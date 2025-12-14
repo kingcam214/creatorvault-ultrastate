@@ -57,3 +57,42 @@
 - [x] Write tests for all procedures
 - [ ] Test all user flows
 - [ ] Create production checkpoint
+
+## Systems F, G, H - Marketplace, University, Services (NEW)
+
+### Backend (COMPLETE)
+- [x] Copy Systems F, G, H from cv-ultrastate
+- [x] Wire marketplace router (getProducts, createProduct, checkout)
+- [x] Wire university router (getCourses, createCourse, enroll)
+- [x] Wire services router (getOffers, createOffer, purchase)
+- [x] Install Stripe SDK
+- [x] Configure Stripe client
+- [x] Create products configuration
+- [x] Add checkout session creation
+
+### Frontend UI (COMPLETE)
+- [x] Create Marketplace browse page (/marketplace)
+- [x] Create University catalog page (/university)
+- [x] Create Services listing page (/services)
+- [x] Add routes to App.tsx
+- [x] Add navigation buttons to Home page
+
+### Payments (IN PROGRESS)
+- [x] Stripe checkout session creation
+- [ ] Stripe webhook handler (/api/stripe/webhook)
+- [ ] Payment confirmation flow
+- [ ] Order fulfillment trigger
+- [ ] Commission split logging
+- [ ] Store transactions in database
+
+### Dashboards (TODO)
+- [ ] Creator dashboard (sales, revenue, payouts)
+- [ ] Recruiter dashboard (commissions, downline)
+- [ ] King dashboard (GMV, platform revenue, top products/creators)
+
+### Testing & Proof (TODO)
+- [ ] Execute real $1 test transaction
+- [ ] Verify commission math
+- [ ] Generate execution logs
+- [ ] Capture screenshots
+- [ ] Document proof artifacts

@@ -6,6 +6,16 @@ import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { storagePut } from "./storage";
+import { CreatorVaultMarketplace } from "./services/marketplace/marketplace";
+import { CreatorVaultUniversity } from "./services/university/university";
+import { CoursesServicesEngine } from "./services/coursesServices/coursesServices";
+import { stripe } from "./_core/stripe";
+import { PRODUCTS } from "./products";
+
+// Initialize services
+const marketplace = new CreatorVaultMarketplace();
+const university = new CreatorVaultUniversity();
+const servicesEngine = new CoursesServicesEngine();
 
 // ============ MIDDLEWARE ============
 
@@ -321,6 +331,124 @@ export const appRouter = router({
 
     getMyBrands: protectedProcedure.query(async ({ ctx }) => {
       return await db.getBrandAffiliationsByUserId(ctx.user.id);
+    }),
+  }),
+
+  // ============ SYSTEM F: MARKETPLACE ============
+  marketplace: router({
+    getProducts: publicProcedure.query(() => {
+      // TODO: Store products in DB
+      return [];
+    }),
+
+    createProduct: creatorProcedure.input(z.object({
+      title: z.string(),
+      description: z.string(),
+      category: z.enum(["course", "ebook", "template", "coaching", "shoutout", "photoset", "bundle", "adult", "service"]),
+      type: z.enum(["digital", "service", "bundle", "subscription"]),
+      price: z.number(),
+      currency: z.enum(["USD", "DOP", "HTG"]),
+      fulfillmentType: z.enum(["instant", "manual", "scheduled"]),
+    })).mutation(({ ctx, input }) => {
+      const product = marketplace.createProduct({
+        creatorId: String(ctx.user.id),
+        ...input,
+      });
+      return product;
+    }),
+
+    checkout: protectedProcedure.input(z.object({
+      productId: z.string(),
+    })).mutation(async ({ ctx, input }) => {
+      const origin = (ctx.req.headers.origin as string | undefined) ?? "http://localhost:3000";
+      
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        customer_email: ctx.user.email ?? undefined,
+        client_reference_id: String(ctx.user.id),
+        metadata: {
+          user_id: String(ctx.user.id),
+          customer_email: ctx.user.email ?? null,
+          customer_name: ctx.user.name !== null ? String(ctx.user.name) : "",
+          product_id: input.productId,
+        },
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: PRODUCTS.TEST_PRODUCT.name,
+                description: PRODUCTS.TEST_PRODUCT.description,
+              },
+              unit_amount: PRODUCTS.TEST_PRODUCT.priceUsd,
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: `${origin}/marketplace?success=true`,
+        cancel_url: `${origin}/marketplace?canceled=true`,
+        allow_promotion_codes: true,
+      });
+
+      return { sessionId: session.id, url: session.url };
+    }),
+  }),
+
+  // ============ SYSTEM G: UNIVERSITY ============
+  university: router({
+    getCourses: publicProcedure.query(() => {
+      // TODO: Store courses in DB
+      return [];
+    }),
+
+    createCourse: creatorProcedure.input(z.object({
+      title: z.string(),
+      description: z.string(),
+      category: z.enum(["adult-monetization", "content-creation", "dominican-culture", "business", "marketing", "psychology", "technical"]),
+      price: z.number(),
+      currency: z.enum(["USD", "DOP", "HTG"]),
+      free: z.boolean(),
+      certificateEnabled: z.boolean(),
+    })).mutation(({ ctx, input }) => {
+      const course = university.createCourse({
+        instructorId: String(ctx.user.id),
+        ...input,
+      });
+      return course;
+    }),
+
+    enroll: protectedProcedure.input(z.object({
+      courseId: z.string(),
+    })).mutation(({ ctx, input }) => {
+      const enrollment = university.enrollUser(input.courseId, String(ctx.user.id));
+      return enrollment;
+    }),
+  }),
+
+  // ============ SYSTEM H: SERVICES ============
+  services: router({
+    getOffers: publicProcedure.query(() => {
+      // TODO: Store offers in DB
+      return [];
+    }),
+
+    createOffer: creatorProcedure.input(z.object({
+      title: z.string(),
+      description: z.string(),
+      type: z.enum(["mentorship", "coaching", "consulting", "done-for-you", "audit", "strategy-session"]),
+      tier: z.enum(["low-ticket", "mid-ticket", "high-ticket"]),
+      price: z.number(),
+      currency: z.enum(["USD", "DOP", "HTG"]),
+      duration: z.number(),
+      deliveryTime: z.number(),
+      includes: z.array(z.string()),
+      guarantee: z.string().optional(),
+    })).mutation(({ ctx, input }) => {
+      const offer = servicesEngine.createOffer({
+        providerId: String(ctx.user.id),
+        ...input,
+      });
+      return offer;
     }),
   }),
 });

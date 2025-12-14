@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { Link } from "wouter";
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -64,6 +65,17 @@ export default function Home() {
           <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
             The ultimate creator economy platform. Monetize your content, build your brand, and connect with your audience across cultures.
           </p>
+          <div className="flex flex-wrap justify-center gap-4 mb-8">
+            <Button asChild size="lg" className="bg-white text-purple-900 hover:bg-gray-100">
+              <Link href="/marketplace">Browse Marketplace</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+              <Link href="/university">Explore Courses</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+              <Link href="/services">View Services</Link>
+            </Button>
+          </div>
         </div>
 
         {/* Features Grid */}

@@ -8,12 +8,18 @@ import { AuthProvider } from "./contexts/AuthContext";
 import Home from "./pages/Home";
 import KingDashboard from "./pages/KingDashboard";
 import KingUsers from "./pages/KingUsers";
+import Marketplace from "./pages/Marketplace";
+import University from "./pages/University";
+import Services from "./pages/Services";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/marketplace"} component={Marketplace} />
+      <Route path={"/university"} component={University} />
+      <Route path={"/services"} component={Services} />
       <Route path={"/king"} component={KingDashboard} />
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/404"} component={NotFound} />
