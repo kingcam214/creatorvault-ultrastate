@@ -5,6 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
+import * as dbFGH from "./db-fgh";
 import { storagePut } from "./storage";
 import { CreatorVaultMarketplace } from "./services/marketplace/marketplace";
 import { CreatorVaultUniversity } from "./services/university/university";
@@ -336,25 +337,28 @@ export const appRouter = router({
 
   // ============ SYSTEM F: MARKETPLACE ============
   marketplace: router({
-    getProducts: publicProcedure.query(() => {
-      // TODO: Store products in DB
-      return [];
+    getProducts: publicProcedure.query(async () => {
+      return await dbFGH.listProducts({ status: "active" });
     }),
 
     createProduct: creatorProcedure.input(z.object({
       title: z.string(),
       description: z.string(),
-      category: z.enum(["course", "ebook", "template", "coaching", "shoutout", "photoset", "bundle", "adult", "service"]),
       type: z.enum(["digital", "service", "bundle", "subscription"]),
       price: z.number(),
       currency: z.enum(["USD", "DOP", "HTG"]),
-      fulfillmentType: z.enum(["instant", "manual", "scheduled"]),
-    })).mutation(({ ctx, input }) => {
-      const product = marketplace.createProduct({
-        creatorId: String(ctx.user.id),
-        ...input,
+      fulfillmentType: z.enum(["instant", "manual", "scheduled"]).default("manual"),
+    })).mutation(async ({ ctx, input }) => {
+      await dbFGH.createProduct({
+        creatorId: ctx.user.id,
+        type: input.type,
+        title: input.title,
+        description: input.description,
+        priceAmount: Math.round(input.price * 100),
+        currency: input.currency,
+        fulfillmentType: input.fulfillmentType,
       });
-      return product;
+      return { success: true };
     }),
 
     checkout: protectedProcedure.input(z.object({
@@ -419,17 +423,36 @@ export const appRouter = router({
 
     enroll: protectedProcedure.input(z.object({
       courseId: z.string(),
-    })).mutation(({ ctx, input }) => {
-      const enrollment = university.enrollUser(input.courseId, String(ctx.user.id));
-      return enrollment;
+    })).mutation(async ({ ctx, input }) => {
+      // Check if already enrolled
+      const existing = await dbFGH.getEnrollment(input.courseId, ctx.user.id);
+      if (existing) {
+        return existing;
+      }
+
+      // Check if course is free
+      const course = await dbFGH.getCourse(input.courseId);
+      if (!course) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Course not found" });
+      }
+
+      if (!course.isFree) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Course requires payment" });
+      }
+
+      await dbFGH.createEnrollment({
+        courseId: input.courseId,
+        studentId: ctx.user.id,
+      });
+
+      return { success: true };
     }),
   }),
 
   // ============ SYSTEM H: SERVICES ============
   services: router({
-    getOffers: publicProcedure.query(() => {
-      // TODO: Store offers in DB
-      return [];
+    getOffers: publicProcedure.query(async () => {
+      return await dbFGH.listServiceOffers({ status: "active" });
     }),
 
     createOffer: creatorProcedure.input(z.object({

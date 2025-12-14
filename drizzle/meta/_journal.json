@@ -15,6 +15,13 @@
       "when": 1765659104463,
       "tag": "0001_high_archangel",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1765698414997,
+      "tag": "0002_slim_leopardon",
+      "breakpoints": true
     }
   ]
 }

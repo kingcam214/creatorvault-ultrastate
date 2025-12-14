@@ -220,3 +220,219 @@ export type Content = typeof content.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type VideoGenerationJob = typeof videoGenerationJobs.$inferSelect;
 export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+
+/**
+ * ============================================
+ * SYSTEMS F, G, H — MARKETPLACE, UNIVERSITY, SERVICES
+ * ============================================
+ */
+
+/**
+ * Marketplace Products
+ */
+export const marketplaceProducts = mysqlTable("marketplace_products", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  recruiterId: int("recruiter_id").references(() => users.id, { onDelete: "set null" }),
+  
+  type: mysqlEnum("type", ["digital", "service", "bundle", "subscription"]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  
+  priceAmount: int("price_amount").notNull(), // in cents
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  
+  status: mysqlEnum("status", ["draft", "active", "archived"]).default("draft").notNull(),
+  
+  fulfillmentType: mysqlEnum("fulfillment_type", ["instant", "manual", "scheduled"]).default("manual").notNull(),
+  fulfillmentPayload: json("fulfillment_payload"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  creatorIdIdx: index("idx_marketplace_products_creator_id").on(table.creatorId),
+  statusIdx: index("idx_marketplace_products_status").on(table.status),
+}));
+
+/**
+ * Marketplace Orders
+ */
+export const marketplaceOrders = mysqlTable("marketplace_orders", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  buyerId: int("buyer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  productId: varchar("product_id", { length: 36 }).notNull().references(() => marketplaceProducts.id, { onDelete: "restrict" }),
+  
+  quantity: int("quantity").default(1).notNull(),
+  
+  grossAmount: int("gross_amount").notNull(), // in cents
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  
+  creatorAmount: int("creator_amount").notNull(),
+  recruiterAmount: int("recruiter_amount").default(0).notNull(),
+  platformAmount: int("platform_amount").notNull(),
+  
+  paymentProvider: varchar("payment_provider", { length: 20 }).default("stripe").notNull(),
+  stripeSessionId: varchar("stripe_session_id", { length: 255 }),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  
+  status: mysqlEnum("status", ["pending", "paid", "fulfilled", "refunded", "failed"]).default("pending").notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  buyerIdIdx: index("idx_marketplace_orders_buyer_id").on(table.buyerId),
+  productIdIdx: index("idx_marketplace_orders_product_id").on(table.productId),
+  statusIdx: index("idx_marketplace_orders_status").on(table.status),
+  stripeSessionIdIdx: index("idx_marketplace_orders_stripe_session_id").on(table.stripeSessionId),
+}));
+
+/**
+ * University Courses
+ */
+export const universityCourses = mysqlTable("university_courses", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  
+  priceAmount: int("price_amount").default(0).notNull(), // in cents
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  isFree: boolean("is_free").default(false).notNull(),
+  
+  status: mysqlEnum("status", ["draft", "published", "archived"]).default("draft").notNull(),
+  
+  syllabusJson: json("syllabus_json").$type<{
+    modules: Array<{
+      id: string;
+      title: string;
+      lessons: Array<{
+        id: string;
+        title: string;
+        type: "video" | "text" | "quiz" | "assignment";
+        content: string;
+        duration?: number;
+      }>;
+    }>;
+  }>(),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  creatorIdIdx: index("idx_university_courses_creator_id").on(table.creatorId),
+  statusIdx: index("idx_university_courses_status").on(table.status),
+}));
+
+/**
+ * University Enrollments
+ */
+export const universityEnrollments = mysqlTable("university_enrollments", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  courseId: varchar("course_id", { length: 36 }).notNull().references(() => universityCourses.id, { onDelete: "cascade" }),
+  studentId: int("student_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  orderId: varchar("order_id", { length: 36 }).references(() => marketplaceOrders.id, { onDelete: "set null" }),
+  
+  status: mysqlEnum("status", ["active", "completed", "refunded", "revoked"]).default("active").notNull(),
+  
+  progressJson: json("progress_json").$type<{
+    completedLessons: string[];
+    currentModule?: string;
+    currentLesson?: string;
+    lastAccessedAt?: number;
+  }>(),
+  
+  certificateUrl: varchar("certificate_url", { length: 512 }),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  courseIdIdx: index("idx_university_enrollments_course_id").on(table.courseId),
+  studentIdIdx: index("idx_university_enrollments_student_id").on(table.studentId),
+  statusIdx: index("idx_university_enrollments_status").on(table.status),
+}));
+
+/**
+ * Services Offers
+ */
+export const servicesOffers = mysqlTable("services_offers", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  providerId: int("provider_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  
+  tier: mysqlEnum("tier", ["low", "mid", "high"]).default("mid").notNull(),
+  
+  priceAmount: int("price_amount").notNull(), // in cents
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  
+  deliveryDays: int("delivery_days").default(7).notNull(),
+  
+  status: mysqlEnum("status", ["draft", "active", "archived"]).default("draft").notNull(),
+  
+  fulfillmentStepsJson: json("fulfillment_steps_json").$type<Array<{
+    id: string;
+    title: string;
+    description: string;
+    estimatedDays: number;
+  }>>(),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  providerIdIdx: index("idx_services_offers_provider_id").on(table.providerId),
+  statusIdx: index("idx_services_offers_status").on(table.status),
+  tierIdx: index("idx_services_offers_tier").on(table.tier),
+}));
+
+/**
+ * Services Sales
+ */
+export const servicesSales = mysqlTable("services_sales", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  buyerId: int("buyer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  offerId: varchar("offer_id", { length: 36 }).notNull().references(() => servicesOffers.id, { onDelete: "restrict" }),
+  
+  grossAmount: int("gross_amount").notNull(), // in cents
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  
+  providerAmount: int("provider_amount").notNull(),
+  affiliateAmount: int("affiliate_amount").default(0).notNull(),
+  recruiterAmount: int("recruiter_amount").default(0).notNull(),
+  platformAmount: int("platform_amount").notNull(),
+  
+  stripeSessionId: varchar("stripe_session_id", { length: 255 }),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  
+  status: mysqlEnum("status", ["pending", "paid", "in_progress", "delivered", "refunded", "failed"]).default("pending").notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  buyerIdIdx: index("idx_services_sales_buyer_id").on(table.buyerId),
+  offerIdIdx: index("idx_services_sales_offer_id").on(table.offerId),
+  statusIdx: index("idx_services_sales_status").on(table.status),
+  stripeSessionIdIdx: index("idx_services_sales_stripe_session_id").on(table.stripeSessionId),
+}));
+
+/**
+ * Commission Events (tracking all revenue splits)
+ */
+export const commissionEvents = mysqlTable("commission_events", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  refType: mysqlEnum("ref_type", ["order", "sale", "enrollment"]).notNull(),
+  refId: varchar("ref_id", { length: 36 }).notNull(),
+  
+  partyType: mysqlEnum("party_type", ["creator", "recruiter", "affiliate", "platform"]).notNull(),
+  partyId: int("party_id").references(() => users.id, { onDelete: "set null" }), // null for platform
+  
+  amount: int("amount").notNull(), // in cents
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  refTypeIdIdx: index("idx_commission_events_ref").on(table.refType, table.refId),
+  partyIdIdx: index("idx_commission_events_party_id").on(table.partyId),
+  partyTypeIdx: index("idx_commission_events_party_type").on(table.partyType),
+}));
