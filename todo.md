@@ -233,3 +233,52 @@
 - [ ] Verify database effects
 - [ ] Confirm commission splits
 - [ ] Generate proof artifacts
+
+
+## CONTROL GAP DIRECTIVE — OWNER CONTROL PANEL (2024-12-18)
+
+### System Registry Backend
+- [x] Create systemRegistry.ts service
+- [x] Query existing tables (telegram_bots, whatsapp_providers, bot_events)
+- [x] Implement getAllDeployments()
+- [x] Implement getAllBots()
+- [x] Implement getAllChannels()
+- [x] Implement getAllLinks()
+- [x] Implement getSystemLogs()
+- [x] Implement getDatabaseHealth()
+- [x] Implement toggleBot()
+- [x] Implement toggleBroadcast()
+- [x] Implement getSystemStats()
+- [x] Implement getRoleGovernance()
+
+### Owner Control Panel UI
+- [x] Create /owner-control page (owner/admin-only)
+- [x] Display all active deployments
+- [x] Display all bots with status indicators
+- [x] Display all channels and platforms
+- [x] Enable/disable toggles for each bot
+- [x] Enable/disable toggles for broadcasts
+- [x] Link registry with traceability
+- [x] Real-time logs display
+- [x] Error surfacing dashboard
+- [x] Database health monitor
+- [x] System stats overview
+- [x] Role governance dashboard
+- [x] Tabbed interface (Overview/Bots/Deployments/Channels/Links/Logs/Roles)
+
+### Role-Based Access Control
+- [x] Implement owner-only middleware (ownerProcedure)
+- [x] Role-based permissions enforcement
+- [x] Owner/Admin access to control panel
+- [x] Ambassador role governance (via role stats)
+- [x] Creator role governance (via role stats)
+
+### Documentation
+- [x] OWNER_CONTROL_PANEL.md created
+- [x] How to access Owner Control Panel
+- [x] How to enable/disable bots
+- [x] How to manage roles
+- [x] How to trace links back to control panel
+- [x] How to monitor system health
+- [x] Troubleshooting guide
+- [x] Security documentation

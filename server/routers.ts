@@ -15,6 +15,7 @@ import { PRODUCTS } from "./products";
 import { aiBotRouter } from "./routers/aiBot";
 import { commandHubRouter } from "./routers/commandHub";
 import { checkoutBotRouter } from "./routers/checkoutBot";
+import { ownerControlRouter } from "./routers/ownerControl";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -462,6 +463,9 @@ export const appRouter = router({
 
   // ============ CHECKOUT BOT ============
   checkoutBot: checkoutBotRouter,
+
+  // ============ OWNER CONTROL PANEL ============
+  ownerControl: ownerControlRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({
