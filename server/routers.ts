@@ -408,17 +408,19 @@ export const appRouter = router({
     createCourse: creatorProcedure.input(z.object({
       title: z.string(),
       description: z.string(),
-      category: z.enum(["adult-monetization", "content-creation", "dominican-culture", "business", "marketing", "psychology", "technical"]),
       price: z.number(),
-      currency: z.enum(["USD", "DOP", "HTG"]),
-      free: z.boolean(),
-      certificateEnabled: z.boolean(),
-    })).mutation(({ ctx, input }) => {
-      const course = university.createCourse({
-        instructorId: String(ctx.user.id),
-        ...input,
+      isFree: z.boolean(),
+      currency: z.enum(["USD", "DOP", "HTG"]).default("USD"),
+    })).mutation(async ({ ctx, input }) => {
+      await dbFGH.createCourse({
+        creatorId: ctx.user.id,
+        title: input.title,
+        description: input.description,
+        priceAmount: Math.round(input.price * 100),
+        currency: input.currency,
+        isFree: input.isFree,
       });
-      return course;
+      return { success: true };
     }),
 
     enroll: protectedProcedure.input(z.object({
@@ -458,20 +460,21 @@ export const appRouter = router({
     createOffer: creatorProcedure.input(z.object({
       title: z.string(),
       description: z.string(),
-      type: z.enum(["mentorship", "coaching", "consulting", "done-for-you", "audit", "strategy-session"]),
-      tier: z.enum(["low-ticket", "mid-ticket", "high-ticket"]),
+      tier: z.enum(["low", "mid", "high"]),
       price: z.number(),
-      currency: z.enum(["USD", "DOP", "HTG"]),
-      duration: z.number(),
-      deliveryTime: z.number(),
-      includes: z.array(z.string()),
-      guarantee: z.string().optional(),
-    })).mutation(({ ctx, input }) => {
-      const offer = servicesEngine.createOffer({
-        providerId: String(ctx.user.id),
-        ...input,
+      currency: z.enum(["USD", "DOP", "HTG"]).default("USD"),
+      deliveryDays: z.number(),
+    })).mutation(async ({ ctx, input }) => {
+      await dbFGH.createServiceOffer({
+        providerId: ctx.user.id,
+        title: input.title,
+        description: input.description,
+        tier: input.tier,
+        priceAmount: Math.round(input.price * 100),
+        currency: input.currency,
+        deliveryDays: input.deliveryDays,
       });
-      return offer;
+      return { success: true };
     }),
   }),
 });

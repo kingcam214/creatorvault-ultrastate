@@ -436,3 +436,124 @@ export const commissionEvents = mysqlTable("commission_events", {
   partyIdIdx: index("idx_commission_events_party_id").on(table.partyId),
   partyTypeIdx: index("idx_commission_events_party_type").on(table.partyType),
 }));
+
+
+// ============ TELEGRAM BOTS ============
+
+export const telegramBots = mysqlTable("telegram_bots", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: varchar("name", { length: 255 }).notNull(),
+  botToken: text("bot_token").notNull(), // Encrypted at rest
+  webhookUrl: text("webhook_url"),
+  status: varchar("status", { length: 50 }).notNull().default("active"), // active, paused, deleted
+  createdBy: int("created_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});
+
+export const telegramChannels = mysqlTable("telegram_channels", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  botId: varchar("bot_id", { length: 36 }).notNull().references(() => telegramBots.id, { onDelete: "cascade" }),
+  channelId: varchar("channel_id", { length: 255 }).notNull(), // Telegram channel ID
+  channelName: varchar("channel_name", { length: 255 }),
+  channelType: varchar("channel_type", { length: 50 }).notNull(), // broadcast, funnel, support
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const telegramFunnels = mysqlTable("telegram_funnels", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  botId: varchar("bot_id", { length: 36 }).notNull().references(() => telegramBots.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  messagesJson: text("messages_json").notNull(), // Array of {text, delay, buttons}
+  status: varchar("status", { length: 50 }).notNull().default("active"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});
+
+export const telegramLeads = mysqlTable("telegram_leads", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  botId: varchar("bot_id", { length: 36 }).notNull().references(() => telegramBots.id, { onDelete: "cascade" }),
+  telegramUserId: varchar("telegram_user_id", { length: 255 }).notNull(),
+  username: varchar("username", { length: 255 }),
+  firstName: varchar("first_name", { length: 255 }),
+  lastName: varchar("last_name", { length: 255 }),
+  email: varchar("email", { length: 255 }),
+  country: varchar("country", { length: 100 }),
+  creatorType: varchar("creator_type", { length: 100 }), // content, adult, fitness, etc.
+  funnelId: varchar("funnel_id", { length: 36 }),
+  currentStep: int("current_step").default(0),
+  dataJson: text("data_json"), // Additional collected data
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});
+
+// ============ WHATSAPP AUTOMATION ============
+
+export const whatsappProviders = mysqlTable("whatsapp_providers", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: varchar("name", { length: 255 }).notNull(),
+  provider: varchar("provider", { length: 50 }).notNull(), // twilio, meta_cloud_api
+  credentialsJson: text("credentials_json").notNull(), // Encrypted
+  phoneNumber: varchar("phone_number", { length: 50 }),
+  status: varchar("status", { length: 50 }).notNull().default("active"),
+  createdBy: int("created_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});
+
+export const whatsappFunnels = mysqlTable("whatsapp_funnels", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  providerId: varchar("provider_id", { length: 36 }).notNull().references(() => whatsappProviders.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  messagesJson: text("messages_json").notNull(),
+  status: varchar("status", { length: 50 }).notNull().default("active"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});
+
+export const whatsappLeads = mysqlTable("whatsapp_leads", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  providerId: varchar("provider_id", { length: 36 }).notNull().references(() => whatsappProviders.id, { onDelete: "cascade" }),
+  phoneNumber: varchar("phone_number", { length: 50 }).notNull(),
+  name: varchar("name", { length: 255 }),
+  email: varchar("email", { length: 255 }),
+  country: varchar("country", { length: 100 }),
+  creatorType: varchar("creator_type", { length: 100 }),
+  funnelId: varchar("funnel_id", { length: 36 }),
+  currentStep: int("current_step").default(0),
+  dataJson: text("data_json"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});
+
+// ============ LEADS (UNIFIED) ============
+
+export const leads = mysqlTable("leads", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  source: varchar("source", { length: 50 }).notNull(), // telegram, whatsapp, web, marketplace
+  sourceId: varchar("source_id", { length: 255 }), // Reference to telegram_leads.id or whatsapp_leads.id
+  email: varchar("email", { length: 255 }),
+  name: varchar("name", { length: 255 }),
+  country: varchar("country", { length: 100 }),
+  creatorType: varchar("creator_type", { length: 100 }),
+  status: varchar("status", { length: 50 }).notNull().default("new"), // new, contacted, converted, lost
+  dataJson: text("data_json"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});
+
+// ============ CREATORS (EXTENDED) ============
+
+export const creators = mysqlTable("creators", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  creatorType: varchar("creator_type", { length: 100 }).notNull(), // content, adult, fitness, etc.
+  country: varchar("country", { length: 100 }),
+  platforms: text("platforms"), // JSON array of platforms
+  monthlyRevenue: int("monthly_revenue"), // In cents
+  subscriberCount: int("subscriber_count"),
+  status: varchar("status", { length: 50 }).notNull().default("active"),
+  onboardedAt: timestamp("onboarded_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});

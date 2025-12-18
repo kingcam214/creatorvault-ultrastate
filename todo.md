@@ -1,98 +1,148 @@
 # CreatorVault Platform TODO
 
-## Database & Schema
-- [x] Execute migration-dna-integration.sql
-- [x] Extend schema with additional tables (waitlist, payments, content, analytics)
-- [x] Add indexes and foreign key relationships
-- [ ] Seed initial data
+## KINGCAM PROOF GATE + COMMAND HUB DIRECTIVE
 
-## Authentication & RBAC
-- [x] Extend user schema with King/Creator/User roles
-- [x] Implement role-based access control middleware (kingProcedure, creatorProcedure)
-- [x] Add creator_status and onboarding tracking
+**RULE:** If a feature does not touch REAL users, REAL data, or REAL money, it DOES NOT EXIST.
 
-## Backend API Services
-- [x] User management (registration, profiles, role assignment)
-- [x] Creator management (approval, tracking, earnings)
-- [x] Content upload and storage integration
-- [x] Waitlist system (signup, analytics, notifications)
-- [x] Payment tracking endpoints
-- [ ] Stripe webhook integration
-- [x] Emma network tracking (recruitment, commissions, engagement)
-- [x] Cultural intelligence (templates, translations)
-- [x] Analytics and reporting
-- [x] Video generation endpoints
-- [x] Brand affiliations endpoints
+### Phase 0 - Baseline Audit
+- [ ] Identify current repo (creatorvault-platform)
+- [ ] Print git rev-parse HEAD
+- [ ] List server/client directories
+- [ ] List existing DB tables via SQL
+- [ ] Confirm Stripe env presence
+- [ ] Create /tmp/kingcam-proof/ folder
+- [ ] Create proof.jsonl log format
 
-## King Dashboard
-- [ ] Video generation lab UI
-- [ ] Creator management interface
-- [ ] Analytics dashboard
-- [ ] Brand controls
-- [ ] Earnings and payout tracking
+### Phase 1 - Proof Gate (Hard Enforcement)
+- [ ] Build server/proofGate.ts with feature registry
+- [ ] Implement assertFeatureReal() function
+- [ ] Add UI enforcement (hide NOT REAL features)
+- [ ] Create "NOT REAL" blocking page
+- [ ] Write proof event for proofGate init
 
-## Creator Portal
-- [ ] Content upload interface
-- [ ] Earnings tracking dashboard
-- [ ] Profile management
-- [ ] Emma network integration
+### Phase 2 - Command Hub
+- [ ] Build server/routers/commandHub.ts
+- [ ] POST /king/commands/run endpoint
+- [ ] GET /king/commands/history endpoint
+- [ ] Build client/src/pages/CommandHub.tsx
+- [ ] Implement 9 required commands (marketplace, university, services, social, telegram, whatsapp, repurpose, podcast)
+- [ ] Test 3 commands with DB + artifacts + proof.jsonl
 
-## Waitlist System
-- [ ] Landing page
-- [ ] Signup flow
-- [ ] Analytics dashboard
-- [ ] Email notifications
+### Phase 3 - Marketplace Real Money Lane
+- [ ] Verify DB tables (products, orders, order_items, payments, users, creators)
+- [ ] Product creation writes to DB
+- [ ] Stripe Checkout integration (test mode)
+- [ ] Webhook handler (checkout.session.completed)
+- [ ] Mark orders paid + write payment records
+- [ ] Calculate commission splits
+- [ ] Digital product fulfillment + receipt artifacts
+- [ ] Admin marketplace dashboard
+- [ ] Creator storefront page
+- [ ] My Orders page
+- [ ] Execute real test purchase with full proof chain
 
-## Onboarding Flows
-- [ ] King onboarding multi-step form
-- [ ] Founder onboarding flow
-- [ ] Progress tracking
+### Phase 4 - Systems F/G/H Real
+- [ ] Move F/G/H logic to server/services
+- [ ] Add /api/marketplace/* routers
+- [ ] Add /api/university/* routers
+- [ ] Add /api/courses-services/* routers
+- [ ] Wire UI pages to real DB
+- [ ] Create 1 product, 1 course, 1 service via Command Hub
+- [ ] Verify all appear in UI lists from DB
 
-## Services Integration
-- [ ] DigitalOcean Spaces storage setup
-- [ ] Stripe payment processing
-- [ ] Email service integration
+### Phase 5 - Telegram/WhatsApp Funnel Foundation
+- [ ] Create telegram_bots, telegram_channels tables
+- [ ] Register bot token (encrypted)
+- [ ] Register channel ID
+- [ ] Send test message endpoint
+- [ ] Create funnel sequence records
+- [ ] Build funnel runner
+- [ ] Create whatsapp_providers table
+- [ ] Support Twilio/Meta Cloud API
+- [ ] Test send action
+- [ ] Create 1 telegram funnel + runner job + proof log
 
-## Testing & Deployment
-- [x] Write tests for all procedures
-- [ ] Test all user flows
-- [ ] Create production checkpoint
+### Phase 6 - Content Repurposing Foundation
+- [ ] Create repurpose_jobs table
+- [ ] Create repurpose_outputs table
+- [ ] Build job runner (video/url/text → captions/hooks/shorts/posts)
+- [ ] Generate 3 platform packs (TikTok/IG/YT) as JSON artifacts
+- [ ] Integrate with Viral Optimizer
+- [ ] Create 1 repurpose job + 3 output artifacts + DB storage
 
-## Systems F, G, H - Marketplace, University, Services (NEW)
+### Phase 7 - Podcast Sector Foundation
+- [ ] Create podcast_shows table
+- [ ] Create podcast_episodes table
+- [ ] Create podcast_jobs table
+- [ ] Support RSS ingest OR upload
+- [ ] Build Podcast Studio page
+- [ ] Generate clip ideas job (ties to Viral Optimizer)
+- [ ] Create 1 show + 1 episode + 5 clip ideas + artifacts
 
-### Backend (COMPLETE)
-- [x] Copy Systems F, G, H from cv-ultrastate
-- [x] Wire marketplace router (getProducts, createProduct, checkout)
-- [x] Wire university router (getCourses, createCourse, enroll)
-- [x] Wire services router (getOffers, createOffer, purchase)
-- [x] Install Stripe SDK
-- [x] Configure Stripe client
-- [x] Create products configuration
-- [x] Add checkout session creation
+### Phase 8 - Reality Dashboard + Acceptance
+- [ ] Build /king/reality page
+- [ ] Show all modules with REAL/NOT REAL status
+- [ ] Display missing proof items
+- [ ] Show last proof timestamp
+- [ ] Add links to run commands that make features real
+- [ ] All tests passing
+- [ ] Generate screenshot/logs + route evidence
 
-### Frontend UI (COMPLETE)
-- [x] Create Marketplace browse page (/marketplace)
-- [x] Create University catalog page (/university)
-- [x] Create Services listing page (/services)
-- [x] Add routes to App.tsx
-- [x] Add navigation buttons to Home page
+**OUTPUT REQUIREMENTS PER PHASE:**
+- git show --stat
+- commit hash
+- push output
+- test output
+- proof.jsonl tail (last 20 lines)
+- list of DB tables created + migrations applied
 
-### Payments (IN PROGRESS)
-- [x] Stripe checkout session creation
-- [ ] Stripe webhook handler (/api/stripe/webhook)
-- [ ] Payment confirmation flow
-- [ ] Order fulfillment trigger
-- [ ] Commission split logging
-- [ ] Store transactions in database
 
-### Dashboards (TODO)
-- [ ] Creator dashboard (sales, revenue, payouts)
-- [ ] Recruiter dashboard (commissions, downline)
-- [ ] King dashboard (GMV, platform revenue, top products/creators)
+## 🎄 CHRISTMAS LAUNCH — LOCKED SCOPE
 
-### Testing & Proof (TODO)
-- [ ] Execute real $1 test transaction
-- [ ] Verify commission math
-- [ ] Generate execution logs
-- [ ] Capture screenshots
-- [ ] Document proof artifacts
+**RULE:** If it does NOT touch REAL users, REAL data, or REAL money by Christmas, it does NOT exist.
+
+### 1. REAL USERS + REAL DATA (IMMEDIATE)
+- [x] Telegram bot - broadcast functionality
+- [x] Telegram bot - DM funnel
+- [x] Telegram bot - collect emails, usernames, country, creator type
+- [x] WhatsApp automation - opt-in flows
+- [x] WhatsApp automation - creator funnels
+- [x] Database tables: users, leads, creators
+- [x] Store ALL bot data in database
+
+### 2. REAL MONEY (IMMEDIATE)
+- [x] Stripe webhook handler (checkout.session.completed)
+- [x] Execute $1 test transaction
+- [x] Orders table with real data
+- [x] Payouts table
+- [x] Commissions table with splits
+- [ ] Transaction ID visible in admin UI
+- [x] Proof artifact generated
+
+### 3. CREATOR TOOLS — MUST BE USABLE
+- [x] Viral Optimizer - real inputs
+- [x] Viral Optimizer - real outputs
+- [x] Viral Optimizer - real analytics
+- [ ] Content repurposing - produce shorts files
+- [ ] Content repurposing - produce captions files
+- [ ] Podcast sector - ingest content (RSS or upload)
+- [ ] Podcast sector - output clip files
+
+### 4. LIVE / GO LIVE (CHRISTMAS REQUIREMENT)
+- [ ] LIVE rooms functionality
+- [ ] Chat in LIVE rooms
+- [ ] Reactions in LIVE rooms
+- [ ] Creator presence indicators
+- [ ] NO placeholder UI - MUST FUNCTION
+
+### 5. COMMAND HUB (CONTROL CENTER)
+- [ ] Buttons execute API calls (not just navigation)
+- [ ] Every button produces database effect
+- [ ] Command history visible
+- [ ] Proof artifacts logged
+
+### 6. PROOF GATE (ENFORCEMENT)
+- [ ] Block features without backend
+- [ ] UI shows "NOT REAL" for blocked features
+- [ ] Feature registry enforced
+- [ ] Missing requirements displayed
