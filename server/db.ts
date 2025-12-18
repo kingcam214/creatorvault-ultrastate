@@ -11,6 +11,9 @@ import {
   payments,
   videoGenerationJobs,
   analyticsEvents,
+  botEvents,
+  viralAnalyses,
+  viralMetrics,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -27,6 +30,9 @@ export async function getDb() {
   }
   return _db;
 }
+
+// Export db instance for direct use
+export const db = drizzle(process.env.DATABASE_URL!);
 
 // ============ USER MANAGEMENT ============
 

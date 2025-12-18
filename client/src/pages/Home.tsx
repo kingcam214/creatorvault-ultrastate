@@ -76,9 +76,12 @@ export default function Home() {
               <Link href="/services">View Services</Link>
             </Button>
           </div>
-          <div className="flex justify-center mb-8">
+          <div className="flex flex-wrap justify-center gap-4 mb-8">
             <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:from-pink-600 hover:to-purple-600">
               <Link href="/creator">Creator Dashboard</Link>
+            </Button>
+            <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600">
+              <Link href="/ai-bot">🤖 AI Assistant</Link>
             </Button>
           </div>
         </div>

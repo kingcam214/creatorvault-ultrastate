@@ -557,3 +557,86 @@ export const creators = mysqlTable("creators", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
 });
+
+// ============ BOT EVENTS (AI Bot Interactions) ============
+
+export const botEvents = mysqlTable("bot_events", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  channel: varchar("channel", { length: 50 }).notNull(), // telegram, whatsapp, web
+  eventType: varchar("event_type", { length: 100 }).notNull(), // ai_chat, onboarding_plan_generated, script_generated, etc.
+  eventData: json("event_data"), // Flexible JSON for event-specific data
+  outcome: varchar("outcome", { length: 50 }).default("success"), // success, error, pending
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_bot_events_user_id").on(table.userId),
+  channelIdx: index("idx_bot_events_channel").on(table.channel),
+  eventTypeIdx: index("idx_bot_events_event_type").on(table.eventType),
+  createdAtIdx: index("idx_bot_events_created_at").on(table.createdAt),
+}));
+
+// ============ VIRAL OPTIMIZER ============
+
+export const viralAnalyses = mysqlTable("viral_analyses", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Input data
+  title: text("title").notNull(),
+  description: text("description"),
+  tags: text("tags"), // Comma-separated
+  duration: int("duration"), // In seconds
+  platform: varchar("platform", { length: 50 }).notNull(), // youtube, tiktok, instagram, etc.
+  
+  // Analysis results
+  viralScore: int("viral_score").notNull(), // 0-100
+  confidenceLevel: int("confidence_level").default(0), // 0-100
+  
+  // Component scores
+  hookScore: int("hook_score"),
+  qualityScore: int("quality_score"),
+  trendScore: int("trend_score"),
+  audienceScore: int("audience_score"),
+  formatScore: int("format_score"),
+  timingScore: int("timing_score"),
+  platformScore: int("platform_score"),
+  
+  // Recommendations
+  weaknesses: text("weaknesses"), // JSON array
+  recommendations: text("recommendations"), // JSON array
+  optimizedTitle: text("optimized_title"),
+  optimizedDescription: text("optimized_description"),
+  optimizedTags: text("optimized_tags"), // Comma-separated
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_viral_analyses_user_id").on(table.userId),
+  platformIdx: index("idx_viral_analyses_platform").on(table.platform),
+  viralScoreIdx: index("idx_viral_analyses_viral_score").on(table.viralScore),
+  createdAtIdx: index("idx_viral_analyses_created_at").on(table.createdAt),
+}));
+
+export const viralMetrics = mysqlTable("viral_metrics", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  analysisId: varchar("analysis_id", { length: 36 }).notNull().references(() => viralAnalyses.id, { onDelete: "cascade" }),
+  
+  // Predicted metrics
+  predictedViews: int("predicted_views"),
+  predictedEngagement: decimal("predicted_engagement", { precision: 5, scale: 2 }), // Percentage
+  predictedCtr: decimal("predicted_ctr", { precision: 5, scale: 2 }), // Percentage
+  predictedRetention: decimal("predicted_retention", { precision: 5, scale: 2 }), // Percentage
+  
+  // Actual metrics (updated after content is published)
+  actualViews: int("actual_views"),
+  actualEngagement: decimal("actual_engagement", { precision: 5, scale: 2 }),
+  actualCtr: decimal("actual_ctr", { precision: 5, scale: 2 }),
+  actualRetention: decimal("actual_retention", { precision: 5, scale: 2 }),
+  
+  // Tracking
+  publishedAt: timestamp("published_at"),
+  lastUpdatedAt: timestamp("last_updated_at"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  analysisIdIdx: index("idx_viral_metrics_analysis_id").on(table.analysisId),
+}));

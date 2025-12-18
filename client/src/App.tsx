@@ -12,6 +12,7 @@ import Marketplace from "./pages/Marketplace";
 import University from "./pages/University";
 import Services from "./pages/Services";
 import CreatorDashboard from "./pages/CreatorDashboard";
+import AIBot from "./pages/AIBot";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -22,6 +23,7 @@ function Router() {
       <Route path={"/university"} component={University} />
       <Route path={"/services"} component={Services} />
       <Route path={"/creator"} component={CreatorDashboard} />
+      <Route path={"/ai-bot"} component={AIBot} />
       <Route path={"/king"} component={KingDashboard} />
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/404"} component={NotFound} />
