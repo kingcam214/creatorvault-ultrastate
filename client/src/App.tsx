@@ -15,11 +15,15 @@ import CreatorDashboard from "./pages/CreatorDashboard";
 import AIBot from "./pages/AIBot";
 import CommandHub from "./pages/CommandHub";
 import OwnerControl from "./pages/OwnerControl";
+import AppHeader from "./components/AppHeader";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
-    <Switch>
+    <>
+      <AppHeader />
+      <div className="pt-16">
+        <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/marketplace"} component={Marketplace} />
       <Route path={"/university"} component={University} />
@@ -32,8 +36,10 @@ function Router() {
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+          <Route component={NotFound} />
+        </Switch>
+      </div>
+    </>
   );
 }
 
