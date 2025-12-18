@@ -506,8 +506,18 @@ export default function OwnerControl() {
                               {new Date(log.timestamp).toLocaleString()}
                             </span>
                           </div>
-                          <p className="text-sm text-white">{log.message}</p>
-                          <p className="text-xs text-gray-400">Component: {log.component}</p>
+                          <p className="text-sm text-white mb-2">{log.message}</p>
+                          <p className="text-xs text-gray-400 mb-2">Component: {log.component}</p>
+                          {log.metadata && (
+                            <details className="mt-2">
+                              <summary className="text-xs text-purple-400 cursor-pointer hover:text-purple-300">
+                                View Full Payload
+                              </summary>
+                              <pre className="mt-2 p-2 bg-black/30 rounded text-xs text-gray-300 overflow-x-auto max-h-60 overflow-y-auto">
+                                {JSON.stringify(log.metadata, null, 2)}
+                              </pre>
+                            </details>
+                          )}
                         </div>
                       ))}
                     </div>

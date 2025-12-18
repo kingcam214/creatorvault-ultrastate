@@ -315,3 +315,34 @@
 - [ ] Build /api/telegram/webhook endpoint
 - [ ] Set Telegram webhook URL
 - [ ] Test: Send message → See event in Owner Control Panel
+
+
+## TELEGRAM WEBHOOK IMPLEMENTATION (2024-12-18)
+
+### Webhook Endpoint
+- [x] Implement POST /api/telegram/webhook/:botToken
+- [x] Signature/token verification (x-telegram-bot-api-secret-token)
+- [x] Extract: chat_id, user_id, username, message_id, text, timestamp, raw payload
+- [x] Insert into bot_events table
+- [x] Return 200 OK JSON
+- [x] Error logging to bot_events
+
+### Health Check Endpoint
+- [x] Implement GET /api/telegram/health
+- [x] Return 200 with { ok: true, db: 'ok', time: ISO }
+- [x] Write bot_events entry for health_check
+- [x] Database connection test
+
+### Logs Display
+- [x] Verify Logs tab shows telegram events
+- [x] Full payload scrollable with <details> expand
+- [x] Mobile-responsive JSON display
+
+### Testing
+- [x] 6/6 tests passing (186ms)
+- [x] Bot token format validation
+- [x] Database bot lookup
+- [x] Message event insertion
+- [x] Health check event insertion
+- [x] Error logging
+- [x] Required fields validation
