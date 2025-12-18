@@ -1,7 +1,55 @@
-# OWNER CONTROL PANEL — REAL WORLD HANDOFF
+# OWNER HANDOFF — REAL WORLD AUDIT
+
+## ✅ QUICK START (OWNER)
+
+### Telegram Webhook URLs (Copy/Paste Ready)
+
+**Health Check URL:**
+```
+https://3000-iwfr5umzbitqw8es11bym-9c3c9d70.manusvm.computer/api/telegram/health
+```
+
+**Webhook URL Template:**
+```
+https://3000-iwfr5umzbitqw8es11bym-9c3c9d70.manusvm.computer/api/telegram/webhook/YOUR_BOT_TOKEN_HERE
+```
+
+**Example with Sample Token:**
+```
+https://3000-iwfr5umzbitqw8es11bym-9c3c9d70.manusvm.computer/api/telegram/webhook/1234567890:ABCdefGHIjklMNOpqrsTUVwxyz123456789
+```
+
+### Test Commands
+
+**Test Health Endpoint:**
+```bash
+curl https://3000-iwfr5umzbitqw8es11bym-9c3c9d70.manusvm.computer/api/telegram/health
+```
+
+**Test Webhook (will return "Bot not found" but proves endpoint is live):**
+```bash
+curl -X POST https://3000-iwfr5umzbitqw8es11bym-9c3c9d70.manusvm.computer/api/telegram/webhook/1234567890:ABCdefGHIjklMNOpqrsTUVwxyz123456789 -H "Content-Type: application/json" -d '{"update_id":123456789,"message":{"message_id":1,"from":{"id":987654321,"is_bot":false,"first_name":"Test","username":"testuser"},"chat":{"id":987654321,"first_name":"Test","username":"testuser","type":"private"},"date":1734542805,"text":"Hello from curl test"}}'
+```
+
+### Where to Check Logs
+
+1. Navigate to: `https://3000-iwfr5umzbitqw8es11bym-9c3c9d70.manusvm.computer/owner-control`
+2. Click **"Logs"** tab (5th tab in navigation)
+3. Look for entries with:
+   - **Component:** telegram
+   - **Message:** message_received or health_check
+4. Click **"View Full Payload"** to expand JSON
+5. Scroll within the expanded payload to see full message data
+
+### Active Route Format
+
+- **Route:** `/api/telegram/webhook/:botToken` (Express parameter)
+- **Usage:** Replace `:botToken` with your actual bot token from @BotFather
+- **Status:** LIVE and ready to receive messages
+
+---
 
 ## 1. OWNER CONTROL ACCESS
-
 ### EXACT URLs
 - **Primary Access:** https://3000-iwfr5umzbitqw8es11bym-9c3c9d70.manusvm.computer/owner-control
 - **Home Page Entry:** https://3000-iwfr5umzbitqw8es11bym-9c3c9d70.manusvm.computer/ (click "🛡️ Owner Control" button)
