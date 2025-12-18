@@ -13,6 +13,8 @@ import { CoursesServicesEngine } from "./services/coursesServices/coursesService
 import { stripe } from "./_core/stripe";
 import { PRODUCTS } from "./products";
 import { aiBotRouter } from "./routers/aiBot";
+import { commandHubRouter } from "./routers/commandHub";
+import { checkoutBotRouter } from "./routers/checkoutBot";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -454,6 +456,12 @@ export const appRouter = router({
 
   // ============ AI BOT (ROLE-AWARE) ============
   aiBot: aiBotRouter,
+
+  // ============ COMMAND HUB ============
+  commandHub: commandHubRouter,
+
+  // ============ CHECKOUT BOT ============
+  checkoutBot: checkoutBotRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({

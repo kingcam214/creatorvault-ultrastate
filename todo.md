@@ -197,3 +197,39 @@
 - [ ] Content Repurposing Pipeline
 - [ ] Podcast Sector
 - [ ] LIVE Rooms
+
+
+## BOT #5 — COMMAND HUB + BOT #2 — CASHFLOW CHECKOUT (2024-12-18)
+
+### Command Hub Backend
+- [x] Create commandHub.ts service
+- [x] Implement command execution with database logging
+- [x] Use existing bot_events table for command history
+- [x] Build tRPC commandHub router
+- [x] Support 6 command types (product, course, service, telegram, whatsapp, viral)
+- [x] Each command produces database effect
+- [x] Log all executions to bot_events table
+
+### Cashflow Checkout Bot
+- [x] Create checkoutBot.ts service
+- [x] Implement product catalog generation for Telegram/WhatsApp
+- [x] Generate Stripe checkout session links
+- [x] Process payment with webhook support
+- [x] Record commissions (70% creator, 20% recruiter, 10% platform)
+- [x] Log all transactions to orders/enrollments/sales tables
+- [x] Build tRPC checkoutBot router
+
+### Command Hub UI
+- [x] Create /command-hub page
+- [x] Build command execution interface
+- [x] Display command history
+- [x] Show real-time execution stats
+- [x] Ensure every button executes API call (not just navigation)
+- [x] Added Command Hub button to Home page
+
+### Testing
+- [ ] Test all 9 command types
+- [ ] Execute real checkout flow
+- [ ] Verify database effects
+- [ ] Confirm commission splits
+- [ ] Generate proof artifacts
