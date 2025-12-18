@@ -73,9 +73,9 @@ export default function AppHeader() {
                 size="sm"
                 className="hidden md:flex bg-gradient-to-r from-slate-700 to-purple-700 text-white hover:from-slate-800 hover:to-purple-800 border border-purple-500"
               >
-                <Link href="/owner-control">
+                <Link href="/owner-status">
                   <Shield className="h-4 w-4 mr-2" />
-                  Owner Control
+                  Owner Status
                 </Link>
               </Button>
             )}
@@ -124,10 +124,10 @@ export default function AppHeader() {
                 )}
                 {isOwnerOrAdmin && (
                   <DropdownMenuItem asChild>
-                    <Link href="/owner-control">
+                    <Link href="/owner-status">
                       <a className="w-full flex items-center gap-2">
                         <Shield className="h-4 w-4" />
-                        Owner Control
+                        Owner Status
                       </a>
                     </Link>
                   </DropdownMenuItem>

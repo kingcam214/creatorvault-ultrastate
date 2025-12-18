@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import telegramWebhook from "../telegram-webhook";
+import { initializeSimulatedBots, startAutonomousConversationGenerator } from "../services/simulatedBots";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -61,8 +62,14 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  server.listen(port, () => {
+  server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
+    
+    // Initialize simulated bots (no owner dependencies)
+    await initializeSimulatedBots();
+    
+    // Start autonomous conversation generator
+    startAutonomousConversationGenerator();
   });
 }
 

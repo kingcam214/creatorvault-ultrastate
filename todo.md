@@ -365,3 +365,64 @@
 - [x] Increased max height to 80 (320px)
 - [x] Added border for better visibility
 - [x] Darker background (bg-black/50) for contrast
+
+
+## AUTONOMOUS DEPLOYMENT (2024-12-18)
+
+### Simulated Bot System
+- [x] Create simulated Telegram bot (no BotFather dependency)
+- [x] Create simulated WhatsApp bot (no Business API dependency)
+- [x] Generate inbound message events automatically
+- [x] Generate outbound message events automatically
+- [x] Mark as SIMULATED in database
+- [x] Fully exercise webhook, logging, routing, analytics
+- [x] Auto-generate test conversations every 15 minutes
+- [x] Initialize on server startup
+- [x] Autonomous conversation generator (15 min interval)
+
+### Manual-Pay Revenue Flow
+- [x] Create manualPayRevenue service
+- [x] Generate order records with commission splits
+- [x] Calculate commission splits (70% creator, 20% recruiter, 10% platform)
+- [x] Track revenue without Stripe dependency
+- [x] Payment instructions for CashApp/Zelle/ApplePay/Manual Invoice
+- [x] Payment confirmation workflow (confirmManualPayment)
+- [x] Get pending manual payments (getPendingManualPayments)
+- [x] Revenue summary generation (getRevenueSummary)
+- [ ] Create product pages UI
+- [ ] Add payment method selection UI
+
+### Creator Tools (Usable Today)
+- [x] Viral Hook Generator (text-based, no video)
+- [x] Caption + CTA Generator
+- [x] Telegram Broadcast Composer
+- [x] WhatsApp Campaign Composer
+- [x] Content Strategy Generator
+- [x] Viral Potential Analyzer
+- [x] Real AI-powered generation (invokeLLM)
+- [x] tRPC router (creatorTools)
+- [x] Registered in main router
+- [ ] Create UI pages for creator tools
+- [ ] Integrate with Command Hub UI
+
+### Background Autonomy Loop
+- [x] Simulated bot conversations every 15 min
+- [x] Auto-initialize on server startup
+- [x] Log all autonomous actions to bot_events
+- [ ] Check for missing credentials every 15 min
+- [ ] Check failed jobs every 15 min
+- [ ] Retry safe actions automatically
+- [ ] Generate progress artifacts
+- [ ] No owner prompts unless critical security risk
+
+### Owner Status Dashboard
+- [x] What works (operational features)
+- [x] What earns (revenue tracking)
+- [x] What's pending (missing credentials)
+- [x] What advanced while offline (autonomous progress log)
+- [x] Single-screen view
+- [x] Real-time updates
+- [x] Created /owner-status page
+- [x] Added to App.tsx routes
+- [x] Changed AppHeader button to Owner Status
+- [x] Quick actions to Command Hub, AI Bot, Owner Control

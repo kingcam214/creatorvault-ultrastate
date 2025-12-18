@@ -15,6 +15,7 @@ import CreatorDashboard from "./pages/CreatorDashboard";
 import AIBot from "./pages/AIBot";
 import CommandHub from "./pages/CommandHub";
 import OwnerControl from "./pages/OwnerControl";
+import OwnerStatus from "./pages/OwnerStatus";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -32,6 +33,7 @@ function Router() {
       <Route path={"/ai-bot"} component={AIBot} />
       <Route path={"/command-hub"} component={CommandHub} />
       <Route path={"/owner-control"} component={OwnerControl} />
+      <Route path={"/owner-status"} component={OwnerStatus} />
       <Route path={"/king"} component={KingDashboard} />
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/404"} component={NotFound} />
