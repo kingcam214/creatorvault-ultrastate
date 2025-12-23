@@ -1,0 +1,22 @@
+{
+  "query": "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND (TABLE_NAME LIKE '%orchestr%' OR TABLE_NAME LIKE '%content_performance%' OR TABLE_NAME LIKE '%platform_adaptations%' OR TABLE_NAME LIKE '%optimization_history%');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND (TABLE_NAME LIKE '%orchestr%' OR TABLE_NAME LIKE '%content_performance%' OR TABLE_NAME LIKE '%platform_adaptations%' OR TABLE_NAME LIKE '%optimization_history%');",
+  "rows": [
+    {
+      "TABLE_NAME": "platform_adaptations"
+    },
+    {
+      "TABLE_NAME": "content_performance"
+    },
+    {
+      "TABLE_NAME": "optimization_history"
+    },
+    {
+      "TABLE_NAME": "orchestration_runs"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\nplatform_adaptations\ncontent_performance\noptimization_history\norchestration_runs\n",
+  "stderr": "",
+  "execution_time_ms": 137
+}

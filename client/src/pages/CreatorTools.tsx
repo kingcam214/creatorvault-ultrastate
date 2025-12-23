@@ -135,6 +135,26 @@ export default function CreatorTools() {
         </div>
       </div>
 
+      {/* Unified Content Publisher - Featured */}
+      <Link href="/unified-publisher">
+        <Card className="mb-6 border-2 border-primary bg-gradient-to-br from-purple-500/10 to-pink-500/10 cursor-pointer hover:border-primary/80 transition-all">
+          <CardHeader>
+            <CardTitle className="text-2xl flex items-center gap-3">
+              <Sparkles className="h-6 w-6 text-primary" />
+              Unified Content Publisher
+            </CardTitle>
+            <CardDescription className="text-base">
+              🚀 One interface. Automatic optimization. Multi-platform distribution. Zero manual steps.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              The orchestrator automatically runs viral analysis, generates thumbnails, adapts content for each platform, and publishes—all in one click.
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
+
       {/* Multi-Platform Features */}
       <div className="grid md:grid-cols-4 gap-4 mb-8">
         <Link href="/platform-connections">

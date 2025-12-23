@@ -1,0 +1,34 @@
+{
+  "query": "SHOW CREATE TABLE ab_test_variants;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute SHOW CREATE TABLE ab_test_variants;",
+  "rows": [
+    {
+      "Table": "ab_test_variants",
+      "Create Table": "CREATE TABLE `ab_test_variants` ("
+    }
+  ],
+  "messages": [
+    "  `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,",
+    "  `content_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,",
+    "  `variant_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,",
+    "  `variant_type` enum('title','thumbnail','description','full') COLLATE utf8mb4_unicode_ci NOT NULL,",
+    "  `title` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,",
+    "  `description` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,",
+    "  `thumbnail_url` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,",
+    "  `impressions` int(11) NOT NULL DEFAULT '0',",
+    "  `clicks` int(11) NOT NULL DEFAULT '0',",
+    "  `ctr` decimal(5,2) DEFAULT NULL,",
+    "  `conversions` int(11) NOT NULL DEFAULT '0',",
+    "  `is_control` tinyint(1) NOT NULL DEFAULT '0',",
+    "  `is_winner` tinyint(1) NOT NULL DEFAULT '0',",
+    "  `created_at` datetime NOT NULL,",
+    "  `updated_at` datetime NOT NULL,",
+    "  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,",
+    "  KEY `ab_test_variants_content_id_unified_content_id_fk` (`content_id`),",
+    "  CONSTRAINT `ab_test_variants_content_id_unified_content_id_fk` FOREIGN KEY (`content_id`) REFERENCES `3Ss8KhjHmMbtxkDLhxH8t9`.`unified_content` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION",
+    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+  ],
+  "stdout": "Table\tCreate Table\nab_test_variants\tCREATE TABLE `ab_test_variants` (\n  `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,\n  `content_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,\n  `variant_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,\n  `variant_type` enum('title','thumbnail','description','full') COLLATE utf8mb4_unicode_ci NOT NULL,\n  `title` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,\n  `description` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,\n  `thumbnail_url` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,\n  `impressions` int(11) NOT NULL DEFAULT '0',\n  `clicks` int(11) NOT NULL DEFAULT '0',\n  `ctr` decimal(5,2) DEFAULT NULL,\n  `conversions` int(11) NOT NULL DEFAULT '0',\n  `is_control` tinyint(1) NOT NULL DEFAULT '0',\n  `is_winner` tinyint(1) NOT NULL DEFAULT '0',\n  `created_at` datetime NOT NULL,\n  `updated_at` datetime NOT NULL,\n  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,\n  KEY `ab_test_variants_content_id_unified_content_id_fk` (`content_id`),\n  CONSTRAINT `ab_test_variants_content_id_unified_content_id_fk` FOREIGN KEY (`content_id`) REFERENCES `3Ss8KhjHmMbtxkDLhxH8t9`.`unified_content` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci\n",
+  "stderr": "",
+  "execution_time_ms": 627
+}

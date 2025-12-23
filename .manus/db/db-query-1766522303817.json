@@ -1,0 +1,13 @@
+{
+  "query": "SHOW TABLES LIKE 'unified_content';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute SHOW TABLES LIKE 'unified_content';",
+  "rows": [
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9 (unified_content)": "unified_content"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9 (unified_content)\nunified_content\n",
+  "stderr": "",
+  "execution_time_ms": 50
+}

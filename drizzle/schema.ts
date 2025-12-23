@@ -777,6 +777,10 @@ export * from "./schema-multiplatform";
 // Import from schema-podcasting.ts
 export * from "./schema-podcasting";
 
+// ============ CONTENT ORCHESTRATOR ============
+
+export * from "./schema-orchestrator";
+
 export const thumbnailAnalyses = mysqlTable("thumbnail_analyses", {
   id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

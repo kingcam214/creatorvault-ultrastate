@@ -1119,3 +1119,59 @@
 - [ ] Add route to App.tsx
 - [ ] Update AppHeader with Podcasting menu item
 - [ ] Create onboarding flow for first-time podcasters
+
+
+---
+
+## GLOBAL CONTENT ORCHESTRATOR — SYSTEM UNIFICATION
+
+### Phase 1: Core Orchestrator Infrastructure
+- [x] Create `unified_content` database table
+- [x] Create `orchestration_runs` database table
+- [x] Create `content_performance` database table
+- [x] Run `pnpm db:push` to apply schema (tables already exist from previous session)
+- [x] Create `server/services/contentOrchestrator.ts` service
+- [x] Implement `orchestrateContent()` main entry point
+- [x] Implement `runOptimizationPipeline()` with parallel execution
+- [x] Integrate Viral Optimizer into pipeline
+- [x] Integrate Thumbnail Generator into pipeline
+- [x] Integrate Ad Optimizer into pipeline (conditional)
+- [x] Build `generateAssets()` function
+- [x] Build `adaptForPlatforms()` function with platform-specific formatting
+- [x] Create tRPC router `server/routers/orchestrator.ts`
+
+### Phase 2: Distribution Router
+- [ ] Implement `distributeContent()` function
+- [ ] Integrate Platform Posting for immediate publishing
+- [ ] Integrate Content Scheduler for scheduled publishing
+- [ ] Add draft storage functionality
+- [ ] Implement error handling and retry logic
+- [ ] Add orchestration status tracking
+- [ ] Build execution logging
+
+### Phase 3: Feedback Loop & Learning
+- [ ] Implement `collectPerformanceData()` function
+- [ ] Build performance data aggregation from `creator_metrics`
+- [ ] Implement `calculatePredictionAccuracy()` function
+- [ ] Build `updateOptimizationModels()` function
+- [ ] Create background job for performance monitoring
+- [ ] Add A/B testing infrastructure
+- [ ] Implement model improvement logic
+
+### Phase 4: UI Integration
+- [ ] Create `client/src/pages/UnifiedContentPublisher.tsx`
+- [ ] Build unified content submission form
+- [ ] Add real-time orchestration status display
+- [ ] Show optimization results in UI
+- [ ] Add platform selection with preview
+- [ ] Build generated assets gallery
+- [ ] Add publish/schedule/draft actions
+- [ ] Update Creator Tools navigation
+
+### Phase 5: Testing & Documentation
+- [ ] Write vitest tests for orchestrator service
+- [ ] Test end-to-end flow (upload → optimize → publish)
+- [ ] Create architecture diagram
+- [ ] Document data flow
+- [ ] Create user guide for unified publisher
+- [ ] Verify all systems use orchestrator as single entry point
