@@ -86,6 +86,9 @@ export default function Home() {
             <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-indigo-500 to-blue-500 text-white hover:from-indigo-600 hover:to-blue-600">
               <Link href="/command-hub">⚡ Command Hub</Link>
             </Button>
+            <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-green-500 to-teal-500 text-white hover:from-green-600 hover:to-teal-600">
+              <Link href="/creator-tools">🎨 Creator Tools</Link>
+            </Button>
             <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-slate-700 to-purple-700 text-white hover:from-slate-800 hover:to-purple-800 border-2 border-purple-500">
               <Link href="/owner-control">🛡️ Owner Control</Link>
             </Button>

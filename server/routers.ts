@@ -17,6 +17,7 @@ import { commandHubRouter } from "./routers/commandHub";
 import { checkoutBotRouter } from "./routers/checkoutBot";
 import { ownerControlRouter } from "./routers/ownerControl";
 import { creatorToolsRouter } from "./routers/creatorTools";
+import { manualPaymentRouter } from "./routers/manualPayment";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -470,6 +471,9 @@ export const appRouter = router({
 
   // ============ CREATOR TOOLS ============
   creatorTools: creatorToolsRouter,
+
+  // ============ MANUAL PAYMENT ============
+  manualPayment: manualPaymentRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({
