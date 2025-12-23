@@ -19,6 +19,9 @@ import { ownerControlRouter } from "./routers/ownerControl";
 import { creatorToolsRouter } from "./routers/creatorTools";
 import { manualPaymentRouter } from "./routers/manualPayment";
 import { adultSalesBotRouter } from "./routers/adultSalesBot";
+import { platformPostingRouter } from "./routers/platformPosting";
+import { schedulerRouter } from "./routers/scheduler";
+import { analyticsRouter } from "./routers/analytics";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -579,6 +582,9 @@ export const appRouter = router({
 
   // ============ ADULT SALES BOT ============
   adultSalesBot: adultSalesBotRouter,
+  platformPosting: platformPostingRouter,
+  scheduler: schedulerRouter,
+  creatorAnalytics: analyticsRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({

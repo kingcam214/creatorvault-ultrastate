@@ -769,6 +769,10 @@ export const adAnalyses = mysqlTable("ad_analyses", {
 
 // ============ THUMBNAIL GENERATOR ============
 
+// ============ MULTI-PLATFORM POSTING & ANALYTICS ============
+// Import from schema-multiplatform.ts
+export * from "./schema-multiplatform";
+
 export const thumbnailAnalyses = mysqlTable("thumbnail_analyses", {
   id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

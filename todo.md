@@ -873,3 +873,149 @@
 - [x] Show predicted metrics for each variant
 - [x] TypeScript: 0 errorseferred variant
 - [ ] Variant difference indicators (tone, style, approach)
+
+
+---
+
+## OPTION A SPRINT — ORIGINAL VISION RECOVERY (2024-12-23)
+
+**Goal:** Multi-platform auto-posting + Analytics dashboard (12-16 hour sprint)  
+**Deadline:** Christmas launch (36 hours remaining)
+
+### Phase 1: Multi-Platform Posting Service
+
+#### Backend Services
+- [x] Create `server/services/platformPosting.ts` with base posting logic
+- [x] Implement TikTok API integration (video upload)
+- [x] Implement Instagram API integration (photo/video/story/reel)
+- [x] Implement YouTube API integration (video upload, shorts)
+- [x] Implement Twitter/X API integration (text/media posts)
+- [x] Implement Facebook API integration (page posts)
+- [x] Create `postContent()` function with platform routing
+- [x] Add platform-specific content formatting (character limits, aspect ratios, hashtag rules)
+- [x] Add error handling and retry logic per platform
+- [x] Create database table `platform_posts` (postId, userId, platform, contentType, status, platformPostId, url, postedAt)
+- [x] Create database table `platform_credentials` (userId, platform, accessToken, refreshToken, expiresAt, platformUserId, platformUsername)
+
+#### tRPC Router
+- [x] Create `platformPosting` router
+- [x] Add `connectPlatform` mutation (OAuth flow)
+- [x] Add `disconnectPlatform` mutation
+- [x] Add `getConnectedPlatforms` query
+- [x] Add `postToSinglePlatform` mutation
+- [x] Add `postToMultiplePlatforms` mutation (batch)
+- [x] Add `getPostHistory` query
+- [x] Add `deletePost` mutation (if platform supports)
+
+---
+
+### Phase 2: Content Scheduler
+
+#### Backend Services
+- [x] Create `server/services/contentScheduler.ts`
+- [x] Implement `schedulePost()` function
+- [x] Implement `getScheduledPosts()` function
+- [x] Implement `cancelScheduledPost()` function
+- [x] Implement `reschedulePost()` function
+- [x] Create cron job or background worker for scheduled post execution
+- [x] Add optimal posting time recommendations by platform (algorithm)
+- [x] Create database table `scheduled_posts` (scheduleId, userId, content, platforms, scheduledFor, status, createdAt)
+- [x] Create database table `posting_times_analytics` (platform, dayOfWeek, hour, avgEngagement, sampleSize)
+
+#### tRPC Router
+- [x] Create `scheduler` router
+- [x] Add `schedulePost` mutation
+- [x] Add `getScheduledPosts` query
+- [x] Add `cancelScheduledPost` mutation
+- [x] Add `reschedulePost` mutation
+- [x] Add `getOptimalPostingTimes` query
+- [x] Add `bulkSchedule` mutation (for content calendar)
+
+---
+
+### Phase 3: Analytics Dashboard
+
+#### Backend Services
+- [x] Create `server/services/creatorAnalytics.ts`
+- [x] Implement `fetchPlatformMetrics()` - Pull views/likes/shares from each platform API
+- [x] Implement `aggregateMetrics()` - Combine cross-platform stats
+- [x] Implement `calculateMonetizationMilestones()` - Track progress to payout thresholds
+- [x] Implement `predictRevenue()` - Project earnings based on current growth
+- [x] Implement `getPerformanceBreakdown()` - Platform-by-platform comparison
+- [x] Create database table `creator_metrics` (metricId, userId, platform, postId, views, likes, shares, comments, saves, ctr, watchTime, recordedAt)
+- [x] Create database table `monetization_milestones` (milestoneId, userId, platform, thresholdType, currentValue, targetValue, estimatedReachDate, payoutAmount)
+- [x] Create database table `revenue_projections` (projectionId, userId, projectedRevenue30d, projectedRevenue90d, growthRate, confidenceScore, calculatedAt)
+
+#### tRPC Router
+- [x] Create `analytics` router
+- [x] Add `getOverviewStats` query (total views, engagement, revenue)
+- [x] Add `getPlatformBreakdown` query
+- [x] Add `getMonetizationMilestones` query
+- [x] Add `getRevenueProjections` query
+- [x] Add `getTopPerformingPosts` query
+- [x] Add `getGrowthTrends` query (7d/30d/90d)d)
+- - [x] Add `refreshMetrics` mutation (sync from platform APIs))
+
+---
+
+### Phase 4: UI Implementation
+
+#### Multi-Platform Posting UI
+- [x] Create `client/src/pages/MultiPlatformPosting.tsx`
+- [ ] Add platform connection cards (Connect TikTok, IG, YouTube, etc.)
+- [ ] Add OAuth flow for each platform
+- [ ] Add content composer (text, media upload, platform selector)
+- [ ] Add platform-specific preview (character count, aspect ratio warnings)
+- [ ] Add "Post Now" and "Schedule" buttons
+- [ ] Add post history table with status badges
+- [ ] Add navigation link from Creator Tools
+
+#### Content Scheduler UI- [x] Create `client/src/pages/ContentScheduler.tsx`
+- [ ] Add calendar view (monthly grid)
+- [ ] Add scheduled posts display on calendar
+- [ ] Add "Schedule Post" modal
+- [ ] Add optimal posting time suggestions
+- [ ] Add bulk scheduling interface (CSV upload)
+- [ ] Add drag-and-drop rescheduling
+- [ ] Add navigation link from Creator Tools
+
+#### Analytics Dashboard- [x] Create `client/src/pages/CreatorAnalyticsDashboard.tsx`] Add overview stats cards (total views, engagement rate, revenue)
+- [ ] Add platform breakdown chart (bar/pie chart)
+- [ ] Add monetization milestones progress bars
+- [ ] Add revenue projections card with growth trend
+- [ ] Add top performing posts table
+- [ ] Add growth trends line chart (7d/30d/90d toggle)
+- [ ] Add "Refresh Metrics" button
+- [ ] Add date range selector
+- [ ] Add navigation link from main navigation
+
+---
+
+### Phase 5: Testing & Verification
+
+#### End-to-End Testing
+- [ ] Test platform connection flow (OAuth)
+- [ ] Test single platform posting
+- [ ] Test multi-platform posting (batch)
+- [ ] Test content scheduling
+- [ ] Test scheduled post execution
+- [ ] Test analytics data fetching
+- [ ] Test monetization milestone calculations
+- [ ] Test revenue projections
+- [ ] Verify all TypeScript compiles (0 errors)
+- [ ] Run test suite (aim for 90%+ passing)
+
+#### Launch Verification
+- [ ] Create LAUNCH_VERIFICATION_REPORT.md
+- [ ] Document all platform API requirements (keys, OAuth setup)
+- [ ] Document analytics sync intervals
+- [ ] Document monetization milestone thresholds
+- [ ] Create user guide for platform connections
+- [ ] Create troubleshooting guide for API errors
+- [ ] Save final checkpoint
+
+---
+
+**ESTIMATED COMPLETION:** 12-16 hours  
+**LAUNCH DEADLINE:** 36 hours from now  
+**BUFFER:** 20-24 hours for testing, fixes, deployment

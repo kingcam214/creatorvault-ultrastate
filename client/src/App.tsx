@@ -20,6 +20,9 @@ import CreatorTools from "./pages/CreatorTools";
 import CreatorVideoStudio from "./pages/CreatorVideoStudio";
 import AdultSalesBot from "./pages/AdultSalesBot";
 import Onboard from "./pages/Onboard";
+import { MultiPlatformPosting } from "./pages/MultiPlatformPosting";
+import { ContentScheduler } from "./pages/ContentScheduler";
+import { CreatorAnalyticsDashboard } from "./pages/CreatorAnalyticsDashboard";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -42,6 +45,9 @@ function Router() {
       <Route path={"/creator-video-studio"} component={CreatorVideoStudio} />
       <Route path={"/adult-sales-bot"} component={AdultSalesBot} />
       <Route path={"/onboard"} component={Onboard} />
+      <Route path={"/multi-platform-posting"} component={MultiPlatformPosting} />
+      <Route path={"/content-scheduler"} component={ContentScheduler} />
+      <Route path={"/creator-analytics"} component={CreatorAnalyticsDashboard} />
       <Route path={"/king"} component={KingDashboard} />
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/404"} component={NotFound} />
