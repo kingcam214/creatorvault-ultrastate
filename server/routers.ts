@@ -27,6 +27,7 @@ import { podcastingRouter } from "./routers/podcasting";
 import { orchestratorRouter } from "./routers/orchestrator";
 import { vaultLiveRouter } from "./routers/vaultLive";
 import { emmaNetworkRouter } from "./routers/emmaNetwork";
+import { osRouter } from "./routers/os";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -596,6 +597,7 @@ export const appRouter = router({
   orchestrator: orchestratorRouter,
   vaultLive: vaultLiveRouter,
   emmaNetwork: emmaNetworkRouter,
+  os: osRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({
