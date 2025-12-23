@@ -6,7 +6,7 @@ type User = {
   name: string | null;
   email: string | null;
   loginMethod: string | null;
-  role: "user" | "creator" | "admin" | "king";
+  role: "user" | "creator" | "influencer" | "celebrity" | "admin" | "king";
   language: string | null;
   country: string | null;
   referredBy: number | null;

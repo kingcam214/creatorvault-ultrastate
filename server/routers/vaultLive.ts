@@ -13,6 +13,8 @@ import { router } from "../_core/trpc";
 import { protectedProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import * as dbVaultLive from "../db-vaultlive";
+import * as stripeVaultLive from "../services/stripeVaultLive";
+import * as db from "../db";
 
 // Creator-only procedure (includes influencers and celebrities)
 const creatorProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -171,7 +173,44 @@ export const vaultLiveRouter = router({
   // ============================================================================
 
   /**
-   * Send a tip (85% creator, 15% platform)
+   * Create Stripe Checkout session for tip
+   */
+  createTipCheckout: protectedProcedure
+    .input(
+      z.object({
+        streamId: z.number(),
+        amount: z.number().positive(),
+        message: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Get stream details
+      const stream = await dbVaultLive.getStreamById(input.streamId);
+      if (!stream) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Stream not found" });
+      }
+
+      // Get creator name
+      const creator = await db.getUserById(stream.userId);
+      if (!creator) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Creator not found" });
+      }
+
+      // Create Stripe Checkout session
+      const checkoutUrl = await stripeVaultLive.createTipCheckout({
+        streamId: input.streamId,
+        creatorId: stream.userId,
+        creatorName: creator.name || "Creator",
+        amount: input.amount,
+        viewerEmail: ctx.user.email || undefined,
+        message: input.message,
+      });
+
+      return { checkoutUrl };
+    }),
+
+  /**
+   * Send a tip (85% creator, 15% platform) - LEGACY, use createTipCheckout instead
    */
   sendTip: protectedProcedure
     .input(

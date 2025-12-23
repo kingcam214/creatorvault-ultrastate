@@ -29,6 +29,7 @@ import VaultLiveStream from "./pages/VaultLiveStream";
 import EmmaNetwork from "./pages/EmmaNetwork";
 import InfluencerOnboarding from "./pages/InfluencerOnboarding";
 import InfluencerDashboard from "./pages/InfluencerDashboard";
+import JoinVaultLive from "./pages/JoinVaultLive";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -62,6 +63,7 @@ function Router() {
       <Route path={"/king/emma"} component={EmmaNetwork} />
       <Route path={"/onboard/influencer"} component={InfluencerOnboarding} />
       <Route path={"/influencer"} component={InfluencerDashboard} />
+      <Route path={"/join-vaultlive"} component={JoinVaultLive} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
           <Route component={NotFound} />

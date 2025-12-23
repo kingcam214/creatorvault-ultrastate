@@ -1276,3 +1276,40 @@
 - [x] Update creatorProcedure to allow influencer/celebrity roles
 - [x] Update auth.updateProfile to support influencer/celebrity roles
 - [ ] **USER ACTION REQUIRED:** Test influencer onboarding end-to-end
+
+
+## 💳 STRIPE LIVE INTEGRATION FOR VAULTLIVE (December 23, 2024)
+
+### Phase 1: Stripe Checkout Integration
+- [x] Create Stripe Checkout session for tips (stripeVaultLive.ts)
+- [x] Create Stripe Checkout session for donations (stripeVaultLive.ts)
+- [x] Pass 85/15 split metadata to Stripe
+- [x] Add createTipCheckout procedure to vaultLive router
+- [ ] Update VaultLive UI to use Stripe payment flow (frontend integration)
+- [ ] Test Stripe Checkout in test mode
+
+### Phase 2: Stripe Webhook Handler
+- [x] Create /api/stripe/webhook endpoint
+- [x] Verify webhook signature (verifyWebhookSignature)
+- [x] Handle checkout.session.completed event
+- [x] Record creator revenue (85%) and platform fee (15%)
+- [ ] Configure webhook URL in Stripe dashboard
+- [ ] Test webhook with Stripe CLI
+
+### Phase 3: Public Recruitment Page
+- [x] Create /join-vaultlive public page (no auth)
+- [x] Highlight 85% revenue split
+- [x] Compare vs competitors (Fanbase 80%, OnlyFans 80%)
+- [x] Add waitlist signup form
+- [x] Link to /onboard/influencer
+- [x] Mobile-responsive design
+- [x] Register route in App.tsx
+
+### Phase 4: Real-Device E2E Test
+- [ ] **USER ACTION REQUIRED:** Start VaultLive stream with camera
+- [ ] **USER ACTION REQUIRED:** Join as viewer in incognito
+- [ ] **USER ACTION REQUIRED:** Send tip via Stripe Checkout
+- [ ] **USER ACTION REQUIRED:** Verify payment completion
+- [ ] **USER ACTION REQUIRED:** Verify 85/15 split in database
+- [ ] **USER ACTION REQUIRED:** End stream and verify cleanup
+- [ ] **USER ACTION REQUIRED:** Document test results
