@@ -200,30 +200,30 @@ export const optimizationHistory = mysqlTable("optimization_history", {
  * Allows testing multiple versions of content to determine best optimization strategy.
  * (Table already exists in database, importing to resolve schema drift)
  */
-export const abTestVariants = mysqlTable("ab_test_variants", {
-  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
-  contentId: varchar("content_id", { length: 36 }).notNull().references(() => unifiedContent.id, { onDelete: "cascade" }),
-  
-  // Variant details
-  variantName: varchar("variant_name", { length: 100 }).notNull(), // "A", "B", "C", etc.
-  variantType: mysqlEnum("variant_type", ["title", "thumbnail", "description", "full"]).notNull(),
-  
-  // Variant content
-  title: varchar("title", { length: 500 }),
-  description: text("description"),
-  thumbnailUrl: varchar("thumbnail_url", { length: 500 }),
-  
-  // Performance tracking
-  impressions: int("impressions").notNull().default(0),
-  clicks: int("clicks").notNull().default(0),
-  ctr: decimal("ctr", { precision: 5, scale: 2 }), // Click-through rate
-  conversions: int("conversions").notNull().default(0),
-  
-  // Test status
-  isControl: boolean("is_control").notNull().default(false), // Is this the control variant?
-  isWinner: boolean("is_winner").notNull().default(false), // Did this variant win?
-  
-  // Timestamps
-  createdAt: datetime("created_at").notNull().$defaultFn(() => new Date()),
-  updatedAt: datetime("updated_at").notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
-});
+// export const abTestVariants = mysqlTable("ab_test_variants", {
+//   id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+//   contentId: varchar("content_id", { length: 36 }).notNull().references(() => unifiedContent.id, { onDelete: "cascade" }),
+//   
+//   // Variant details
+//   variantName: varchar("variant_name", { length: 100 }).notNull(), // "A", "B", "C", etc.
+//   variantType: mysqlEnum("variant_type", ["title", "thumbnail", "description", "full"]).notNull(),
+//   
+//   // Variant content
+//   title: varchar("title", { length: 500 }),
+//   description: text("description"),
+//   thumbnailUrl: varchar("thumbnail_url", { length: 500 }),
+//   
+//   // Performance tracking
+//   impressions: int("impressions").notNull().default(0),
+//   clicks: int("clicks").notNull().default(0),
+//   ctr: decimal("ctr", { precision: 5, scale: 2 }), // Click-through rate
+//   conversions: int("conversions").notNull().default(0),
+//   
+//   // Test status
+//   isControl: boolean("is_control").notNull().default(false), // Is this the control variant?
+//   isWinner: boolean("is_winner").notNull().default(false), // Did this variant win?
+//   
+//   // Timestamps
+//   createdAt: datetime("created_at").notNull().$defaultFn(() => new Date()),
+//   updatedAt: datetime("updated_at").notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
+// });

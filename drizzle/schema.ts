@@ -821,3 +821,7 @@ export const thumbnailAnalyses = mysqlTable("thumbnail_analyses", {
   overallScoreIdx: index("idx_thumbnail_analyses_overall_score").on(table.overallScore),
   createdAtIdx: index("idx_thumbnail_analyses_created_at").on(table.createdAt),
 }));
+
+
+// VaultLive Streaming
+export * from "./schema-vaultlive";

@@ -9,6 +9,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import telegramWebhook from "../telegram-webhook";
 import { initializeSimulatedBots, startAutonomousConversationGenerator } from "../services/simulatedBots";
+import { initializeWebRTC } from "../webrtc";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -61,6 +62,9 @@ async function startServer() {
   if (port !== preferredPort) {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
+
+  // Initialize WebRTC signaling server
+  initializeWebRTC(server);
 
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);

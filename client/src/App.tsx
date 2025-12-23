@@ -25,6 +25,7 @@ import { ContentScheduler } from "./pages/ContentScheduler";
 import { CreatorAnalyticsDashboard } from "./pages/CreatorAnalyticsDashboard";
 import { PlatformConnections } from "./pages/PlatformConnections";
 import UnifiedContentPublisher from "./pages/UnifiedContentPublisher";
+import VaultLiveStream from "./pages/VaultLiveStream";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -52,6 +53,7 @@ function Router() {
       <Route path={"/creator-analytics"} component={CreatorAnalyticsDashboard} />
       <Route path={"/platform-connections"} component={PlatformConnections} />
       <Route path={"/unified-publisher"} component={UnifiedContentPublisher} />
+      <Route path={"/vault-live"} component={VaultLiveStream} />
       <Route path={"/king"} component={KingDashboard} />
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/404"} component={NotFound} />

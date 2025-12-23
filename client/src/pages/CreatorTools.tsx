@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Sparkles, MessageSquare, Send, TrendingUp, Lightbulb, Share2, Calendar, BarChart3, Link as LinkIcon } from "lucide-react";
+import { Loader2, Sparkles, MessageSquare, Send, TrendingUp, Lightbulb, Share2, Calendar, BarChart3, Link as LinkIcon, Video } from "lucide-react";
 import { Link } from "wouter";
 
 export default function CreatorTools() {
@@ -150,6 +150,26 @@ export default function CreatorTools() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               The orchestrator automatically runs viral analysis, generates thumbnails, adapts content for each platform, and publishes—all in one click.
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
+
+      {/* VaultLive Streaming - Featured */}
+      <Link href="/vault-live">
+        <Card className="mb-6 border-2 border-pink-500 bg-gradient-to-br from-pink-500/10 to-purple-500/10 cursor-pointer hover:border-pink-500/80 transition-all">
+          <CardHeader>
+            <CardTitle className="text-2xl flex items-center gap-3">
+              <Video className="h-6 w-6 text-pink-500" />
+              VaultLive Streaming
+            </CardTitle>
+            <CardDescription className="text-base">
+              🔴 Go live with WebRTC streaming. Real-time tipping. 85% creator revenue split.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Compete with FANBASE: Live streaming with instant tips, donations, and viewer engagement. No external platform needed.
             </p>
           </CardContent>
         </Card>

@@ -25,6 +25,7 @@ import { analyticsRouter } from "./routers/analytics";
 import { oauthCallbackRouter } from "./routers/oauthCallback";
 import { podcastingRouter } from "./routers/podcasting";
 import { orchestratorRouter } from "./routers/orchestrator";
+import { vaultLiveRouter } from "./routers/vaultLive";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -591,6 +592,7 @@ export const appRouter = router({
   oauthCallback: oauthCallbackRouter,
   podcasting: podcastingRouter,
   orchestrator: orchestratorRouter,
+  vaultLive: vaultLiveRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({
