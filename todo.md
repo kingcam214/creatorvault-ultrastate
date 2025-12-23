@@ -710,3 +710,58 @@
 - [ ] Include UI screenshots (prompt, timeline, regeneration)
 - [ ] Include end-to-end video job run (with outputs)
 - [ ] Include Owner Control Panel logs screenshot
+
+
+## VIRAL OPTIMIZER RECOVERY (PRIORITY)
+
+### Phase 1: Locate Existing Viral Logic
+- [x] Search for viral-related files (analysis, hooks, metrics, strategy)
+- [x] Map existing tRPC procedures (generateViralHooks, analyzeViralPotential, generateContentStrategy)
+- [x] Identify database tables for viral data (viralAnalyses, viralMetrics)
+- [x] Document current execution paths and disconnections
+- [x] Create VIRAL_OPTIMIZER_ANALYSIS.md with full breakdown
+
+**FINDINGS:**
+- server/viralOptimizer.ts exists (406 lines) but uses SQLite, not MySQL
+- server/services/creatorTools.ts has LLM-powered functions but no persistence
+- server/services/commandHub.ts persists to DB but uses random scores
+- Database schema fully defined (viralAnalyses + viralMetrics tables)
+- UI calls creatorTools functions (no persistence, results disappear)
+- 3 disconnected execution paths, no canonical pipeline
+
+### Phase 2: Consolidate into Canonical Pipeline
+- [x] Rewrite server/services/viralOptimizer.ts (550 lines)
+- [x] Migrate from SQLite to Drizzle ORM (MySQL)
+- [x] Consolidate viral analysis + hook generation + strategy into single pipeline
+- [x] Define ViralOptimizerInput and ViralOptimizerOutput interfaces
+- [x] Implement runViralOptimizer() - single entry point
+- [x] Integrate LLM-powered hook generation (generateViralHooks)
+- [x] Integrate LLM-powered content analysis (analyzeContentWithLLM)
+- [x] Keep scoring algorithms (7 sub-scores: hook, quality, trend, audience, format, timing, platform)
+- [x] Calculate overall viral score (weighted average)
+- [x] Generate weaknesses and recommendations
+- [x] Optimize content (title, description, tags)
+- [x] Predict metrics (views, engagement, CTR, retention)
+- [x] Persist to database (viralAnalyses + viralMetrics tables)
+- [x] TypeScript: 0 errors
+
+### Phase 3: Wire to UI and Persist
+- [x] Add viralOptimizer.run tRPC mutation to creatorTools router
+- [x] Wire Creator Tools UI to call runViralOptimizer (canonical pipeline)
+- [x] Add new "Viral Optimizer" tab to Creator Tools
+- [x] Input form: title, description, tags, platform selector
+- [x] Display full optimizer output:
+  - Viral score (0-100) with 7 sub-scores
+  - 5 viral hooks
+  - Weaknesses list
+  - Recommendations list
+  - Optimized content (title, description, tags)
+  - Predicted metrics (views, engagement, CTR, retention)
+- [x] Persist optimizer outputs to database (viralAnalyses + viralMetrics tables)
+- [x] TypeScript: 0 errors
+
+### Phase 4: Test and Verify
+- [ ] Run end-to-end test (input → optimizer → database → UI)
+- [ ] Verify results persist across page refreshes
+- [ ] Create proof packet with screenshots
+- [ ] Confirm single source of truth for viral optimization
