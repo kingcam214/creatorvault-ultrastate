@@ -560,3 +560,46 @@
 - [ ] BotFather token insertion instructions
 - [ ] Webhook URL setup
 - [ ] Test message verification steps
+
+
+## TELEGRAM TWO-WAY MESSAGING + PAYMENT PERSISTENCE (2024-12-22)
+
+### Telegram sendMessage Integration
+- [x] Add sendTelegramMessage function to telegram-webhook.ts
+- [x] Call https://api.telegram.org/bot<token>/sendMessage with chat_id and text
+- [x] Add error handling + 2 retry attempts with exponential backoff
+- [x] Log outbound messages to bot_events table (message_sent event)
+- [x] Wire Adult Sales Bot response to sendTelegramMessage
+- [x] Link inbound/outbound messages via botId and chatId
+- [x] Install node-fetch@2 dependency
+- [x] Log send failures to bot_events (send_message_failed event)
+
+### Payment Methods Table
+- [x] Extended users table with payment method fields
+- [x] Fields: cashappHandle, zelleHandle, applepayHandle (varchar 100)
+- [x] Wire /onboard form to persist payment methods via updateProfile
+- [x] Updated updateUserProfile function signature in db.ts
+- [x] Pushed database migration (0005_aromatic_lethal_legion.sql)
+- [x] Wire Adult Sales Bot payment state to display creator payment instructions
+- [x] Add fallback message if payment methods missing
+- [x] Import users table in adultSalesBot.ts
+- [x] Query creator payment methods from database in handlePayment
+- [x] Build dynamic payment instructions based on available methods
+
+### Multi-Creator Routing Verification
+- [ ] Verify botToken -> creator mapping via telegram_bots.createdBy
+- [ ] Ensure isolated conversations per creator
+- [ ] Ensure isolated pricing tiers per creator
+- [ ] Ensure isolated blacklist per creator
+
+### Test Fixes
+- [ ] Fix 5 FGH integration test failures (schema issues: foreign keys, default values)
+- [ ] Fix 1 telegram webhook test failure (test data issue)
+- [ ] Get test suite to 100% passing (currently 64/71)
+
+### Proof Packet
+- [ ] Create PROOF_PACKET__TELEGRAM_TWO_WAY__PAYMENT_METHODS__FIXED_TESTS.md
+- [ ] Include files changed
+- [ ] Include pnpm typecheck + pnpm test outputs
+- [ ] Include live Telegram verification steps (3 negotiator messages)
+- [ ] Include exact DB rows after each test

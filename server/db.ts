@@ -149,7 +149,17 @@ export async function updateCreatorStatus(userId: number, status: string) {
   await db.update(users).set({ creatorStatus: status }).where(eq(users.id, userId));
 }
 
-export async function updateUserProfile(userId: number, data: Partial<{ name: string; language: string; country: string }>) {
+export async function updateUserProfile(
+  userId: number, 
+  data: Partial<{ 
+    name: string; 
+    language: string; 
+    country: string; 
+    cashappHandle: string; 
+    zelleHandle: string; 
+    applepayHandle: string 
+  }>
+) {
   const db = await getDb();
   if (!db) return;
   

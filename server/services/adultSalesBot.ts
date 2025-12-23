@@ -9,7 +9,7 @@
  */
 
 import { db } from "../db";
-import { botEvents } from "../../drizzle/schema";
+import { botEvents, users } from "../../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
 import crypto from "crypto";
@@ -377,13 +377,40 @@ async function handlePayment(context: ConversationContext, message: string): Pro
   const isAgreeing = agreementKeywords.some(kw => lowerMessage.includes(kw));
 
   if (isAgreeing) {
+    // Fetch creator payment methods from database
+    const [creator] = await db
+      .select({
+        cashappHandle: users.cashappHandle,
+        zelleHandle: users.zelleHandle,
+        applepayHandle: users.applepayHandle,
+      })
+      .from(users)
+      .where(eq(users.id, context.creatorId))
+      .limit(1);
+
+    // Build payment instructions based on available methods
+    let paymentMethods = [];
+    if (creator?.cashappHandle) {
+      paymentMethods.push(`💵 CashApp: ${creator.cashappHandle}`);
+    }
+    if (creator?.zelleHandle) {
+      paymentMethods.push(`💸 Zelle: ${creator.zelleHandle}`);
+    }
+    if (creator?.applepayHandle) {
+      paymentMethods.push(`🍎 Apple Pay: ${creator.applepayHandle}`);
+    }
+
+    // Fallback if no payment methods configured
+    if (paymentMethods.length === 0) {
+      paymentMethods.push("💳 Payment methods are being set up. Please check back shortly!");
+    }
+
+    const price = (context.metadata as any).price || 25;
     const paymentInstructions = `Great! Here's how to pay:
 
-💵 CashApp: $CreatorHandle
-💸 Zelle: creator@email.com
-🍎 Apple Pay: (123) 456-7890
+${paymentMethods.join('\n')}
 
-Send $${(context.metadata as any).price || 25} and include your username in the note. I'll deliver your content within 10 minutes of payment confirmation!`;
+Send $${price} and include your username in the note. I'll deliver your content within 10 minutes of payment confirmation!`;
 
     return {
       message: paymentInstructions,

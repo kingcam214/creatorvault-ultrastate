@@ -19,6 +19,11 @@ export const users = mysqlTable("users", {
   contentType: json("content_type").$type<string[]>(),
   primaryBrand: varchar("primary_brand", { length: 50 }).default("CREATORVAULT"),
   
+  // Payment methods for manual payment flow
+  cashappHandle: varchar("cashapp_handle", { length: 100 }),
+  zelleHandle: varchar("zelle_handle", { length: 100 }),
+  applepayHandle: varchar("applepay_handle", { length: 100 }),
+  
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

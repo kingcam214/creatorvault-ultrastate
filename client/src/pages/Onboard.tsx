@@ -63,8 +63,9 @@ export default function Onboard() {
       role,
       language,
       country: country || undefined,
-      // Store additional data as JSON in a metadata field if available
-      // For now, we'll just update basic profile fields
+      cashappHandle: cashappHandle.trim() || undefined,
+      zelleHandle: zelleEmail.trim() || undefined,
+      applepayHandle: applepayPhone.trim() || undefined,
     });
   };
 

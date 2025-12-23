@@ -58,6 +58,9 @@ export const appRouter = router({
       role: z.enum(["user", "creator", "admin", "king"]).optional(),
       language: z.string().optional(),
       country: z.string().optional(),
+      cashappHandle: z.string().optional(),
+      zelleHandle: z.string().optional(),
+      applepayHandle: z.string().optional(),
     })).mutation(async ({ ctx, input }) => {
       // Update user profile
       if (input.name) {
@@ -71,6 +74,15 @@ export const appRouter = router({
       }
       if (input.country) {
         await db.updateUserProfile(ctx.user.id, { country: input.country });
+      }
+      if (input.cashappHandle !== undefined) {
+        await db.updateUserProfile(ctx.user.id, { cashappHandle: input.cashappHandle });
+      }
+      if (input.zelleHandle !== undefined) {
+        await db.updateUserProfile(ctx.user.id, { zelleHandle: input.zelleHandle });
+      }
+      if (input.applepayHandle !== undefined) {
+        await db.updateUserProfile(ctx.user.id, { applepayHandle: input.applepayHandle });
       }
       return { success: true };
     }),

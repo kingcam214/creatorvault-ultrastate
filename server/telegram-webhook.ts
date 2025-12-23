@@ -10,8 +10,54 @@ import { db } from "./db";
 import { botEvents, telegramBots } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { handleInboundMessage } from "./services/adultSalesBot";
+import fetch from "node-fetch";
 
 const router = express.Router();
+
+/**
+ * Send message to Telegram user
+ * Retries up to 2 times on failure
+ */
+async function sendTelegramMessage(
+  botToken: string,
+  chatId: number,
+  text: string,
+  retries = 2
+): Promise<boolean> {
+  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text,
+          parse_mode: "Markdown",
+        }),
+      });
+
+      const data = await response.json() as { ok: boolean; description?: string };
+      
+      if (data.ok) {
+        console.log(`[Telegram] Message sent successfully to chat ${chatId}`);
+        return true;
+      } else {
+        console.error(`[Telegram] sendMessage failed (attempt ${attempt + 1}/${retries + 1}):`, data.description);
+        if (attempt === retries) return false;
+      }
+    } catch (error) {
+      console.error(`[Telegram] sendMessage error (attempt ${attempt + 1}/${retries + 1}):`, error);
+      if (attempt === retries) return false;
+    }
+    
+    // Wait before retry (exponential backoff)
+    await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+  }
+  
+  return false;
+}
 
 /**
  * Verify Telegram webhook signature
@@ -154,9 +200,43 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
         disengage: botResponse.shouldDisengage,
       });
 
-      // TODO: Send response back to Telegram via Bot API
-      // Requires calling https://api.telegram.org/bot<token>/sendMessage
-      // with chat_id and text from botResponse.response
+      // Send response back to Telegram
+      if (chatId && !botResponse.shouldDisengage) {
+        const sent = await sendTelegramMessage(botToken, chatId, botResponse.message);
+        
+        if (!sent) {
+          console.error("[Telegram] Failed to send bot response after retries");
+          await db.insert(botEvents).values({
+            userId: bot.createdBy,
+            channel: "telegram",
+            eventType: "send_message_failed",
+            eventData: {
+              botId: bot.id,
+              chatId,
+              response: botResponse.message,
+              error: "Failed after 2 retries",
+            },
+            outcome: "error",
+          });
+        } else {
+          // Log successful outbound message
+          await db.insert(botEvents).values({
+            userId: bot.createdBy,
+            channel: "telegram",
+            eventType: "message_sent",
+            eventData: {
+              botId: bot.id,
+              chatId,
+              buyerId: userId,
+              text: botResponse.message,
+              conversationState: botResponse.nextState,
+            },
+            outcome: "success",
+          });
+        }
+      } else if (botResponse.shouldDisengage) {
+        console.log("[Adult Sales Bot] Not sending response - buyer disengaged");
+      }
     } catch (botError) {
       console.error("[Adult Sales Bot] Error processing message:", botError);
       await db.insert(botEvents).values({
