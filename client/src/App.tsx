@@ -27,6 +27,8 @@ import { PlatformConnections } from "./pages/PlatformConnections";
 import UnifiedContentPublisher from "./pages/UnifiedContentPublisher";
 import VaultLiveStream from "./pages/VaultLiveStream";
 import EmmaNetwork from "./pages/EmmaNetwork";
+import InfluencerOnboarding from "./pages/InfluencerOnboarding";
+import InfluencerDashboard from "./pages/InfluencerDashboard";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -58,6 +60,8 @@ function Router() {
       <Route path={"/king"} component={KingDashboard} />
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/king/emma"} component={EmmaNetwork} />
+      <Route path={"/onboard/influencer"} component={InfluencerOnboarding} />
+      <Route path={"/influencer"} component={InfluencerDashboard} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
           <Route component={NotFound} />

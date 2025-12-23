@@ -14,9 +14,10 @@ import { protectedProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import * as dbVaultLive from "../db-vaultlive";
 
-// Creator-only procedure
+// Creator-only procedure (includes influencers and celebrities)
 const creatorProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "creator" && ctx.user.role !== "king" && ctx.user.role !== "admin") {
+  const allowedRoles = ["creator", "influencer", "celebrity", "king", "admin"];
+  if (!allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Creator access required" });
   }
   return next({ ctx });
@@ -264,5 +265,23 @@ export const vaultLiveRouter = router({
    */
   getStreamStats: creatorProcedure.query(async ({ ctx }) => {
     return await dbVaultLive.getStreamStats(ctx.user.id);
+  }),
+
+  /**
+   * Get creator statistics for influencer dashboard
+   */
+  getCreatorStats: protectedProcedure.query(async ({ ctx }) => {
+    const stats = await dbVaultLive.getStreamStats(ctx.user.id);
+    const allStreams = await dbVaultLive.getStreamsByUserId(ctx.user.id);
+    const recentStreams = allStreams.slice(0, 5); // Get 5 most recent
+    
+    // Calculate total revenue from stats
+    const totalRevenue = (parseFloat(stats.totalTips) + parseFloat(stats.totalDonations)) * 100; // Convert to cents
+    
+    return {
+      ...stats,
+      totalRevenue,
+      recentStreams,
+    };
   }),
 });

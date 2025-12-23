@@ -1246,3 +1246,33 @@
 - [ ] Add brand selection UI for creators
 - [ ] Multi-brand content generation
 - [ ] PPP-adjusted pricing for DR/Haiti
+
+
+## 🎥 VAULTLIVE END-TO-END VERIFICATION (December 23, 2024)
+
+### Phase 1: Real Device Testing (Proof Packet)
+- [x] Create VaultLive test protocol document (VAULTLIVE_VERIFICATION_PROTOCOL.md)
+- [x] Build database verification queries (vaultlive-db-verification.sql)
+- [x] Create quick start guide (VAULTLIVE_QUICK_START.md)
+- [ ] **USER ACTION REQUIRED:** Test host stream start (camera/mic access)
+- [ ] **USER ACTION REQUIRED:** Test viewer join from second device/incognito
+- [ ] **USER ACTION REQUIRED:** Test viewer count updates in real-time
+- [ ] **USER ACTION REQUIRED:** Test send tip/donation with 85/15 split
+- [ ] **USER ACTION REQUIRED:** Verify DB rows in live_streams table
+- [ ] **USER ACTION REQUIRED:** Verify DB rows in live_stream_viewers table
+- [ ] **USER ACTION REQUIRED:** Verify DB rows in live_stream_tips table
+- [ ] **USER ACTION REQUIRED:** Verify DB rows in live_stream_donations table
+- [ ] **USER ACTION REQUIRED:** Test end stream and confirm cleanup
+- [ ] **USER ACTION REQUIRED:** Generate proof packet with URLs, steps, DB queries, screenshots
+
+### Phase 2: Influencer/Celebrity Onboarding
+- [x] Add influencer/celebrity role to user schema
+- [x] Create role-gated onboarding flow (InfluencerOnboarding.tsx)
+- [x] Build /onboard/influencer path
+- [x] Create InfluencerDashboard component
+- [x] Wire VaultLive metrics to influencer dashboard (getCreatorStats)
+- [x] Wire revenue tracking to influencer dashboard (85/15 split display)
+- [x] Add VaultLive-first activation for influencers (3-step onboarding)
+- [x] Update creatorProcedure to allow influencer/celebrity roles
+- [x] Update auth.updateProfile to support influencer/celebrity roles
+- [ ] **USER ACTION REQUIRED:** Test influencer onboarding end-to-end

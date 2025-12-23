@@ -63,7 +63,8 @@ export const appRouter = router({
     }),
     updateProfile: protectedProcedure.input(z.object({
       name: z.string().optional(),
-      role: z.enum(["user", "creator", "admin", "king"]).optional(),
+      email: z.string().email().optional(),
+      role: z.enum(["user", "creator", "influencer", "celebrity", "admin", "king"]).optional(),
       language: z.string().optional(),
       country: z.string().optional(),
       cashappHandle: z.string().optional(),
@@ -110,7 +111,7 @@ export const appRouter = router({
 
     updateRole: kingProcedure.input(z.object({
       userId: z.number(),
-      role: z.enum(["user", "creator", "admin", "king"]),
+      role: z.enum(["user", "creator", "influencer", "celebrity", "admin", "king"]),
     })).mutation(async ({ input }) => {
       await db.updateUserRole(input.userId, input.role);
       return { success: true };
