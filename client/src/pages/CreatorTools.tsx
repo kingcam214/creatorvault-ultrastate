@@ -63,12 +63,22 @@ export default function CreatorTools() {
   return (
     <div className="container py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">
-          Creator Tools
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          AI-powered tools to generate viral content, captions, and campaigns
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">
+              Creator Tools
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              AI-powered tools to generate viral content, captions, and campaigns
+            </p>
+          </div>
+          <Button asChild variant="outline" size="lg">
+            <a href="/creator-video-studio">
+              <Sparkles className="w-4 h-4 mr-2" />
+              AI Video Studio
+            </a>
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="hooks" className="space-y-6">

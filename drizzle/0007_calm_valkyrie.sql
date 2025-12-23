@@ -1,0 +1,1 @@
+ALTER TABLE `video_generation_jobs` MODIFY COLUMN `status` enum('pending','queued','processing','complete','failed') NOT NULL DEFAULT 'queued';

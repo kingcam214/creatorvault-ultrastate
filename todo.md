@@ -603,3 +603,100 @@
 - [ ] Include pnpm typecheck + pnpm test outputs
 - [ ] Include live Telegram verification steps (3 negotiator messages)
 - [ ] Include exact DB rows after each test
+
+
+## CREATOR AI VIDEO STUDIO (2024-12-22)
+
+### Database Schema Extensions
+- [x] Extend video_generation_jobs table with scene_plan, reference_assets, character_features
+- [x] Create video_scenes table (jobId, sceneIndex, prompt, imageUrl, status, metadata)
+- [x] Create video_assets table (jobId, assetType, url, metadata)
+- [x] Add status progression (pending/queued → processing → complete → failed)
+- [x] Push database migration (0006_video_studio_tables.sql)
+- [x] Fix migration conflict (dropped + recreated tables)
+- [x] Update legacy status='pending' rows to status='queued'
+- [x] Verify final schema with indexes and foreign keys
+
+### Video Generation Service
+- [x] Create videoStudio.ts service (530 lines)
+- [x] Implement generateScenePlan() - LLM-powered scene breakdown with JSON schema
+- [x] Implement generateSceneFrame() - Image generation with character consistency
+- [x] Implement extractCharacterFeatures() - Parse base image/prompt for continuity
+- [x] Implement regenerateScene() - Single scene regeneration with history tracking
+- [x] Implement lockCharacterAppearance() - Store character reference in job + scenes
+- [x] Implement createVideoJob() - Job orchestration with scene planning
+- [x] Implement generateAllScenes() - Batch scene generation with progress tracking
+- [x] Implement getVideoJob() - Fetch job with scenes and assets
+- [x] Implement reorderScenes() - Scene timeline manipulation
+- [x] Add scene continuity validation (character features injection)
+- [x] Wire to existing generateImage service
+- [x] Fix TypeScript errors (0 errors)
+- [x] Add Owner Control Panel logging (video_created, scenes_generated)
+
+### Video Assembly Engine
+- [ ] Create videoAssembly.ts service
+- [ ] Implement stitchScenes() - Combine scene frames into video
+- [ ] Implement addCameraMotion() - Pan, zoom, parallax effects
+- [ ] Implement exportMP4() - Final video output
+- [ ] Store final video in S3 via storagePut
+- [ ] Update video_generation_jobs with final asset URL
+
+### Creator Video Studio UI
+- [x] Create /creator-video-studio route in App.tsx
+- [x] Build CreatorVideoStudio.tsx page (600+ lines, 3 tabs)
+- [x] Create Video tab: Prompt input + base image URL + duration/scene count selectors
+- [x] Scene Timeline tab: Scene cards with image previews, status badges, progress bar
+- [x] My Videos tab: Job library with status and metadata
+- [x] Implement scene reordering (up/down arrow buttons)
+- [x] Implement individual scene regeneration (prompt dialog)
+- [x] Display job status (queued/processing/complete/failed with badges)
+- [x] Display character features (locked state with details)
+- [x] Real-time progress updates (3s polling when processing)
+- [x] Wire to video tRPC router
+- [x] Add navigation link from Creator Tools page
+- [ ] Download link for completed videos (requires video assembly)
+
+### tRPC Router
+- [x] Extend video router with Creator Video Studio procedures
+- [x] video.create mutation (prompt, baseImageUrl, duration, sceneCount)
+- [x] video.generateScenes mutation (jobId) - triggers batch generation
+- [x] video.getJob query (jobId) - returns job with scenes and assets
+- [x] video.getMyJobs query - returns all jobs for current user
+- [x] video.regenerateScene mutation (sceneId, newPrompt)
+- [x] video.reorderScenes mutation (jobId, sceneIds)
+- [x] video.lockCharacter mutation (jobId, characterFeatures)
+- [x] All procedures use kingProcedure (creator role required)
+- [x] TypeScript: 0 errors
+- [ ] assembleVideo mutation (jobId)
+- [ ] Register router in main appRouter
+
+### AI Prompt Memory
+- [ ] Store original prompt in video_generation_jobs
+- [ ] Store scene prompts in video_scenes
+- [ ] Store regeneration history in video_scenes metadata
+- [ ] Enable iterative refinement (load previous prompts)
+
+### Owner Control Panel Logging
+- [ ] Log video_created event to bot_events
+- [ ] Log scenes_generated event to bot_events
+- [ ] Log scene_regenerated event to bot_events
+- [ ] Log video_assembled event to bot_events
+- [ ] Display in Owner Control Panel → Logs tab
+
+### Testing
+- [ ] Create video job with text prompt + base image
+- [ ] Verify scene plan generation (5-10 scenes)
+- [ ] Verify scene frame generation (character continuity)
+- [ ] Test scene regeneration
+- [ ] Test scene reordering
+- [ ] Test video assembly (even if mocked)
+- [ ] Verify final video URL in database
+- [ ] Verify all events logged to Owner Control Panel
+
+### Proof Packet
+- [ ] Create PROOF_PACKET__CREATOR_VIDEO_STUDIO.md
+- [ ] Include database schema changes
+- [ ] Include service architecture diagram
+- [ ] Include UI screenshots (prompt, timeline, regeneration)
+- [ ] Include end-to-end video job run (with outputs)
+- [ ] Include Owner Control Panel logs screenshot

@@ -180,16 +180,35 @@ export const payments = mysqlTable("payments", {
 export const videoGenerationJobs = mysqlTable("video_generation_jobs", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  imageUrl: text("image_url").notNull(),
+  
+  // Input
+  prompt: text("prompt").notNull(),
+  baseImageUrl: text("base_image_url"),
+  referenceAssets: json("reference_assets").$type<string[]>(),
+  
+  // Scene plan
+  scenePlan: json("scene_plan").$type<{ sceneIndex: number; description: string; prompt: string }[]>(),
+  characterFeatures: json("character_features").$type<{ hair: string; eyes: string; skin: string; clothing: string; style: string }>(),
+  
+  // Output
   videoUrl: text("video_url"),
-  status: varchar("status", { length: 20 }).default("pending"),
+  
+  // Status
+  status: mysqlEnum("status", ["pending", "queued", "processing", "complete", "failed"]).default("queued").notNull(),
   progress: int("progress").default(0),
-  duration: int("duration").default(5),
+  errorMessage: text("error_message"),
+  
+  // Settings
+  duration: int("duration").default(30), // seconds
   fps: int("fps").default(24),
+  sceneCount: int("scene_count").default(5),
+  
+  // Legacy fields (kept for compatibility)
+  imageUrl: text("image_url"),
   motionIntensity: decimal("motion_intensity", { precision: 3, scale: 2 }).default("0.50"),
   seed: int("seed"),
-  errorMessage: text("error_message"),
   metadata: json("metadata"),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
 }, (table) => ({
@@ -644,4 +663,56 @@ export const viralMetrics = mysqlTable("viral_metrics", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   analysisIdIdx: index("idx_viral_metrics_analysis_id").on(table.analysisId),
+}));
+
+/**
+ * Video scenes for multi-scene video generation
+ */
+export const videoScenes = mysqlTable("video_scenes", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  jobId: int("job_id").notNull().references(() => videoGenerationJobs.id, { onDelete: "cascade" }),
+  
+  sceneIndex: int("scene_index").notNull(),
+  description: text("description").notNull(),
+  prompt: text("prompt").notNull(),
+  
+  imageUrl: text("image_url"),
+  status: mysqlEnum("status", ["pending", "generating", "complete", "failed"]).default("pending").notNull(),
+  errorMessage: text("error_message"),
+  
+  // Regeneration tracking
+  regenerationCount: int("regeneration_count").default(0),
+  regenerationHistory: json("regeneration_history").$type<{ timestamp: string; prompt: string; imageUrl: string }[]>(),
+  
+  // Character continuity
+  characterLocked: boolean("character_locked").default(false),
+  
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  jobIdIdx: index("idx_video_scenes_job_id").on(table.jobId),
+  sceneIndexIdx: index("idx_video_scenes_scene_index").on(table.sceneIndex),
+  statusIdx: index("idx_video_scenes_status").on(table.status),
+}));
+
+/**
+ * Video assets (final outputs, intermediate frames, etc.)
+ */
+export const videoAssets = mysqlTable("video_assets", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  jobId: int("job_id").notNull().references(() => videoGenerationJobs.id, { onDelete: "cascade" }),
+  
+  assetType: mysqlEnum("asset_type", ["final_video", "scene_frame", "reference_image", "thumbnail"]).notNull(),
+  url: text("url").notNull(),
+  
+  fileSize: int("file_size"), // bytes
+  mimeType: varchar("mime_type", { length: 100 }),
+  duration: int("duration"), // seconds (for videos)
+  
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  jobIdIdx: index("idx_video_assets_job_id").on(table.jobId),
+  assetTypeIdx: index("idx_video_assets_asset_type").on(table.assetType),
 }));

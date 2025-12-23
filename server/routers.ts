@@ -242,37 +242,88 @@ export const appRouter = router({
     }),
   }),
 
-  // ============ VIDEO GENERATION ============
+  // ============ CREATOR VIDEO STUDIO ============
   video: router({
-    generate: kingProcedure.input(z.object({
-      imageUrl: z.string(),
-      duration: z.number().default(5),
-      fps: z.number().default(24),
-      motionIntensity: z.number().default(0.5),
-      seed: z.number().optional(),
+    // Create new video generation job
+    create: kingProcedure.input(z.object({
+      prompt: z.string(),
+      baseImageUrl: z.string().optional(),
+      duration: z.number().default(30),
+      sceneCount: z.number().optional(),
     })).mutation(async ({ ctx, input }) => {
-      await db.createVideoJob({
+      const videoStudio = await import("./services/videoStudio");
+      const jobId = await videoStudio.createVideoJob({
         userId: ctx.user.id,
-        imageUrl: input.imageUrl,
+        prompt: input.prompt,
+        baseImageUrl: input.baseImageUrl,
         duration: input.duration,
-        fps: input.fps,
-        motionIntensity: input.motionIntensity.toString(),
-        seed: input.seed,
-        status: "pending",
-        progress: 0,
+        sceneCount: input.sceneCount,
       });
+      return { jobId };
+    }),
 
+    // Generate all scenes for a job
+    generateScenes: kingProcedure.input(z.object({
+      jobId: z.number(),
+    })).mutation(async ({ input }) => {
+      const videoStudio = await import("./services/videoStudio");
+      await videoStudio.generateAllScenes(input.jobId);
       return { success: true };
     }),
 
+    // Get video job with scenes and assets
+    getJob: kingProcedure.input(z.object({
+      jobId: z.number(),
+    })).query(async ({ input }) => {
+      const videoStudio = await import("./services/videoStudio");
+      return await videoStudio.getVideoJob(input.jobId);
+    }),
+
+    // Get all video jobs for current user
     getMyJobs: kingProcedure.query(async ({ ctx }) => {
       return await db.getVideoJobsByUserId(ctx.user.id);
     }),
 
-    getJobStatus: kingProcedure.input(z.object({
+    // Regenerate single scene
+    regenerateScene: kingProcedure.input(z.object({
+      sceneId: z.string(),
+      newPrompt: z.string(),
+    })).mutation(async ({ input }) => {
+      const videoStudio = await import("./services/videoStudio");
+      const newImageUrl = await videoStudio.regenerateScene(
+        input.sceneId,
+        input.newPrompt
+      );
+      return { imageUrl: newImageUrl };
+    }),
+
+    // Reorder scenes
+    reorderScenes: kingProcedure.input(z.object({
       jobId: z.number(),
-    })).query(async ({ input }) => {
-      return await db.getVideoJobById(input.jobId);
+      sceneIds: z.array(z.string()),
+    })).mutation(async ({ input }) => {
+      const videoStudio = await import("./services/videoStudio");
+      await videoStudio.reorderScenes(input.jobId, input.sceneIds);
+      return { success: true };
+    }),
+
+    // Lock character appearance
+    lockCharacter: kingProcedure.input(z.object({
+      jobId: z.number(),
+      characterFeatures: z.object({
+        hair: z.string(),
+        eyes: z.string(),
+        skin: z.string(),
+        clothing: z.string(),
+        style: z.string(),
+      }),
+    })).mutation(async ({ input }) => {
+      const videoStudio = await import("./services/videoStudio");
+      await videoStudio.lockCharacterAppearance(
+        input.jobId,
+        input.characterFeatures
+      );
+      return { success: true };
     }),
   }),
 
