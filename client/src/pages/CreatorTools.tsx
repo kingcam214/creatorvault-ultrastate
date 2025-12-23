@@ -22,6 +22,20 @@ export default function CreatorTools() {
   const [optimizerTags, setOptimizerTags] = useState("");
   const [optimizerPlatform, setOptimizerPlatform] = useState<"youtube" | "tiktok" | "instagram" | "twitter">("tiktok");
 
+  // Facebook Ads state
+  const [adProduct, setAdProduct] = useState("");
+  const [adAudience, setAdAudience] = useState("");
+  const [adGoal, setAdGoal] = useState<"awareness" | "traffic" | "conversions" | "engagement">("conversions");
+  const [adDescription, setAdDescription] = useState("");
+  const [adTone, setAdTone] = useState<"casual" | "professional" | "urgent" | "playful">("professional");
+  const [adBudget, setAdBudget] = useState("");
+
+  // YouTube Thumbnails state
+  const [thumbTitle, setThumbTitle] = useState("");
+  const [thumbNiche, setThumbNiche] = useState("");
+  const [thumbStyle, setThumbStyle] = useState<"bold" | "minimal" | "dramatic" | "playful">("bold");
+  const [thumbCustomPrompt, setThumbCustomPrompt] = useState("");
+
   const generateViralHooks = trpc.creatorTools.generateViralHooks.useMutation();
   const generateCaption = trpc.creatorTools.generateCaption.useMutation();
   const generateTelegramBroadcast = trpc.creatorTools.generateTelegramBroadcast.useMutation();
@@ -29,6 +43,8 @@ export default function CreatorTools() {
   const generateStrategy = trpc.creatorTools.generateContentStrategy.useMutation();
   const analyzeViral = trpc.creatorTools.analyzeViralPotential.useMutation();
   const runOptimizer = trpc.creatorTools.runViralOptimizer.useMutation();
+  const runAdOptimizer = trpc.creatorTools.runAdOptimizer.useMutation();
+  const runThumbnailGenerator = trpc.creatorTools.runThumbnailGenerator.useMutation();
 
   const handleViralHooks = async () => {
     if (!viralHooksInput.trim()) return;
@@ -72,6 +88,28 @@ export default function CreatorTools() {
       description: optimizerDescription || undefined,
       tags: optimizerTags ? optimizerTags.split(",").map(t => t.trim()) : undefined,
       platform: optimizerPlatform,
+    });
+  };
+
+  const handleRunAdOptimizer = async () => {
+    if (!adProduct.trim() || !adAudience.trim()) return;
+    await runAdOptimizer.mutateAsync({
+      product: adProduct,
+      targetAudience: adAudience,
+      goal: adGoal,
+      description: adDescription || undefined,
+      tone: adTone,
+      budget: adBudget ? parseInt(adBudget) : undefined,
+    });
+  };
+
+  const handleRunThumbnailGenerator = async () => {
+    if (!thumbTitle.trim() || !thumbNiche.trim()) return;
+    await runThumbnailGenerator.mutateAsync({
+      videoTitle: thumbTitle,
+      niche: thumbNiche,
+      style: thumbStyle,
+      customPrompt: thumbCustomPrompt || undefined,
     });
   };
 
@@ -631,14 +669,214 @@ export default function CreatorTools() {
         <TabsContent value="ads">
           <Card>
             <CardHeader>
-              <CardTitle>Facebook Ad Maker + Optimizer</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-blue-500" />
+                Facebook Ad Maker + Optimizer
+              </CardTitle>
               <CardDescription>
                 Generate high-converting Facebook ad copy + creative with AI scoring
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Ad inputs will be added here */}
-              <p className="text-sm text-muted-foreground">Facebook Ads tab - Coming soon</p>
+              <div>
+                <Label htmlFor="ad-product">Product/Service *</Label>
+                <Input
+                  id="ad-product"
+                  placeholder="e.g., Online Course, Fitness App, Consulting Service"
+                  value={adProduct}
+                  onChange={(e) => setAdProduct(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="ad-audience">Target Audience *</Label>
+                <Input
+                  id="ad-audience"
+                  placeholder="e.g., Entrepreneurs 25-45, Fitness enthusiasts, Small business owners"
+                  value={adAudience}
+                  onChange={(e) => setAdAudience(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="ad-goal">Campaign Goal</Label>
+                <select
+                  id="ad-goal"
+                  value={adGoal}
+                  onChange={(e) => setAdGoal(e.target.value as any)}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="conversions">Conversions</option>
+                  <option value="traffic">Traffic</option>
+                  <option value="awareness">Awareness</option>
+                  <option value="engagement">Engagement</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="ad-description">Product Description (optional)</Label>
+                <Textarea
+                  id="ad-description"
+                  placeholder="Brief description of your product/service"
+                  value={adDescription}
+                  onChange={(e) => setAdDescription(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="ad-tone">Tone</Label>
+                  <select
+                    id="ad-tone"
+                    value={adTone}
+                    onChange={(e) => setAdTone(e.target.value as any)}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="professional">Professional</option>
+                    <option value="casual">Casual</option>
+                    <option value="urgent">Urgent</option>
+                    <option value="playful">Playful</option>
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="ad-budget">Budget (optional, USD)</Label>
+                  <Input
+                    id="ad-budget"
+                    type="number"
+                    placeholder="1000"
+                    value={adBudget}
+                    onChange={(e) => setAdBudget(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button 
+                onClick={handleRunAdOptimizer} 
+                disabled={runAdOptimizer.isPending || !adProduct.trim() || !adAudience.trim()}
+                className="w-full"
+              >
+                {runAdOptimizer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Generate Facebook Ad
+              </Button>
+              {runAdOptimizer.data && (
+                <div className="mt-6 space-y-6">
+                  {/* Ad Preview */}
+                  <div className="p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
+                    <h3 className="text-xl font-bold mb-4">Generated Ad</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Headline</p>
+                        <p className="text-lg font-bold">{runAdOptimizer.data.headline}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Body Text</p>
+                        <p className="text-sm">{runAdOptimizer.data.bodyText}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Call to Action</p>
+                        <Button size="sm" className="pointer-events-none">{runAdOptimizer.data.cta}</Button>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Ad Creative</p>
+                        <img src={runAdOptimizer.data.imageUrl} alt="Ad Creative" className="w-full rounded-lg border" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ad Score */}
+                  <div className="p-6 bg-gradient-to-br from-green-500/10 to-blue-500/10 rounded-lg border border-green-500/20">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-bold">Ad Score</h3>
+                      <span className="text-4xl font-bold bg-gradient-to-r from-green-400 to-blue-600 bg-clip-text text-transparent">
+                        {runAdOptimizer.data.overallScore}/100
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Hook:</span>
+                        <span className="font-semibold">{runAdOptimizer.data.hookScore}/100</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Clarity:</span>
+                        <span className="font-semibold">{runAdOptimizer.data.clarityScore}/100</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Urgency:</span>
+                        <span className="font-semibold">{runAdOptimizer.data.urgencyScore}/100</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Value:</span>
+                        <span className="font-semibold">{runAdOptimizer.data.valueScore}/100</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">CTA:</span>
+                        <span className="font-semibold">{runAdOptimizer.data.ctaScore}/100</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Analysis */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                      <h3 className="font-semibold mb-3 text-green-600">Strengths</h3>
+                      <ul className="space-y-2 text-sm">
+                        {runAdOptimizer.data.strengths.map((s, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-green-500 mt-0.5">✓</span>
+                            <span>{s}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="p-4 bg-orange-500/10 rounded-lg border border-orange-500/20">
+                      <h3 className="font-semibold mb-3 text-orange-600">Weaknesses</h3>
+                      <ul className="space-y-2 text-sm">
+                        {runAdOptimizer.data.weaknesses.map((w, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-orange-500 mt-0.5">!</span>
+                            <span>{w}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Recommendations */}
+                  <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                    <h3 className="font-semibold mb-3">Recommendations</h3>
+                    <ul className="space-y-2 text-sm">
+                      {runAdOptimizer.data.recommendations.map((r, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <Lightbulb className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <span>{r}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Predicted Metrics */}
+                  <div className="p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                    <h3 className="font-semibold mb-3">Predicted Performance</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground">CTR</p>
+                        <p className="text-lg font-bold">{runAdOptimizer.data.predictedMetrics.ctr}%</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">CPC</p>
+                        <p className="text-lg font-bold">${runAdOptimizer.data.predictedMetrics.cpc}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Conversions</p>
+                        <p className="text-lg font-bold">{runAdOptimizer.data.predictedMetrics.conversions}/1K</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">ROAS</p>
+                        <p className="text-lg font-bold">{runAdOptimizer.data.predictedMetrics.roas}x</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {runAdOptimizer.error && (
+                <p className="text-sm text-destructive">Error: {runAdOptimizer.error.message}</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -647,14 +885,169 @@ export default function CreatorTools() {
         <TabsContent value="thumbnails">
           <Card>
             <CardHeader>
-              <CardTitle>YouTube Thumbnail Generator</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-red-500" />
+                YouTube Thumbnail Generator
+              </CardTitle>
               <CardDescription>
                 Generate high-CTR YouTube thumbnails with AI optimization
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Thumbnail inputs will be added here */}
-              <p className="text-sm text-muted-foreground">YouTube Thumbnails tab - Coming soon</p>
+              <div>
+                <Label htmlFor="thumb-title">Video Title *</Label>
+                <Input
+                  id="thumb-title"
+                  placeholder="e.g., How I Made $10k in 30 Days"
+                  value={thumbTitle}
+                  onChange={(e) => setThumbTitle(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="thumb-niche">Niche *</Label>
+                <Input
+                  id="thumb-niche"
+                  placeholder="e.g., finance, fitness, tech, lifestyle"
+                  value={thumbNiche}
+                  onChange={(e) => setThumbNiche(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="thumb-style">Thumbnail Style</Label>
+                <select
+                  id="thumb-style"
+                  value={thumbStyle}
+                  onChange={(e) => setThumbStyle(e.target.value as any)}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="bold">Bold (High contrast, large text)</option>
+                  <option value="minimal">Minimal (Clean, simple design)</option>
+                  <option value="dramatic">Dramatic (Cinematic, moody)</option>
+                  <option value="playful">Playful (Colorful, fun)</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="thumb-custom">Custom Prompt (optional)</Label>
+                <Textarea
+                  id="thumb-custom"
+                  placeholder="Add specific visual elements or style preferences"
+                  value={thumbCustomPrompt}
+                  onChange={(e) => setThumbCustomPrompt(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <Button 
+                onClick={handleRunThumbnailGenerator} 
+                disabled={runThumbnailGenerator.isPending || !thumbTitle.trim() || !thumbNiche.trim()}
+                className="w-full"
+              >
+                {runThumbnailGenerator.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Generate Thumbnail
+              </Button>
+              {runThumbnailGenerator.data && (
+                <div className="mt-6 space-y-6">
+                  {/* Thumbnail Preview */}
+                  <div className="p-6 bg-gradient-to-br from-red-500/10 to-orange-500/10 rounded-lg border border-red-500/20">
+                    <h3 className="text-xl font-bold mb-4">Generated Thumbnail</h3>
+                    <div className="space-y-4">
+                      <img src={runThumbnailGenerator.data.imageUrl} alt="Thumbnail" className="w-full rounded-lg border" />
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Text Overlay</p>
+                        <p className="text-lg font-bold">{runThumbnailGenerator.data.textOverlay}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Thumbnail Score */}
+                  <div className="p-6 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-lg border border-orange-500/20">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-bold">Thumbnail Score</h3>
+                      <span className="text-4xl font-bold bg-gradient-to-r from-orange-400 to-red-600 bg-clip-text text-transparent">
+                        {runThumbnailGenerator.data.overallScore}/100
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">CTR:</span>
+                        <span className="font-semibold">{runThumbnailGenerator.data.ctrScore}/100</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Clarity:</span>
+                        <span className="font-semibold">{runThumbnailGenerator.data.clarityScore}/100</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Emotion:</span>
+                        <span className="font-semibold">{runThumbnailGenerator.data.emotionScore}/100</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Contrast:</span>
+                        <span className="font-semibold">{runThumbnailGenerator.data.contrastScore}/100</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Text:</span>
+                        <span className="font-semibold">{runThumbnailGenerator.data.textScore}/100</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Analysis */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                      <h3 className="font-semibold mb-3 text-green-600">Strengths</h3>
+                      <ul className="space-y-2 text-sm">
+                        {runThumbnailGenerator.data.strengths.map((s, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-green-500 mt-0.5">✓</span>
+                            <span>{s}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="p-4 bg-orange-500/10 rounded-lg border border-orange-500/20">
+                      <h3 className="font-semibold mb-3 text-orange-600">Weaknesses</h3>
+                      <ul className="space-y-2 text-sm">
+                        {runThumbnailGenerator.data.weaknesses.map((w, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-orange-500 mt-0.5">!</span>
+                            <span>{w}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Recommendations */}
+                  <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                    <h3 className="font-semibold mb-3">Recommendations</h3>
+                    <ul className="space-y-2 text-sm">
+                      {runThumbnailGenerator.data.recommendations.map((r, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <Lightbulb className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <span>{r}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Predicted Metrics */}
+                  <div className="p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                    <h3 className="font-semibold mb-3">Predicted Performance</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground">CTR by Niche</p>
+                        <p className="text-lg font-bold">{runThumbnailGenerator.data.predictedMetrics.ctr}%</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Views Boost</p>
+                        <p className="text-lg font-bold">+{runThumbnailGenerator.data.predictedMetrics.views}%</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {runThumbnailGenerator.error && (
+                <p className="text-sm text-destructive">Error: {runThumbnailGenerator.error.message}</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
