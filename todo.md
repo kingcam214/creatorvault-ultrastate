@@ -634,12 +634,22 @@
 - [x] Add Owner Control Panel logging (video_created, scenes_generated)
 
 ### Video Assembly Engine
-- [ ] Create videoAssembly.ts service
-- [ ] Implement stitchScenes() - Combine scene frames into video
-- [ ] Implement addCameraMotion() - Pan, zoom, parallax effects
-- [ ] Implement exportMP4() - Final video output
-- [ ] Store final video in S3 via storagePut
-- [ ] Update video_generation_jobs with final asset URL
+- [x] Install ffmpeg-static and fluent-ffmpeg for video processing
+- [x] Create videoAssembly.ts service (330 lines)
+- [x] Implement downloadImage() - Download scene frames from URLs
+- [x] Implement applyKenBurnsEffect() - Ken Burns effect (pan, zoom) on static frames
+- [x] Implement concatenateVideos() - Combine scene clips with crossfade transitions
+- [x] Implement assembleVideo() - Full pipeline (download → motion → stitch → upload)
+- [x] Store final video in S3 via storagePut
+- [x] Update video_generation_jobs status to 'complete' with videoUrl
+- [x] Store final video in video_assets table (assetType: final_video)
+- [x] Add video.assembleVideo tRPC mutation with fps/transition/motion params
+- [x] Wire assembly to Creator Video Studio UI (Assemble Final Video button)
+- [x] Add download link for completed videos in UI
+- [x] Progress tracking during assembly (10% → 90% → 100%)
+- [x] Error handling with job status update to 'failed'
+- [x] Temp file cleanup after assembly
+- [x] TypeScript: 0 errors
 
 ### Creator Video Studio UI
 - [x] Create /creator-video-studio route in App.tsx

@@ -325,6 +325,23 @@ export const appRouter = router({
       );
       return { success: true };
     }),
+
+    // Assemble final video from scenes
+    assembleVideo: kingProcedure.input(z.object({
+      jobId: z.number(),
+      fps: z.number().optional(),
+      transitionDuration: z.number().optional(),
+      motionIntensity: z.number().optional(),
+    })).mutation(async ({ input }) => {
+      const videoAssembly = await import("./services/videoAssembly");
+      const videoUrl = await videoAssembly.assembleVideo({
+        jobId: input.jobId,
+        fps: input.fps,
+        transitionDuration: input.transitionDuration,
+        motionIntensity: input.motionIntensity,
+      });
+      return { videoUrl };
+    }),
   }),
 
   // ============ ANALYTICS ============

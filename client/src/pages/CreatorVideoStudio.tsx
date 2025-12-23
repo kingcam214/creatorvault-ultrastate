@@ -53,6 +53,7 @@ interface VideoJob {
   status: "pending" | "queued" | "processing" | "complete" | "failed";
   progress: number;
   scenes: Scene[];
+  videoUrl?: string;
   characterFeatures?: {
     hair: string;
     eyes: string;
@@ -133,6 +134,23 @@ export default function CreatorVideoStudio() {
         description: "Timeline updated successfully.",
       });
       jobQuery.refetch();
+    },
+  });
+
+  const assembleVideo = trpc.video.assembleVideo.useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: "Video assembled",
+        description: "Your video is ready to download!",
+      });
+      jobQuery.refetch();
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to assemble video",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -363,6 +381,39 @@ export default function CreatorVideoStudio() {
                             Generate All Scenes
                           </>
                         )}
+                      </Button>
+                    )}
+
+                    {currentJob.status === "complete" && currentJob.scenes.every(s => s.status === "complete") && !currentJob.videoUrl && (
+                      <Button
+                        onClick={() => assembleVideo.mutate({ jobId: currentJob.id })}
+                        disabled={assembleVideo.isPending}
+                        className="w-full"
+                      >
+                        {assembleVideo.isPending ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Assembling Video...
+                          </>
+                        ) : (
+                          <>
+                            <Film className="w-4 h-4 mr-2" />
+                            Assemble Final Video
+                          </>
+                        )}
+                      </Button>
+                    )}
+
+                    {currentJob.videoUrl && (
+                      <Button
+                        asChild
+                        className="w-full"
+                        variant="default"
+                      >
+                        <a href={currentJob.videoUrl} download target="_blank" rel="noopener noreferrer">
+                          <Download className="w-4 h-4 mr-2" />
+                          Download Video
+                        </a>
                       </Button>
                     )}
 
