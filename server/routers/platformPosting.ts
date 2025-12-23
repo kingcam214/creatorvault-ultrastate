@@ -118,7 +118,7 @@ export const platformPostingRouter = router({
             )
           );
 
-        return { success: true };
+        return { success: true, platform: input.platform };
       } catch (error: any) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",

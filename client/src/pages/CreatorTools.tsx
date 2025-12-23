@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Sparkles, MessageSquare, Send, TrendingUp, Lightbulb } from "lucide-react";
+import { Loader2, Sparkles, MessageSquare, Send, TrendingUp, Lightbulb, Share2, Calendar, BarChart3, Link as LinkIcon } from "lucide-react";
+import { Link } from "wouter";
 
 export default function CreatorTools() {
   const [viralHooksInput, setViralHooksInput] = useState("");
@@ -132,6 +133,73 @@ export default function CreatorTools() {
             </a>
           </Button>
         </div>
+      </div>
+
+      {/* Multi-Platform Features */}
+      <div className="grid md:grid-cols-4 gap-4 mb-8">
+        <Link href="/platform-connections">
+          <Card className="cursor-pointer hover:border-primary transition-colors">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <LinkIcon className="h-4 w-4 text-primary" />
+                Platform Connections
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Connect your social media accounts
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/multi-platform-posting">
+          <Card className="cursor-pointer hover:border-primary transition-colors">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Share2 className="h-4 w-4 text-primary" />
+                Multi-Platform Posting
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Post to all platforms at once
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/content-scheduler">
+          <Card className="cursor-pointer hover:border-primary transition-colors">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                Content Scheduler
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Schedule posts for optimal times
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/creator-analytics">
+          <Card className="cursor-pointer hover:border-primary transition-colors">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                Creator Analytics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Track performance & revenue
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <Tabs defaultValue="hooks" className="space-y-6">

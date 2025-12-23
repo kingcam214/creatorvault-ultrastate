@@ -22,6 +22,7 @@ import { adultSalesBotRouter } from "./routers/adultSalesBot";
 import { platformPostingRouter } from "./routers/platformPosting";
 import { schedulerRouter } from "./routers/scheduler";
 import { analyticsRouter } from "./routers/analytics";
+import { oauthCallbackRouter } from "./routers/oauthCallback";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -585,6 +586,7 @@ export const appRouter = router({
   platformPosting: platformPostingRouter,
   scheduler: schedulerRouter,
   creatorAnalytics: analyticsRouter,
+  oauthCallback: oauthCallbackRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({

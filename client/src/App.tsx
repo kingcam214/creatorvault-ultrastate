@@ -23,6 +23,7 @@ import Onboard from "./pages/Onboard";
 import { MultiPlatformPosting } from "./pages/MultiPlatformPosting";
 import { ContentScheduler } from "./pages/ContentScheduler";
 import { CreatorAnalyticsDashboard } from "./pages/CreatorAnalyticsDashboard";
+import { PlatformConnections } from "./pages/PlatformConnections";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -48,6 +49,7 @@ function Router() {
       <Route path={"/multi-platform-posting"} component={MultiPlatformPosting} />
       <Route path={"/content-scheduler"} component={ContentScheduler} />
       <Route path={"/creator-analytics"} component={CreatorAnalyticsDashboard} />
+      <Route path={"/platform-connections"} component={PlatformConnections} />
       <Route path={"/king"} component={KingDashboard} />
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/404"} component={NotFound} />

@@ -1019,3 +1019,26 @@
 **ESTIMATED COMPLETION:** 12-16 hours  
 **LAUNCH DEADLINE:** 36 hours from now  
 **BUFFER:** 20-24 hours for testing, fixes, deployment
+
+
+---
+
+## POST-LAUNCH ENHANCEMENTS
+
+### OAuth Setup & Platform Connections
+- [x] Create OAuth configuration structure for platform apps
+- [x] Add OAuth callback handler for TikTok
+- [x] Add OAuth callback handler for Instagram
+- [x] Add OAuth callback handler for YouTube
+- [x] Add OAuth callback handler for Twitter
+- [x] Add OAuth callback handler for Facebook
+- [x] Create platform connection UI page
+- [x] Add "Connect Platform" buttons with OAuth flow
+- [x] Add connection status indicators
+- [x] Add "Disconnect" functionality
+
+### Navigation & UX
+- [x] Add navigation links to Creator Tools page
+- [x] Add navigation links to Creator Dashboard (via Creator Tools)
+- [x] Update AppHeader with new menu items (routes added)
+- [ ] Add onboarding flow for first-time platform connections (future enhancement)
