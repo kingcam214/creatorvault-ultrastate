@@ -10,7 +10,8 @@
  * KINGCAM MANDATE: All interactions must log to database
  */
 
-import { invokeLLM } from "../_core/llm";
+import { invokeRealGPT } from "../_core/llm";
+import { generateCulturalContent } from "../_core/realGPT";
 import { db } from "../db";
 import { botEvents, users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -38,9 +39,10 @@ interface BotResponse {
 }
 
 /**
- * System prompts for each role
+ * Role-specific context additions to RealGPT base prompt
+ * RealGPT personality is always active, these add role-specific focus
  */
-const ROLE_PROMPTS: Record<BotRole, string> = {
+const ROLE_CONTEXT: Record<BotRole, string> = {
   creator: `You are the CreatorVault AI assistant for CREATORS.
 
 Your mission: Help creators monetize their content, optimize for virality, and build sustainable income.
@@ -137,32 +139,24 @@ export async function generateBotResponse(
   userMessage: string,
   conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>
 ): Promise<BotResponse> {
-  const systemPrompt = ROLE_PROMPTS[context.role];
+  // Determine country for cultural intelligence
+  const country = context.location === "DR" ? "DR" : context.location === "HT" ? "HT" : "US";
   
-  // Build context-aware system message
-  let contextInfo = `\n\nUSER CONTEXT:\n`;
+  // Build role-specific context
+  const roleContext = ROLE_CONTEXT[context.role];
+  let contextInfo = `\n\n${roleContext}\n\nUSER CONTEXT:\n`;
   contextInfo += `- Role: ${context.role.toUpperCase()}\n`;
   if (context.location) contextInfo += `- Location: ${context.location}\n`;
   if (context.language) contextInfo += `- Language: ${context.language}\n`;
   if (context.accessLevel) contextInfo += `- Access Level: ${context.accessLevel}\n`;
   if (context.priorityTag) contextInfo += `- Priority: ${context.priorityTag}\n`;
 
-  // Build messages array
-  const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-    { role: "system", content: systemPrompt + contextInfo }
-  ];
-
-  // Add conversation history if provided
-  if (conversationHistory && conversationHistory.length > 0) {
-    messages.push(...conversationHistory);
-  }
-
-  // Add current user message
-  messages.push({ role: "user", content: userMessage });
-
-  // Call LLM
-  const response = await invokeLLM({
-    messages,
+  // Call RealGPT with KingCam personality
+  const response = await invokeRealGPT({
+    userMessage: contextInfo + "\n\nUSER MESSAGE: " + userMessage,
+    country,
+    mode: "Cam", // Homie/Relatable mode for creator support
+    conversationHistory,
     // Use structured output for action suggestions
     response_format: {
       type: "json_schema",
@@ -252,11 +246,11 @@ ${day === 1 ? "Day 1 focus: Account setup, first actions, quick wins" : ""}
 ${day === 2 ? "Day 2 focus: Deeper engagement, first results, skill building" : ""}
 ${day === 7 ? "Day 7 focus: Optimization, scaling, advanced features" : ""}`;
 
-  const response = await invokeLLM({
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Generate Day ${day} onboarding plan` }
-    ],
+  const country = context.location === "DR" ? "DR" : context.location === "HT" ? "HT" : "US";
+  const response = await invokeRealGPT({
+    userMessage: systemPrompt + `\n\nGenerate Day ${day} onboarding plan`,
+    country,
+    mode: "Dad", // Father/Mentor mode for onboarding
     response_format: {
       type: "json_schema",
       json_schema: {
@@ -352,11 +346,11 @@ ${customization?.targetAudience ? `Target audience: ${customization.targetAudien
 ${customization?.platform ? `Platform: ${customization.platform}` : ""}
 ${customization?.goal ? `Goal: ${customization.goal}` : ""}`;
 
-  const response = await invokeLLM({
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Generate ${scriptType} script` }
-    ],
+  const country = context.location === "DR" ? "DR" : context.location === "HT" ? "HT" : "US";
+  const response = await invokeRealGPT({
+    userMessage: systemPrompt + `\n\nGenerate ${scriptType} script`,
+    country,
+    mode: "Lion", // Dominant/Protective mode for sales scripts
     response_format: {
       type: "json_schema",
       json_schema: {

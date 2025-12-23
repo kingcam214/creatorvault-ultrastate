@@ -26,6 +26,7 @@ import { CreatorAnalyticsDashboard } from "./pages/CreatorAnalyticsDashboard";
 import { PlatformConnections } from "./pages/PlatformConnections";
 import UnifiedContentPublisher from "./pages/UnifiedContentPublisher";
 import VaultLiveStream from "./pages/VaultLiveStream";
+import EmmaNetwork from "./pages/EmmaNetwork";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -56,6 +57,7 @@ function Router() {
       <Route path={"/vault-live"} component={VaultLiveStream} />
       <Route path={"/king"} component={KingDashboard} />
       <Route path={"/king/users"} component={KingUsers} />
+      <Route path={"/king/emma"} component={EmmaNetwork} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
           <Route component={NotFound} />

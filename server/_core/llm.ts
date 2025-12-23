@@ -1,4 +1,5 @@
 import { ENV } from "./env";
+import { getRealGPTPrompt } from "./realGPT";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -264,6 +265,33 @@ const normalizeResponseFormat = ({
     },
   };
 };
+
+/**
+ * Invoke LLM with RealGPT personality (KingCam AI)
+ * Automatically injects RealGPT system prompt with cultural intelligence
+ */
+export async function invokeRealGPT(params: Omit<InvokeParams, 'messages'> & {
+  userMessage: string;
+  country?: "US" | "DR" | "HT";
+  mode?: "KingCam" | "Cameron" | "Cam" | "Architect" | "Lion" | "Realist" | "Dad";
+  conversationHistory?: Message[];
+}): Promise<InvokeResult> {
+  const systemPrompt = getRealGPTPrompt({
+    country: params.country,
+    mode: params.mode,
+  });
+
+  const messages: Message[] = [
+    { role: "system", content: systemPrompt },
+    ...(params.conversationHistory || []),
+    { role: "user", content: params.userMessage },
+  ];
+
+  return invokeLLM({
+    ...params,
+    messages,
+  });
+}
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
