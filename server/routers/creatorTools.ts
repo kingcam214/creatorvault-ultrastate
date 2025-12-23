@@ -13,6 +13,8 @@ import {
   analyzeViralPotential,
 } from "../services/creatorTools";
 import { runViralOptimizer } from "../services/viralOptimizer";
+import { runAdOptimizer } from "../services/adOptimizer";
+import { runThumbnailGenerator } from "../services/thumbnailGenerator";
 
 export const creatorToolsRouter = router({
   /**
@@ -117,7 +119,44 @@ export const creatorToolsRouter = router({
     }),
 
   /**
-   * Run Viral Optimizer (CANONICAL PIPELINE)
+   * Run Ad Optimizer (canonical pipeline)
+   */
+  runAdOptimizer: protectedProcedure
+    .input(
+      z.object({
+        product: z.string(),
+        targetAudience: z.string(),
+        goal: z.enum(["awareness", "traffic", "conversions", "engagement"]),
+        description: z.string().optional(),
+        tone: z.enum(["casual", "professional", "urgent", "playful"]).optional(),
+        budget: z.number().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const result = await runAdOptimizer(ctx.user.id, input);
+      return result;
+    }),
+
+  /**
+   * Run Thumbnail Generator (canonical pipeline)
+   */
+  runThumbnailGenerator: protectedProcedure
+    .input(
+      z.object({
+        videoTitle: z.string(),
+        niche: z.string(),
+        style: z.enum(["bold", "minimal", "dramatic", "playful"]).optional(),
+        platform: z.string().optional(),
+        customPrompt: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const result = await runThumbnailGenerator(ctx.user.id, input);
+      return result;
+    }),
+
+  /**
+   * Run Viral Optimizer (canonical pipeline)
    */
   runViralOptimizer: protectedProcedure
     .input(

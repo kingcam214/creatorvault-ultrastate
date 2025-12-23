@@ -765,3 +765,69 @@
 - [ ] Verify results persist across page refreshes
 - [ ] Create proof packet with screenshots
 - [ ] Confirm single source of truth for viral optimization
+
+
+## AI FACEBOOK AD MAKER + OPTIMIZER (RECOVERY)
+
+### Phase 1: Forensic Search
+- [x] Search for ad-related code (generation, optimization, scoring)
+- [x] Search for existing database tables (ad_analyses, ad_assets)
+- [x] Map existing tRPC procedures
+- [x] Document disconnections
+- [x] Create AD_THUMBNAIL_FORENSICS.md with findings
+
+**FINDINGS:**
+- NO existing ad or thumbnail features found
+- Building blocks available: LLM, image generation, scoring patterns
+- This is a NEW BUILD, not a recovery operation
+- Will replicate Viral Optimizer architecture
+
+### Phase 2: Canonical Ad Optimizer
+- [x] Create server/services/adOptimizer.ts (550 lines)
+- [x] Implement runAdOptimizer() - single entry point
+- [x] LLM-powered ad copy generation (headline, body, CTA) with JSON schema
+- [x] Ad scoring (hook, clarity, urgency, value prop, CTA strength)
+- [x] Weighted overall score (hook 25%, CTA 25%, urgency 20%, clarity 15%, value 15%)
+- [x] Image generation for ad creative with generateImage()
+- [x] Database persistence (ad_analyses table with 27 columns)
+- [x] Push database migration (0008_minor_rick_jones.sql)
+- [x] TypeScript: 0 errors
+- [ ] Add tRPC mutation
+
+### Phase 3: Wire to UI
+- [ ] Add "Facebook Ads" tab to Creator Tools
+- [ ] Input form (product, audience, goal)
+- [ ] Display ad preview with image
+- [ ] Display scores and recommendations
+- [ ] Persist results
+
+---
+
+## AI YOUTUBE THUMBNAIL MAKER (RECOVERY)
+
+### Phase 1: Forensic Search
+- [x] Search for thumbnail-related code
+- [x] Search for existing database tables
+- [x] Map existing tRPC procedures
+- [x] Document disconnections
+- [x] NO existing thumbnail features found (new build required)
+
+### Phase 2: Canonical Thumbnail Generator
+- [x] Create server/services/thumbnailGenerator.ts (480 lines)
+- [x] Implement runThumbnailGenerator() - single entry point
+- [x] LLM-powered text overlay generation (3-5 words, curiosity-driven)
+- [x] Thumbnail scoring (CTR, clarity, emotion, contrast, text)
+- [x] Weighted overall score (CTR 35%, emotion 25%, clarity 15%, text 15%, contrast 10%)
+- [x] Image generation for thumbnail with style support (bold, minimal, dramatic, playful)
+- [x] Database persistence (thumbnail_analyses table with 21 columns)
+- [x] Database migration already pushed (0008_minor_rick_jones.sql)
+- [x] TypeScript: 0 errors
+- [ ] Add tRPC mutation
+
+### Phase 3: Wire to UI
+- [ ] Add "YouTube Thumbnails" tab to Creator Tools
+- [ ] Input form (video title, niche, style)
+- [ ] Display thumbnail preview
+- [ ] Display CTR prediction and scores
+- [ ] Download button
+- [ ] Persist results

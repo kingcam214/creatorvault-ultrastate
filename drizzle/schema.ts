@@ -716,3 +716,96 @@ export const videoAssets = mysqlTable("video_assets", {
   jobIdIdx: index("idx_video_assets_job_id").on(table.jobId),
   assetTypeIdx: index("idx_video_assets_asset_type").on(table.assetType),
 }));
+
+// ============ AD OPTIMIZER ============
+
+export const adAnalyses = mysqlTable("ad_analyses", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Input data
+  product: text("product").notNull(),
+  targetAudience: text("target_audience").notNull(),
+  goal: mysqlEnum("goal", ["awareness", "traffic", "conversions", "engagement"]).notNull(),
+  description: text("description"),
+  tone: varchar("tone", { length: 50 }),
+  budget: int("budget"),
+  
+  // Generated ad copy
+  headline: text("headline").notNull(),
+  bodyText: text("body_text").notNull(),
+  cta: text("cta").notNull(),
+  
+  // Generated creative
+  imageUrl: text("image_url").notNull(),
+  imagePrompt: text("image_prompt"),
+  
+  // Scores (0-100)
+  overallScore: int("overall_score").notNull(),
+  hookScore: int("hook_score"),
+  clarityScore: int("clarity_score"),
+  urgencyScore: int("urgency_score"),
+  valueScore: int("value_score"),
+  ctaScore: int("cta_score"),
+  
+  // Analysis
+  strengths: text("strengths"), // JSON array
+  weaknesses: text("weaknesses"), // JSON array
+  recommendations: text("recommendations"), // JSON array
+  
+  // Predicted metrics
+  predictedCtr: decimal("predicted_ctr", { precision: 5, scale: 2 }), // Click-through rate (%)
+  predictedCpc: decimal("predicted_cpc", { precision: 6, scale: 2 }), // Cost per click (USD)
+  predictedConversions: int("predicted_conversions"), // Per 1000 impressions
+  predictedRoas: decimal("predicted_roas", { precision: 6, scale: 2 }), // Return on ad spend
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_ad_analyses_user_id").on(table.userId),
+  goalIdx: index("idx_ad_analyses_goal").on(table.goal),
+  overallScoreIdx: index("idx_ad_analyses_overall_score").on(table.overallScore),
+  createdAtIdx: index("idx_ad_analyses_created_at").on(table.createdAt),
+}));
+
+// ============ THUMBNAIL GENERATOR ============
+
+export const thumbnailAnalyses = mysqlTable("thumbnail_analyses", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Input data
+  videoTitle: text("video_title").notNull(),
+  niche: varchar("niche", { length: 100 }).notNull(),
+  style: varchar("style", { length: 50 }), // bold, minimal, dramatic, playful
+  platform: varchar("platform", { length: 50 }).default("youtube").notNull(),
+  
+  // Generated thumbnail
+  imageUrl: text("image_url").notNull(),
+  imagePrompt: text("image_prompt"),
+  textOverlay: text("text_overlay"), // Text shown on thumbnail
+  
+  // Scores (0-100)
+  overallScore: int("overall_score").notNull(),
+  ctrScore: int("ctr_score"), // Click-through rate potential
+  clarityScore: int("clarity_score"), // Visual clarity
+  emotionScore: int("emotion_score"), // Emotional impact
+  contrastScore: int("contrast_score"), // Color contrast
+  textScore: int("text_score"), // Text readability
+  
+  // Analysis
+  strengths: text("strengths"), // JSON array
+  weaknesses: text("weaknesses"), // JSON array
+  recommendations: text("recommendations"), // JSON array
+  
+  // Predicted metrics
+  predictedCtr: decimal("predicted_ctr", { precision: 5, scale: 2 }), // Click-through rate (%)
+  predictedViews: int("predicted_views"), // Expected views boost
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_thumbnail_analyses_user_id").on(table.userId),
+  nicheIdx: index("idx_thumbnail_analyses_niche").on(table.niche),
+  platformIdx: index("idx_thumbnail_analyses_platform").on(table.platform),
+  overallScoreIdx: index("idx_thumbnail_analyses_overall_score").on(table.overallScore),
+  createdAtIdx: index("idx_thumbnail_analyses_created_at").on(table.createdAt),
+}));

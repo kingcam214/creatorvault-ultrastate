@@ -97,7 +97,7 @@ export default function CreatorTools() {
       </div>
 
       <Tabs defaultValue="hooks" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9">
           <TabsTrigger value="hooks">Viral Hooks</TabsTrigger>
           <TabsTrigger value="caption">Captions</TabsTrigger>
           <TabsTrigger value="telegram">Telegram</TabsTrigger>
@@ -105,6 +105,8 @@ export default function CreatorTools() {
           <TabsTrigger value="strategy">Strategy</TabsTrigger>
           <TabsTrigger value="analyze">Analyze</TabsTrigger>
           <TabsTrigger value="optimizer">Viral Optimizer</TabsTrigger>
+          <TabsTrigger value="ads">Facebook Ads</TabsTrigger>
+          <TabsTrigger value="thumbnails">Thumbnails</TabsTrigger>
         </TabsList>
 
         {/* Viral Hooks Generator */}
@@ -621,6 +623,38 @@ export default function CreatorTools() {
               {runOptimizer.error && (
                 <p className="text-sm text-destructive">Error: {runOptimizer.error.message}</p>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Facebook Ads Generator */}
+        <TabsContent value="ads">
+          <Card>
+            <CardHeader>
+              <CardTitle>Facebook Ad Maker + Optimizer</CardTitle>
+              <CardDescription>
+                Generate high-converting Facebook ad copy + creative with AI scoring
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Ad inputs will be added here */}
+              <p className="text-sm text-muted-foreground">Facebook Ads tab - Coming soon</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* YouTube Thumbnails Generator */}
+        <TabsContent value="thumbnails">
+          <Card>
+            <CardHeader>
+              <CardTitle>YouTube Thumbnail Generator</CardTitle>
+              <CardDescription>
+                Generate high-CTR YouTube thumbnails with AI optimization
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Thumbnail inputs will be added here */}
+              <p className="text-sm text-muted-foreground">YouTube Thumbnails tab - Coming soon</p>
             </CardContent>
           </Card>
         </TabsContent>
