@@ -53,6 +53,27 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+    updateProfile: protectedProcedure.input(z.object({
+      name: z.string().optional(),
+      role: z.enum(["user", "creator", "admin", "king"]).optional(),
+      language: z.string().optional(),
+      country: z.string().optional(),
+    })).mutation(async ({ ctx, input }) => {
+      // Update user profile
+      if (input.name) {
+        await db.updateUserProfile(ctx.user.id, { name: input.name });
+      }
+      if (input.role && (ctx.user.role === "admin" || ctx.user.role === "king")) {
+        await db.updateUserRole(ctx.user.id, input.role);
+      }
+      if (input.language) {
+        await db.updateUserProfile(ctx.user.id, { language: input.language });
+      }
+      if (input.country) {
+        await db.updateUserProfile(ctx.user.id, { country: input.country });
+      }
+      return { success: true };
+    }),
   }),
 
   // ============ USER MANAGEMENT ============

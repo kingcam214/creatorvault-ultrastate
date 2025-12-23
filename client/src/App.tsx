@@ -18,6 +18,7 @@ import OwnerControl from "./pages/OwnerControl";
 import OwnerStatus from "./pages/OwnerStatus";
 import CreatorTools from "./pages/CreatorTools";
 import AdultSalesBot from "./pages/AdultSalesBot";
+import Onboard from "./pages/Onboard";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -38,6 +39,7 @@ function Router() {
       <Route path={"/owner-status"} component={OwnerStatus} />
       <Route path={"/creator-tools"} component={CreatorTools} />
       <Route path={"/adult-sales-bot"} component={AdultSalesBot} />
+      <Route path={"/onboard"} component={Onboard} />
       <Route path={"/king"} component={KingDashboard} />
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/404"} component={NotFound} />

@@ -9,6 +9,7 @@ import crypto from "crypto";
 import { db } from "./db";
 import { botEvents, telegramBots } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { handleInboundMessage } from "./services/adultSalesBot";
 
 const router = express.Router();
 
@@ -119,6 +120,57 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       userId,
       text: text.substring(0, 50),
     });
+
+    // Route message through Adult Sales Bot
+    try {
+      const botResponse = await handleInboundMessage(
+        userId || 0,
+        bot.createdBy,
+        "telegram",
+        text,
+        String(chatId || "")
+      );
+
+      // Log bot response
+      await db.insert(botEvents).values({
+        userId: bot.createdBy,
+        channel: "telegram",
+        eventType: "bot_response",
+        eventData: {
+          botId: bot.id,
+          chatId,
+          buyerId: userId,
+          response: botResponse.message,
+          nextState: botResponse.nextState,
+          buyerTag: botResponse.buyerTag,
+          shouldDisengage: botResponse.shouldDisengage,
+        },
+        outcome: "success",
+      });
+
+      console.log("[Adult Sales Bot] Response generated:", {
+        state: botResponse.nextState,
+        tag: botResponse.buyerTag,
+        disengage: botResponse.shouldDisengage,
+      });
+
+      // TODO: Send response back to Telegram via Bot API
+      // Requires calling https://api.telegram.org/bot<token>/sendMessage
+      // with chat_id and text from botResponse.response
+    } catch (botError) {
+      console.error("[Adult Sales Bot] Error processing message:", botError);
+      await db.insert(botEvents).values({
+        userId: bot.createdBy,
+        channel: "telegram",
+        eventType: "bot_error",
+        eventData: {
+          botId: bot.id,
+          chatId,
+          error: botError instanceof Error ? botError.message : String(botError),
+        },
+        outcome: "error",
+      });
+    }
 
     res.status(200).json({ ok: true });
   } catch (error) {

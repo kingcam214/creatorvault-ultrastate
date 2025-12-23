@@ -145,8 +145,15 @@ export async function updateUserRole(userId: number, role: "user" | "creator" | 
 export async function updateCreatorStatus(userId: number, status: string) {
   const db = await getDb();
   if (!db) return;
-
+  
   await db.update(users).set({ creatorStatus: status }).where(eq(users.id, userId));
+}
+
+export async function updateUserProfile(userId: number, data: Partial<{ name: string; language: string; country: string }>) {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.update(users).set(data).where(eq(users.id, userId));
 }
 
 // ============ EMMA NETWORK ============
