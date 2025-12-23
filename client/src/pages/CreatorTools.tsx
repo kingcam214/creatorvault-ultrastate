@@ -135,7 +135,7 @@ export default function CreatorTools() {
       </div>
 
       <Tabs defaultValue="hooks" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-15">
           <TabsTrigger value="hooks">Viral Hooks</TabsTrigger>
           <TabsTrigger value="caption">Captions</TabsTrigger>
           <TabsTrigger value="telegram">Telegram</TabsTrigger>
@@ -145,6 +145,12 @@ export default function CreatorTools() {
           <TabsTrigger value="optimizer">Viral Optimizer</TabsTrigger>
           <TabsTrigger value="ads">Facebook Ads</TabsTrigger>
           <TabsTrigger value="thumbnails">Thumbnails</TabsTrigger>
+          <TabsTrigger value="ad-history">Ad History</TabsTrigger>
+          <TabsTrigger value="thumb-history">Thumb History</TabsTrigger>
+          <TabsTrigger value="batch-ads">Batch Ads</TabsTrigger>
+          <TabsTrigger value="batch-thumbs">Batch Thumbs</TabsTrigger>
+          <TabsTrigger value="ab-ads">A/B Ads</TabsTrigger>
+          <TabsTrigger value="ab-thumbs">A/B Thumbs</TabsTrigger>
         </TabsList>
 
         {/* Viral Hooks Generator */}
@@ -1051,7 +1057,806 @@ export default function CreatorTools() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Ad History Tab */}
+        <TabsContent value="ad-history">
+          <AdHistoryTab />
+        </TabsContent>
+
+        {/* Thumbnail History Tab */}
+        <TabsContent value="thumb-history">
+          <ThumbnailHistoryTab />
+        </TabsContent>
+
+        {/* Batch Ads Tab */}
+        <TabsContent value="batch-ads">
+          <BatchAdsTab />
+        </TabsContent>
+
+        {/* Batch Thumbnails Tab */}
+        <TabsContent value="batch-thumbs">
+          <BatchThumbnailsTab />
+        </TabsContent>
+
+        {/* A/B Testing Ads Tab */}
+        <TabsContent value="ab-ads">
+          <ABTestingAdsTab />
+        </TabsContent>
+
+        {/* A/B Testing Thumbnails Tab */}
+        <TabsContent value="ab-thumbs">
+          <ABTestingThumbnailsTab />
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// Ad History Tab Component
+function AdHistoryTab() {
+  const [sortBy, setSortBy] = useState<"createdAt" | "overallScore" | "product">("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(0);
+  const limit = 10;
+  
+  const { data, isLoading } = trpc.creatorTools.getAdHistory.useQuery({
+    limit,
+    offset: page * limit,
+    sortBy,
+    sortOrder,
+  });
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Facebook Ad History</CardTitle>
+        <CardDescription>View and manage your past ad generations</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading && <p className="text-sm text-muted-foreground">Loading history...</p>}
+        {data && data.analyses.length === 0 && (
+          <p className="text-sm text-muted-foreground">No ad analyses yet. Generate your first ad!</p>
+        )}
+        {data && data.analyses.length > 0 && (
+          <div className="space-y-4">
+            {/* Sort Controls */}
+            <div className="flex gap-4">
+              <div>
+                <Label>Sort By</Label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="createdAt">Date</option>
+                  <option value="overallScore">Score</option>
+                  <option value="product">Product</option>
+                </select>
+              </div>
+              <div>
+                <Label>Order</Label>
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as any)}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="desc">Descending</option>
+                  <option value="asc">Ascending</option>
+                </select>
+              </div>
+            </div>
+            
+            {/* History Table */}
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="p-3 text-left">Date</th>
+                    <th className="p-3 text-left">Product</th>
+                    <th className="p-3 text-left">Goal</th>
+                    <th className="p-3 text-left">Score</th>
+                    <th className="p-3 text-left">Headline</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.analyses.map((analysis) => (
+                    <tr key={analysis.id} className="border-t hover:bg-muted/50">
+                      <td className="p-3 text-sm">
+                        {new Date(analysis.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="p-3 text-sm font-medium">{analysis.product}</td>
+                      <td className="p-3 text-sm">{analysis.goal}</td>
+                      <td className="p-3 text-sm">
+                        <span className="font-bold text-blue-600">{analysis.overallScore}/100</span>
+                      </td>
+                      <td className="p-3 text-sm">{analysis.headline}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Pagination */}
+            <div className="flex justify-between items-center">
+              <Button
+                variant="outline"
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">Page {page + 1}</span>
+              <Button
+                variant="outline"
+                onClick={() => setPage(p => p + 1)}
+                disabled={data.analyses.length < limit}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Thumbnail History Tab Component
+function ThumbnailHistoryTab() {
+  const [sortBy, setSortBy] = useState<"createdAt" | "overallScore" | "videoTitle">("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(0);
+  const limit = 10;
+  
+  const { data, isLoading } = trpc.creatorTools.getThumbnailHistory.useQuery({
+    limit,
+    offset: page * limit,
+    sortBy,
+    sortOrder,
+  });
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>YouTube Thumbnail History</CardTitle>
+        <CardDescription>View and manage your past thumbnail generations</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading && <p className="text-sm text-muted-foreground">Loading history...</p>}
+        {data && data.analyses.length === 0 && (
+          <p className="text-sm text-muted-foreground">No thumbnail analyses yet. Generate your first thumbnail!</p>
+        )}
+        {data && data.analyses.length > 0 && (
+          <div className="space-y-4">
+            {/* Sort Controls */}
+            <div className="flex gap-4">
+              <div>
+                <Label>Sort By</Label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="createdAt">Date</option>
+                  <option value="overallScore">Score</option>
+                  <option value="videoTitle">Title</option>
+                </select>
+              </div>
+              <div>
+                <Label>Order</Label>
+                <select
+                  value="sortOrder"
+                  onChange={(e) => setSortOrder(e.target.value as any)}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="desc">Descending</option>
+                  <option value="asc">Ascending</option>
+                </select>
+              </div>
+            </div>
+            
+            {/* History Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {data.analyses.map((analysis) => (
+                <div key={analysis.id} className="border rounded-lg p-4 hover:bg-muted/50">
+                  <img src={analysis.imageUrl} alt="Thumbnail" className="w-full rounded-lg mb-3" />
+                  <div className="space-y-2">
+                    <p className="font-semibold text-sm">{analysis.videoTitle}</p>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{new Date(analysis.createdAt).toLocaleDateString()}</span>
+                      <span className="font-bold text-blue-600">{analysis.overallScore}/100</span>
+                    </div>
+                    <p className="text-xs">Niche: {analysis.niche}</p>
+                    <p className="text-xs">Text: {analysis.textOverlay}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Pagination */}
+            <div className="flex justify-between items-center">
+              <Button
+                variant="outline"
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">Page {page + 1}</span>
+              <Button
+                variant="outline"
+                onClick={() => setPage(p => p + 1)}
+                disabled={data.analyses.length < limit}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Batch Ads Tab Component
+function BatchAdsTab() {
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvData, setCsvData] = useState<any[]>([]);
+  const batchGenerate = trpc.creatorTools.batchGenerateAds.useMutation();
+  
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setCsvFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const lines = text.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(',').map(h => h.trim());
+      
+      const rows = lines.slice(1).map(line => {
+        const values = line.split(',').map(v => v.trim());
+        const row: any = {};
+        headers.forEach((header, i) => {
+          row[header] = values[i];
+        });
+        return row;
+      });
+      
+      setCsvData(rows);
+    };
+    reader.readAsText(file);
+  };
+  
+  const handleBatchGenerate = async () => {
+    if (csvData.length === 0) return;
+    
+    const rows = csvData.map(row => ({
+      product: row.product || row.Product,
+      audience: row.audience || row.Audience,
+      goal: (row.goal || row.Goal || 'conversions') as any,
+      description: row.description || row.Description,
+      tone: (row.tone || row.Tone || 'professional') as any,
+      budget: row.budget ? parseInt(row.budget) : undefined,
+    }));
+    
+    await batchGenerate.mutateAsync({ rows });
+  };
+  
+  const handleDownloadResults = () => {
+    if (!batchGenerate.data) return;
+    
+    const XLSX = require('xlsx');
+    const worksheet = XLSX.utils.json_to_sheet(
+      batchGenerate.data.results.map((r: any) => ({
+        Product: r.input.product,
+        Audience: r.input.audience,
+        Goal: r.input.goal,
+        Success: r.success ? 'Yes' : 'No',
+        Headline: r.data?.headline || r.error,
+        Body: r.data?.bodyText || '',
+        CTA: r.data?.cta || '',
+        Score: r.data?.overallScore || 0,
+        ImageURL: r.data?.imageUrl || '',
+      }))
+    );
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Batch Ads');
+    XLSX.writeFile(workbook, 'batch-ads-results.xlsx');
+  };
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Batch Ad Generation</CardTitle>
+        <CardDescription>
+          Upload CSV with columns: product, audience, goal, description, tone, budget
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="csv-upload">Upload CSV File</Label>
+          <Input
+            id="csv-upload"
+            type="file"
+            accept=".csv"
+            onChange={handleFileUpload}
+          />
+        </div>
+        
+        {csvData.length > 0 && (
+          <div>
+            <p className="text-sm font-medium mb-2">{csvData.length} rows loaded</p>
+            <div className="border rounded-lg p-4 max-h-60 overflow-auto">
+              <pre className="text-xs">{JSON.stringify(csvData.slice(0, 3), null, 2)}</pre>
+              {csvData.length > 3 && <p className="text-xs text-muted-foreground mt-2">... and {csvData.length - 3} more</p>}
+            </div>
+          </div>
+        )}
+        
+        <Button
+          onClick={handleBatchGenerate}
+          disabled={batchGenerate.isPending || csvData.length === 0}
+          className="w-full"
+        >
+          {batchGenerate.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Generate {csvData.length} Ads
+        </Button>
+        
+        {batchGenerate.data && (
+          <div className="space-y-4">
+            <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+              <p className="font-semibold">Batch Complete!</p>
+              <p className="text-sm">Successful: {batchGenerate.data.successful}/{batchGenerate.data.total}</p>
+            </div>
+            <Button onClick={handleDownloadResults} className="w-full">
+              Download Results (XLSX)
+            </Button>
+          </div>
+        )}
+        
+        {batchGenerate.error && (
+          <p className="text-sm text-destructive">Error: {batchGenerate.error.message}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Batch Thumbnails Tab Component
+function BatchThumbnailsTab() {
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvData, setCsvData] = useState<any[]>([]);
+  const batchGenerate = trpc.creatorTools.batchGenerateThumbnails.useMutation();
+  
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setCsvFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const lines = text.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(',').map(h => h.trim());
+      
+      const rows = lines.slice(1).map(line => {
+        const values = line.split(',').map(v => v.trim());
+        const row: any = {};
+        headers.forEach((header, i) => {
+          row[header] = values[i];
+        });
+        return row;
+      });
+      
+      setCsvData(rows);
+    };
+    reader.readAsText(file);
+  };
+  
+  const handleBatchGenerate = async () => {
+    if (csvData.length === 0) return;
+    
+    const rows = csvData.map(row => ({
+      videoTitle: row.videoTitle || row.VideoTitle || row.title || row.Title,
+      niche: row.niche || row.Niche,
+      style: (row.style || row.Style || 'bold') as any,
+      customPrompt: row.customPrompt || row.CustomPrompt,
+    }));
+    
+    await batchGenerate.mutateAsync({ rows });
+  };
+  
+  const handleDownloadResults = () => {
+    if (!batchGenerate.data) return;
+    
+    const XLSX = require('xlsx');
+    const worksheet = XLSX.utils.json_to_sheet(
+      batchGenerate.data.results.map((r: any) => ({
+        VideoTitle: r.input.videoTitle,
+        Niche: r.input.niche,
+        Style: r.input.style,
+        Success: r.success ? 'Yes' : 'No',
+        TextOverlay: r.data?.textOverlay || r.error,
+        Score: r.data?.overallScore || 0,
+        ImageURL: r.data?.imageUrl || '',
+      }))
+    );
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Batch Thumbnails');
+    XLSX.writeFile(workbook, 'batch-thumbnails-results.xlsx');
+  };
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Batch Thumbnail Generation</CardTitle>
+        <CardDescription>
+          Upload CSV with columns: videoTitle, niche, style, customPrompt
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="csv-upload-thumb">Upload CSV File</Label>
+          <Input
+            id="csv-upload-thumb"
+            type="file"
+            accept=".csv"
+            onChange={handleFileUpload}
+          />
+        </div>
+        
+        {csvData.length > 0 && (
+          <div>
+            <p className="text-sm font-medium mb-2">{csvData.length} rows loaded</p>
+            <div className="border rounded-lg p-4 max-h-60 overflow-auto">
+              <pre className="text-xs">{JSON.stringify(csvData.slice(0, 3), null, 2)}</pre>
+              {csvData.length > 3 && <p className="text-xs text-muted-foreground mt-2">... and {csvData.length - 3} more</p>}
+            </div>
+          </div>
+        )}
+        
+        <Button
+          onClick={handleBatchGenerate}
+          disabled={batchGenerate.isPending || csvData.length === 0}
+          className="w-full"
+        >
+          {batchGenerate.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Generate {csvData.length} Thumbnails
+        </Button>
+        
+        {batchGenerate.data && (
+          <div className="space-y-4">
+            <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+              <p className="font-semibold">Batch Complete!</p>
+              <p className="text-sm">Successful: {batchGenerate.data.successful}/{batchGenerate.data.total}</p>
+            </div>
+            <Button onClick={handleDownloadResults} className="w-full">
+              Download Results (XLSX)
+            </Button>
+          </div>
+        )}
+        
+        {batchGenerate.error && (
+          <p className="text-sm text-destructive">Error: {batchGenerate.error.message}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// A/B Testing Ads Tab Component
+function ABTestingAdsTab() {
+  const [abProduct, setAbProduct] = useState("");
+  const [abAudience, setAbAudience] = useState("");
+  const [abGoal, setAbGoal] = useState<"awareness" | "traffic" | "conversions" | "engagement">("conversions");
+  const [abDescription, setAbDescription] = useState("");
+  const [abBudget, setAbBudget] = useState("");
+  const [variantCount, setVariantCount] = useState(3);
+  
+  const generateVariants = trpc.creatorTools.generateAdVariants.useMutation();
+  
+  const handleGenerateVariants = async () => {
+    await generateVariants.mutateAsync({
+      product: abProduct,
+      targetAudience: abAudience,
+      goal: abGoal,
+      description: abDescription || undefined,
+      budget: abBudget ? parseInt(abBudget) : undefined,
+      variantCount,
+    });
+  };
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>A/B Testing - Facebook Ads</CardTitle>
+        <CardDescription>Generate multiple ad variants and compare performance scores</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="ab-product">Product/Service</Label>
+            <Input
+              id="ab-product"
+              value={abProduct}
+              onChange={(e) => setAbProduct(e.target.value)}
+              placeholder="e.g., AI Writing Tool"
+            />
+          </div>
+          <div>
+            <Label htmlFor="ab-audience">Target Audience</Label>
+            <Input
+              id="ab-audience"
+              value={abAudience}
+              onChange={(e) => setAbAudience(e.target.value)}
+              placeholder="e.g., Content creators, 25-40"
+            />
+          </div>
+          <div>
+            <Label htmlFor="ab-goal">Campaign Goal</Label>
+            <select
+              id="ab-goal"
+              value={abGoal}
+              onChange={(e) => setAbGoal(e.target.value as any)}
+              className="w-full p-2 border rounded-md"
+            >
+              <option value="awareness">Brand Awareness</option>
+              <option value="traffic">Traffic</option>
+              <option value="conversions">Conversions</option>
+              <option value="engagement">Engagement</option>
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="ab-variant-count">Number of Variants</Label>
+            <select
+              id="ab-variant-count"
+              value={variantCount}
+              onChange={(e) => setVariantCount(parseInt(e.target.value))}
+              className="w-full p-2 border rounded-md"
+            >
+              <option value="2">2 Variants</option>
+              <option value="3">3 Variants</option>
+            </select>
+          </div>
+        </div>
+        
+        <div>
+          <Label htmlFor="ab-description">Product Description (Optional)</Label>
+          <Textarea
+            id="ab-description"
+            value={abDescription}
+            onChange={(e) => setAbDescription(e.target.value)}
+            placeholder="Additional details about your product..."
+            rows={3}
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="ab-budget">Budget (Optional)</Label>
+          <Input
+            id="ab-budget"
+            type="number"
+            value={abBudget}
+            onChange={(e) => setAbBudget(e.target.value)}
+            placeholder="e.g., 500"
+          />
+        </div>
+        
+        <Button
+          onClick={handleGenerateVariants}
+          disabled={generateVariants.isPending || !abProduct || !abAudience}
+          className="w-full"
+        >
+          {generateVariants.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Generate {variantCount} Variants
+        </Button>
+        
+        {generateVariants.data && (
+          <div className="space-y-6">
+            <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+              <p className="font-semibold">Best Performer: Variant {generateVariants.data.bestVariantIndex}</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {generateVariants.data.variants.map((variant: any, index: number) => (
+                <div
+                  key={index}
+                  className={`border rounded-lg p-4 ${
+                    index + 1 === generateVariants.data.bestVariantIndex
+                      ? 'border-green-500 bg-green-500/5'
+                      : ''
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-semibold">Variant {variant.variantIndex}</h3>
+                    <span className="text-sm font-bold text-blue-600">{variant.overallScore}/100</span>
+                  </div>
+                  
+                  {variant.imageUrl && (
+                    <img src={variant.imageUrl} alt="Ad Creative" className="w-full rounded-lg mb-3" />
+                  )}
+                  
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Tone</p>
+                      <p className="font-medium">{variant.tone}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Headline</p>
+                      <p className="font-medium">{variant.headline}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Body</p>
+                      <p className="text-xs">{variant.bodyText}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">CTA</p>
+                      <p className="font-medium">{variant.cta}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Hook</p>
+                        <p className="text-sm font-bold">{variant.hookScore}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">CTA</p>
+                        <p className="text-sm font-bold">{variant.ctaScore}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {generateVariants.error && (
+          <p className="text-sm text-destructive">Error: {generateVariants.error.message}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// A/B Testing Thumbnails Tab Component
+function ABTestingThumbnailsTab() {
+  const [abTitle, setAbTitle] = useState("");
+  const [abNiche, setAbNiche] = useState("");
+  const [abCustomPrompt, setAbCustomPrompt] = useState("");
+  const [variantCount, setVariantCount] = useState(3);
+  
+  const generateVariants = trpc.creatorTools.generateThumbnailVariants.useMutation();
+  
+  const handleGenerateVariants = async () => {
+    await generateVariants.mutateAsync({
+      videoTitle: abTitle,
+      niche: abNiche,
+      customPrompt: abCustomPrompt || undefined,
+      variantCount,
+    });
+  };
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>A/B Testing - YouTube Thumbnails</CardTitle>
+        <CardDescription>Generate multiple thumbnail variants and compare CTR scores</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="ab-title">Video Title</Label>
+            <Input
+              id="ab-title"
+              value={abTitle}
+              onChange={(e) => setAbTitle(e.target.value)}
+              placeholder="e.g., 10 AI Tools That Will Change Your Life"
+            />
+          </div>
+          <div>
+            <Label htmlFor="ab-niche">Niche</Label>
+            <Input
+              id="ab-niche"
+              value={abNiche}
+              onChange={(e) => setAbNiche(e.target.value)}
+              placeholder="e.g., Tech, Finance, Fitness"
+            />
+          </div>
+          <div>
+            <Label htmlFor="ab-variant-count-thumb">Number of Variants</Label>
+            <select
+              id="ab-variant-count-thumb"
+              value={variantCount}
+              onChange={(e) => setVariantCount(parseInt(e.target.value))}
+              className="w-full p-2 border rounded-md"
+            >
+              <option value="2">2 Variants</option>
+              <option value="3">3 Variants</option>
+            </select>
+          </div>
+        </div>
+        
+        <div>
+          <Label htmlFor="ab-custom-prompt">Custom Prompt (Optional)</Label>
+          <Textarea
+            id="ab-custom-prompt"
+            value={abCustomPrompt}
+            onChange={(e) => setAbCustomPrompt(e.target.value)}
+            placeholder="Additional visual requirements..."
+            rows={3}
+          />
+        </div>
+        
+        <Button
+          onClick={handleGenerateVariants}
+          disabled={generateVariants.isPending || !abTitle || !abNiche}
+          className="w-full"
+        >
+          {generateVariants.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Generate {variantCount} Variants
+        </Button>
+        
+        {generateVariants.data && (
+          <div className="space-y-6">
+            <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+              <p className="font-semibold">Best Performer: Variant {generateVariants.data.bestVariantIndex}</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {generateVariants.data.variants.map((variant: any, index: number) => (
+                <div
+                  key={index}
+                  className={`border rounded-lg p-4 ${
+                    index + 1 === generateVariants.data.bestVariantIndex
+                      ? 'border-green-500 bg-green-500/5'
+                      : ''
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-semibold">Variant {variant.variantIndex}</h3>
+                    <span className="text-sm font-bold text-blue-600">{variant.overallScore}/100</span>
+                  </div>
+                  
+                  {variant.imageUrl && (
+                    <img src={variant.imageUrl} alt="Thumbnail" className="w-full rounded-lg mb-3" />
+                  )}
+                  
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Style</p>
+                      <p className="font-medium">{variant.style}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Text Overlay</p>
+                      <p className="font-medium">{variant.textOverlay}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                      <div>
+                        <p className="text-xs text-muted-foreground">CTR Score</p>
+                        <p className="text-sm font-bold">{variant.ctrScore}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Emotion</p>
+                        <p className="text-sm font-bold">{variant.emotionScore}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Predicted CTR</p>
+                      <p className="text-sm font-bold">{variant.predictedMetrics.ctr}%</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {generateVariants.error && (
+          <p className="text-sm text-destructive">Error: {generateVariants.error.message}</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }

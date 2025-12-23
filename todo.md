@@ -831,3 +831,45 @@
 - [ ] Display CTR prediction and scores
 - [ ] Download button
 - [ ] Persist results
+
+
+## CREATOR TOOLS ENHANCEMENTS (2024-12-23)
+
+### History/Library Tabs
+- [x] Add tRPC query: getAdHistory (userId, limit, offset, sortBy, sortOrder)
+- [x] Add tRPC query: getThumbnailHistory (userId, limit, offset, sortBy, sortOrder)
+- [x] Build History tab for Facebook Ads (sortable table: date, product, goal, score, headline)
+- [x] Build History tab for YouTube Thumbnails (grid layout with thumbnails, date, score, niche, text)
+- [x] Add sorting by date, score, product/title
+- [x] Add sort order toggle (asc/desc)
+- [x] Add pagination (10 items per page)
+- [x] TypeScript: 0 errors
+- [ ] Add "View Details" button to reopen past analysis
+- [ ] Add "Regenerate" button to create new variant
+
+### Batch Generation
+- [x] Add tRPC mutation: batchGenerateAds (csvData)
+- [x] Add tRPC mutation: batchGenerateThumbnails (csvData)
+- [x] Build CSV upload UI for Facebook Ads
+- [x] Build CSV upload UI for YouTube Thumbnails
+- [x] Parse CSV (product, audience, goal, description, tone, budget)
+- [x] Process all rows sequentially
+- [x] Generate spreadsheet export (XLSX) with results
+- [x] Download link for completed batch
+- [x] Error handling for invalid CSV rows
+- [x] Install xlsx package for spreadsheet generation
+- [x] Success/failure tracking per row
+- [x] TypeScript: 0 errors
+### A/B Testing Mode
+- [x] Add tRPC mutation: generateAdVariants (input, variantCount)
+- [x] Add tRPC mutation: generateThumbnailVariants (input, variantCount)
+- [x] Build A/B Testing UI for Facebook Ads
+- [x] Build A/B Testing UI for YouTube Thumbnails
+- [x] Generate 2-3 variants with different tones/styles
+- [x] Side-by-side comparison display (grid layout)
+- [x] Highlight best performer (highest score) with green border
+- [x] Show score breakdown for each variant
+- [x] Display tone/style for each variant
+- [x] Show predicted metrics for each variant
+- [x] TypeScript: 0 errorseferred variant
+- [ ] Variant difference indicators (tone, style, approach)
