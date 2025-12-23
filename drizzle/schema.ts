@@ -773,6 +773,10 @@ export const adAnalyses = mysqlTable("ad_analyses", {
 // Import from schema-multiplatform.ts
 export * from "./schema-multiplatform";
 
+// ============ PODCASTING INTEGRATION SUITE ============
+// Import from schema-podcasting.ts
+export * from "./schema-podcasting";
+
 export const thumbnailAnalyses = mysqlTable("thumbnail_analyses", {
   id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
