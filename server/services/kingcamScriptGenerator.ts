@@ -80,7 +80,11 @@ Return JSON with this structure:
 
   // Parse response
   const content = response.choices[0].message.content;
-  const responseText = typeof content === "string" ? content : "{}";
+  let responseText = typeof content === "string" ? content : "{}";
+  
+  // Strip markdown code blocks if present
+  responseText = responseText.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+  
   const scriptData = JSON.parse(responseText);
 
   // Build script segments

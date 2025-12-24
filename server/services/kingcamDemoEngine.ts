@@ -54,13 +54,14 @@ export async function generateKingCamDemo(
     sceneCount: 4,
   });
 
-  // Step 2: Generate voice narration
-  console.log("🎤 Generating KingCam voice narration...");
-  const voiceProfile = sector === "dominican" 
-    ? KINGCAM_DOMINICAN_VOICE_PROFILE 
-    : KINGCAM_VOICE_PROFILE;
-
-  const audioResult = await generateSpeech(script.fullText, voiceProfile);
+  // Step 2: Skip TTS (not available in Manus built-in services)
+  // Video will have text overlays instead of audio narration
+  console.log("📝 Skipping TTS - using text overlays...");
+  const audioResult = {
+    audioUrl: "",
+    duration: 0,
+    text: script.fullText,
+  };
 
   // Step 3: Generate video scenes
   console.log("🎬 Generating video scenes...");

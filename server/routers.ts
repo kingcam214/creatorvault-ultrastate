@@ -28,6 +28,7 @@ import { orchestratorRouter } from "./routers/orchestrator";
 import { vaultLiveRouter } from "./routers/vaultLive";
 import { emmaNetworkRouter } from "./routers/emmaNetwork";
 import { osRouter } from "./routers/os";
+import { kingcamDemosRouter } from "./routers/kingcamDemos";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -598,6 +599,7 @@ export const appRouter = router({
   vaultLive: vaultLiveRouter,
   emmaNetwork: emmaNetworkRouter,
   os: osRouter,
+  kingcamDemos: kingcamDemosRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({
