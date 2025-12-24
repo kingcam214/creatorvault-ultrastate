@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO subscriptions (fan_id, creator_id, tier_id, status, current_period_start, current_period_end) VALUES (2, 1, 1, 'active', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY))",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute INSERT INTO subscriptions (fan_id, creator_id, tier_id, status, current_period_start, current_period_end) VALUES (2, 1, 1, 'active', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY))",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1452 (23000) at line 1: Cannot add or update a child row: a foreign key constraint fails (`3ss8khjhmmbtxkdlhxh8t9`.`subscriptions`, CONSTRAINT `fk_1` FOREIGN KEY (`fan_id`) REFERENCES `users` (`id`) ON DELETE CASCADE)"
+  ]
+}

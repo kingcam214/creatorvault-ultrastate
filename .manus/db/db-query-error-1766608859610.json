@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO subscriptions (fan_id, creator_id, tier_id, status) VALUES (2, 1, LAST_INSERT_ID(), 'pending_verification')",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute INSERT INTO subscriptions (fan_id, creator_id, tier_id, status) VALUES (2, 1, LAST_INSERT_ID(), 'pending_verification')",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1265 (01000) at line 1: Data truncated for column 'status' at row 1"
+  ]
+}

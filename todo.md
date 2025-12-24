@@ -1582,3 +1582,12 @@
 - [ ] Capture proof: Stripe dashboard screenshot
 - [ ] Capture proof: Database transaction row
 - [ ] Capture proof: Creator balance before/after
+
+
+## REAL MONEY FLOWS - CHRISTMAS EVE PRIORITY (2024-12-24)
+- [ ] Test subscription payment flow end-to-end (creator creates tier → fan pays CashApp → admin confirms → balance updates)
+- [ ] Test payout withdrawal flow end-to-end (creator requests payout → admin approves → money moves)
+- [ ] Test manual payment confirmation flow end-to-end (fan sends payment → admin confirms → 70/30 split applied)
+- [ ] Wire money pages to navigation (admin payouts, manual payments, creator earnings)
+- [ ] Verify VaultLive tip flow works (fan tips → creator balance updates)
+- [ ] Delete live demo system (doesn't make real money)

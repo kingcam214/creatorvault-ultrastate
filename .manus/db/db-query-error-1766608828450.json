@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO subscription_tiers (creator_id, name, price_cents, description, benefits) VALUES (1, 'Test Tier', 1000, 'Test subscription $10/month', 'Exclusive content access')",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute INSERT INTO subscription_tiers (creator_id, name, price_cents, description, benefits) VALUES (1, 'Test Tier', 1000, 'Test subscription $10/month', 'Exclusive content access')",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'price_cents' in 'field list'"
+  ]
+}
