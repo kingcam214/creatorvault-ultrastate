@@ -32,6 +32,7 @@ import { kingcamDemosRouter } from "./routers/kingcamDemos";
 import { vaultPayRouter } from "./routers/vaultPay";
 import { dayShiftDoctorRouter } from "./routers/dayShiftDoctor";
 import { hollywoodReplacementRouter } from "./routers/hollywoodReplacement";
+import { proofGateRouter } from "./routers/proofGate";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -606,6 +607,7 @@ export const appRouter = router({
   vaultPay: vaultPayRouter,
   dayShiftDoctor: dayShiftDoctorRouter,
   hollywoodReplacement: hollywoodReplacementRouter,
+  proofGate: proofGateRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({

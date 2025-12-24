@@ -1446,3 +1446,86 @@
 - [ ] Add button to Home page
 - [ ] Test all calculators
 - [ ] Save checkpoint
+
+
+## PHASE 2: FIX EVERYTHING BY TONIGHT (2024-12-23)
+
+### Hollywood Replacement UI
+- [ ] Debug blank page issue
+- [ ] Fix rendering
+- [ ] Verify all calculators display
+- [ ] Test project estimate generator
+
+### Proof Gate System
+- [ ] Create server/proofGate.ts
+- [ ] Build feature registry
+- [ ] Implement assertFeatureReal() function
+- [ ] Add "REAL" vs "NOT REAL" badges to UI
+- [ ] Create blocking page for placeholder features
+- [ ] Add proof logging
+
+### KingCam Demos
+- [ ] Generate 3 Dominican demos (street content, cultural, lifestyle)
+- [ ] Generate 3 Adult demos (OnlyFans style, subscription content, DM sales)
+- [ ] Store in database
+- [ ] Display on /king/demos page
+- [ ] Add download/share functionality
+
+### Content Repurposing System
+- [ ] Create repurpose_jobs table
+- [ ] Create repurpose_outputs table
+- [ ] Build repurposing service
+- [ ] Create tRPC router
+- [ ] Build UI page (/content-repurpose)
+- [ ] Add video/url/text input
+- [ ] Generate platform packs (TikTok/IG/YT)
+- [ ] Display outputs with download
+
+### Podcast Sector
+- [ ] Create podcast_shows table
+- [ ] Create podcast_episodes table
+- [ ] Create podcast_jobs table
+- [ ] Build podcast service
+- [ ] Create tRPC router
+- [ ] Build UI page (/podcast-studio)
+- [ ] Add RSS ingest
+- [ ] Add file upload
+- [ ] Generate clip ideas
+- [ ] Display analytics
+
+### LIVE Rooms
+- [ ] Add real-time chat to VaultLiveStream.tsx
+- [ ] Add reactions (hearts, fire, money)
+- [ ] Add creator presence indicators
+- [ ] Add viewer count
+- [ ] Add chat message persistence
+- [ ] Test end-to-end
+
+### Real Telegram Bot
+- [ ] Create bot via @BotFather
+- [ ] Get bot token
+- [ ] Store token in database (encrypted)
+- [ ] Deploy webhook handler
+- [ ] Test 10 messages
+- [ ] Verify leads in database
+
+### Real WhatsApp Provider
+- [ ] Choose provider (Twilio or Meta Cloud API)
+- [ ] Get API credentials
+- [ ] Store in database
+- [ ] Test 10 messages
+- [ ] Verify leads in database
+
+### Create Real Content
+- [ ] Create 3 marketplace products (Dominican guide, Adult content pack, Influencer toolkit)
+- [ ] Create 3 university courses (Dominican Creator 101, Adult Platform Mastery, Viral Content Formula)
+- [ ] Register 3 Emma Network recruiters (test accounts)
+- [ ] Verify all visible in UI
+- [ ] Test purchase flow
+
+### Final Testing
+- [ ] Run all tests
+- [ ] Check all pages load
+- [ ] Verify database has real data
+- [ ] Test Proof Gate enforcement
+- [ ] Save checkpoint

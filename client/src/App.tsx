@@ -34,6 +34,7 @@ import KingCamDemos from "./pages/KingCamDemos";
 import VaultPay from "./pages/VaultPay";
 import DayShiftDoctor from "./pages/DayShiftDoctor";
 import HollywoodReplacement from "./pages/HollywoodReplacement";
+import ProofGate from "./pages/ProofGate";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -72,6 +73,7 @@ function Router() {
       <Route path={"/vault-pay"} component={VaultPay} />
       <Route path={"/dayshift-doctor"} component={DayShiftDoctor} />
       <Route path={"/hollywood-replacement"} component={HollywoodReplacement} />
+      <Route path={"/proof-gate"} component={ProofGate} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
           <Route component={NotFound} />
