@@ -4,9 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { loadStripe } from "@stripe/stripe-js";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
 export default function FanSubscribe() {
   const [, params] = useRoute("/subscribe/:tierId");
@@ -20,8 +18,7 @@ export default function FanSubscribe() {
     { enabled: false } // Disabled for now
   );
 
-  const subscribe = trpc.subscriptions.subscribe.useMutation();
-  const processPayment = trpc.subscriptions.processPayment.useMutation();
+  const createCheckout = trpc.stripeCheckout.createCheckoutSession.useMutation();
 
   // Mock tier data for now
   const mockTier = {
@@ -41,23 +38,15 @@ export default function FanSubscribe() {
     setIsProcessing(true);
 
     try {
-      // Step 1: Create subscription
-      const subResult = await subscribe.mutateAsync({
-        fanId: user.id,
-        tierId,
-      });
-
-      // Step 2: Process payment (in production, this would create Stripe PaymentIntent)
-      const paymentResult = await processPayment.mutateAsync({
-        subscriptionId: subResult.subscriptionId,
-        amountInCents: mockTier.priceInCents,
-      });
-
-      alert(`Success! Subscription created. Transaction ID: ${paymentResult.transactionId}`);
-      window.location.href = "/my-subscriptions";
+      // Create Stripe Checkout Session
+      const result = await createCheckout.mutateAsync({ tierId });
+      
+      // Redirect to Stripe Checkout
+      if (result.url) {
+        window.location.href = result.url;
+      }
     } catch (error: any) {
       alert(`Error: ${error.message}`);
-    } finally {
       setIsProcessing(false);
     }
   };

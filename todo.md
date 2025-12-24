@@ -1570,3 +1570,15 @@
 - [x] Build creator balance display
 - [ ] Test end-to-end with real Stripe payment
 - [ ] Provide proof (screenshot + database entry)
+
+
+## REAL STRIPE PAYMENT FLOW (2024-12-24)
+- [x] Create Stripe Checkout Session endpoint (stripeCheckout router)
+- [x] Replace mock payment with real Stripe redirect (FanSubscribe.tsx)
+- [x] Build webhook endpoint to receive Stripe events (stripeWebhook.ts)
+- [x] Process checkout.session.completed event (handleSubscriptionCheckout)
+- [x] Update database transaction and creator balance (70/30 split)
+- [ ] Test with real $1 payment
+- [ ] Capture proof: Stripe dashboard screenshot
+- [ ] Capture proof: Database transaction row
+- [ ] Capture proof: Creator balance before/after

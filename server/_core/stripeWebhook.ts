@@ -42,7 +42,14 @@ export async function handleStripeWebhook(req: Request, res: Response) {
     // Handle checkout.session.completed
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-      await handleCheckoutCompleted(session);
+      
+      // Check if this is a subscription checkout (has tierId in metadata)
+      if (session.metadata?.tierId) {
+        await handleSubscriptionCheckout(session);
+      } else {
+        // VaultLive tip/donation
+        await handleCheckoutCompleted(session);
+      }
     }
 
     // Return 200 to acknowledge receipt
@@ -111,4 +118,81 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   console.log(`[Stripe Webhook] Payment completed successfully`);
+}
+
+/**
+ * Handle subscription checkout
+ */
+async function handleSubscriptionCheckout(session: Stripe.Checkout.Session) {
+  const { tierId, creatorId, fanId } = session.metadata!;
+
+  if (!tierId || !creatorId || !fanId) {
+    console.error("[Stripe Webhook] Missing subscription metadata");
+    return;
+  }
+
+  const { db } = await import("../db");
+  const { subscriptions, transactions, creatorBalances } = await import("../../drizzle/schema");
+  const { eq } = await import("drizzle-orm");
+
+  // Create subscription record
+  const subResult = await db.insert(subscriptions).values({
+    fanId: parseInt(fanId),
+    creatorId: parseInt(creatorId),
+    tierId: parseInt(tierId),
+    stripeSubscriptionId: session.subscription as string,
+    status: "active",
+    currentPeriodStart: new Date(),
+    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  });
+
+  const subscriptionId = Number((subResult as any).insertId);
+  const amountInCents = session.amount_total || 0;
+
+  // Calculate 70/30 split
+  const creatorShare = Math.floor(amountInCents * 0.7);
+  const platformShare = amountInCents - creatorShare;
+
+  // Create transaction record
+  await db.insert(transactions).values({
+    subscriptionId,
+    fanId: parseInt(fanId),
+    creatorId: parseInt(creatorId),
+    amountInCents,
+    creatorShareInCents: creatorShare,
+    platformShareInCents: platformShare,
+    stripePaymentIntentId: session.payment_intent as string,
+    status: "completed",
+  });
+
+  // Update creator balance
+  const [existingBalance] = await db
+    .select()
+    .from(creatorBalances)
+    .where(eq(creatorBalances.creatorId, parseInt(creatorId)));
+
+  if (existingBalance) {
+    await db
+      .update(creatorBalances)
+      .set({
+        availableBalanceInCents: existingBalance.availableBalanceInCents + creatorShare,
+        lifetimeEarningsInCents: existingBalance.lifetimeEarningsInCents + creatorShare,
+        updatedAt: new Date(),
+      })
+      .where(eq(creatorBalances.creatorId, parseInt(creatorId)));
+  } else {
+    await db.insert(creatorBalances).values({
+      creatorId: parseInt(creatorId),
+      availableBalanceInCents: creatorShare,
+      pendingBalanceInCents: 0,
+      lifetimeEarningsInCents: creatorShare,
+    });
+  }
+
+  console.log("[Stripe Webhook] Subscription created", {
+    subscriptionId,
+    creatorId,
+    creatorShare: `$${(creatorShare / 100).toFixed(2)}`,
+    platformShare: `$${(platformShare / 100).toFixed(2)}`,
+  });
 }
