@@ -825,3 +825,134 @@ export const thumbnailAnalyses = mysqlTable("thumbnail_analyses", {
 
 // VaultLive Streaming
 export * from "./schema-vaultlive";
+
+
+/**
+ * Adult creator verification and compliance
+ */
+export const adultVerification = mysqlTable("adult_verification", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  idDocumentUrl: varchar("id_document_url", { length: 500 }),
+  verificationStatus: mysqlEnum("verification_status", ["pending", "approved", "rejected"]).default("pending"),
+  verifiedAt: timestamp("verified_at"),
+  ageVerified: boolean("age_verified").default(false),
+  consentFormsSigned: boolean("consent_forms_signed").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  creatorIdIdx: index("idx_adult_verification_creator_id").on(table.creatorId),
+  statusIdx: index("idx_adult_verification_status").on(table.verificationStatus),
+}));
+
+/**
+ * Content protection settings
+ */
+export const contentProtection = mysqlTable("content_protection", {
+  id: int("id").autoincrement().primaryKey(),
+  contentId: int("content_id").notNull(),
+  watermarkEnabled: boolean("watermark_enabled").default(true),
+  screenshotPrevention: boolean("screenshot_prevention").default(true),
+  geographicBlocks: json("geographic_blocks").$type<string[]>(),
+  allowedRegions: json("allowed_regions").$type<string[]>(),
+  dmcaMonitoring: boolean("dmca_monitoring").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  contentIdIdx: index("idx_content_protection_content_id").on(table.contentId),
+}));
+
+/**
+ * Safety incident logging
+ */
+export const safetyLogs = mysqlTable("safety_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  incidentType: mysqlEnum("incident_type", ["harassment", "stalking", "leak", "threat"]).notNull(),
+  reportedAt: timestamp("reported_at").defaultNow().notNull(),
+  userBlockedId: int("user_blocked_id"),
+  ipBlocked: varchar("ip_blocked", { length: 45 }),
+  resolutionStatus: mysqlEnum("resolution_status", ["open", "investigating", "resolved"]).default("open"),
+  notes: text("notes"),
+  resolvedAt: timestamp("resolved_at"),
+}, (table) => ({
+  creatorIdIdx: index("idx_safety_logs_creator_id").on(table.creatorId),
+  incidentTypeIdx: index("idx_safety_logs_incident_type").on(table.incidentType),
+  statusIdx: index("idx_safety_logs_status").on(table.resolutionStatus),
+}));
+
+/**
+ * Custom content requests
+ */
+export const customRequests = mysqlTable("custom_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  requesterId: int("requester_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  requestDetails: text("request_details").notNull(),
+  priceQuoted: int("price_quoted").notNull(), // in cents
+  status: mysqlEnum("status", ["pending", "accepted", "declined", "completed"]).default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+}, (table) => ({
+  creatorIdIdx: index("idx_custom_requests_creator_id").on(table.creatorId),
+  requesterIdIdx: index("idx_custom_requests_requester_id").on(table.requesterId),
+  statusIdx: index("idx_custom_requests_status").on(table.status),
+}));
+
+/**
+ * Emma Network hierarchy (regional ambassadors + recruiters)
+ */
+export const emmaNetworkHierarchy = mysqlTable("emma_network_hierarchy", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: mysqlEnum("role", ["coordinator", "regional_ambassador", "recruiter"]).notNull(),
+  region: varchar("region", { length: 100 }), // Sosúa, Santiago, Santo Domingo, Punta Cana
+  parentId: int("parent_id"), // references another hierarchy entry
+  recruitedCount: int("recruited_count").default(0),
+  totalCommissionsEarned: int("total_commissions_earned").default(0), // in cents
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_emma_hierarchy_user_id").on(table.userId),
+  roleIdx: index("idx_emma_hierarchy_role").on(table.role),
+  regionIdx: index("idx_emma_hierarchy_region").on(table.region),
+  parentIdIdx: index("idx_emma_hierarchy_parent_id").on(table.parentId),
+}));
+
+/**
+ * Recruiter commission tracking
+ */
+export const recruiterCommissions = mysqlTable("recruiter_commissions", {
+  id: int("id").autoincrement().primaryKey(),
+  recruiterId: int("recruiter_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  transactionId: int("transaction_id").notNull(),
+  commissionAmount: int("commission_amount").notNull(), // in cents
+  commissionRate: int("commission_rate").notNull(), // percentage * 100 (e.g., 200 = 2%)
+  paidOut: boolean("paid_out").default(false),
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  recruiterIdIdx: index("idx_recruiter_commissions_recruiter_id").on(table.recruiterId),
+  creatorIdIdx: index("idx_recruiter_commissions_creator_id").on(table.creatorId),
+  paidOutIdx: index("idx_recruiter_commissions_paid_out").on(table.paidOut),
+}));
+
+/**
+ * Bilingual content support
+ */
+export const bilingualContent = mysqlTable("bilingual_content", {
+  id: int("id").autoincrement().primaryKey(),
+  contentId: int("content_id").notNull(),
+  titleEs: varchar("title_es", { length: 200 }),
+  titleEn: varchar("title_en", { length: 200 }),
+  descriptionEs: text("description_es"),
+  descriptionEn: text("description_en"),
+  tagsEs: json("tags_es").$type<string[]>(),
+  tagsEn: json("tags_en").$type<string[]>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  contentIdIdx: index("idx_bilingual_content_content_id").on(table.contentId),
+}));

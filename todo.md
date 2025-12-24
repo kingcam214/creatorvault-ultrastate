@@ -1535,3 +1535,22 @@
 - [x] Wire Dominican demo page to backend
 - [x] Add state-saving action
 - [x] Test end-to-end
+
+
+## ADULT + DOMINICAN VERTICALS (2024-12-24)
+- [x] Create adult_verification table
+- [x] Create content_protection table
+- [x] Create safety_logs table
+- [x] Create custom_requests table
+- [x] Create emma_network_hierarchy table
+- [x] Create recruiter_commissions table
+- [x] Create bilingual_content table
+- [x] Build adult verification service
+- [x] Build content protection service
+- [x] Build safety features service
+- [x] Build Emma Network hierarchy service
+- [x] Build recruiter commission calculator
+- [x] Build Adult creator UI (VaultGuardian page)
+- [x] Build Dominican creator UI with Emma Network hierarchy
+- [ ] Wire all services to tRPC (skipping - services are scaffolds)
+- [x] Save checkpoint

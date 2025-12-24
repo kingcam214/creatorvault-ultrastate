@@ -36,6 +36,22 @@ export default function DominicanSector() {
     c.contentTags?.includes("dominican")
   ) || [];
 
+  // Emma Network stats
+  const emmaCoordinator = { name: "Emma", recruited: 573, region: "All DR" };
+  const regionalAmbassadors = [
+    { name: "Sosúa Ambassador", region: "Sosúa", recruited: 143 },
+    { name: "Santiago Ambassador", region: "Santiago", recruited: 127 },
+    { name: "Santo Domingo Ambassador", region: "Santo Domingo", recruited: 189 },
+    { name: "Punta Cana Ambassador", region: "Punta Cana", recruited: 114 },
+  ];
+  const topRecruiters = [
+    { name: "Gigi/Virginia", recruited: 47 },
+    { name: "Diana", recruited: 38 },
+    { name: "Delbania", recruited: 31 },
+    { name: "Addy", recruited: 29 },
+    { name: "Montero", recruited: 24 },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-black to-green-900 text-white p-8">
       <div className="max-w-6xl mx-auto">
@@ -125,6 +141,44 @@ export default function DominicanSector() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Emma Network Hierarchy */}
+        <div className="bg-gray-900 p-6 rounded-lg mb-8">
+          <h2 className="text-2xl font-bold mb-4">🇩🇴 Emma Network Hierarchy</h2>
+          
+          {/* Emma Coordinator */}
+          <div className="bg-gradient-to-r from-yellow-600 to-orange-600 p-4 rounded-lg mb-4">
+            <p className="text-sm text-gray-200">Top Coordinator</p>
+            <p className="text-xl font-bold">{emmaCoordinator.name}</p>
+            <p className="text-sm">{emmaCoordinator.recruited} creators recruited</p>
+          </div>
+
+          {/* Regional Ambassadors */}
+          <div className="mb-4">
+            <p className="text-sm text-gray-400 mb-2">Regional Ambassadors (12 total)</p>
+            <div className="grid grid-cols-2 gap-2">
+              {regionalAmbassadors.map((ambassador, i) => (
+                <div key={i} className="bg-blue-900/50 p-3 rounded">
+                  <p className="font-bold text-sm">{ambassador.region}</p>
+                  <p className="text-xs text-gray-300">{ambassador.recruited} recruited</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Recruiters */}
+          <div>
+            <p className="text-sm text-gray-400 mb-2">Top Recruiters (89 active)</p>
+            <div className="space-y-2">
+              {topRecruiters.map((recruiter, i) => (
+                <div key={i} className="bg-green-900/30 p-2 rounded flex justify-between">
+                  <span className="text-sm">{recruiter.name}</span>
+                  <span className="text-sm text-green-400">{recruiter.recruited} recruited</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Stats */}

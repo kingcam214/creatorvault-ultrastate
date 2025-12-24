@@ -110,6 +110,9 @@ export default function Home() {
             <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-blue-600 to-green-600 text-white hover:from-blue-700 hover:to-green-700 border-2 border-white">
               <Link href="/dominican">🇩🇴 Dominican Sector</Link>
             </Button>
+            <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-700 hover:to-blue-700 border-2 border-cyan-400">
+              <Link href="/vault-guardian">🛡️ VaultGuardian (Adult)</Link>
+            </Button>
             <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-slate-700 to-purple-700 text-white hover:from-slate-800 hover:to-purple-800 border-2 border-purple-500">
               <Link href="/owner-control">🛡️ Owner Control</Link>
             </Button>
