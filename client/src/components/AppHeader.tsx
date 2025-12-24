@@ -1,11 +1,13 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Shield, Menu } from "lucide-react";
+import { Shield, Menu, DollarSign, Users, BarChart3, Podcast, TrendingUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -28,110 +30,205 @@ export default function AppHeader() {
             </a>
           </Link>
 
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
-            <Link href="/marketplace">
-              <a className="text-gray-300 hover:text-white transition-colors">
-                Marketplace
-              </a>
-            </Link>
-            <Link href="/university">
-              <a className="text-gray-300 hover:text-white transition-colors">
-                University
-              </a>
-            </Link>
-            <Link href="/services">
-              <a className="text-gray-300 hover:text-white transition-colors">
-                Services
-              </a>
-            </Link>
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex items-center gap-2">
+            {/* Creator Tools Dropdown */}
             {user && (
-              <>
-                <Link href="/creator">
-                  <a className="text-gray-300 hover:text-white transition-colors">
-                    Creator Dashboard
-                  </a>
-                </Link>
-                <Link href="/ai-bot">
-                  <a className="text-gray-300 hover:text-white transition-colors">
-                    AI Assistant
-                  </a>
-                </Link>
-                <Link href="/command-hub">
-                  <a className="text-gray-300 hover:text-white transition-colors">
-                    Command Hub
-                  </a>
-                </Link>
-              </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white">
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Creator Tools
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 bg-slate-900 border-white/10">
+                  <DropdownMenuLabel className="text-gray-400">Money Making</DropdownMenuLabel>
+                  <DropdownMenuItem asChild>
+                    <Link href="/creator-subscriptions">
+                      <a className="w-full">Subscriptions (70/30)</a>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/vault-live">
+                      <a className="w-full">VaultLive (85/15)</a>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/podcast-studio">
+                      <a className="w-full flex items-center gap-2">
+                        <Podcast className="h-4 w-4" />
+                        Podcast Studio
+                      </a>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/creator-earnings">
+                      <a className="w-full flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        My Earnings
+                      </a>
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuLabel className="text-gray-400">Growth Tools</DropdownMenuLabel>
+                  <DropdownMenuItem asChild>
+                    <Link href="/social-audit">
+                      <a className="w-full">Social Media Audit</a>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/performance-insights">
+                      <a className="w-full flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4" />
+                        Performance Insights
+                      </a>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/creator-toolbox">
+                      <a className="w-full">Content Tools</a>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-          </nav>
 
-          {/* Owner Control + Mobile Menu */}
-          <div className="flex items-center gap-4">
-            {isOwnerOrAdmin && (
-              <Button
-                asChild
-                size="sm"
-                className="hidden md:flex bg-gradient-to-r from-slate-700 to-purple-700 text-white hover:from-slate-800 hover:to-purple-800 border border-purple-500"
-              >
-                <Link href="/owner-status">
-                  <Shield className="h-4 w-4 mr-2" />
-                  Owner Status
+            {/* Emma Network / Recruiter */}
+            {user && (
+              <Button variant="ghost" size="sm" asChild className="text-gray-300 hover:text-white">
+                <Link href="/recruiter">
+                  <Users className="h-4 w-4 mr-2" />
+                  Emma Network
                 </Link>
               </Button>
             )}
 
-            {/* Mobile Menu */}
+            {/* Admin Menu */}
+            {isOwnerOrAdmin && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-purple-400 hover:text-purple-300">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Admin
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 bg-slate-900 border-purple-500/20">
+                  <DropdownMenuLabel className="text-purple-400">Money Management</DropdownMenuLabel>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/payouts">
+                      <a className="w-full">Approve Payouts</a>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/manual-payments">
+                      <a className="w-full">Confirm Payments</a>
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuLabel className="text-purple-400">System</DropdownMenuLabel>
+                  <DropdownMenuItem asChild>
+                    <Link href="/owner-status">
+                      <a className="w-full">Owner Status</a>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/king">
+                      <a className="w-full">King Dashboard</a>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </nav>
+
+          {/* Mobile Menu */}
+          <div className="flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="md:hidden text-white">
+                <Button variant="ghost" size="sm" className="lg:hidden text-white">
                   <Menu className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-slate-900 border-white/10">
-                <DropdownMenuItem asChild>
-                  <Link href="/marketplace">
-                    <a className="w-full">Marketplace</a>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/university">
-                    <a className="w-full">University</a>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/services">
-                    <a className="w-full">Services</a>
-                  </Link>
-                </DropdownMenuItem>
+              <DropdownMenuContent align="end" className="w-64 bg-slate-900 border-white/10 max-h-[80vh] overflow-y-auto">
                 {user && (
                   <>
+                    <DropdownMenuLabel className="text-gray-400">Money Making</DropdownMenuLabel>
                     <DropdownMenuItem asChild>
-                      <Link href="/creator">
-                        <a className="w-full">Creator Dashboard</a>
+                      <Link href="/creator-subscriptions">
+                        <a className="w-full">Subscriptions (70/30)</a>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/ai-bot">
-                        <a className="w-full">AI Assistant</a>
+                      <Link href="/vault-live">
+                        <a className="w-full">VaultLive (85/15)</a>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/command-hub">
-                        <a className="w-full">Command Hub</a>
+                      <Link href="/podcast-studio">
+                        <a className="w-full">Podcast Studio</a>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/creator-earnings">
+                        <a className="w-full">My Earnings</a>
+                      </Link>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuSeparator className="bg-white/10" />
+                    <DropdownMenuLabel className="text-gray-400">Growth Tools</DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                      <Link href="/social-audit">
+                        <a className="w-full">Social Media Audit</a>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/performance-insights">
+                        <a className="w-full">Performance Insights</a>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/creator-toolbox">
+                        <a className="w-full">Content Tools</a>
+                      </Link>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuSeparator className="bg-white/10" />
+                    <DropdownMenuLabel className="text-gray-400">Emma Network</DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                      <Link href="/recruiter">
+                        <a className="w-full">Recruiter Dashboard</a>
                       </Link>
                     </DropdownMenuItem>
                   </>
                 )}
+                
                 {isOwnerOrAdmin && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/owner-status">
-                      <a className="w-full flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        Owner Status
-                      </a>
-                    </Link>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuSeparator className="bg-purple-500/20" />
+                    <DropdownMenuLabel className="text-purple-400">Admin</DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/payouts">
+                        <a className="w-full">Approve Payouts</a>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/manual-payments">
+                        <a className="w-full">Confirm Payments</a>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/owner-status">
+                        <a className="w-full">Owner Status</a>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/king">
+                        <a className="w-full">King Dashboard</a>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
