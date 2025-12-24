@@ -33,6 +33,7 @@ import { vaultPayRouter } from "./routers/vaultPay";
 import { dayShiftDoctorRouter } from "./routers/dayShiftDoctor";
 import { hollywoodReplacementRouter } from "./routers/hollywoodReplacement";
 import { proofGateRouter } from "./routers/proofGate";
+import { subscriptionsRouter } from "./routers/subscriptions";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -608,6 +609,7 @@ export const appRouter = router({
   dayShiftDoctor: dayShiftDoctorRouter,
   hollywoodReplacement: hollywoodReplacementRouter,
   proofGate: proofGateRouter,
+  subscriptions: subscriptionsRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({

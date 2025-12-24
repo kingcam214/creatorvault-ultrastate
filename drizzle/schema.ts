@@ -956,3 +956,81 @@ export const bilingualContent = mysqlTable("bilingual_content", {
 }, (table) => ({
   contentIdIdx: index("idx_bilingual_content_content_id").on(table.contentId),
 }));
+
+
+/**
+ * Subscription tiers created by adult creators
+ */
+export const subscriptionTiers = mysqlTable("subscription_tiers", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(), // "Basic", "VIP", "Premium"
+  priceInCents: int("price_in_cents").notNull(),
+  billingInterval: mysqlEnum("billing_interval", ["monthly", "yearly"]).default("monthly"),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  creatorIdIdx: index("idx_subscription_tiers_creator_id").on(table.creatorId),
+  isActiveIdx: index("idx_subscription_tiers_is_active").on(table.isActive),
+}));
+
+/**
+ * Active subscriptions from fans to creators
+ */
+export const subscriptions = mysqlTable("subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  fanId: int("fan_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tierId: int("tier_id").notNull().references(() => subscriptionTiers.id, { onDelete: "cascade" }),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  status: mysqlEnum("status", ["active", "canceled", "past_due", "unpaid"]).default("active"),
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  canceledAt: timestamp("canceled_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  fanIdIdx: index("idx_subscriptions_fan_id").on(table.fanId),
+  creatorIdIdx: index("idx_subscriptions_creator_id").on(table.creatorId),
+  statusIdx: index("idx_subscriptions_status").on(table.status),
+  stripeSubscriptionIdIdx: index("idx_subscriptions_stripe_subscription_id").on(table.stripeSubscriptionId),
+}));
+
+/**
+ * Creator balance tracking
+ */
+export const creatorBalances = mysqlTable("creator_balances", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creator_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  availableBalanceInCents: int("available_balance_in_cents").default(0).notNull(),
+  pendingBalanceInCents: int("pending_balance_in_cents").default(0).notNull(),
+  lifetimeEarningsInCents: int("lifetime_earnings_in_cents").default(0).notNull(),
+  lastPayoutAt: timestamp("last_payout_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  creatorIdIdx: index("idx_creator_balances_creator_id").on(table.creatorId),
+}));
+
+/**
+ * Transaction ledger for all payments
+ */
+export const transactions = mysqlTable("transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  subscriptionId: int("subscription_id").references(() => subscriptions.id, { onDelete: "set null" }),
+  fanId: int("fan_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  amountInCents: int("amount_in_cents").notNull(),
+  creatorShareInCents: int("creator_share_in_cents").notNull(), // 70%
+  platformShareInCents: int("platform_share_in_cents").notNull(), // 30%
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  status: mysqlEnum("status", ["pending", "completed", "failed", "refunded"]).default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  fanIdIdx: index("idx_transactions_fan_id").on(table.fanId),
+  creatorIdIdx: index("idx_transactions_creator_id").on(table.creatorId),
+  subscriptionIdIdx: index("idx_transactions_subscription_id").on(table.subscriptionId),
+  statusIdx: index("idx_transactions_status").on(table.status),
+}));

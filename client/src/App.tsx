@@ -37,6 +37,8 @@ import HollywoodReplacement from "./pages/HollywoodReplacement";
 import ProofGate from "./pages/ProofGate";
 import DominicanSector from "./pages/DominicanSector";
 import VaultGuardian from "./pages/VaultGuardian";
+import CreatorSubscriptions from "./pages/CreatorSubscriptions";
+import FanSubscribe from "./pages/FanSubscribe";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -78,6 +80,8 @@ function Router() {
       <Route path={"/proof-gate"} component={ProofGate} />
       <Route path={"/dominican"} component={DominicanSector} />
       <Route path={"/vault-guardian"} component={VaultGuardian} />
+      <Route path={"/creator-subscriptions"} component={CreatorSubscriptions} />
+      <Route path={"/subscribe/:tierId"} component={FanSubscribe} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
           <Route component={NotFound} />

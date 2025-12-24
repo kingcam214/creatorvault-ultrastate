@@ -1554,3 +1554,19 @@
 - [x] Build Dominican creator UI with Emma Network hierarchy
 - [ ] Wire all services to tRPC (skipping - services are scaffolds)
 - [x] Save checkpoint
+
+
+## MONEY TRUTH FLOW - ADULT CREATOR SUBSCRIPTION (2024-12-24)
+- [x] Create subscription_tiers table
+- [x] Create subscriptions table
+- [x] Create creator_balances table
+- [x] Create transactions table
+- [x] Build backend service for subscription tier creation
+- [x] Build backend service for fan subscription
+- [x] Build Stripe payment processing (processSubscriptionPayment)
+- [x] Build 70/30 revenue split calculator
+- [x] Build creator UI to set subscription price (/creator-subscriptions)
+- [x] Build fan UI to subscribe and pay (/subscribe/:tierId)
+- [x] Build creator balance display
+- [ ] Test end-to-end with real Stripe payment
+- [ ] Provide proof (screenshot + database entry)

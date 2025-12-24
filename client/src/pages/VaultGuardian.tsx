@@ -140,9 +140,11 @@ export default function VaultGuardian() {
 
         {/* CTA */}
         <div className="text-center">
-          <Button size="lg" className="bg-cyan-600 hover:bg-cyan-700 text-xl px-12 py-6">
-            Join VaultGuardian
-          </Button>
+          <a href="/creator-subscriptions">
+            <Button size="lg" className="bg-cyan-600 hover:bg-cyan-700 text-xl px-12 py-6">
+              Manage Your Subscriptions
+            </Button>
+          </a>
           <p className="text-sm text-gray-400 mt-4">Protected. Empowered. Profitable.</p>
         </div>
       </div>
