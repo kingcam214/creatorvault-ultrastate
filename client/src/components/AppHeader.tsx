@@ -19,11 +19,12 @@ export default function AppHeader() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/">
-            <a className="flex items-center gap-2 text-xl font-bold text-white hover:text-purple-400 transition-colors">
-              <span className="text-white">CreatorVault</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                ULTRASTATE
-              </span>
+            <a className="flex items-center hover:opacity-80 transition-opacity">
+              <img 
+                src="/logo-white.png" 
+                alt="CreatorVault" 
+                className="h-10 w-auto"
+              />
             </a>
           </Link>
 
