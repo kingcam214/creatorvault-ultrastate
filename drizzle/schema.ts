@@ -1168,3 +1168,23 @@ export const payoutRequests = mysqlTable("payout_requests", {
   processedAt: timestamp("processed_at"),
   notes: text("notes"),
 });
+
+/**
+ * Creator audits for social media monetization analysis
+ */
+export const creatorAudits = mysqlTable("creator_audits", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: varchar("user_id", { length: 64 }).notNull(),
+  platforms: json("platforms").notNull(), // Array of SocialMediaProfile
+  monetizationPotential: int("monetization_potential").notNull(),
+  strengths: json("strengths").notNull(), // Array of strings
+  revenueOpportunities: json("revenue_opportunities").notNull(), // Array of strings
+  roadmapWeek1: json("roadmap_week1").notNull(),
+  roadmapWeek2: json("roadmap_week2").notNull(),
+  roadmapWeek3: json("roadmap_week3").notNull(),
+  roadmapWeek4: json("roadmap_week4").notNull(),
+  firstThousandPlan: text("first_thousand_plan").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_creator_audits_user_id").on(table.userId),
+}));

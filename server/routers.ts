@@ -37,6 +37,7 @@ import { subscriptionsRouter } from "./routers/subscriptions";
 import { stripeCheckoutRouter } from "./routers/stripeCheckout";
 import { viralOptimizerRouter } from "./routers/viralOptimizer";
 import { payoutsRouter } from "./routers/payouts";
+import { socialMediaAuditRouter } from "./routers/socialMediaAudit";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -616,6 +617,7 @@ export const appRouter = router({
   stripeCheckout: stripeCheckoutRouter,
   viralOptimizer: viralOptimizerRouter,
   payouts: payoutsRouter,
+  socialMediaAudit: socialMediaAuditRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({
