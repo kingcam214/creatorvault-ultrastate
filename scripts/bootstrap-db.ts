@@ -180,6 +180,22 @@ async function bootstrap() {
       INDEX idx_transactions_status (status)
     )`,
 
+    // Payout Requests
+    `CREATE TABLE IF NOT EXISTS payout_requests (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      creator_id INT NOT NULL,
+      amount_in_cents INT NOT NULL,
+      status ENUM('pending', 'processing', 'completed', 'rejected') NOT NULL DEFAULT 'pending',
+      payment_method VARCHAR(50),
+      payment_details TEXT,
+      requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      processed_at TIMESTAMP NULL,
+      notes TEXT,
+      FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_payout_requests_creator_id (creator_id),
+      INDEX idx_payout_requests_status (status)
+    )`,
+
     // Ad Campaigns
     `CREATE TABLE IF NOT EXISTS ad_campaigns (
       id VARCHAR(36) PRIMARY KEY,

@@ -1154,3 +1154,17 @@ export const adCampaigns = mysqlTable("ad_campaigns", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
+
+
+// Payout Requests
+export const payoutRequests = mysqlTable("payout_requests", {
+  id: int("id").primaryKey().autoincrement(),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  amountInCents: int("amount_in_cents").notNull(),
+  status: mysqlEnum("status", ["pending", "processing", "completed", "rejected"]).notNull().default("pending"),
+  paymentMethod: varchar("payment_method", { length: 50 }), // cashapp, zelle, bank_transfer, etc
+  paymentDetails: text("payment_details"), // JSON with payment info
+  requestedAt: timestamp("requested_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+  notes: text("notes"),
+});

@@ -36,6 +36,7 @@ import { proofGateRouter } from "./routers/proofGate";
 import { subscriptionsRouter } from "./routers/subscriptions";
 import { stripeCheckoutRouter } from "./routers/stripeCheckout";
 import { viralOptimizerRouter } from "./routers/viralOptimizer";
+import { payoutsRouter } from "./routers/payouts";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -614,6 +615,7 @@ export const appRouter = router({
   subscriptions: subscriptionsRouter,
   stripeCheckout: stripeCheckoutRouter,
   viralOptimizer: viralOptimizerRouter,
+  payouts: payoutsRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({
