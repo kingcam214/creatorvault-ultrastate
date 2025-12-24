@@ -40,6 +40,7 @@ import { payoutsRouter } from "./routers/payouts";
 import { socialMediaAuditRouter } from "./routers/socialMediaAudit";
 import { podcastStudioRouter } from "./routers/podcastStudio";
 import { performanceFeedbackRouter } from "./routers/performanceFeedback";
+import { liveDemoRouter } from "./routers/liveDemo";
 // import { adultVerificationRouter } from "./routers/adultVerification";
 // import { contentProtectionRouter } from "./routers/contentProtection";
 // import { safetyFeaturesRouter } from "./routers/safetyFeatures";
@@ -626,6 +627,7 @@ export const appRouter = router({
   socialMediaAudit: socialMediaAuditRouter,
   podcastStudio: podcastStudioRouter,
   performanceFeedback: performanceFeedbackRouter,
+  liveDemo: liveDemoRouter,
   // adultVerification: adultVerificationRouter,
   // contentProtection: contentProtectionRouter,
   // safetyFeatures: safetyFeaturesRouter,

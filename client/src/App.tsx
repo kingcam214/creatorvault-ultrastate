@@ -47,6 +47,7 @@ import AdminManualPayments from "./pages/AdminManualPayments";
 import PodcastStudio from "./pages/PodcastStudio";
 import SocialMediaAudit from "./pages/SocialMediaAudit";
 import PerformanceInsights from "./pages/PerformanceInsights";
+import LiveDemoControl from "./pages/LiveDemoControl";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -97,6 +98,7 @@ function Router() {
       <Route path={"/podcast-studio"} component={PodcastStudio} />
       <Route path={"/social-audit"} component={SocialMediaAudit} />
       <Route path={"/performance-insights"} component={PerformanceInsights} />
+      <Route path={"/live-demo"} component={LiveDemoControl} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
           <Route component={NotFound} />
