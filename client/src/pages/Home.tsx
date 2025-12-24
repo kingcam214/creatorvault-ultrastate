@@ -107,6 +107,9 @@ export default function Home() {
             <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-gray-700 to-gray-900 text-white hover:from-gray-800 hover:to-black border-2 border-white">
               <Link href="/proof-gate">🛡️ Proof Gate</Link>
             </Button>
+            <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-blue-600 to-green-600 text-white hover:from-blue-700 hover:to-green-700 border-2 border-white">
+              <Link href="/dominican">🇩🇴 Dominican Sector</Link>
+            </Button>
             <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-slate-700 to-purple-700 text-white hover:from-slate-800 hover:to-purple-800 border-2 border-purple-500">
               <Link href="/owner-control">🛡️ Owner Control</Link>
             </Button>

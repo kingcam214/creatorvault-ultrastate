@@ -219,7 +219,7 @@ export const appRouter = router({
 
   // ============ EMMA NETWORK ============
   emma: router({
-    create: kingProcedure.input(z.object({
+    create: publicProcedure.input(z.object({
       userId: z.number(),
       instagram: z.string().optional(),
       tiktok: z.string().optional(),
