@@ -59,11 +59,14 @@ export default function Home() {
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-16">
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-4 tracking-tight">
             CreatorVault <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">ULTRASTATE</span>
           </h1>
+          <p className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 mb-6">
+            The Dopest App in the World
+          </p>
           <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-            The ultimate creator economy platform. Monetize your content, build your brand, and connect with your audience across cultures.
+            Built for creators, by a creator. 85% revenue split. AI creates for you. No permission needed to shine.
           </p>
           <div className="flex flex-wrap justify-center gap-4 mb-8">
             <Button asChild size="lg" className="bg-white text-purple-900 hover:bg-gray-100">

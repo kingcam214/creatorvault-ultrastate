@@ -38,6 +38,9 @@ export default function JoinVaultLive() {
             </h1>
             <Sparkles className="h-10 w-10 text-purple-500 animate-pulse" />
           </div>
+          <p className="text-2xl text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 font-bold mb-2">
+            The Dopest App in the World
+          </p>
           <p className="text-3xl text-white font-semibold mb-4">
             The Live Streaming Platform Built for Creators
           </p>
