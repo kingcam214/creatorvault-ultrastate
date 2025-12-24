@@ -38,6 +38,12 @@ import { stripeCheckoutRouter } from "./routers/stripeCheckout";
 import { viralOptimizerRouter } from "./routers/viralOptimizer";
 import { payoutsRouter } from "./routers/payouts";
 import { socialMediaAuditRouter } from "./routers/socialMediaAudit";
+import { podcastStudioRouter } from "./routers/podcastStudio";
+import { performanceFeedbackRouter } from "./routers/performanceFeedback";
+// import { adultVerificationRouter } from "./routers/adultVerification";
+// import { contentProtectionRouter } from "./routers/contentProtection";
+// import { safetyFeaturesRouter } from "./routers/safetyFeatures";
+// import { recruiterCommissionsRouter } from "./routers/recruiterCommissions";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -618,6 +624,12 @@ export const appRouter = router({
   viralOptimizer: viralOptimizerRouter,
   payouts: payoutsRouter,
   socialMediaAudit: socialMediaAuditRouter,
+  podcastStudio: podcastStudioRouter,
+  performanceFeedback: performanceFeedbackRouter,
+  // adultVerification: adultVerificationRouter,
+  // contentProtection: contentProtectionRouter,
+  // safetyFeatures: safetyFeaturesRouter,
+  // recruiterCommissions: recruiterCommissionsRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({

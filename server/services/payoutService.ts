@@ -94,3 +94,105 @@ export async function getCreatorBalance(creatorId: number) {
 
   return balance;
 }
+
+/**
+ * Get all pending payout requests (admin only)
+ */
+export async function getAllPendingPayouts() {
+  return await db
+    .select()
+    .from(payoutRequests)
+    .where(eq(payoutRequests.status, "pending"))
+    .orderBy(payoutRequests.requestedAt);
+}
+
+/**
+ * Approve payout request (admin only)
+ */
+export async function approvePayout(payoutId: number, notes?: string) {
+  const [payout] = await db
+    .select()
+    .from(payoutRequests)
+    .where(eq(payoutRequests.id, payoutId));
+
+  if (!payout) {
+    throw new Error("Payout request not found");
+  }
+
+  if (payout.status !== "pending") {
+    throw new Error(`Payout already ${payout.status}`);
+  }
+
+  // Update payout status
+  await db
+    .update(payoutRequests)
+    .set({
+      status: "completed",
+      processedAt: new Date(),
+      notes: notes || null,
+    })
+    .where(eq(payoutRequests.id, payoutId));
+
+  // Move from pending to paid (remove from balance)
+  const [balance] = await db
+    .select()
+    .from(creatorBalances)
+    .where(eq(creatorBalances.creatorId, payout.creatorId));
+
+  if (balance) {
+    await db
+      .update(creatorBalances)
+      .set({
+        pendingBalanceInCents: balance.pendingBalanceInCents - payout.amountInCents,
+      })
+      .where(eq(creatorBalances.creatorId, payout.creatorId));
+  }
+
+  return { success: true, payoutId };
+}
+
+/**
+ * Reject payout request (admin only)
+ */
+export async function rejectPayout(payoutId: number, notes: string) {
+  const [payout] = await db
+    .select()
+    .from(payoutRequests)
+    .where(eq(payoutRequests.id, payoutId));
+
+  if (!payout) {
+    throw new Error("Payout request not found");
+  }
+
+  if (payout.status !== "pending") {
+    throw new Error(`Payout already ${payout.status}`);
+  }
+
+  // Update payout status
+  await db
+    .update(payoutRequests)
+    .set({
+      status: "rejected",
+      processedAt: new Date(),
+      notes,
+    })
+    .where(eq(payoutRequests.id, payoutId));
+
+  // Move from pending back to available
+  const [balance] = await db
+    .select()
+    .from(creatorBalances)
+    .where(eq(creatorBalances.creatorId, payout.creatorId));
+
+  if (balance) {
+    await db
+      .update(creatorBalances)
+      .set({
+        availableBalanceInCents: balance.availableBalanceInCents + payout.amountInCents,
+        pendingBalanceInCents: balance.pendingBalanceInCents - payout.amountInCents,
+      })
+      .where(eq(creatorBalances.creatorId, payout.creatorId));
+  }
+
+  return { success: true, payoutId };
+}

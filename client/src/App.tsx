@@ -42,6 +42,11 @@ import FanSubscribe from "./pages/FanSubscribe";
 import CreatorToolbox from "./pages/CreatorToolbox";
 import ViralOptimizer from "./pages/tools/ViralOptimizer";
 import CreatorEarnings from "./pages/CreatorEarnings";
+import AdminPayouts from "./pages/AdminPayouts";
+import AdminManualPayments from "./pages/AdminManualPayments";
+import PodcastStudio from "./pages/PodcastStudio";
+import SocialMediaAudit from "./pages/SocialMediaAudit";
+import PerformanceInsights from "./pages/PerformanceInsights";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -87,6 +92,11 @@ function Router() {
       <Route path={"/subscribe/:tierId"} component={FanSubscribe} />
       <Route path={"/creator-toolbox"} component={CreatorToolbox} />      <Route path={"/ tools/viral-optimizer"} component={ViralOptimizer} />
       <Route path={"/creator-earnings"} component={CreatorEarnings} />
+      <Route path={"/admin/payouts"} component={AdminPayouts} />
+      <Route path={"/admin/manual-payments"} component={AdminManualPayments} />
+      <Route path={"/podcast-studio"} component={PodcastStudio} />
+      <Route path={"/social-audit"} component={SocialMediaAudit} />
+      <Route path={"/performance-insights"} component={PerformanceInsights} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
           <Route component={NotFound} />
