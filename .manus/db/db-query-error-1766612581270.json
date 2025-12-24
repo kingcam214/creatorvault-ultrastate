@@ -1,0 +1,8 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS founder_cohort (\n  id INT PRIMARY KEY AUTO_INCREMENT,\n  user_id INT NOT NULL,\n  territory VARCHAR(10) NOT NULL,\n  status VARCHAR(20) DEFAULT 'pending',\n  equity_percentage DECIMAL(5,4) DEFAULT 0.0000,\n  total_earnings DECIMAL(10,2) DEFAULT 0.00,\n  subscriber_count INT DEFAULT 0,\n  content_count INT DEFAULT 0,\n  engagement_score DECIMAL(5,2) DEFAULT 0.00,\n  onboarded_at TIMESTAMP NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (user_id) REFERENCES user(id)\n)",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute CREATE TABLE IF NOT EXISTS founder_cohort (\n  id INT PRIMARY KEY AUTO_INCREMENT,\n  user_id INT NOT NULL,\n  territory VARCHAR(10) NOT NULL,\n  status VARCHAR(20) DEFAULT 'pending',\n  equity_percentage DECIMAL(5,4) DEFAULT 0.0000,\n  total_earnings DECIMAL(10,2) DEFAULT 0.00,\n  subscriber_count INT DEFAULT 0,\n  content_count INT DEFAULT 0,\n  engagement_score DECIMAL(5,2) DEFAULT 0.00,\n  onboarded_at TIMESTAMP NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (user_id) REFERENCES user(id)\n)",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1824 (HY000) at line 1: Failed to open the referenced table 'user'"
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "query": "SHOW TABLES",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute SHOW TABLES",
+  "rows": [
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "ab_test_variants"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "ad_analyses"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "ad_campaigns"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "analytics_events"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "bot_events"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "brand_affiliations"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "commission_events"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "content"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "content_performance"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "creator_audits"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "creator_balances"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "creator_metrics"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "creators"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "cultural_content_templates"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "emma_network"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "leads"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "live_stream_donations"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "live_stream_tips"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "live_stream_viewers"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "live_streams"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "marketplace_orders"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "marketplace_products"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "monetization_milestones"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "onboarding_packets"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "optimization_history"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "orchestration_runs"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "payments"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "payout_requests"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "platform_adaptations"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "platform_credentials"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "platform_posts"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "podcast_analytics"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "podcast_clips"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "podcast_episodes"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "podcast_monetization"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "podcast_platforms"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "podcast_sponsors"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "podcasts"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "posting_times_analytics"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "profile_snapshots"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "prospects"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "recruiter_commissions"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "revenue_projections"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "scheduled_posts"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "services_offers"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "services_sales"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "subscription_tiers"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "subscriptions"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "telegram_bots"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "telegram_channels"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "telegram_funnels"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "telegram_leads"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "thumbnail_analyses"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "transactions"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "unified_content"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "university_courses"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "university_enrollments"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "users"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "video_assets"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "video_generation_jobs"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "video_scenes"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "viral_analyses"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "viral_metrics"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "waitlist"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "whatsapp_funnels"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "whatsapp_leads"
+    },
+    {
+      "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9": "whatsapp_providers"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_3Ss8KhjHmMbtxkDLhxH8t9\n__drizzle_migrations\nab_test_variants\nad_analyses\nad_campaigns\nanalytics_events\nbot_events\nbrand_affiliations\ncommission_events\ncontent\ncontent_performance\ncreator_audits\ncreator_balances\ncreator_metrics\ncreators\ncultural_content_templates\nemma_network\nleads\nlive_stream_donations\nlive_stream_tips\nlive_stream_viewers\nlive_streams\nmarketplace_orders\nmarketplace_products\nmonetization_milestones\nonboarding_packets\noptimization_history\norchestration_runs\npayments\npayout_requests\nplatform_adaptations\nplatform_credentials\nplatform_posts\npodcast_analytics\npodcast_clips\npodcast_episodes\npodcast_monetization\npodcast_platforms\npodcast_sponsors\npodcasts\nposting_times_analytics\nprofile_snapshots\nprospects\nrecruiter_commissions\nrevenue_projections\nscheduled_posts\nservices_offers\nservices_sales\nsubscription_tiers\nsubscriptions\ntelegram_bots\ntelegram_channels\ntelegram_funnels\ntelegram_leads\nthumbnail_analyses\ntransactions\nunified_content\nuniversity_courses\nuniversity_enrollments\nusers\nvideo_assets\nvideo_generation_jobs\nvideo_scenes\nviral_analyses\nviral_metrics\nwaitlist\nwhatsapp_funnels\nwhatsapp_leads\nwhatsapp_providers\n",
+  "stderr": "",
+  "execution_time_ms": 62
+}
