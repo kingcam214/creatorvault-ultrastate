@@ -101,6 +101,9 @@ export default function Home() {
             <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700">
               <Link href="/dayshift-doctor">💃 DayShift Doctor</Link>
             </Button>
+            <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-purple-600 to-orange-600 text-white hover:from-purple-700 hover:to-orange-700">
+              <Link href="/hollywood-replacement">🎬 Hollywood Replacement</Link>
+            </Button>
             <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-slate-700 to-purple-700 text-white hover:from-slate-800 hover:to-purple-800 border-2 border-purple-500">
               <Link href="/owner-control">🛡️ Owner Control</Link>
             </Button>

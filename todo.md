@@ -1429,3 +1429,20 @@
 - [ ] Implement KingFrame AI orchestration
 - [ ] Build VaultGuardian adult creator platform
 - [ ] Deploy to Railway with all brands live
+
+
+## HOLLYWOOD REPLACEMENT UI (2024-12-23)
+
+- [x] Create /hollywood-replacement UI page (has rendering issue - blank page)
+- [ ] Add project type selector (short film, series, documentary, commercial, music video)
+- [ ] Add quality selector (1080p, 4K, 8K)
+- [ ] Add target length input
+- [ ] Add music/voiceover toggles
+- [ ] Display cost comparison (Hollywood vs CreatorVault)
+- [ ] Display timeline comparison
+- [ ] Display capabilities list
+- [ ] Display project estimate
+- [ ] Add route to App.tsx
+- [ ] Add button to Home page
+- [ ] Test all calculators
+- [ ] Save checkpoint

@@ -33,6 +33,7 @@ import JoinVaultLive from "./pages/JoinVaultLive";
 import KingCamDemos from "./pages/KingCamDemos";
 import VaultPay from "./pages/VaultPay";
 import DayShiftDoctor from "./pages/DayShiftDoctor";
+import HollywoodReplacement from "./pages/HollywoodReplacement";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -70,6 +71,7 @@ function Router() {
       <Route path={"/join-vaultlive"} component={JoinVaultLive} />
       <Route path={"/vault-pay"} component={VaultPay} />
       <Route path={"/dayshift-doctor"} component={DayShiftDoctor} />
+      <Route path={"/hollywood-replacement"} component={HollywoodReplacement} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
           <Route component={NotFound} />
