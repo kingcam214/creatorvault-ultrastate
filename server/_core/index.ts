@@ -11,6 +11,7 @@ import telegramWebhook from "../telegram-webhook";
 import { initializeSimulatedBots, startAutonomousConversationGenerator } from "../services/simulatedBots";
 import { initializeWebRTC } from "../webrtc";
 import { handleStripeWebhook } from "./stripeWebhook";
+import { runStartupTasks } from "./startup";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -32,6 +33,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Run startup tasks (schema bootstrap, etc)
+  await runStartupTasks();
+  
   const app = express();
   const server = createServer(app);
   

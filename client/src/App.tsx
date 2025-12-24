@@ -39,6 +39,8 @@ import DominicanSector from "./pages/DominicanSector";
 import VaultGuardian from "./pages/VaultGuardian";
 import CreatorSubscriptions from "./pages/CreatorSubscriptions";
 import FanSubscribe from "./pages/FanSubscribe";
+import CreatorToolbox from "./pages/CreatorToolbox";
+import ViralOptimizer from "./pages/tools/ViralOptimizer";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -82,6 +84,8 @@ function Router() {
       <Route path={"/vault-guardian"} component={VaultGuardian} />
       <Route path={"/creator-subscriptions"} component={CreatorSubscriptions} />
       <Route path={"/subscribe/:tierId"} component={FanSubscribe} />
+      <Route path={"/creator-toolbox"} component={CreatorToolbox} />
+      <Route path={"/tools/viral-optimizer"} component={ViralOptimizer} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
           <Route component={NotFound} />

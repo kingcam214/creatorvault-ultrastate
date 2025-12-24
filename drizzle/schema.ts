@@ -1034,3 +1034,123 @@ export const transactions = mysqlTable("transactions", {
   subscriptionIdIdx: index("idx_transactions_subscription_id").on(table.subscriptionId),
   statusIdx: index("idx_transactions_status").on(table.status),
 }));
+
+
+// ============================================
+// CONTENT ORCHESTRATOR TABLES
+// ============================================
+
+
+
+// ============================================
+// CONTENT ORCHESTRATOR TABLES
+// ============================================
+
+export const unifiedContent = mysqlTable("unified_content", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description"),
+  body: text("body"),
+  mediaUrl: varchar("media_url", { length: 500 }),
+  mediaType: mysqlEnum("media_type", ["image", "video", "audio", "text"]),
+  tags: json("tags").$type<string[]>(),
+  category: varchar("category", { length: 100 }),
+  niche: varchar("niche", { length: 100 }),
+  duration: int("duration"),
+  targetPlatforms: json("target_platforms").$type<string[]>().notNull(),
+  publishStrategy: mysqlEnum("publish_strategy", ["immediate", "scheduled", "draft"]).notNull(),
+  scheduledFor: timestamp("scheduled_for"),
+  timezone: varchar("timezone", { length: 50 }),
+  optimizationLevel: mysqlEnum("optimization_level", ["none", "basic", "aggressive"]).default("basic"),
+  generateThumbnail: boolean("generate_thumbnail").default(false),
+  generateAd: boolean("generate_ad").default(false),
+  runViralAnalysis: boolean("run_viral_analysis").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
+export const orchestrationRuns = mysqlTable("orchestration_runs", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  contentId: varchar("content_id", { length: 36 }).notNull().references(() => unifiedContent.id, { onDelete: "cascade" }),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: mysqlEnum("status", ["draft", "optimizing", "ready", "scheduled", "publishing", "published", "failed"]).notNull(),
+  viralAnalysisId: varchar("viral_analysis_id", { length: 36 }),
+  thumbnailAnalysisId: varchar("thumbnail_analysis_id", { length: 36 }),
+  adAnalysisId: varchar("ad_analysis_id", { length: 36 }),
+  generatedAssets: json("generated_assets").$type<{
+    thumbnails: string[];
+    ads: string[];
+    platformMedia: Record<string, string>;
+  }>(),
+  platformResults: json("platform_results").$type<Record<string, any>>(),
+  errorLog: text("error_log"),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const platformAdaptations = mysqlTable("platform_adaptations", {
+  id: int("id").primaryKey().autoincrement(),
+  orchestrationId: varchar("orchestration_id", { length: 36 }).notNull().references(() => orchestrationRuns.id, { onDelete: "cascade" }),
+  platform: varchar("platform", { length: 50 }).notNull(),
+  adaptedTitle: varchar("adapted_title", { length: 500 }),
+  adaptedDescription: text("adapted_description"),
+  adaptedMediaUrl: varchar("adapted_media_url", { length: 500 }),
+  platformSpecificData: json("platform_specific_data"),
+  publishedUrl: varchar("published_url", { length: 500 }),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const optimizationHistory = mysqlTable("optimization_history", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contentId: varchar("content_id", { length: 36 }).references(() => unifiedContent.id, { onDelete: "cascade" }),
+  optimizationType: varchar("optimization_type", { length: 50 }).notNull(),
+  inputData: json("input_data").notNull(),
+  outputData: json("output_data").notNull(),
+  score: int("score"),
+  appliedRecommendations: json("applied_recommendations").$type<string[]>(),
+  performanceImpact: json("performance_impact"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const contentPerformance = mysqlTable("content_performance", {
+  id: int("id").primaryKey().autoincrement(),
+  contentId: varchar("content_id", { length: 36 }).notNull().references(() => unifiedContent.id, { onDelete: "cascade" }),
+  platform: varchar("platform", { length: 50 }).notNull(),
+  views: int("views").default(0),
+  likes: int("likes").default(0),
+  comments: int("comments").default(0),
+  shares: int("shares").default(0),
+  clicks: int("clicks").default(0),
+  ctr: decimal("ctr", { precision: 5, scale: 2 }),
+  engagement: decimal("engagement", { precision: 5, scale: 2 }),
+  retention: decimal("retention", { precision: 5, scale: 2 }),
+  revenue: int("revenue").default(0),
+  recordedAt: timestamp("recorded_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const adCampaigns = mysqlTable("ad_campaigns", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 200 }).notNull(),
+  platform: mysqlEnum("platform", ["facebook", "instagram", "google", "tiktok", "twitter"]).notNull(),
+  objective: varchar("objective", { length: 100 }),
+  budget: int("budget"),
+  targetAudience: json("target_audience"),
+  adCreativeUrl: varchar("ad_creative_url", { length: 500 }),
+  adCopy: text("ad_copy"),
+  status: mysqlEnum("status", ["draft", "active", "paused", "completed"]).default("draft"),
+  impressions: int("impressions").default(0),
+  clicks: int("clicks").default(0),
+  conversions: int("conversions").default(0),
+  spend: int("spend").default(0),
+  ctr: decimal("ctr", { precision: 5, scale: 2 }),
+  cpc: int("cpc"),
+  roas: decimal("roas", { precision: 5, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
