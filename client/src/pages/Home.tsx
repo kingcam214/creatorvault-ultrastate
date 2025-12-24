@@ -95,6 +95,12 @@ export default function Home() {
             <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:from-pink-600 hover:to-rose-600">
               <Link href="/adult-sales-bot">💬 Adult Sales Bot</Link>
             </Button>
+            <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-green-500 to-blue-500 text-white hover:from-green-600 hover:to-blue-600">
+              <Link href="/vault-pay">💰 VaultPay</Link>
+            </Button>
+            <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700">
+              <Link href="/dayshift-doctor">💃 DayShift Doctor</Link>
+            </Button>
             <Button asChild size="lg" variant="secondary" className="bg-gradient-to-r from-slate-700 to-purple-700 text-white hover:from-slate-800 hover:to-purple-800 border-2 border-purple-500">
               <Link href="/owner-control">🛡️ Owner Control</Link>
             </Button>

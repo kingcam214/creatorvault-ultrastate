@@ -29,6 +29,9 @@ import { vaultLiveRouter } from "./routers/vaultLive";
 import { emmaNetworkRouter } from "./routers/emmaNetwork";
 import { osRouter } from "./routers/os";
 import { kingcamDemosRouter } from "./routers/kingcamDemos";
+import { vaultPayRouter } from "./routers/vaultPay";
+import { dayShiftDoctorRouter } from "./routers/dayShiftDoctor";
+import { hollywoodReplacementRouter } from "./routers/hollywoodReplacement";
 
 // Initialize services
 const marketplace = new CreatorVaultMarketplace();
@@ -600,6 +603,9 @@ export const appRouter = router({
   emmaNetwork: emmaNetworkRouter,
   os: osRouter,
   kingcamDemos: kingcamDemosRouter,
+  vaultPay: vaultPayRouter,
+  dayShiftDoctor: dayShiftDoctorRouter,
+  hollywoodReplacement: hollywoodReplacementRouter,
 
   // ============ SYSTEM H: SERVICES ============
   services: router({

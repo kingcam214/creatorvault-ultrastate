@@ -31,6 +31,8 @@ import InfluencerOnboarding from "./pages/InfluencerOnboarding";
 import InfluencerDashboard from "./pages/InfluencerDashboard";
 import JoinVaultLive from "./pages/JoinVaultLive";
 import KingCamDemos from "./pages/KingCamDemos";
+import VaultPay from "./pages/VaultPay";
+import DayShiftDoctor from "./pages/DayShiftDoctor";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -66,6 +68,8 @@ function Router() {
       <Route path={"/onboard/influencer"} component={InfluencerOnboarding} />
       <Route path={"/influencer"} component={InfluencerDashboard} />
       <Route path={"/join-vaultlive"} component={JoinVaultLive} />
+      <Route path={"/vault-pay"} component={VaultPay} />
+      <Route path={"/dayshift-doctor"} component={DayShiftDoctor} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
           <Route component={NotFound} />
