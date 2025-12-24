@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS recruiter_commissions (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  recruiter_id INT NOT NULL,\n  creator_id INT NOT NULL,\n  transaction_id INT NOT NULL,\n  commission_amount INT NOT NULL,\n  commission_rate DECIMAL(5,2) NOT NULL,\n  paid_out BOOLEAN DEFAULT FALSE,\n  paid_at TIMESTAMP NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  INDEX idx_recruiter (recruiter_id),\n  INDEX idx_creator (creator_id),\n  INDEX idx_paid (paid_out)\n)",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute CREATE TABLE IF NOT EXISTS recruiter_commissions (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  recruiter_id INT NOT NULL,\n  creator_id INT NOT NULL,\n  transaction_id INT NOT NULL,\n  commission_amount INT NOT NULL,\n  commission_rate DECIMAL(5,2) NOT NULL,\n  paid_out BOOLEAN DEFAULT FALSE,\n  paid_at TIMESTAMP NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  INDEX idx_recruiter (recruiter_id),\n  INDEX idx_creator (creator_id),\n  INDEX idx_paid (paid_out)\n)",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 187
+}

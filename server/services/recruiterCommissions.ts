@@ -51,10 +51,17 @@ export async function recordCommission(
   commissionAmount: number,
   commissionRate: number
 ): Promise<{ success: boolean; commissionId: number }> {
-  // In production: insert into recruiter_commissions table
+  const { db } = await import("../db");
+  const { sql } = await import("drizzle-orm");
+  
+  const result: any = await db.execute(sql`
+    INSERT INTO recruiter_commissions (recruiter_id, creator_id, transaction_id, commission_amount, commission_rate)
+    VALUES (${recruiterId}, ${creatorId}, ${transactionId}, ${commissionAmount}, ${commissionRate})
+  `);
+  
   return {
     success: true,
-    commissionId: Math.floor(Math.random() * 10000),
+    commissionId: Number(result.insertId || 0),
   };
 }
 
@@ -62,15 +69,41 @@ export async function recordCommission(
  * Get unpaid commissions for recruiter
  */
 export async function getUnpaidCommissions(recruiterId: number): Promise<CommissionRecord[]> {
-  // In production: query recruiter_commissions WHERE recruiterId=recruiterId AND paidOut=false
-  return [];
+  const { db } = await import("../db");
+  const { sql } = await import("drizzle-orm");
+  
+  const result: any = await db.execute(sql`
+    SELECT * FROM recruiter_commissions 
+    WHERE recruiter_id = ${recruiterId} AND paid_out = FALSE
+    ORDER BY created_at DESC
+  `);
+  
+  return ((result.rows || []) as any[]).map(row => ({
+    recruiterId: row.recruiter_id,
+    creatorId: row.creator_id,
+    transactionId: row.transaction_id,
+    commissionAmount: row.commission_amount,
+    commissionRate: Number(row.commission_rate),
+    paidOut: Boolean(row.paid_out),
+  }));
 }
 
 /**
  * Mark commissions as paid
  */
 export async function markCommissionsPaid(commissionIds: number[]): Promise<{ success: boolean }> {
-  // In production: UPDATE recruiter_commissions SET paidOut=true, paidAt=now WHERE id IN (commissionIds)
+  const { db } = await import("../db");
+  const { sql } = await import("drizzle-orm");
+  
+  if (commissionIds.length === 0) return { success: true };
+  
+  const idList = commissionIds.join(',');
+  await db.execute(sql.raw(`
+    UPDATE recruiter_commissions 
+    SET paid_out = TRUE, paid_at = NOW() 
+    WHERE id IN (${idList})
+  `));
+  
   return { success: true };
 }
 
@@ -78,6 +111,14 @@ export async function markCommissionsPaid(commissionIds: number[]): Promise<{ su
  * Get total commissions earned by recruiter
  */
 export async function getTotalCommissions(recruiterId: number): Promise<number> {
-  // In production: SUM(commissionAmount) FROM recruiter_commissions WHERE recruiterId=recruiterId
-  return 0;
+  const { db } = await import("../db");
+  const { sql } = await import("drizzle-orm");
+  
+  const result: any = await db.execute(sql`
+    SELECT COALESCE(SUM(commission_amount), 0) as total 
+    FROM recruiter_commissions 
+    WHERE recruiter_id = ${recruiterId}
+  `);
+  
+  return Number((result.rows?.[0] as any)?.total || 0);
 }
