@@ -49,7 +49,7 @@ export default function AppHeader() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/vault-live">
+                    <Link href="/vaultlive">
                       <a className="w-full">VaultLive (85/15)</a>
                     </Link>
                   </DropdownMenuItem>
@@ -161,7 +161,7 @@ export default function AppHeader() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/vault-live">
+                      <Link href="/vaultlive">
                         <a className="w-full">VaultLive (85/15)</a>
                       </Link>
                     </DropdownMenuItem>

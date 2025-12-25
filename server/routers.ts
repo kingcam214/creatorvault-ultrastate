@@ -28,6 +28,7 @@ import { orchestratorRouter } from "./routers/orchestrator";
 import { vaultLiveRouter } from "./routers/vaultLive";
 import { emmaNetworkRouter } from "./routers/emmaNetwork";
 import { osRouter } from "./routers/os";
+import { telegramRouter } from "./routers/telegram";
 import { marketplaceRouter } from "./routers/marketplace";
 import { marketplaceAIRouter } from "./routers/marketplaceAI";
 import { kingcamDemosRouter } from "./routers/kingcamDemos";
@@ -562,6 +563,7 @@ export const appRouter = router({
   vaultLive: vaultLiveRouter,
   emmaNetwork: emmaNetworkRouter,
   os: osRouter,
+  telegram: telegramRouter,
   kingcamDemos: kingcamDemosRouter,
   vaultPay: vaultPayRouter,
   dayShiftDoctor: dayShiftDoctorRouter,
