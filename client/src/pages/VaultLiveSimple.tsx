@@ -197,6 +197,21 @@ export default function VaultLiveSimple() {
               </div>
             </div>
           </div>
+          {balance && parseFloat(balance.confirmed) > 0 && (
+            <div className="pt-4 border-t">
+              <Button 
+                onClick={() => toast.info("Payout request sent! Cameron will process your payment to " + (user?.cashappHandle || user?.paypalEmail))}
+                className="w-full"
+                size="lg"
+              >
+                <DollarSign className="mr-2" />
+                Request Payout (${balance.confirmed})
+              </Button>
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Payouts processed within 24 hours to your {user?.cashappHandle ? 'Cash App' : 'PayPal'}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

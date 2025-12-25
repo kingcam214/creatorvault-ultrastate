@@ -1,0 +1,40 @@
+{
+  "query": "SELECT id, name, email, role FROM users ORDER BY id DESC LIMIT 5",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute SELECT id, name, email, role FROM users ORDER BY id DESC LIMIT 5",
+  "rows": [
+    {
+      "id": "900002",
+      "name": "Test Fan",
+      "email": "fan@test.com",
+      "role": "user"
+    },
+    {
+      "id": "900001",
+      "name": "Test Creator",
+      "email": "creator@test.com",
+      "role": "creator"
+    },
+    {
+      "id": "870003",
+      "name": "Test Owner",
+      "email": "test-owner-1766585101049@example.com",
+      "role": "king"
+    },
+    {
+      "id": "870002",
+      "name": "Test Telegram User",
+      "email": "test-telegram-1766585102030@example.com",
+      "role": "king"
+    },
+    {
+      "id": "870001",
+      "name": "Test AI User",
+      "email": "test-aibot-1766585101371@example.com",
+      "role": "creator"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\trole\n900002\tTest Fan\tfan@test.com\tuser\n900001\tTest Creator\tcreator@test.com\tcreator\n870003\tTest Owner\ttest-owner-1766585101049@example.com\tking\n870002\tTest Telegram User\ttest-telegram-1766585102030@example.com\tking\n870001\tTest AI User\ttest-aibot-1766585101371@example.com\tcreator\n",
+  "stderr": "",
+  "execution_time_ms": 64
+}

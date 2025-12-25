@@ -232,6 +232,7 @@ export interface Tip {
   userId: number;
   amount: string;
   message: string | null;
+  status: "pending" | "confirmed";
   creatorShare: string;
   platformShare: string;
   createdAt: Date;

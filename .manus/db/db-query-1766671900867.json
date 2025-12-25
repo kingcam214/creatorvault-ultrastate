@@ -1,0 +1,21 @@
+{
+  "query": "SELECT * FROM live_stream_tips ORDER BY id DESC LIMIT 1",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute SELECT * FROM live_stream_tips ORDER BY id DESC LIMIT 1",
+  "rows": [
+    {
+      "id": "30004",
+      "stream_id": "30001",
+      "user_id": "1",
+      "amount": "50.00",
+      "message": "NULL",
+      "creator_share": "42.50",
+      "platform_share": "7.50",
+      "created_at": "2025-12-24 14:05:02",
+      "status": "pending"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tstream_id\tuser_id\tamount\tmessage\tcreator_share\tplatform_share\tcreated_at\tstatus\n30004\t30001\t1\t50.00\tNULL\t42.50\t7.50\t2025-12-24 14:05:02\tpending\n",
+  "stderr": "",
+  "execution_time_ms": 114
+}

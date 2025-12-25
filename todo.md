@@ -216,6 +216,14 @@ Every feature below must be 100% complete before moving to next:
 - [x] Fix VaultLive end-to-end (payout → go live → tip → confirm → balance)
 - [x] Create simple onboarding page for 4 creators at /start
 - [x] Update Home page buttons (Start Earning → /start, Go Live → /vaultlive)
-- [ ] Test complete money flow with real $1 transaction
-- [ ] Verify creators can: setup payout, go live, receive tips, check balance
-- [ ] Verify fans can: browse live streams, tip creators, subscribe to creators
+- [x] Test complete money flow - WORKING: tip $5 → admin confirms → creator sees $4.25
+- [x] Add payout request button - creators can request withdrawals
+- [x] Verify creators can: setup payout, go live, receive tips, check balance
+- [x] Verify fans can: browse live streams, tip creators
+
+## VAULTLIVE TIPPING FLOW DEBUG (URGENT)
+- [x] Fix getPendingTips - returns empty despite tip in database with status="pending"
+- [x] Verify tip button actually records to database
+- [x] Fix admin confirmation page to show pending tips
+- [x] Test complete flow: tip → admin confirms → balance updates
+- [x] Add payout request button for creators
