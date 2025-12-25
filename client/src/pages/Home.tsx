@@ -1,178 +1,162 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link } from "wouter";
-import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
+import { useLocation } from "wouter";
+import { DollarSign, Video, ShoppingBag, TrendingUp, Shield, Zap } from "lucide-react";
 
 export default function Home() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900">
-      <div className="container mx-auto px-4 py-16">
-        {/* Hero Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-4 tracking-tight">
-            CreatorVault <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">ULTRASTATE</span>
-          </h1>
-          <p className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 mb-6">
-            The Platform Where Creators Keep 85%
-          </p>
-          <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
-            No Twitch. No YouTube. No OnlyFans taking 50%. This is YOUR platform. Built by a creator, for creators.
-          </p>
-        </div>
-
-        {/* Test Instructions Card */}
-        <Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-lg mb-12">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl">🎄 Christmas Eve Test</CardTitle>
-            <CardDescription className="text-lg">
-              Testing real money flow - 10 minutes total
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border-2 border-green-500">
-              <h3 className="text-xl font-bold mb-3 text-gray-900">What You're Testing:</h3>
-              <p className="text-gray-700 text-lg mb-4">
-                Can real money flow through CreatorVault? You'll send yourself $5 via Zelle, see it split 70/30, then get $3.50 back.
-              </p>
-              <div className="bg-white p-4 rounded border border-gray-200">
-                <p className="font-semibold text-gray-900">💰 Money Flow:</p>
-                <ul className="list-disc list-inside text-gray-700 space-y-1 mt-2">
-                  <li>You send: $5.00</li>
-                  <li>Creator gets: $3.50 (70%)</li>
-                  <li>Platform fee: $1.50 (30%)</li>
-                  <li>You get back: $3.50</li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Step-by-step instructions */}
-            <div className="space-y-4">
-              <div className="bg-purple-50 p-5 rounded-lg border-l-4 border-purple-500">
-                <h4 className="font-bold text-lg text-purple-900 mb-2">STEP 1: Be the Creator (5 min)</h4>
-                <p className="text-gray-700 mb-3">On your COMPUTER:</p>
-                <ol className="list-decimal list-inside space-y-2 text-gray-700">
-                  <li>Click "Login" button below</li>
-                  <li>Sign in with Google</li>
-                  <li>Go to "Creator Subscriptions"</li>
-                  <li>Create a $5 tier called "Test"</li>
-                  <li>Copy the subscribe link</li>
-                </ol>
-              </div>
-
-              <div className="bg-pink-50 p-5 rounded-lg border-l-4 border-pink-500">
-                <h4 className="font-bold text-lg text-pink-900 mb-2">STEP 2: Be the Fan (3 min)</h4>
-                <p className="text-gray-700 mb-3">On your PHONE (different browser):</p>
-                <ol className="list-decimal list-inside space-y-2 text-gray-700">
-                  <li>Open the subscribe link</li>
-                  <li>Login with a different email</li>
-                  <li>Choose "Zelle" payment</li>
-                  <li>Send yourself $5 via Zelle</li>
-                  <li>Enter "TEST" as confirmation</li>
-                  <li>TEXT CAMERON: "Payment sent"</li>
-                </ol>
-              </div>
-
-              <div className="bg-blue-50 p-5 rounded-lg border-l-4 border-blue-500">
-                <h4 className="font-bold text-lg text-blue-900 mb-2">STEP 3: Cameron Confirms</h4>
-                <p className="text-gray-700">
-                  Cameron clicks "Confirm Payment" on his admin page. Money splits automatically.
-                </p>
-              </div>
-
-              <div className="bg-green-50 p-5 rounded-lg border-l-4 border-green-500">
-                <h4 className="font-bold text-lg text-green-900 mb-2">STEP 4: Get Your Money (2 min)</h4>
-                <p className="text-gray-700 mb-3">Back on your COMPUTER:</p>
-                <ol className="list-decimal list-inside space-y-2 text-gray-700">
-                  <li>Go to "Creator Earnings"</li>
-                  <li>See your $3.50 balance</li>
-                  <li>Click "Request Payout"</li>
-                  <li>TEXT CAMERON: "Payout requested"</li>
-                </ol>
-                <p className="text-gray-700 mt-3">
-                  Cameron approves and sends you $3.50 via Zelle. Test complete! ✅
-                </p>
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex flex-col gap-4 pt-6">
-              {!user ? (
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 text-white">
+        <div className="container py-20 md:py-32">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
+              CreatorVault <span className="text-pink-300">ULTRASTATE</span>
+            </h1>
+            <p className="text-2xl md:text-3xl font-medium">
+              The Platform Where Creators Keep 85%
+            </p>
+            <p className="text-xl md:text-2xl text-purple-100 max-w-3xl mx-auto">
+              No Twitch. No YouTube. No OnlyFans taking 50%. This is YOUR platform. Built by a creator, for creators.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+              {user ? (
                 <>
-                  <Button 
-                    asChild 
-                    size="lg" 
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-xl py-8"
+                  <Button
+                    size="lg"
+                    className="bg-white text-purple-700 hover:bg-purple-50 text-lg px-8 py-6"
+                    onClick={() => setLocation("/creator-dashboard")}
                   >
-                    <a href={import.meta.env.VITE_OAUTH_PORTAL_URL}>🚀 Start Test - Login Here</a>
+                    Go to Dashboard
                   </Button>
-                  <p className="text-center text-sm text-gray-600">
-                    Questions? Text Cameron
-                  </p>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-white text-white hover:bg-white/10 text-lg px-8 py-6"
+                    onClick={() => setLocation("/vaultlive")}
+                  >
+                    Start Streaming
+                  </Button>
                 </>
               ) : (
                 <>
-                  <Button 
-                    asChild 
-                    size="lg" 
-                    className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white text-xl py-8"
+                  <Button
+                    size="lg"
+                    className="bg-white text-purple-700 hover:bg-purple-50 text-lg px-8 py-6"
+                    onClick={() => window.location.href = getLoginUrl()}
                   >
-                    <Link href="/creator-subscriptions">✅ Logged In - Go to Step 1</Link>
+                    Get Started Free
                   </Button>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Button asChild variant="outline" size="lg">
-                      <Link href="/marketplace">🛍️ Browse Marketplace</Link>
-                    </Button>
-                    <Button asChild variant="outline" size="lg">
-                      <Link href="/marketplace/create">📦 Sell Products</Link>
-                    </Button>
-                    <Button asChild variant="outline" size="lg">
-                      <Link href="/creator-earnings">💰 Creator Earnings</Link>
-                    </Button>
-                    <Button asChild variant="outline" size="lg">
-                      <Link href="/creator-subscriptions">📋 Subscriptions</Link>
-                    </Button>
-                  </div>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-white text-white hover:bg-white/10 text-lg px-8 py-6"
+                    onClick={() => setLocation("/guia")}
+                  >
+                    🇩🇴 Ver Guía en Español
+                  </Button>
                 </>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </div>
 
-        {/* What CreatorVault Is */}
-        <div className="max-w-4xl mx-auto">
-          <Card className="bg-white/10 backdrop-blur-lg border-white/20 text-white">
-            <CardHeader>
-              <CardTitle className="text-2xl text-center">What is CreatorVault?</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 text-gray-200">
-              <p className="text-lg">
-                CreatorVault is the platform where creators actually make money. No middleman taking 50%. No waiting for payouts. No bullshit.
-              </p>
-              <div className="grid md:grid-cols-3 gap-4 mt-6">
-                <div className="text-center p-4 bg-white/5 rounded-lg">
-                  <div className="text-3xl mb-2">85%</div>
-                  <div className="text-sm">Creator Split</div>
-                </div>
-                <div className="text-center p-4 bg-white/5 rounded-lg">
-                  <div className="text-3xl mb-2">🎥</div>
-                  <div className="text-sm">Live Streaming</div>
-                </div>
-                <div className="text-center p-4 bg-white/5 rounded-lg">
-                  <div className="text-3xl mb-2">💳</div>
-                  <div className="text-sm">Any Payment Method</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Features Section */}
+      <div className="container py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold mb-4">Why CreatorVault?</h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            We built the platform we wish existed. Fair splits, powerful tools, zero BS.
+          </p>
         </div>
 
-        {/* Footer */}
-        <div className="text-center mt-12 text-gray-300">
-          <p className="text-sm">
-            © 2024 CreatorVault ULTRASTATE. Built on Christmas Eve by KingCam.
-          </p>
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <Card>
+            <CardHeader>
+              <DollarSign className="h-12 w-12 text-purple-600 mb-4" />
+              <CardTitle>Keep 85% of Everything</CardTitle>
+              <CardDescription>
+                Live tips, subscriptions, product sales. You keep 85%, we take 15%. That's it.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Video className="h-12 w-12 text-purple-600 mb-4" />
+              <CardTitle>VaultLive Streaming</CardTitle>
+              <CardDescription>
+                Go live, receive tips in real-time. No complicated setup. Just stream and earn.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <ShoppingBag className="h-12 w-12 text-purple-600 mb-4" />
+              <CardTitle>Sell Anything</CardTitle>
+              <CardDescription>
+                Digital products, physical goods, services, coaching. One platform for everything.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <TrendingUp className="h-12 w-12 text-purple-600 mb-4" />
+              <CardTitle>Growth Tools</CardTitle>
+              <CardDescription>
+                AI-powered content tools, analytics, and insights to help you grow faster.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Shield className="h-12 w-12 text-purple-600 mb-4" />
+              <CardTitle>Your Platform</CardTitle>
+              <CardDescription>
+                No arbitrary bans. No sudden policy changes. Built for creators, by creators.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Zap className="h-12 w-12 text-purple-600 mb-4" />
+              <CardTitle>Fast Payouts</CardTitle>
+              <CardDescription>
+                Get paid via Cash App or PayPal. No waiting 30 days for your money.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <div className="bg-purple-50 dark:bg-purple-950 py-20">
+        <div className="container">
+          <div className="max-w-3xl mx-auto text-center space-y-8">
+            <h2 className="text-4xl font-bold">Ready to Keep What You Earn?</h2>
+            <p className="text-xl text-muted-foreground">
+              Join creators who are done with platforms taking 50%. Start earning 85% today.
+            </p>
+            {!user && (
+              <Button
+                size="lg"
+                className="bg-purple-600 hover:bg-purple-700 text-lg px-8 py-6"
+                onClick={() => window.location.href = getLoginUrl()}
+              >
+                Sign Up Free - No Credit Card
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
