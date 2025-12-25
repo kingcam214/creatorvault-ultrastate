@@ -249,3 +249,15 @@ Every feature below must be 100% complete before moving to next:
 - [ ] Verify Subscriptions work end-to-end
 - [ ] Verify My Earnings displays correctly
 - [ ] Add WhatsApp bot integration for creator onboarding
+
+
+## WAITLIST + KINGCAM SHOWCASE (URGENT - BUY TIME)
+- [x] Create public waitlist landing page (no auth required)
+- [x] Add email capture form with name, email, creator type
+- [x] Create waitlist database table
+- [x] Add waitlist signup tRPC procedure
+- [x] Notify owner when someone joins waitlist
+- [x] Create KingCam video showcase page at /demos
+- [x] Add social proof and feature cards
+- [x] Make both pages accessible without login
+- [x] Link waitlist → demos → waitlist flow

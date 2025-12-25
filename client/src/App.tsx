@@ -57,6 +57,8 @@ import PayoutSetup from "./pages/PayoutSetup";
 import AdminTips from "./pages/AdminTips";
 import GuiaCreador from "./pages/GuiaCreador";
 import TelegramSetup from "./pages/TelegramSetup";
+import Waitlist from "./pages/Waitlist";
+import Demos from "./pages/Demos";
 import CreatorOnboarding from "./pages/CreatorOnboarding";
 import BrowseLive from "./pages/BrowseLive";
 import StreamView from "./pages/StreamView";
@@ -94,6 +96,8 @@ function Router() {
       <Route path="/payout-setup" component={PayoutSetup} />
       <Route path="/admin/tips" component={AdminTips} />
       <Route path="/admin/telegram" component={TelegramSetup} />
+      <Route path="/waitlist" component={Waitlist} />
+      <Route path="/demos" component={Demos} />
       <Route path="/guia" component={GuiaCreador} />
       <Route path="/start" component={CreatorOnboarding} />
       <Route path="/vaultlive" component={VaultLiveSimple} />
