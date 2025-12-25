@@ -56,6 +56,7 @@ import RecruiterDashboard from "./pages/RecruiterDashboard";
 import PayoutSetup from "./pages/PayoutSetup";
 import AdminTips from "./pages/AdminTips";
 import GuiaCreador from "./pages/GuiaCreador";
+import CreatorOnboarding from "./pages/CreatorOnboarding";
 import BrowseLive from "./pages/BrowseLive";
 import StreamView from "./pages/StreamView";
 import AppHeader from "./components/AppHeader";
@@ -92,6 +93,7 @@ function Router() {
       <Route path="/payout-setup" component={PayoutSetup} />
       <Route path="/admin/tips" component={AdminTips} />
       <Route path="/guia" component={GuiaCreador} />
+      <Route path="/start" component={CreatorOnboarding} />
       <Route path="/vaultlive" component={VaultLiveSimple} />
       <Route path="/live" component={BrowseLive} />
       <Route path="/stream/:id" component={StreamView} />

@@ -1,0 +1,8 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM live_streams) as total_streams,\n  (SELECT COUNT(*) FROM live_streams WHERE status = 'live') as live_streams,\n  (SELECT COUNT(*) FROM live_stream_tips) as total_tips,\n  (SELECT COUNT(*) FROM live_stream_tips WHERE status = 'pending') as pending_tips,\n  (SELECT COUNT(*) FROM users WHERE cashappHandle IS NOT NULL OR paypalEmail IS NOT NULL) as users_with_payout",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute SELECT \n  (SELECT COUNT(*) FROM live_streams) as total_streams,\n  (SELECT COUNT(*) FROM live_streams WHERE status = 'live') as live_streams,\n  (SELECT COUNT(*) FROM live_stream_tips) as total_tips,\n  (SELECT COUNT(*) FROM live_stream_tips WHERE status = 'pending') as pending_tips,\n  (SELECT COUNT(*) FROM users WHERE cashappHandle IS NOT NULL OR paypalEmail IS NOT NULL) as users_with_payout",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'cashapphandle' in 'where clause'"
+  ]
+}

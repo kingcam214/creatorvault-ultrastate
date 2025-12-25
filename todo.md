@@ -209,3 +209,13 @@ Every feature below must be 100% complete before moving to next:
 - [ ] Build message handlers (greetings, commands, payment requests)
 - [ ] Add payment link flow (Zelle)
 - [ ] Test bot with real messages
+
+
+## CHRISTMAS DAY CREATOR ONBOARDING (RAE, SLIM, EMMA, DELBANIA)
+- [x] Audit all monetization features (VaultLive works, subscriptions need Stripe setup)
+- [x] Fix VaultLive end-to-end (payout → go live → tip → confirm → balance)
+- [x] Create simple onboarding page for 4 creators at /start
+- [x] Update Home page buttons (Start Earning → /start, Go Live → /vaultlive)
+- [ ] Test complete money flow with real $1 transaction
+- [ ] Verify creators can: setup payout, go live, receive tips, check balance
+- [ ] Verify fans can: browse live streams, tip creators, subscribe to creators

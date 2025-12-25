@@ -30,9 +30,9 @@ export default function Home() {
                   <Button
                     size="lg"
                     className="bg-white text-purple-700 hover:bg-purple-50 text-lg px-8 py-6"
-                    onClick={() => setLocation("/creator")}
+                    onClick={() => setLocation("/start")}
                   >
-                    Go to Dashboard
+                    Start Earning
                   </Button>
                   <Button
                     size="lg"
@@ -40,7 +40,7 @@ export default function Home() {
                     className="border-white text-white hover:bg-white/10 text-lg px-8 py-6"
                     onClick={() => setLocation("/vaultlive")}
                   >
-                    Start Streaming
+                    Go Live
                   </Button>
                 </>
               ) : (
