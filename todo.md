@@ -186,3 +186,8 @@ Every feature below must be 100% complete before moving to next:
 - [x] Create admin page to confirm pending tips
 - [x] Add creator balance display (pending/earned)
 - [ ] Test: creator setup → go live → fan tips → admin confirms → balance updates
+
+## SPANISH WALKTHROUGH FOR YODARIS
+- [x] Create Spanish step-by-step guide page for VaultLive testing
+- [x] Add guide link to navigation menu
+- [ ] Test complete flow with Yodaris

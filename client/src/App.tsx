@@ -55,6 +55,7 @@ import LiveDemoControl from "./pages/LiveDemoControl";
 import RecruiterDashboard from "./pages/RecruiterDashboard";
 import PayoutSetup from "./pages/PayoutSetup";
 import AdminTips from "./pages/AdminTips";
+import GuiaCreador from "./pages/GuiaCreador";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -88,6 +89,7 @@ function Router() {
       <Route path={"/unified-publisher"} component={UnifiedContentPublisher} />
       <Route path="/payout-setup" component={PayoutSetup} />
       <Route path="/admin/tips" component={AdminTips} />
+      <Route path="/guia" component={GuiaCreador} />
       <Route path="/vaultlive" component={VaultLiveSimple} />
       <Route path={"/king"} component={KingDashboard} />
       <Route path={"/king/users"} component={KingUsers} />

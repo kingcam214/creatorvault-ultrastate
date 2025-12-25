@@ -29,6 +29,7 @@ import { Button } from "./ui/button";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/creator-dashboard" },
+  { icon: LayoutDashboard, label: "🇩🇴 Guía (Español)", path: "/guia" },
   { icon: ShoppingBag, label: "Browse Marketplace", path: "/marketplace" },
   { icon: Store, label: "Sell Products", path: "/marketplace/create" },
   { icon: Store, label: "My Products", path: "/marketplace/manage" },
@@ -36,6 +37,7 @@ const menuItems = [
   { icon: GraduationCap, label: "University", path: "/university" },
   { icon: Briefcase, label: "Services", path: "/services" },
   { icon: DollarSign, label: "Subscriptions", path: "/creator-subscriptions" },
+  { icon: Settings, label: "Setup Payout", path: "/payout-setup" },
   { icon: DollarSign, label: "Earnings", path: "/creator-earnings" },
   { icon: BarChart3, label: "Analytics", path: "/creator-analytics" },
 ];
