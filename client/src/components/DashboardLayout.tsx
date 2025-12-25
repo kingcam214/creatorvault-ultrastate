@@ -21,15 +21,23 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, ShoppingBag, Store, Video, GraduationCap, Briefcase, DollarSign, BarChart3, Settings } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/creator-dashboard" },
+  { icon: ShoppingBag, label: "Browse Marketplace", path: "/marketplace" },
+  { icon: Store, label: "Sell Products", path: "/marketplace/create" },
+  { icon: Store, label: "My Products", path: "/marketplace/manage" },
+  { icon: Video, label: "VaultLive", path: "/vaultlive" },
+  { icon: GraduationCap, label: "University", path: "/university" },
+  { icon: Briefcase, label: "Services", path: "/services" },
+  { icon: DollarSign, label: "Subscriptions", path: "/creator-subscriptions" },
+  { icon: DollarSign, label: "Earnings", path: "/creator-earnings" },
+  { icon: BarChart3, label: "Analytics", path: "/creator-analytics" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

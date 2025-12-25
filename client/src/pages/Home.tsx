@@ -122,6 +122,12 @@ export default function Home() {
                   </Button>
                   <div className="grid grid-cols-2 gap-4">
                     <Button asChild variant="outline" size="lg">
+                      <Link href="/marketplace">🛍️ Browse Marketplace</Link>
+                    </Button>
+                    <Button asChild variant="outline" size="lg">
+                      <Link href="/marketplace/create">📦 Sell Products</Link>
+                    </Button>
+                    <Button asChild variant="outline" size="lg">
                       <Link href="/creator-earnings">💰 Creator Earnings</Link>
                     </Button>
                     <Button asChild variant="outline" size="lg">

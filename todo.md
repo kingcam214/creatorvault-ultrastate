@@ -172,3 +172,8 @@ Every feature below must be 100% complete before moving to next:
 
 ## MARKETPLACE BUGS (Reported by user)
 - [x] Fix marketplace product publishing - database insertion failing with missing/incorrect default values (Added 32 missing columns to marketplace_products table)
+
+## NAVIGATION ISSUES (Reported by user)
+- [x] Menu bar missing marketplace browse/shop links
+- [x] Users can create products but can't find them to purchase
+- [x] Add clear path from home → marketplace browse → product detail → checkout
