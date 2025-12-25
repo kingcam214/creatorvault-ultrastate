@@ -259,14 +259,65 @@ export const marketplaceProducts = mysqlTable("marketplace_products", {
   creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   recruiterId: int("recruiter_id").references(() => users.id, { onDelete: "set null" }),
   
-  type: mysqlEnum("type", ["digital", "service", "bundle", "subscription"]).notNull(),
+  type: mysqlEnum("type", ["digital", "physical", "service", "bundle", "subscription"]).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
+  category: varchar("category", { length: 100 }),
+  shortDescription: varchar("short_description", { length: 280 }),
   description: text("description"),
   
   priceAmount: int("price_amount").notNull(), // in cents
   currency: varchar("currency", { length: 3 }).default("USD").notNull(),
   
+  // Images & Media
+  mainImage: varchar("main_image", { length: 500 }),
+  additionalImages: json("additional_images").$type<string[]>(),
+  productVideo: varchar("product_video", { length: 500 }),
+  
+  // Digital Product Fields
+  digitalFiles: json("digital_files").$type<Array<{url: string, name: string, size: number}>>(),
+  downloadLimit: int("download_limit"), // null = unlimited
+  accessDuration: int("access_duration"), // in days, null = lifetime
+  
+  // Physical Product Fields
+  shippingType: mysqlEnum("shipping_type", ["self", "fulfillment"]),
+  shippingCost: int("shipping_cost"), // in cents
+  estimatedDeliveryDays: int("estimated_delivery_days"),
+  inventory: int("inventory"), // null = unlimited
+  variations: json("variations").$type<{sizes?: string[], colors?: string[]}>(),
+  
+  // Service Fields
+  serviceDuration: int("service_duration"), // in minutes
+  deliveryMethods: json("delivery_methods").$type<string[]>(),
+  bookingEnabled: boolean("booking_enabled").default(false),
+  turnaroundDays: int("turnaround_days"),
+  
+  // Pricing & Discounts
+  regularPrice: int("regular_price"), // in cents, for sale pricing
+  salePrice: int("sale_price"), // in cents
+  saleEndDate: timestamp("sale_end_date"),
+  monthlyPrice: int("monthly_price"), // in cents, for subscription option
+  
+  // SEO & Discovery
+  keywords: json("keywords").$type<string[]>(),
+  targetAudience: json("target_audience").$type<string[]>(),
+  contentRating: mysqlEnum("content_rating", ["general", "18+", "21+"]).default("general"),
+  
+  // Terms & Delivery
+  refundPolicy: mysqlEnum("refund_policy", ["no-refunds", "7-day", "30-day", "custom"]).default("no-refunds"),
+  customRefundPolicy: text("custom_refund_policy"),
+  customerInstructions: text("customer_instructions"),
+  termsOfUse: text("terms_of_use"),
+  
   status: mysqlEnum("status", ["draft", "active", "archived"]).default("draft").notNull(),
+  
+  // Publishing
+  publishedAt: timestamp("published_at"),
+  scheduledFor: timestamp("scheduled_for"),
+  
+  // Stats
+  viewCount: int("view_count").default(0),
+  salesCount: int("sales_count").default(0),
+  totalRevenue: int("total_revenue").default(0), // in cents
   
   fulfillmentType: mysqlEnum("fulfillment_type", ["instant", "manual", "scheduled"]).default("manual").notNull(),
   fulfillmentPayload: json("fulfillment_payload"),
@@ -276,6 +327,8 @@ export const marketplaceProducts = mysqlTable("marketplace_products", {
 }, (table) => ({
   creatorIdIdx: index("idx_marketplace_products_creator_id").on(table.creatorId),
   statusIdx: index("idx_marketplace_products_status").on(table.status),
+  typeIdx: index("idx_marketplace_products_type").on(table.type),
+  categoryIdx: index("idx_marketplace_products_category").on(table.category),
 }));
 
 /**

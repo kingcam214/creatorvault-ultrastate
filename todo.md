@@ -140,3 +140,30 @@ Every feature below must be 100% complete before moving to next:
 ## WAITING ON USER
 - [ ] Meg completes manual payment test
 - [ ] ChatGPT export email arrives (for additional feature discovery)
+
+## MARKETPLACE PRODUCT UPLOAD FLOW (PRIORITY)
+- [x] Database: Verify marketplace_products, marketplace_orders tables
+- [x] Backend: Product CRUD tRPC router
+- [x] Backend: File upload with S3 storage
+- [x] Backend: Stripe checkout integration
+- [x] UI: 8-step product upload wizard (/marketplace/create)
+- [x] UI: Step 1 - Product type selection (digital/physical/service)
+- [x] UI: Step 2 - Basic information (title, category, price, descriptions)
+- [x] UI: Step 3A - Digital product fields (file upload, download limits)
+- [x] UI: Step 3B - Physical product fields (shipping, inventory, variations)
+- [x] UI: Step 3C - Service fields (duration, delivery method, booking)
+- [x] UI: Step 4 - Images & media upload with AI generator
+- [x] UI: Step 5 - Pricing & discounts (launch discount, bundles, subscription)
+- [x] UI: Step 6 - SEO & discovery (keywords, audience, rating)
+- [x] UI: Step 7 - Terms & delivery (refund policy, instructions, license)
+- [x] UI: Step 8 - Preview & publish (product card preview, scheduling)
+- [x] UI: Seller dashboard (/marketplace/manage)
+- [x] UI: Product analytics page (/marketplace/analytics/:productId)
+- [x] UI: Buyer marketplace browse (/marketplace) - search, filter, sort
+- [x] UI: Product detail page (/marketplace/:productId) - carousel, reviews, buy
+- [x] UI: Checkout flow with Stripe
+- [x] AI: Product description generator
+- [x] AI: Pricing optimizer
+- [x] AI: Image generator integration
+- [ ] Test: Complete product upload flow (digital, physical, service)
+- [ ] Test: Purchase and delivery flow
