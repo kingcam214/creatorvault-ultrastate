@@ -28,6 +28,8 @@ import { orchestratorRouter } from "./routers/orchestrator";
 import { vaultLiveRouter } from "./routers/vaultLive";
 import { emmaNetworkRouter } from "./routers/emmaNetwork";
 import { osRouter } from "./routers/os";
+import { marketplaceRouter } from "./routers/marketplace";
+import { marketplaceAIRouter } from "./routers/marketplaceAI";
 import { kingcamDemosRouter } from "./routers/kingcamDemos";
 import { vaultPayRouter } from "./routers/vaultPay";
 import { dayShiftDoctorRouter } from "./routers/dayShiftDoctor";
@@ -471,67 +473,8 @@ export const appRouter = router({
   }),
 
   // ============ SYSTEM F: MARKETPLACE ============
-  marketplace: router({
-    getProducts: publicProcedure.query(async () => {
-      return await dbFGH.listProducts({ status: "active" });
-    }),
-
-    createProduct: creatorProcedure.input(z.object({
-      title: z.string(),
-      description: z.string(),
-      type: z.enum(["digital", "service", "bundle", "subscription"]),
-      price: z.number(),
-      currency: z.enum(["USD", "DOP", "HTG"]),
-      fulfillmentType: z.enum(["instant", "manual", "scheduled"]).default("manual"),
-    })).mutation(async ({ ctx, input }) => {
-      await dbFGH.createProduct({
-        creatorId: ctx.user.id,
-        type: input.type,
-        title: input.title,
-        description: input.description,
-        priceAmount: Math.round(input.price * 100),
-        currency: input.currency,
-        fulfillmentType: input.fulfillmentType,
-      });
-      return { success: true };
-    }),
-
-    checkout: protectedProcedure.input(z.object({
-      productId: z.string(),
-    })).mutation(async ({ ctx, input }) => {
-      const origin = (ctx.req.headers.origin as string | undefined) ?? "http://localhost:3000";
-      
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        customer_email: ctx.user.email ?? undefined,
-        client_reference_id: String(ctx.user.id),
-        metadata: {
-          user_id: String(ctx.user.id),
-          customer_email: ctx.user.email ?? null,
-          customer_name: ctx.user.name !== null ? String(ctx.user.name) : "",
-          product_id: input.productId,
-        },
-        line_items: [
-          {
-            price_data: {
-              currency: "usd",
-              product_data: {
-                name: PRODUCTS.TEST_PRODUCT.name,
-                description: PRODUCTS.TEST_PRODUCT.description,
-              },
-              unit_amount: PRODUCTS.TEST_PRODUCT.priceUsd,
-            },
-            quantity: 1,
-          },
-        ],
-        success_url: `${origin}/marketplace?success=true`,
-        cancel_url: `${origin}/marketplace?canceled=true`,
-        allow_promotion_codes: true,
-      });
-
-      return { sessionId: session.id, url: session.url };
-    }),
-  }),
+  marketplace: marketplaceRouter,
+  marketplaceAI: marketplaceAIRouter,
 
   // ============ SYSTEM G: UNIVERSITY ============
   university: router({
