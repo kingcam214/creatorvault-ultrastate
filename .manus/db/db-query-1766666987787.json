@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS live_stream_tips (\n  id INT PRIMARY KEY AUTO_INCREMENT,\n  stream_id INT NOT NULL,\n  user_id INT NOT NULL,\n  amount DECIMAL(10, 2) NOT NULL,\n  creator_share DECIMAL(10, 2) NOT NULL,\n  platform_share DECIMAL(10, 2) NOT NULL,\n  message TEXT,\n  status ENUM('pending', 'confirmed', 'cancelled') DEFAULT 'pending' NOT NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  confirmed_at TIMESTAMP NULL,\n  INDEX idx_live_stream_tips_stream_id (stream_id),\n  INDEX idx_live_stream_tips_user_id (user_id),\n  INDEX idx_live_stream_tips_status (status),\n  FOREIGN KEY (stream_id) REFERENCES live_streams(id) ON DELETE CASCADE,\n  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute CREATE TABLE IF NOT EXISTS live_stream_tips (\n  id INT PRIMARY KEY AUTO_INCREMENT,\n  stream_id INT NOT NULL,\n  user_id INT NOT NULL,\n  amount DECIMAL(10, 2) NOT NULL,\n  creator_share DECIMAL(10, 2) NOT NULL,\n  platform_share DECIMAL(10, 2) NOT NULL,\n  message TEXT,\n  status ENUM('pending', 'confirmed', 'cancelled') DEFAULT 'pending' NOT NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  confirmed_at TIMESTAMP NULL,\n  INDEX idx_live_stream_tips_stream_id (stream_id),\n  INDEX idx_live_stream_tips_user_id (user_id),\n  INDEX idx_live_stream_tips_status (status),\n  FOREIGN KEY (stream_id) REFERENCES live_streams(id) ON DELETE CASCADE,\n  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 50
+}

@@ -30,7 +30,7 @@ export default function Home() {
                   <Button
                     size="lg"
                     className="bg-white text-purple-700 hover:bg-purple-50 text-lg px-8 py-6"
-                    onClick={() => setLocation("/creator-dashboard")}
+                    onClick={() => setLocation("/creator")}
                   >
                     Go to Dashboard
                   </Button>

@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS live_stream_viewers (\n  id INT PRIMARY KEY AUTO_INCREMENT,\n  stream_id INT NOT NULL,\n  user_id INT,\n  joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  left_at TIMESTAMP NULL,\n  watch_duration INT DEFAULT 0 NOT NULL,\n  INDEX idx_live_stream_viewers_stream_id (stream_id),\n  INDEX idx_live_stream_viewers_user_id (user_id),\n  FOREIGN KEY (stream_id) REFERENCES live_streams(id) ON DELETE CASCADE,\n  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL\n)",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3GtrSVWktBvDbNd.730b1d7910c0 --database 3Ss8KhjHmMbtxkDLhxH8t9 --execute CREATE TABLE IF NOT EXISTS live_stream_viewers (\n  id INT PRIMARY KEY AUTO_INCREMENT,\n  stream_id INT NOT NULL,\n  user_id INT,\n  joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  left_at TIMESTAMP NULL,\n  watch_duration INT DEFAULT 0 NOT NULL,\n  INDEX idx_live_stream_viewers_stream_id (stream_id),\n  INDEX idx_live_stream_viewers_user_id (user_id),\n  FOREIGN KEY (stream_id) REFERENCES live_streams(id) ON DELETE CASCADE,\n  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL\n)",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 52
+}

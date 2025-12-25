@@ -185,6 +185,8 @@ Every feature below must be 100% complete before moving to next:
 - [x] Add manual "$5 tip" button for fans
 - [x] Create admin page to confirm pending tips
 - [x] Add creator balance display (pending/earned)
+- [x] Fix Home page button pointing to wrong route (/creator-dashboard should be /creator)
+- [x] Verify all VaultLive pages load correctly - Database tables created
 - [ ] Test: creator setup → go live → fan tips → admin confirms → balance updates
 
 ## SPANISH WALKTHROUGH FOR YODARIS
@@ -200,3 +202,10 @@ Every feature below must be 100% complete before moving to next:
 - [x] No way for fans to view creator's stream and tip
 - [x] Payout setup not accessible/working
 - [x] Need public stream view page for fans (no login required)
+
+## TELEGRAM BOT INTEGRATION
+- [ ] Add Telegram bot token to environment
+- [ ] Create webhook endpoint for Telegram
+- [ ] Build message handlers (greetings, commands, payment requests)
+- [ ] Add payment link flow (Zelle)
+- [ ] Test bot with real messages

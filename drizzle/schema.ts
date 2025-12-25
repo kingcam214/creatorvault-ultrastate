@@ -1587,3 +1587,116 @@ export const youthKingPrograms = mysqlTable("youth_king_programs", {
   statusIdx: index("idx_youth_king_programs_status").on(table.status),
   registrationOpenIdx: index("idx_youth_king_programs_registration_open").on(table.registrationOpen),
 }));
+
+// ============================================================================
+// VAULTLIVE - Live Streaming System
+// ============================================================================
+
+/**
+ * Live Streams - Creator live streaming sessions
+ */
+export const liveStreams = mysqlTable("live_streams", {
+  id: int("id").primaryKey().autoincrement(),
+  
+  // Creator
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Stream details
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  thumbnailUrl: varchar("thumbnail_url", { length: 500 }),
+  
+  // Status
+  status: mysqlEnum("status", ["pending", "live", "ended"]).default("pending").notNull(),
+  
+  // Metrics
+  viewerCount: int("viewer_count").default(0).notNull(),
+  peakViewerCount: int("peak_viewer_count").default(0).notNull(),
+  totalTips: decimal("total_tips", { precision: 10, scale: 2 }).default("0.00").notNull(),
+  
+  // Timestamps
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_live_streams_user_id").on(table.userId),
+  statusIdx: index("idx_live_streams_status").on(table.status),
+  createdAtIdx: index("idx_live_streams_created_at").on(table.createdAt),
+}));
+
+/**
+ * Live Stream Viewers - Track who is watching
+ */
+export const liveStreamViewers = mysqlTable("live_stream_viewers", {
+  id: int("id").primaryKey().autoincrement(),
+  
+  // Stream and viewer
+  streamId: int("stream_id").notNull().references(() => liveStreams.id, { onDelete: "cascade" }),
+  userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
+  
+  // Session tracking
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  leftAt: timestamp("left_at"),
+  watchDuration: int("watch_duration").default(0).notNull(), // in seconds
+}, (table) => ({
+  streamIdIdx: index("idx_live_stream_viewers_stream_id").on(table.streamId),
+  userIdIdx: index("idx_live_stream_viewers_user_id").on(table.userId),
+}));
+
+/**
+ * Live Stream Tips - Manual tips with 85/15 split
+ */
+export const liveStreamTips = mysqlTable("live_stream_tips", {
+  id: int("id").primaryKey().autoincrement(),
+  
+  // Stream and users
+  streamId: int("stream_id").notNull().references(() => liveStreams.id, { onDelete: "cascade" }),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Tip details
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // in dollars
+  creatorShare: decimal("creator_share", { precision: 10, scale: 2 }).notNull(), // 85%
+  platformShare: decimal("platform_share", { precision: 10, scale: 2 }).notNull(), // 15%
+  message: text("message"),
+  
+  // Status
+  status: mysqlEnum("status", ["pending", "confirmed", "cancelled"]).default("pending").notNull(),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  confirmedAt: timestamp("confirmed_at"),
+}, (table) => ({
+  streamIdIdx: index("idx_live_stream_tips_stream_id").on(table.streamId),
+  userIdIdx: index("idx_live_stream_tips_user_id").on(table.userId),
+  statusIdx: index("idx_live_stream_tips_status").on(table.status),
+}));
+
+/**
+ * Live Stream Donations - Payment-based donations
+ */
+export const liveStreamDonations = mysqlTable("live_stream_donations", {
+  id: int("id").primaryKey().autoincrement(),
+  
+  // Stream and users
+  streamId: int("stream_id").notNull().references(() => liveStreams.id, { onDelete: "cascade" }),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Donation details
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  creatorShare: decimal("creator_share", { precision: 10, scale: 2 }).notNull(), // 85%
+  platformShare: decimal("platform_share", { precision: 10, scale: 2 }).notNull(), // 15%
+  paymentMethod: varchar("payment_method", { length: 50 }).notNull(),
+  message: text("message"),
+  
+  // Payment status
+  paymentStatus: mysqlEnum("payment_status", ["pending", "completed", "failed", "refunded"]).default("pending").notNull(),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+}, (table) => ({
+  streamIdIdx: index("idx_live_stream_donations_stream_id").on(table.streamId),
+  userIdIdx: index("idx_live_stream_donations_user_id").on(table.userId),
+  paymentStatusIdx: index("idx_live_stream_donations_payment_status").on(table.paymentStatus),
+}));
