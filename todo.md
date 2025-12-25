@@ -165,5 +165,6 @@ Every feature below must be 100% complete before moving to next:
 - [x] AI: Product description generator
 - [x] AI: Pricing optimizer
 - [x] AI: Image generator integration
+- [x] Backend: AI tools router wired to main routers.ts
 - [ ] Test: Complete product upload flow (digital, physical, service)
 - [ ] Test: Purchase and delivery flow

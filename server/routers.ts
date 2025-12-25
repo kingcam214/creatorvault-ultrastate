@@ -29,6 +29,7 @@ import { vaultLiveRouter } from "./routers/vaultLive";
 import { emmaNetworkRouter } from "./routers/emmaNetwork";
 import { osRouter } from "./routers/os";
 import { marketplaceRouter } from "./routers/marketplace";
+import { marketplaceAIRouter } from "./routers/marketplaceAI";
 import { kingcamDemosRouter } from "./routers/kingcamDemos";
 import { vaultPayRouter } from "./routers/vaultPay";
 import { dayShiftDoctorRouter } from "./routers/dayShiftDoctor";
@@ -473,6 +474,7 @@ export const appRouter = router({
 
   // ============ SYSTEM F: MARKETPLACE ============
   marketplace: marketplaceRouter,
+  marketplaceAI: marketplaceAIRouter,
 
   // ============ SYSTEM G: UNIVERSITY ============
   university: router({
