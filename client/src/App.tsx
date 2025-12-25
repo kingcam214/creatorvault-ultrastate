@@ -35,6 +35,10 @@ import InfluencerOnboarding from "./pages/InfluencerOnboarding";
 import InfluencerDashboard from "./pages/InfluencerDashboard";
 import JoinVaultLive from "./pages/JoinVaultLive";
 import KingCamDemos from "./pages/KingCamDemos";
+import KingWaitlist from "./pages/KingWaitlist";
+import KingContent from "./pages/KingContent";
+import KingVideoLab from "./pages/KingVideoLab";
+import KingAnalytics from "./pages/KingAnalytics";
 import VaultPay from "./pages/VaultPay";
 import DayShiftDoctor from "./pages/DayShiftDoctor";
 import HollywoodReplacement from "./pages/HollywoodReplacement";
@@ -107,6 +111,10 @@ function Router() {
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/king/emma"} component={EmmaNetwork} />
       <Route path={"/king/demos"} component={KingCamDemos} />
+      <Route path={"/king/waitlist"} component={KingWaitlist} />
+      <Route path={"/king/content"} component={KingContent} />
+      <Route path={"/king/video-lab"} component={KingVideoLab} />
+      <Route path={"/king/analytics"} component={KingAnalytics} />
       <Route path={"/onboard/influencer"} component={InfluencerOnboarding} />
       <Route path={"/influencer"} component={InfluencerDashboard} />
       <Route path={"/join-vaultlive"} component={JoinVaultLive} />
