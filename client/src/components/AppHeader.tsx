@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Shield, Menu, DollarSign, Users, BarChart3, Podcast, TrendingUp } from "lucide-react";
+import { Shield, Menu, DollarSign, Users, BarChart3, Podcast, TrendingUp, ShoppingBag, GraduationCap } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -93,6 +93,22 @@ export default function AppHeader() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
+
+            {/* Marketplace */}
+            <Button variant="ghost" size="sm" asChild className="text-gray-300 hover:text-white">
+              <Link href="/marketplace">
+                <ShoppingBag className="h-4 w-4 mr-2" />
+                Marketplace
+              </Link>
+            </Button>
+
+            {/* University */}
+            <Button variant="ghost" size="sm" asChild className="text-gray-300 hover:text-white">
+              <Link href="/university">
+                <GraduationCap className="h-4 w-4 mr-2" />
+                University
+              </Link>
+            </Button>
 
             {/* Emma Network / Recruiter */}
             {user && (
@@ -191,6 +207,19 @@ export default function AppHeader() {
                     <DropdownMenuItem asChild>
                       <Link href="/creator-toolbox">
                         <a className="w-full">Content Tools</a>
+                      </Link>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuSeparator className="bg-white/10" />
+                    <DropdownMenuLabel className="text-gray-400">Marketplace & Learning</DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                      <Link href="/marketplace">
+                        <a className="w-full">Marketplace</a>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/university">
+                        <a className="w-full">University</a>
                       </Link>
                     </DropdownMenuItem>
                     

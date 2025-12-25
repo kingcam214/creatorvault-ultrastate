@@ -168,3 +168,8 @@ Every feature below must be 100% complete before moving to next:
 - [x] Backend: AI tools router wired to main routers.ts
 - [ ] Test: Complete product upload flow (digital, physical, service)
 - [ ] Test: Purchase and delivery flow
+
+## NAVIGATION FIX
+- [x] Add Marketplace link to navigation menu
+- [x] Add University link to navigation menu
+- [ ] Test navigation from menu to pages
