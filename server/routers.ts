@@ -88,6 +88,7 @@ export const appRouter = router({
       language: z.string().optional(),
       country: z.string().optional(),
       cashappHandle: z.string().optional(),
+      paypalEmail: z.string().optional(),
       zelleHandle: z.string().optional(),
       applepayHandle: z.string().optional(),
     })).mutation(async ({ ctx, input }) => {
@@ -106,6 +107,9 @@ export const appRouter = router({
       }
       if (input.cashappHandle !== undefined) {
         await db.updateUserProfile(ctx.user.id, { cashappHandle: input.cashappHandle });
+      }
+      if (input.paypalEmail !== undefined) {
+        await db.updateUserProfile(ctx.user.id, { paypalEmail: input.paypalEmail });
       }
       if (input.zelleHandle !== undefined) {
         await db.updateUserProfile(ctx.user.id, { zelleHandle: input.zelleHandle });

@@ -177,3 +177,12 @@ Every feature below must be 100% complete before moving to next:
 - [x] Menu bar missing marketplace browse/shop links
 - [x] Users can create products but can't find them to purchase
 - [x] Add clear path from home → marketplace browse → product detail → checkout
+
+## VAULTLIVE VALIDATION FLOW (PRIORITY)
+- [x] Add payout fields to user table (cashapp_handle, paypal_email)
+- [x] Create payout setup form for creators
+- [x] Simplify "Go Live" button (no WebRTC complexity)
+- [x] Add manual "$5 tip" button for fans
+- [x] Create admin page to confirm pending tips
+- [x] Add creator balance display (pending/earned)
+- [ ] Test: creator setup → go live → fan tips → admin confirms → balance updates

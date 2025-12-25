@@ -48,6 +48,7 @@ export const liveStreamTips = mysqlTable("live_stream_tips", {
   userId: int("user_id").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   message: text("message"),
+  status: mysqlEnum("status", ["pending", "confirmed", "rejected"]).notNull().default("pending"),
   creatorShare: decimal("creator_share", { precision: 10, scale: 2 }).notNull(),
   platformShare: decimal("platform_share", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),

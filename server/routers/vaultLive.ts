@@ -25,6 +25,14 @@ const creatorProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+// Admin-only procedure
+const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== "admin" && ctx.user.role !== "king") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+  }
+  return next({ ctx });
+});
+
 export const vaultLiveRouter = router({
   // ============================================================================
   // STREAM MANAGEMENT
@@ -210,6 +218,26 @@ export const vaultLiveRouter = router({
     }),
 
   /**
+   * Send a manual tip for validation flow (status = pending)
+   */
+  sendManualTip: protectedProcedure
+    .input(
+      z.object({
+        streamId: z.number(),
+        amount: z.number().positive(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const tip = await dbVaultLive.recordTip(
+        input.streamId,
+        ctx.user.id,
+        input.amount / 100, // Convert cents to dollars
+        "Manual validation tip"
+      );
+      return tip;
+    }),
+
+  /**
    * Send a tip (85% creator, 15% platform) - LEGACY, use createTipCheckout instead
    */
   sendTip: protectedProcedure
@@ -245,6 +273,30 @@ export const vaultLiveRouter = router({
    */
   getMyTips: protectedProcedure.query(async ({ ctx }) => {
     return await dbVaultLive.getTipsByUserId(ctx.user.id);
+  }),
+
+  /**
+   * Get all pending tips (admin only)
+   */
+  getPendingTips: adminProcedure.query(async () => {
+    return await dbVaultLive.getPendingTips();
+  }),
+
+  /**
+   * Confirm a tip (admin only)
+   */
+  confirmTip: adminProcedure
+    .input(z.object({ tipId: z.number() }))
+    .mutation(async ({ input }) => {
+      await dbVaultLive.confirmTip(input.tipId);
+      return { success: true };
+    }),
+
+  /**
+   * Get creator balance (pending + confirmed)
+   */
+  getCreatorBalance: creatorProcedure.query(async ({ ctx }) => {
+    return await dbVaultLive.getCreatorBalance(ctx.user.id);
   }),
 
   /**

@@ -446,3 +446,62 @@ export async function getStreamStats(userId: number): Promise<StreamStats> {
     peakViewerCount: streamRow?.peakViewerCount || 0,
   };
 }
+
+/**
+ * Get all pending tips (admin only)
+ */
+export async function getPendingTips(): Promise<Tip[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const tips = await db.select().from(liveStreamTips)
+    .where(eq(liveStreamTips.status, "pending"))
+    .orderBy(desc(liveStreamTips.createdAt));
+
+  return tips as Tip[];
+}
+
+/**
+ * Confirm a tip (admin only)
+ */
+export async function confirmTip(tipId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(liveStreamTips)
+    .set({ status: "confirmed" })
+    .where(eq(liveStreamTips.id, tipId));
+}
+
+/**
+ * Get creator balance (pending + confirmed)
+ */
+export async function getCreatorBalance(userId: number): Promise<{ pending: string; confirmed: string }> {
+  const db = await getDb();
+  if (!db) return { pending: "0.00", confirmed: "0.00" };
+
+  // Get all streams by this creator
+  const streams = await db.select().from(liveStreams).where(eq(liveStreams.userId, userId));
+  const streamIds = streams.map(s => s.id);
+
+  if (streamIds.length === 0) {
+    return { pending: "0.00", confirmed: "0.00" };
+  }
+
+  // Get all tips for these streams
+  const allTips = await db.select().from(liveStreamTips)
+    .where(sql`${liveStreamTips.streamId} IN (${sql.join(streamIds.map(id => sql`${id}`), sql`, `)})`);
+
+  const pendingTotal = allTips
+    .filter(t => t.status === "pending")
+    .reduce((sum, t) => sum + parseFloat(t.creatorShare as string), 0);
+
+  const confirmedTotal = allTips
+    .filter(t => t.status === "confirmed")
+    .reduce((sum, t) => sum + parseFloat(t.creatorShare as string), 0);
+
+  return {
+    pending: pendingTotal.toFixed(2),
+    confirmed: confirmedTotal.toFixed(2),
+  };
+}

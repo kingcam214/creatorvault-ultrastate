@@ -21,6 +21,7 @@ export const users = mysqlTable("users", {
   
   // Payment methods for manual payment flow
   cashappHandle: varchar("cashapp_handle", { length: 100 }),
+  paypalEmail: varchar("paypal_email", { length: 320 }),
   zelleHandle: varchar("zelle_handle", { length: 100 }),
   applepayHandle: varchar("applepay_handle", { length: 100 }),
   
