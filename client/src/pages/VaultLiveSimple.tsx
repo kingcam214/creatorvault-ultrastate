@@ -134,6 +134,12 @@ export default function VaultLiveSimple() {
               <div className="bg-red-500 text-white p-4 rounded-lg text-center font-bold">
                 🔴 LIVE: {streamTitle}
               </div>
+              <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+                <p className="text-sm font-semibold mb-2">Share this link with fans:</p>
+                <code className="text-sm bg-white dark:bg-gray-800 p-2 rounded block overflow-x-auto">
+                  {window.location.origin}/stream/{currentStreamId}
+                </code>
+              </div>
               <Button 
                 onClick={handleEndStream}
                 disabled={endStreamMutation.isPending}

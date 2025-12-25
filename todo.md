@@ -194,3 +194,9 @@ Every feature below must be 100% complete before moving to next:
 
 ## HOME PAGE FIX
 - [x] Replace placeholder content with proper CreatorVault landing page
+
+## VAULTLIVE CRITICAL ISSUES
+- [x] VaultLive page broken - can't see who is live
+- [x] No way for fans to view creator's stream and tip
+- [x] Payout setup not accessible/working
+- [x] Need public stream view page for fans (no login required)

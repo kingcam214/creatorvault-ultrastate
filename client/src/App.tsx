@@ -56,6 +56,8 @@ import RecruiterDashboard from "./pages/RecruiterDashboard";
 import PayoutSetup from "./pages/PayoutSetup";
 import AdminTips from "./pages/AdminTips";
 import GuiaCreador from "./pages/GuiaCreador";
+import BrowseLive from "./pages/BrowseLive";
+import StreamView from "./pages/StreamView";
 import AppHeader from "./components/AppHeader";
 
 function Router() {
@@ -91,6 +93,8 @@ function Router() {
       <Route path="/admin/tips" component={AdminTips} />
       <Route path="/guia" component={GuiaCreador} />
       <Route path="/vaultlive" component={VaultLiveSimple} />
+      <Route path="/live" component={BrowseLive} />
+      <Route path="/stream/:id" component={StreamView} />
       <Route path={"/king"} component={KingDashboard} />
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/king/emma"} component={EmmaNetwork} />

@@ -9,8 +9,7 @@
  */
 
 import { z } from "zod";
-import { router } from "../_core/trpc";
-import { protectedProcedure } from "../_core/trpc";
+import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import * as dbVaultLive from "../db-vaultlive";
 import * as stripeVaultLive from "../services/stripeVaultLive";
@@ -61,9 +60,9 @@ export const vaultLiveRouter = router({
     }),
 
   /**
-   * Get stream by ID
+   * Get stream by ID (public - no auth required)
    */
-  getStream: protectedProcedure
+  getStream: publicProcedure
     .input(z.object({ streamId: z.number() }))
     .query(async ({ input }) => {
       const stream = await dbVaultLive.getStreamById(input.streamId);
@@ -81,9 +80,9 @@ export const vaultLiveRouter = router({
   }),
 
   /**
-   * Get all live streams
+   * Get all live streams (public - no auth required)
    */
-  getLiveStreams: protectedProcedure.query(async () => {
+  getLiveStreams: publicProcedure.query(async () => {
     return await dbVaultLive.getLiveStreams();
   }),
 
