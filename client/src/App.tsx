@@ -9,10 +9,6 @@ import Home from "./pages/Home";
 import KingDashboard from "./pages/KingDashboard";
 import KingUsers from "./pages/KingUsers";
 import Marketplace from "./pages/Marketplace";
-import MarketplaceCreate from "./pages/MarketplaceCreate";
-import MarketplaceManage from "./pages/MarketplaceManage";
-import MarketplaceAnalytics from "./pages/MarketplaceAnalytics";
-import MarketplaceProduct from "./pages/MarketplaceProduct";
 import University from "./pages/University";
 import Services from "./pages/Services";
 import CreatorDashboard from "./pages/CreatorDashboard";
@@ -64,10 +60,6 @@ function Router() {
         <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/marketplace"} component={Marketplace} />
-      <Route path={"/marketplace/create"} component={MarketplaceCreate} />
-      <Route path={"/marketplace/manage"} component={MarketplaceManage} />
-      <Route path={"/marketplace/analytics/:productId"} component={MarketplaceAnalytics} />
-      <Route path={"/marketplace/:productId"} component={MarketplaceProduct} />
       <Route path={"/university"} component={University} />
       <Route path={"/services"} component={Services} />
       <Route path={"/creator"} component={CreatorDashboard} />
