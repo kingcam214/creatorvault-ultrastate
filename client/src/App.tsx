@@ -100,7 +100,8 @@ function Router() {
       <Route path={"/vault-guardian"} component={VaultGuardian} />
       <Route path={"/creator-subscriptions"} component={CreatorSubscriptions} />
       <Route path={"/subscribe/:tierId"} component={FanSubscribe} />
-      <Route path={"/creator-toolbox"} component={CreatorToolbox} />      <Route path={"/ tools/viral-optimizer"} component={ViralOptimizer} />
+      <Route path={"/creator-toolbox"} component={CreatorToolbox} />
+      <Route path={"/tools/viral-optimizer"} component={ViralOptimizer} />
       <Route path={"/creator-earnings"} component={CreatorEarnings} />
       <Route path={"/admin/payouts"} component={AdminPayouts} />
       <Route path={"/admin/manual-payments"} component={AdminManualPayments} />

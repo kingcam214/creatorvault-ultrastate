@@ -168,3 +168,7 @@ Every feature below must be 100% complete before moving to next:
 - [x] Backend: AI tools router wired to main routers.ts
 - [ ] Test: Complete product upload flow (digital, physical, service)
 - [ ] Test: Purchase and delivery flow
+
+
+## MARKETPLACE BUGS (Reported by user)
+- [x] Fix marketplace product publishing - database insertion failing with missing/incorrect default values (Added 32 missing columns to marketplace_products table)
