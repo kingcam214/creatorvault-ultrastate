@@ -19,6 +19,13 @@ import * as dbVaultLive from "../db-vaultlive";
  * Configure in Express: app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), handler)
  */
 export async function handleStripeWebhook(req: Request, res: Response) {
+  // Stripe is OPTIONAL - return 200 if not configured
+  const { ENV } = await import("./env");
+  if (!ENV.stripeSecretKey || !ENV.stripeWebhookSecret) {
+    console.log("[Stripe Webhook] Stripe not configured, skipping");
+    return res.json({ received: true, skipped: true });
+  }
+  
   const signature = req.headers["stripe-signature"];
 
   if (!signature || typeof signature !== "string") {
