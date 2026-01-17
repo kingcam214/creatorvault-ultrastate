@@ -47,7 +47,7 @@
     "@trpc/client": "^11.6.0",
     "@trpc/react-query": "^11.6.0",
     "@trpc/server": "^11.6.0",
-    "@types/better-sqlite3": "^7.6.13",
+
     "@types/fluent-ffmpeg": "^2.1.28",
     "@types/pg": "^8.16.0",
     "axios": "^1.12.0",
@@ -130,7 +130,6 @@
       "tailwindcss>nanoid": "3.3.7"
     },
     "onlyBuiltDependencies": [
-      "better-sqlite3",
       "ffmpeg-static"
     ]
   }
