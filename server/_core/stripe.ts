@@ -1,8 +1,7 @@
 import Stripe from "stripe";
 import { ENV } from "./env";
 
-if (!ENV.stripeSecretKey) {
-  throw new Error("STRIPE_SECRET_KEY is not configured");
-}
-
-export const stripe = new Stripe(ENV.stripeSecretKey);
+// Stripe is OPTIONAL - only initialize if configured
+export const stripe = ENV.stripeSecretKey 
+  ? new Stripe(ENV.stripeSecretKey)
+  : null;
