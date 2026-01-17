@@ -9,10 +9,12 @@
 import Stripe from "stripe";
 import { ENV } from "../_core/env";
 
-// Initialize Stripe
-const stripe = new Stripe(ENV.stripeSecretKey, {
-  apiVersion: "2025-11-17.clover",
-});
+// Initialize Stripe ONLY if configured
+const stripe = ENV.stripeSecretKey 
+  ? new Stripe(ENV.stripeSecretKey, {
+      apiVersion: "2025-11-17.clover",
+    })
+  : null;
 
 export interface CreateTipCheckoutInput {
   streamId: number;
@@ -123,6 +125,9 @@ export function verifyWebhookSignature(
   payload: string | Buffer,
   signature: string
 ): Stripe.Event {
+  if (!stripe) {
+    throw new Error("Stripe not configured");
+  }
   return stripe.webhooks.constructEvent(
     payload,
     signature,
