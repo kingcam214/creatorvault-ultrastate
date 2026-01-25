@@ -33,7 +33,8 @@ export async function getDb() {
 }
 
 // Export db instance for direct use
-export const db = drizzle(process.env.DATABASE_URL!);
+// Only initialize if DATABASE_URL is set
+export const db = process.env.DATABASE_URL ? drizzle(process.env.DATABASE_URL) : null as any;
 
 // ============ USER MANAGEMENT ============
 
