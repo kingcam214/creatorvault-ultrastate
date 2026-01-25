@@ -25,6 +25,12 @@ export interface SimulatedMessage {
  */
 export async function initializeSimulatedBots() {
   try {
+    // Skip if database is not connected
+    if (!db) {
+      console.log("[Simulated Bots] Database not available, skipping initialization");
+      return;
+    }
+
     // Find owner user
     const [owner] = await db
       .select()
@@ -89,6 +95,11 @@ export async function generateSimulatedInboundMessage(
   platform: "telegram" | "whatsapp"
 ): Promise<void> {
   try {
+    // Skip if database is not connected
+    if (!db) {
+      return;
+    }
+
     // Find owner user
     const [owner] = await db
       .select()
