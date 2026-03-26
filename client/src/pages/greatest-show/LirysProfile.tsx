@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import LirysMissedRevenue from "./LirysMissedRevenue";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -127,7 +128,7 @@ export default function LirysProfile() {
       {/* TABS */}
       <div className="container mx-auto px-4 py-16">
         <Tabs defaultValue="youtube" className="w-full">
-          <TabsList className="grid grid-cols-5 w-full mb-12 bg-white/5 border border-white/10 rounded-2xl p-1">
+          <TabsList className="grid grid-cols-6 w-full mb-12 bg-white/5 border border-white/10 rounded-2xl p-1">
             <TabsTrigger value="youtube" className="data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-xl font-semibold">
               <Youtube className="w-4 h-4 mr-2" /> YouTube
             </TabsTrigger>
@@ -139,6 +140,9 @@ export default function LirysProfile() {
             </TabsTrigger>
             <TabsTrigger value="content" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white rounded-xl font-semibold">
               <Camera className="w-4 h-4 mr-2" /> Content
+            </TabsTrigger>
+            <TabsTrigger value="money" className="data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-xl font-semibold">
+              <DollarSign className="w-4 h-4 mr-2" /> 💀 Money Lost
             </TabsTrigger>
             <TabsTrigger value="subscribe" className="data-[state=active]:bg-pink-600 data-[state=active]:text-white rounded-xl font-semibold">
               <Crown className="w-4 h-4 mr-2" /> Subscribe
@@ -673,6 +677,10 @@ export default function LirysProfile() {
                 <Button className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold">Subscribe</Button>
               </Card>
             </div>
+          </TabsContent>
+          {/* ===== MONEY LEFT ON TABLE TAB ===== */}
+          <TabsContent value="money">
+            <LirysMissedRevenue />
           </TabsContent>
         </Tabs>
       </div>
