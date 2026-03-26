@@ -160,3 +160,32 @@ Morning brief scheduler fires at **7:00 AM Dominican Republic time (UTC-4)**.
 ---
 
 *Last updated: Mar 26, 2026*
+
+---
+
+## RULE 11: db import path is '../db.js' NOT '../_core/db.js'
+**Date:** 2026-03-26
+**Lesson:** There is NO `server/_core/db.ts` file. The database is exported from `server/db.ts`.
+**Correct:** `import { db } from '../db.js';`
+**Wrong:** `import { db } from '../_core/db.js';` ← THIS BREAKS THE BUILD
+
+## RULE 12: ownerProcedure does NOT exist — use kingProcedure
+**Date:** 2026-03-26
+**Lesson:** The owner/admin procedure is called `kingProcedure`, not `ownerProcedure`.
+**Available procedures:** `publicProcedure`, `protectedProcedure`, `adminProcedure`, `kingProcedure`
+**Correct:** `import { router, kingProcedure } from '../_core/trpc.js';`
+
+## RULE 13: Each chica has a DIFFERENT business model — do NOT assume VaultX for all
+**Date:** 2026-03-26
+**Lesson:** Only Marielka (8002) and Emma do adult content on VaultX.
+- Delbania (8001): Fitness influencer + boutique (expensive hair). NO adult content.
+- Marielka/China (8002): Adult content → VaultX. YES adult content.
+- Lizzy/Slim (8003): Sexy fitness content + lifestyle. NO adult content.
+- Lirys/Twin (8004): Airbnb host + lifestyle. NO adult content.
+**Rule:** Always ask about each chica's business model before building their funnel.
+
+## RULE 14: TikTok monetization bridge — TikTok = free ads, NOT direct income
+**Date:** 2026-03-26
+**Lesson:** All 4 chicas have TikTok but cannot monetize it directly (requires US/UK/CA/AU residency + 10K followers + no adult content).
+**Solution:** TikTok → link-in-bio → creatorvault.live/chica/{id} → paid platform (boutique/VaultX/fitness plan/Airbnb)
+**Rule:** NEVER promise TikTok direct monetization. Build the bridge to paid platforms instead.
