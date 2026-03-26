@@ -149,6 +149,9 @@ import AderlyProfile from "./pages/greatest-show/AderlyProfile";
 import CanishaProfile from "./pages/greatest-show/CanishaProfile";
 import LuvRoxieProfile from "./pages/greatest-show/LuvRoxieProfile";
 import LirysProfile from "./pages/greatest-show/LirysProfile";
+import LeslieProfile from "./pages/greatest-show/LeslieProfile";
+import ChicaLoyaltyCommand from './pages/ChicaLoyaltyCommand';
+import MyLoyaltyPortal from './pages/MyLoyaltyPortal';
 import FitnessGoddesses from "./pages/greatest-show/FitnessGoddesses";
 import PoleArtists from "./pages/greatest-show/PoleArtists";
 import LifestyleGoddesses from "./pages/greatest-show/LifestyleGoddesses";
@@ -381,6 +384,7 @@ function Router() {
       <Route path={"/greatest-show/canisha"} component={CanishaProfile} />
       <Route path={"/greatest-show/luvroxie"} component={LuvRoxieProfile} />
       <Route path={"/greatest-show/lirys"} component={LirysProfile} />
+      <Route path={"/greatest-show/leslie"} component={LeslieProfile} />
       <Route path={"/greatest-show/fitness"} component={FitnessGoddesses} />
       <Route path={"/greatest-show/pole"} component={PoleArtists} />
       <Route path={"/greatest-show/lifestyle"} component={LifestyleGoddesses} />
@@ -468,6 +472,8 @@ function Router() {
       <Route path="/chuuch/code" component={ChuuchCode} />
       <Route path="/chuuch/events" component={ChuuchEvents} />
       <Route component={NotFound} />
+        <Route path="/loyalty-command" component={ChicaLoyaltyCommand} />
+        <Route path="/my-loyalty" component={MyLoyaltyPortal} />
       </Switch>
       </div>
     </>
