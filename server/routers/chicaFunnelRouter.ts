@@ -1,355 +1,260 @@
-import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc.js";
-import { db } from "../db.js";
-import { createPool } from "mysql2/promise";
+import { z } from 'zod';
+import { router, kingProcedure, protectedProcedure } from '../_core/trpc.js';
+// NOTE: db is imported from '../db.js' NOT '../_core/db.js' — _core/db.ts does not exist
+// NOTE: kingProcedure does not exist — use kingProcedure for owner-only endpoints
+import { db } from '../db.js';
+import { v4 as uuidv4 } from 'uuid';
 
-const getPool = () => createPool(process.env.DATABASE_URL || "mysql://creatorvault:KingCam214CreatorVault@localhost:3306/creatorvault");
-
-import { v4 as uuidv4 } from "uuid";
-
-// ─── Chica Funnel Router ──────────────────────────────────────────────────────
-// Provisions, manages, and activates Tinder → WhatsApp → Telegram → VaultX
-// conversion funnels for each chica. Ready-made templates auto-populate on
-// provision. Owner can override any field before activating.
-// ─────────────────────────────────────────────────────────────────────────────
-
-function requireKing(role: string) {
-  if (role !== "king" && role !== "admin") {
-    throw new Error("Unauthorized: King/Admin only");
-  }
-}
+// Chica business model types
+const CHICA_FUNNEL_TYPES = {
+  8001: { name: 'Delbania', template: 'Delbania Boutique Funnel', type: 'boutique_fitness', platform: 'boutique' },
+  8002: { name: 'Marielka', template: 'Dominican Chica Funnel', type: 'adult_content', platform: 'vaultx' },
+  8003: { name: 'Lizzy', template: 'Lizzy Fitness Funnel', type: 'fitness_lifestyle', platform: 'fitness' },
+  8004: { name: 'Lirys', template: 'Lirys Airbnb Funnel', type: 'airbnb_lifestyle', platform: 'airbnb' },
+} as const;
 
 export const chicaFunnelRouter = router({
+  // List all chica funnels
+  list: kingProcedure.query(async () => {
+    const [rows] = await db.execute(
+      `SELECT cf.*, 
+        (SELECT COUNT(*) FROM chica_funnel_steps cfs WHERE cfs.funnel_id = cf.id) as step_count
+       FROM chica_funnels cf ORDER BY cf.chica_user_id`
+    );
+    return rows;
+  }),
 
-  // ── List all chica funnels (Owner view) ────────────────────────────────────
-  listFunnels: protectedProcedure
-    .query(async ({ ctx }) => {
-      requireKing(ctx.user.role);
-      const pool = getPool();
-      const conn = await pool.getConnection();
-      try {
-        const [rows] = await conn.execute(
-          "SELECT cf.id, cf.chica_user_id, cf.funnel_name, cf.locale, cf.status, cf.tinder_bio, cf.tinder_opener, cf.tinder_cta, cf.vaultx_referral_link, cf.vaultx_offer_text, cf.created_at, u.name AS chica_name, u.phone AS chica_phone, (SELECT COUNT(*) FROM chica_funnel_steps cfs WHERE cfs.funnel_id = cf.id) AS totalSteps FROM chica_funnels cf JOIN users u ON u.id = cf.chica_user_id ORDER BY cf.created_at DESC"
-        ) as any;
-        return rows;
-      } finally {
-        conn.release();
-        await pool.end();
-      }
-    }),
-
-  // ── Get a single funnel with all its steps ─────────────────────────────────
-  getFunnel: protectedProcedure
+  // Get a single funnel with all steps
+  get: kingProcedure
     .input(z.object({ funnelId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      requireKing(ctx.user.role);
-      try {
-        const [[funnel]] = await db.execute(
-          `SELECT cf.*, u.name AS chica_name FROM chica_funnels cf
-           JOIN users u ON u.id = cf.chica_user_id
-           WHERE cf.id = ?`, [input.funnelId]
-        ) as any;
-        if (!funnel) throw new Error("Funnel not found");
+    .query(async ({ input }) => {
+      const [funnels] = await db.execute(
+        'SELECT * FROM chica_funnels WHERE id = ?',
+        [input.funnelId]
+      );
+      const funnel = (funnels as any[])[0];
+      if (!funnel) throw new Error('Funnel not found');
 
-        const [steps] = await db.execute(
-          `SELECT * FROM chica_funnel_steps WHERE funnel_id = ? ORDER BY platform, step_order`,
-          [input.funnelId]
+      const [steps] = await db.execute(
+        'SELECT * FROM chica_funnel_steps WHERE funnel_id = ? ORDER BY platform, step_order',
+        [input.funnelId]
+      );
+      return { ...funnel, steps };
+    }),
+
+  // Provision funnel for a specific chica
+  provision: kingProcedure
+    .input(z.object({ chicaUserId: z.number() }))
+    .mutation(async ({ input }) => {
+      const { chicaUserId } = input;
+      const chicaConfig = CHICA_FUNNEL_TYPES[chicaUserId as keyof typeof CHICA_FUNNEL_TYPES];
+      if (!chicaConfig) throw new Error(`No funnel config for chica ID ${chicaUserId}`);
+
+      // Check if funnel already exists
+      const [existing] = await db.execute(
+        'SELECT id FROM chica_funnels WHERE chica_user_id = ?',
+        [chicaUserId]
+      );
+      if ((existing as any[]).length > 0) {
+        return { message: 'Funnel already exists', funnelId: (existing as any[])[0].id };
+      }
+
+      const funnelId = uuidv4();
+      await db.execute(
+        `INSERT INTO chica_funnels (id, chica_user_id, funnel_name, locale, status, provisioned_at)
+         VALUES (?, ?, ?, 'es_DO', 'draft', NOW())`,
+        [funnelId, chicaUserId, `${chicaConfig.name}'s ${chicaConfig.type.replace(/_/g, ' ')} Funnel`]
+      );
+
+      // Copy steps from template
+      const [templates] = await db.execute(
+        'SELECT * FROM chica_funnel_templates WHERE template_name = ? ORDER BY platform, step_order',
+        [chicaConfig.template]
+      );
+
+      for (const tmpl of templates as any[]) {
+        await db.execute(
+          `INSERT INTO chica_funnel_steps (funnel_id, step_order, platform, step_type, message_text, delay_hours, is_active)
+           VALUES (?, ?, ?, ?, ?, ?, 1)`,
+          [funnelId, tmpl.step_order, tmpl.platform, tmpl.step_type, tmpl.message_text, tmpl.delay_hours]
         );
-        return { ...funnel, steps };
-      } finally {
       }
+
+      return { message: 'Funnel provisioned', funnelId, template: chicaConfig.template };
     }),
 
-  // ── Provision a ready-made funnel for a chica ──────────────────────────────
-  // Auto-populates all steps from the locale template.
-  // Owner can then edit before activating.
-  provisionFunnel: protectedProcedure
-    .input(z.object({
-      chicaUserId: z.number(),
-      locale: z.enum(["es_DO", "ht_HT", "en_US"]).default("es_DO"),
-      whatsappProviderId: z.string().optional(),
-      telegramBotId: z.number().optional(),
-      vaultxReferralLink: z.string().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      requireKing(ctx.user.role);
-      try {
-        // Get chica info
-        const [[chica]] = await db.execute(
-          `SELECT id, name, phone FROM users WHERE id = ? AND role = 'chica'`,
-          [input.chicaUserId]
-        ) as any;
-        if (!chica) throw new Error("Chica not found");
-
-        // Check if funnel already exists
-        const [[existing]] = await db.execute(
-          `SELECT id FROM chica_funnels WHERE chica_user_id = ? AND status != 'paused'`,
-          [input.chicaUserId]
-        ) as any;
-        if (existing) throw new Error("Active funnel already exists for this chica. Pause it first.");
-
-        const funnelId = uuidv4();
-        const templateName = input.locale === 'ht_HT' ? 'Haitian Chica Funnel' : 'Dominican Chica Funnel';
-
-        // Get the template steps for this locale
-        const [templateSteps] = await db.execute(
-          `SELECT * FROM chica_funnel_templates WHERE template_name = ? AND locale = ? ORDER BY platform, step_order`,
-          [templateName, input.locale]
-        ) as any;
-
-        // Build tinder bio/opener/cta from template
-        const tinderSteps = templateSteps.filter((s: any) => s.platform === 'tinder');
-        const tinderBio = `${chica.name} | CreatorVault Empire | ${input.locale === 'ht_HT' ? 'Biznis dijital' : 'Negocio digital'} 🔥`;
-        const tinderOpener = tinderSteps.find((s: any) => s.step_order === 1)?.message_text || '';
-        const tinderCta = tinderSteps.find((s: any) => s.step_order === 2)?.message_text || '';
-
-        // Create the funnel record
-        await db.execute(`
-          INSERT INTO chica_funnels (
-            id, chica_user_id, funnel_name, tinder_bio, tinder_opener, tinder_cta,
-            whatsapp_provider_id, telegram_bot_id, vaultx_referral_link,
-            vaultx_offer_text, locale, status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')
-        `, [
-          funnelId,
-          input.chicaUserId,
-          `${chica.name}'s Empire Funnel`,
-          tinderBio,
-          tinderOpener,
-          tinderCta,
-          input.whatsappProviderId || null,
-          input.telegramBotId || null,
-          input.vaultxReferralLink || `https://creatorvault.live/ref/${chica.id}`,
-          input.locale === 'ht_HT'
-            ? `Rejwenn Vault mwen epi fè lajan avèk mwen 💰`
-            : `Únete a mi Vault y gana dinero conmigo 💰`,
-          input.locale,
-        ]);
-
-        // Insert all steps from template (skip tinder — those are in the funnel header)
-        const nonTinderSteps = templateSteps.filter((s: any) => s.platform !== 'tinder');
-        for (const step of nonTinderSteps) {
-          await db.execute(`
-            INSERT INTO chica_funnel_steps (funnel_id, step_order, platform, step_type, message_text, delay_hours)
-            VALUES (?, ?, ?, ?, ?, ?)
-          `, [funnelId, step.step_order, step.platform, step.step_type, step.message_text, step.delay_hours]);
-        }
-
-        return { success: true, funnelId, message: `Funnel provisioned for ${chica.name}. Review and activate.` };
-      } finally {
+  // Provision ALL chicas that don't have funnels yet
+  provisionAllUnfunneled: kingProcedure.mutation(async () => {
+    const results = [];
+    for (const [chicaId, config] of Object.entries(CHICA_FUNNEL_TYPES)) {
+      const userId = parseInt(chicaId);
+      const [existing] = await db.execute(
+        'SELECT id FROM chica_funnels WHERE chica_user_id = ?',
+        [userId]
+      );
+      if ((existing as any[]).length > 0) {
+        results.push({ chicaId: userId, name: config.name, status: 'already_exists' });
+        continue;
       }
-    }),
 
-  // ── Update funnel settings (before or after activation) ───────────────────
-  updateFunnel: protectedProcedure
+      const funnelId = uuidv4();
+      await db.execute(
+        `INSERT INTO chica_funnels (id, chica_user_id, funnel_name, locale, status, provisioned_at)
+         VALUES (?, ?, ?, 'es_DO', 'draft', NOW())`,
+        [funnelId, userId, `${config.name}'s Funnel`]
+      );
+
+      const [templates] = await db.execute(
+        'SELECT * FROM chica_funnel_templates WHERE template_name = ? ORDER BY platform, step_order',
+        [config.template]
+      );
+
+      for (const tmpl of templates as any[]) {
+        await db.execute(
+          `INSERT INTO chica_funnel_steps (funnel_id, step_order, platform, step_type, message_text, delay_hours, is_active)
+           VALUES (?, ?, ?, ?, ?, ?, 1)`,
+          [funnelId, tmpl.step_order, tmpl.platform, tmpl.step_type, tmpl.message_text, tmpl.delay_hours]
+        );
+      }
+
+      results.push({ chicaId: userId, name: config.name, funnelId, status: 'provisioned' });
+    }
+    return results;
+  }),
+
+  // Update funnel fields
+  update: kingProcedure
     .input(z.object({
       funnelId: z.string(),
       tinderBio: z.string().optional(),
       tinderOpener: z.string().optional(),
       tinderCta: z.string().optional(),
-      whatsappProviderId: z.string().optional(),
-      telegramBotId: z.number().optional(),
       vaultxReferralLink: z.string().optional(),
       vaultxOfferText: z.string().optional(),
+      status: z.enum(['draft', 'active', 'paused']).optional(),
     }))
-    .mutation(async ({ ctx, input }) => {
-      requireKing(ctx.user.role);
-      try {
-        const fields: string[] = [];
-        const values: any[] = [];
-        if (input.tinderBio !== undefined) { fields.push("tinder_bio = ?"); values.push(input.tinderBio); }
-        if (input.tinderOpener !== undefined) { fields.push("tinder_opener = ?"); values.push(input.tinderOpener); }
-        if (input.tinderCta !== undefined) { fields.push("tinder_cta = ?"); values.push(input.tinderCta); }
-        if (input.whatsappProviderId !== undefined) { fields.push("whatsapp_provider_id = ?"); values.push(input.whatsappProviderId); }
-        if (input.telegramBotId !== undefined) { fields.push("telegram_bot_id = ?"); values.push(input.telegramBotId); }
-        if (input.vaultxReferralLink !== undefined) { fields.push("vaultx_referral_link = ?"); values.push(input.vaultxReferralLink); }
-        if (input.vaultxOfferText !== undefined) { fields.push("vaultx_offer_text = ?"); values.push(input.vaultxOfferText); }
-        if (fields.length === 0) throw new Error("No fields to update");
-        values.push(input.funnelId);
-        await db.execute(`UPDATE chica_funnels SET ${fields.join(", ")} WHERE id = ?`, values);
-        return { success: true };
-      } finally {
-      }
+    .mutation(async ({ input }) => {
+      const { funnelId, ...fields } = input;
+      const updates: string[] = [];
+      const values: any[] = [];
+
+      if (fields.tinderBio !== undefined) { updates.push('tinder_bio = ?'); values.push(fields.tinderBio); }
+      if (fields.tinderOpener !== undefined) { updates.push('tinder_opener = ?'); values.push(fields.tinderOpener); }
+      if (fields.tinderCta !== undefined) { updates.push('tinder_cta = ?'); values.push(fields.tinderCta); }
+      if (fields.vaultxReferralLink !== undefined) { updates.push('vaultx_referral_link = ?'); values.push(fields.vaultxReferralLink); }
+      if (fields.vaultxOfferText !== undefined) { updates.push('vaultx_offer_text = ?'); values.push(fields.vaultxOfferText); }
+      if (fields.status !== undefined) { updates.push('status = ?'); values.push(fields.status); }
+
+      if (updates.length === 0) throw new Error('No fields to update');
+      values.push(funnelId);
+
+      await db.execute(
+        `UPDATE chica_funnels SET ${updates.join(', ')} WHERE id = ?`,
+        values
+      );
+      return { message: 'Funnel updated' };
     }),
 
-  // ── Update a single funnel step message ────────────────────────────────────
-  updateFunnelStep: protectedProcedure
-    .input(z.object({
-      stepId: z.number(),
-      messageText: z.string(),
-      delayHours: z.number().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      requireKing(ctx.user.role);
-      try {
-        await db.execute(
-          `UPDATE chica_funnel_steps SET message_text = ?, delay_hours = COALESCE(?, delay_hours) WHERE id = ?`,
-          [input.messageText, input.delayHours ?? null, input.stepId]
-        );
-        return { success: true };
-      } finally {
-      }
-    }),
-
-  // ── Activate a funnel (go live) ────────────────────────────────────────────
-  activateFunnel: protectedProcedure
+  // Activate a funnel
+  activate: kingProcedure
     .input(z.object({ funnelId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      requireKing(ctx.user.role);
-      try {
-        await db.execute(
-          `UPDATE chica_funnels SET status = 'active', provisioned_at = NOW() WHERE id = ?`,
-          [input.funnelId]
-        );
-        // Also create a WhatsApp funnel entry if provider is set
-        const [[funnel]] = await db.execute(
-          `SELECT * FROM chica_funnels WHERE id = ?`, [input.funnelId]
-        ) as any;
-
-        if (funnel.whatsapp_provider_id) {
-          const [waSteps] = await db.execute(
-            `SELECT * FROM chica_funnel_steps WHERE funnel_id = ? AND platform = 'whatsapp' ORDER BY step_order`,
-            [input.funnelId]
-          ) as any;
-          const waMessages = waSteps.map((s: any) => ({
-            type: s.step_type,
-            text: s.message_text,
-            delay_hours: s.delay_hours,
-          }));
-          await db.execute(
-            `INSERT INTO whatsapp_funnels (id, provider_id, name, messages_json, status) VALUES (?, ?, ?, ?, 'active')
-             ON DUPLICATE KEY UPDATE messages_json = VALUES(messages_json), status = 'active'`,
-            [input.funnelId, funnel.whatsapp_provider_id, `${funnel.funnel_name} - WA`, JSON.stringify(waMessages)]
-          );
-        }
-
-        if (funnel.telegram_bot_id) {
-          const [tgSteps] = await db.execute(
-            `SELECT * FROM chica_funnel_steps WHERE funnel_id = ? AND platform = 'telegram' ORDER BY step_order`,
-            [input.funnelId]
-          ) as any;
-          const tgMessages = tgSteps.map((s: any) => ({
-            type: s.step_type,
-            text: s.message_text,
-            delay_hours: s.delay_hours,
-          }));
-          await db.execute(
-            `INSERT INTO telegram_funnels (id, bot_id, name, messages_json, status) VALUES (?, ?, ?, ?, 'active')
-             ON DUPLICATE KEY UPDATE messages_json = VALUES(messages_json), status = 'active'`,
-            [input.funnelId, funnel.telegram_bot_id, `${funnel.funnel_name} - TG`, JSON.stringify(tgMessages)]
-          );
-        }
-
-        return { success: true, message: "Funnel activated. WhatsApp and Telegram sequences are live." };
-      } finally {
-      }
+    .mutation(async ({ input }) => {
+      await db.execute(
+        "UPDATE chica_funnels SET status = 'active' WHERE id = ?",
+        [input.funnelId]
+      );
+      return { message: 'Funnel activated' };
     }),
 
-  // ── Pause a funnel ─────────────────────────────────────────────────────────
-  pauseFunnel: protectedProcedure
+  // Pause a funnel
+  pause: kingProcedure
     .input(z.object({ funnelId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      requireKing(ctx.user.role);
-      try {
-        await db.execute(`UPDATE chica_funnels SET status = 'paused' WHERE id = ?`, [input.funnelId]);
-        await db.execute(`UPDATE whatsapp_funnels SET status = 'inactive' WHERE id = ?`, [input.funnelId]);
-        await db.execute(`UPDATE telegram_funnels SET status = 'inactive' WHERE id = ?`, [input.funnelId]);
-        return { success: true };
-      } finally {
-      }
+    .mutation(async ({ input }) => {
+      await db.execute(
+        "UPDATE chica_funnels SET status = 'paused' WHERE id = ?",
+        [input.funnelId]
+      );
+      return { message: 'Funnel paused' };
     }),
 
-  // ── Get rendered funnel card (with variables substituted) ─────────────────
-  // Returns the fully rendered Tinder bio/opener/CTA with real chica data
-  getRenderedFunnel: protectedProcedure
-    .input(z.object({ funnelId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      requireKing(ctx.user.role);
-      try {
-        const [[funnel]] = await db.execute(
-          `SELECT cf.*, u.name AS chica_name, u.phone AS chica_phone
-           FROM chica_funnels cf JOIN users u ON u.id = cf.chica_user_id
-           WHERE cf.id = ?`, [input.funnelId]
-        ) as any;
-        if (!funnel) throw new Error("Funnel not found");
-
-        const [steps] = await db.execute(
-          `SELECT * FROM chica_funnel_steps WHERE funnel_id = ? ORDER BY platform, step_order`,
-          [input.funnelId]
-        ) as any;
-
-        // Variable substitution helper
-        const vars: Record<string, string> = {
-          '{name}': funnel.chica_name,
-          '{city}': 'Sosua',
-          '{whatsapp_number}': funnel.chica_phone || '',
-          '{telegram_link}': funnel.telegram_bot_id ? `https://t.me/chica_${funnel.chica_user_id}_bot` : '[Telegram Link]',
-          '{vaultx_link}': funnel.vaultx_referral_link || `https://creatorvault.live/ref/${funnel.chica_user_id}`,
-          '{referral_link}': funnel.vaultx_referral_link || `https://creatorvault.live/ref/${funnel.chica_user_id}`,
-        };
-        const render = (text: string) => Object.entries(vars).reduce((t, [k, v]) => t.replaceAll(k, v), text);
-
-        return {
-          funnelId: funnel.id,
-          chicaName: funnel.chica_name,
-          status: funnel.status,
-          locale: funnel.locale,
-          tinder: {
-            bio: render(funnel.tinder_bio || ''),
-            opener: render(funnel.tinder_opener || ''),
-            cta: render(funnel.tinder_cta || ''),
-          },
-          whatsapp: (steps as any[]).filter(s => s.platform === 'whatsapp').map(s => ({
-            ...s, message_text: render(s.message_text)
-          })),
-          telegram: (steps as any[]).filter(s => s.platform === 'telegram').map(s => ({
-            ...s, message_text: render(s.message_text)
-          })),
-          vaultx: (steps as any[]).filter(s => s.platform === 'vaultx').map(s => ({
-            ...s, message_text: render(s.message_text)
-          })),
-        };
-      } finally {
-      }
+  // Get TikTok content plan for a chica
+  getTikTokPlan: kingProcedure
+    .input(z.object({ chicaUserId: z.number() }))
+    .query(async ({ input }) => {
+      const plans: Record<number, any> = {
+        8001: {
+          name: 'Delbania',
+          contentType: 'Fitness + Boutique',
+          hooks: [
+            'POV: Dominican girl building her empire 💪',
+            'Watch me transform this hair in 60 seconds ✨',
+            'Day in the life of a single mom boss 👑',
+          ],
+          cta: 'Link in bio for my boutique + fitness guides',
+          linkInBio: 'https://creatorvault.live/chica/8001',
+          postingSchedule: '3x daily: 7AM, 12PM, 7PM DR time',
+          monetizationPath: 'TikTok → Link in Bio → WhatsApp → Boutique Sales',
+          revenueTarget: '$500-$2,000/month from boutique + fitness guides',
+        },
+        8002: {
+          name: 'Marielka (China)',
+          contentType: 'Lifestyle + Glow Up (SFW only on TikTok)',
+          hooks: [
+            'The girl they warned you about 😈',
+            'Glow up check — 1 year later ✨',
+            'Things I don\'t post on TikTok 🔥 (link in bio)',
+          ],
+          cta: 'Link in bio for exclusive content',
+          linkInBio: 'https://creatorvault.live/chica/8002',
+          postingSchedule: '3x daily: 7AM, 12PM, 7PM DR time',
+          monetizationPath: 'TikTok → Link in Bio → WhatsApp → VaultX',
+          revenueTarget: '$500-$3,000/month from VaultX subscriptions',
+          urgent: true,
+          urgentNote: 'Rent 2 months overdue — need 10 VaultX subs at $30 = $300 ASAP',
+        },
+        8003: {
+          name: 'Lizzy (Slim)',
+          contentType: 'Sexy Fitness + Lifestyle',
+          hooks: [
+            'How I stay fit as a single mom 💪',
+            'My full body workout in 60 seconds 🔥',
+            'What I eat in a day to maintain this body 🍑',
+          ],
+          cta: 'Link in bio for my full workout plan',
+          linkInBio: 'https://creatorvault.live/chica/8003',
+          postingSchedule: '3x daily: 7AM, 12PM, 7PM DR time',
+          monetizationPath: 'TikTok → Link in Bio → WhatsApp → Workout Plan Purchase',
+          revenueTarget: '$250-$1,500/month from fitness plans',
+        },
+        8004: {
+          name: 'Lirys (Twin)',
+          contentType: 'Airbnb + Dominican Republic Lifestyle',
+          hooks: [
+            'POV: You\'re staying at the best Airbnb in DR 🌴',
+            'Why everyone is moving to the Dominican Republic 🏖️',
+            'Tour of my Airbnb — would you stay here? 🏠',
+          ],
+          cta: 'Link in bio to book my Airbnb',
+          linkInBio: 'https://creatorvault.live/chica/8004',
+          postingSchedule: '3x daily: 7AM, 12PM, 7PM DR time',
+          monetizationPath: 'TikTok → Link in Bio → WhatsApp → Airbnb Booking',
+          revenueTarget: '$500-$2,000/month from Airbnb bookings',
+        },
+      };
+      return plans[input.chicaUserId] || null;
     }),
 
-  // ── Bulk provision all chicas without an active funnel ────────────────────
-  provisionAllUnfunneled: protectedProcedure
-    .mutation(async ({ ctx }) => {
-      requireKing(ctx.user.role);
-      const pool = getPool();
-      const conn = await pool.getConnection();
-      try {
-        const [unfunneled] = await conn.execute(
-          "SELECT u.id, u.name FROM users u WHERE u.role = 'chica' AND u.id NOT IN (SELECT chica_user_id FROM chica_funnels WHERE status != 'paused')"
-        ) as any;
-        const results = [];
-        for (const chica of unfunneled) {
-          const funnelId = uuidv4();
-          const bio = chica.name + " | CreatorVault Empire | Negocio digital";
-          const opener = "Hola papi, soy " + chica.name + ". Tengo mi propio negocio digital. Tienes WhatsApp?";
-          const cta = "Escribeme directo al WhatsApp — ahi te cuento todo";
-          const refLink = "https://creatorvault.live/ref/" + chica.id;
-          const offerText = "Unete a mi Vault y gana dinero conmigo";
-          await conn.execute(
-            "INSERT INTO chica_funnels (id, chica_user_id, funnel_name, locale, status, tinder_bio, tinder_opener, tinder_cta, vaultx_referral_link, vaultx_offer_text) VALUES (?, ?, ?, 'es_DO', 'draft', ?, ?, ?, ?, ?)",
-            [funnelId, chica.id, chica.name + "'s Empire Funnel", bio, opener, cta, refLink, offerText]
-          );
-          const [templateSteps] = await conn.execute(
-            "SELECT * FROM chica_funnel_templates WHERE template_name = 'Dominican Chica Funnel' AND platform != 'tinder' ORDER BY platform, step_order"
-          ) as any;
-          for (const step of templateSteps) {
-            await conn.execute(
-              "INSERT INTO chica_funnel_steps (funnel_id, step_order, platform, step_type, message_text, delay_hours) VALUES (?, ?, ?, ?, ?, ?)",
-              [funnelId, step.step_order, step.platform, step.step_type, step.message_text, step.delay_hours]
-            );
-          }
-          results.push({ chicaId: chica.id, chicaName: chica.name, funnelId, steps: (templateSteps as any[]).length });
-        }
-        return { success: true, provisioned: results.length, funnels: results };
-      } finally {
-        conn.release();
-        await pool.end();
-      }
-    }),
+  // Get all TikTok plans
+  getAllTikTokPlans: kingProcedure.query(async () => {
+    return {
+      strategy: 'TikTok = free advertising. Money is made OUTSIDE TikTok. Link-in-bio is the bridge.',
+      rule: 'NEVER post adult content on TikTok. NEVER say OnlyFans/VaultX. Use "exclusive content" or "private community".',
+      chicas: [
+        { id: 8001, name: 'Delbania', model: 'Boutique + Fitness', tiktokContent: 'Hair transformations, fitness routines, single mom boss life' },
+        { id: 8002, name: 'Marielka (China)', model: 'Adult Content (VaultX)', tiktokContent: 'Lifestyle, glow ups, fashion — SFW only on TikTok', urgent: true },
+        { id: 8003, name: 'Lizzy (Slim)', model: 'Sexy Fitness', tiktokContent: 'Workout videos, body transformation, meal prep' },
+        { id: 8004, name: 'Lirys (Twin)', model: 'Airbnb + Lifestyle', tiktokContent: 'Airbnb tours, DR lifestyle, travel content' },
+      ],
+    };
+  }),
 });
