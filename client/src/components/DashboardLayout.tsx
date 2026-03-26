@@ -20,8 +20,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
+import { safeStorage } from "@/lib/safeStorage";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, ShoppingBag, Store, Video, GraduationCap, Briefcase, DollarSign, BarChart3, Settings } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, ShoppingBag, Store, Video, GraduationCap, Briefcase, DollarSign, BarChart3, Settings, Stethoscope, Star, Globe, Church, Search } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -29,6 +30,8 @@ import { Button } from "./ui/button";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/creator-dashboard" },
+  { icon: Star, label: "🎪 Greatest Show on Earth", path: "/greatest-show" },
+  { icon: Star, label: "↳ Lirys — Chef/Host/YouTube", path: "/greatest-show/lirys" },
   { icon: LayoutDashboard, label: "🇩🇴 Guía (Español)", path: "/guia" },
   { icon: ShoppingBag, label: "Browse Marketplace", path: "/marketplace" },
   { icon: Store, label: "Sell Products", path: "/marketplace/create" },
@@ -41,6 +44,9 @@ const menuItems = [
   { icon: Settings, label: "Setup Payout", path: "/payout-setup" },
   { icon: DollarSign, label: "Earnings", path: "/creator-earnings" },
   { icon: BarChart3, label: "Analytics", path: "/creator-analytics" },
+  { icon: Stethoscope, label: "DayShift Doctor", path: "/dayshift-doctor" },
+  { icon: Globe, label: "VaultSpace", path: "/vaultspace-dashboard" },
+  { icon: Church, label: "Chuuch Members", path: "/chuuch/members" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -54,13 +60,13 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
+    const saved = safeStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
 
   useEffect(() => {
-    localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
+    safeStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
   if (loading) {
@@ -122,6 +128,7 @@ function DashboardLayoutContent({
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
@@ -170,7 +177,7 @@ function DashboardLayoutContent({
           className="border-r-0"
           disableTransition={isResizing}
         >
-          <SidebarHeader className="h-16 justify-center">
+          <SidebarHeader className="h-auto justify-center">
             <div className="flex items-center gap-3 px-2 transition-all w-full">
               <button
                 onClick={toggleSidebar}
@@ -187,11 +194,27 @@ function DashboardLayoutContent({
                 </div>
               ) : null}
             </div>
+            {!isCollapsed ? (
+              <div className="px-2 pb-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search pages..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full h-8 pl-8 pr-3 text-sm bg-muted/50 border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </div>
+              </div>
+            ) : null}
           </SidebarHeader>
 
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
+              {menuItems.filter(item =>
+                !searchQuery || item.label.toLowerCase().includes(searchQuery.toLowerCase())
+              ).map(item => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>
