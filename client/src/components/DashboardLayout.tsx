@@ -57,6 +57,7 @@ import {
   Tv,
   Monitor,
   PanelLeft,
+  Shirt,
 } from "lucide-react";
 
 // ─── Zone Definitions ─────────────────────────────────────────────────────────
@@ -106,6 +107,7 @@ const ZONE_NAV: Record<ZoneId, { label: string; path: string; icon: any }[]> = {
     { label: "Hollywood Studio", path: "/hollywood-studio", icon: Tv },
     { label: "Chuuch", path: "/chuuch/members", icon: Church },
     { label: "DayShift Doctor", path: "/dayshift-doctor", icon: Stethoscope },
+    { label: "Apparel Lab", path: "/apparel-lab", icon: Shirt },
   ],
   infra: [
     { label: "Back Office", path: "/king/backoffice", icon: Settings },
