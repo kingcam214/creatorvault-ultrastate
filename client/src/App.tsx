@@ -123,6 +123,7 @@ import FanSubscribe from "./pages/FanSubscribe";
 import CreatorToolbox from "./pages/CreatorToolbox";
 import ViralOptimizer from "./pages/tools/ViralOptimizer"; // @deprecated — use ViralOptimizerPage
 import ViralOptimizerPage from "./pages/ViralOptimizerPage";
+import VerticalPackLauncher from "./pages/VerticalPackLauncher";
 import CreatorEarnings from "./pages/CreatorEarnings";
 import AdminPayouts from "./pages/AdminPayouts";
 import AdminManualPayments from "./pages/AdminManualPayments";
@@ -413,6 +414,7 @@ function Router() {
       <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} />
       <Route path={"/real-estate-empire"} component={RealEstateEmpire} />
       <Route path={"/viral-optimizer"} component={ViralOptimizerPage} />
+      <Route path={"/vertical-pack"} component={VerticalPackLauncher} />
       <Route path={"/brand-deals"} component={BrandDeals} />
       <Route path={"/subscriptions"} component={Subscriptions} />
       <Route path={"/feed"} component={FeedPage} />
