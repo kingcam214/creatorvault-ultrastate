@@ -1700,3 +1700,26 @@ export const liveStreamDonations = mysqlTable("live_stream_donations", {
   userIdIdx: index("idx_live_stream_donations_user_id").on(table.userId),
   paymentStatusIdx: index("idx_live_stream_donations_payment_status").on(table.paymentStatus),
 }));
+
+// ============ JOHANNY MEDIA SESSION ============
+export const mediaJobs = mysqlTable("media_jobs", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  jobType: varchar("job_type", { length: 50 }).notNull(), // YODEIRIS_LONGFORM_DEMO_V1, YODEIRIS_VAULTX_TRAILER_V1
+  projectId: varchar("project_id", { length: 100 }).notNull(),
+  status: mysqlEnum("status", ["pending", "queued", "processing", "complete", "failed"]).default("pending").notNull(),
+  mediaSessionData: json("media_session_data"), // Stores the full JohannyMediaSession object
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export const sceneShotMedia = mysqlTable("scene_shot_media", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  mediaJobId: varchar("media_job_id", { length: 36 }).notNull().references(() => mediaJobs.id, { onDelete: "cascade" }),
+  sceneId: varchar("scene_id", { length: 100 }).notNull(),
+  shotType: varchar("shot_type", { length: 50 }).notNull(),
+  requiredDescription: text("required_description").notNull(),
+  assignedMediaUrl: text("assigned_media_url"),
+  status: mysqlEnum("status", ["missing", "assigned", "approved", "rejected"]).default("missing").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

@@ -6,6 +6,7 @@
  */
 
 import { invokeRealGPT } from "../_core/llm.js";
+import { formatSlangContext } from "./slangExxchange.js";
 
 export interface ScriptSegment {
   text: string;
@@ -116,20 +117,23 @@ function getSectorContext(sector: "dominican" | "adult"): string {
     dominican: `
 DOMINICAN SECTOR CONTEXT:
 - Audience: Dominican creators (🇩🇴)
-- Language: Mix English with Dominican Spanish phrases
+- Language: Mix English with authentic Dominican Spanish slang from SlangExxchange
 - Cultural references: DR creator economy, PPP advantages, local platforms
 - Tone: Familia, pero profesional (Family, but professional)
-- Use "¡Qué lo qué!" for greetings, "tíguere" for hustler
+- Authentic Slang Dictionary (USE THESE NATURALLY):
+${formatSlangContext("es_do")}
 - Emphasize: CreatorVault understands DR market better than US platforms
 `,
     adult: `
-ADULT SECTOR CONTEXT:
-- Audience: Adult content creators
-- Tone: Professional, no judgment, business-focused
-- Emphasize: 85/15 revenue split vs OnlyFans 80/20
-- Key points: Age verification, content control, direct monetization
+ADULT SECTOR CONTEXT (VAULTX_ADULT_PREMIUM):
+- Audience: Adult content creators transitioning to VaultSpace
+- Tone: Professional, no judgment, business-focused, street-smart
+- Authentic Street English Dictionary (USE THESE NATURALLY):
+${formatSlangContext("en_street")}
+- Emphasize: VaultSpace is the top-tier cash cow (85/15 split)
+- Key points: Safe Tinder funnels (never post direct links, use IG/Telegram as bridge to avoid bans), Telegram/WhatsApp growth strategies, content control
 - NO explicit content in narration (keep it business-focused)
-- Position as: "The platform that respects your hustle"
+- Position as: "The undisputed #1 adult platform on Earth"
 `,
   };
 

@@ -1,0 +1,29 @@
+{
+  "creatorId": 8078,
+  "creatorName": "Yodeiris Caraballo Ureña",
+  "bundleId": "bundle_yodeiris_001",
+  "bundleName": "VaultSpace Premium: The Dominican Connect",
+  "pricing": {
+    "usd": 49.99,
+    "dop": 2950
+  },
+  "contents": [
+    {
+      "type": "telegram_access",
+      "description": "VIP Telegram Channel Access (SlangExxchange integrated)"
+    },
+    {
+      "type": "whatsapp_access",
+      "description": "Direct WhatsApp Line for 1-on-1 chatting"
+    },
+    {
+      "type": "ppv_starter_pack",
+      "description": "Exclusive PPV Starter Pack (3 premium videos, 10 exclusive photos)"
+    }
+  ],
+  "promotionMapping": {
+    "tinder": "Subtle bio hint -> Instagram DM -> WhatsApp/Telegram funnel -> VaultSpace Bundle",
+    "instagram": "Reels & Stories -> Link in Bio -> VaultSpace Bundle",
+    "tiktok": "High-energy hooks -> Link in Bio -> VaultSpace Bundle"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "creatorId": 8078,
+  "projectId": "demo_yodeiris_001",
+  "title": "Cómo ganar dinero con VaultSpace en República Dominicana usando Telegram y WhatsApp",
+  "host": "Yodeiris Caraballo Ureña",
+  "location": "Puerto Plata, República Dominicana",
+  "scenes": [
+    {
+      "sceneId": "scene_01",
+      "chapter": "CHAPTER 1: The VaultSpace Advantage",
+      "type": "A-Roll",
+      "visuals": "Yodeiris walking through Puerto Plata, showing her phone screen with VaultSpace dashboard.",
+      "script": "Oye, mi gente. Si tú estás en RD y quieres hacer dinero de verdad, olvídate de OnlyFans. VaultSpace es la vuelta. Aquí tú tienes el control total de tu contenido y tu dinero. Yo soy Yodeiris, y te voy a enseñar cómo lo hago.",
+      "audio_cues": "Upbeat Dominican dembow instrumental, street ambiance.",
+      "required_media": ["B-Roll: Puerto Plata street view", "Screen Recording: VaultSpace dashboard scrolling"]
+    },
+    {
+      "sceneId": "scene_02",
+      "chapter": "CHAPTER 2: Funneling from Tinder (Safely)",
+      "type": "A-Roll/B-Roll Hybrid",
+      "visuals": "Screen recording of Tinder profile with subtle hints, NOT direct links. Yodeiris explaining to camera.",
+      "script": "Tinder es para pescar, no para vender directamente. Si pones el link de una vez, te tumban la cuenta. Lo que tú haces es mandarlos a tu Instagram o a tu WhatsApp. 'Papi, búscame en IG que por aquí casi no hablo'. Y de ahí, los metes al embudo.",
+      "audio_cues": "Tinder swipe sound effects, slight music ducking.",
+      "required_media": ["Screen Recording: Tinder profile setup", "B-Roll: Typing on phone"]
+    },
+    {
+      "sceneId": "scene_03",
+      "chapter": "CHAPTER 3: The WhatsApp & Telegram Hustle",
+      "type": "Montage",
+      "visuals": "Fast-paced montage of WhatsApp chats and Telegram channel notifications.",
+      "script": "El dinero rápido está en WhatsApp y Telegram. En Telegram, tú tienes tu canal VIP. En WhatsApp, tú mantienes la conexión caliente. Yo uso el SlangExxchange para hablarles claro, en nuestro idioma. Cuando ellos sienten que están hablando con una dominicana real, sacan la tarjeta.",
+      "audio_cues": "Notification chimes (WhatsApp/Telegram) synced to beat.",
+      "required_media": ["Screen Recording: Telegram VIP channel", "Screen Recording: WhatsApp chat with SlangExxchange terms"]
+    },
+    {
+      "sceneId": "scene_04",
+      "chapter": "CHAPTER 4: Closing the Sale on VaultSpace",
+      "type": "A-Roll",
+      "visuals": "Yodeiris smiling, showing a payout notification.",
+      "script": "Al final, todo termina en VaultSpace. Ahí es donde está el contenido premium, los PPV, y las suscripciones. Ya tú sabes, actívate y empieza a facturar.",
+      "audio_cues": "Cash register sound, music swells to conclusion.",
+      "required_media": ["Screen Recording: VaultSpace payout notification"]
+    }
+  ],
+  "teasers": [
+    {
+      "platform": "TikTok",
+      "duration": "15s",
+      "script": "Klk mi gente! ¿Quieres saber cómo estoy facturando desde Puerto Plata? Te enseño el truco con VaultSpace y WhatsApp. Link en mi bio.",
+      "visuals": "High-energy hook, text overlay with '$$$ desde RD'."
+    },
+    {
+      "platform": "Instagram Reel",
+      "duration": "30s",
+      "script": "El error número uno que hacen las chamaquitas en Tinder... Te lo explico todo en mi nuevo video. Aprende a pescar sin que te baneen.",
+      "visuals": "Curiosity hook, split screen showing Tinder fail vs success."
+    }
+  ]
+}
