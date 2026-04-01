@@ -1,298 +1,435 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
+/**
+ * ============================================================================
+ * KingCam OS V2 — DashboardLayout
+ * ============================================================================
+ * The 5-Zone Navigation Shell:
+ *   COMMAND | IDENTITY | EXECUTION | STUDIOS | INFRA
+ *
+ * Design DNA:
+ *   - Deep charcoal / warm black base (#1A1A1A, #0A0A0A)
+ *   - Bone/smoke surfaces (#F5F5F0, #E8E8E3)
+ *   - ONE accent: aged gold (#C9A961)
+ *   - Playfair Display for editorial titles
+ *   - Inter for UI text
+ *   - Apple-level restraint — one hero action per screen
+ * ============================================================================
+ */
+
+import { useAuth } from "@/contexts/AuthContext";
 import { getLoginUrl } from "@/const";
-import { safeStorage } from "@/lib/safeStorage";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, ShoppingBag, Store, Video, GraduationCap, Briefcase, DollarSign, BarChart3, Settings, Stethoscope, Star, Globe, Church, Search } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
+import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
+import {
+  Zap,
+  Crown,
+  DollarSign,
+  Film,
+  Settings,
+  ChevronRight,
+  Menu,
+  X,
+  LayoutDashboard,
+  Users,
+  Target,
+  MessageSquare,
+  ShoppingBag,
+  BarChart3,
+  Mic,
+  GraduationCap,
+  Video,
+  Palette,
+  Bot,
+  Shield,
+  GitBranch,
+  Key,
+  Activity,
+  Globe,
+  Church,
+  Stethoscope,
+  Store,
+  Star,
+  Briefcase,
+  Building2,
+  Brain,
+  Tv,
+  Monitor,
+  PanelLeft,
+} from "lucide-react";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/creator-dashboard" },
-  { icon: Star, label: "🎪 Greatest Show on Earth", path: "/greatest-show" },
-  { icon: Star, label: "↳ Lirys — Chef/Host/YouTube", path: "/greatest-show/lirys" },
-  { icon: LayoutDashboard, label: "🇩🇴 Guía (Español)", path: "/guia" },
-  { icon: ShoppingBag, label: "Browse Marketplace", path: "/marketplace" },
-  { icon: Store, label: "Sell Products", path: "/marketplace/create" },
-  { icon: Store, label: "My Products", path: "/marketplace/manage" },
-  { icon: Video, label: "Go Live (Creator)", path: "/vaultlive" },
-  { icon: Video, label: "Browse Live Streams", path: "/live" },
-  { icon: GraduationCap, label: "University", path: "/university" },
-  { icon: Briefcase, label: "Services", path: "/services" },
-  { icon: DollarSign, label: "Subscriptions", path: "/creator-subscriptions" },
-  { icon: Settings, label: "Setup Payout", path: "/payout-setup" },
-  { icon: DollarSign, label: "Earnings", path: "/creator-earnings" },
-  { icon: BarChart3, label: "Analytics", path: "/creator-analytics" },
-  { icon: Stethoscope, label: "DayShift Doctor", path: "/dayshift-doctor" },
-  { icon: Globe, label: "VaultSpace", path: "/vaultspace-dashboard" },
-  { icon: Church, label: "Chuuch Members", path: "/chuuch/members" },
-];
+// ─── Zone Definitions ─────────────────────────────────────────────────────────
 
-const SIDEBAR_WIDTH_KEY = "sidebar-width";
-const DEFAULT_WIDTH = 280;
-const MIN_WIDTH = 200;
-const MAX_WIDTH = 480;
+const ZONES = [
+  { id: "command", label: "Command", icon: Zap, path: "/king" },
+  { id: "identity", label: "Identity", icon: Crown, path: "/king/identity" },
+  { id: "execution", label: "Execution", icon: DollarSign, path: "/king/money-mission" },
+  { id: "studios", label: "Studios", icon: Film, path: "/king/presentation-builder" },
+  { id: "infra", label: "Infra", icon: Settings, path: "/king/backoffice" },
+] as const;
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const saved = safeStorage.getItem(SIDEBAR_WIDTH_KEY);
-    return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
-  });
+type ZoneId = typeof ZONES[number]["id"];
+
+// ─── Zone Sub-Navigation ──────────────────────────────────────────────────────
+
+const ZONE_NAV: Record<ZoneId, { label: string; path: string; icon: any }[]> = {
+  command: [
+    { label: "Today's Mission", path: "/king", icon: Zap },
+    { label: "Empire Brain", path: "/empire-brain", icon: Brain },
+    { label: "Launch Command", path: "/king/launch-command", icon: Target },
+    { label: "Analytics", path: "/king/analytics", icon: BarChart3 },
+    { label: "Users", path: "/king/users", icon: Users },
+  ],
+  identity: [
+    { label: "KingCam Profile", path: "/king/identity", icon: Crown },
+    { label: "Brand Assets", path: "/king/engine", icon: Palette },
+    { label: "Voice Library", path: "/king/script-writer", icon: Mic },
+    { label: "Vault", path: "/king/backoffice", icon: Key },
+    { label: "KingCam Demos", path: "/king/demos", icon: Star },
+  ],
+  execution: [
+    { label: "Money Mission", path: "/king/money-mission", icon: DollarSign },
+    { label: "Chicas Empire", path: "/owner-cockpit/chicas-empire", icon: Users },
+    { label: "Presentation Empire", path: "/owner-cockpit/presentation-empire", icon: Monitor },
+    { label: "Recruitment", path: "/owner-cockpit/recruitment", icon: Target },
+    { label: "Marketplace", path: "/marketplace", icon: ShoppingBag },
+    { label: "Subscriptions", path: "/subscriptions", icon: DollarSign },
+  ],
+  studios: [
+    { label: "Presentation Builder", path: "/king/presentation-builder", icon: Monitor },
+    { label: "AI Agents", path: "/emma-ai-agents", icon: Bot },
+    { label: "Animated Flyer", path: "/animated-flyer-studio", icon: Film },
+    { label: "Image Lab", path: "/image-lab", icon: Palette },
+    { label: "VaultX Studio", path: "/vaultx-studio", icon: Video },
+    { label: "University", path: "/university", icon: GraduationCap },
+    { label: "Hollywood Studio", path: "/hollywood-studio", icon: Tv },
+    { label: "Chuuch", path: "/chuuch/members", icon: Church },
+    { label: "DayShift Doctor", path: "/dayshift-doctor", icon: Stethoscope },
+  ],
+  infra: [
+    { label: "Back Office", path: "/king/backoffice", icon: Settings },
+    { label: "Empire State", path: "/empire-state", icon: Activity },
+    { label: "Agent Tracker", path: "/agent-tracker", icon: Bot },
+    { label: "Gem Center", path: "/king/gem-center", icon: Crown },
+    { label: "VaultSpace", path: "/vaultspace-dashboard", icon: Globe },
+    { label: "WhatsApp Bot", path: "/king/whatsapp-bot", icon: MessageSquare },
+    { label: "Loyalty Command", path: "/loyalty-command", icon: Shield },
+  ],
+};
+
+// ─── Route → Zone Mapping ─────────────────────────────────────────────────────
+
+function getActiveZone(path: string): ZoneId {
+  if (
+    path.startsWith("/king/money-mission") ||
+    path.startsWith("/owner-cockpit/chicas") ||
+    path.startsWith("/owner-cockpit/presentation") ||
+    path.startsWith("/owner-cockpit/recruitment") ||
+    path.startsWith("/marketplace") ||
+    path.startsWith("/subscriptions") ||
+    path.startsWith("/king/telegram")
+  ) return "execution";
+
+  if (
+    path.startsWith("/king/presentation-builder") ||
+    path.startsWith("/emma-ai-agents") ||
+    path.startsWith("/animated-flyer") ||
+    path.startsWith("/image-lab") ||
+    path.startsWith("/vaultx-studio") ||
+    path.startsWith("/university") ||
+    path.startsWith("/hollywood") ||
+    path.startsWith("/chuuch") ||
+    path.startsWith("/dayshift-doctor") ||
+    path.startsWith("/vault-cut") ||
+    path.startsWith("/music-cover")
+  ) return "studios";
+
+  if (
+    path.startsWith("/king/backoffice") ||
+    path.startsWith("/empire-state") ||
+    path.startsWith("/agent-tracker") ||
+    path.startsWith("/king/gem-center") ||
+    path.startsWith("/vaultspace") ||
+    path.startsWith("/king/whatsapp") ||
+    path.startsWith("/loyalty-command")
+  ) return "infra";
+
+  if (
+    path.startsWith("/king/identity") ||
+    path.startsWith("/king/engine") ||
+    path.startsWith("/king/script-writer") ||
+    path.startsWith("/king/demos")
+  ) return "identity";
+
+  return "command";
+}
+
+// ─── Breadcrumb Generator ─────────────────────────────────────────────────────
+
+function getBreadcrumb(path: string, zone: ZoneId): string[] {
+  const zoneLabel = ZONES.find(z => z.id === zone)?.label ?? "Command";
+  const subItem = ZONE_NAV[zone].find(item => item.path === path);
+  if (!subItem || subItem.path === ZONES.find(z => z.id === zone)?.path) {
+    return ["KingCam OS", zoneLabel];
+  }
+  return ["KingCam OS", zoneLabel, subItem.label];
+}
+
+// ─── Main Layout ──────────────────────────────────────────────────────────────
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { loading, user } = useAuth();
 
-  useEffect(() => {
-    safeStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
-  }, [sidebarWidth]);
-
-  if (loading) {
-    return <DashboardLayoutSkeleton />
-  }
+  if (loading) return <DashboardLayoutSkeleton />;
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen" style={{ background: "#0A0A0A" }}>
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
-          <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Sign in to continue
-            </h1>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
-            </p>
-          </div>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "28px", fontWeight: 700, color: "#F5F5F0", letterSpacing: "-0.02em", textAlign: "center" }}>
+            KingCam OS
+          </h1>
+          <p style={{ color: "#666", fontSize: "14px", textAlign: "center", lineHeight: 1.6 }}>
+            Access requires authentication.
+          </p>
           <Button
-            onClick={() => {
-              window.location.href = getLoginUrl();
-            }}
+            onClick={() => { window.location.href = getLoginUrl(); }}
             size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
+            style={{ background: "#C9A961", color: "#0A0A0A", fontWeight: 700, width: "100%", border: "none" }}
           >
-            Sign in
+            Sign In
           </Button>
         </div>
       </div>
     );
   }
 
-  return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": `${sidebarWidth}px`,
-        } as CSSProperties
-      }
-    >
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>
-        {children}
-      </DashboardLayoutContent>
-    </SidebarProvider>
-  );
+  return <KingCamOSShell>{children}</KingCamOSShell>;
 }
 
-type DashboardLayoutContentProps = {
-  children: React.ReactNode;
-  setSidebarWidth: (width: number) => void;
-};
+// ─── OS Shell ─────────────────────────────────────────────────────────────────
 
-function DashboardLayoutContent({
-  children,
-  setSidebarWidth,
-}: DashboardLayoutContentProps) {
-  const { user, logout } = useAuth();
+function KingCamOSShell({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
-  const { state, toggleSidebar } = useSidebar();
-  const isCollapsed = state === "collapsed";
-  const [isResizing, setIsResizing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const isMobile = useIsMobile();
+  const activeZone = getActiveZone(location);
+  const breadcrumb = getBreadcrumb(location, activeZone);
+  const { user, logout } = useAuth();
 
-  useEffect(() => {
-    if (isCollapsed) {
-      setIsResizing(false);
-    }
-  }, [isCollapsed]);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-
-      const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
-      const newWidth = e.clientX - sidebarLeft;
-      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
-        setSidebarWidth(newWidth);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    if (isResizing) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-  }, [isResizing, setSidebarWidth]);
+  // Close mobile menu on navigation
+  useEffect(() => { setMobileOpen(false); }, [location]);
 
   return (
-    <>
-      <div className="relative" ref={sidebarRef}>
-        <Sidebar
-          collapsible="icon"
-          className="border-r-0"
-          disableTransition={isResizing}
-        >
-          <SidebarHeader className="h-auto justify-center">
-            <div className="flex items-center gap-3 px-2 transition-all w-full">
-              <button
-                onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
-                aria-label="Toggle navigation"
-              >
-                <PanelLeft className="h-4 w-4 text-muted-foreground" />
-              </button>
-              {!isCollapsed ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
-                    Navigation
-                  </span>
-                </div>
-              ) : null}
-            </div>
-            {!isCollapsed ? (
-              <div className="px-2 pb-2">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Search pages..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full h-8 pl-8 pr-3 text-sm bg-muted/50 border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                </div>
-              </div>
-            ) : null}
-          </SidebarHeader>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#0A0A0A", fontFamily: "'Inter', sans-serif" }}>
 
-          <SidebarContent className="gap-0">
-            <SidebarMenu className="px-2 py-1">
-              {menuItems.filter(item =>
-                !searchQuery || item.label.toLowerCase().includes(searchQuery.toLowerCase())
-              ).map(item => {
-                const isActive = location === item.path;
+      {/* ── Sidebar ── */}
+      <aside
+        style={{
+          width: isMobile ? (mobileOpen ? "280px" : "0") : "280px",
+          minWidth: isMobile ? (mobileOpen ? "280px" : "0") : "280px",
+          background: "#111111",
+          borderRight: "1px solid rgba(255,255,255,0.06)",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          transition: "width 0.25s cubic-bezier(0.4,0,0.2,1), min-width 0.25s cubic-bezier(0.4,0,0.2,1)",
+          position: isMobile ? "fixed" : "sticky",
+          top: 0,
+          height: "100vh",
+          zIndex: 50,
+        }}
+      >
+        {/* Logo */}
+        <div style={{ padding: "28px 24px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "20px", fontWeight: 700, color: "#F5F5F0", letterSpacing: "-0.01em" }}>
+            KingCam OS
+          </div>
+          <div style={{ fontSize: "11px", color: "#C9A961", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: "4px" }}>
+            CreatorVault
+          </div>
+        </div>
+
+        {/* Zone Tabs */}
+        <div style={{ padding: "16px 12px 8px" }}>
+          <div style={{ fontSize: "10px", color: "#444", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "10px", paddingLeft: "12px" }}>
+            Zones
+          </div>
+          {ZONES.map(zone => {
+            const isActive = activeZone === zone.id;
+            return (
+              <button
+                key={zone.id}
+                onClick={() => setLocation(zone.path)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: isActive ? "rgba(201,169,97,0.12)" : "transparent",
+                  color: isActive ? "#C9A961" : "#666",
+                  fontSize: "13px",
+                  fontWeight: isActive ? 600 : 400,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  marginBottom: "2px",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <zone.icon size={15} />
+                {zone.label}
+                {isActive && <ChevronRight size={12} style={{ marginLeft: "auto", opacity: 0.6 }} />}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: "1px", background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
+
+        {/* Context-Aware Sub-Nav */}
+        <div style={{ padding: "12px 12px 8px", flex: 1, overflowY: "auto" }}>
+          <div style={{ fontSize: "10px", color: "#444", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "10px", paddingLeft: "12px" }}>
+            {ZONES.find(z => z.id === activeZone)?.label}
+          </div>
+          {ZONE_NAV[activeZone].map(item => {
+            const isActive = location === item.path || location.startsWith(item.path + "/");
+            return (
+              <button
+                key={item.path}
+                onClick={() => setLocation(item.path)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  width: "100%",
+                  padding: "9px 12px",
+                  borderRadius: "6px",
+                  border: "none",
+                  background: isActive ? "rgba(255,255,255,0.05)" : "transparent",
+                  color: isActive ? "#F5F5F0" : "#555",
+                  fontSize: "13px",
+                  fontWeight: isActive ? 500 : 400,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  marginBottom: "1px",
+                  transition: "all 0.12s ease",
+                }}
+              >
+                <item.icon size={14} />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* User Footer */}
+        <div style={{ padding: "16px 20px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ fontSize: "12px", color: "#F5F5F0", fontWeight: 600, marginBottom: "2px" }}>
+            {user?.name ?? "KingCam"}
+          </div>
+          <div style={{ fontSize: "11px", color: "#444" }}>
+            {user?.email ?? ""}
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile overlay */}
+      {isMobile && mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 49 }}
+        />
+      )}
+
+      {/* ── Main Content ── */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+
+        {/* Top Bar */}
+        <header style={{
+          height: "56px",
+          background: "#111111",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          display: "flex",
+          alignItems: "center",
+          padding: "0 24px",
+          gap: "16px",
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
+        }}>
+          {isMobile && (
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              style={{ background: "none", border: "none", color: "#666", cursor: "pointer", padding: "4px" }}
+            >
+              {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          )}
+
+          {/* Breadcrumb */}
+          <nav style={{ display: "flex", alignItems: "center", gap: "6px", flex: 1, overflow: "hidden" }}>
+            {breadcrumb.map((crumb, i) => (
+              <span key={i} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                {i > 0 && <ChevronRight size={12} style={{ color: "#333", flexShrink: 0 }} />}
+                <span style={{
+                  fontSize: "12px",
+                  color: i === breadcrumb.length - 1 ? "#F5F5F0" : "#444",
+                  fontWeight: i === breadcrumb.length - 1 ? 500 : 400,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}>
+                  {crumb}
+                </span>
+              </span>
+            ))}
+          </nav>
+
+          {/* Zone Pills (desktop only) */}
+          {!isMobile && (
+            <div style={{ display: "flex", gap: "4px" }}>
+              {ZONES.map(zone => {
+                const isActive = activeZone === zone.id;
                 return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
-                    >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <button
+                    key={zone.id}
+                    onClick={() => setLocation(zone.path)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "5px 10px",
+                      borderRadius: "6px",
+                      border: isActive ? "1px solid rgba(201,169,97,0.4)" : "1px solid transparent",
+                      background: isActive ? "rgba(201,169,97,0.1)" : "transparent",
+                      color: isActive ? "#C9A961" : "#444",
+                      fontSize: "11px",
+                      fontWeight: isActive ? 600 : 400,
+                      cursor: "pointer",
+                      transition: "all 0.12s ease",
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    <zone.icon size={11} />
+                    {zone.label}
+                  </button>
                 );
               })}
-            </SidebarMenu>
-          </SidebarContent>
-
-          <SidebarFooter className="p-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Avatar className="h-9 w-9 border shrink-0">
-                    <AvatarFallback className="text-xs font-medium">
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-medium truncate leading-none">
-                      {user?.name || "-"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5">
-                      {user?.email || "-"}
-                    </p>
-                  </div>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={logout}
-                  className="cursor-pointer text-destructive focus:text-destructive"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarFooter>
-        </Sidebar>
-        <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors ${isCollapsed ? "hidden" : ""}`}
-          onMouseDown={() => {
-            if (isCollapsed) return;
-            setIsResizing(true);
-          }}
-          style={{ zIndex: 50 }}
-        />
-      </div>
-
-      <SidebarInset>
-        {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="tracking-tight text-foreground">
-                    {activeMenuItem?.label ?? "Menu"}
-                  </span>
-                </div>
-              </div>
             </div>
-          </div>
-        )}
-        <main className="flex-1 p-4">{children}</main>
-      </SidebarInset>
-    </>
+          )}
+        </header>
+
+        {/* Page Content */}
+        <main style={{ flex: 1, padding: "32px", overflowY: "auto" }}>
+          {children}
+        </main>
+      </div>
+    </div>
   );
 }

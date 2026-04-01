@@ -180,4 +180,167 @@
       max-width: 1280px; /* Standard content width */
     }
   }
+}/* ============================================================
+   KINGCAM OS V2 — Design Token Overrides
+   Applied on top of existing Tailwind/shadcn base
+   ============================================================ */
+
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* ── KingCam OS V2 Palette ── */
+  --kc-black:       #0A0A0A;
+  --kc-charcoal:    #111111;
+  --kc-surface:     #1A1A1A;
+  --kc-surface-2:   #222222;
+  --kc-border:      rgba(255,255,255,0.06);
+  --kc-border-mid:  rgba(255,255,255,0.10);
+
+  --kc-bone:        #F5F5F0;
+  --kc-smoke:       #E8E8E3;
+  --kc-muted:       #888888;
+  --kc-dim:         #555555;
+  --kc-ghost:       #333333;
+
+  --kc-gold:        #C9A961;
+  --kc-gold-dim:    rgba(201,169,97,0.15);
+  --kc-gold-border: rgba(201,169,97,0.30);
+
+  --kc-danger:      #ef4444;
+  --kc-warn:        #f59e0b;
+  --kc-success:     #10B981;
+
+  /* ── Typography ── */
+  --kc-font-display: 'Playfair Display', serif;
+  --kc-font-ui:      'Inter', sans-serif;
+
+  /* ── Spacing Scale ── */
+  --kc-space-xs:  4px;
+  --kc-space-sm:  8px;
+  --kc-space-md:  16px;
+  --kc-space-lg:  24px;
+  --kc-space-xl:  32px;
+  --kc-space-2xl: 48px;
+
+  /* ── Radius ── */
+  --kc-radius-sm:  6px;
+  --kc-radius-md:  10px;
+  --kc-radius-lg:  16px;
 }
+
+/* ── KingCam OS V2 Utility Classes ── */
+
+.kc-display {
+  font-family: var(--kc-font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--kc-bone);
+}
+
+.kc-display-xl { font-size: 48px; }
+.kc-display-lg { font-size: 36px; }
+.kc-display-md { font-size: 28px; }
+.kc-display-sm { font-size: 22px; }
+
+.kc-label {
+  font-family: var(--kc-font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--kc-ghost);
+}
+
+.kc-body {
+  font-family: var(--kc-font-ui);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--kc-muted);
+}
+
+.kc-card {
+  background: var(--kc-charcoal);
+  border: 1px solid var(--kc-border);
+  border-radius: var(--kc-radius-md);
+  padding: var(--kc-space-lg);
+}
+
+.kc-card-gold {
+  background: var(--kc-charcoal);
+  border: 1px solid var(--kc-gold-border);
+  border-radius: var(--kc-radius-md);
+  padding: var(--kc-space-lg);
+}
+
+.kc-btn-gold {
+  background: var(--kc-gold);
+  color: var(--kc-black);
+  font-family: var(--kc-font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--kc-radius-sm);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.kc-btn-gold:hover { opacity: 0.85; }
+
+.kc-btn-ghost {
+  background: transparent;
+  color: var(--kc-muted);
+  font-family: var(--kc-font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border: 1px solid var(--kc-border);
+  border-radius: var(--kc-radius-sm);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.kc-btn-ghost:hover {
+  border-color: var(--kc-border-mid);
+  color: var(--kc-bone);
+}
+
+.kc-progress-bar {
+  height: 3px;
+  background: var(--kc-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.kc-progress-fill {
+  height: 100%;
+  background: var(--kc-gold);
+  border-radius: 2px;
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+
+.kc-stat-number {
+  font-family: var(--kc-font-display);
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--kc-bone);
+  line-height: 1.1;
+}
+
+.kc-stat-number-gold {
+  font-family: var(--kc-font-display);
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--kc-gold);
+  line-height: 1.1;
+}
+
+/* ── Scrollbar Styling ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
