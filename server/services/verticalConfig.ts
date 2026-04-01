@@ -18,7 +18,8 @@ export type VerticalId =
   | "FITNESS_COACH"
   | "MUSIC_ARTIST"
   | "AGENCY_CONSULTANT"
-  | "VAULTX_ADULT_PREMIUM";
+  | "VAULTX_ADULT_PREMIUM"
+  | "LONGFORM_DEMOS_TOURS";
 
 // ============================================================
 // HERO PACKAGE ARTIFACT TYPES
@@ -456,6 +457,88 @@ const VAULTX_ADULT_PREMIUM: VerticalConfig = {
 };
 
 // ============================================================
+// VERTICAL #7: LONGFORM DEMOS & TOURS (REAL ESTATE / PRODUCT / PROPERTY)
+// ============================================================
+
+const LONGFORM_DEMOS_TOURS: VerticalConfig = {
+  id: "LONGFORM_DEMOS_TOURS",
+  displayName: "Long-Form Demos & Tours Creator",
+  packName: "Long-Form Demos & Tours Launch Pack v1",
+  description: "Built for creators who produce long-form walkthrough videos — real estate tours, product demos, software walkthroughs, vehicle reviews, or property showcases. Every output is tuned for trust-building, high-intent buyer conversion, and premium listing authority.",
+  status: "ACTIVE",
+  heroArtifacts: [
+    "SOCIAL_AUDIT_SUMMARY",
+    "FLAGSHIP_TRAILER",
+    "SHORT_TEASER_CLIPS",
+    "LAUNCH_DECK",
+    "LANDING_PAGE_BLOCK",
+    "DM_EMAIL_SCRIPT",
+  ],
+  trailerPreset: {
+    pacingStyle: "slow",
+    sceneDurationSeconds: 10,
+    totalDurationSeconds: 120,
+    textStyle: "clear_structured",
+    openingHookType: "bold_claim",
+    closingCTAStyle: "book_now",
+    colorMood: "professional_blue",
+    musicTone: "inspiring_orchestral",
+  },
+  deckPreset: {
+    slideOrder: [
+      "The Property / Product (Hero Shot)",
+      "Why This Matters (Market Context)",
+      "Full Walkthrough Highlights",
+      "Key Features & Specs",
+      "Proof of Value (Comps / Reviews / Data)",
+      "Creator Authority (Why Trust This Channel)",
+      "Audience Stats & Reach",
+      "Partnership / Listing Opportunity",
+      "CTA — Schedule a Showing / Get a Demo",
+    ],
+    toneLabel: "Professional, authoritative, detail-oriented. Buyer-trust first. No hype.",
+    focusAreas: ["Trust", "Detail", "Conversion"],
+    ctaSlideText: "Schedule a Showing / Request a Demo",
+    colorScheme: "blue_authority",
+  },
+  copyPreset: {
+    tone: "Professional, detail-forward, trust-building. Buyer-intent focused. No hype, no fluff.",
+    voiceRules: [
+      "Lead with the most compelling feature or stat",
+      "Every claim must be verifiable — use specs, prices, comps",
+      "Speak to the buyer's decision, not their emotion",
+      "Make the next step frictionless and obvious",
+      "Position the creator as the authority on this category",
+    ],
+    dmTemplate: `Hey [NAME] — I produce long-form [PROPERTY/PRODUCT] tours for [MARKET/NICHE]. My last video on [SPECIFIC LISTING/PRODUCT] got [VIEW COUNT] views and [OUTCOME — e.g., 3 offers in 48 hours]. I'd like to feature [THEIR LISTING/PRODUCT]. Worth a quick call?`,
+    emailSubjectTemplate: "[PROPERTY/PRODUCT] video feature — [VIEW COUNT] buyers watching",
+    landingHeroHeadline: "See Every Detail Before You Decide — [CATEGORY] Tours That Convert",
+    landingSubheadline: "[CHANNEL NAME] has helped [NUMBER] buyers and clients make confident decisions with honest, detailed walkthroughs.",
+    landingBullets: [
+      "✓ Full [property/product] walkthroughs — nothing hidden",
+      "✓ [VIEW COUNT]+ monthly viewers actively searching [category]",
+      "✓ High-intent audience — buyers, not browsers",
+      "✓ Custom feature videos available for listings and products",
+    ],
+    landingCTA: "Book a Feature Video",
+  },
+  auditPreset: {
+    focusMetrics: [
+      "Average view duration on long-form content (>10 min)",
+      "Watch-through rate on full tour videos",
+      "Click-through rate to listing/product links in description",
+      "Subscriber growth from tour content vs other content",
+      "Comment quality — buyer intent signals vs casual viewers",
+    ],
+    primaryPlatform: "youtube",
+    summaryFraming: "What to fix first to maximize buyer-intent traffic and listing/product conversion from your tour content",
+    monetizationAngle: "Paid feature videos, listing partnerships, affiliate commissions, sponsored demos, consulting retainers",
+  },
+  teaserCount: 3,
+  teaserDurationSeconds: 60,
+};
+
+// ============================================================
 // VERTICAL REGISTRY
 // ============================================================
 
@@ -466,6 +549,7 @@ export const VERTICAL_REGISTRY: Record<VerticalId, VerticalConfig> = {
   MUSIC_ARTIST,
   AGENCY_CONSULTANT,
   VAULTX_ADULT_PREMIUM,
+  LONGFORM_DEMOS_TOURS,
 };
 
 /**
