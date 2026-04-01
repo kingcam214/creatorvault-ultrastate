@@ -17,7 +17,8 @@ export type VerticalId =
   | "SHORTFORM_ENTERTAINER"
   | "FITNESS_COACH"
   | "MUSIC_ARTIST"
-  | "AGENCY_CONSULTANT";
+  | "AGENCY_CONSULTANT"
+  | "VAULTX_ADULT_PREMIUM";
 
 // ============================================================
 // HERO PACKAGE ARTIFACT TYPES
@@ -29,7 +30,10 @@ export type HeroArtifactType =
   | "SHORT_TEASER_CLIPS"
   | "LAUNCH_DECK"
   | "LANDING_PAGE_BLOCK"
-  | "DM_EMAIL_SCRIPT";
+  | "DM_EMAIL_SCRIPT"
+  | "PLATFORM_STRATEGY"
+  | "CONTENT_CALENDAR"
+  | "MONETIZATION_ROADMAP";
 
 // ============================================================
 // VERTICAL PRESET INTERFACE
@@ -368,6 +372,90 @@ const AGENCY_CONSULTANT: VerticalConfig = {
 };
 
 // ============================================================
+// VERTICAL #6: VAULTX ADULT PREMIUM CREATOR
+// ============================================================
+
+const VAULTX_ADULT_PREMIUM: VerticalConfig = {
+  id: "VAULTX_ADULT_PREMIUM",
+  displayName: "VaultX Adult Premium Creator",
+  packName: "VaultX Adult Creator Launch Pack v1",
+  description: "Built for adult content creators on OnlyFans, Fansly, and similar platforms. Every output is tuned for subscriber acquisition, retention, and premium monetization — with full platform-safe language.",
+  status: "ACTIVE",
+  heroArtifacts: [
+    "SOCIAL_AUDIT_SUMMARY",
+    "FLAGSHIP_TRAILER",
+    "SHORT_TEASER_CLIPS",
+    "PLATFORM_STRATEGY",
+    "CONTENT_CALENDAR",
+    "LANDING_PAGE_BLOCK",
+    "DM_EMAIL_SCRIPT",
+    "MONETIZATION_ROADMAP",
+  ],
+  trailerPreset: {
+    pacingStyle: "medium",
+    sceneDurationSeconds: 5,
+    totalDurationSeconds: 60,
+    textStyle: "punchy",
+    openingHookType: "bold_claim",
+    closingCTAStyle: "join_now",
+    colorMood: "dark_cinematic",
+    musicTone: "emotional_piano",
+  },
+  deckPreset: {
+    slideOrder: [
+      "Brand Identity & Persona",
+      "Platform Overview (OF/Fansly/etc.)",
+      "Audience Stats & Demographics",
+      "Content Strategy & Niche",
+      "Revenue Streams Breakdown",
+      "Subscriber Growth Trajectory",
+      "Retention & Renewal Strategy",
+      "Expansion Plan (PPV, Tips, Custom)",
+    ],
+    toneLabel: "Confident, brand-first, business-minded. Treat this like a premium media brand.",
+    focusAreas: ["Brand", "Retention", "Revenue"],
+    ctaSlideText: "Subscribe Now — Exclusive Access",
+    colorScheme: "dark_premium",
+  },
+  copyPreset: {
+    tone: "Confident, alluring, brand-forward. Premium positioning. Business-minded.",
+    voiceRules: [
+      "Lead with exclusivity and premium value",
+      "Never sound desperate — scarcity and confidence only",
+      "Use subscriber milestones as social proof",
+      "Every CTA is about joining an exclusive world",
+      "Platform-safe language always — no explicit terms in marketing copy",
+    ],
+    dmTemplate: `Hey [NAME] — I noticed you follow [RELATED CREATOR/NICHE]. I create exclusive [CONTENT TYPE] content that [SPECIFIC VALUE PROP]. First month is [PRICE/OFFER]. Link in bio — limited spots.`,
+    emailSubjectTemplate: "Exclusive access for [NAME] — [CREATOR NAME]'s private world",
+    landingHeroHeadline: "Exclusive. Unfiltered. Only for [CREATOR NAME]'s Inner Circle.",
+    landingSubheadline: "Join [SUBSCRIBER COUNT]+ subscribers who get access to content you won't find anywhere else.",
+    landingBullets: [
+      "✓ Daily exclusive content — never posted publicly",
+      "✓ Direct messaging — I actually respond",
+      "✓ Custom requests available for subscribers",
+      "✓ Cancel anytime — no contracts",
+    ],
+    landingCTA: "Join Now — [PRICE]/month",
+  },
+  auditPreset: {
+    focusMetrics: [
+      "Subscriber count and monthly growth rate",
+      "Renewal/retention rate (% who rebill)",
+      "PPV open rate and conversion",
+      "Tip frequency and average tip amount",
+      "Free trial to paid conversion rate",
+      "Social funnel traffic (which platform drives most subs)",
+    ],
+    primaryPlatform: "instagram",
+    summaryFraming: "What to fix first to maximize subscriber retention and monthly recurring revenue",
+    monetizationAngle: "Monthly subscriptions, PPV content, tips, custom requests, merchandise, brand deals",
+  },
+  teaserCount: 3,
+  teaserDurationSeconds: 30,
+};
+
+// ============================================================
 // VERTICAL REGISTRY
 // ============================================================
 
@@ -377,6 +465,7 @@ export const VERTICAL_REGISTRY: Record<VerticalId, VerticalConfig> = {
   FITNESS_COACH,
   MUSIC_ARTIST,
   AGENCY_CONSULTANT,
+  VAULTX_ADULT_PREMIUM,
 };
 
 /**

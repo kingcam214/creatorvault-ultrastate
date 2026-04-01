@@ -101,13 +101,54 @@ export interface DMEmailArtifact {
   followUpDM: string;
 }
 
+export interface PlatformStrategyArtifact {
+  type: "PLATFORM_STRATEGY";
+  primaryPlatform: string;
+  secondaryPlatforms: string[];
+  contentMix: Array<{ contentType: string; frequency: string; purpose: string }>;
+  funnelMap: string;
+  growthTactics: string[];
+  platformRules: string[];
+}
+
+export interface ContentCalendarArtifact {
+  type: "CONTENT_CALENDAR";
+  weeklySchedule: Array<{
+    day: string;
+    contentType: string;
+    platform: string;
+    hook: string;
+    goal: string;
+  }>;
+  monthlyTheme: string;
+  contentPillars: string[];
+  postingFrequency: string;
+}
+
+export interface MonetizationRoadmapArtifact {
+  type: "MONETIZATION_ROADMAP";
+  currentMonthlyEstimate: string;
+  revenueStreams: Array<{
+    stream: string;
+    currentStatus: string;
+    targetMonthly: string;
+    actionToActivate: string;
+  }>;
+  thirtyDayPlan: string[];
+  ninetyDayTarget: string;
+  keyLeverage: string;
+}
+
 export type HeroArtifact =
   | SocialAuditArtifact
   | TrailerScriptArtifact
   | TeaserClipsArtifact
   | LaunchDeckArtifact
   | LandingPageArtifact
-  | DMEmailArtifact;
+  | DMEmailArtifact
+  | PlatformStrategyArtifact
+  | ContentCalendarArtifact
+  | MonetizationRoadmapArtifact;
 
 export interface VerticalPackResult {
   packId: string;
@@ -149,15 +190,22 @@ export async function runVerticalPack(input: VerticalPackInput): Promise<Vertica
 
   console.log(`[VerticalPack] Starting ${config.packName} for @${input.creatorHandle}`);
 
-  // Run all 6 artifacts — collect errors but don't abort
-  const [audit, trailer, teasers, deck, landing, dm] = await Promise.allSettled([
-    buildSocialAudit(input, config),
-    buildTrailerScript(input, config),
-    buildTeaserClips(input, config),
-    buildLaunchDeck(input, config),
-    buildLandingPage(input, config),
-    buildDMEmailScript(input, config),
-  ]);
+  // Run all artifacts — collect errors but don't abort
+  // VAULTX_ADULT_PREMIUM has 8 artifacts; all others have 6
+  const isAdult = input.verticalId === "VAULTX_ADULT_PREMIUM";
+
+  const [audit, trailer, teasers, deck, landing, dm, platformStrategy, contentCalendar, monetizationRoadmap] =
+    await Promise.allSettled([
+      buildSocialAudit(input, config),
+      buildTrailerScript(input, config),
+      buildTeaserClips(input, config),
+      isAdult ? Promise.resolve(null) : buildLaunchDeck(input, config),
+      buildLandingPage(input, config),
+      buildDMEmailScript(input, config),
+      isAdult ? buildPlatformStrategy(input, config) : Promise.resolve(null),
+      isAdult ? buildContentCalendar(input, config) : Promise.resolve(null),
+      isAdult ? buildMonetizationRoadmap(input, config) : Promise.resolve(null),
+    ]);
 
   if (audit.status === "fulfilled") artifacts.push(audit.value);
   else errors.push(`Social Audit: ${audit.reason?.message || "failed"}`);
@@ -168,8 +216,10 @@ export async function runVerticalPack(input: VerticalPackInput): Promise<Vertica
   if (teasers.status === "fulfilled") artifacts.push(teasers.value);
   else errors.push(`Teaser Clips: ${teasers.reason?.message || "failed"}`);
 
-  if (deck.status === "fulfilled") artifacts.push(deck.value);
-  else errors.push(`Launch Deck: ${deck.reason?.message || "failed"}`);
+  if (!isAdult) {
+    if (deck.status === "fulfilled" && deck.value) artifacts.push(deck.value);
+    else errors.push(`Launch Deck: ${deck.status === "rejected" ? deck.reason?.message || "failed" : "skipped"}`);
+  }
 
   if (landing.status === "fulfilled") artifacts.push(landing.value);
   else errors.push(`Landing Page: ${landing.reason?.message || "failed"}`);
@@ -177,7 +227,19 @@ export async function runVerticalPack(input: VerticalPackInput): Promise<Vertica
   if (dm.status === "fulfilled") artifacts.push(dm.value);
   else errors.push(`DM/Email Script: ${dm.reason?.message || "failed"}`);
 
-  console.log(`[VerticalPack] Completed ${config.packName}: ${artifacts.length}/6 artifacts, ${errors.length} errors`);
+  if (isAdult) {
+    if (platformStrategy.status === "fulfilled" && platformStrategy.value) artifacts.push(platformStrategy.value);
+    else errors.push(`Platform Strategy: ${platformStrategy.status === "rejected" ? platformStrategy.reason?.message || "failed" : "skipped"}`);
+
+    if (contentCalendar.status === "fulfilled" && contentCalendar.value) artifacts.push(contentCalendar.value);
+    else errors.push(`Content Calendar: ${contentCalendar.status === "rejected" ? contentCalendar.reason?.message || "failed" : "skipped"}`);
+
+    if (monetizationRoadmap.status === "fulfilled" && monetizationRoadmap.value) artifacts.push(monetizationRoadmap.value);
+    else errors.push(`Monetization Roadmap: ${monetizationRoadmap.status === "rejected" ? monetizationRoadmap.reason?.message || "failed" : "skipped"}`);
+  }
+
+  const expectedCount = isAdult ? 8 : 6;
+  console.log(`[VerticalPack] Completed ${config.packName}: ${artifacts.length}/${expectedCount} artifacts, ${errors.length} errors`);
 
   return {
     packId,
@@ -529,5 +591,174 @@ Use real language. No 'I hope this finds you well'. No generic opener. Get to th
     emailSubject: parsed.emailSubject ?? preset.emailSubjectTemplate,
     emailBody: parsed.emailBody ?? result.content ?? "",
     followUpDM: parsed.followUpDM ?? "Hey — sent you something yesterday. Worth 2 mins. Check it?",
+  };
+}
+
+// ============================================================
+// ADULT VERTICAL ARTIFACT BUILDERS (VAULTX_ADULT_PREMIUM)
+// ============================================================
+
+async function buildPlatformStrategy(
+  input: VerticalPackInput,
+  config: VerticalConfig
+): Promise<PlatformStrategyArtifact> {
+  const topic = input.courseTopic ?? "premium content";
+  const audience = input.targetAudience ?? "adult content consumers";
+
+  const prompt = `You are a platform strategy consultant for adult content creators.
+
+Creator: @${input.creatorHandle} on ${input.platform}
+Content type: ${topic}
+Target audience: ${audience}
+Monetization angle: ${config.auditPreset.monetizationAngle}
+
+Build a complete platform strategy. Return JSON:
+{
+  "primaryPlatform": "Main revenue platform (e.g., OnlyFans)",
+  "secondaryPlatforms": ["Platform 2", "Platform 3"],
+  "contentMix": [
+    {"contentType": "Free teaser content", "frequency": "Daily", "purpose": "Top of funnel acquisition"},
+    {"contentType": "Paid exclusive content", "frequency": "3x/week", "purpose": "Subscriber retention"},
+    {"contentType": "PPV drops", "frequency": "Weekly", "purpose": "Revenue spikes"}
+  ],
+  "funnelMap": "Describe the full funnel from discovery to paying subscriber in 2-3 sentences",
+  "growthTactics": ["Tactic 1", "Tactic 2", "Tactic 3", "Tactic 4", "Tactic 5"],
+  "platformRules": ["Rule 1 about what to never do", "Rule 2", "Rule 3"]
+}
+
+Be specific. Platform-safe language. Business-minded. No explicit terms.`;
+
+  const result = await invokeRealGPT({ userMessage: prompt, mode: "Architect" });
+
+  let parsed: Partial<PlatformStrategyArtifact> = {};
+  try {
+    const jsonMatch = (result.content ?? "{}").match(/\{[\s\S]*\}/);
+    if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+  } catch { parsed = {}; }
+
+  return {
+    type: "PLATFORM_STRATEGY",
+    primaryPlatform: parsed.primaryPlatform ?? input.platform,
+    secondaryPlatforms: parsed.secondaryPlatforms ?? ["Twitter/X", "Reddit"],
+    contentMix: parsed.contentMix ?? [
+      { contentType: "Free teaser content", frequency: "Daily", purpose: "Acquisition" },
+      { contentType: "Exclusive paid content", frequency: "3x/week", purpose: "Retention" },
+      { contentType: "PPV drops", frequency: "Weekly", purpose: "Revenue spikes" },
+    ],
+    funnelMap: parsed.funnelMap ?? "Free social → profile visit → subscribe → PPV upsell",
+    growthTactics: parsed.growthTactics ?? config.auditPreset.focusMetrics,
+    platformRules: parsed.platformRules ?? config.copyPreset.voiceRules,
+  };
+}
+
+async function buildContentCalendar(
+  input: VerticalPackInput,
+  config: VerticalConfig
+): Promise<ContentCalendarArtifact> {
+  const topic = input.courseTopic ?? "premium content";
+
+  const prompt = `Build a 7-day content calendar for @${input.creatorHandle}, an adult content creator specializing in ${topic}.
+
+Tone: ${config.copyPreset.tone}
+Platform: ${input.platform} + secondary platforms
+Goal: Maximize subscriber acquisition and retention
+
+Return JSON:
+{
+  "monthlyTheme": "One-sentence theme for this month's content",
+  "contentPillars": ["Pillar 1", "Pillar 2", "Pillar 3"],
+  "postingFrequency": "X posts/day across Y platforms",
+  "weeklySchedule": [
+    {"day": "Monday", "contentType": "Type of content", "platform": "Platform name", "hook": "Opening hook idea", "goal": "What this achieves"},
+    ... (7 days)
+  ]
+}
+
+Platform-safe language. Business-focused. No explicit terms.`;
+
+  const result = await invokeRealGPT({ userMessage: prompt, mode: "KingCam" });
+
+  let parsed: Partial<ContentCalendarArtifact> = {};
+  try {
+    const jsonMatch = (result.content ?? "{}").match(/\{[\s\S]*\}/);
+    if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+  } catch { parsed = {}; }
+
+  const defaultSchedule = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => ({
+    day,
+    contentType: day === "Monday" || day === "Thursday" ? "Exclusive content drop" : "Teaser / engagement post",
+    platform: input.platform,
+    hook: `${day} exclusive — subscribers only`,
+    goal: day === "Monday" || day === "Thursday" ? "Retention + PPV revenue" : "Acquisition + engagement",
+  }));
+
+  return {
+    type: "CONTENT_CALENDAR",
+    monthlyTheme: parsed.monthlyTheme ?? `${topic} — Exclusive Access Month`,
+    contentPillars: parsed.contentPillars ?? ["Exclusivity", "Engagement", "Monetization"],
+    postingFrequency: parsed.postingFrequency ?? "2-3 posts/day across 2 platforms",
+    weeklySchedule: parsed.weeklySchedule ?? defaultSchedule,
+  };
+}
+
+async function buildMonetizationRoadmap(
+  input: VerticalPackInput,
+  config: VerticalConfig
+): Promise<MonetizationRoadmapArtifact> {
+  const followers = input.existingFollowers ?? 0;
+  const price = input.pricePoint ?? "$15/month";
+  const proof = input.credibilityProof ?? "growing subscriber base";
+
+  const prompt = `Build a monetization roadmap for @${input.creatorHandle}, an adult content creator.
+
+Current followers: ${followers.toLocaleString()}
+Subscription price: ${price}
+Proof/current status: ${proof}
+Monetization angle: ${config.auditPreset.monetizationAngle}
+
+Return JSON:
+{
+  "currentMonthlyEstimate": "Estimated current MRR based on followers and price",
+  "revenueStreams": [
+    {"stream": "Monthly subscriptions", "currentStatus": "Active/Inactive", "targetMonthly": "$X,XXX", "actionToActivate": "What to do"},
+    {"stream": "PPV content", "currentStatus": "Active/Inactive", "targetMonthly": "$X,XXX", "actionToActivate": "What to do"},
+    {"stream": "Tips", "currentStatus": "Active/Inactive", "targetMonthly": "$X,XXX", "actionToActivate": "What to do"},
+    {"stream": "Custom requests", "currentStatus": "Active/Inactive", "targetMonthly": "$X,XXX", "actionToActivate": "What to do"},
+    {"stream": "Merchandise", "currentStatus": "Inactive", "targetMonthly": "$XXX", "actionToActivate": "What to do"}
+  ],
+  "thirtyDayPlan": ["Action 1", "Action 2", "Action 3", "Action 4", "Action 5"],
+  "ninetyDayTarget": "Specific MRR target in 90 days with the actions above",
+  "keyLeverage": "The single highest-leverage action to take this week"
+}
+
+Be specific with numbers. Business-minded. Platform-safe language.`;
+
+  const result = await invokeRealGPT({ userMessage: prompt, mode: "Realist" });
+
+  let parsed: Partial<MonetizationRoadmapArtifact> = {};
+  try {
+    const jsonMatch = (result.content ?? "{}").match(/\{[\s\S]*\}/);
+    if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+  } catch { parsed = {}; }
+
+  return {
+    type: "MONETIZATION_ROADMAP",
+    currentMonthlyEstimate: parsed.currentMonthlyEstimate ?? "Calculating based on current metrics...",
+    revenueStreams: parsed.revenueStreams ?? [
+      { stream: "Monthly subscriptions", currentStatus: "Active", targetMonthly: "$2,000", actionToActivate: "Optimize pricing and free trial conversion" },
+      { stream: "PPV content", currentStatus: "Active", targetMonthly: "$1,500", actionToActivate: "Increase drop frequency to weekly" },
+      { stream: "Tips", currentStatus: "Active", targetMonthly: "$500", actionToActivate: "Engage subscribers with direct messages" },
+      { stream: "Custom requests", currentStatus: "Inactive", targetMonthly: "$1,000", actionToActivate: "Announce custom request availability to subscribers" },
+      { stream: "Merchandise", currentStatus: "Inactive", targetMonthly: "$300", actionToActivate: "Launch branded merch store via Printful" },
+    ],
+    thirtyDayPlan: parsed.thirtyDayPlan ?? [
+      "Audit current subscriber retention rate",
+      "Launch weekly PPV drop schedule",
+      "Activate custom request tier",
+      "Build secondary platform funnel",
+      "Set up automated welcome DM sequence",
+    ],
+    ninetyDayTarget: parsed.ninetyDayTarget ?? "$5,000+ MRR across all streams",
+    keyLeverage: parsed.keyLeverage ?? "Activate PPV drops — highest margin, lowest effort revenue stream",
   };
 }

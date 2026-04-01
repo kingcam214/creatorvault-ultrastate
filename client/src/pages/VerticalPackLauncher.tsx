@@ -21,9 +21,10 @@ type VerticalId =
   | "SHORTFORM_ENTERTAINER"
   | "FITNESS_COACH"
   | "MUSIC_ARTIST"
-  | "AGENCY_CONSULTANT";
+  | "AGENCY_CONSULTANT"
+  | "VAULTX_ADULT_PREMIUM";
 
-type Platform = "youtube" | "tiktok" | "instagram" | "twitter";
+type Platform = "youtube" | "tiktok" | "instagram" | "twitter" | "onlyfans" | "fansly";
 
 interface PackArtifact {
   type: string;
@@ -294,6 +295,153 @@ function DMEmailCard({ artifact }: { artifact: PackArtifact }) {
   );
 }
 
+function PlatformStrategyCard({ artifact }: { artifact: PackArtifact }) {
+  const a = artifact as {
+    type: string;
+    primaryPlatform: string;
+    secondaryPlatforms: string[];
+    contentMix: Array<{ contentType: string; frequency: string; purpose: string }>;
+    funnelMap: string;
+    growthTactics: string[];
+    platformRules: string[];
+  };
+  return (
+    <div className="artifact-card">
+      <div className="artifact-header">
+        <span className="artifact-tag" style={{ background: "#be185d" }}>04</span>
+        <h3>Platform Strategy</h3>
+      </div>
+      <div className="artifact-body">
+        <div className="stat-row">
+          <span className="stat-label">Primary Platform</span>
+          <span className="stat-value">{a.primaryPlatform}</span>
+        </div>
+        <div className="stat-row">
+          <span className="stat-label">Secondary Platforms</span>
+          <span className="stat-value">{a.secondaryPlatforms?.join(" · ")}</span>
+        </div>
+        <div className="text-block">
+          <p className="text-label">Funnel Map</p>
+          <p className="pre-wrap">{a.funnelMap}</p>
+        </div>
+        <div className="text-block">
+          <p className="text-label">Content Mix</p>
+          {a.contentMix?.map((c, i) => (
+            <div key={i} className="segment-row" style={{ marginBottom: 8 }}>
+              <div className="seg-content">
+                <p className="seg-text">{c.contentType}</p>
+                <p className="seg-visual">{c.frequency} · {c.purpose}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="text-block">
+          <p className="text-label">Growth Tactics</p>
+          {a.growthTactics?.map((t, i) => <p key={i} className="bullet-line">→ {t}</p>)}
+        </div>
+        <div className="text-block">
+          <p className="text-label">Platform Rules</p>
+          {a.platformRules?.map((r, i) => <p key={i} className="bullet-line" style={{ color: "#f87171" }}>✗ {r}</p>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContentCalendarCard({ artifact }: { artifact: PackArtifact }) {
+  const a = artifact as {
+    type: string;
+    monthlyTheme: string;
+    contentPillars: string[];
+    postingFrequency: string;
+    weeklySchedule: Array<{ day: string; contentType: string; platform: string; hook: string; goal: string }>;
+  };
+  return (
+    <div className="artifact-card">
+      <div className="artifact-header">
+        <span className="artifact-tag" style={{ background: "#be185d" }}>05</span>
+        <h3>Content Calendar</h3>
+      </div>
+      <div className="artifact-body">
+        <div className="stat-row">
+          <span className="stat-label">Monthly Theme</span>
+          <span className="stat-value">{a.monthlyTheme}</span>
+        </div>
+        <div className="stat-row">
+          <span className="stat-label">Posting Frequency</span>
+          <span className="stat-value">{a.postingFrequency}</span>
+        </div>
+        <div className="stat-row">
+          <span className="stat-label">Content Pillars</span>
+          <span className="stat-value">{a.contentPillars?.join(" · ")}</span>
+        </div>
+        <div className="text-block">
+          <p className="text-label">7-Day Schedule</p>
+          {a.weeklySchedule?.map((day, i) => (
+            <div key={i} className="segment-row" style={{ marginBottom: 8 }}>
+              <div className="seg-num">{day.day}</div>
+              <div className="seg-content">
+                <p className="seg-text">{day.contentType} · {day.platform}</p>
+                <p className="seg-visual">Hook: {day.hook}</p>
+                <p className="seg-dur">Goal: {day.goal}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MonetizationRoadmapCard({ artifact }: { artifact: PackArtifact }) {
+  const a = artifact as {
+    type: string;
+    currentMonthlyEstimate: string;
+    revenueStreams: Array<{ stream: string; currentStatus: string; targetMonthly: string; actionToActivate: string }>;
+    thirtyDayPlan: string[];
+    ninetyDayTarget: string;
+    keyLeverage: string;
+  };
+  return (
+    <div className="artifact-card">
+      <div className="artifact-header">
+        <span className="artifact-tag" style={{ background: "#be185d" }}>08</span>
+        <h3>Monetization Roadmap</h3>
+      </div>
+      <div className="artifact-body">
+        <div className="stat-row">
+          <span className="stat-label">Current MRR Estimate</span>
+          <span className="stat-value score">{a.currentMonthlyEstimate}</span>
+        </div>
+        <div className="stat-row">
+          <span className="stat-label">90-Day Target</span>
+          <span className="stat-value" style={{ color: "#4ade80" }}>{a.ninetyDayTarget}</span>
+        </div>
+        <div className="text-block">
+          <p className="text-label">Key Leverage This Week</p>
+          <p className="pre-wrap" style={{ color: "#fbbf24", fontWeight: 600 }}>{a.keyLeverage}</p>
+        </div>
+        <div className="text-block">
+          <p className="text-label">Revenue Streams</p>
+          {a.revenueStreams?.map((s, i) => (
+            <div key={i} className="segment-row" style={{ marginBottom: 8 }}>
+              <div className="seg-content">
+                <p className="seg-text">{s.stream} · <span style={{ color: s.currentStatus === "Active" ? "#4ade80" : "#f87171" }}>{s.currentStatus}</span></p>
+                <p className="seg-visual">Target: {s.targetMonthly}</p>
+                <p className="seg-dur">→ {s.actionToActivate}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="text-block">
+          <p className="text-label">30-Day Action Plan</p>
+          {a.thirtyDayPlan?.map((action, i) => <p key={i} className="bullet-line">✓ {action}</p>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ArtifactRenderer({ artifact }: { artifact: PackArtifact }) {
   switch (artifact.type) {
     case "SOCIAL_AUDIT_SUMMARY": return <SocialAuditCard artifact={artifact} />;
@@ -302,6 +450,9 @@ function ArtifactRenderer({ artifact }: { artifact: PackArtifact }) {
     case "LAUNCH_DECK": return <LaunchDeckCard artifact={artifact} />;
     case "LANDING_PAGE_BLOCK": return <LandingPageCard artifact={artifact} />;
     case "DM_EMAIL_SCRIPT": return <DMEmailCard artifact={artifact} />;
+    case "PLATFORM_STRATEGY": return <PlatformStrategyCard artifact={artifact} />;
+    case "CONTENT_CALENDAR": return <ContentCalendarCard artifact={artifact} />;
+    case "MONETIZATION_ROADMAP": return <MonetizationRoadmapCard artifact={artifact} />;
     default: return (
       <div className="artifact-card">
         <div className="artifact-header"><h3>{artifact.type}</h3></div>
@@ -794,7 +945,7 @@ export default function VerticalPackLauncher() {
             <div className="pack-header">
               <div>
                 <h2>{packResult.packName}</h2>
-                <p className="pack-meta">@{handle} · {packResult.artifactCount}/6 artifacts generated</p>
+                <p className="pack-meta">@{handle} · {packResult.artifactCount} artifacts generated</p>
               </div>
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                 <span className="pack-badge">{packResult.artifactCount} Artifacts Ready</span>
@@ -821,7 +972,7 @@ export default function VerticalPackLauncher() {
           <div className="loading-state">
             <div className="spinner" />
             <h3>Generating your pack...</h3>
-            <p>Running all 6 artifacts in parallel. This takes 30–60 seconds.</p>
+            <p>Running all artifacts in parallel. This takes 30–90 seconds.</p>
           </div>
         ) : (
           <div className="vpl-form">
@@ -830,6 +981,7 @@ export default function VerticalPackLauncher() {
             <div className="vertical-selector">
               {(verticals ?? [
                 { id: "YOUTUBE_EDUCATOR", displayName: "YouTube Educator", packName: "YouTube Educator Launch Pack v1", status: "ACTIVE" },
+                { id: "VAULTX_ADULT_PREMIUM", displayName: "VaultX Adult Premium Creator", packName: "VaultX Adult Creator Launch Pack v1", status: "ACTIVE" },
                 { id: "SHORTFORM_ENTERTAINER", displayName: "Short-Form Entertainer", packName: "Short-Form Entertainer Pack v1", status: "PENDING" },
                 { id: "FITNESS_COACH", displayName: "Fitness Coach", packName: "Fitness Coach Launch Pack v1", status: "PENDING" },
                 { id: "MUSIC_ARTIST", displayName: "Music Artist", packName: "Music Artist Launch Pack v1", status: "PENDING" },
@@ -863,6 +1015,8 @@ export default function VerticalPackLauncher() {
                   <option value="tiktok">TikTok</option>
                   <option value="instagram">Instagram</option>
                   <option value="twitter">Twitter / X</option>
+                  <option value="onlyfans">OnlyFans</option>
+                  <option value="fansly">Fansly</option>
                 </select>
               </div>
               <div className="form-group">
