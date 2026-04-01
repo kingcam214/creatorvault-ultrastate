@@ -8,7 +8,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/_core/hooks/useAuth";
 import {
   Heart, MessageCircle, Share2, Bookmark, Play, ShoppingBag,
   BookOpen, TrendingUp, Zap, Award, ChevronRight, Plus,
