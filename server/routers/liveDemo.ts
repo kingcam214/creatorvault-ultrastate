@@ -7,7 +7,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { runSocialMediaAudit } from "../services/socialMediaAudit";
 import { scrapeInstagramProfile, scrapeTikTokProfile, scrapeYouTubeProfile } from "../services/socialMediaScraper";
-import { generateImage } from "../_core/imageGeneration";
+import { generateKingCamImage } from "../services/kingcamAI";
 import {
   generateViralVideoConcept,
   generateThumbnail,

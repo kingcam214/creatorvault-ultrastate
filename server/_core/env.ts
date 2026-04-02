@@ -10,4 +10,10 @@ export const ENV = {
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
+
+  // ── KingCam AI OS — Unified AI Provider Keys ──────────────────────────────
+  // Replicate: kingcam214/fluxdevcam image model + SadTalker + Kokoro TTS
+  replicateApiToken: process.env.REPLICATE_API_TOKEN ?? "",
+  // Pollo.ai: Kling 3.0, Seedance 2.0, Wan 2.6, Vidu Q3 Pro, Pollo 3.0
+  polloApiKey: process.env.POLLO_API_KEY ?? "",
 };

@@ -8,7 +8,7 @@
  */
 
 import { invokeLLM } from "../_core/llm";
-import { generateImage } from "../_core/imageGeneration";
+import { generateKingCamImage } from "./kingcamAI";
 import { getDb } from "../db";
 import { thumbnailAnalyses } from "../../drizzle/schema";
 import crypto from "crypto";
@@ -202,7 +202,13 @@ async function generateThumbnailImage(
     `YouTube thumbnail for "${input.videoTitle}". ${styleDesc}. ${input.niche} content. Professional photography, 16:9 aspect ratio, high quality, attention-grabbing composition. Text overlay: "${textOverlay}". Face close-up with expressive emotion if relevant to topic.`;
   
   try {
-    const result = await generateImage({ prompt: imagePrompt });
+    const result = await generateKingCamImage({
+      prompt: imagePrompt,
+      injectDNA: true,
+      styleLevel: "social",
+      aspectRatio: "16:9",
+      vertical: "thumbnail",
+    });
     if (!result.url) {
       throw new Error("Image generation returned no URL");
     }

@@ -4,7 +4,7 @@
  * Real-time content generation for live demos
  */
 
-import { generateImage } from "../_core/imageGeneration";
+import { generateKingCamImage } from "./kingcamAI";
 import { invokeLLM } from "../_core/llm";
 
 export interface GeneratedContent {
@@ -61,7 +61,14 @@ export async function generateThumbnail(
 ): Promise<GeneratedContent> {
   const prompt = `Create a viral YouTube thumbnail for "${videoTitle}" by @${creatorHandle}. Style: ${contentStyle}. High contrast, bold text, eye-catching composition. Professional quality, 16:9 aspect ratio.`;
 
-  const { url } = await generateImage({ prompt });
+  const result = await generateKingCamImage({
+    prompt,
+    injectDNA: true,
+    styleLevel: "social",
+    aspectRatio: "16:9",
+    vertical: "thumbnail",
+  });
+  const url = result.url;
 
   return {
     type: "thumbnail",

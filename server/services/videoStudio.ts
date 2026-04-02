@@ -12,7 +12,7 @@ import { getDb } from "../db";
 import { videoGenerationJobs, videoScenes, videoAssets, botEvents } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
-import { generateImage } from "../_core/imageGeneration";
+import { generateKingCamImage } from "./kingcamAI";
 import { storagePut } from "../storage";
 import crypto from "crypto";
 
@@ -208,10 +208,15 @@ export async function generateSceneFrame(
     ? enhancePromptWithCharacter(scene.prompt, characterFeatures)
     : scene.prompt;
 
-  // Generate image
-  const { url: imageUrl } = await generateImage({
+  // Generate image via KingCam AI (fluxdevcam primary, forge fallback)
+  const aiResult = await generateKingCamImage({
     prompt: finalPrompt,
+    injectDNA: true,
+    styleLevel: "cinematic",
+    aspectRatio: "16:9",
+    vertical: "video_studio",
   });
+  const imageUrl = aiResult.url;
 
   if (!imageUrl) {
     throw new Error("Image generation failed: no URL returned");
@@ -280,10 +285,15 @@ export async function regenerateScene(
       ? enhancePromptWithCharacter(newPrompt, characterFeatures)
       : newPrompt;
 
-  // Generate new image
-  const { url: newImageUrl } = await generateImage({
+  // Regenerate image via KingCam AI
+  const aiResult = await generateKingCamImage({
     prompt: finalPrompt,
+    injectDNA: true,
+    styleLevel: "cinematic",
+    aspectRatio: "16:9",
+    vertical: "video_studio",
   });
+  const newImageUrl = aiResult.url;
 
   if (!newImageUrl) {
     throw new Error("Image regeneration failed: no URL returned");

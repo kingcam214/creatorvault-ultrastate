@@ -8,7 +8,7 @@
  */
 
 import { invokeLLM } from "../_core/llm";
-import { generateImage } from "../_core/imageGeneration";
+import { generateKingCamImage } from "./kingcamAI";
 import { getDb } from "../db";
 import { adAnalyses } from "../../drizzle/schema";
 import crypto from "crypto";
@@ -216,7 +216,13 @@ async function generateAdCreative(input: AdOptimizerInput): Promise<{
   const imagePrompt = `Professional Facebook ad image for ${input.product}. Target audience: ${input.targetAudience}. ${input.description || ""}. Clean, modern, attention-grabbing. Product-focused with lifestyle context. High quality, vibrant colors, professional photography style.`;
   
   try {
-    const result = await generateImage({ prompt: imagePrompt });
+    const result = await generateKingCamImage({
+      prompt: imagePrompt,
+      injectDNA: true,
+      styleLevel: "social",
+      aspectRatio: "1:1",
+      vertical: "ad_optimizer",
+    });
     if (!result.url) {
       throw new Error("Image generation returned no URL");
     }

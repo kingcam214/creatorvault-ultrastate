@@ -48,6 +48,7 @@ import { liveDemoRouter } from "./routers/liveDemo";
 import { economicProtectionRouter } from "./routers/economicProtection";
 import { kingAuthorityRouter } from "./routers/kingAuthority";
 import { verticalPackRouter } from "./routers/verticalPackRouter";
+import { kingcamAIRouter } from "./routers/kingcamAIRouter";
 // import { adultVerificationRouter } from "./routers/adultVerification";
 // import { contentProtectionRouter } from "./routers/contentProtection";
 // import { safetyFeaturesRouter } from "./routers/safetyFeatures";
@@ -585,6 +586,11 @@ export const appRouter = router({
   economicProtection: economicProtectionRouter,
   kingAuthority: kingAuthorityRouter,
   verticalPack: verticalPackRouter,
+
+  // ============ KINGCAM AI OS — UNIFIED AI LAYER ============
+  // Every image, video, and AI generation action on the platform
+  // flows through this router. All verticals connected.
+  kingcamAI: kingcamAIRouter,
   // adultVerification: adultVerificationRouter,
   // contentProtection: contentProtectionRouter,
   // safetyFeatures: safetyFeaturesRouter,

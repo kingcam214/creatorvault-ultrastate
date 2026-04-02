@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
-import { generateImage } from "../_core/imageGeneration";
+import { generateKingCamImage } from "../services/kingcamAI";
 
 export const marketplaceAIRouter = router({
   // Generate product description
@@ -118,7 +118,13 @@ Return as JSON with this exact structure:
       const style = input.style || "professional";
       const prompt = `Product image for "${input.title}": ${input.description.substring(0, 200)}. ${stylePrompts[style]}. High quality, commercial product photography.`;
 
-      const result = await generateImage({ prompt });
+      const result = await generateKingCamImage({
+        prompt,
+        injectDNA: true,
+        styleLevel: "product",
+        aspectRatio: "1:1",
+        vertical: "marketplace",
+      });
 
       return {
         imageUrl: result.url,
