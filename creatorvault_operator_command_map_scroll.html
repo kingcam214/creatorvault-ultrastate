@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>👑 CreatorVault Operator Command Map</title>
+  <style>
+    :root {
+      --gold: #D4AF37;
+      --gold-light: #F5D060;
+      --gold-dim: #8B7320;
+      --carbon: #0A0A0A;
+      --obsidian: #111111;
+      --slate: #1A1A1A;
+      --panel: #1E1E1E;
+      --border: #2A2A2A;
+      --text: #E8E8E8;
+      --text-dim: #888888;
+      --green: #00C853;
+      --red: #FF3D3D;
+      --blue: #4FC3F7;
+      --purple: #CE93D8;
+      --orange: #FFB74D;
+      --teal: #4DB6AC;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--carbon);
+      color: var(--text);
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    /* ─── HEADER ─────────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, #0A0A0A 0%, #1A1200 50%, #0A0A0A 100%);
+      border-bottom: 2px solid var(--gold);
+      padding: 24px 32px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header-title {
+      font-size: 22px;
+      font-weight: bold;
+      color: var(--gold);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .header-subtitle {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+    .header-meta {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: right;
+    }
+    /* ─── STATS PILLS ─────────────────────────────────────────── */
+    .stats-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      border: 1px solid;
+    }
+    .pill-gold   { background: rgba(212,175,55,0.12); border-color: var(--gold);   color: var(--gold-light); }
+    .pill-green  { background: rgba(0,200,83,0.12);   border-color: var(--green);  color: var(--green); }
+    .pill-blue   { background: rgba(79,195,247,0.12); border-color: var(--blue);   color: var(--blue); }
+    .pill-purple { background: rgba(206,147,216,0.12);border-color: var(--purple); color: var(--purple); }
+    .pill-orange { background: rgba(255,183,77,0.12); border-color: var(--orange); color: var(--orange); }
+    .pill-teal   { background: rgba(77,182,172,0.12); border-color: var(--teal);   color: var(--teal); }
+    .pill-red    { background: rgba(255,61,61,0.12);  border-color: var(--red);    color: var(--red); }
+    /* ─── LAYOUT ──────────────────────────────────────────────── */
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px 32px; }
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .section-header {
+      background: linear-gradient(90deg, rgba(212,175,55,0.08) 0%, transparent 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-num {
+      background: var(--gold);
+      color: var(--carbon);
+      font-size: 10px;
+      font-weight: bold;
+      padding: 2px 7px;
+      border-radius: 4px;
+      min-width: 28px;
+      text-align: center;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .section-body { padding: 20px; }
+    /* ─── TABLES ──────────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      background: rgba(212,175,55,0.08);
+      color: var(--gold-dim);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 7px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .mono { font-family: 'Courier New', monospace; }
+    .count-badge {
+      display: inline-block;
+      background: rgba(212,175,55,0.15);
+      color: var(--gold-light);
+      border: 1px solid rgba(212,175,55,0.3);
+      border-radius: 4px;
+      padding: 1px 8px;
+      font-size: 12px;
+      font-weight: bold;
+      min-width: 40px;
+      text-align: center;
+    }
+    .status-online  { color: var(--green); }
+    .status-stopped { color: var(--red); }
+    .tag {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: bold;
+      margin: 1px;
+    }
+    .tag-new    { background: rgba(0,200,83,0.15);   color: var(--green);  border: 1px solid rgba(0,200,83,0.3); }
+    .tag-api    { background: rgba(79,195,247,0.15);  color: var(--blue);   border: 1px solid rgba(79,195,247,0.3); }
+    .tag-admin  { background: rgba(212,175,55,0.15);  color: var(--gold);   border: 1px solid rgba(212,175,55,0.3); }
+    .tag-ai     { background: rgba(206,147,216,0.15); color: var(--purple); border: 1px solid rgba(206,147,216,0.3); }
+    .tag-live   { background: rgba(255,61,61,0.15);   color: var(--red);    border: 1px solid rgba(255,61,61,0.3); }
+    /* ─── GRID ────────────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    @media (max-width: 900px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    }
+    /* ─── CARD ────────────────────────────────────────────────── */
+    .card {
+      background: var(--slate);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--gold-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .card-value {
+      font-size: 28px;
+      font-weight: bold;
+      color: var(--gold-light);
+    }
+    .card-sub {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+    /* ─── CODE BLOCK ──────────────────────────────────────────── */
+    .code-block {
+      background: var(--obsidian);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    /* ─── NAMESPACE GRID ──────────────────────────────────────── */
+    .ns-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .ns-tag {
+      background: rgba(79,195,247,0.08);
+      border: 1px solid rgba(79,195,247,0.2);
+      color: var(--blue);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+    }
+    .ns-tag.new {
+      background: rgba(0,200,83,0.1);
+      border-color: rgba(0,200,83,0.3);
+      color: var(--green);
+    }
+    /* ─── ROUTE LIST ──────────────────────────────────────────── */
+    .route-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 4px;
+    }
+    .route-item {
+      background: var(--obsidian);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .route-item .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--gold-dim);
+      flex-shrink: 0;
+    }
+    .route-item.new-route .dot { background: var(--green); }
+    .route-item.new-route { border-color: rgba(0,200,83,0.2); color: var(--text); }
+    /* ─── CHANGELOG ───────────────────────────────────────────── */
+    .changelog-entry {
+      border-left: 3px solid var(--gold);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      background: rgba(212,175,55,0.03);
+    }
+    .changelog-entry:last-child { margin-bottom: 0; }
+    .changelog-date {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .changelog-items { list-style: none; }
+    .changelog-items li {
+      font-size: 12px;
+      color: var(--text-dim);
+      padding: 2px 0;
+    }
+    .changelog-items li::before { content: "▸ "; color: var(--gold-dim); }
+    /* ─── PM2 TABLE ───────────────────────────────────────────── */
+    .pm2-online  { color: var(--green); font-weight: bold; }
+    .pm2-stopped { color: var(--red); }
+    .pm2-mem { color: var(--blue); }
+    /* ─── DIVIDER ─────────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0;
+    }
+    .label {
+      font-size: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .value { color: var(--text); font-size: 13px; }
+    .highlight { color: var(--gold-light); font-weight: bold; }
+    .dim { color: var(--text-dim); }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  HEADER                                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="header-title">👑 CreatorVault Operator Command Map</div>
+      <div class="header-subtitle">Live System Intelligence — VPS 134.199.202.69 · MySQL + PostgreSQL · creatorvault-ultrastate</div>
+    </div>
+    <div class="header-meta">
+      Last Updated: <span style="color:var(--gold)">April 6, 2026</span><br/>
+      Version: <span style="color:var(--gold)">v6.0 — Clone Empire + KingCam AI</span><br/>
+      Server Uptime: <span style="color:var(--green)">50 days 20h</span>
+    </div>
+  </div>
+
+  <!-- STATS PILLS -->
+  <div class="stats-row">
+    <span class="pill pill-gold">👑 120 Users (MySQL)</span>
+    <span class="pill pill-green">✅ 235 Routes (App.tsx)</span>
+    <span class="pill pill-blue">⚡ 249 tRPC Namespaces</span>
+    <span class="pill pill-purple">🗄️ 796 MySQL Tables</span>
+    <span class="pill pill-orange">🎬 76 Flyer Jobs</span>
+    <span class="pill pill-teal">📹 20 Clone Videos</span>
+    <span class="pill pill-gold">🏛️ 31 Courses</span>
+    <span class="pill pill-green">🔴 4 PM2 Online</span>
+    <span class="pill pill-red">⛔ 1 PM2 Stopped</span>
+    <span class="pill pill-blue">💾 53GB / 87GB Disk</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  MAIN CONTENT                                               -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="container">
+
+  <!-- ─── SECTION 1: DB COUNTS ─────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <span class="section-title">Live DB Counts — MySQL (creatorvault) · Queried Apr 6, 2026</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-4" style="margin-bottom:20px">
+        <div class="card">
+          <div class="card-title">Total Users</div>
+          <div class="card-value">120</div>
+          <div class="card-sub">users table · MySQL</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Total Tables</div>
+          <div class="card-value">796</div>
+          <div class="card-sub">MySQL schema · creatorvault</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Agent Logs</div>
+          <div class="card-value">49,908</div>
+          <div class="card-sub">agent_logs · highest row count</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Flyer Jobs</div>
+          <div class="card-value">76</div>
+          <div class="card-sub">flyer_animation_jobs</div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Table Name</th>
+            <th>Row Count</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">users</td><td><span class="count-badge">120</span></td><td class="dim">Registered accounts</td></tr>
+          <tr><td class="mono">subscriptions</td><td><span class="count-badge">5</span></td><td class="dim">Active subscriptions</td></tr>
+          <tr><td class="mono">flyer_animation_jobs</td><td><span class="count-badge">76</span></td><td class="dim">Animated flyer render queue</td></tr>
+          <tr><td class="mono">kingcam_clone_videos</td><td><span class="count-badge">20</span></td><td class="dim">KingCam clone video library</td></tr>
+          <tr><td class="mono">kingcam_vault</td><td><span class="count-badge">38</span></td><td class="dim">KingCam vault assets</td></tr>
+          <tr><td class="mono">university_courses</td><td><span class="count-badge">31</span></td><td class="dim">Published courses</td></tr>
+          <tr><td class="mono">video_lab_jobs</td><td><span class="count-badge">26</span></td><td class="dim">Video lab processing queue</td></tr>
+          <tr><td class="mono">viral_analyses</td><td><span class="count-badge">15</span></td><td class="dim">Viral content analyses</td></tr>
+          <tr><td class="mono">marketplace_products</td><td><span class="count-badge">10</span></td><td class="dim">Listed marketplace items</td></tr>
+          <tr><td class="mono">king_income_log</td><td><span class="count-badge">9</span></td><td class="dim">Income tracking entries</td></tr>
+          <tr><td class="mono">vaultlive_recordings</td><td><span class="count-badge">2</span></td><td class="dim">VaultLive session recordings</td></tr>
+          <tr><td class="mono">script_projects</td><td><span class="count-badge">1</span></td><td class="dim">Script writing projects</td></tr>
+          <tr><td class="mono">smart_albums</td><td><span class="count-badge">3</span></td><td class="dim">Smart album collections</td></tr>
+          <tr><td class="mono">vaultspace_profiles</td><td><span class="count-badge">2</span></td><td class="dim">VaultSpace creator profiles</td></tr>
+          <tr><td class="mono">presentation_empire_packages</td><td><span class="count-badge">127</span></td><td class="dim">Presentation packages (empire)</td></tr>
+          <tr><td class="mono">agent_logs</td><td><span class="count-badge">49,908</span></td><td class="dim">AI agent activity logs</td></tr>
+          <tr><td class="mono">agent_execution_runs</td><td><span class="count-badge">25,254</span></td><td class="dim">Agent execution history</td></tr>
+          <tr><td class="mono">agent_credit_transactions</td><td><span class="count-badge">21,044</span></td><td class="dim">Agent credit usage</td></tr>
+          <tr><td class="mono">bot_events</td><td><span class="count-badge">8,818</span></td><td class="dim">Bot event stream</td></tr>
+          <tr><td class="mono">agent_messages</td><td><span class="count-badge">5,931</span></td><td class="dim">Agent conversation messages</td></tr>
+          <tr><td class="mono">university_lessons</td><td><span class="count-badge">240</span></td><td class="dim">Course lesson content</td></tr>
+          <tr><td class="mono">viral_video_uploads</td><td><span class="count-badge">63</span></td><td class="dim">Viral video upload queue</td></tr>
+          <tr><td class="mono">media_assets</td><td><span class="count-badge">61</span></td><td class="dim">Media asset library</td></tr>
+          <tr><td class="mono">telegram_bots</td><td><span class="count-badge">53</span></td><td class="dim">Configured Telegram bots</td></tr>
+          <tr><td class="mono">video_lab_outputs</td><td><span class="count-badge">49</span></td><td class="dim">Video lab render outputs</td></tr>
+          <tr><td class="mono">empire_agents</td><td><span class="count-badge">49</span></td><td class="dim">Empire AI agent registry</td></tr>
+          <tr><td class="mono">editor_projects</td><td><span class="count-badge">39</span></td><td class="dim">Video editor projects</td></tr>
+        </tbody>
+      </table>
+
+      <hr class="divider" />
+      <div class="label">PostgreSQL DB (creatorvault-empire backend) — Queried Apr 6, 2026</div>
+      <table style="margin-top:8px">
+        <thead>
+          <tr>
+            <th>Table Name</th>
+            <th>Row Count</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">users</td><td><span class="count-badge">1</span></td><td class="dim">Empire backend user</td></tr>
+          <tr><td class="mono">subscriptions</td><td><span class="count-badge">0</span></td><td class="dim">Empire subscriptions</td></tr>
+          <tr><td class="mono">courses</td><td><span class="count-badge">4</span></td><td class="dim">Empire courses</td></tr>
+          <tr><td class="mono">creator_profiles</td><td><span class="count-badge">1</span></td><td class="dim">Empire creator profiles</td></tr>
+          <tr><td class="mono">profit_streams</td><td><span class="count-badge">12</span></td><td class="dim">Revenue streams tracked</td></tr>
+          <tr><td class="mono">celebrity_packs</td><td><span class="count-badge">3</span></td><td class="dim">Celebrity content packs</td></tr>
+          <tr><td class="mono">fashion_items</td><td><span class="count-badge">5</span></td><td class="dim">Fashion catalog items</td></tr>
+          <tr><td class="mono">club_partnerships</td><td><span class="count-badge">2</span></td><td class="dim">Club partner records</td></tr>
+          <tr><td class="mono">founding_members</td><td><span class="count-badge">1</span></td><td class="dim">Founding member seats</td></tr>
+          <tr><td class="mono">recruiter_networks</td><td><span class="count-badge">1</span></td><td class="dim">Recruiter network nodes</td></tr>
+          <tr><td class="mono">system_settings</td><td><span class="count-badge">7</span></td><td class="dim">Platform config entries</td></tr>
+          <tr><td class="mono">transactions</td><td><span class="count-badge">0</span></td><td class="dim">Payment transactions</td></tr>
+          <tr><td class="mono">live_streams</td><td><span class="count-badge">0</span></td><td class="dim">Live stream sessions</td></tr>
+          <tr><td class="mono">messages</td><td><span class="count-badge">0</span></td><td class="dim">Direct messages</td></tr>
+          <tr><td class="mono">notifications</td><td><span class="count-badge">0</span></td><td class="dim">Push notifications</td></tr>
+          <tr><td class="mono">Total PG Tables</td><td><span class="count-badge">45</span></td><td class="dim">45 tables in public schema</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 2: PM2 PROCESS STATUS ────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <span class="section-title">PM2 Process Status — Live · Apr 6, 2026</span>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>PID</th>
+            <th>Uptime</th>
+            <th>Restarts</th>
+            <th>Memory</th>
+            <th>CPU</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>31</td>
+            <td class="mono highlight">creatorvault</td>
+            <td><span class="pm2-online">● online</span></td>
+            <td class="mono">3842316</td>
+            <td>25h</td>
+            <td>71</td>
+            <td class="pm2-mem">273.0 MB</td>
+            <td>0%</td>
+          </tr>
+          <tr>
+            <td>1</td>
+            <td class="mono">cv-git-sync</td>
+            <td><span class="pm2-online">● online</span></td>
+            <td class="mono">3723114</td>
+            <td>2D</td>
+            <td>21</td>
+            <td class="pm2-mem">2.4 MB</td>
+            <td>0%</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td class="mono">cv-swarm-monitor</td>
+            <td><span class="pm2-online">● online</span></td>
+            <td class="mono">3465588</td>
+            <td>4D</td>
+            <td>19</td>
+            <td class="pm2-mem">43.9 MB</td>
+            <td>0%</td>
+          </tr>
+          <tr>
+            <td>12</td>
+            <td class="mono">mediacore-python</td>
+            <td><span class="pm2-online">● online</span></td>
+            <td class="mono">3465625</td>
+            <td>4D</td>
+            <td>16</td>
+            <td class="pm2-mem">9.3 MB</td>
+            <td>0%</td>
+          </tr>
+          <tr>
+            <td>19</td>
+            <td class="mono">adult-sales-poller</td>
+            <td><span class="pm2-stopped">⛔ stopped</span></td>
+            <td class="mono">—</td>
+            <td>—</td>
+            <td>0</td>
+            <td>—</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px; font-size:11px; color:var(--text-dim)">
+        Server uptime: <span class="highlight">50 days 20h 55m</span> &nbsp;|&nbsp;
+        Load average: <span class="highlight">0.10, 0.04, 0.01</span> &nbsp;|&nbsp;
+        Disk: <span class="highlight">53GB used / 87GB total (62%)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 3: ROUTE MAP ──────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <span class="section-title">Frontend Routes — App.tsx · 235 Total Routes · Apr 6, 2026</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-4" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">Total Routes</div>
+          <div class="card-value">235</div>
+          <div class="card-sub">App.tsx &lt;Route&gt; declarations</div>
+        </div>
+        <div class="card">
+          <div class="card-title">King/Admin Routes</div>
+          <div class="card-value">12</div>
+          <div class="card-sub">/king/* protected routes</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Creator Routes</div>
+          <div class="card-value">8</div>
+          <div class="card-sub">/creator/* routes</div>
+        </div>
+        <div class="card">
+          <div class="card-title">New Since Last Update</div>
+          <div class="card-value" style="color:var(--green)">8</div>
+          <div class="card-sub">Clone Empire, Chuuch, Hollywood+</div>
+        </div>
+      </div>
+
+      <div class="label">All Routes (sorted)</div>
+      <div class="route-list" style="margin-top:8px">
+        <div class="route-item"><span class="dot"></span>/</div>
+        <div class="route-item"><span class="dot"></span>/admin/manual-payments</div>
+        <div class="route-item"><span class="dot"></span>/admin/payouts</div>
+        <div class="route-item"><span class="dot"></span>/admin/tips</div>
+        <div class="route-item"><span class="dot"></span>/adult-sales-bot</div>
+        <div class="route-item"><span class="dot"></span>/agent-tracker</div>
+        <div class="route-item"><span class="dot"></span>/ai-bot</div>
+        <div class="route-item"><span class="dot"></span>/analytics</div>
+        <div class="route-item"><span class="dot"></span>/animated-flyer-studio</div>
+        <div class="route-item"><span class="dot"></span>/apparel-lab</div>
+        <div class="route-item"><span class="dot"></span>/artist/storefront</div>
+        <div class="route-item"><span class="dot"></span>/brand-deals</div>
+        <div class="route-item"><span class="dot"></span>/chica</div>
+        <div class="route-item"><span class="dot"></span>/command-hub</div>
+        <div class="route-item"><span class="dot"></span>/command-hub-v2</div>
+        <div class="route-item"><span class="dot"></span>/content-dashboard</div>
+        <div class="route-item"><span class="dot"></span>/content-scheduler</div>
+        <div class="route-item"><span class="dot"></span>/control-room</div>
+        <div class="route-item"><span class="dot"></span>/creator</div>
+        <div class="route-item"><span class="dot"></span>/creator-analytics</div>
+        <div class="route-item"><span class="dot"></span>/creator-management</div>
+        <div class="route-item"><span class="dot"></span>/creator-toolbox</div>
+        <div class="route-item"><span class="dot"></span>/creator/:creatorId/protected-demo</div>
+        <div class="route-item"><span class="dot"></span>/creator/:creatorId/tiers</div>
+        <div class="route-item"><span class="dot"></span>/creator/analytics</div>
+        <div class="route-item"><span class="dot"></span>/creator/earnings</div>
+        <div class="route-item"><span class="dot"></span>/creator/subscription-tiers</div>
+        <div class="route-item"><span class="dot"></span>/creator/subscriptions</div>
+        <div class="route-item"><span class="dot"></span>/creator/toolbox</div>
+        <div class="route-item"><span class="dot"></span>/creator/tools</div>
+        <div class="route-item"><span class="dot"></span>/creator/video-studio</div>
+        <div class="route-item"><span class="dot"></span>/culture-selection</div>
+        <div class="route-item"><span class="dot"></span>/dashboard</div>
+        <div class="route-item"><span class="dot"></span>/dayshift-doctor</div>
+        <div class="route-item"><span class="dot"></span>/design-department</div>
+        <div class="route-item"><span class="dot"></span>/dominican</div>
+        <div class="route-item"><span class="dot"></span>/dominicana</div>
+        <div class="route-item"><span class="dot"></span>/emma</div>
+        <div class="route-item"><span class="dot"></span>/emma-ai-agents</div>
+        <div class="route-item"><span class="dot"></span>/emma-empire</div>
+        <div class="route-item"><span class="dot"></span>/emma-university</div>
+        <div class="route-item"><span class="dot"></span>/emma/network</div>
+        <div class="route-item"><span class="dot"></span>/emma/reset</div>
+        <div class="route-item"><span class="dot"></span>/emma/reset-dashboard</div>
+        <div class="route-item"><span class="dot"></span>/empire-brain</div>
+        <div class="route-item"><span class="dot"></span>/empire-brain-dashboard</div>
+        <div class="route-item"><span class="dot"></span>/empire-brain-rules</div>
+        <div class="route-item"><span class="dot"></span>/empire-brain-showrunner</div>
+        <div class="route-item"><span class="dot"></span>/empire-state</div>
+        <div class="route-item new-route"><span class="dot"></span>/empire-cockpit-v3 <span class="tag tag-new">NEW</span></div>
+        <div class="route-item"><span class="dot"></span>/empire-cockpit-v2</div>
+        <div class="route-item"><span class="dot"></span>/explore</div>
+        <div class="route-item"><span class="dot"></span>/feed</div>
+        <div class="route-item"><span class="dot"></span>/flyer-composer</div>
+        <div class="route-item"><span class="dot"></span>/flyer-design-studio</div>
+        <div class="route-item"><span class="dot"></span>/flyer-generator</div>
+        <div class="route-item"><span class="dot"></span>/font-library</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show-studio</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/aderly</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/adult</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/apply</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/canisha</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/dance</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/delbania</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/diana</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/emma</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/fitness</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/leslie</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/lifestyle</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/lirys</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/luvroxie</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/maily</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/pole</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/subscribe</div>
+        <div class="route-item"><span class="dot"></span>/greatest-show/thebiggestb</div>
+        <div class="route-item"><span class="dot"></span>/guia</div>
+        <div class="route-item"><span class="dot"></span>/hollywood-replacement</div>
+        <div class="route-item new-route"><span class="dot"></span>/hollywood-shows <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/hollywood-creator-dashboard <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/hollywood-studio <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/hollywood-academy <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/hollywood/channel/:creatorId <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/hollywood/episode/:episodeId <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/hollywood/:slug <span class="tag tag-new">NEW</span></div>
+        <div class="route-item"><span class="dot"></span>/image-lab</div>
+        <div class="route-item"><span class="dot"></span>/influencer</div>
+        <div class="route-item"><span class="dot"></span>/join-vaultlive</div>
+        <div class="route-item"><span class="dot"></span>/king</div>
+        <div class="route-item"><span class="dot"></span>/king/analytics</div>
+        <div class="route-item"><span class="dot"></span>/king/backoffice</div>
+        <div class="route-item"><span class="dot"></span>/king/content</div>
+        <div class="route-item"><span class="dot"></span>/king/demos</div>
+        <div class="route-item"><span class="dot"></span>/king/emma</div>
+        <div class="route-item"><span class="dot"></span>/king/engine</div>
+        <div class="route-item"><span class="dot"></span>/king/flyer-design-studio</div>
+        <div class="route-item"><span class="dot"></span>/king/flyer-generator</div>
+        <div class="route-item new-route"><span class="dot"></span>/king/gem-center <span class="tag tag-new">NEW</span></div>
+        <div class="route-item"><span class="dot"></span>/king/launch-command</div>
+        <div class="route-item"><span class="dot"></span>/king/presentation-builder</div>
+        <div class="route-item"><span class="dot"></span>/king/script-writer</div>
+        <div class="route-item"><span class="dot"></span>/king/users</div>
+        <div class="route-item"><span class="dot"></span>/king/video-editor</div>
+        <div class="route-item"><span class="dot"></span>/king/video-editor/:projectId</div>
+        <div class="route-item"><span class="dot"></span>/king/video-lab</div>
+        <div class="route-item"><span class="dot"></span>/king/waitlist</div>
+        <div class="route-item"><span class="dot"></span>/king/whatsapp-bot</div>
+        <div class="route-item"><span class="dot"></span>/king/telegram-hub</div>
+        <div class="route-item"><span class="dot"></span>/kingcam-clone</div>
+        <div class="route-item"><span class="dot"></span>/kingcam-demos</div>
+        <div class="route-item"><span class="dot"></span>/kingcam-showcase</div>
+        <div class="route-item"><span class="dot"></span>/kingcam-tours</div>
+        <div class="route-item"><span class="dot"></span>/launch-trailer-studio</div>
+        <div class="route-item"><span class="dot"></span>/lead-capture</div>
+        <div class="route-item"><span class="dot"></span>/learn</div>
+        <div class="route-item"><span class="dot"></span>/live</div>
+        <div class="route-item"><span class="dot"></span>/live-demo</div>
+        <div class="route-item"><span class="dot"></span>/login</div>
+        <div class="route-item new-route"><span class="dot"></span>/loyalty-command <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/my-loyalty <span class="tag tag-new">NEW</span></div>
+        <div class="route-item"><span class="dot"></span>/mark-cuban-agent</div>
+        <div class="route-item"><span class="dot"></span>/marketplace</div>
+        <div class="route-item"><span class="dot"></span>/marketplace/:productId</div>
+        <div class="route-item"><span class="dot"></span>/marketplace/analytics/:productId</div>
+        <div class="route-item"><span class="dot"></span>/marketplace/create</div>
+        <div class="route-item"><span class="dot"></span>/marketplace/manage</div>
+        <div class="route-item"><span class="dot"></span>/messages</div>
+        <div class="route-item"><span class="dot"></span>/messages/:conversationId</div>
+        <div class="route-item"><span class="dot"></span>/monetization</div>
+        <div class="route-item"><span class="dot"></span>/multi-platform-posting</div>
+        <div class="route-item"><span class="dot"></span>/music-library</div>
+        <div class="route-item"><span class="dot"></span>/my-subscriptions</div>
+        <div class="route-item"><span class="dot"></span>/nfc-cards</div>
+        <div class="route-item"><span class="dot"></span>/notifications</div>
+        <div class="route-item"><span class="dot"></span>/nurse</div>
+        <div class="route-item"><span class="dot"></span>/onboard</div>
+        <div class="route-item"><span class="dot"></span>/onboard/creator</div>
+        <div class="route-item"><span class="dot"></span>/onboard/influencer</div>
+        <div class="route-item"><span class="dot"></span>/onboarding</div>
+        <div class="route-item"><span class="dot"></span>/operator</div>
+        <div class="route-item"><span class="dot"></span>/owner-cockpit</div>
+        <div class="route-item"><span class="dot"></span>/owner-cockpit/ai-empire</div>
+        <div class="route-item"><span class="dot"></span>/owner-cockpit/apple-queue</div>
+        <div class="route-item"><span class="dot"></span>/owner-cockpit/chicas-empire</div>
+        <div class="route-item"><span class="dot"></span>/owner-cockpit/espionage</div>
+        <div class="route-item"><span class="dot"></span>/owner-cockpit/presentation-empire</div>
+        <div class="route-item"><span class="dot"></span>/owner-cockpit/recruitment</div>
+        <div class="route-item"><span class="dot"></span>/owner-control</div>
+        <div class="route-item"><span class="dot"></span>/owner-status</div>
+        <div class="route-item"><span class="dot"></span>/payout-setup</div>
+        <div class="route-item"><span class="dot"></span>/performance-insights</div>
+        <div class="route-item"><span class="dot"></span>/platform-connections</div>
+        <div class="route-item"><span class="dot"></span>/podcast-studio</div>
+        <div class="route-item"><span class="dot"></span>/presentation-builder</div>
+        <div class="route-item"><span class="dot"></span>/presentation-empire</div>
+        <div class="route-item"><span class="dot"></span>/profile/:username</div>
+        <div class="route-item"><span class="dot"></span>/profile/edit</div>
+        <div class="route-item"><span class="dot"></span>/proof-gate</div>
+        <div class="route-item"><span class="dot"></span>/real-estate-empire</div>
+        <div class="route-item"><span class="dot"></span>/recruiter</div>
+        <div class="route-item"><span class="dot"></span>/recruiter-dashboard</div>
+        <div class="route-item"><span class="dot"></span>/register</div>
+        <div class="route-item"><span class="dot"></span>/services</div>
+        <div class="route-item"><span class="dot"></span>/shows/:slug</div>
+        <div class="route-item"><span class="dot"></span>/shows/:slug/episodes/:episodeId</div>
+        <div class="route-item"><span class="dot"></span>/smart-album</div>
+        <div class="route-item"><span class="dot"></span>/social-audit</div>
+        <div class="route-item"><span class="dot"></span>/stream/:id</div>
+        <div class="route-item"><span class="dot"></span>/studio-slots</div>
+        <div class="route-item"><span class="dot"></span>/subscribe/:creatorId</div>
+        <div class="route-item"><span class="dot"></span>/subscriptions</div>
+        <div class="route-item"><span class="dot"></span>/telegram-setup</div>
+        <div class="route-item"><span class="dot"></span>/thumbnail-generator</div>
+        <div class="route-item"><span class="dot"></span>/tools/viral-optimizer</div>
+        <div class="route-item"><span class="dot"></span>/unified-publisher</div>
+        <div class="route-item"><span class="dot"></span>/university</div>
+        <div class="route-item"><span class="dot"></span>/vault-analytics</div>
+        <div class="route-item"><span class="dot"></span>/vault-culture</div>
+        <div class="route-item"><span class="dot"></span>/vault-drop</div>
+        <div class="route-item"><span class="dot"></span>/vault-guardian</div>
+        <div class="route-item"><span class="dot"></span>/vault-moment</div>
+        <div class="route-item"><span class="dot"></span>/vault-pass</div>
+        <div class="route-item"><span class="dot"></span>/vault-pay</div>
+        <div class="route-item"><span class="dot"></span>/vault-remix</div>
+        <div class="route-item"><span class="dot"></span>/vault-rise</div>
+        <div class="route-item"><span class="dot"></span>/vault-snap</div>
+        <div class="route-item"><span class="dot"></span>/vault-x</div>
+        <div class="route-item"><span class="dot"></span>/vaultlive</div>
+        <div class="route-item"><span class="dot"></span>/vaultspace-dashboard</div>
+        <div class="route-item"><span class="dot"></span>/vertical-pack</div>
+        <div class="route-item"><span class="dot"></span>/video-lab</div>
+        <div class="route-item"><span class="dot"></span>/video-lab-pro</div>
+        <div class="route-item"><span class="dot"></span>/video-production-studio</div>
+        <div class="route-item"><span class="dot"></span>/video-studio</div>
+        <div class="route-item"><span class="dot"></span>/viral-optimizer</div>
+        <div class="route-item"><span class="dot"></span>/whatsapp-content</div>
+        <div class="route-item new-route"><span class="dot"></span>/chuuch <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/chuuch/elders/:slug <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/chuuch/archive <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/chuuch/teaching <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/chuuch/media <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/chuuch/merch <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/chuuch/transition <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/chuuch/members <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/chuuch/code <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/chuuch/events <span class="tag tag-new">NEW</span></div>
+        <div class="route-item new-route"><span class="dot"></span>/follow-list/:userId/:type <span class="tag tag-new">NEW</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 4: tRPC NAMESPACES ───────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <span class="section-title">tRPC Router Namespaces — server/routers.ts · 249 Total · Apr 6, 2026</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-4" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">Total Namespaces</div>
+          <div class="card-value">249</div>
+          <div class="card-sub">appRouter keys</div>
+        </div>
+        <div class="card">
+          <div class="card-title">New Since Last</div>
+          <div class="card-value" style="color:var(--green)">5</div>
+          <div class="card-sub">cloneEmpire, kingcamAI, videoEnhance, agentOrchestrator, swarmEngine</div>
+        </div>
+        <div class="card">
+          <div class="card-title">AI Namespaces</div>
+          <div class="card-value">28</div>
+          <div class="card-sub">ai* prefixed routers</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Vault Namespaces</div>
+          <div class="card-value">18</div>
+          <div class="card-sub">vault* prefixed routers</div>
+        </div>
+      </div>
+
+      <div class="label">Core Platform</div>
+      <div class="ns-grid" style="margin-bottom:12px">
+        <span class="ns-tag">auth</span>
+        <span class="ns-tag">users</span>
+        <span class="ns-tag">waitlist</span>
+        <span class="ns-tag">content</span>
+        <span class="ns-tag">system</span>
+        <span class="ns-tag">analytics</span>
+        <span class="ns-tag">payments</span>
+        <span class="ns-tag">subscriptions</span>
+        <span class="ns-tag">profile</span>
+        <span class="ns-tag">notification</span>
+        <span class="ns-tag">explore</span>
+        <span class="ns-tag">follow</span>
+        <span class="ns-tag">post</span>
+        <span class="ns-tag">story</span>
+        <span class="ns-tag">comment</span>
+        <span class="ns-tag">messages</span>
+        <span class="ns-tag">onboarding</span>
+        <span class="ns-tag">onboardingV2</span>
+        <span class="ns-tag">simpleAuth</span>
+        <span class="ns-tag">standaloneAuth</span>
+        <span class="ns-tag">oauthCallback</span>
+        <span class="ns-tag">oauthProxy</span>
+        <span class="ns-tag">stripeCheckout</span>
+        <span class="ns-tag">stripeIntegration</span>
+        <span class="ns-tag">payouts</span>
+        <span class="ns-tag">manualPayment</span>
+        <span class="ns-tag">proofGate</span>
+        <span class="ns-tag">scheduler</span>
+      </div>
+
+      <div class="label">AI / Agent Layer</div>
+      <div class="ns-grid" style="margin-bottom:12px">
+        <span class="ns-tag">aiBot</span>
+        <span class="ns-tag">aiCloneArmy</span>
+        <span class="ns-tag">aiContentImport</span>
+        <span class="ns-tag">aiEmpireOrchestrator</span>
+        <span class="ns-tag">aiEmpire</span>
+        <span class="ns-tag">aiEngagementMultiplier</span>
+        <span class="ns-tag">aiMonetizationHunter</span>
+        <span class="ns-tag">aiOnboardingAssistant</span>
+        <span class="ns-tag">aiOnboardingConcierge</span>
+        <span class="ns-tag">aiPlatformDominator</span>
+        <span class="ns-tag">aiRevenueTracker</span>
+        <span class="ns-tag">aiScriptSurgeon</span>
+        <span class="ns-tag">aiTrendProphet</span>
+        <span class="ns-tag">aiAffiliateOptimizer</span>
+        <span class="ns-tag">aiAudienceClone</span>
+        <span class="ns-tag">aiRevenueOptimizer</span>
+        <span class="ns-tag">aiContentDirector</span>
+        <span class="ns-tag">aiCourseGenerator</span>
+        <span class="ns-tag">aiTutor</span>
+        <span class="ns-tag">aiVideoDirector</span>
+        <span class="ns-tag">aiDealCloser</span>
+        <span class="ns-tag">agentTracker</span>
+        <span class="ns-tag">agentExecutor</span>
+        <span class="ns-tag">agentOrchestrator <span style="color:var(--green)">★</span></span>
+        <span class="ns-tag new">swarmEngine ★</span>
+        <span class="ns-tag">empireBrain</span>
+        <span class="ns-tag">empireBrainIntegration</span>
+        <span class="ns-tag">empireAgents</span>
+        <span class="ns-tag">realGPT</span>
+        <span class="ns-tag">orchestrator</span>
+        <span class="ns-tag">os</span>
+        <span class="ns-tag">markCubanAgent</span>
+        <span class="ns-tag">mercedesAgent</span>
+      </div>
+
+      <div class="label">KingCam / Clone Empire</div>
+      <div class="ns-grid" style="margin-bottom:12px">
+        <span class="ns-tag">kingcamClone</span>
+        <span class="ns-tag">kingcamVault</span>
+        <span class="ns-tag">kingcamDemos</span>
+        <span class="ns-tag">kingcamPerks</span>
+        <span class="ns-tag">kingcamTours</span>
+        <span class="ns-tag">kingcamScriptWriter</span>
+        <span class="ns-tag">kingcamCategoryCreating</span>
+        <span class="ns-tag">kingcamImport</span>
+        <span class="ns-tag">kingcamBrain</span>
+        <span class="ns-tag">kingcamEditor</span>
+        <span class="ns-tag new">kingcamAI ★</span>
+        <span class="ns-tag new">cloneEmpire ★</span>
+        <span class="ns-tag">cloneLab</span>
+        <span class="ns-tag">cloneSuccessSystem</span>
+        <span class="ns-tag">cloneTours</span>
+        <span class="ns-tag">kingframe</span>
+        <span class="ns-tag">kingWorld3D</span>
+        <span class="ns-tag">kingLife</span>
+      </div>
+
+      <div class="label">Vault Products</div>
+      <div class="ns-grid" style="margin-bottom:12px">
+        <span class="ns-tag">vaultLive</span>
+        <span class="ns-tag">vaultLiveEnhanced</span>
+        <span class="ns-tag">vaultlivePro</span>
+        <span class="ns-tag">vaultAnalytics</span>
+        <span class="ns-tag">vaultCommunity</span>
+        <span class="ns-tag">vaultCreatorTools</span>
+        <span class="ns-tag">vaultCulture</span>
+        <span class="ns-tag">vaultDrop</span>
+        <span class="ns-tag">vaultLoves</span>
+        <span class="ns-tag">vaultMarket</span>
+        <span class="ns-tag">vaultMoment</span>
+        <span class="ns-tag">vaultPass</span>
+        <span class="ns-tag">vaultPay</span>
+        <span class="ns-tag">vaultRemix</span>
+        <span class="ns-tag">vaultRise</span>
+        <span class="ns-tag">vaultSnap</span>
+        <span class="ns-tag">vaultmarket</span>
+        <span class="ns-tag">vaultremix</span>
+        <span class="ns-tag">vaultspace</span>
+        <span class="ns-tag">vaultspaceAutomation</span>
+        <span class="ns-tag">vaultu</span>
+        <span class="ns-tag">vaultx</span>
+      </div>
+
+      <div class="label">Content / Media / Studio</div>
+      <div class="ns-grid" style="margin-bottom:12px">
+        <span class="ns-tag">flyerAI</span>
+        <span class="ns-tag">flyerAnalytics</span>
+        <span class="ns-tag">flyerBatchExport</span>
+        <span class="ns-tag">flyerComposer</span>
+        <span class="ns-tag">flyerStudio</span>
+        <span class="ns-tag">flyerGenerator</span>
+        <span class="ns-tag">animatedFlyer</span>
+        <span class="ns-tag">imageLab</span>
+        <span class="ns-tag">batchGeneration</span>
+        <span class="ns-tag">brollGenerator</span>
+        <span class="ns-tag">videoLab</span>
+        <span class="ns-tag">videoLabAgent</span>
+        <span class="ns-tag">videoLabPro</span>
+        <span class="ns-tag">videoProcessing</span>
+        <span class="ns-tag">videoStudioV2</span>
+        <span class="ns-tag">videoEditor</span>
+        <span class="ns-tag">creatorVideoEditor</span>
+        <span class="ns-tag new">videoEnhance ★</span>
+        <span class="ns-tag">scriptAI</span>
+        <span class="ns-tag">scriptToVideo</span>
+        <span class="ns-tag">thumbnailGenerator</span>
+        <span class="ns-tag">smartCaptions</span>
+        <span class="ns-tag">smartAlbum</span>
+        <span class="ns-tag">musicAI</span>
+        <span class="ns-tag">musicLibrary</span>
+        <span class="ns-tag">artistMusic</span>
+        <span class="ns-tag">podcastStudio</span>
+        <span class="ns-tag">podcasting</span>
+        <span class="ns-tag">podcastOS</span>
+        <span class="ns-tag">contentRepurposing</span>
+        <span class="ns-tag">mediaCore</span>
+        <span class="ns-tag">storiesCompilation</span>
+        <span class="ns-tag">dubbingAI</span>
+        <span class="ns-tag">launchTrailerStudio</span>
+        <span class="ns-tag">greatestShow</span>
+        <span class="ns-tag">greatestShowStudio</span>
+      </div>
+
+      <div class="label">Hollywood / Production</div>
+      <div class="ns-grid" style="margin-bottom:12px">
+        <span class="ns-tag">hollywoodReplacement</span>
+        <span class="ns-tag">hollywoodProduction</span>
+        <span class="ns-tag">hollywoodRepurposing</span>
+        <span class="ns-tag">hollywoodDistribution</span>
+        <span class="ns-tag">hollywoodMonetization</span>
+        <span class="ns-tag">hollywoodCreator</span>
+        <span class="ns-tag">hollywoodAnalytics</span>
+        <span class="ns-tag">liveSessionScheduler</span>
+        <span class="ns-tag">liveDemo</span>
+      </div>
+
+      <div class="label">Commerce / Monetization</div>
+      <div class="ns-grid" style="margin-bottom:12px">
+        <span class="ns-tag">marketplace</span>
+        <span class="ns-tag">marketplaceAI</span>
+        <span class="ns-tag">crossVerticalMarketplace</span>
+        <span class="ns-tag">storefront</span>
+        <span class="ns-tag">brandDeals</span>
+        <span class="ns-tag">brandDealEmailAutomation</span>
+        <span class="ns-tag">botMonetization</span>
+        <span class="ns-tag">monetizationOptimizer</span>
+        <span class="ns-tag">cryptoPayouts</span>
+        <span class="ns-tag">checkoutBot</span>
+        <span class="ns-tag">adultSalesBot</span>
+        <span class="ns-tag">adultVerification</span>
+        <span class="ns-tag">onlyfansIntegration</span>
+        <span class="ns-tag">verticalPack</span>
+        <span class="ns-tag">verticalWizard</span>
+        <span class="ns-tag">waitlistEngine</span>
+        <span class="ns-tag">performanceFeedback</span>
+        <span class="ns-tag">productAnalyticsAI</span>
+      </div>
+
+      <div class="label">Emma / Chica / Loyalty</div>
+      <div class="ns-grid" style="margin-bottom:12px">
+        <span class="ns-tag">emma</span>
+        <span class="ns-tag">emmaContent</span>
+        <span class="ns-tag">emmaDashboard</span>
+        <span class="ns-tag">emmaLeads</span>
+        <span class="ns-tag">emmaNetwork</span>
+        <span class="ns-tag">emmaOs</span>
+        <span class="ns-tag">emmaCaseStudy</span>
+        <span class="ns-tag">emmaPayments</span>
+        <span class="ns-tag">emmaVoice</span>
+        <span class="ns-tag">chicaCockpit</span>
+        <span class="ns-tag">chicaFunnel</span>
+        <span class="ns-tag">chicasEmpire</span>
+        <span class="ns-tag">loyalty</span>
+        <span class="ns-tag">recruitmentWeapon</span>
+        <span class="ns-tag">dancerOnboarding</span>
+        <span class="ns-tag">collabAI</span>
+      </div>
+
+      <div class="label">Telegram / WhatsApp / Social</div>
+      <div class="ns-grid" style="margin-bottom:12px">
+        <span class="ns-tag">telegram</span>
+        <span class="ns-tag">telegramBot</span>
+        <span class="ns-tag">telegramHub</span>
+        <span class="ns-tag">telegramWebhook</span>
+        <span class="ns-tag">whatsappBot</span>
+        <span class="ns-tag">whatsappContent</span>
+        <span class="ns-tag">platformPosting</span>
+        <span class="ns-tag">socialMediaAudit</span>
+        <span class="ns-tag">socialScraper</span>
+        <span class="ns-tag">socialMediaAutoPoster</span>
+        <span class="ns-tag">socialLink</span>
+        <span class="ns-tag">viralOptimizer</span>
+        <span class="ns-tag">viralMechanics</span>
+        <span class="ns-tag">viralPerformance</span>
+        <span class="ns-tag">eventBus</span>
+      </div>
+
+      <div class="label">University / Education</div>
+      <div class="ns-grid" style="margin-bottom:12px">
+        <span class="ns-tag">university</span>
+        <span class="ns-tag">universityV2</span>
+        <span class="ns-tag">courseVideo</span>
+        <span class="ns-tag">liveCohorts</span>
+        <span class="ns-tag">skillVerification</span>
+        <span class="ns-tag">mentorship</span>
+        <span class="ns-tag">microCredentials</span>
+        <span class="ns-tag">jobPlacement</span>
+        <span class="ns-tag">uci</span>
+        <span class="ns-tag">demos</span>
+        <span class="ns-tag">kingcamDemos</span>
+      </div>
+
+      <div class="label">Infrastructure / Admin / Operator</div>
+      <div class="ns-grid" style="margin-bottom:12px">
+        <span class="ns-tag">operator</span>
+        <span class="ns-tag">ownerCockpit</span>
+        <span class="ns-tag">ownerControl</span>
+        <span class="ns-tag">missionControl</span>
+        <span class="ns-tag">commandHub</span>
+        <span class="ns-tag">commandHubV2</span>
+        <span class="ns-tag">adminRouter</span>
+        <span class="ns-tag">devguardian</span>
+        <span class="ns-tag">multiTenant</span>
+        <span class="ns-tag">empireState</span>
+        <span class="ns-tag">empireWeeklyBrief</span>
+        <span class="ns-tag">brandEngine</span>
+        <span class="ns-tag">brandCoordination</span>
+        <span class="ns-tag">brandDNA</span>
+        <span class="ns-tag">brandExtraction</span>
+        <span class="ns-tag">designDepartment</span>
+        <span class="ns-tag">designDepartmentWeaponized</span>
+        <span class="ns-tag">designerOS</span>
+        <span class="ns-tag">gemEngine</span>
+        <span class="ns-tag">chuuchMembers</span>
+        <span class="ns-tag">channels</span>
+        <span class="ns-tag">businessCards</span>
+        <span class="ns-tag">nfcCards</span>
+        <span class="ns-tag">templateRecommendations</span>
+        <span class="ns-tag">categoryCreator</span>
+        <span class="ns-tag">campaign</span>
+        <span class="ns-tag">apparel</span>
+        <span class="ns-tag">services</span>
+        <span class="ns-tag">studioSlots</span>
+        <span class="ns-tag">autoCreditRepairExecutor</span>
+        <span class="ns-tag">autoGrantApplicator</span>
+        <span class="ns-tag">autoHousingFinder</span>
+        <span class="ns-tag">realEstateEmpire</span>
+        <span class="ns-tag">realEstateEmpireAgent</span>
+        <span class="ns-tag">property</span>
+        <span class="ns-tag">dayShiftDoctor</span>
+        <span class="ns-tag">memberOnboarding</span>
+        <span class="ns-tag">guidedMode</span>
+        <span class="ns-tag">cultural</span>
+        <span class="ns-tag">brands</span>
+        <span class="ns-tag">competitorIntel</span>
+        <span class="ns-tag">appleQ</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 5: BACKEND API ROUTES ────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <span class="section-title">Backend REST API Routes — Express (creatorvault-empire)</span>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead>
+          <tr>
+            <th>Mount Path</th>
+            <th>Router File</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">/api/auth</td><td class="mono">routes/auth.ts</td><td>Authentication, JWT, session</td></tr>
+          <tr><td class="mono">/api/creator</td><td class="mono">routes/creator.ts</td><td>Creator profile management</td></tr>
+          <tr><td class="mono">/api/content</td><td class="mono">routes/content.ts</td><td>Content upload and management</td></tr>
+          <tr><td class="mono">/api/subscriptions</td><td class="mono">routes/subscriptions.ts</td><td>Fan subscription handling</td></tr>
+          <tr><td class="mono">/api/payments</td><td class="mono">routes/payments.ts</td><td>Stripe payments + webhooks</td></tr>
+          <tr><td class="mono">/api/messages</td><td class="mono">routes/messages.ts</td><td>Direct messaging</td></tr>
+          <tr><td class="mono">/api/explore</td><td class="mono">routes/explore.ts</td><td>Creator discovery feed</td></tr>
+          <tr><td class="mono">/api/stories</td><td class="mono">routes/stories.ts</td><td>Stories feature</td></tr>
+          <tr><td class="mono">/api/king</td><td class="mono">routes/kingRoom.ts</td><td>Admin/King Room controls</td></tr>
+          <tr><td class="mono">/api/upload</td><td class="mono">routes/upload.ts</td><td>File upload handling</td></tr>
+          <tr><td class="mono">/health</td><td class="mono">index.ts</td><td>Health check endpoint</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 6: NAVIGATION ZONES (DashboardLayout) ───── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <span class="section-title">DashboardLayout Navigation Zones — KingCam OS V2</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-2">
+        <div>
+          <div class="label">Zone: COMMAND</div>
+          <table style="margin-bottom:12px">
+            <tbody>
+              <tr><td class="mono">/king</td><td class="dim">Today's Mission</td></tr>
+              <tr><td class="mono">/empire-brain</td><td class="dim">Empire Brain</td></tr>
+              <tr><td class="mono">/king/launch-command</td><td class="dim">Launch Command</td></tr>
+              <tr><td class="mono">/king/analytics</td><td class="dim">Analytics</td></tr>
+              <tr><td class="mono">/king/users</td><td class="dim">Users</td></tr>
+            </tbody>
+          </table>
+
+          <div class="label">Zone: IDENTITY</div>
+          <table style="margin-bottom:12px">
+            <tbody>
+              <tr><td class="mono">/king/identity</td><td class="dim">KingCam Profile</td></tr>
+              <tr><td class="mono">/king/engine</td><td class="dim">Brand Assets</td></tr>
+              <tr><td class="mono">/king/script-writer</td><td class="dim">Voice Library</td></tr>
+              <tr><td class="mono">/king/backoffice</td><td class="dim">Vault</td></tr>
+              <tr><td class="mono">/king/demos</td><td class="dim">KingCam Demos</td></tr>
+            </tbody>
+          </table>
+
+          <div class="label">Zone: EXECUTION</div>
+          <table>
+            <tbody>
+              <tr><td class="mono">/king/money-mission</td><td class="dim">Money Mission</td></tr>
+              <tr><td class="mono">/owner-cockpit/chicas-empire</td><td class="dim">Chicas Empire</td></tr>
+              <tr><td class="mono">/owner-cockpit/presentation-empire</td><td class="dim">Presentation Empire</td></tr>
+              <tr><td class="mono">/owner-cockpit/recruitment</td><td class="dim">Recruitment</td></tr>
+              <tr><td class="mono">/marketplace</td><td class="dim">Marketplace</td></tr>
+              <tr><td class="mono">/subscriptions</td><td class="dim">Subscriptions</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="label">Zone: STUDIOS</div>
+          <table style="margin-bottom:12px">
+            <tbody>
+              <tr><td class="mono">/king/presentation-builder</td><td class="dim">Presentation Builder</td></tr>
+              <tr><td class="mono">/emma-ai-agents</td><td class="dim">AI Agents</td></tr>
+              <tr><td class="mono">/animated-flyer-studio</td><td class="dim">Animated Flyer</td></tr>
+              <tr><td class="mono">/image-lab</td><td class="dim">Image Lab</td></tr>
+              <tr><td class="mono">/vaultx-studio</td><td class="dim">VaultX Studio</td></tr>
+              <tr><td class="mono">/university</td><td class="dim">University</td></tr>
+              <tr><td class="mono">/hollywood-studio</td><td class="dim">Hollywood Studio <span class="tag tag-new">NEW</span></td></tr>
+              <tr><td class="mono">/chuuch/members</td><td class="dim">Chuuch <span class="tag tag-new">NEW</span></td></tr>
+              <tr><td class="mono">/dayshift-doctor</td><td class="dim">DayShift Doctor</td></tr>
+              <tr><td class="mono">/apparel-lab</td><td class="dim">Apparel Lab</td></tr>
+            </tbody>
+          </table>
+
+          <div class="label">Zone: INFRA</div>
+          <table>
+            <tbody>
+              <tr><td class="mono">/king/backoffice</td><td class="dim">Back Office</td></tr>
+              <tr><td class="mono">/empire-state</td><td class="dim">Empire State</td></tr>
+              <tr><td class="mono">/agent-tracker</td><td class="dim">Agent Tracker</td></tr>
+              <tr><td class="mono">/king/gem-center</td><td class="dim">Gem Center <span class="tag tag-new">NEW</span></td></tr>
+              <tr><td class="mono">/vaultspace-dashboard</td><td class="dim">VaultSpace</td></tr>
+              <tr><td class="mono">/king/whatsapp-bot</td><td class="dim">WhatsApp Bot</td></tr>
+              <tr><td class="mono">/loyalty-command</td><td class="dim">Loyalty Command <span class="tag tag-new">NEW</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 7: SERVER INFRASTRUCTURE ─────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <span class="section-title">Server Infrastructure — VPS 134.199.202.69</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-2">
+        <div>
+          <div class="label">VPS Details</div>
+          <table>
+            <tbody>
+              <tr><td class="dim">IP Address</td><td class="highlight">134.199.202.69</td></tr>
+              <tr><td class="dim">OS</td><td>Ubuntu Linux</td></tr>
+              <tr><td class="dim">Uptime</td><td class="highlight">50 days 20h 55m</td></tr>
+              <tr><td class="dim">Load Avg</td><td>0.10 / 0.04 / 0.01</td></tr>
+              <tr><td class="dim">Disk Used</td><td>53 GB / 87 GB (62%)</td></tr>
+              <tr><td class="dim">SSH User</td><td class="mono">root</td></tr>
+              <tr><td class="dim">App Port</td><td class="mono">3001 (Express)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="label">Databases</div>
+          <table>
+            <tbody>
+              <tr><td class="dim">MySQL DB</td><td class="highlight">creatorvault (796 tables)</td></tr>
+              <tr><td class="dim">MySQL User</td><td class="mono">creatorvault</td></tr>
+              <tr><td class="dim">MySQL Port</td><td class="mono">3306</td></tr>
+              <tr><td class="dim">PostgreSQL DB</td><td class="highlight">creatorvault (45 tables)</td></tr>
+              <tr><td class="dim">PG User</td><td class="mono">creatorvault</td></tr>
+              <tr><td class="dim">PG Port</td><td class="mono">5432</td></tr>
+              <tr><td class="dim">App Dirs</td><td class="mono">/root/creatorvault &amp; /root/creatorvault-empire</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 8: RECENTLY ADDED PAGES/FEATURES ─────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">08</span>
+      <span class="section-title">Recently Added Pages &amp; Features (Since Last Map Update)</span>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Route / Namespace</th>
+            <th>Commit / Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Clone Empire</strong></td>
+            <td class="mono">/kingcam-clone · cloneEmpire tRPC</td>
+            <td class="dim">Apr 2, 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>KingCam AI Unified Layer</strong></td>
+            <td class="mono">kingcamAI tRPC · all providers wired</td>
+            <td class="dim">Apr 2, 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>VideoProductionStudio v3</strong></td>
+            <td class="mono">/video-production-studio</td>
+            <td class="dim">Mar 31, 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>VaultLive Pro TV Truck v3</strong></td>
+            <td class="mono">/vaultlive · vaultlivePro tRPC</td>
+            <td class="dim">Mar 31, 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>VaultLive Control Room V1</strong></td>
+            <td class="mono">/control-room</td>
+            <td class="dim">Mar 30, 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>Apparel Lab v5 Empire Atelier</strong></td>
+            <td class="mono">/apparel-lab · apparel tRPC</td>
+            <td class="dim">Mar 29, 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>Chuuch Platform</strong></td>
+            <td class="mono">/chuuch/* (10 sub-routes) · chuuchMembers tRPC</td>
+            <td class="dim">Mar 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>Hollywood Suite</strong></td>
+            <td class="mono">/hollywood-* (7 routes) · hollywood* tRPC</td>
+            <td class="dim">Mar 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>Loyalty Command</strong></td>
+            <td class="mono">/loyalty-command · /my-loyalty · loyalty tRPC</td>
+            <td class="dim">Mar 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>Gem Center</strong></td>
+            <td class="mono">/king/gem-center · gemEngine tRPC</td>
+            <td class="dim">Mar 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>Haitian Sector / Ayiti</strong></td>
+            <td class="mono">Haitian cultural vertical + Dominican roster</td>
+            <td class="dim">Mar 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>Swarm Engine</strong></td>
+            <td class="mono">swarmEngine tRPC namespace</td>
+            <td class="dim">Apr 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>Agent Orchestrator</strong></td>
+            <td class="mono">agentOrchestrator tRPC namespace</td>
+            <td class="dim">Apr 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>Video Enhance</strong></td>
+            <td class="mono">videoEnhance tRPC namespace</td>
+            <td class="dim">Apr 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+          <tr>
+            <td><strong>Empire Cockpit V3</strong></td>
+            <td class="mono">/empire-cockpit-v3</td>
+            <td class="dim">Apr 2026</td>
+            <td><span class="tag tag-new">LIVE</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 9: KEY COMMANDS ──────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">09</span>
+      <span class="section-title">Operator Quick Commands — SSH &amp; DB</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-2">
+        <div>
+          <div class="label">SSH Access</div>
+          <div class="code-block">sshpass -p 'KingCam214CreatorVault' ssh -o StrictHostKeyChecking=no root@134.199.202.69</div>
+
+          <div class="label" style="margin-top:12px">PM2 Commands</div>
+          <div class="code-block">pm2 list                    # view all processes
+pm2 logs creatorvault       # tail app logs
+pm2 restart creatorvault    # restart main app
+pm2 reload creatorvault     # zero-downtime reload
+pm2 stop adult-sales-poller # stop specific process</div>
+
+          <div class="label" style="margin-top:12px">Git Sync</div>
+          <div class="code-block">cd /root/creatorvault && git pull
+pm2 restart creatorvault</div>
+        </div>
+        <div>
+          <div class="label">MySQL Queries</div>
+          <div class="code-block">mysql -u creatorvault -pKingCam214CreatorVault creatorvault
+
+-- Quick counts
+SELECT COUNT(*) FROM users;
+SELECT COUNT(*) FROM flyer_animation_jobs;
+SELECT COUNT(*) FROM university_courses;
+
+-- Top tables by rows
+SELECT table_name, table_rows 
+FROM information_schema.tables 
+WHERE table_schema='creatorvault' 
+ORDER BY table_rows DESC LIMIT 20;</div>
+
+          <div class="label" style="margin-top:12px">PostgreSQL Queries</div>
+          <div class="code-block">PGPASSWORD='KingCam214CreatorVault' psql \
+  -U creatorvault -d creatorvault -h localhost
+
+-- All table counts
+SELECT relname, n_live_tup 
+FROM pg_stat_user_tables 
+ORDER BY n_live_tup DESC;</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 10: ENV VARIABLES ────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">10</span>
+      <span class="section-title">Environment Configuration — Key Variables</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-2">
+        <div>
+          <div class="label">creatorvault-empire (Express Backend)</div>
+          <table>
+            <tbody>
+              <tr><td class="mono dim">NODE_ENV</td><td>production</td></tr>
+              <tr><td class="mono dim">PORT</td><td>3001</td></tr>
+              <tr><td class="mono dim">DATABASE_URL</td><td class="mono">postgresql://creatorvault:***@localhost:5432/creatorvault</td></tr>
+              <tr><td class="mono dim">FRONTEND_URL</td><td class="mono">http://localhost:3000</td></tr>
+              <tr><td class="mono dim">JWT_SECRET</td><td class="dim">[set]</td></tr>
+              <tr><td class="mono dim">REPLICATE_API_TOKEN</td><td class="dim">[set]</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="label">creatorvault (Main App — MySQL)</div>
+          <table>
+            <tbody>
+              <tr><td class="mono dim">DATABASE_URL</td><td class="mono">mysql://creatorvault:***@localhost:3306/creatorvault</td></tr>
+              <tr><td class="mono dim">App Path</td><td class="mono">/root/creatorvault</td></tr>
+              <tr><td class="mono dim">Dist</td><td class="mono">/root/creatorvault/dist/index.js</td></tr>
+              <tr><td class="mono dim">Logs</td><td class="mono">/root/creatorvault/logs/</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 11: GITHUB REPO ──────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">11</span>
+      <span class="section-title">GitHub Repository — kingcam214/creatorvault-ultrastate</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-2">
+        <div>
+          <div class="label">Repo Info</div>
+          <table>
+            <tbody>
+              <tr><td class="dim">Repo</td><td class="mono highlight">kingcam214/creatorvault-ultrastate</td></tr>
+              <tr><td class="dim">Branch</td><td class="mono">main</td></tr>
+              <tr><td class="dim">Latest Commit</td><td>feat: Clone Empire + KingCam AI unified layer</td></tr>
+              <tr><td class="dim">Commit Date</td><td>Apr 2, 2026</td></tr>
+              <tr><td class="dim">App.tsx</td><td class="mono">client/src/App.tsx (507 lines)</td></tr>
+              <tr><td class="dim">routers.ts</td><td class="mono">server/routers.ts (478 lines)</td></tr>
+              <tr><td class="dim">DashboardLayout</td><td class="mono">client/src/components/DashboardLayout.tsx</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="label">Recent Commits</div>
+          <table>
+            <tbody>
+              <tr><td class="mono dim">03f2f19</td><td class="dim">Clone Empire + KingCam AI unified layer</td><td>Apr 2</td></tr>
+              <tr><td class="mono dim">6ae7488</td><td class="dim">KingCam AI OS — unified multi-model AI</td><td>Apr 1</td></tr>
+              <tr><td class="mono dim">185f1ca</td><td class="dim">VideoProductionStudio v3 + VaultLive Pro TV Truck v3</td><td>Mar 31</td></tr>
+              <tr><td class="mono dim">ac40031</td><td class="dim">VaultLive Control Room V1</td><td>Mar 30</td></tr>
+              <tr><td class="mono dim">1e6c50e</td><td class="dim">Platform-wide visual-first audit</td><td>Mar 29</td></tr>
+              <tr><td class="mono dim">260b1c5</td><td class="dim">Apparel Lab v5 Empire Atelier</td><td>Mar 28</td></tr>
+              <tr><td class="mono dim">a7e0582</td><td class="dim">Sync all workspace artifacts</td><td>Apr 1</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 12: AGENT / SWARM STATUS ─────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">12</span>
+      <span class="section-title">AI Agent &amp; Swarm Status</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-4" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">Agent Logs</div>
+          <div class="card-value">49,908</div>
+          <div class="card-sub">agent_logs table</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Execution Runs</div>
+          <div class="card-value">25,254</div>
+          <div class="card-sub">agent_execution_runs</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Credit Transactions</div>
+          <div class="card-value">21,044</div>
+          <div class="card-sub">agent_credit_transactions</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Empire Agents</div>
+          <div class="card-value">49</div>
+          <div class="card-sub">empire_agents registry</div>
+        </div>
+      </div>
+      <div class="label">Active PM2 Monitors</div>
+      <table>
+        <tbody>
+          <tr>
+            <td class="mono">cv-swarm-monitor</td>
+            <td><span class="pm2-online">● online</span></td>
+            <td class="dim">Swarm health monitoring · 43.9 MB · 4D uptime</td>
+          </tr>
+          <tr>
+            <td class="mono">mediacore-python</td>
+            <td><span class="pm2-online">● online</span></td>
+            <td class="dim">Python media processing core · 9.3 MB · 4D uptime</td>
+          </tr>
+          <tr>
+            <td class="mono">cv-git-sync</td>
+            <td><span class="pm2-online">● online</span></td>
+            <td class="dim">Auto git sync daemon · 2.4 MB · 2D uptime</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 13: PLATFORM VERTICALS ───────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">13</span>
+      <span class="section-title">Platform Verticals &amp; Product Lines</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title">👑 KingCam Empire</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:6px">
+            KingCam Clone · KingCam AI · KingCam Vault · KingCam Tours · KingCam Demos · KingCam Script Writer · Clone Empire (NEW)
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">💃 Greatest Show / Chicas</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:6px">
+            18 creator profiles · Dominican roster · Haitian Sector · Chica Funnels · Loyalty System · VaultX Adult Premium
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🎬 Hollywood Suite</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:6px">
+            Hollywood Shows · Hollywood Studio · Hollywood Academy · Hollywood Creator Dashboard · Episode Theater 3D
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🔴 VaultLive</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:6px">
+            VaultLive Simple · VaultLive Pro TV Truck v3 · Control Room V1 · Multi-platform streaming · 2 recordings
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🎓 University</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:6px">
+            31 courses · 240 lessons · Emma University · Live Cohorts · Skill Verification · Mentorship · Job Placement
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🤖 AI Empire</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:6px">
+            28 AI routers · Swarm Engine · Agent Orchestrator · Empire Brain · 49,908 agent logs · KingCam AI unified
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🏪 Marketplace</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:6px">
+            10 products · Cross-vertical marketplace · Storefront · Brand Deals · NFC Cards · Business Cards
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">⛪ Chuuch</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:6px">
+            10 routes · Elders · Archive · Teaching · Media · Merch · Transition · Members · Code · Events (NEW)
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🏠 Real Estate / Auto</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:6px">
+            Real Estate Empire · Auto Credit Repair · Auto Grant Applicator · Auto Housing Finder · DayShift Doctor
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 14: CHANGE LOG ────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">14</span>
+      <span class="section-title">Change Log — Operator Map Updates</span>
+    </div>
+    <div class="section-body">
+
+      <!-- ENTRY: Apr 6, 2026 — TODAY -->
+      <div class="changelog-entry">
+        <div class="changelog-date">📅 April 6, 2026 — Live Sync Update (v6.0)</div>
+        <ul class="changelog-items">
+          <li>SSH'd into VPS 134.199.202.69 and ran live MySQL + PostgreSQL queries</li>
+          <li>Updated header stats pills: 120 users, 235 routes, 249 tRPC namespaces, 796 MySQL tables</li>
+          <li>Updated DB Counts section (Section 1) with all live table counts from both MySQL and PostgreSQL</li>
+          <li>Confirmed PM2 status: 4 online (creatorvault 273MB, cv-swarm-monitor, mediacore-python, cv-git-sync), 1 stopped (adult-sales-poller)</li>
+          <li>Route count updated to 235 from App.tsx (507 lines)</li>
+          <li>Added new routes: /chuuch/* (10 routes), /hollywood-* (7 routes), /loyalty-command, /my-loyalty, /king/gem-center, /empire-cockpit-v3, /follow-list/:userId/:type</li>
+          <li>Added new tRPC namespaces: cloneEmpire, kingcamAI, videoEnhance, agentOrchestrator, swarmEngine</li>
+          <li>Added Section 8: Recently Added Pages &amp; Features with 15 entries</li>
+          <li>Updated DashboardLayout nav zones (Section 6) with Chuuch, Hollywood Studio, Loyalty Command, Gem Center</li>
+          <li>Confirmed routers.ts at 478 lines with 249 total namespace keys</li>
+          <li>Server uptime: 50 days 20h · Disk: 53GB/87GB (62%) · Load: 0.10</li>
+          <li>Latest commit: 03f2f19 — Clone Empire + KingCam AI unified layer (Apr 2, 2026)</li>
+        </ul>
+      </div>
+
+      <!-- ENTRY: Apr 2, 2026 -->
+      <div class="changelog-entry">
+        <div class="changelog-date">📅 April 2, 2026 — Clone Empire + KingCam AI</div>
+        <ul class="changelog-items">
+          <li>Added CloneEmpire.tsx (674 lines) — full clone management UI</li>
+          <li>Added cloneEmpireRouter.ts (848 lines) — tRPC clone empire namespace</li>
+          <li>Expanded routers.ts by 648 lines — added kingcamAI, swarmEngine, agentOrchestrator, videoEnhance</li>
+          <li>KingCam AI unified layer — all AI providers wired (OpenAI, Replicate, Gemini)</li>
+          <li>Server IP updated to 134.199.202.69</li>
+        </ul>
+      </div>
+
+      <!-- ENTRY: Apr 1, 2026 -->
+      <div class="changelog-entry">
+        <div class="changelog-date">📅 April 1, 2026 — KingCam OS V2 + Workspace Sync</div>
+        <ul class="changelog-items">
+          <li>KingCam OS V2 — 5-Zone Navigation (Command, Identity, Execution, Studios, Infra)</li>
+          <li>Added CREATORVAULT_ULTIMATE_TRUTH.md — single source of truth document</li>
+          <li>Synced all workspace artifacts, Yodeiris assets, schema updates, media services</li>
+          <li>Apparel Lab added to Studios zone navigation</li>
+        </ul>
+      </div>
+
+      <!-- ENTRY: Mar 31, 2026 -->
+      <div class="changelog-entry">
+        <div class="changelog-date">📅 March 31, 2026 — VideoProductionStudio v3 + VaultLive Pro TV Truck v3</div>
+        <ul class="changelog-items">
+          <li>VideoProductionStudio rebuilt as visual-first luxury 3-zone spatial layout</li>
+          <li>VaultLive Pro TV Truck v3 — no form stacking, no stream gates</li>
+          <li>VaultLive Control Room V1 — multi-platform streaming, luxury editorial design</li>
+        </ul>
+      </div>
+
+      <!-- ENTRY: Mar 29, 2026 -->
+      <div class="changelog-entry">
+        <div class="changelog-date">📅 March 29, 2026 — Apparel Lab v5 + Visual-First Audit</div>
+        <ul class="changelog-items">
+          <li>Apparel Lab v5 Empire Atelier — visual-first 3-zone layout, luxury editorial design</li>
+          <li>Platform-wide visual-first audit — 124 form-first pages catalogued, Tier 1/2/3 rebuild priority</li>
+          <li>CreatorVault Unified UX Architecture document added</li>
+        </ul>
+      </div>
+
+      <!-- ENTRY: Mar 2026 -->
+      <div class="changelog-entry">
+        <div class="changelog-date">📅 March 2026 — Chuuch + Hollywood + Loyalty + Haitian Sector</div>
+        <ul class="changelog-items">
+          <li>Chuuch platform launched — 10 routes, full church/community vertical</li>
+          <li>Hollywood Suite — 7 routes, production/distribution/monetization system</li>
+          <li>Chica Loyalty &amp; Accountability System — loyalty-command + my-loyalty routes</li>
+          <li>Haitian Sector + Ayiti landing + Dominican roster (7 chicas)</li>
+          <li>Leslie (Princesa De Africa) added to Greatest Show Adult Creator roster</li>
+          <li>Lirys — Money Left on the Table dashboard ($98,864 missed in 24 months)</li>
+          <li>Vertical Pack Launcher — YouTube Educator Launch Pack v1</li>
+          <li>Gem Center added to King Room navigation</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─── SECTION 15: QUICK REFERENCE ──────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">15</span>
+      <span class="section-title">Quick Reference — Key Numbers</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-4">
+        <div class="card">
+          <div class="card-title">MySQL Users</div>
+          <div class="card-value">120</div>
+          <div class="card-sub">Registered accounts</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Frontend Routes</div>
+          <div class="card-value">235</div>
+          <div class="card-sub">App.tsx &lt;Route&gt;</div>
+        </div>
+        <div class="card">
+          <div class="card-title">tRPC Namespaces</div>
+          <div class="card-value">249</div>
+          <div class="card-sub">server/routers.ts</div>
+        </div>
+        <div class="card">
+          <div class="card-title">MySQL Tables</div>
+          <div class="card-value">796</div>
+          <div class="card-sub">creatorvault schema</div>
+        </div>
+        <div class="card">
+          <div class="card-title">PG Tables</div>
+          <div class="card-value">45</div>
+          <div class="card-sub">empire backend</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Agent Logs</div>
+          <div class="card-value">49,908</div>
+          <div class="card-sub">AI activity records</div>
+        </div>
+        <div class="card">
+          <div class="card-title">University Courses</div>
+          <div class="card-value">31</div>
+          <div class="card-sub">Published courses</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Flyer Jobs</div>
+          <div class="card-value">76</div>
+          <div class="card-sub">Animation queue</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<div style="text-align:center; padding:24px; color:var(--text-dim); font-size:11px; border-top:1px solid var(--border)">
+  👑 CreatorVault Operator Command Map · v6.0 · Last synced April 6, 2026 · VPS 134.199.202.69 · #RealestAlive
+</div>
+
+</body>
+</html>
