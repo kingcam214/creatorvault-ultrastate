@@ -13,7 +13,7 @@ import {
   generatePlatformTour,
   type DemoResult 
 } from "../services/kingcamDemoEngine.js";
-import { getDb } from "../db.js";
+import { getDb } from "../db";
 import { videoGenerationJobs, videoAssets } from "../../drizzle/schema.js";
 import { eq, desc } from "drizzle-orm";
 
