@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { router, kingProcedure, protectedProcedure } from '../_core/trpc.js';
-// NOTE: db is imported from '../db.js' NOT '../_core/db.js' — _core/db.ts does not exist
+// NOTE: db is imported from '../db' NOT '../_core/db.js' — _core/db.ts does not exist
 // NOTE: kingProcedure does not exist — use kingProcedure for owner-only endpoints
-import { db } from '../db.js';
+import { db } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 
 // Chica business model types
