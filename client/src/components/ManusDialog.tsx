@@ -32,6 +32,10 @@ export function ManusDialog({
     if (!onOpenChange) {
       setInternalOpen(open);
     }
+
+    return () => {
+      // no-op cleanup
+    };
   }, [open, onOpenChange]);
 
   const handleOpenChange = (nextOpen: boolean) => {

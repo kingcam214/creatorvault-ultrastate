@@ -342,12 +342,22 @@ export default function VaultLiveControlRoom() {
   );
 
   useEffect(() => {
-    if (viewerData) setTotalViewers(viewerData.count ?? 0);
+    if (viewerData) {
+      setTotalViewers(viewerData.count ?? 0);
+    }
+
+    return () => {
+      // no-op cleanup
+    };
   }, [viewerData]);
 
   // ── Auto-scroll chat ──
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+
+    return () => {
+      // no-op cleanup
+    };
   }, [chatMessages]);
 
   // ── Cleanup ──

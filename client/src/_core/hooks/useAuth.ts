@@ -42,10 +42,6 @@ export function useAuth(options?: UseAuthOptions) {
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
     return {
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,
@@ -61,13 +57,45 @@ export function useAuth(options?: UseAuthOptions) {
   ]);
 
   useEffect(() => {
-    if (!redirectOnUnauthenticated) return;
-    if (meQuery.isLoading || logoutMutation.isPending) return;
-    if (state.user) return;
-    if (typeof window === "undefined") return;
-    if (window.location.pathname === redirectPath) return;
+    if (typeof window === "undefined") {
+      return () => {
+        // no-op cleanup for SSR branch
+      };
+    }
 
-    window.location.href = redirectPath
+    try {
+      localStorage.setItem(
+        "manus-runtime-user-info",
+        JSON.stringify(meQuery.data ?? null)
+      );
+    } catch (error) {
+      console.warn("Unable to persist auth state", error);
+    }
+
+    return () => {
+      // no-op cleanup
+    };
+  }, [meQuery.data]);
+
+  useEffect(() => {
+    if (
+      !redirectOnUnauthenticated ||
+      meQuery.isLoading ||
+      logoutMutation.isPending ||
+      state.user ||
+      typeof window === "undefined" ||
+      window.location.pathname === redirectPath
+    ) {
+      return () => {
+        // no-op cleanup
+      };
+    }
+
+    window.location.href = redirectPath;
+
+    return () => {
+      // no-op cleanup
+    };
   }, [
     redirectOnUnauthenticated,
     redirectPath,

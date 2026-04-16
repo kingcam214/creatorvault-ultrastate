@@ -77,7 +77,16 @@ export default function VaultLiveStream() {
     });
 
     return () => {
+      socket.removeAllListeners();
       socket.disconnect();
+
+      peersRef.current.forEach(peer => peer.destroy());
+      peersRef.current.clear();
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
     };
   }, []);
 

@@ -356,10 +356,28 @@ function ProjectsSection() {
   const [view, setView] = useState<"grid" | "list">("grid");
 
   useEffect(() => {
-    trpcQuery("videoEditor.getProjects")
-      .then((data) => setProjects(data || []))
-      .catch(() => setProjects([]))
-      .finally(() => setLoading(false));
+    let isActive = true;
+
+    void trpcQuery("videoEditor.getProjects")
+      .then((data) => {
+        if (isActive) {
+          setProjects(data || []);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setProjects([]);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   const STATUS_COLORS: Record<string, string> = {
@@ -762,10 +780,28 @@ function AnalyticsSection() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    trpcQuery("videoStudioV2.getAnalytics")
-      .then((data) => setAnalytics(data))
-      .catch(() => setAnalytics(null))
-      .finally(() => setLoading(false));
+    let isActive = true;
+
+    void trpcQuery("videoStudioV2.getAnalytics")
+      .then((data) => {
+        if (isActive) {
+          setAnalytics(data);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setAnalytics(null);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   const STATS = [
@@ -819,10 +855,28 @@ function BrandKitSection() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    trpcQuery("videoStudioV2.getBrandKits")
-      .then((data) => setKits(data || []))
-      .catch(() => setKits([]))
-      .finally(() => setLoading(false));
+    let isActive = true;
+
+    void trpcQuery("videoStudioV2.getBrandKits")
+      .then((data) => {
+        if (isActive) {
+          setKits(data || []);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setKits([]);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   const save = async () => {

@@ -15,6 +15,7 @@ import {
   Film, Wand2, Layers, Target, Star, ArrowRight, Plus, X,
   Camera, Palette, Calendar, Globe, Lock, Eye, Heart, Share2
 } from "lucide-react";
+import { EmptyState, LoadingSpinner } from "@/components/feedback";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Tab = "studio" | "train" | "gallery" | "schedule" | "stats";
@@ -123,8 +124,14 @@ export default function CloneEmpire() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!authLoading && !user) setLocation("/login");
-  }, [user, authLoading]);
+    if (!authLoading && !user) {
+      setLocation("/login");
+    }
+
+    return () => {
+      // no-op cleanup to keep effect lifecycle explicit
+    };
+  }, [user, authLoading, setLocation]);
 
   const [activeTab, setActiveTab] = useState<Tab>("studio");
   const [videoMode, setVideoMode] = useState<VideoMode>("talking_head");
@@ -167,8 +174,18 @@ export default function CloneEmpire() {
   // Also get existing clone videos from the main clone lab
   const { data: existingVideos } = trpc.cloneLab.listCloneVideos.useQuery({ limit: 50, offset: 0 }, { retry: false });
 
-  if (authLoading) return <div style={{ minHeight: "100vh", background: "#0A0A0F", display: "flex", alignItems: "center", justifyContent: "center" }}><RefreshCw size={24} color="#D4AF37" className="animate-spin" /></div>;
-  if (!user) return null;
+  if (authLoading) {
+    return <LoadingSpinner message="Loading Clone Empire..." />;
+  }
+
+  if (!user) {
+    return (
+      <EmptyState
+        title="Authentication required"
+        description="Please sign in to access Clone Empire."
+      />
+    );
+  }
 
   const handleGenerateTalkingHead = async () => {
     if (!topic.trim() && !customScript.trim()) { setError("Enter a topic or script"); return; }

@@ -221,7 +221,13 @@ function KingCamOSShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
 
   // Close mobile menu on navigation
-  useEffect(() => { setMobileOpen(false); }, [location]);
+  useEffect(() => {
+    setMobileOpen(false);
+
+    return () => {
+      // no-op cleanup
+    };
+  }, [location]);
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#0A0A0A", fontFamily: "'Inter', sans-serif" }}>

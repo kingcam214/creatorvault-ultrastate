@@ -31,6 +31,7 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = document.documentElement;
+
     if (theme === "dark") {
       root.classList.add("dark");
     } else {
@@ -38,8 +39,16 @@ export function ThemeProvider({
     }
 
     if (switchable) {
-      localStorage.setItem("theme", theme);
+      try {
+        localStorage.setItem("theme", theme);
+      } catch (error) {
+        console.warn("Unable to persist theme", error);
+      }
     }
+
+    return () => {
+      // no-op cleanup
+    };
   }, [theme, switchable]);
 
   const toggleTheme = switchable
