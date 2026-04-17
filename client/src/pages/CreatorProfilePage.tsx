@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/_core/hooks/useAuth";
 import {
   ArrowUpRight, ShoppingBag, BookOpen, TrendingUp, Users,
   Star, Award, ChevronRight, Play, Heart, MessageCircle,
@@ -288,7 +288,7 @@ export default function CreatorProfilePage() {
 
   const { data: products } = trpc.marketplace.getProducts.useQuery();
   const creatorProducts = (products ?? []).filter(
-    (p: any) => p.creator_id === profileData?.profile?.userId && p.status === "active"
+    (p: any) => (p.creatorId ?? p.creator_id) === profileData?.profile?.userId && (p.status ?? p.status) === "active"
   );
 
   const { data: sellerStats } = trpc.marketplace.getSellerStats.useQuery(undefined, {
