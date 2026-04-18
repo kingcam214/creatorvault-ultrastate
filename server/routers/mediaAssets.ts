@@ -6,6 +6,19 @@ import { getDb } from "../db";
 
 const mediaFilterSchema = z.enum(["all", "videos", "images"]).default("all");
 
+/* ── helper: mysql2 + drizzle returns [rows[], fields[]] ── */
+function extractRows(result: unknown): any[] {
+  if (!result) return [];
+  // mysql2 returns [rows, fields] tuple
+  if (Array.isArray(result) && result.length >= 1 && Array.isArray(result[0])) {
+    return result[0];
+  }
+  // fallback for other adapters
+  if (Array.isArray(result)) return result;
+  if ((result as any)?.rows) return (result as any).rows;
+  return [];
+}
+
 export const mediaAssetsRouter = router({
   list: protectedProcedure
     .input(
@@ -50,13 +63,14 @@ export const mediaAssetsRouter = router({
           created_at
         FROM media_assets
         WHERE user_id = ${ctx.user.id}
+          AND status = 'ready'
           ${typeCondition}
         ORDER BY created_at DESC
         LIMIT ${limit}
       `;
 
       const result = await db.execute(query as any);
-      const rows = Array.isArray(result) ? result : (result as any)?.rows ?? [];
+      const rows = extractRows(result);
 
       return rows.map((row: any) => ({
         id: String(row.id),
@@ -121,9 +135,7 @@ export const mediaAssetsRouter = router({
           LIMIT ${input.selectedAssetIds.length}
         ` as any
       );
-      const ownedAssets = Array.isArray(ownedAssetsResult)
-        ? ownedAssetsResult
-        : (ownedAssetsResult as any)?.rows ?? [];
+      const ownedAssets = extractRows(ownedAssetsResult);
 
       if (ownedAssets.length === 0) {
         throw new Error("No valid media assets selected");
@@ -192,7 +204,7 @@ export const mediaAssetsRouter = router({
         ` as any
       );
 
-      const rows = Array.isArray(result) ? result : (result as any)?.rows ?? [];
+      const rows = extractRows(result);
       return rows.map((row: any) => ({
         id: String(row.id),
         projectName: row.project_name,
