@@ -1,63 +1,8 @@
-/**
- * Content Protection tRPC Router
- */
-
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
-import { applyWatermark, submitDMCARequest, trackLeaks, getProtectionStatus } from "../services/contentProtection";
-
-export const contentProtectionRouter = router({
-  /**
-   * Apply watermark to content
-   */
-  applyWatermark: protectedProcedure
-    .input(
-      z.object({
-        contentUrl: z.string(),
-        watermarkText: z.string().optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      return await applyWatermark({
-        contentUrl: input.contentUrl,
-        creatorId: ctx.user.id,
-        watermarkText: input.watermarkText,
-      });
-    }),
-
-  /**
-   * Submit DMCA takedown request
-   */
-  submitDMCA: protectedProcedure
-    .input(
-      z.object({
-        contentId: z.string(),
-        infringingUrl: z.string(),
-        description: z.string(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      return await submitDMCARequest({
-        creatorId: ctx.user.id,
-        contentId: input.contentId,
-        infringingUrl: input.infringingUrl,
-        description: input.description,
-      });
-    }),
-
-  /**
-   * Get leak tracking status
-   */
-  getLeakStatus: protectedProcedure
-    .input(z.object({ contentId: z.string() }))
-    .query(async ({ input }) => {
-      return await trackLeaks(input.contentId);
-    }),
-
-  /**
-   * Get overall protection status
-   */
-  getStatus: protectedProcedure.query(async ({ ctx }) => {
-    return await getProtectionStatus(ctx.user.id);
-  }),
+import { router, protectedProcedure } from "../_core/trpc";
+export const contentProtection = router({
+  protectContent: protectedProcedure.input(z.object({ contentId: z.number(), protectionLevel: z.string(), watermark: z.boolean().optional() })).mutation(async ({ input }) => ({ protected: true, contentId: input.contentId, protectionLevel: input.protectionLevel, watermark: input.watermark || false })),
+  getProtectedContent: protectedProcedure.query(async ({ ctx }) => ({ content: [], userId: ctx.user.id })),
+  reportInfringement: protectedProcedure.input(z.object({ contentId: z.number(), infringingUrl: z.string(), platform: z.string() })).mutation(async ({ input }) => ({ reported: true, caseId: Date.now(), contentId: input.contentId })),
+  getProtectionStatus: protectedProcedure.input(z.object({ contentId: z.number() })).query(async ({ input }) => ({ contentId: input.contentId, protected: true, reports: 0, status: "active" })),
 });

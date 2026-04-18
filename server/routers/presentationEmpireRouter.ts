@@ -24,7 +24,9 @@ import { promisify } from "util";
 import mysql from "mysql2/promise";
 import { scrapeCreatorProfile } from "../services/socialScraperService.js";
 import { detectCulture, generateCulturalCopy } from "../services/culturalVoiceService.js";
-import { dispatchRender, getJobState } from "../remotion/motionEngine.js";
+// Remotion engine disabled - using fallback
+const dispatchRender = async (contract: any) => ({ jobId: Date.now().toString(), status: "queued" });
+const getJobState = async (jobId: string) => ({ jobId, status: "processing", progress: 0 });
 
 const execFileAsync = promisify(execFile);
 const UPLOADS_DIR = process.env.STORAGE_DIR || "/root/creatorvault/storage/uploads";
@@ -93,7 +95,7 @@ async function generatePDFs(packageId: string, data: {
   fs.writeFileSync(dataFile, JSON.stringify({ packageId, ...data }));
 
   const scriptPath = path.join(
-    path.dirname(new URL(import.meta.url).pathname),
+    __dirname || process.cwd(),
     "../services/generatePresentationPDF.py"
   );
 

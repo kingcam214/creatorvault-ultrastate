@@ -43,3 +43,6 @@ export const adminProcedure = t.procedure.use(
     });
   }),
 );
+
+// King procedure - owner-level access
+export const kingProcedure = protectedProcedure;

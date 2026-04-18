@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
-const __filename = fileURLToPath(import.meta.url);
+const __filename = __filename;
 const __dirname = path.dirname(__filename);
 
 const plugins = [react(), tailwindcss(), jsxLocPlugin()];

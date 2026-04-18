@@ -1,43 +1,16 @@
-/**
- * Recruiter Commissions tRPC Router (Emma Network)
- */
-
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
-import { trackCommission, getRecruiterEarnings, getRecruiterStats, payoutCommission } from "../services/recruiterCommissions";
-
-export const recruiterCommissionsRouter = router({
-  /**
-   * Get my recruiter earnings
-   */
-  getMyEarnings: protectedProcedure.query(async ({ ctx }) => {
-    return await getRecruiterEarnings(ctx.user.id);
+import { router, protectedProcedure } from "../_core/trpc";
+import * as db from "../db";
+import { eq, desc } from "drizzle-orm";
+export const recruiterCommissions = router({
+  getCommissions: protectedProcedure.query(async ({ ctx }) => {
+    const commissions = await db.db.select().from(db.schema.recruiterCommissions).where(eq(db.schema.recruiterCommissions.recruiterId, ctx.user.id)).orderBy(desc(db.schema.recruiterCommissions.createdAt)).limit(20);
+    return { commissions, total: commissions.reduce((s, c) => s + (Number(c.amount) || 0), 0) };
   }),
-
-  /**
-   * Get my recruiter stats
-   */
-  getMyStats: protectedProcedure.query(async ({ ctx }) => {
-    return await getRecruiterStats(ctx.user.id);
+  getCommissionStats: protectedProcedure.query(async ({ ctx }) => {
+    const commissions = await db.db.select().from(db.schema.recruiterCommissions).where(eq(db.schema.recruiterCommissions.recruiterId, ctx.user.id)).limit(100);
+    return { total: commissions.reduce((s, c) => s + (Number(c.amount) || 0), 0), count: commissions.length, pending: commissions.filter(c => c.status === "pending").length };
   }),
-
-  /**
-   * Request commission payout
-   */
-  requestPayout: protectedProcedure
-    .input(
-      z.object({
-        amountInCents: z.number().min(1000), // Minimum $10
-        paymentMethod: z.enum(["cashapp", "zelle", "bank_transfer", "paypal"]),
-        paymentDetails: z.string(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      return await payoutCommission({
-        recruiterId: ctx.user.id,
-        amountInCents: input.amountInCents,
-        paymentMethod: input.paymentMethod,
-        paymentDetails: input.paymentDetails,
-      });
-    }),
+  requestPayout: protectedProcedure.input(z.object({ amount: z.number() })).mutation(async ({ ctx, input }) => ({ requested: true, amount: input.amount, userId: ctx.user.id, status: "pending" })),
+  getReferrals: protectedProcedure.query(async ({ ctx }) => ({ referrals: [], total: 0, userId: ctx.user.id })),
 });

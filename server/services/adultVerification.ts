@@ -53,3 +53,6 @@ export async function rejectVerification(creatorId: number, reason: string): Pro
   // In production: update adult_verification table, set status=rejected, log reason
   return { success: true };
 }
+
+
+export async function getAllPendingVerifications() { return []; }

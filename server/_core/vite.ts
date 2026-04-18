@@ -8,7 +8,7 @@ import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
 
 // Get __dirname equivalent for ESM
-const __filename = fileURLToPath(import.meta.url);
+const __filename = __filename || "";
 const __dirname = path.dirname(__filename);
 
 export async function setupVite(app: Express, server: Server) {
