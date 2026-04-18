@@ -232,6 +232,17 @@ export async function updateWaitlistStatus(id: number, status: string) {
   await db.update(waitlist).set({ status }).where(eq(waitlist.id, id));
 }
 
+export async function getWaitlistCount() {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(waitlist);
+
+  return Number(result[0]?.count ?? 0);
+}
+
 // ============ CONTENT ============
 
 export async function createContent(data: typeof content.$inferInsert) {

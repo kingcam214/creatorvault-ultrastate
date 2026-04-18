@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { router, kingProcedure, protectedProcedure } from '../_core/trpc.js';
-import { db } from '../db.js';
+import { db } from '../db';
 
 // ============================================================
 // TIER CALCULATION

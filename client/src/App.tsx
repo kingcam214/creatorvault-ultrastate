@@ -1,6 +1,6 @@
 // import PlatformWarRoom from "./pages/PlatformWarRoom";
 // import EmpireVerticals from "./pages/EmpireVerticals";
-import { Toaster } from "@/components/ui/sonner";
+// import { Toaster } from "@/components/ui/sonner";
 // import { DebugOverlay } from "./components/DebugOverlay";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -82,7 +82,7 @@ import AdultSalesBot from "./pages/AdultSalesBot";
 // import InfluencerDashboard from "./pages/InfluencerDashboard";
 // import JoinVaultLive from "./pages/JoinVaultLive";
 // import ControlRoom from "./pages/ControlRoom";
-// import LaunchTrailerStudio from "./pages/LaunchTrailerStudio";
+import LaunchTrailerStudio from "./pages/LaunchTrailerStudio";
 // import KingCamClone from "./pages/KingCamClone";
 // import KingCamShowcase from "./pages/KingCamShowcase";
 // import KingCamImport from "./pages/king/KingCamImport";
@@ -123,7 +123,7 @@ import AdultSalesBot from "./pages/AdultSalesBot";
 // import CreatorToolbox from "./pages/CreatorToolbox";
 // import ViralOptimizer from "./pages/tools/ViralOptimizer"; // @deprecated — use ViralOptimizerPage
 // import ViralOptimizerPage from "./pages/ViralOptimizerPage";
-// import VerticalPackLauncher from "./pages/VerticalPackLauncher";
+import VerticalPackLauncher from "./pages/VerticalPackLauncher";
 // import CreatorEarnings from "./pages/CreatorEarnings";
 // import AdminPayouts from "./pages/AdminPayouts";
 // import AdminManualPayments from "./pages/AdminManualPayments";
@@ -242,130 +242,130 @@ function Router() {
       <div className="pt-16">
         <Switch>
       <Route path={"/"} component={Home} />
-      <Route path={"/login"} component={Login} />
-      <Route path={"/register"} component={Register} />
-      <Route path={"/dashboard"} component={CreatorHome} />
-      <Route path={"/operator"} component={OperatorDashboard} />
-      <Route path={"/flyer-generator"} component={FlyerGenerator} />
-      <Route path={"/animated-flyer-studio"} component={AnimatedFlyerStudio} />
-      <Route path={"/image-lab"} component={ImageLab} />
-      <Route path={"/flyer-composer"} component={FlyerComposer} />
-      <Route path={"/flyer-design-studio"} component={FlyerDesignStudio} />
-      <Route path={"/dayshift-doctor"} component={DayShiftDoctor} />
-      <Route path={"/nurse"} component={NurseConsole} />
-      <Route path={"/design-department"} component={DesignDepartment} />
-      <Route path={"/whatsapp-content"} component={WhatsAppContentGenerator} />
-      <Route path={"/king/whatsapp-bot"} component={WhatsAppBotDashboard} />
-      <Route path={"/studio-slots"} component={StudioSlots} />
-      <Route path={"/content-dashboard"} component={ContentDashboard} />
-      <Route path={"/monetization"} component={MonetizationPipeline} />
-      <Route path={"/lead-capture"} component={LeadCapture} />
-      <Route path={"/analytics"} component={PerformanceAnalytics} />
-      <Route path={"/marketplace"} component={Marketplace} />
-      <Route path={"/marketplace/create"} component={MarketplaceCreate} />
-      <Route path={"/marketplace/manage"} component={MarketplaceManage} />
-      <Route path={"/marketplace/analytics/:productId"} component={MarketplaceAnalytics} />
-      <Route path={"/marketplace/:productId"} component={MarketplaceProduct} />
-      <Route path={"/university"} component={University} />
-      <Route path={"/learn"} component={KingCamShowreel} />
-      <Route path={"/king/script-writer"} component={KingCamScriptWriter} />
-      <Route path={"/king/engine"} component={KingCamEngine} />
-      <Route path={"/emma-university"} component={EmmaUniversity} />
-      <Route path={"/services"} component={Services} />
-      <Route path={"/creator/subscription-tiers"} component={CreatorSubscriptionTiers} />
-      <Route path={"/creator/:creatorId/tiers"} component={CreatorPublicTiers} />
-      <Route path={"/creator/:creatorId/protected-demo"} component={ProtectedContentDemo} />
-      <Route path={"/my-subscriptions"} component={MySubscriptions} />
+      {/* <Route path={"/login"} component={Login} /> */}
+      {/* <Route path={"/register"} component={Register} /> */}
+      {/* <Route path={"/dashboard"} component={CreatorHome} /> */}
+      {/* <Route path={"/operator"} component={OperatorDashboard} /> */}
+      {/* <Route path={"/flyer-generator"} component={FlyerGenerator} /> */}
+      {/* <Route path={"/animated-flyer-studio"} component={AnimatedFlyerStudio} /> */}
+      {/* <Route path={"/image-lab"} component={ImageLab} /> */}
+      {/* <Route path={"/flyer-composer"} component={FlyerComposer} /> */}
+      {/* <Route path={"/flyer-design-studio"} component={FlyerDesignStudio} /> */}
+      {/* <Route path={"/dayshift-doctor"} component={DayShiftDoctor} /> */}
+      {/* <Route path={"/nurse"} component={NurseConsole} /> */}
+      {/* <Route path={"/design-department"} component={DesignDepartment} /> */}
+      {/* <Route path={"/whatsapp-content"} component={WhatsAppContentGenerator} /> */}
+      {/* <Route path={"/king/whatsapp-bot"} component={WhatsAppBotDashboard} /> */}
+      {/* <Route path={"/studio-slots"} component={StudioSlots} /> */}
+      {/* <Route path={"/content-dashboard"} component={ContentDashboard} /> */}
+      {/* <Route path={"/monetization"} component={MonetizationPipeline} /> */}
+      {/* <Route path={"/lead-capture"} component={LeadCapture} /> */}
+      {/* <Route path={"/analytics"} component={PerformanceAnalytics} /> */}
+      {/* <Route path={"/marketplace"} component={Marketplace} /> */}
+      {/* <Route path={"/marketplace/create"} component={MarketplaceCreate} /> */}
+      {/* <Route path={"/marketplace/manage"} component={MarketplaceManage} /> */}
+      {/* <Route path={"/marketplace/analytics/:productId"} component={MarketplaceAnalytics} /> */}
+      {/* <Route path={"/marketplace/:productId"} component={MarketplaceProduct} /> */}
+      {/* <Route path={"/university"} component={University} /> */}
+      {/* <Route path={"/learn"} component={KingCamShowreel} /> */}
+      {/* <Route path={"/king/script-writer"} component={KingCamScriptWriter} /> */}
+      {/* <Route path={"/king/engine"} component={KingCamEngine} /> */}
+      {/* <Route path={"/emma-university"} component={EmmaUniversity} /> */}
+      {/* <Route path={"/services"} component={Services} /> */}
+      {/* <Route path={"/creator/subscription-tiers"} component={CreatorSubscriptionTiers} /> */}
+      {/* <Route path={"/creator/:creatorId/tiers"} component={CreatorPublicTiers} /> */}
+      {/* <Route path={"/creator/:creatorId/protected-demo"} component={ProtectedContentDemo} /> */}
+      {/* <Route path={"/my-subscriptions"} component={MySubscriptions} /> */}
       <Route path={"/creator"} component={CreatorDashboard} />
       <Route path={"/creator/tools"} component={CreatorTools} />
-      <Route path={"/creator/toolbox"} component={CreatorToolbox} />
-      <Route path={"/creator-toolbox"} component={CreatorToolbox} />
+      {/* <Route path={"/creator/toolbox"} component={CreatorToolbox} /> */}
+      {/* <Route path={"/creator-toolbox"} component={CreatorToolbox} /> */}
       <Route path={"/creator/video-studio"} component={CreatorVideoStudio} />
-      <Route path={"/creator/subscriptions"} component={CreatorSubscriptions} />
-      <Route path={"/creator/earnings"} component={CreatorEarnings} />
-      <Route path={"/creator/analytics"} component={CreatorAnalyticsDashboard} />
-       <Route path={"/creator-analytics"} component={CreatorAnalyticsDashboard} />
-      <Route path={"/tools/viral-optimizer"} component={ViralOptimizer} />
+      {/* <Route path={"/creator/subscriptions"} component={CreatorSubscriptions} /> */}
+      {/* <Route path={"/creator/earnings"} component={CreatorEarnings} /> */}
+      {/* <Route path={"/creator/analytics"} component={CreatorAnalyticsDashboard} /> */}
+       {/* <Route path={"/creator-analytics"} component={CreatorAnalyticsDashboard} /> */}
+      {/* <Route path={"/tools/viral-optimizer"} component={ViralOptimizer} /> */}
       <Route path={"/ai-bot"} component={AIBot} />
       <Route path={"/adult-sales-bot"} component={AdultSalesBot} />
-      <Route path={"/creator-management"} component={CreatorManagement} />
+      {/* <Route path={"/creator-management"} component={CreatorManagement} /> */}
       <Route path={"/command-hub"} component={CommandHub} />
-      <Route path={"/onboard"} component={Onboard} />
-      <Route path={"/onboard/influencer"} component={InfluencerOnboarding} />
+      {/* <Route path={"/onboard"} component={Onboard} /> */}
+      {/* <Route path={"/onboard/influencer"} component={InfluencerOnboarding} /> */}
       <Route path={"/onboard/creator"} component={CreatorOnboarding} />
-      <Route path={"/influencer"} component={InfluencerDashboard} />
-      <Route path={"/multi-platform-posting"} component={MultiPlatformPosting} />
-      <Route path={"/content-scheduler"} component={ContentScheduler} />
-      <Route path={"/platform-connections"} component={PlatformConnections} />
-      <Route path={"/unified-publisher"} component={UnifiedContentPublisher} />
-      <Route path={"/vaultlive"} component={VaultLiveSimple} />
+      {/* <Route path={"/influencer"} component={InfluencerDashboard} /> */}
+      {/* <Route path={"/multi-platform-posting"} component={MultiPlatformPosting} /> */}
+      {/* <Route path={"/content-scheduler"} component={ContentScheduler} /> */}
+      {/* <Route path={"/platform-connections"} component={PlatformConnections} /> */}
+      {/* <Route path={"/unified-publisher"} component={UnifiedContentPublisher} /> */}
+      {/* <Route path={"/vaultlive"} component={VaultLiveSimple} /> */}
       <Route path={"/live"} component={BrowseLive} />
       <Route path={"/stream/:id"} component={StreamView} />
-      <Route path={"/join-vaultlive"} component={JoinVaultLive} />
-      <Route path={"/control-room"} component={ControlRoom} />
-      <Route path={"/subscribe/:creatorId"} component={FanSubscribe} />
-      <Route path={"/emma"} component={EmmaHome} />
-      <Route path={"/emma-empire"} component={EmmaEmpire} />
-      <Route path="/chica" component={ChicaCockpit} />
-      <Route path={"/emma/reset-dashboard"} component={EmmaResetDashboard} />
-      <Route path={"/emma/reset"} component={EmmaSimpleView} />
-      <Route path={"/emma/network"} component={EmmaNetworkHome} />
-      <Route path={"/king"} component={KingHome} />
-          <Route path="/king/gem-center" component={KingGemCenter} />
-      <Route path={"/king/users"} component={KingUsers} />
-      <Route path={"/king/demos"} component={KingCamDemos} />
-      <Route path={"/king/presentation-builder"} component={PresentationBuilder} />
-      <Route path={"/presentation-builder"} component={PresentationBuilder} />
-      <Route path="/king/telegram-hub" component={TelegramMoneyHub} />
-      <Route path={"/king/backoffice"} component={KingBackOffice} />
-      <Route path="/king/command-center" component={KingCamCommandCenter} />
-      <Route path="/king/episodes-3d" component={KingCamEpisodeTheater3D} />
-      <Route path="/king/empire-3d" component={KingCamEmpireMap3D} />
-      <Route path="/king/connect-socials" component={KingConnectSocials} />
-      <Route path="/king/vault-remix" component={KingVaultRemixEngine} />
-      <Route path="/king/empire" component={KingEmpire} />
-      <Route path="/king/money-mission" component={KingMoneyMission} />
-      <Route path="/king/life" component={KingLife} />
-      <Route path="/agents" component={AgentRoster} />
-      <Route path="/hire" component={AgentRoster} />
-      <Route path={"/king/emma"} component={KingEmmaOversight} />
-      <Route path={"/king/video-editor"} component={VideoEditorProjects} />
-      <Route path="/king/script-director" component={ScriptDirectorPage} />
-          <Route path="/king/import" component={KingCamImport} />
-          <Route path="/king/gallery" component={KingCamGallery} />
-      <Route path="/king/music-composer" component={MusicAI} />
-      <Route path={"/music-library"} component={MusicLibrary} />
-      <Route path={"/artist/storefront"} component={ArtistStorefront} />
-      <Route path="/king/dubbing" component={DubbingAI} />
-      <Route path="/business-cards" component={BusinessCardDesigner} />
-      <Route path="/business-cards/editor" component={CardEditor} />
-      <Route path="/business-cards/editor/:cardId" component={CardEditor} />
-      <Route path="/business-cards/ai-designer" component={AICardDesigner} />
-      <Route path="/king/hollywood-ai" component={HollywoodReplacement} />
-          <Route path="/king/platform-war-room" component={PlatformWarRoom} />
-          <Route path="/king/empire-verticals" component={EmpireVerticals} />
-      <Route path={"/king/video-editor/:projectId"} component={VideoEditor} />
-      <Route path={"/vault-pay"} component={VaultPay} />
-      <Route path={"/hollywood-replacement"} component={HollywoodReplacement} />
-      <Route path={"/proof-gate"} component={ProofGate} />
-      <Route path={"/dominican"} component={DominicanSector} />
+      {/* <Route path={"/join-vaultlive"} component={JoinVaultLive} /> */}
+      {/* <Route path={"/control-room"} component={ControlRoom} /> */}
+      {/* <Route path={"/subscribe/:creatorId"} component={FanSubscribe} /> */}
+      {/* <Route path={"/emma"} component={EmmaHome} /> */}
+      {/* <Route path={"/emma-empire"} component={EmmaEmpire} /> */}
+      {/* <Route path="/chica" component={ChicaCockpit} /> */}
+      {/* <Route path={"/emma/reset-dashboard"} component={EmmaResetDashboard} /> */}
+      {/* <Route path={"/emma/reset"} component={EmmaSimpleView} /> */}
+      {/* <Route path={"/emma/network"} component={EmmaNetworkHome} /> */}
+      {/* <Route path={"/king"} component={KingHome} /> */}
+          {/* <Route path="/king/gem-center" component={KingGemCenter} /> */}
+      {/* <Route path={"/king/users"} component={KingUsers} /> */}
+      {/* <Route path={"/king/demos"} component={KingCamDemos} /> */}
+      {/* <Route path={"/king/presentation-builder"} component={PresentationBuilder} /> */}
+      {/* <Route path={"/presentation-builder"} component={PresentationBuilder} /> */}
+      {/* <Route path="/king/telegram-hub" component={TelegramMoneyHub} /> */}
+      {/* <Route path={"/king/backoffice"} component={KingBackOffice} /> */}
+      {/* <Route path="/king/command-center" component={KingCamCommandCenter} /> */}
+      {/* <Route path="/king/episodes-3d" component={KingCamEpisodeTheater3D} /> */}
+      {/* <Route path="/king/empire-3d" component={KingCamEmpireMap3D} /> */}
+      {/* <Route path="/king/connect-socials" component={KingConnectSocials} /> */}
+      {/* <Route path="/king/vault-remix" component={KingVaultRemixEngine} /> */}
+      {/* <Route path="/king/empire" component={KingEmpire} /> */}
+      {/* <Route path="/king/money-mission" component={KingMoneyMission} /> */}
+      {/* <Route path="/king/life" component={KingLife} /> */}
+      {/* <Route path="/agents" component={AgentRoster} /> */}
+      {/* <Route path="/hire" component={AgentRoster} /> */}
+      {/* <Route path={"/king/emma"} component={KingEmmaOversight} /> */}
+      {/* <Route path={"/king/video-editor"} component={VideoEditorProjects} /> */}
+      {/* <Route path="/king/script-director" component={ScriptDirectorPage} /> */}
+          {/* <Route path="/king/import" component={KingCamImport} /> */}
+          {/* <Route path="/king/gallery" component={KingCamGallery} /> */}
+      {/* <Route path="/king/music-composer" component={MusicAI} /> */}
+      {/* <Route path={"/music-library"} component={MusicLibrary} /> */}
+      {/* <Route path={"/artist/storefront"} component={ArtistStorefront} /> */}
+      {/* <Route path="/king/dubbing" component={DubbingAI} /> */}
+      {/* <Route path="/business-cards" component={BusinessCardDesigner} /> */}
+      {/* <Route path="/business-cards/editor" component={CardEditor} /> */}
+      {/* <Route path="/business-cards/editor/:cardId" component={CardEditor} /> */}
+      {/* <Route path="/business-cards/ai-designer" component={AICardDesigner} /> */}
+      {/* <Route path="/king/hollywood-ai" component={HollywoodReplacement} /> */}
+          {/* <Route path="/king/platform-war-room" component={PlatformWarRoom} /> */}
+          {/* <Route path="/king/empire-verticals" component={EmpireVerticals} /> */}
+      {/* <Route path={"/king/video-editor/:projectId"} component={VideoEditor} /> */}
+      {/* <Route path={"/vault-pay"} component={VaultPay} /> */}
+      {/* <Route path={"/hollywood-replacement"} component={HollywoodReplacement} /> */}
+      {/* <Route path={"/proof-gate"} component={ProofGate} /> */}
+      {/* <Route path={"/dominican"} component={DominicanSector} /> */}
       <Route path={"/guia"} component={GuiaCreador} />
-      <Route path={"/vault-guardian"} component={VaultGuardian} />
-      <Route path={"/vault-remix"} component={VaultRemix} />
-      <Route path={"/video-lab"} component={VideoLab} />
-      <Route path={"/video-lab-pro"} component={VideoLabPro} />
-      <Route path={"/video-studio"} component={VideoStudio} />
-      <Route path={"/video-production-studio"} component={VideoProductionStudio} />
-      <Route path={"/vault-x"} component={VaultX} />
-      <Route path={"/culture-selection"} component={CultureSelection} />
-      <Route path={"/thumbnail-generator"} component={ThumbnailGeneratorUI} />
-      <Route path={"/admin/payouts"} component={AdminPayouts} />
-      <Route path={"/admin/manual-payments"} component={AdminManualPayments} />
+      {/* <Route path={"/vault-guardian"} component={VaultGuardian} /> */}
+      {/* <Route path={"/vault-remix"} component={VaultRemix} /> */}
+      {/* <Route path={"/video-lab"} component={VideoLab} /> */}
+      {/* <Route path={"/video-lab-pro"} component={VideoLabPro} /> */}
+      {/* <Route path={"/video-studio"} component={VideoStudio} /> */}
+      {/* <Route path={"/video-production-studio"} component={VideoProductionStudio} /> */}
+      {/* <Route path={"/vault-x"} component={VaultX} /> */}
+      {/* <Route path={"/culture-selection"} component={CultureSelection} /> */}
+      {/* <Route path={"/thumbnail-generator"} component={ThumbnailGeneratorUI} /> */}
+      {/* <Route path={"/admin/payouts"} component={AdminPayouts} /> */}
+      {/* <Route path={"/admin/manual-payments"} component={AdminManualPayments} /> */}
       <Route path={"/admin/tips"} component={AdminTips} />
-      <Route path={"/podcast-studio"} component={PodcastStudio} />
+      {/* <Route path={"/podcast-studio"} component={PodcastStudio} /> */}
       <Route path={"/launch-trailer-studio"} component={LaunchTrailerStudio} />
-      <Route path={"/shows/:slug/episodes/:episodeId"} component={EpisodeDetailPage} />
-      <Route path={"/shows/:slug"} component={ShowPage} />
+      {/* <Route path={"/shows/:slug/episodes/:episodeId"} component={EpisodeDetailPage} /> */}
+      {/* <Route path={"/shows/:slug"} component={ShowPage} /> */}
       <Route path={"/social-audit"} component={SocialMediaAudit} />
       <Route path={"/performance-insights"} component={PerformanceInsights} />
       <Route path={"/live-demo"} component={LiveDemoControl} />
@@ -375,7 +375,7 @@ function Router() {
       <Route path={"/owner-control"} component={OwnerControl} />
       <Route path={"/owner-status"} component={OwnerStatus} />
       <Route path={"/greatest-show"} component={GreatestShowLanding} />
-      <Route path={"/greatest-show-studio"} component={GreatestShowStudio} />
+      {/* <Route path={"/greatest-show-studio"} component={GreatestShowStudio} /> */}
       <Route path={"/greatest-show/maily"} component={MailyProfile} />
       <Route path={"/greatest-show/diana"} component={DianaProfile} />
       <Route path={"/greatest-show/emma"} component={EmmaProfile} />
@@ -393,89 +393,89 @@ function Router() {
       <Route path={"/greatest-show/adult"} component={AdultContent} />
       <Route path={"/greatest-show/apply"} component={CreatorApplication} />
       <Route path={"/greatest-show/subscribe"} component={FanSubscription} />
-      <Route path={"/king/flyer-generator"} component={FlyerGenerator} />
-      <Route path={"/king/flyer-design-studio"} component={FlyerDesignStudio} />
-      <Route path={"/king/video-lab"} component={KingVideoLab} />
-      <Route path={"/king/analytics"} component={KingAnalytics} />
-      <Route path={"/king/content"} component={KingContent} />
-      <Route path={"/king/waitlist"} component={KingWaitlist} />
-      <Route path={"/king/launch-command"} component={LaunchCommand} />
-      <Route path="/king/empire-doc" component={EmpireDocPrompt} />
-      <Route path={"/nfc-cards"} component={NFCCards} />
-      <Route path={"/empire-brain"} component={EmpireBrain} />
-      <Route path={"/empire-brain-dashboard"} component={EmpireBrainDashboard} />
-      <Route path={"/empire-brain-rules"} component={EmpireBrainRules} />
-      <Route path={"/empire-state"} component={EmpireState} />
-      <Route path={"/agent-tracker"} component={AgentTracker} />
-      <Route path={"/emma-ai-agents"} component={EmmaAIAgentDashboard} />
-      <Route path={"/empire-brain-showrunner"} component={EmpireBrainShowrunner} />
-      <Route path={"/apparel-lab"} component={ApparelLab} />
-      <Route path={"/king/emma"} component={EmmaNetworkHome} />
-      <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} />
-      <Route path={"/real-estate-empire"} component={RealEstateEmpire} />
-      <Route path={"/viral-optimizer"} component={ViralOptimizerPage} />
+      {/* <Route path={"/king/flyer-generator"} component={FlyerGenerator} /> */}
+      {/* <Route path={"/king/flyer-design-studio"} component={FlyerDesignStudio} /> */}
+      {/* <Route path={"/king/video-lab"} component={KingVideoLab} /> */}
+      {/* <Route path={"/king/analytics"} component={KingAnalytics} /> */}
+      {/* <Route path={"/king/content"} component={KingContent} /> */}
+      {/* <Route path={"/king/waitlist"} component={KingWaitlist} /> */}
+      {/* <Route path={"/king/launch-command"} component={LaunchCommand} /> */}
+      {/* <Route path="/king/empire-doc" component={EmpireDocPrompt} /> */}
+      {/* <Route path={"/nfc-cards"} component={NFCCards} /> */}
+      {/* <Route path={"/empire-brain"} component={EmpireBrain} /> */}
+      {/* <Route path={"/empire-brain-dashboard"} component={EmpireBrainDashboard} /> */}
+      {/* <Route path={"/empire-brain-rules"} component={EmpireBrainRules} /> */}
+      {/* <Route path={"/empire-state"} component={EmpireState} /> */}
+      {/* <Route path={"/agent-tracker"} component={AgentTracker} /> */}
+      {/* <Route path={"/emma-ai-agents"} component={EmmaAIAgentDashboard} /> */}
+      {/* <Route path={"/empire-brain-showrunner"} component={EmpireBrainShowrunner} /> */}
+      {/* <Route path={"/apparel-lab"} component={ApparelLab} /> */}
+      {/* <Route path={"/king/emma"} component={EmmaNetworkHome} /> */}
+      {/* <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} /> */}
+      {/* <Route path={"/real-estate-empire"} component={RealEstateEmpire} /> */}
+      {/* <Route path={"/viral-optimizer"} component={ViralOptimizerPage} /> */}
       <Route path={"/vertical-pack"} component={VerticalPackLauncher} />
-      <Route path={"/brand-deals"} component={BrandDeals} />
-      <Route path={"/subscriptions"} component={Subscriptions} />
-      <Route path={"/feed"} component={FeedPage} />
-      <Route path={"/explore"} component={Explore} />
-      <Route path={"/profile/edit"} component={EditProfile} />
-      <Route path={"/profile/:username"} component={PublicProfile} />
-      <Route path="/follow-list/:userId/:type" component={FollowListPage} />
-      <Route path={"/notifications"} component={Notifications} />
-      <Route path={"/messages"} component={Messages} />
-      <Route path={"/messages/:conversationId"} component={MessageThread} />
-      <Route path={"/onboarding"} component={OnboardingV2} />
-      <Route path={"/command-hub-v2"} component={CommandHubV2} />
-      <Route path={"/owner-cockpit"} component={OwnerCockpit} />
-      <Route path={"/owner-cockpit/chicas-empire"} component={ChicasEmpire} />
-      <Route path={"/presentation-empire"} component={PresentationEmpire} />
-      <Route path={"/owner-cockpit/presentation-empire"} component={PresentationEmpireCockpit} />
-      <Route path={"/owner-cockpit/recruitment"} component={RecruitmentDashboard} />
-      <Route path={"/owner-cockpit/espionage"} component={EspionageDashboard} />
-      <Route path={"/owner-cockpit/ai-empire"} component={AIEmpireDashboard} />
-      <Route path={"/owner-cockpit/apple-queue"} component={AppleQDashboard} />
-      <Route path="/empire-cockpit-v3" element={<EmpireCockpitV3 />} />
-              <Route path="/empire-cockpit-v2" component={EmpireCockpitV2} />
-      <Route path={"/kingcam-clone"} component={KingCamClone} />
-      <Route path={"/kingcam-demos"} component={KingCamDemos} />
-      <Route path={"/kingcam-tours"} component={KingCamTours} />
-      <Route path={"/kingcam-showcase"} component={KingCamShowcase} />
-      <Route path={"/smart-album"} component={SmartAlbum} />
-      <Route path={"/vault-snap"} component={VaultSnap} />
-      <Route path={"/vault-pass"} component={VaultPass} />
-      <Route path={"/vault-drop"} component={VaultDrop} />
-      <Route path={"/vault-analytics"} component={VaultAnalytics} />
-       <Route path={"/vaultspace-dashboard"} component={VaultSpaceDashboard} />
-      <Route path={"/vault-moment"} component={VaultMoment} />
-      <Route path={"/vault-rise"} component={VaultRise} />
-      <Route path={"/vault-culture"} component={VaultCulture} />
-      <Route path="/hollywood-shows" component={HollywoodShows} />
-      <Route path="/hollywood-creator-dashboard" component={HollywoodCreatorDashboard} />
-      <Route path="/hollywood-studio" component={HollywoodStudio} />
-      <Route path="/hollywood-academy" component={HollywoodAcademy} />
-      <Route path="/hollywood/channel/:creatorId" component={HollywoodChannel} />
-      <Route path="/hollywood/episode/:episodeId" component={HollywoodEpisode} />
-      <Route path="/hollywood/:slug" component={HollywoodShow} />
-      <Route path={"/font-library"} component={FontLibrary} />
+      {/* <Route path={"/brand-deals"} component={BrandDeals} /> */}
+      {/* <Route path={"/subscriptions"} component={Subscriptions} /> */}
+      {/* <Route path={"/feed"} component={FeedPage} /> */}
+      {/* <Route path={"/explore"} component={Explore} /> */}
+      {/* <Route path={"/profile/edit"} component={EditProfile} /> */}
+      {/* <Route path={"/profile/:username"} component={PublicProfile} /> */}
+      {/* <Route path="/follow-list/:userId/:type" component={FollowListPage} /> */}
+      {/* <Route path={"/notifications"} component={Notifications} /> */}
+      {/* <Route path={"/messages"} component={Messages} /> */}
+      {/* <Route path={"/messages/:conversationId"} component={MessageThread} /> */}
+      {/* <Route path={"/onboarding"} component={OnboardingV2} /> */}
+      {/* <Route path={"/command-hub-v2"} component={CommandHubV2} /> */}
+      {/* <Route path={"/owner-cockpit"} component={OwnerCockpit} /> */}
+      {/* <Route path={"/owner-cockpit/chicas-empire"} component={ChicasEmpire} /> */}
+      {/* <Route path={"/presentation-empire"} component={PresentationEmpire} /> */}
+      {/* <Route path={"/owner-cockpit/presentation-empire"} component={PresentationEmpireCockpit} /> */}
+      {/* <Route path={"/owner-cockpit/recruitment"} component={RecruitmentDashboard} /> */}
+      {/* <Route path={"/owner-cockpit/espionage"} component={EspionageDashboard} /> */}
+      {/* <Route path={"/owner-cockpit/ai-empire"} component={AIEmpireDashboard} /> */}
+      {/* <Route path={"/owner-cockpit/apple-queue"} component={AppleQDashboard} /> */}
+      {/* <Route path="/empire-cockpit-v3" element={<EmpireCockpitV3 />} /> */}
+              {/* <Route path="/empire-cockpit-v2" component={EmpireCockpitV2} /> */}
+      {/* <Route path={"/kingcam-clone"} component={KingCamClone} /> */}
+      {/* <Route path={"/kingcam-demos"} component={KingCamDemos} /> */}
+      {/* <Route path={"/kingcam-tours"} component={KingCamTours} /> */}
+      {/* <Route path={"/kingcam-showcase"} component={KingCamShowcase} /> */}
+      {/* <Route path={"/smart-album"} component={SmartAlbum} /> */}
+      {/* <Route path={"/vault-snap"} component={VaultSnap} /> */}
+      {/* <Route path={"/vault-pass"} component={VaultPass} /> */}
+      {/* <Route path={"/vault-drop"} component={VaultDrop} /> */}
+      {/* <Route path={"/vault-analytics"} component={VaultAnalytics} /> */}
+       {/* <Route path={"/vaultspace-dashboard"} component={VaultSpaceDashboard} /> */}
+      {/* <Route path={"/vault-moment"} component={VaultMoment} /> */}
+      {/* <Route path={"/vault-rise"} component={VaultRise} /> */}
+      {/* <Route path={"/vault-culture"} component={VaultCulture} /> */}
+      {/* <Route path="/hollywood-shows" component={HollywoodShows} /> */}
+      {/* <Route path="/hollywood-creator-dashboard" component={HollywoodCreatorDashboard} /> */}
+      {/* <Route path="/hollywood-studio" component={HollywoodStudio} /> */}
+      {/* <Route path="/hollywood-academy" component={HollywoodAcademy} /> */}
+      {/* <Route path="/hollywood/channel/:creatorId" component={HollywoodChannel} /> */}
+      {/* <Route path="/hollywood/episode/:episodeId" component={HollywoodEpisode} /> */}
+      {/* <Route path="/hollywood/:slug" component={HollywoodShow} /> */}
+      {/* <Route path={"/font-library"} component={FontLibrary} /> */}
             <Route path={"/recruiter-dashboard"} component={RecruiterDashboard} />
-            <Route path={"/dominicana"} component={CreatorVaultDominicana} />
-      <Route path="/chuuch" component={Chuuch} />
-      <Route path="/chuuch/elders/:slug" component={ChuuchElders} />
-      <Route path="/chuuch/elders" component={ChuuchElders} />
-      <Route path="/chuuch/archive/:slug" component={ChuuchArchive} />
-      <Route path="/chuuch/archive" component={ChuuchArchive} />
-      <Route path="/chuuch/teaching/:slug" component={ChuuchTeaching} />
-      <Route path="/chuuch/teaching" component={ChuuchTeaching} />
-      <Route path="/chuuch/media" component={ChuuchMedia} />
-      <Route path="/chuuch/merch" component={ChuuchMerch} />
-      <Route path="/chuuch/transition" component={ChuuchTransition} />
-      <Route path="/chuuch/members" component={ChuuchMembersPage} />
-      <Route path="/chuuch/code" component={ChuuchCode} />
-      <Route path="/chuuch/events" component={ChuuchEvents} />
-      <Route component={NotFound} />
+            {/* <Route path={"/dominicana"} component={CreatorVaultDominicana} /> */}
+      {/* <Route path="/chuuch" component={Chuuch} /> */}
+      {/* <Route path="/chuuch/elders/:slug" component={ChuuchElders} /> */}
+      {/* <Route path="/chuuch/elders" component={ChuuchElders} /> */}
+      {/* <Route path="/chuuch/archive/:slug" component={ChuuchArchive} /> */}
+      {/* <Route path="/chuuch/archive" component={ChuuchArchive} /> */}
+      {/* <Route path="/chuuch/teaching/:slug" component={ChuuchTeaching} /> */}
+      {/* <Route path="/chuuch/teaching" component={ChuuchTeaching} /> */}
+      {/* <Route path="/chuuch/media" component={ChuuchMedia} /> */}
+      {/* <Route path="/chuuch/merch" component={ChuuchMerch} /> */}
+      {/* <Route path="/chuuch/transition" component={ChuuchTransition} /> */}
+      {/* <Route path="/chuuch/members" component={ChuuchMembersPage} /> */}
+      {/* <Route path="/chuuch/code" component={ChuuchCode} /> */}
+      {/* <Route path="/chuuch/events" component={ChuuchEvents} /> */}
         <Route path="/loyalty-command" component={ChicaLoyaltyCommand} />
         <Route path="/my-loyalty" component={MyLoyaltyPortal} />
+      <Route component={NotFound} />
       </Switch>
       </div>
     </>
@@ -490,12 +490,7 @@ function App() {
       >
         <TooltipProvider>
           <AuthProvider>
-            <GuidedModeProvider>
-              <Toaster />
-              <DebugOverlay />
-              <GettingStartedChecklist />
-              <Router />
-            </GuidedModeProvider>
+            <Router />
           </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>

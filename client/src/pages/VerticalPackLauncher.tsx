@@ -8,9 +8,10 @@
  * One call. Six artifacts. All real.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/contexts/AuthContext";
+import MediaPicker, { type MediaAssetItem } from "@/components/MediaPicker";
 
 // ============================================================
 // TYPES
@@ -475,6 +476,10 @@ export default function VerticalPackLauncher() {
   const [targetAudience, setTargetAudience] = useState("");
   const [pricePoint, setPricePoint] = useState("");
   const [credibilityProof, setCredibilityProof] = useState("");
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<MediaAssetItem[]>([]);
+  const [lastTrailerProjectId, setLastTrailerProjectId] = useState<string | null>(null);
+  const [trailerProjectError, setTrailerProjectError] = useState<string | null>(null);
   const [packResult, setPackResult] = useState<{
     packId: string;
     packName: string;
@@ -484,6 +489,17 @@ export default function VerticalPackLauncher() {
   } | null>(null);
 
   const { data: verticals } = trpc.verticalPack.listVerticals.useQuery();
+  const selectedMediaIds = useMemo(() => selectedMedia.map((asset) => asset.id), [selectedMedia]);
+
+  const createTrailerProjectMutation = trpc.mediaAssets.createTrailerProject.useMutation({
+    onSuccess: (data) => {
+      setLastTrailerProjectId(data.trailerProjectId);
+      setTrailerProjectError(null);
+    },
+    onError: (error) => {
+      setTrailerProjectError(error.message);
+    },
+  });
 
   const generateMutation = trpc.verticalPack.generatePack.useMutation({
     onSuccess: (data) => {
@@ -505,6 +521,39 @@ export default function VerticalPackLauncher() {
   };
 
   const isLoading = generateMutation.isPending;
+
+  const handleCreateTrailerProject = () => {
+    if (!packResult || selectedMediaIds.length === 0) return;
+
+    const trailerArtifact = packResult.artifacts.find((artifact) => artifact.type === "FLAGSHIP_TRAILER") as
+      | {
+          title?: string;
+          openingHook?: string;
+          closingCTA?: string;
+          segments?: Array<{ text?: string; visualDescription?: string; duration?: number }>;
+        }
+      | undefined;
+
+    const hooks = [trailerArtifact?.openingHook, trailerArtifact?.closingCTA].filter(Boolean) as string[];
+    const scriptText = trailerArtifact?.segments?.map((segment) => segment.text ?? "").join("\n") ?? "";
+
+    createTrailerProjectMutation.mutate({
+      projectName: `${handle.trim().replace(/^@/, "") || "creator"} - ${selectedVertical.toLowerCase()} trailer`,
+      projectType: "launch_trailer",
+      format: "16:9",
+      title: trailerArtifact?.title,
+      concept: courseTopic || undefined,
+      scriptText: scriptText || undefined,
+      selectedAssetIds: selectedMediaIds,
+      segments: trailerArtifact?.segments?.map((segment, idx) => ({
+        sceneIndex: idx,
+        text: segment.text ?? "",
+        visualDescription: segment.visualDescription,
+        duration: segment.duration,
+      })),
+      hooks,
+    });
+  };
 
   return (
     <div className="vpl-root">
@@ -967,6 +1016,42 @@ export default function VerticalPackLauncher() {
                 <ArtifactRenderer key={i} artifact={artifact} />
               ))}
             </div>
+
+            <div style={{ marginTop: 24, background: "#101010", border: "1px solid #242424", borderRadius: 12, padding: 16 }}>
+              <h3 style={{ margin: "0 0 8px", color: "#f5f0e8" }}>Create Trailer Project</h3>
+              <p style={{ margin: "0 0 12px", color: "#9a9a9a", fontSize: 13 }}>
+                Use your selected media + generated flagship trailer script to create a row in trailer_projects.
+              </p>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowMediaPicker(true)}
+                  style={{ borderRadius: 8, border: "1px solid #c9a84c", background: "rgba(201,168,76,0.12)", color: "#c9a84c", padding: "8px 12px", fontWeight: 700, cursor: "pointer" }}
+                >
+                  Select Media ({selectedMedia.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateTrailerProject}
+                  disabled={selectedMedia.length === 0 || createTrailerProjectMutation.isPending}
+                  style={{ borderRadius: 8, border: "1px solid #c9a84c", background: selectedMedia.length === 0 ? "#4f4533" : "#c9a84c", color: "#111", padding: "8px 12px", fontWeight: 800, cursor: selectedMedia.length === 0 ? "not-allowed" : "pointer" }}
+                >
+                  {createTrailerProjectMutation.isPending ? "Creating..." : "Create trailer_projects row"}
+                </button>
+              </div>
+
+              {lastTrailerProjectId && (
+                <p style={{ margin: "10px 0 0", color: "#4ade80", fontSize: 13 }}>
+                  Trailer project created: {lastTrailerProjectId}
+                </p>
+              )}
+              {trailerProjectError && (
+                <p style={{ margin: "10px 0 0", color: "#f87171", fontSize: 13 }}>
+                  {trailerProjectError}
+                </p>
+              )}
+            </div>
           </div>
         ) : isLoading ? (
           <div className="loading-state">
@@ -1057,6 +1142,51 @@ export default function VerticalPackLauncher() {
               </div>
             </div>
 
+            <div style={{ marginBottom: 18, border: "1px solid #2b2b2b", borderRadius: 10, padding: 14, background: "#121212" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 12 }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: 12, color: "#888", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    Trailer Media Selection
+                  </p>
+                  <p style={{ margin: "4px 0 0", color: "#aaa", fontSize: 13 }}>
+                    Choose media clips/images now so your trailer project can be created right after artifacts generate.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMediaPicker(true)}
+                  style={{
+                    borderRadius: 8,
+                    border: "1px solid #c9a84c",
+                    color: "#c9a84c",
+                    background: "rgba(201,168,76,0.12)",
+                    padding: "8px 12px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Select Media ({selectedMedia.length})
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
+                {selectedMedia.slice(0, 8).map((asset) => (
+                  <div key={asset.id} style={{ border: "1px solid #2a2a2a", borderRadius: 8, overflow: "hidden", background: "#0f0f0f" }}>
+                    {(asset.thumbnailUrl ?? asset.publicUrl) ? (
+                      <img src={asset.thumbnailUrl ?? asset.publicUrl ?? ""} alt={asset.fileName} style={{ width: "100%", height: 64, objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ height: 64, display: "grid", placeItems: "center", color: "#666", fontSize: 11 }}>No preview</div>
+                    )}
+                    <div style={{ padding: "4px 6px", fontSize: 10, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {asset.fileName}
+                    </div>
+                  </div>
+                ))}
+                {selectedMedia.length === 0 && <p style={{ margin: 0, color: "#777", fontSize: 12 }}>No media selected yet.</p>}
+              </div>
+            </div>
+
             {generateMutation.isError && (
               <div className="errors-block" style={{ marginBottom: 16 }}>
                 <h4>Error</h4>
@@ -1076,6 +1206,18 @@ export default function VerticalPackLauncher() {
           </div>
         )}
       </div>
+      <MediaPicker
+        open={showMediaPicker}
+        mode="multi"
+        title="Select Media for Trailer + Teasers"
+        subtitle="Choose the clips and images that should feed your trailer scenes"
+        initialSelectedIds={selectedMediaIds}
+        onClose={() => setShowMediaPicker(false)}
+        onConfirm={(selected) => {
+          setSelectedMedia(selected);
+          setShowMediaPicker(false);
+        }}
+      />
     </div>
   );
 }

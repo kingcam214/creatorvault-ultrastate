@@ -10,7 +10,7 @@ import { generateSpeech, KINGCAM_VOICE_PROFILE, KINGCAM_DOMINICAN_VOICE_PROFILE 
 import { createVideoJob, generateAllScenes } from "./videoStudio.js";
 import { assembleVideo } from "./videoAssembly.js";
 import { storagePut } from "../storage.js";
-import { getDb } from "../db.js";
+import { getDb } from "../db";
 import { videoGenerationJobs } from "../../drizzle/schema.js";
 import { eq } from "drizzle-orm";
 

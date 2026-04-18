@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.db = void 0;
+export const db = {};
 exports.getDb = getDb;
 exports.upsertUser = upsertUser;
 exports.getUserByOpenId = getUserByOpenId;

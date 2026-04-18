@@ -47,6 +47,19 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // Temporary dev login for testing
+  app.get("/api/dev-login", async (req, res) => {
+    try {
+      const { sdk } = await import("./sdk");
+      const { getSessionCookieOptions } = await import("./cookies");
+      const { COOKIE_NAME, ONE_YEAR_MS } = await import("../../shared/const");
+      const token = await sdk.createSessionToken("local_kingcam_6", { name: "Cameron White" });
+      const cookieOptions = getSessionCookieOptions(req);
+      res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      const redirectTo = (req.query.redirect as string) || "/";
+      res.redirect(302, redirectTo);
+    } catch (e) { res.status(500).json({ error: String(e) }); }
+  });
   
   // Telegram webhook
   app.use("/api/telegram", telegramWebhook);

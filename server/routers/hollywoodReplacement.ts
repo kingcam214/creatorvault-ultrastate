@@ -33,7 +33,7 @@ export const hollywoodReplacementRouter = router({
       quality: z.enum(["1080p", "4K", "8K"])
     }))
     .query(({ input }) => {
-      return hollywoodService.compareProductionCosts(input);
+      return hollywoodService.compareProductionCosts?.(input) ?? { error: "not implemented" };
     }),
 
   /**

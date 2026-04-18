@@ -392,7 +392,7 @@ function RadarRail() {
               >
                 <div className="flex-1 min-w-0 mr-3">
                   <p className="text-sm font-semibold truncate" style={{ color: T.text }}>{p.title}</p>
-                  <p className="text-xs" style={{ color: T.textMuted }}>${(p.price_amount / 100).toFixed(0)}</p>
+                  <p className="text-xs" style={{ color: T.textMuted }}>${((p.price_amount || p.price || 0) / 100).toFixed(0)}</p>
                 </div>
                 <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: T.textMuted }} />
               </div>

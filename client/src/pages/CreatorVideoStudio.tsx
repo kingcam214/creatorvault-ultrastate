@@ -19,19 +19,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Film, 
-  Sparkles, 
-  Image as ImageIcon, 
-  Play, 
-  RefreshCw, 
-  Lock, 
-  Unlock,
+import {
+  Film,
+  Sparkles,
+  Image as ImageIcon,
+  Play,
+  RefreshCw,
+  Lock,
   ArrowUp,
   ArrowDown,
-  Trash2,
-  Download
+  Download,
 } from "lucide-react";
+import MediaPicker, { type MediaAssetItem } from "@/components/MediaPicker";
 
 interface Scene {
   id: string;
@@ -73,6 +72,8 @@ export default function CreatorVideoStudio() {
   const [baseImageUrl, setBaseImageUrl] = useState("");
   const [duration, setDuration] = useState(30);
   const [sceneCount, setSceneCount] = useState(5);
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
+  const [selectedBaseMedia, setSelectedBaseMedia] = useState<MediaAssetItem | null>(null);
 
   // Mutations
   const createJob = trpc.video.create.useMutation({
@@ -269,13 +270,36 @@ export default function CreatorVideoStudio() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="baseImage">Base Image URL (Optional)</Label>
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="baseImage">Base Image URL (Optional)</Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowMediaPicker(true)}
+                    >
+                      Select Media
+                    </Button>
+                  </div>
                   <Input
                     id="baseImage"
-                    placeholder="https://example.com/character-reference.jpg"
+                    placeholder="https://i.pinimg.com/736x/c5/5e/8c/c55e8c9f14116f2d2392a1805428fa93.jpg"
                     value={baseImageUrl}
                     onChange={(e) => setBaseImageUrl(e.target.value)}
                   />
+                  {selectedBaseMedia && (
+                    <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 p-2">
+                      <img
+                        src={selectedBaseMedia.thumbnailUrl ?? selectedBaseMedia.publicUrl ?? ""}
+                        alt={selectedBaseMedia.fileName}
+                        className="h-12 w-16 rounded object-cover"
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{selectedBaseMedia.fileName}</p>
+                        <p className="text-xs text-muted-foreground">Selected from your media library</p>
+                      </div>
+                    </div>
+                  )}
                   <p className="text-sm text-muted-foreground">
                     Provide a character reference image to maintain visual consistency
                   </p>
@@ -584,6 +608,22 @@ export default function CreatorVideoStudio() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <MediaPicker
+        open={showMediaPicker}
+        mode="single"
+        title="Select Base Reference Media"
+        subtitle="Pick one image or video frame to guide character consistency"
+        confirmLabel="Use this media"
+        onClose={() => setShowMediaPicker(false)}
+        onConfirm={(selected) => {
+          const first = selected[0];
+          if (!first) return;
+          setSelectedBaseMedia(first);
+          setBaseImageUrl(first.publicUrl ?? first.thumbnailUrl ?? "");
+          setShowMediaPicker(false);
+        }}
+      />
     </div>
   );
 }
