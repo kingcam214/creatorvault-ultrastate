@@ -16,11 +16,11 @@ import Home from "./pages/Home";
 // import BusinessCardDesigner from "./pages/BusinessCardDesigner";
 // import CardEditor from "./pages/CardEditor";
 // import AICardDesigner from "./pages/AICardDesigner";
-// import Login from "./pages/Login";
-// import Register from "./pages/Register";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-// import CreatorHome from "./pages/CreatorHome";
-// import KingHome from "./pages/KingHome";
+import CreatorHome from "./pages/CreatorHome";
+import KingHome from "./pages/KingHome";
 // import KingGemCenter from "./pages/king/KingGemCenter";
 // import FlyerGenerator from "./pages/FlyerGenerator";
 // import AnimatedFlyerStudio from "./pages/AnimatedFlyerStudio";
@@ -242,9 +242,9 @@ function Router() {
       <div className="pt-16">
         <Switch>
       <Route path={"/"} component={Home} />
-      {/* <Route path={"/login"} component={Login} /> */}
-      {/* <Route path={"/register"} component={Register} /> */}
-      {/* <Route path={"/dashboard"} component={CreatorHome} /> */}
+      <Route path={"/login"} component={Login} />
+      <Route path={"/register"} component={Register} />
+      <Route path={"/dashboard"} component={CreatorHome} />
       {/* <Route path={"/operator"} component={OperatorDashboard} /> */}
       {/* <Route path={"/flyer-generator"} component={FlyerGenerator} /> */}
       {/* <Route path={"/animated-flyer-studio"} component={AnimatedFlyerStudio} /> */}
@@ -290,6 +290,7 @@ function Router() {
       <Route path={"/adult-sales-bot"} component={AdultSalesBot} />
       {/* <Route path={"/creator-management"} component={CreatorManagement} /> */}
       <Route path={"/command-hub"} component={CommandHub} />
+      <Route path={"/command-center"} component={CommandHub} />
       {/* <Route path={"/onboard"} component={Onboard} /> */}
       {/* <Route path={"/onboard/influencer"} component={InfluencerOnboarding} /> */}
       <Route path={"/onboard/creator"} component={CreatorOnboarding} />
@@ -310,7 +311,7 @@ function Router() {
       {/* <Route path={"/emma/reset-dashboard"} component={EmmaResetDashboard} /> */}
       {/* <Route path={"/emma/reset"} component={EmmaSimpleView} /> */}
       {/* <Route path={"/emma/network"} component={EmmaNetworkHome} /> */}
-      {/* <Route path={"/king"} component={KingHome} /> */}
+      <Route path={"/king"} component={KingHome} />
           {/* <Route path="/king/gem-center" component={KingGemCenter} /> */}
       {/* <Route path={"/king/users"} component={KingUsers} /> */}
       {/* <Route path={"/king/demos"} component={KingCamDemos} /> */}
