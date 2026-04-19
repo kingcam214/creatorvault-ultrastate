@@ -11,7 +11,7 @@ import { createVideoJob, generateAllScenes } from "./videoStudio.js";
 import { assembleVideo } from "./videoAssembly.js";
 import { storagePut } from "../storage.js";
 import { getDb } from "../db";
-import { videoGenerationJobs } from "../../drizzle/schema.js";
+import { videoGenerationJobs } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 export interface DemoGenerationOptions {

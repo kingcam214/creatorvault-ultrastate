@@ -90,3 +90,86 @@ Surgical App.tsx repair completed successfully at source/build level:
 - Route signatures present in compiled bundle
 
 Live runtime verification through PM2 currently **blocked** by existing server-side `dist/index.js` ESM/CJS dynamic require failure.
+
+---
+
+# PHASE 6 — BACKEND ERROR RESOLUTION & SERVER RESTORATION
+
+Date: 2026-04-19 (UTC)
+Objective: Resolve PM2 startup failure caused by drizzle-orm ESM/CJS compatibility issue and restore HTTP route serving.
+
+## A) Error Investigation
+Commands:
+- `pm2 logs creatorvault --lines 100 --err --nostream`
+
+Primary blocker found:
+- `Error: Dynamic require of "drizzle-orm/mysql-core" is not supported`
+- Stack included:
+  - `file:///root/creatorvault/dist/index.js:11`
+  - `at drizzle/schema.js (file:///root/creatorvault/dist/index.js:4616:24)`
+
+## B) Drizzle Import Audit + Config Checks
+Commands used:
+- `grep -R "drizzle-orm" server --include="*.ts" -n`
+- `grep -R "drizzle/schema" -n server shared drizzle --include="*.ts" --include="*.js"`
+- inspected `package.json`, `tsconfig.json`, `ecosystem.config.cjs`, `start.sh`
+
+Findings:
+- Project builds server with ESM bundle (`esbuild ... --format=esm --bundle`).
+- PM2 runs `node dist/index.js` via `/root/creatorvault/start.sh`.
+- Two TypeScript files imported schema using explicit `.js` extension:
+  - `server/routers/kingcamDemos.ts`
+  - `server/services/kingcamDemoEngine.ts`
+- Those imports forced bundling of `drizzle/schema.js` (CJS style), which triggered runtime dynamic require of `drizzle-orm/mysql-core` under ESM.
+
+## C) Surgical Fixes Applied
+Backups created before edits:
+- `server/routers/kingcamDemos.ts.backup_phase6`
+- `server/services/kingcamDemoEngine.ts.backup_phase6`
+- `server/_core/vite.ts.backup_phase6`
+- `vite.config.ts.backup_phase6`
+
+Fix 1 (drizzle ESM/CJS root cause):
+- Changed:
+  - `import ... from "../../drizzle/schema.js"`
+- To:
+  - `import ... from "../../drizzle/schema"`
+- Files:
+  - `server/routers/kingcamDemos.ts`
+  - `server/services/kingcamDemoEngine.ts`
+
+Fix 2 (secondary blocker discovered after drizzle fix):
+- Startup then failed with `TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string. Received undefined` originating from invalid `__filename` usage in bundled ESM.
+- Corrected ESM filename handling:
+  - `server/_core/vite.ts`: use `fileURLToPath(import.meta.url)`
+  - `vite.config.ts`: use `fileURLToPath(import.meta.url)`
+- Corrected static path resolution for bundled runtime:
+  - `server/_core/vite.ts` now resolves from `process.cwd()` for:
+    - client template path in dev middleware
+    - `dist/public` path in production static serving
+
+## D) Build + PM2 + Route Verification
+Commands:
+- `npm run build`
+- `pm2 restart creatorvault`
+- `pm2 status creatorvault`
+- `ss -ltnp | grep :3000`
+- `curl -I http://localhost:3000/`
+- `curl -I http://localhost:3000/login`
+- `curl -I https://creatorvault.live/`
+- `curl -I https://creatorvault.live/login`
+
+Verification results:
+- PM2 process `creatorvault` is `online`.
+- Node listening on `*:3000`.
+- Local routes return `HTTP/1.1 200 OK`:
+  - `/`
+  - `/login`
+- Public domain routes return `HTTP/2 200`:
+  - `https://creatorvault.live/`
+  - `https://creatorvault.live/login`
+
+## E) Phase 6 Outcome
+✅ Drizzle-ORM ESM/CJS startup error resolved.
+✅ Backend process restored and stable in PM2.
+✅ Restored frontend routes are now being served successfully.

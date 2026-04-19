@@ -14,7 +14,7 @@ import {
   type DemoResult 
 } from "../services/kingcamDemoEngine.js";
 import { getDb } from "../db";
-import { videoGenerationJobs, videoAssets } from "../../drizzle/schema.js";
+import { videoGenerationJobs, videoAssets } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 
 export const kingcamDemosRouter = router({
