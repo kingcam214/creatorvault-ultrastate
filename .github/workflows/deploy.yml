@@ -1,0 +1,38 @@
+name: Deploy to CreatorVault VPS
+
+on:
+  push:
+    branches:
+      - work
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Sync repo to VPS and deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.CREATORVAULT_VPS_HOST }}
+          username: ${{ secrets.CREATORVAULT_VPS_USER }}
+          key: ${{ secrets.CREATORVAULT_VPS_SSH_KEY }}
+          port: 22
+          script: |
+            set -euo pipefail
+
+            cd /root/creatorvault
+
+            git fetch origin work
+            git checkout work
+            git reset --hard origin/work
+
+            pnpm install --frozen-lockfile
+            pnpm build
+
+            chmod +x ./deploy_work_to_prod.sh
+            ./deploy_work_to_prod.sh
+
+            pm2 reload all || pm2 restart all
