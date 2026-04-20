@@ -30,4 +30,5 @@ export const viralOptimizerRouter = router({
       estimatedReach: 50000
     };
   }),
+    }),
 });

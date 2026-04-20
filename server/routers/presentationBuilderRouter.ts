@@ -21,5 +21,4 @@ Provide: headline, 3-5 bullet points, and speaker notes.` }], max_tokens: 400 })
     return { content: c.choices[0].message.content };
   }),
   listTemplates: protectedProcedure.query(async () => ({ templates: [{ id: "pitch_deck", name: "Pitch Deck", slides: 10, style: "professional" }, { id: "webinar", name: "Webinar", slides: 15, style: "engaging" }, { id: "course", name: "Course Slides", slides: 20, style: "educational" }, { id: "keynote", name: "Keynote", slides: 12, style: "cinematic" }] })),
-  getPresentationTemplates: protectedProcedure.query(async () => ({ templates: [{ id: "pitch_deck", name: "Pitch Deck" }, { id: "webinar", name: "Webinar" }, { id: "course", name: "Course Slides" }, { id: "keynote", name: "Keynote" }] })),
 });
