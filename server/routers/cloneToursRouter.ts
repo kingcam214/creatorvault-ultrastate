@@ -29,6 +29,7 @@ Create: tour announcement copy, ticket pricing strategy, promotional content pla
     return { tourPlan: completion.choices[0].message.content };
   }),
 
+  getAllTours: protectedProcedure.query(async () => ({ tours: [], total: 0, message: "No tours created yet" })),
   getTourTemplates: protectedProcedure.query(async () => {
     return {
       templates: [
