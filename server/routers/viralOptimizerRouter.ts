@@ -32,3 +32,4 @@ export const viralOptimizerRouter = router({
   }),
     }),
 });
+});
