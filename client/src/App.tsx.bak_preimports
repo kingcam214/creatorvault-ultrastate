@@ -1,7 +1,7 @@
 // import PlatformWarRoom from "./pages/PlatformWarRoom";
 // import EmpireVerticals from "./pages/EmpireVerticals";
 // import { Toaster } from "@/components/ui/sonner";
-import { DebugOverlay } from "./components/DebugOverlay";
+// import { DebugOverlay } from "./components/DebugOverlay";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 // import FollowListPage from "./pages/FollowListPage";
@@ -45,8 +45,8 @@ import KingHome from "./pages/KingHome";
 // import LeadCapture from "./pages/LeadCapture";
 // import PerformanceAnalytics from "./pages/PerformanceAnalytics";
 import AppHeader from "./components/AppHeader";
-import KingDashboard from "./pages/KingDashboard";
-import MissionControl from "./pages/MissionControl";
+// import KingDashboard from "./pages/KingDashboard";
+// import MissionControl from "./pages/MissionControl";
 // import KingUsers from "./pages/KingUsers";
 // import Marketplace from "./pages/Marketplace";
 // import MarketplaceCreate from "./pages/MarketplaceCreate";
@@ -58,7 +58,7 @@ import MissionControl from "./pages/MissionControl";
 // import KingCamScriptWriter from "./pages/KingCamScriptWriter";
 // import KingCamEngine from "./pages/KingCamEngine";
 // import EmmaUniversity from "./pages/EmmaUniversity";
-import EmmaTransparencyLog from "./pages/EmmaTransparencyLog";
+// import EmmaTransparencyLog from "./pages/EmmaTransparencyLog";
 // import Services from "./pages/Services";
 import CreatorDashboard from "./pages/CreatorDashboard";
 import AIBot from "./pages/AIBot";
@@ -77,7 +77,7 @@ import AdultSalesBot from "./pages/AdultSalesBot";
 // import { PlatformConnections } from "./pages/PlatformConnections";
 // import UnifiedContentPublisher from "./pages/UnifiedContentPublisher";
 // import VaultLiveSimple from "./pages/VaultLiveSimple";
-import EmmaNetwork from "./pages/EmmaNetwork";
+// import EmmaNetwork from "./pages/EmmaNetwork";
 // import InfluencerOnboarding from "./pages/InfluencerOnboarding";
 // import InfluencerDashboard from "./pages/InfluencerDashboard";
 // import JoinVaultLive from "./pages/JoinVaultLive";
@@ -87,7 +87,7 @@ import LaunchTrailerStudio from "./pages/LaunchTrailerStudio";
 // import KingCamShowcase from "./pages/KingCamShowcase";
 // import KingCamImport from "./pages/king/KingCamImport";
 // import KingCamGallery from "./pages/king/KingCamGallery";
-import LaunchCommand from "./pages/king/LaunchCommandWrapper";
+// import LaunchCommand from "./pages/king/LaunchCommandWrapper";
 // import SmartAlbum from "./pages/SmartAlbum";
 // import VaultSnap from "./pages/VaultSnap";
 // import VaultPass from "./pages/VaultPass";
@@ -104,7 +104,7 @@ import LaunchCommand from "./pages/king/LaunchCommandWrapper";
 // import KingEmmaOversight from "./pages/KingEmmaOversight";
 // import PublicProfile from "./pages/PublicProfile";
 // import EditProfile from "./pages/EditProfile";
-import FeedPage from "./pages/Feed";
+// import FeedPage from "./pages/Feed";
 // import Explore from "./pages/Explore";
 // import VideoEditorProjects from "./pages/videoeditor/VideoEditorProjects";
 // import VideoEditor from "./pages/videoeditor/VideoEditor";
@@ -338,7 +338,7 @@ import WhatsAppContentGenerator from "./pages/WhatsAppContentGenerator";
 // import MySubscriptions from "./pages/MySubscriptions";
 
 // import { GuidedModeProvider } from "./contexts/GuidedModeContext";
-import GettingStartedChecklist from "./components/GettingStartedChecklist";
+// import GettingStartedChecklist from "./components/GettingStartedChecklist";
 // import KingVideoLab from "./pages/KingVideoLab";
 // import KingAnalytics from "./pages/KingAnalytics";
 // import KingContent from "./pages/KingContent";
@@ -388,8 +388,7 @@ import GettingStartedChecklist from "./components/GettingStartedChecklist";
 // import ChuuchMedia from "./pages/ChuuchMedia";
 // import ChuuchMerch from "./pages/ChuuchMerch";
 // import ChuuchTransition from "./pages/ChuuchTransition";
-import ChuuchMembersPage from "./pages/ChuuchMembers";
-import EmpireCockpitV3 from "./pages/EmpireCockpitV3";
+// import ChuuchMembersPage from "./pages/ChuuchMembers";
 // import ChuuchCode from "./pages/ChuuchCode";
 // import ChuuchEvents from "./pages/ChuuchEvents";
 // import ShowPage from "./pages/ShowPage";
@@ -609,7 +608,7 @@ function Router() {
       <Route path={"/owner-cockpit/espionage"} component={EspionageDashboard} />
       <Route path={"/owner-cockpit/ai-empire"} component={AIEmpireDashboard} />
       <Route path={"/owner-cockpit/apple-queue"} component={AppleQDashboard} />
-      <Route path="/empire-cockpit-v3" component={EmpireCockpitV3} />
+      {/* <Route path="/empire-cockpit-v3" element={<EmpireCockpitV3 />} /> */}
               <Route path="/empire-cockpit-v2" component={EmpireCockpitV2} />
       <Route path={"/kingcam-clone"} component={KingCamClone} />
       <Route path={"/kingcam-demos"} component={KingCamDemos} />
