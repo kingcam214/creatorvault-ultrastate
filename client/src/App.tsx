@@ -390,6 +390,61 @@ import GettingStartedChecklist from "./components/GettingStartedChecklist";
 // import ChuuchTransition from "./pages/ChuuchTransition";
 import ChuuchMembersPage from "./pages/ChuuchMembers";
 import EmpireCockpitV3 from "./pages/EmpireCockpitV3";
+import AgentApprovalInbox from "./pages/AgentApprovalInbox";
+import AgentCommandTower from "./pages/AgentCommandTower";
+import AlbumCoverDesigner from "./pages/AlbumCoverDesigner";
+import BCBPanel from "./pages/BCBPanel";
+import BotMonetizationDashboard from "./pages/BotMonetizationDashboard";
+import ChicaFunnelManager from "./pages/ChicaFunnelManager";
+import CloneEmpire from "./pages/CloneEmpire";
+import CloneRenderStudio from "./pages/CloneRenderStudio";
+import ComponentShowcase from "./pages/ComponentShowcase";
+import CreatorProfilePage from "./pages/CreatorProfilePage";
+import CreatorVaultAyiti from "./pages/CreatorVaultAyiti";
+import DelbaniaPanel from "./pages/DelbaniaPanel";
+import Demos from "./pages/Demos";
+import EmmaReset from "./pages/EmmaReset";
+import EmmaResetSuccess from "./pages/EmmaResetSuccess";
+import FlyerStudio from "./pages/FlyerStudio";
+import FunnelForge from "./pages/FunnelForge";
+import HaitianSector from "./pages/HaitianSector";
+import KingCamVault from "./pages/KingCamVault";
+import LipSyncStudio from "./pages/LipSyncStudio";
+import MarielkaDashboard from "./pages/MarielkaDashboard";
+import MediaHubPage from "./pages/MediaHubPage";
+import MotionFlyerAgent from "./pages/MotionFlyerAgent";
+import MusicCoverStudio from "./pages/MusicCoverStudio";
+import MusicLibraryAgent from "./pages/MusicLibraryAgent";
+import OAuthSocialCallback from "./pages/OAuthSocialCallback";
+import OpsStatusPage from "./pages/OpsStatusPage";
+import Podcasting from "./pages/Podcasting";
+import RealGPTDashboard from "./pages/RealGPTDashboard";
+import Shop from "./pages/Shop";
+import SocialAutoposterAgent from "./pages/SocialAutoposterAgent";
+import SocialFactory from "./pages/SocialFactory";
+import SocialPostingHub from "./pages/SocialPostingHub";
+import SpatialComposer from "./pages/SpatialComposer";
+import SubscriptionSuccess from "./pages/SubscriptionSuccess";
+import TestCheckout from "./pages/TestCheckout";
+import UniversityEnrollSuccess from "./pages/UniversityEnrollSuccess";
+import VaultCut from "./pages/VaultCut";
+import VaultLiveControlRoom from "./pages/VaultLiveControlRoom";
+import VaultLiveStream from "./pages/VaultLiveStream";
+import VaultMarket from "./pages/VaultMarket";
+import VaultXOnboarding from "./pages/VaultXOnboarding";
+import VaultXStudio from "./pages/VaultXStudio";
+import VaultXVideoEditor from "./pages/VaultXVideoEditor";
+import VideoOS from "./pages/VideoOS";
+import Waitlist from "./pages/Waitlist";
+import LirysMissedRevenue from "./pages/greatest-show/LirysMissedRevenue";
+import MarielkaProfile from "./pages/greatest-show/MarielkaProfile";
+import SubscribeSuccess from "./pages/greatest-show/SubscribeSuccess";
+import CloneCommand from "./pages/king/CloneCommand";
+import CloneStudio from "./pages/king/CloneStudio";
+import MediaVault from "./pages/king/MediaVault";
+import ViralOptimizerV2 from "./pages/tools/ViralOptimizerV2";
+import VaultXVideoEditorVideoeditorOrphan from "./pages/videoeditor/VaultXVideoEditor";
+import VaultXVideoEditorProjects from "./pages/videoeditor/VaultXVideoEditorProjects";
 // import ChuuchCode from "./pages/ChuuchCode";
 // import ChuuchEvents from "./pages/ChuuchEvents";
 // import ShowPage from "./pages/ShowPage";
@@ -650,6 +705,61 @@ function Router() {
         <Route path="/loyalty-command" component={ChicaLoyaltyCommand} />
         <Route path="/my-loyalty" component={MyLoyaltyPortal} />
       <Route component={NotFound} />
+      <Route path="/agents/approvals" component={AgentApprovalInbox} />
+      <Route path="/agents/command-tower" component={AgentCommandTower} />
+      <Route path="/music/album-cover" component={AlbumCoverDesigner} />
+      <Route path="/mi-panel/bcb-panel" component={BCBPanel} />
+      <Route path="/bots/monetization" component={BotMonetizationDashboard} />
+      <Route path="/chica/funnels" component={ChicaFunnelManager} />
+      <Route path="/clone-empire-home" component={CloneEmpire} />
+      <Route path="/clone/render-studio" component={CloneRenderStudio} />
+      <Route path="/_dev/components" component={ComponentShowcase} />
+      <Route path="/creator/profile-page" component={CreatorProfilePage} />
+      <Route path="/vault-ayiti" component={CreatorVaultAyiti} />
+      <Route path="/mi-panel/delbania-panel" component={DelbaniaPanel} />
+      <Route path="/demos-home" component={Demos} />
+      <Route path="/emma/reset-home" component={EmmaReset} />
+      <Route path="/emma/reset-success" component={EmmaResetSuccess} />
+      <Route path="/flyer-studio-v2" component={FlyerStudio} />
+      <Route path="/funnels" component={FunnelForge} />
+      <Route path="/sector/haiti" component={HaitianSector} />
+      <Route path="/kingcam/vault" component={KingCamVault} />
+      <Route path="/studio/lipsync" component={LipSyncStudio} />
+      <Route path="/mi-panel/marielka-dashboard" component={MarielkaDashboard} />
+      <Route path="/media/hub" component={MediaHubPage} />
+      <Route path="/agents/motion-flyer-agent" component={MotionFlyerAgent} />
+      <Route path="/music/cover-studio" component={MusicCoverStudio} />
+      <Route path="/agents/music-library-agent" component={MusicLibraryAgent} />
+      <Route path="/oauth/social/callback" component={OAuthSocialCallback} />
+      <Route path="/ops/status" component={OpsStatusPage} />
+      <Route path="/podcasting-home" component={Podcasting} />
+      <Route path="/realgpt/dashboard" component={RealGPTDashboard} />
+      <Route path="/shop" component={Shop} />
+      <Route path="/agents/social-autoposter-agent" component={SocialAutoposterAgent} />
+      <Route path="/social/factory" component={SocialFactory} />
+      <Route path="/social/posting-hub" component={SocialPostingHub} />
+      <Route path="/tools/spatial-composer" component={SpatialComposer} />
+      <Route path="/subscription/success" component={SubscriptionSuccess} />
+      <Route path="/_dev/test-checkout" component={TestCheckout} />
+      <Route path="/university/enroll-success" component={UniversityEnrollSuccess} />
+      <Route path="/vault/cut" component={VaultCut} />
+      <Route path="/vaultlive/control-room" component={VaultLiveControlRoom} />
+      <Route path="/vaultlive/stream" component={VaultLiveStream} />
+      <Route path="/vault-market-home" component={VaultMarket} />
+      <Route path="/vaultx/onboarding" component={VaultXOnboarding} />
+      <Route path="/vaultx/studio" component={VaultXStudio} />
+      <Route path="/vaultx/video-editor" component={VaultXVideoEditor} />
+      <Route path="/video-os" component={VideoOS} />
+      <Route path="/waitlist" component={Waitlist} />
+      <Route path="/greatest-show/lirys-missed-revenue" component={LirysMissedRevenue} />
+      <Route path="/greatest-show/marielka-profile" component={MarielkaProfile} />
+      <Route path="/greatest-show/subscribe-success" component={SubscribeSuccess} />
+      <Route path="/king/clone-command" component={CloneCommand} />
+      <Route path="/king/clone-studio" component={CloneStudio} />
+      <Route path="/king/media-vault" component={MediaVault} />
+      <Route path="/tools/viral-optimizer-v2" component={ViralOptimizerV2} />
+      <Route path="/videoeditor/vaultx" component={VaultXVideoEditorVideoeditorOrphan} />
+      <Route path="/videoeditor/vaultx-projects" component={VaultXVideoEditorProjects} />
       </Switch>
       </div>
     </>
