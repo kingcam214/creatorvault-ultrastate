@@ -317,6 +317,10 @@ export default function Home() {
 
   return (
     <div style={{ background: "#050508", minHeight: "100vh", fontFamily: "Inter, sans-serif", overflowX: "hidden" }}>
+      {/* HOMEPAGE LIVE CHECK BANNER */}
+      <div style={{ background: "#c9a84c", color: "#050508", textAlign: "center", padding: "10px 16px", fontFamily: "Inter, sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", zIndex: 9999, position: "relative" }}>
+        HOMEPAGE LIVE CHECK — CREATORVAULT UPDATED
+      </div>
       <style>{`
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #050508; color: #fff; }
