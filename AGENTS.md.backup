@@ -50,69 +50,6 @@ Make careful, surgical improvements to the real CreatorVault codebase without br
 - If fixing build/server issues, document exactly how static assets are resolved in production.
 - Be careful with ESM/CJS boundaries, path resolution, and Vite production serving.
 
-## Production Workflow (MANDATORY)
-
-### Production Branch Truth
-- `main` is the ONLY production branch
-- Production deploys ONLY from `main` branch pushes
-- `work` branch is for preview/testing only
-- Never deploy from feature branches to production
-
-### Preview vs Production
-- Preview: `work` branch → preview environment
-- Production: `main` branch → live site
-- Preview must never be mistaken for production
-
-### One Task Per Session
-- Each VS Code session handles exactly one task
-- Task types: homepage, vaultx, navigation, etc.
-- No mixing unrelated tasks in one session
-
-### Route-Owner Verification (MANDATORY)
-Before editing any UI:
-1. Run: `npm run route-owner /`
-2. Confirms which component renders the route
-3. Only edit that component + directly required files
-
-### Scope Guard Usage (MANDATORY)
-After making changes:
-1. Run: `npm run scope-guard <task>`
-2. Checks changed files against task allowlist
-3. Fails if unrelated files were touched
-
-### Release Truth Verification
-After deploy:
-1. Visit: `https://creatorvault.live/__release`
-2. Confirms exact commit, branch, timestamp live
-3. No guessing - auditable proof
-
-### Exact Build/Test/Browser Commands
-- Build: `npm run build`
-- Test: `npm run test`
-- Route owner: `npm run route-owner <route>`
-- Scope guard: `npm run scope-guard <task>`
-- Visual proof: `npm run visual-proof <task> <before|after>`
-
-### No Success Claims from Local Preview
-- Localhost verification is meaningless
-- Must verify on live URL with release stamp
-- UI tasks require before/after screenshots at same viewport
-
-### No Touching Unrelated Files
-- Homepage task: only Home.tsx, index.css, index.html
-- VaultX task: only VaultX.tsx + styles
-- Navigation task: only App.tsx, AppHeader.tsx
-- Scope guard enforces this
-
-## Day-to-Day Flow in VS Code
-1. **Start task**: Identify route owner with `npm run route-owner /`
-2. **Make changes**: Edit only allowed files
-3. **Check scope**: Run `npm run scope-guard homepage`
-4. **Build & test**: `npm run build && npm run test`
-5. **Visual proof**: `npm run visual-proof homepage before` (take screenshot)
-6. **Deploy**: Push to `main` branch
-7. **Verify live**: Check `https://creatorvault.live/__release` for commit match
-
 ## Change workflow
 For every task:
 1. Summarize the issue in plain English.
@@ -144,9 +81,9 @@ Default to:
 
 Avoid:
 - massive refactors
-- speculative "cleanup"
+- speculative “cleanup”
 - changing unrelated subsystems during a fix
-- reporting "done" before visual confirmation
+- reporting “done” before visual confirmation
 
 ## Current priorities
 1. Stabilize the currently recovered frontend.

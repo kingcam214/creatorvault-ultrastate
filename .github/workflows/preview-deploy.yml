@@ -1,12 +1,12 @@
-name: Deploy to CreatorVault VPS
+name: Preview Deploy to CreatorVault VPS
 
 on:
   push:
     branches:
-      - main
+      - work
 
 jobs:
-  deploy:
+  preview-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,7 +15,7 @@ jobs:
 
       - name: Generate release stamp
         run: |
-          echo "{\"commit\":\"${{ github.sha }}\",\"branch\":\"${{ github.ref_name }}\",\"timestamp\":\"$(date -Iseconds)\",\"environment\":\"production\"}" > public/release.json
+          echo "{\"commit\":\"${{ github.sha }}\",\"branch\":\"${{ github.ref_name }}\",\"timestamp\":\"$(date -Iseconds)\",\"environment\":\"preview\"}" > public/release.json
 
       - name: Sync repo to VPS and deploy
         uses: appleboy/ssh-action@v1.0.3
@@ -27,11 +27,11 @@ jobs:
           script: |
             set -euo pipefail
 
-            cd /root/creatorvault
+            cd /root/creatorvault-preview
 
-            git fetch origin main
-            git checkout main
-            git reset --hard origin/main
+            git fetch origin work
+            git checkout work
+            git reset --hard origin/work
 
             pnpm install --frozen-lockfile
             pnpm build
@@ -39,4 +39,4 @@ jobs:
             chmod +x ./deploy_work_to_prod.sh
             ./deploy_work_to_prod.sh
 
-            pm2 reload all || pm2 restart all
+            pm2 reload preview || pm2 restart preview

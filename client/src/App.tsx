@@ -328,6 +328,7 @@ import VideoLab from "./pages/VideoLab";
 import VideoLabPro from "./pages/VideoLabPro";
 import VideoProductionStudio from "./pages/VideoProductionStudio";
 import VideoStudio from "./pages/VideoStudio";
+import ReleaseInfo from "./pages/ReleaseInfo";
 import ViralOptimizer from "./pages/tools/ViralOptimizer";
 import ViralOptimizerPage from "./pages/ViralOptimizerPage";
 import WhatsAppBotDashboard from "./pages/WhatsAppBotDashboard";
@@ -470,6 +471,7 @@ function Router() {
       <div className="pt-16">
         <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/__release"} component={ReleaseInfo} />
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
       <Route path={"/dashboard"} component={CreatorHome} />

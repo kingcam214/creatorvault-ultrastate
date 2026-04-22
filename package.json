@@ -9,7 +9,10 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "db:push": "drizzle-kit generate && drizzle-kit migrate"
+    "db:push": "drizzle-kit generate && drizzle-kit migrate",
+    "visual-proof": "node scripts/visual-proof.js",
+    "route-owner": "node scripts/route-owner.js",
+    "scope-guard": "node scripts/scope-guard.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
