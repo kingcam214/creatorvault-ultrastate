@@ -17,7 +17,7 @@
  *   - Typography: Playfair Display (headlines) + Inter (body)
  * ─────────────────────────────────────────────────────────────────────────────
  */
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Player } from "@remotion/player";
 import { AbsoluteFill, useCurrentFrame, interpolate, spring, useVideoConfig, Easing } from "remotion";
 import { trpc } from "@/lib/trpc";
@@ -318,7 +318,6 @@ export default function Home() {
   return (
     <div style={{ background: "#050508", minHeight: "100vh", fontFamily: "Inter, sans-serif", overflowX: "hidden" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600;700&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #050508; color: #fff; }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }

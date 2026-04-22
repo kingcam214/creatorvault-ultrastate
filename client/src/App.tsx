@@ -1,6 +1,6 @@
 // import PlatformWarRoom from "./pages/PlatformWarRoom";
 // import EmpireVerticals from "./pages/EmpireVerticals";
-// import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "./components/ui/sonner";
 import { DebugOverlay } from "./components/DebugOverlay";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -528,6 +528,7 @@ function Router() {
       <Route path={"/platform-connections"} component={PlatformConnections} />
       <Route path={"/unified-publisher"} component={UnifiedContentPublisher} />
       <Route path={"/vaultlive"} component={VaultLiveSimple} />
+      <Route path={"/vault-live"} component={VaultLiveSimple} />
       <Route path={"/live"} component={BrowseLive} />
       <Route path={"/stream/:id"} component={StreamView} />
       <Route path={"/join-vaultlive"} component={JoinVaultLive} />
@@ -592,6 +593,7 @@ function Router() {
       <Route path={"/admin/manual-payments"} component={AdminManualPayments} />
       <Route path={"/admin/tips"} component={AdminTips} />
       <Route path={"/podcast-studio"} component={PodcastStudio} />
+      <Route path={"/podcasting"} component={Podcasting} />
       <Route path={"/launch-trailer-studio"} component={LaunchTrailerStudio} />
       <Route path={"/shows/:slug/episodes/:episodeId"} component={EpisodeDetailPage} />
       <Route path={"/shows/:slug"} component={ShowPage} />
@@ -783,4 +785,3 @@ function App() {
 }
 
 export default App;
-
