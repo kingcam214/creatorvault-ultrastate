@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>King Console — CreatorVault OS</title>
+<style>
+  :root {
+    --bg: #07070b;
+    --surface: #0f0f18;
+    --border: rgba(255,255,255,0.08);
+    --gold: #c9a84c;
+    --cyan: #38bdf8;
+    --green: #4ade80;
+    --red: #f87171;
+    --text: #e8e8f0;
+    --muted: rgba(255,255,255,0.38);
+    --radius: 12px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; min-height:100vh; display:flex; flex-direction:column; }
+
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 24px;
+    border-bottom:1px solid var(--border);
+    background:rgba(255,255,255,0.02);
+  }
+  .logo { font-size:15px; font-weight:700; letter-spacing:0.06em; color:var(--gold); }
+  .logo span { color:var(--text); font-weight:400; }
+  .status-pill {
+    display:flex; align-items:center; gap:7px;
+    background:rgba(255,255,255,0.04); border:1px solid var(--border);
+    border-radius:100px; padding:5px 14px; font-size:12px; font-weight:600;
+  }
+  .dot { width:7px; height:7px; border-radius:50%; background:var(--muted); transition:background 0.3s; }
+  .dot.running { background:var(--cyan); animation:pulse 1.2s ease-in-out infinite; }
+  .dot.done { background:var(--green); }
+  .dot.error { background:var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.35} }
+
+  main { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:0; max-height:calc(100vh - 57px); overflow:hidden; }
+
+  .panel { display:flex; flex-direction:column; border-right:1px solid var(--border); overflow:hidden; }
+  .panel:last-child { border-right:none; }
+  .panel-header { padding:14px 20px; border-bottom:1px solid var(--border); font-size:11px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); }
+
+  /* Left panel */
+  .left-panel { padding:20px; gap:16px; overflow-y:auto; }
+  .field-label { font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
+
+  select, textarea {
+    width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border);
+    border-radius:8px; color:var(--text); font-family:inherit; font-size:14px;
+    padding:10px 14px; transition:border-color 0.2s, box-shadow 0.2s;
+    appearance:none;
+  }
+  select:focus, textarea:focus { outline:none; border-color:rgba(201,168,76,0.5); box-shadow:0 0 0 3px rgba(201,168,76,0.1); }
+  select { cursor:pointer; }
+  textarea { resize:vertical; min-height:180px; line-height:1.6; }
+
+  .profile-desc { font-size:12px; color:var(--muted); margin-top:6px; line-height:1.5; }
+
+  .checkbox-row { display:flex; align-items:center; gap:10px; cursor:pointer; }
+  .checkbox-row input[type=checkbox] { width:16px; height:16px; accent-color:var(--gold); cursor:pointer; }
+  .checkbox-row span { font-size:13px; color:var(--muted); }
+
+  .btn-row { display:flex; gap:10px; margin-top:4px; }
+  .btn {
+    flex:1; padding:13px 20px; border-radius:8px; font-size:14px; font-weight:700;
+    letter-spacing:0.06em; text-transform:uppercase; cursor:pointer; border:none;
+    transition:opacity 0.2s, transform 0.15s;
+  }
+  .btn:active { transform:scale(0.97); }
+  .btn-run { background:var(--gold); color:#07070b; }
+  .btn-run:disabled { opacity:0.4; cursor:not-allowed; }
+  .btn-kill { background:rgba(248,113,113,0.15); color:var(--red); border:1px solid rgba(248,113,113,0.3); flex:0 0 auto; padding:13px 18px; }
+  .btn-reset { background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid var(--border); flex:0 0 auto; padding:13px 18px; font-size:12px; }
+
+  /* Right panel */
+  .right-panel { display:flex; flex-direction:column; overflow:hidden; }
+  .log-area {
+    flex:1; overflow-y:auto; padding:16px 20px;
+    font-family:'JetBrains Mono','Fira Code','Courier New',monospace;
+    font-size:12px; line-height:1.7; color:rgba(255,255,255,0.65);
+    background:rgba(0,0,0,0.3);
+  }
+  .log-line { white-space:pre-wrap; word-break:break-all; }
+  .log-line.gemini { color:var(--cyan); }
+  .log-line.verify { color:var(--green); }
+  .log-line.error { color:var(--red); }
+  .log-line.king { color:var(--gold); font-weight:600; }
+  .log-line.git { color:#a78bfa; }
+
+  .result-bar {
+    border-top:1px solid var(--border);
+    padding:14px 20px;
+    background:rgba(255,255,255,0.02);
+    font-size:12px;
+  }
+  .result-bar .changed-files { color:var(--cyan); font-weight:600; margin-top:6px; }
+  .result-bar .build-ok { color:var(--green); font-weight:700; }
+  .result-bar .build-fail { color:var(--red); font-weight:700; }
+
+  .setup-banner {
+    background:rgba(201,168,76,0.08); border:1px solid rgba(201,168,76,0.25);
+    border-radius:8px; padding:12px 16px; font-size:13px; color:var(--gold);
+    line-height:1.6;
+  }
+  .setup-banner code { background:rgba(0,0,0,0.4); border-radius:4px; padding:1px 6px; font-size:12px; }
+
+  @media (max-width: 700px) {
+    main { grid-template-columns:1fr; }
+    .panel { border-right:none; border-bottom:1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">KING <span>CONSOLE</span> &nbsp;·&nbsp; CreatorVault OS</div>
+  <div class="status-pill">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText">Idle</span>
+  </div>
+</header>
+
+<main>
+  <!-- LEFT: Input panel -->
+  <div class="panel left-panel" id="leftPanel">
+
+    <div id="setupBanner" class="setup-banner" style="display:none;margin-bottom:4px;">
+      ⚠ <strong>GEMINI_API_KEY not set.</strong><br/>
+      Create <code>tools/king-console/.env</code> with:<br/>
+      <code>GEMINI_API_KEY=your_key_here</code><br/>
+      Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--gold)">aistudio.google.com</a>
+    </div>
+
+    <div>
+      <div class="field-label">Task Profile</div>
+      <select id="profileSelect">
+        <option value="homepage">Homepage</option>
+        <option value="bugfix">Bug Fix</option>
+        <option value="vaultx">VaultX</option>
+        <option value="deploy-fix">Deploy / Pipeline</option>
+        <option value="verify">Verify Only</option>
+      </select>
+      <div class="profile-desc" id="profileDesc"></div>
+    </div>
+
+    <div>
+      <div class="field-label">Prompt</div>
+      <textarea id="promptInput" placeholder="Describe the change you want Gemini to make to the CreatorVault repo...
+
+Examples:
+• Add a gold border to the hero section in Home.tsx
+• Fix the broken import in server/routes/auth.ts
+• Restore the proof-of-work section to match the screenshot"></textarea>
+    </div>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="verifyCheck" checked />
+      <span>Run build verification after task completes</span>
+    </label>
+
+    <div class="btn-row">
+      <button class="btn btn-run" id="runBtn" onclick="runTask()">▶ RUN</button>
+      <button class="btn btn-kill" id="killBtn" onclick="killTask()" style="display:none">■ STOP</button>
+      <button class="btn btn-reset" id="resetBtn" onclick="resetConsole()">↺</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: Output panel -->
+  <div class="panel right-panel">
+    <div class="panel-header">Output Log</div>
+    <div class="log-area" id="logArea">
+      <div class="log-line king">KING CONSOLE ready. Paste a prompt and click RUN.</div>
+    </div>
+    <div class="result-bar" id="resultBar" style="display:none">
+      <div id="resultSummary"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const PROFILES = {
+  homepage: "Edits to client/src/pages/Home.tsx and homepage-related files only. Keep changes surgical and visible.",
+  bugfix: "Fix the described bug. Trace the root cause, edit only the affected file(s), do not refactor unrelated code.",
+  vaultx: "Edits scoped to VaultX pages and components only. Do not touch main homepage or auth.",
+  "deploy-fix": "Fix the described deploy or pipeline issue. Do not touch product files.",
+  verify: "Read-only verification. Do not edit any files. Report what you find.",
+};
+
+let pollInterval = null;
+let lastLogIndex = 0;
+let currentStatus = "idle";
+
+document.getElementById("profileSelect").addEventListener("change", updateProfileDesc);
+updateProfileDesc();
+
+function updateProfileDesc() {
+  const v = document.getElementById("profileSelect").value;
+  document.getElementById("profileDesc").textContent = PROFILES[v] || "";
+}
+
+async function runTask() {
+  const prompt = document.getElementById("promptInput").value.trim();
+  const profile = document.getElementById("profileSelect").value;
+  const verifyAfter = document.getElementById("verifyCheck").checked;
+
+  if (!prompt) { alert("Please enter a prompt."); return; }
+
+  clearLog();
+  setStatus("running");
+  document.getElementById("runBtn").disabled = true;
+  document.getElementById("killBtn").style.display = "flex";
+  document.getElementById("resultBar").style.display = "none";
+  lastLogIndex = 0;
+
+  try {
+    const res = await fetch("/api/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, profile, verifyAfter }),
+    });
+    const data = await res.json();
+    if (data.error) { appendLogLine(`[ERROR] ${data.error}`, "error"); setStatus("error"); return; }
+  } catch (e) {
+    appendLogLine(`[ERROR] Could not reach King Console server: ${e.message}`, "error");
+    setStatus("error");
+    return;
+  }
+
+  // Start polling
+  pollInterval = setInterval(pollStatus, 800);
+}
+
+async function pollStatus() {
+  try {
+    const res = await fetch(`/api/status?since=${lastLogIndex}`);
+    const data = await res.json();
+
+    for (const entry of data.log) {
+      const text = entry.text;
+      let cls = "";
+      if (text.startsWith("[GEMINI]")) cls = "gemini";
+      else if (text.startsWith("[VERIFY]") || text.startsWith("[build]")) cls = "verify";
+      else if (text.startsWith("[ERROR]") || text.startsWith("[stderr]")) cls = "error";
+      else if (text.startsWith("[KING CONSOLE]")) cls = "king";
+      else if (text.startsWith("[git]")) cls = "git";
+      appendLogLine(text, cls);
+    }
+    lastLogIndex = data.total;
+
+    if (data.status !== "running") {
+      clearInterval(pollInterval);
+      pollInterval = null;
+      setStatus(data.status);
+      document.getElementById("runBtn").disabled = false;
+      document.getElementById("killBtn").style.display = "none";
+    }
+  } catch (e) {
+    appendLogLine(`[ERROR] Poll failed: ${e.message}`, "error");
+  }
+}
+
+async function killTask() {
+  await fetch("/api/kill", { method: "POST" });
+  appendLogLine("[KING CONSOLE] Kill signal sent.", "king");
+}
+
+async function resetConsole() {
+  if (currentStatus === "running") { alert("Cannot reset while running."); return; }
+  await fetch("/api/reset", { method: "POST" });
+  clearLog();
+  setStatus("idle");
+  lastLogIndex = 0;
+  document.getElementById("resultBar").style.display = "none";
+  document.getElementById("runBtn").disabled = false;
+  document.getElementById("killBtn").style.display = "none";
+  appendLogLine("KING CONSOLE ready. Paste a prompt and click RUN.", "king");
+}
+
+function setStatus(s) {
+  currentStatus = s;
+  const dot = document.getElementById("statusDot");
+  const text = document.getElementById("statusText");
+  dot.className = "dot " + s;
+  const labels = { idle: "Idle", running: "Running...", done: "Done ✓", error: "Error ✗" };
+  text.textContent = labels[s] || s;
+}
+
+function clearLog() {
+  document.getElementById("logArea").innerHTML = "";
+}
+
+function appendLogLine(text, cls = "") {
+  const el = document.createElement("div");
+  el.className = "log-line " + cls;
+  el.textContent = text;
+  const area = document.getElementById("logArea");
+  area.appendChild(el);
+  area.scrollTop = area.scrollHeight;
+}
+
+// Check if API key is set
+fetch("/api/status").then(r => r.json()).then(() => {
+  // Server is up — check for setup banner via a custom header or just show it
+  // We'll check via a simple heuristic: if server responds, it's up
+}).catch(() => {
+  document.getElementById("setupBanner").style.display = "block";
+});
+</script>
+</body>
+</html>

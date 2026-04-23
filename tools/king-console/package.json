@@ -1,0 +1,13 @@
+{
+  "name": "king-console",
+  "version": "1.0.0",
+  "description": "CreatorVault local prompt box — wraps Gemini CLI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
