@@ -13,6 +13,7 @@
     --cyan: #38bdf8;
     --green: #4ade80;
     --red: #f87171;
+    --orange: #fb923c;
     --text: #e8e8f0;
     --muted: rgba(255,255,255,0.38);
     --radius: 12px;
@@ -39,13 +40,61 @@
   .dot.error { background:var(--red); }
   @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.35} }
 
+  /* ── Auth Banner ── */
+  #authBanner {
+    display:flex; align-items:center; gap:12px;
+    padding:10px 24px;
+    border-bottom:1px solid var(--border);
+    font-size:12px; font-weight:600; letter-spacing:0.04em;
+    transition:background 0.3s;
+  }
+  #authBanner.state-ready { background:rgba(74,222,128,0.06); color:var(--green); }
+  #authBanner.state-not_connected { background:rgba(251,146,60,0.08); color:var(--orange); }
+  #authBanner.state-missing { background:rgba(248,113,113,0.08); color:var(--red); }
+  #authBanner.state-checking { background:rgba(56,189,248,0.05); color:var(--cyan); }
+  .auth-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .state-ready .auth-dot { background:var(--green); box-shadow:0 0 6px var(--green); }
+  .state-not_connected .auth-dot { background:var(--orange); }
+  .state-missing .auth-dot { background:var(--red); }
+  .state-checking .auth-dot { background:var(--cyan); animation:pulse 1s infinite; }
+  #authMessage { flex:1; }
+  .auth-action-btn {
+    padding:5px 14px; border-radius:6px;
+    font-family:inherit; font-size:11px; font-weight:700;
+    letter-spacing:0.06em; cursor:pointer; text-transform:uppercase; border:none;
+  }
+  #connectBtn { background:var(--orange); color:#000; }
+  #connectBtn:hover { background:#fdba74; }
+  #checkAuthBtn { background:transparent; color:var(--cyan); border:1px solid rgba(56,189,248,0.4); margin-left:6px; }
+  #checkAuthBtn:hover { background:rgba(56,189,248,0.1); }
+
+  /* ── Connect instructions ── */
+  #connectInstructions {
+    display:none;
+    margin:0; padding:12px 24px;
+    background:rgba(56,189,248,0.05);
+    border-bottom:1px solid rgba(56,189,248,0.2);
+    font-size:12px; color:var(--cyan); line-height:1.7;
+  }
+  #connectInstructions strong { font-size:13px; }
+  #connectInstructions ol { padding-left:18px; margin-top:6px; }
+
+  /* ── Quota alert ── */
+  #quotaAlert {
+    display:none;
+    margin:0; padding:10px 24px;
+    background:rgba(251,146,60,0.08);
+    border-bottom:1px solid rgba(251,146,60,0.25);
+    font-size:12px; color:var(--orange); line-height:1.6;
+  }
+  #quotaAlert strong { font-size:13px; }
+
   main { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:0; max-height:calc(100vh - 57px); overflow:hidden; }
 
   .panel { display:flex; flex-direction:column; border-right:1px solid var(--border); overflow:hidden; }
   .panel:last-child { border-right:none; }
   .panel-header { padding:14px 20px; border-bottom:1px solid var(--border); font-size:11px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); }
 
-  /* Left panel */
   .left-panel { padding:20px; gap:16px; overflow-y:auto; }
   .field-label { font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
 
@@ -77,7 +126,6 @@
   .btn-kill { background:rgba(248,113,113,0.15); color:var(--red); border:1px solid rgba(248,113,113,0.3); flex:0 0 auto; padding:13px 18px; }
   .btn-reset { background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid var(--border); flex:0 0 auto; padding:13px 18px; font-size:12px; }
 
-  /* Right panel */
   .right-panel { display:flex; flex-direction:column; overflow:hidden; }
   .log-area {
     flex:1; overflow-y:auto; padding:16px 20px;
@@ -91,6 +139,9 @@
   .log-line.error { color:var(--red); }
   .log-line.king { color:var(--gold); font-weight:600; }
   .log-line.git { color:#a78bfa; }
+  .log-line.hint { color:var(--orange); }
+  .log-line.quota { color:var(--orange); font-weight:700; }
+  .log-line.auth-needed { color:var(--red); font-weight:700; }
 
   .result-bar {
     border-top:1px solid var(--border);
@@ -98,16 +149,6 @@
     background:rgba(255,255,255,0.02);
     font-size:12px;
   }
-  .result-bar .changed-files { color:var(--cyan); font-weight:600; margin-top:6px; }
-  .result-bar .build-ok { color:var(--green); font-weight:700; }
-  .result-bar .build-fail { color:var(--red); font-weight:700; }
-
-  .setup-banner {
-    background:rgba(201,168,76,0.08); border:1px solid rgba(201,168,76,0.25);
-    border-radius:8px; padding:12px 16px; font-size:13px; color:var(--gold);
-    line-height:1.6;
-  }
-  .setup-banner code { background:rgba(0,0,0,0.4); border-radius:4px; padding:1px 6px; font-size:12px; }
 
   @media (max-width: 700px) {
     main { grid-template-columns:1fr; }
@@ -125,16 +166,33 @@
   </div>
 </header>
 
+<!-- Auth Banner -->
+<div id="authBanner" class="state-checking">
+  <div class="auth-dot"></div>
+  <span id="authMessage">Checking Gemini status...</span>
+  <button id="connectBtn" class="auth-action-btn" style="display:none" onclick="connectGemini()">⚡ Connect Gemini</button>
+  <button id="checkAuthBtn" class="auth-action-btn" style="display:none" onclick="checkAuth()">↻ Check Status</button>
+</div>
+
+<!-- Connect instructions (shown after clicking Connect) -->
+<div id="connectInstructions">
+  <strong>How to connect Gemini:</strong>
+  <ol>
+    <li>A Terminal window should open automatically — follow the Google login prompt there</li>
+    <li>If no Terminal opened, run this in your terminal: <code id="geminiCmd">gemini</code></li>
+    <li>Once logged in, return here and click <strong>↻ Check Status</strong> above</li>
+  </ol>
+</div>
+
+<!-- Quota alert (shown when rate limit hit) -->
+<div id="quotaAlert">
+  <strong>⚠ Gemini Free Tier Quota Hit</strong> — Wait ~1 minute then click RUN again.
+  To remove this limit: add a paid <code>GEMINI_API_KEY</code> to <code>tools/king-console/.env</code>
+</div>
+
 <main>
   <!-- LEFT: Input panel -->
   <div class="panel left-panel" id="leftPanel">
-
-    <div id="setupBanner" class="setup-banner" style="display:none;margin-bottom:4px;">
-      ⚠ <strong>GEMINI_API_KEY not set.</strong><br/>
-      Create <code>tools/king-console/.env</code> with:<br/>
-      <code>GEMINI_API_KEY=your_key_here</code><br/>
-      Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--gold)">aistudio.google.com</a>
-    </div>
 
     <div>
       <div class="field-label">Task Profile</div>
@@ -153,9 +211,9 @@
       <textarea id="promptInput" placeholder="Describe the change you want Gemini to make to the CreatorVault repo...
 
 Examples:
-• Add a gold border to the hero section in Home.tsx
-• Fix the broken import in server/routes/auth.ts
-• Restore the proof-of-work section to match the screenshot"></textarea>
+• Restore the Clone Ambassador section with KingCam image
+• Add metrics strip: $4,200 / 85% / 47 tools / 20+ platforms
+• Fix the broken import in server/routes/auth.ts"></textarea>
     </div>
 
     <label class="checkbox-row">
@@ -203,6 +261,58 @@ function updateProfileDesc() {
   document.getElementById("profileDesc").textContent = PROFILES[v] || "";
 }
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+async function checkAuth() {
+  const banner = document.getElementById("authBanner");
+  const msg = document.getElementById("authMessage");
+  const connectBtn = document.getElementById("connectBtn");
+  const checkBtn = document.getElementById("checkAuthBtn");
+
+  banner.className = "state-checking";
+  msg.textContent = "Checking Gemini status...";
+  connectBtn.style.display = "none";
+  checkBtn.style.display = "none";
+
+  try {
+    const r = await fetch("/api/auth");
+    const data = await r.json();
+
+    if (data.binary) {
+      document.getElementById("geminiCmd").textContent = data.binary;
+    }
+
+    banner.className = `state-${data.state}`;
+    msg.textContent = data.message || data.state;
+
+    if (data.state === "not_connected" || data.state === "missing") {
+      connectBtn.style.display = "inline-block";
+      checkBtn.style.display = "inline-block";
+    } else if (data.state === "ready") {
+      connectBtn.style.display = "none";
+      checkBtn.style.display = "none";
+      document.getElementById("connectInstructions").style.display = "none";
+    }
+  } catch (e) {
+    banner.className = "state-missing";
+    msg.textContent = "Cannot reach King Console server.";
+  }
+}
+
+async function connectGemini() {
+  document.getElementById("connectInstructions").style.display = "block";
+  document.getElementById("checkAuthBtn").style.display = "inline-block";
+  try {
+    const r = await fetch("/api/connect", { method: "POST" });
+    const data = await r.json();
+    if (data.fallback) {
+      document.getElementById("geminiCmd").textContent = data.fallback;
+    }
+  } catch (e) {
+    console.error("Connect error:", e);
+  }
+}
+
+// ── Run ───────────────────────────────────────────────────────────────────────
 async function runTask() {
   const prompt = document.getElementById("promptInput").value.trim();
   const profile = document.getElementById("profileSelect").value;
@@ -215,6 +325,7 @@ async function runTask() {
   document.getElementById("runBtn").disabled = true;
   document.getElementById("killBtn").style.display = "flex";
   document.getElementById("resultBar").style.display = "none";
+  document.getElementById("quotaAlert").style.display = "none";
   lastLogIndex = 0;
 
   try {
@@ -231,7 +342,6 @@ async function runTask() {
     return;
   }
 
-  // Start polling
   pollInterval = setInterval(pollStatus, 800);
 }
 
@@ -245,10 +355,19 @@ async function pollStatus() {
       let cls = "";
       if (text.startsWith("[GEMINI]")) cls = "gemini";
       else if (text.startsWith("[VERIFY]") || text.startsWith("[build]")) cls = "verify";
-      else if (text.startsWith("[ERROR]") || text.startsWith("[stderr]")) cls = "error";
+      else if (text.startsWith("[ERROR]")) cls = "error";
+      else if (text.startsWith("[stderr]")) cls = "hint";
       else if (text.startsWith("[KING CONSOLE]")) cls = "king";
       else if (text.startsWith("[git]")) cls = "git";
+      else if (text.startsWith("[HINT]")) cls = "hint";
+      else if (text.startsWith("[QUOTA LIMIT]")) cls = "quota";
+      else if (text.startsWith("[AUTH NEEDED]")) cls = "auth-needed";
       appendLogLine(text, cls);
+
+      // Show quota alert banner
+      if (text.includes("QUOTA LIMIT") || text.includes("Quota exceeded")) {
+        document.getElementById("quotaAlert").style.display = "block";
+      }
     }
     lastLogIndex = data.total;
 
@@ -276,6 +395,7 @@ async function resetConsole() {
   setStatus("idle");
   lastLogIndex = 0;
   document.getElementById("resultBar").style.display = "none";
+  document.getElementById("quotaAlert").style.display = "none";
   document.getElementById("runBtn").disabled = false;
   document.getElementById("killBtn").style.display = "none";
   appendLogLine("KING CONSOLE ready. Paste a prompt and click RUN.", "king");
@@ -303,13 +423,8 @@ function appendLogLine(text, cls = "") {
   area.scrollTop = area.scrollHeight;
 }
 
-// Check if API key is set
-fetch("/api/status").then(r => r.json()).then(() => {
-  // Server is up — check for setup banner via a custom header or just show it
-  // We'll check via a simple heuristic: if server responds, it's up
-}).catch(() => {
-  document.getElementById("setupBanner").style.display = "block";
-});
+// Init: check auth on load
+checkAuth();
 </script>
 </body>
 </html>
