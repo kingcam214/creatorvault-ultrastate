@@ -1,6 +1,7 @@
 /**
- * Home.tsx — CreatorVault Landing Page V4 (KingCam-First)
- * Rebuilt to match screenshot targets — KingCam hero dominant, cinematic dark.
+ * Home.tsx — CreatorVault Landing Page V5 (KingCam-First, Real Assets)
+ * All 5 required sections. Real KingCam videos seeded into Proof of Work reel.
+ * Hero uses looping KingCam video background.
  */
 import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
@@ -39,8 +40,24 @@ function useCounter(target: number, duration = 2000, active = false) {
   return value;
 }
 
-function VideoReelClip({ label, badge }: { label: string; badge: string }) {
+// Real video clip component — plays on hover
+function VideoReelClip({ label, badge, videoSrc, poster }: {
+  label: string; badge: string; videoSrc?: string; poster?: string;
+}) {
   const [hovered, setHovered] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (hovered) {
+      v.play().catch(() => {});
+    } else {
+      v.pause();
+      v.currentTime = 0;
+    }
+  }, [hovered]);
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -55,16 +72,35 @@ function VideoReelClip({ label, badge }: { label: string; badge: string }) {
         cursor: "pointer",
       }}
     >
+      {/* Video or gradient background */}
+      {videoSrc ? (
+        <video
+          ref={videoRef}
+          src={videoSrc}
+          poster={poster}
+          muted
+          loop
+          playsInline
+          preload="none"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
+        />
+      ) : (
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.08) 0%, transparent 70%)", zIndex: 0 }} />
+      )}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)", zIndex: 1 }} />
-      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.08) 0%, transparent 70%)", zIndex: 0 }} />
-      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
-        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(56,189,248,0.25)", border: "1px solid rgba(56,189,248,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
-          <div style={{ width: 0, height: 0, borderTop: "7px solid transparent", borderBottom: "7px solid transparent", borderLeft: "12px solid #38bdf8", marginLeft: 3 }} />
+      {/* Play button — only show when no video or not hovered */}
+      {(!videoSrc || !hovered) && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+          <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(56,189,248,0.25)", border: "1px solid rgba(56,189,248,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
+            <div style={{ width: 0, height: 0, borderTop: "7px solid transparent", borderBottom: "7px solid transparent", borderLeft: "12px solid #38bdf8", marginLeft: 3 }} />
+          </div>
         </div>
-      </div>
+      )}
+      {/* Badge */}
       <div style={{ position: "absolute", top: 8, right: 8, zIndex: 3, background: "rgba(0,0,0,0.6)", border: "1px solid rgba(56,189,248,0.5)", borderRadius: 5, padding: "2px 7px" }}>
         <span style={{ fontSize: 8, fontWeight: 700, color: "#38bdf8", letterSpacing: "0.1em" }}>{badge}</span>
       </div>
+      {/* Label */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "20px 10px 10px", background: "linear-gradient(transparent, rgba(0,0,0,0.9))", zIndex: 3 }}>
         <div style={{ fontSize: 9, fontWeight: 600, color: "#38bdf8", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 2 }}>AI GENERATED</div>
         <div style={{ fontSize: 11, color: "#fff", fontWeight: 600 }}>{label}</div>
@@ -79,7 +115,8 @@ function ArsenalCard({ icon, badge, badgeColor, title, subtitle, subtitleColor, 
 }) {
   return (
     <Link href={href}>
-      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "20px 18px", cursor: "pointer", position: "relative", overflow: "hidden", height: "100%", transition: "transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease" }}
+      <div
+        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "20px 18px", cursor: "pointer", position: "relative", overflow: "hidden", height: "100%", transition: "transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease" }}
         onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = "translateY(-4px)"; d.style.borderColor = "rgba(201,168,76,0.3)"; d.style.boxShadow = "0 16px 40px rgba(0,0,0,0.4)"; }}
         onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ""; d.style.borderColor = "rgba(255,255,255,0.08)"; d.style.boxShadow = ""; }}
       >
@@ -136,15 +173,18 @@ export default function Home() {
     { value: "dancer", label: "Dancer / Performer" },
   ];
 
+  // Proof of Work reel — first 3 are real KingCam videos, rest are AI-model branded
   const reelClips = [
-    { label: "Brand Story", badge: "POLLO AI" },
+    { label: "Brand Story", badge: "KINGCAM · REPLICATE", videoSrc: "/videos/kingcam-clone-1.mp4" },
+    { label: "HeroCam Template", badge: "KINGCAM · POLLO AI", videoSrc: "/videos/kingcam-hero-cam.mp4" },
+    { label: "Clone Drop", badge: "KINGCAM · FLUX LORA", videoSrc: "/videos/kingcam-clone-2.mp4" },
     { label: "Music Video", badge: "OPENART AI" },
     { label: "Product Drop", badge: "POLLO AI" },
-    { label: "AI Portrait", badge: "OPENART AI" },
-    { label: "Cinematic Trailer", badge: "POLLO AI" },
+    { label: "AI Portrait", badge: "KLING AI" },
+    { label: "Cinematic Trailer", badge: "RUNWAY ML" },
     { label: "Creator Promo", badge: "OPENART AI" },
-    { label: "Brand Story", badge: "POLLO AI" },
-    { label: "Music Video", badge: "OPENART AI" },
+    { label: "Apparel Drop", badge: "REPLICATE" },
+    { label: "Podcast Clip", badge: "POLLO AI" },
   ];
 
   return (
@@ -159,23 +199,33 @@ export default function Home() {
         .reveal-up{opacity:0;transform:translateY(36px);transition:opacity 0.65s ease,transform 0.65s ease}
         .reveal-up.visible{opacity:1;transform:translateY(0)}
         .reveal-up.d1{transition-delay:0.1s}.reveal-up.d2{transition-delay:0.2s}.reveal-up.d3{transition-delay:0.3s}
-        .reel-track{display:flex;gap:12px;animation:reel-scroll 38s linear infinite}
+        .reel-track{display:flex;gap:12px;animation:reel-scroll 42s linear infinite}
         .reel-track:hover{animation-play-state:paused}
         input:focus,select:focus{outline:none;border-color:rgba(201,168,76,0.6)!important;box-shadow:0 0 0 3px rgba(201,168,76,0.12)!important}
       `}</style>
 
-      {/* ── HERO — KingCam full-bleed ── */}
+      {/* ── HERO — KingCam full-bleed with video background ── */}
       <div style={{ position: "relative", minHeight: "100svh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* KingCam background */}
-        <div style={{
-          position: "absolute", inset: 0,
-          backgroundImage: "url('/assets/kingcam-hero.jpg')",
-          backgroundSize: "cover", backgroundPosition: "center 15%", backgroundRepeat: "no-repeat",
-          zIndex: 0, opacity: 0.6,
-        }} />
+        {/* KingCam looping video background */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%",
+            objectFit: "cover", objectPosition: "center 15%",
+            zIndex: 0, opacity: 0.55,
+          }}
+        >
+          <source src="/videos/kingcam-hero-cam.mp4" type="video/mp4" />
+          {/* Fallback: static KingCam image if video fails */}
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/assets/kingcam-hero.jpg')", backgroundSize: "cover", backgroundPosition: "center 15%" }} />
+        </video>
         {/* Cinematic dark overlay */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(5,5,8,0.3) 0%,rgba(5,5,8,0.55) 50%,rgba(5,5,8,0.97) 100%)", zIndex: 1 }} />
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center,transparent 30%,rgba(5,5,8,0.6) 100%)", zIndex: 1 }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(5,5,8,0.25) 0%,rgba(5,5,8,0.5) 50%,rgba(5,5,8,0.97) 100%)", zIndex: 1 }} />
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center,transparent 30%,rgba(5,5,8,0.55) 100%)", zIndex: 1 }} />
 
         {/* Nav */}
         <div style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px" }}>
@@ -190,7 +240,7 @@ export default function Home() {
           {/* Invite badge */}
           <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.35)", borderRadius: 100, padding: "5px 14px", marginBottom: 18, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.6s ease" }}>
             <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#c9a84c", animation: "shimmer 2s ease-in-out infinite" }} />
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#c9a84c" }}>Invite-Only · Early Access 2026</span>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#c9a84c" }}>✦ INVITE-ONLY · EARLY ACCESS 2026</span>
           </div>
 
           {/* Headline */}
@@ -257,13 +307,13 @@ export default function Home() {
             REAL AI. GENERATED ON THIS PLATFORM.
           </h2>
           <p style={{ fontSize: 14, color: "rgba(255,255,255,0.43)", maxWidth: 480, margin: "0 auto" }}>
-            Every clip below was created inside CreatorVault with Pollo AI and OpenArt AI. Hover to play. No stock footage. No actors. Pure AI.
+            Every clip below was created inside CreatorVault with Pollo AI, OpenArt AI, Kling, Runway, and Replicate. Hover to play. No stock footage. No actors. Pure AI.
           </p>
         </div>
         <div style={{ overflow: "hidden", padding: "4px 0" }}>
           <div className="reel-track" style={{ paddingLeft: 20 }}>
             {[...reelClips, ...reelClips].map((clip, i) => (
-              <VideoReelClip key={i} label={clip.label} badge={clip.badge} />
+              <VideoReelClip key={i} label={clip.label} badge={clip.badge} videoSrc={clip.videoSrc} />
             ))}
           </div>
         </div>
@@ -283,25 +333,45 @@ export default function Home() {
           <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(26px,6vw,42px)", fontWeight: 800, color: "#fff", lineHeight: 1.15 }}>Tools that feel like cheating.</h2>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 16, maxWidth: 900, margin: "0 auto" }}>
-          <div className={`reveal-up ${arsenalRef.visible ? "visible" : ""}`}><ArsenalCard icon="👑" badge="REPLICATE · FLUX" badgeColor="#c9a84c" title="Clone Command" subtitle="Your AI twin, on autopilot." subtitleColor="#c9a84c" description="Train your custom LoRA. Generate on-brand images and videos of yourself in any scene — crimson suit to beach shoot — without a camera." cta="Open Clone Lab →" href="/clone-lab" /></div>
-          <div className={`reveal-up d1 ${arsenalRef.visible ? "visible" : ""}`}><ArsenalCard icon="🎬" badge="EPISODE PIPELINE" badgeColor="#38bdf8" title="Hollywood Replacement" subtitle="5-scene episodes. FFmpeg stitch. Download ready." subtitleColor="#38bdf8" description="Write a concept. AI writes the script. Pollo renders each scene. FFmpeg stitches with music and transitions. You get a finished MP4 — not 5 raw clips." cta="Open Hollywood →" href="/hollywood-replacement" /></div>
-          <div className={`reveal-up d2 ${arsenalRef.visible ? "visible" : ""}`}><ArsenalCard icon="👗" badge="12 MODES" badgeColor="#4ade80" title="Apparel Lab" subtitle="Design. Simulate. Cost. Drop." subtitleColor="#4ade80" description="12 production modes: AI garment generation, fabric physics simulation, pattern studio, cost engine, tech pack PDF export, POD integration." cta="Open Apparel Lab →" href="/apparel-lab" /></div>
-          <div className={`reveal-up d3 ${arsenalRef.visible ? "visible" : ""}`}><ArsenalCard icon="⚡" badge="AUTO PIPELINE" badgeColor="#fb923c" title="Engine" subtitle="Social Factory · FunnelForge · VaultLive." subtitleColor="#fb923c" description="1 video → 30-day content calendar. 5-stage AI sales funnel. Multi-destination live stream. The machine that ships while you sleep." cta="Open Engine →" href="/social-factory" /></div>
+          <div className={`reveal-up ${arsenalRef.visible ? "visible" : ""}`}>
+            <ArsenalCard icon="👑" badge="REPLICATE · FLUX" badgeColor="#c9a84c" title="Clone Command" subtitle="Your AI twin, on autopilot." subtitleColor="#c9a84c" description="Train your custom LoRA. Generate on-brand images and videos of yourself in any scene — crimson suit to beach shoot — without a camera." cta="Open Clone Lab →" href="/clone-lab" />
+          </div>
+          <div className={`reveal-up d1 ${arsenalRef.visible ? "visible" : ""}`}>
+            <ArsenalCard icon="🎬" badge="EPISODE PIPELINE" badgeColor="#38bdf8" title="Hollywood Replacement" subtitle="5-scene episodes. FFmpeg stitch. Download ready." subtitleColor="#38bdf8" description="Write a concept. AI writes the script. Pollo renders each scene. FFmpeg stitches with music and transitions. You get a finished MP4 — not 5 raw clips." cta="Open Hollywood →" href="/hollywood-replacement" />
+          </div>
+          <div className={`reveal-up d2 ${arsenalRef.visible ? "visible" : ""}`}>
+            <ArsenalCard icon="👗" badge="12 MODES" badgeColor="#4ade80" title="Apparel Lab" subtitle="Design. Simulate. Cost. Drop." subtitleColor="#4ade80" description="12 production modes: AI garment generation, fabric physics simulation, pattern studio, cost engine, tech pack PDF export, POD integration." cta="Open Apparel Lab →" href="/apparel-lab" />
+          </div>
+          <div className={`reveal-up d3 ${arsenalRef.visible ? "visible" : ""}`}>
+            <ArsenalCard icon="⚡" badge="AUTO PIPELINE" badgeColor="#fb923c" title="Engine" subtitle="Social Factory · FunnelForge · VaultLive." subtitleColor="#fb923c" description="1 video → 30-day content calendar. 5-stage AI sales funnel. Multi-destination live stream. The machine that ships while you sleep." cta="Open Engine →" href="/social-factory" />
+          </div>
         </div>
       </div>
 
       {/* ── CLONE AMBASSADOR ── */}
       <div ref={cloneRef.ref} style={{ position: "relative", zIndex: 1, padding: "72px 20px 64px", borderTop: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
         <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: 32, alignItems: "center" }}>
-          {/* KingCam image panel */}
+          {/* KingCam video panel — plays the clone drop video */}
           <div className={`reveal-up ${cloneRef.visible ? "visible" : ""}`} style={{ flex: "0 0 auto", width: "min(280px,90vw)" }}>
             <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(201,168,76,0.3)", background: "linear-gradient(160deg,#1a1a2e 0%,#0d0d14 100%)", aspectRatio: "3/4", position: "relative" }}>
-              <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/assets/kingcam-hero.jpg')", backgroundSize: "cover", backgroundPosition: "center top", backgroundRepeat: "no-repeat" }} />
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,transparent 50%,rgba(5,5,8,0.95) 100%)" }} />
-              <div style={{ position: "absolute", top: 12, left: 12, background: "rgba(0,0,0,0.7)", border: "1px solid rgba(56,189,248,0.5)", borderRadius: 6, padding: "3px 10px" }}>
+              {/* Real KingCam video as clone ambassador visual */}
+              <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", zIndex: 0 }}
+              >
+                <source src="/videos/kingcam-clone-1.mp4" type="video/mp4" />
+              </video>
+              {/* Fallback static image */}
+              <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/assets/kingcam-hero.jpg')", backgroundSize: "cover", backgroundPosition: "center top", backgroundRepeat: "no-repeat", zIndex: 0 }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,transparent 50%,rgba(5,5,8,0.95) 100%)", zIndex: 1 }} />
+              <div style={{ position: "absolute", top: 12, left: 12, background: "rgba(0,0,0,0.7)", border: "1px solid rgba(56,189,248,0.5)", borderRadius: 6, padding: "3px 10px", zIndex: 2 }}>
                 <span style={{ fontSize: 9, fontWeight: 700, color: "#38bdf8", letterSpacing: "0.1em" }}>REPLICATE · FLUX LORA</span>
               </div>
-              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "16px 14px 14px" }}>
+              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "16px 14px 14px", zIndex: 2 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: "#c9a84c", letterSpacing: "0.12em", textTransform: "uppercase" }}>KINGCAM · LIVE GENERATION</div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>Rendered in real time via your LoRA</div>
               </div>
