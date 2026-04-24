@@ -72,7 +72,7 @@ function VideoReelClip({ label, badge, videoSrc, poster }: {
         cursor: "pointer",
       }}
     >
-      {/* Video or gradient background */}
+      {/* Video or poster image background */}
       {videoSrc ? (
         <video
           ref={videoRef}
@@ -82,6 +82,12 @@ function VideoReelClip({ label, badge, videoSrc, poster }: {
           loop
           playsInline
           preload="none"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
+        />
+      ) : poster ? (
+        <img
+          src={poster}
+          alt={label}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
         />
       ) : (
@@ -178,13 +184,13 @@ export default function Home() {
     { label: "Brand Story", badge: "KINGCAM · REPLICATE", videoSrc: "/videos/kingcam-clone-1.mp4" },
     { label: "HeroCam Template", badge: "KINGCAM · POLLO AI", videoSrc: "/videos/kingcam-hero-cam.mp4" },
     { label: "Clone Drop", badge: "KINGCAM · FLUX LORA", videoSrc: "/videos/kingcam-clone-2.mp4" },
-    { label: "Music Video", badge: "OPENART AI" },
-    { label: "Product Drop", badge: "POLLO AI" },
-    { label: "AI Portrait", badge: "KLING AI" },
-    { label: "Cinematic Trailer", badge: "RUNWAY ML" },
-    { label: "Creator Promo", badge: "OPENART AI" },
-    { label: "Apparel Drop", badge: "REPLICATE" },
-    { label: "Podcast Clip", badge: "POLLO AI" },
+    { label: "Music Video", badge: "OPENART AI", poster: "/images/reel/reel-music-video.png" },
+    { label: "Product Drop", badge: "POLLO AI", poster: "/images/reel/reel-product-drop.png" },
+    { label: "AI Portrait", badge: "KLING AI", poster: "/images/reel/reel-ai-portrait.png" },
+    { label: "Cinematic Trailer", badge: "RUNWAY ML", poster: "/images/reel/reel-cinematic-trailer.png" },
+    { label: "Creator Promo", badge: "OPENART AI", poster: "/images/reel/reel-creator-promo.png" },
+    { label: "Apparel Drop", badge: "REPLICATE", poster: "/images/reel/reel-apparel-drop.png" },
+    { label: "Podcast Clip", badge: "POLLO AI", poster: "/images/reel/reel-podcast-clip.png" },
   ];
 
   return (
