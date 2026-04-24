@@ -48,13 +48,11 @@ function VideoReelClip({ label, badge, videoSrc, poster }: {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    // autoPlay handles playback; on hover we ensure it's playing
     const v = videoRef.current;
     if (!v) return;
     if (hovered) {
       v.play().catch(() => {});
-    } else {
-      v.pause();
-      v.currentTime = 0;
     }
   }, [hovered]);
 
@@ -81,7 +79,8 @@ function VideoReelClip({ label, badge, videoSrc, poster }: {
           muted
           loop
           playsInline
-          preload="none"
+          autoPlay
+          preload="metadata"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
         />
       ) : poster ? (
