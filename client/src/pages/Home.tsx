@@ -179,18 +179,18 @@ export default function Home() {
     { value: "dancer", label: "Dancer / Performer" },
   ];
 
-  // Proof of Work reel — first 3 are real KingCam videos, rest are AI-model branded
+  // Proof of Work reel — KingCam videos + 7 unique AI-generated cinematic clips
   const reelClips = [
     { label: "Brand Story", badge: "KINGCAM · REPLICATE", videoSrc: "/videos/kingcam-clone-1.mp4" },
-    { label: "HeroCam Template", badge: "KINGCAM · POLLO AI", videoSrc: "/videos/kingcam-hero-cam.mp4" },
+    { label: "Music Video", badge: "POLLO AI", videoSrc: "/videos/reel-music-video.mp4" },
     { label: "Clone Drop", badge: "KINGCAM · FLUX LORA", videoSrc: "/videos/kingcam-clone-2.mp4" },
-    { label: "Music Video", badge: "OPENART AI", poster: "/images/reel/reel-music-video.png" },
-    { label: "Product Drop", badge: "POLLO AI", poster: "/images/reel/reel-product-drop.png" },
-    { label: "AI Portrait", badge: "KLING AI", poster: "/images/reel/reel-ai-portrait.png" },
-    { label: "Cinematic Trailer", badge: "RUNWAY ML", poster: "/images/reel/reel-cinematic-trailer.png" },
-    { label: "Creator Promo", badge: "OPENART AI", poster: "/images/reel/reel-creator-promo.png" },
-    { label: "Apparel Drop", badge: "REPLICATE", poster: "/images/reel/reel-apparel-drop.png" },
-    { label: "Podcast Clip", badge: "POLLO AI", poster: "/images/reel/reel-podcast-clip.png" },
+    { label: "Product Drop", badge: "KLING AI", videoSrc: "/videos/reel-product-drop.mp4" },
+    { label: "AI Portrait", badge: "OPENART AI", videoSrc: "/videos/reel-ai-portrait.mp4" },
+    { label: "HeroCam", badge: "KINGCAM · POLLO AI", videoSrc: "/videos/kingcam-hero-cam.mp4" },
+    { label: "Cinematic Trailer", badge: "RUNWAY ML", videoSrc: "/videos/reel-cinematic-trailer.mp4" },
+    { label: "Creator Promo", badge: "OPENART AI", videoSrc: "/videos/reel-creator-promo.mp4" },
+    { label: "Apparel Drop", badge: "REPLICATE", videoSrc: "/videos/reel-apparel-drop.mp4" },
+    { label: "Empire Reel", badge: "KLING AI", videoSrc: "/videos/reel-brand-story.mp4" },
   ];
 
   return (
