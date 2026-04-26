@@ -81,6 +81,7 @@ function VideoReelClip({ label, badge, videoSrc, poster }: {
           playsInline
           autoPlay
           preload="metadata"
+          onCanPlay={() => { videoRef.current?.play().catch(() => {}); }}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
         />
       ) : poster ? (
