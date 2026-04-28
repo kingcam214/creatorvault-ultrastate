@@ -50,6 +50,55 @@ Make careful, surgical improvements to the real CreatorVault codebase without br
 - If fixing build/server issues, document exactly how static assets are resolved in production.
 - Be careful with ESM/CJS boundaries, path resolution, and Vite production serving.
 
+## VPS SSH Access (PERMANENT RULE — NON-NEGOTIABLE)
+
+**NEVER use password auth. NEVER use sshpass. SSH key ONLY. Always.**
+
+### VPS Credentials
+```
+Host:     134.199.202.69
+User:     root
+Provider: DigitalOcean ATL1
+App dir:  /root/creatorvault
+PM2 app:  creatorvault
+```
+
+### Sandbox SSH Key (already in VPS authorized_keys — DO NOT REGENERATE)
+```
+Private:  /home/ubuntu/.ssh/creatorvault_deploy
+Public:   ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHfQt5ZrDAux08/cSHhLvWq1LVTy+Ta7V/SuvSiZPSy0 manus-sandbox-deploy
+```
+
+### FIRST COMMAND every session — run before ANY work:
+```bash
+ssh -i /home/ubuntu/.ssh/creatorvault_deploy -o StrictHostKeyChecking=no root@134.199.202.69 "echo SSH_OK && pm2 list | grep creatorvault"
+```
+Expected: `SSH_OK` + `creatorvault | online`
+
+### If sandbox was wiped and key is gone (2-minute fix):
+```bash
+# 1. Regenerate key
+ssh-keygen -t ed25519 -f /home/ubuntu/.ssh/creatorvault_deploy -N ""
+
+# 2. Add to VPS via DigitalOcean web console (login: GitHub → kingcam214)
+#    Open: https://cloud.digitalocean.com/droplets/545144175/terminal/ui/?os_user=root
+#    Run in console:
+echo "$(cat /home/ubuntu/.ssh/creatorvault_deploy.pub)" >> /root/.ssh/authorized_keys
+
+# 3. Test
+ssh -i /home/ubuntu/.ssh/creatorvault_deploy -o StrictHostKeyChecking=no root@134.199.202.69 "echo SSH_OK"
+```
+
+### NEVER run `npm run build` on the VPS — it OOMs (2GB RAM, Vite needs 1.7GB)
+### Build on sandbox or use esbuild for server-only changes:
+```bash
+# Server-only rebuild on VPS:
+ssh -i /home/ubuntu/.ssh/creatorvault_deploy -o StrictHostKeyChecking=no root@134.199.202.69 \
+  "cd /root/creatorvault && npx esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && pm2 restart creatorvault && echo DEPLOYED"
+```
+
+---
+
 ## GitHub Auth (PERMANENT RULE — NON-NEGOTIABLE)
 
 **NEVER use HTTPS token (`gh auth`) for git push. Tokens expire and cause multi-day blockers.**
