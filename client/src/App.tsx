@@ -752,7 +752,11 @@ function Router() {
       <Route path="/vault-market-home" component={VaultMarket} />
       <Route path="/vaultx/onboarding" component={VaultXOnboarding} />
       <Route path="/vaultx/studio" component={VaultXStudio} />
+      <Route path="/vaultx/video-editor/:projectId" component={VaultXVideoEditor} />
       <Route path="/vaultx/video-editor" component={VaultXVideoEditor} />
+      {/* Redirect aliases for OwnerCockpit and legacy links */}
+      <Route path="/vaultx">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
+      <Route path="/vaultx-video-editor">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
       <Route path="/video-os" component={VideoOS} />
       <Route path="/waitlist" component={Waitlist} />
       <Route path="/greatest-show/lirys-missed-revenue" component={LirysMissedRevenue} />

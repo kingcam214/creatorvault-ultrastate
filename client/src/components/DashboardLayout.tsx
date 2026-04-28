@@ -102,7 +102,7 @@ const ZONE_NAV: Record<ZoneId, { label: string; path: string; icon: any }[]> = {
     { label: "AI Agents", path: "/emma-ai-agents", icon: Bot },
     { label: "Animated Flyer", path: "/animated-flyer-studio", icon: Film },
     { label: "Image Lab", path: "/image-lab", icon: Palette },
-    { label: "VaultX Studio", path: "/vaultx-studio", icon: Video },
+    { label: "VaultX Studio", path: "/vaultx/studio", icon: Video },
     { label: "University", path: "/university", icon: GraduationCap },
     { label: "Hollywood Studio", path: "/hollywood-studio", icon: Tv },
     { label: "Chuuch", path: "/chuuch/members", icon: Church },
@@ -138,7 +138,7 @@ function getActiveZone(path: string): ZoneId {
     path.startsWith("/emma-ai-agents") ||
     path.startsWith("/animated-flyer") ||
     path.startsWith("/image-lab") ||
-    path.startsWith("/vaultx-studio") ||
+    path.startsWith("/vaultx/studio") || path.startsWith("/vaultx-studio") ||
     path.startsWith("/university") ||
     path.startsWith("/hollywood") ||
     path.startsWith("/chuuch") ||

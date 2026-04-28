@@ -13,6 +13,8 @@ import { initializeSimulatedBots, startAutonomousConversationGenerator } from ".
 import { initializeWebRTC } from "../webrtc";
 import { handleStripeWebhook } from "./stripeWebhook";
 import { runStartupTasks } from "./startup";
+import videoStudioRouter from "../routers/videoStudioRouter";
+import { videoUploadRouter } from "../routers/videoUploadRouter";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -66,6 +68,10 @@ async function startServer() {
   
   // Telegram webhook
   app.use("/api/telegram", telegramWebhook);
+  // VaultX Video Studio REST endpoints (FFmpeg processing)
+  app.use("/api/video-studio", videoStudioRouter);
+  // VaultX Content Vault chunked upload
+  app.use("/api/video/upload", videoUploadRouter);
   // tRPC API
   app.use(
     "/api/trpc",
