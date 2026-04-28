@@ -44,7 +44,9 @@ async function saveLocalAndRespond(res: Response, buffer: Buffer, filename: stri
   await mkdir(uploadsDir, { recursive: true });
   const filePath = path.join(uploadsDir, filename);
   await writeFile(filePath, buffer);
-  const url = `/uploads/video-studio/${uuid}/${filename}`;
+  const relativePath = `/uploads/video-studio/${uuid}/${filename}`;
+  const baseUrl = (process.env.APP_URL || "https://creatorvault.live").replace(/\/$/, "");
+  const url = `${baseUrl}${relativePath}`;
   res.json({ url, filename });
 }
 
