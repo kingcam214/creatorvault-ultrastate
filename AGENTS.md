@@ -232,3 +232,7 @@ Avoid:
 
 ## Business context
 CreatorVault is founder-built under tight budget constraints. Wasted credits and false-success reports are costly. Optimize for reliability, clarity, and preserving momentum.
+## Deployment Verification — 2026-04-28
+- All 7 FFmpeg endpoints verified working with local file storage
+- esbuild command confirmed: npx esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+- PM2 running stable at 174MB memory
