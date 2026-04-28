@@ -50,6 +50,32 @@ Make careful, surgical improvements to the real CreatorVault codebase without br
 - If fixing build/server issues, document exactly how static assets are resolved in production.
 - Be careful with ESM/CJS boundaries, path resolution, and Vite production serving.
 
+## GitHub Auth (PERMANENT RULE — NON-NEGOTIABLE)
+
+**NEVER use HTTPS token (`gh auth`) for git push. Tokens expire and cause multi-day blockers.**
+
+### Always push via SSH deploy key:
+```bash
+GIT_SSH_COMMAND="ssh -i /home/ubuntu/.ssh/creatorvault_deploy -o StrictHostKeyChecking=no" git push origin main
+```
+
+### Setup (already done — do NOT redo unless sandbox is wiped):
+- Deploy key private key: `/home/ubuntu/.ssh/creatorvault_deploy`
+- Deploy key added to repo: `github.com/kingcam214/creatorvault-ultrastate → Settings → Deploy keys → manus-sandbox-deploy`
+- Git remote set to SSH: `git remote set-url origin git@github.com:kingcam214/creatorvault-ultrastate.git`
+- `core.sshCommand` set in `.git/config` — SSH is now the default for this repo
+
+### If sandbox is wiped and key is gone:
+1. Generate new key: `ssh-keygen -t ed25519 -f ~/.ssh/creatorvault_deploy -N ""`
+2. Add public key to GitHub: `gh api repos/kingcam214/creatorvault-ultrastate/keys --method POST --field title="manus-sandbox-deploy" --field key="$(cat ~/.ssh/creatorvault_deploy.pub)" --field read_only=false`
+3. Test: `ssh -i ~/.ssh/creatorvault_deploy -T git@github.com`
+4. Set remote: `git remote set-url origin git@github.com:kingcam214/creatorvault-ultrastate.git`
+5. Set config: `git config core.sshCommand "ssh -i ~/.ssh/creatorvault_deploy -o StrictHostKeyChecking=no"`
+
+**This takes 2 minutes. The HTTPS token path wastes days. SSH only, always.**
+
+---
+
 ## Production Workflow (MANDATORY)
 
 ### Production Branch Truth
