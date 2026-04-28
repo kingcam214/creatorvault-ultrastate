@@ -1,42 +1,24 @@
 /**
  * VaultX Video Studio — REST Router
  * ============================================================================
- * Handles all /api/video-studio/* endpoints called by VaultXStudio.tsx
- *
- * Endpoints:
- *   POST /api/video-studio/filter      { video, filter, intensity }
- *   POST /api/video-studio/trim        { video, start, end }
- *   POST /api/video-studio/watermark   { video, mode, text, position, opacity, size, color }
- *   POST /api/video-studio/convert     { video, format, resolution }
- *   POST /api/video-studio/add-text    { video, text, position, fontSize, color, start, end }
- *   POST /api/video-studio/audio       { video, mode, volume, fadeIn, fadeOut }
- *   POST /api/video-studio/color-grade { video, look, brightness, contrast, saturation }
- *
- * All endpoints:
- *   1. Accept multipart/form-data via multer (memStorage)
- *   2. Write input to /tmp
- *   3. Run FFmpeg
- *   4. Upload output to storage via storagePut()
- *   5. Return { url: string }
+ * All endpoints use local file serving (dist/public/uploads/video-studio/)
+ * instead of storagePut() to avoid external storage dependency.
  * ============================================================================
  */
-
 import { Router, Request, Response } from "express";
 import multer from "multer";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { writeFile, unlink, readFile } from "fs/promises";
+import { writeFile, unlink, readFile, mkdir } from "fs/promises";
 import { randomUUID } from "crypto";
 import path from "path";
 import os from "os";
-import { storagePut } from "../storage";
 
 const execAsync = promisify(exec);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
 const router = Router();
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
 async function withTempVideo(
   buffer: Buffer,
   fn: (inputPath: string, outputPath: string) => Promise<void>,
@@ -56,9 +38,13 @@ async function withTempVideo(
   }
 }
 
-async function uploadAndRespond(res: Response, buffer: Buffer, filename: string) {
-  const key = `vaultx-studio/${randomUUID()}/${filename}`;
-  const { url } = await storagePut(key, buffer, "video/mp4");
+async function saveLocalAndRespond(res: Response, buffer: Buffer, filename: string) {
+  const uuid = randomUUID();
+  const uploadsDir = path.resolve(process.cwd(), "dist", "public", "uploads", "video-studio", uuid);
+  await mkdir(uploadsDir, { recursive: true });
+  const filePath = path.join(uploadsDir, filename);
+  await writeFile(filePath, buffer);
+  const url = `/uploads/video-studio/${uuid}/${filename}`;
   res.json({ url, filename });
 }
 
@@ -69,183 +55,145 @@ function handleError(res: Response, e: unknown) {
 }
 
 // ─── /filter — beauty, skin smooth, denoise, color filters ───────────────────
-
 router.post("/filter", upload.single("video"), async (req: Request, res: Response) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No video file" });
     const filter = (req.body.filter as string) || "beauty";
-    const intensity = Math.min(100, Math.max(0, parseInt(req.body.intensity || "70"))) / 100;
-
-    let vfFilter = "";
-    switch (filter) {
-      case "beauty":
-      case "smooth":
-        vfFilter = `smartblur=lr=${1 + intensity * 2}:ls=-1:lt=0,eq=brightness=${0.02 * intensity}:saturation=${1 + 0.2 * intensity}`;
-        break;
-      case "glow":
-        vfFilter = `gblur=sigma=${1 + intensity * 3},eq=brightness=${0.05 * intensity}:saturation=${1 + 0.3 * intensity}`;
-        break;
-      case "warm":
-        vfFilter = `colorbalance=rs=${0.1 * intensity}:gs=${0.05 * intensity}:bs=${-0.05 * intensity}`;
-        break;
-      case "cool":
-        vfFilter = `colorbalance=rs=${-0.05 * intensity}:gs=${0.02 * intensity}:bs=${0.1 * intensity}`;
-        break;
-      case "vintage":
-        vfFilter = `curves=vintage,vignette=PI/4`;
-        break;
-      case "moody":
-        vfFilter = `eq=brightness=${-0.05 * intensity}:contrast=${1 + 0.3 * intensity}:saturation=${0.8}`;
-        break;
-      case "denoise":
-        vfFilter = `hqdn3d=${intensity * 5}:${intensity * 5}:${intensity * 10}:${intensity * 10}`;
-        break;
-      case "sharpen":
-        vfFilter = `unsharp=5:5:${intensity}:5:5:0`;
-        break;
-      default:
-        vfFilter = `eq=brightness=0:saturation=1`;
-    }
-
+    const intensity = parseFloat(req.body.intensity || "0.7");
+    const filterMap: Record<string, string> = {
+      "beauty":    `unsharp=5:5:${intensity * 0.5}:5:5:0,eq=brightness=0.02:saturation=${1 + intensity * 0.1}`,
+      "velvet":    `unsharp=3:3:${intensity * 0.3}:3:3:0,eq=brightness=0.03:contrast=1.05:saturation=${1 + intensity * 0.15}`,
+      "silk":      `gblur=sigma=${intensity * 0.8},eq=brightness=0.01:saturation=${1 + intensity * 0.05}`,
+      "golden":    `eq=brightness=0.04:saturation=${1 + intensity * 0.2},colorbalance=rs=0.05:gs=0.02:bs=-0.03`,
+      "smooth":    `gblur=sigma=${intensity * 0.5},unsharp=5:5:${intensity * 0.3}:5:5:0`,
+      "boudoir":   `eq=brightness=0.05:contrast=0.95:saturation=${1 + intensity * 0.1},vignette=PI/5`,
+      "desire":    `eq=brightness=0.02:contrast=1.1:saturation=${1 + intensity * 0.25},colorbalance=rs=0.08:gs=0:bs=-0.05`,
+      "champagne": `eq=brightness=0.06:saturation=${1 + intensity * 0.15},colorbalance=rs=0.06:gs=0.04:bs=-0.02`,
+      "denoise":   `hqdn3d=${intensity * 4}:${intensity * 3}:${intensity * 6}:${intensity * 4.5}`,
+    };
+    const vfFilter = filterMap[filter] || filterMap["beauty"];
     const outputBuffer = await withTempVideo(req.file.buffer, async (inp, out) => {
       await execAsync(`ffmpeg -i "${inp}" -vf "${vfFilter}" -c:a copy -y "${out}"`);
     });
-
-    await uploadAndRespond(res, outputBuffer, `vaultx-filter-${filter}.mp4`);
+    await saveLocalAndRespond(res, outputBuffer, `vaultx-filter-${filter}.mp4`);
   } catch (e) { handleError(res, e); }
 });
 
-// ─── /trim — cut start/end ────────────────────────────────────────────────────
-
+// ─── /trim — cut video to start/end ──────────────────────────────────────────
 router.post("/trim", upload.single("video"), async (req: Request, res: Response) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No video file" });
     const start = parseFloat(req.body.start || "0");
-    const end = parseFloat(req.body.end || "30");
+    const end = parseFloat(req.body.end || "15");
     const duration = end - start;
-
     const outputBuffer = await withTempVideo(req.file.buffer, async (inp, out) => {
-      await execAsync(`ffmpeg -i "${inp}" -ss ${start} -t ${duration} -c copy -y "${out}"`);
+      await execAsync(`ffmpeg -ss ${start} -i "${inp}" -t ${duration} -c copy -y "${out}"`);
     });
-
-    await uploadAndRespond(res, outputBuffer, `vaultx-trim-${start}-${end}.mp4`);
+    await saveLocalAndRespond(res, outputBuffer, `vaultx-trim-${start}-${end}.mp4`);
   } catch (e) { handleError(res, e); }
 });
 
-// ─── /watermark — text/logo watermark ────────────────────────────────────────
-
+// ─── /watermark — add text/logo watermark ────────────────────────────────────
 router.post("/watermark", upload.single("video"), async (req: Request, res: Response) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No video file" });
     const text = (req.body.text as string) || "@creator";
-    const position = (req.body.position as string) || "bottom-right";
-    const opacity = parseFloat(req.body.opacity || "0.7");
-    const fontSize = parseInt(req.body.size || "28");
+    const position = (req.body.position as string) || "bottom_right";
+    const opacity = parseFloat(req.body.opacity || "0.8");
+    const size = parseInt(req.body.size || "24");
     const color = (req.body.color as string) || "white";
-
     const posMap: Record<string, string> = {
-      "top-left":     "x=20:y=20",
-      "top-right":    "x=w-tw-20:y=20",
-      "bottom-left":  "x=20:y=h-th-20",
-      "bottom-right": "x=w-tw-20:y=h-th-20",
-      "center":       "x=(w-tw)/2:y=(h-th)/2",
+      "top_left":      "x=20:y=20",
+      "top_center":    "x=(w-text_w)/2:y=20",
+      "top_right":     "x=w-text_w-20:y=20",
+      "center":        "x=(w-text_w)/2:y=(h-text_h)/2",
+      "bottom_left":   "x=20:y=h-text_h-20",
+      "bottom_center": "x=(w-text_w)/2:y=h-text_h-20",
+      "bottom_right":  "x=w-text_w-20:y=h-text_h-20",
     };
-    const pos = posMap[position] || posMap["bottom-right"];
-    const safeText = text.replace(/'/g, "\\'").replace(/:/g, "\\:");
-    const vfFilter = `drawtext=text='${safeText}':fontsize=${fontSize}:fontcolor=${color}@${opacity}:${pos}`;
-
+    const pos = posMap[position] || posMap["bottom_right"];
+    const escaped = text.replace(/'/g, "\\'");
     const outputBuffer = await withTempVideo(req.file.buffer, async (inp, out) => {
-      await execAsync(`ffmpeg -i "${inp}" -vf "${vfFilter}" -c:a copy -y "${out}"`);
+      await execAsync(`ffmpeg -i "${inp}" -vf "drawtext=text='${escaped}':fontsize=${size}:fontcolor=${color}@${opacity}:${pos}" -c:a copy -y "${out}"`);
     });
-
-    await uploadAndRespond(res, outputBuffer, `vaultx-watermark.mp4`);
+    await saveLocalAndRespond(res, outputBuffer, `vaultx-watermark.mp4`);
   } catch (e) { handleError(res, e); }
 });
 
-// ─── /convert — format conversion, resolution change ─────────────────────────
-
+// ─── /convert — format/resolution conversion ─────────────────────────────────
 router.post("/convert", upload.single("video"), async (req: Request, res: Response) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No video file" });
     const format = (req.body.format as string) || "mp4_h264";
     const resolution = (req.body.resolution as string) || "1080p";
-
     const resMap: Record<string, string> = {
-      "720p":  "1280:720",
-      "1080p": "1920:1080",
-      "4k":    "3840:2160",
-      "480p":  "854:480",
-      "360p":  "640:360",
+      "480p": "854:480", "720p": "1280:720", "1080p": "1920:1080",
+      "1440p": "2560:1440", "4k": "3840:2160",
     };
-    const scaleStr = resMap[resolution] || resMap["1080p"];
-    const vfFilter = `scale=${scaleStr}:force_original_aspect_ratio=decrease,pad=${scaleStr}:(ow-iw)/2:(oh-ih)/2`;
-
-    let codec = "-c:v libx264 -crf 23 -preset fast";
-    if (format === "mp4_h265") codec = "-c:v libx265 -crf 28 -preset fast";
-    if (format === "webm") codec = "-c:v libvpx-vp9 -crf 30 -b:v 0";
-
+    const scale = resMap[resolution] || resMap["1080p"];
+    const codecMap: Record<string, string> = {
+      "mp4_h264": "-c:v libx264 -preset fast -crf 23 -c:a aac",
+      "mp4_h265": "-c:v libx265 -preset fast -crf 28 -c:a aac",
+      "webm":     "-c:v libvpx-vp9 -crf 30 -b:v 0 -c:a libopus",
+      "mov":      "-c:v libx264 -preset fast -crf 23 -c:a aac",
+    };
+    const codec = codecMap[format] || codecMap["mp4_h264"];
+    const ext = format === "webm" ? "webm" : format === "mov" ? "mov" : "mp4";
     const outputBuffer = await withTempVideo(req.file.buffer, async (inp, out) => {
-      await execAsync(`ffmpeg -i "${inp}" -vf "${vfFilter}" ${codec} -c:a aac -b:a 128k -y "${out}"`);
-    });
-
-    await uploadAndRespond(res, outputBuffer, `vaultx-converted-${resolution}.mp4`);
+      await execAsync(`ffmpeg -i "${inp}" -vf "scale=${scale}:force_original_aspect_ratio=decrease,pad=${scale}:(ow-iw)/2:(oh-ih)/2" ${codec} -y "${out}"`);
+    }, ext);
+    await saveLocalAndRespond(res, outputBuffer, `vaultx-converted-${resolution}.${ext}`);
   } catch (e) { handleError(res, e); }
 });
 
-// ─── /add-text — burn-in captions / title cards ───────────────────────────────
-
+// ─── /add-text — burn captions/text overlays ─────────────────────────────────
 router.post("/add-text", upload.single("video"), async (req: Request, res: Response) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No video file" });
     const text = (req.body.text as string) || "Caption";
-    const position = (req.body.position as string) || "bottom";
-    const fontSize = parseInt(req.body.fontSize || "36");
+    const position = (req.body.position as string) || "bottom_center";
+    const fontSize = parseInt(req.body.fontSize || "32");
     const color = (req.body.color as string) || "white";
-    const startTime = parseFloat(req.body.start || "0");
-    const endTime = parseFloat(req.body.end || "999");
-
+    const startTime = parseFloat(req.body.startTime || "0");
+    const endTime = parseFloat(req.body.endTime || "10");
     const posMap: Record<string, string> = {
-      "top":    "x=(w-tw)/2:y=40",
-      "center": "x=(w-tw)/2:y=(h-th)/2",
-      "bottom": "x=(w-tw)/2:y=h-th-40",
+      "top_left":      "x=20:y=20",
+      "top_center":    "x=(w-text_w)/2:y=20",
+      "top_right":     "x=w-text_w-20:y=20",
+      "center":        "x=(w-text_w)/2:y=(h-text_h)/2",
+      "bottom_left":   "x=20:y=h-text_h-30",
+      "bottom_center": "x=(w-text_w)/2:y=h-text_h-30",
     };
-    const pos = posMap[position] || posMap["bottom"];
-    const safeText = text.replace(/'/g, "\\'").replace(/:/g, "\\:");
-    const vfFilter = `drawtext=text='${safeText}':fontsize=${fontSize}:fontcolor=${color}:${pos}:enable='between(t,${startTime},${endTime})':box=1:boxcolor=black@0.5:boxborderw=5`;
-
+    const pos = posMap[position] || posMap["bottom_center"];
+    const escaped = text.replace(/'/g, "\\'").replace(/:/g, "\\:");
     const outputBuffer = await withTempVideo(req.file.buffer, async (inp, out) => {
-      await execAsync(`ffmpeg -i "${inp}" -vf "${vfFilter}" -c:a copy -y "${out}"`);
+      await execAsync(`ffmpeg -i "${inp}" -vf "drawtext=text='${escaped}':fontsize=${fontSize}:fontcolor=${color}:box=1:boxcolor=black@0.5:boxborderw=5:${pos}:enable='between(t,${startTime},${endTime})'" -c:a copy -y "${out}"`);
     });
-
-    await uploadAndRespond(res, outputBuffer, `vaultx-captioned.mp4`);
+    await saveLocalAndRespond(res, outputBuffer, `vaultx-captioned.mp4`);
   } catch (e) { handleError(res, e); }
 });
 
-// ─── /audio — volume, fade in/out ────────────────────────────────────────────
-
+// ─── /audio — audio mixing ────────────────────────────────────────────────────
 router.post("/audio", upload.single("video"), async (req: Request, res: Response) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No video file" });
-    const mode = (req.body.mode as string) || "volume";
+    const mode = (req.body.mode as string) || "normalize";
     const volume = parseFloat(req.body.volume || "1.0");
     const fadeIn = parseFloat(req.body.fadeIn || "0");
     const fadeOut = parseFloat(req.body.fadeOut || "0");
-
-    let afFilter = `volume=${volume}`;
-    if (fadeIn > 0) afFilter += `,afade=t=in:st=0:d=${fadeIn}`;
-    if (fadeOut > 0) afFilter += `,afade=t=out:st=999:d=${fadeOut}`;
-    if (mode === "mute") afFilter = "volume=0";
-
+    let audioFilter = `volume=${volume}`;
+    if (fadeIn > 0) audioFilter += `,afade=t=in:st=0:d=${fadeIn}`;
+    if (fadeOut > 0) audioFilter += `,afade=t=out:st=9999:d=${fadeOut}`;
+    if (mode === "normalize") audioFilter += ",loudnorm";
+    if (mode === "mute") audioFilter = "volume=0";
     const outputBuffer = await withTempVideo(req.file.buffer, async (inp, out) => {
-      await execAsync(`ffmpeg -i "${inp}" -af "${afFilter}" -c:v copy -y "${out}"`);
+      await execAsync(`ffmpeg -i "${inp}" -af "${audioFilter}" -c:v copy -y "${out}"`);
     });
-
-    await uploadAndRespond(res, outputBuffer, `vaultx-audio.mp4`);
+    await saveLocalAndRespond(res, outputBuffer, `vaultx-audio.mp4`);
   } catch (e) { handleError(res, e); }
 });
 
 // ─── /color-grade — cinematic color grading ──────────────────────────────────
-
 router.post("/color-grade", upload.single("video"), async (req: Request, res: Response) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No video file" });
@@ -253,7 +201,6 @@ router.post("/color-grade", upload.single("video"), async (req: Request, res: Re
     const brightness = parseFloat(req.body.brightness || "0");
     const contrast = parseFloat(req.body.contrast || "1");
     const saturation = parseFloat(req.body.saturation || "1");
-
     const gradeMap: Record<string, string> = {
       "cinematic":    `eq=brightness=${brightness}:contrast=${contrast}:saturation=${saturation * 0.85},colorbalance=rs=-0.05:gs=0:bs=0.05`,
       "moody":        `eq=brightness=${brightness - 0.05}:contrast=${contrast * 1.2}:saturation=${saturation * 0.7},colorbalance=rs=-0.1:gs=-0.05:bs=0.1`,
@@ -265,12 +212,10 @@ router.post("/color-grade", upload.single("video"), async (req: Request, res: Re
       "skin":         `eq=brightness=${brightness + 0.02}:saturation=${saturation * 1.05},colorbalance=rs=0.05:gs=0.02:bs=-0.02`,
     };
     const vfFilter = gradeMap[look] || gradeMap["cinematic"];
-
     const outputBuffer = await withTempVideo(req.file.buffer, async (inp, out) => {
       await execAsync(`ffmpeg -i "${inp}" -vf "${vfFilter}" -c:a copy -y "${out}"`);
     });
-
-    await uploadAndRespond(res, outputBuffer, `vaultx-grade-${look}.mp4`);
+    await saveLocalAndRespond(res, outputBuffer, `vaultx-grade-${look}.mp4`);
   } catch (e) { handleError(res, e); }
 });
 
