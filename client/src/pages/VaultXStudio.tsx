@@ -10,7 +10,7 @@
  *   3. SCENE ARCHITECT   — Trim, cut, speed, audio, multi-operation editor
  *   4. PPV ENGINE        — Teaser clipper + blur censor + watermark branding
  *   5. PLATFORM VAULT    — OF / Fansly / ManyVids / Clips4Sale / Twitter export
- *   6. AI ENHANCE        — Runway/Kling slow motion + upscale + motion effects
+ *   6. AI ENHANCE        — Replicate RIFE slow motion + Real-ESRGAN upscale + FFmpeg denoise
  *   7. CAPTION STUDIO    — Burn-in captions + text overlays + title cards
  *   8. CONTENT VAULT     — Chunked upload + library management
  *
@@ -23,8 +23,11 @@
  *   POST /api/video-studio/speed        { video, speed }
  *   POST /api/video-studio/watermark    { video, mode, text, position, opacity, size, color }
  *   POST /api/video-studio/convert      { video, format, resolution }
- *   trpc.videoEnhance.slowMotion        { videoUrl, targetFps: "60"|"120"|"240" }
- *   trpc.videoEnhance.getJob            { predictionId }
+ *   trpc.videoEnhance.slowMotion        { videoUrl, targetFps: "60"|"120"|"240" } → Replicate RIFE v4.6
+ *   trpc.videoEnhance.upscaleVideo       { videoUrl, resolution: "FHD"|"2k"|"4k" } → Replicate Real-ESRGAN
+ *   trpc.videoEnhance.transcribeVideo    { videoUrl } → OpenAI Whisper-1
+ *   trpc.videoEnhance.getJob             { predictionId } → Replicate polling
+ *   trpc.videoEnhance.getAIEngineStatus  {} → engine availability map
  * ============================================================================
  */
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -79,7 +82,7 @@ const MODES: { id: ModeId; label: string; icon: React.ReactNode; desc: string; c
   { id: "scene-architect", label: "Scene Architect", icon: <Scissors size={18}/>,     desc: "Trim, cut, speed, audio — full editor",     color: "#EAB308", accent: "rgba(234,179,8,0.15)"   },
   { id: "ppv-engine",      label: "PPV Engine",      icon: <Lock size={18}/>,         desc: "Teaser clipper + blur censor + watermark",  color: "#A855F7", accent: "rgba(168,85,247,0.15)"  },
   { id: "platform-vault",  label: "Platform Vault",  icon: <MonitorPlay size={18}/>,  desc: "Export for OF, Fansly, MV, Clips4Sale",    color: "#06B6D4", accent: "rgba(6,182,212,0.15)"   },
-  { id: "ai-enhance",      label: "AI Enhance",      icon: <BrainCircuit size={18}/>, desc: "Runway slow motion + AI upscale",           color: "#22C55E", accent: "rgba(34,197,94,0.15)"   },
+  { id: "ai-enhance",      label: "AI Enhance",      icon: <BrainCircuit size={18}/>, desc: "Replicate RIFE slow motion + Real-ESRGAN upscale", color: "#22C55E", accent: "rgba(34,197,94,0.15)"   },
   { id: "caption-studio",  label: "Caption Studio",  icon: <Type size={18}/>,         desc: "Burn-in captions + text overlays",          color: "#60A5FA", accent: "rgba(96,165,250,0.15)"  },
   { id: "content-vault",   label: "Content Vault",   icon: <HardDrive size={18}/>,    desc: "Upload & organize your content library",    color: "#9333EA", accent: "rgba(147,51,234,0.15)"  },
 ];
@@ -277,6 +280,11 @@ function VelvetSuiteMode({ onOutput }: { onOutput: (url: string, label: string) 
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // AI engine status — Velvet Suite primary AI engine is Pollo AI (requires credits)
+  const engineStatus = trpc.videoEnhance.getAIEngineStatus.useQuery();
+  const polloAvailable = engineStatus.data?.engines?.pollo?.available ?? false;
+  const polloReason = engineStatus.data?.engines?.pollo?.reason ?? "Checking...";
+
   const BEAUTY_FILTERS = [
     { id: "velvet_skin",   label: "Velvet Skin",   desc: "Multi-stage smooth + warmth lift",   badge: "BEST",   color: "#EC4899" },
     { id: "silk_soft",     label: "Silk Soft",     desc: "Extreme airbrushed, max smoothing",  badge: "MAX",    color: "#F472B6" },
@@ -306,7 +314,16 @@ function VelvetSuiteMode({ onOutput }: { onOutput: (url: string, label: string) 
 
   return (
     <div className="flex flex-col gap-6">
-      <SectionHeader icon={<Sparkles size={22}/>} title="Velvet Suite" desc="AI-grade skin smoothing and beauty enhancement" color="#EC4899" />
+      <SectionHeader icon={<Sparkles size={22}/>} title="Velvet Suite" desc="Beauty enhancement — FFmpeg filters (Pollo AI primary when credits available)" color="#EC4899" />
+      {!polloAvailable && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.3)" }}>
+          <AlertCircle size={16} color="#EAB308" className="flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-bold" style={{ color: "#FDE047" }}>AI Engine Unavailable — FFmpeg Fallback Active</p>
+            <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>Primary AI engine (Pollo AI / Kling): {polloReason}. Filters below use FFmpeg processing only — not AI enhancement.</p>
+          </div>
+        </div>
+      )}
       <div>
         <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#6B7280" }}>Beauty Filters</p>
         <div className="grid grid-cols-2 gap-2.5">
@@ -829,12 +846,19 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
   const [activeOp, setActiveOp] = useState<"slowmo" | "upscale" | "denoise">("slowmo");
   const [selectedFps, setSelectedFps] = useState<"60" | "120" | "240">("60");
   const [predictionId, setPredictionId] = useState<string | null>(null);
+  const [upscalePredictionId, setUpscalePredictionId] = useState<string | null>(null);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [denoiseIntensity, setDenoiseIntensity] = useState(60);
+  const [upscaleResolution, setUpscaleResolution] = useState<"FHD" | "2k" | "4k">("4k");
 
   const slowMotionMut = trpc.videoEnhance.slowMotion.useMutation({
     onSuccess: (data: any) => { setPredictionId(data.predictionId); toast.success("AI slow motion started — processing in background..."); },
+    onError: (e: any) => { toast.error(e.message); setIsProcessing(false); },
+  });
+
+  const upscaleMut = trpc.videoEnhance.upscaleVideo.useMutation({
+    onSuccess: (data: any) => { setUpscalePredictionId(data.predictionId); toast.success(`AI upscale started — Replicate Real-ESRGAN — ${upscaleResolution} output`); },
     onError: (e: any) => { toast.error(e.message); setIsProcessing(false); },
   });
 
@@ -843,15 +867,32 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
     { enabled: !!predictionId, refetchInterval: (data: any) => data?.isComplete ? false : 3000 }
   );
 
+  const upscaleJobQuery = trpc.videoEnhance.getJob.useQuery(
+    { predictionId: upscalePredictionId! },
+    { enabled: !!upscalePredictionId, refetchInterval: (data: any) => data?.isComplete ? false : 5000 }
+  );
+
   useEffect(() => {
     const d = jobQuery.data as any;
     if (d?.isComplete && d?.outputUrl) {
       setOutputUrl(d.outputUrl);
-      onOutput(d.outputUrl, `Slow Motion ${selectedFps === "60" ? "2×" : selectedFps === "120" ? "4×" : "8×"}`);
+      onOutput(d.outputUrl, `Slow Motion ${selectedFps === "60" ? "2×" : selectedFps === "120" ? "4×" : "8×"} — Replicate RIFE`);
       setIsProcessing(false); setPredictionId(null);
-      toast.success("AI slow motion complete!");
+      toast.success("AI slow motion complete — Replicate RIFE v4.6");
     }
+    if (d?.isFailed) { toast.error(d.error || "Slow motion processing failed"); setIsProcessing(false); setPredictionId(null); }
   }, [jobQuery.data]);
+
+  useEffect(() => {
+    const d = upscaleJobQuery.data as any;
+    if (d?.isComplete && d?.outputUrl) {
+      setOutputUrl(d.outputUrl);
+      onOutput(d.outputUrl, `AI Upscaled ${upscaleResolution} — Replicate Real-ESRGAN`);
+      setIsProcessing(false); setUpscalePredictionId(null);
+      toast.success(`AI upscale complete — Replicate Real-ESRGAN — ${upscaleResolution}`);
+    }
+    if (d?.isFailed) { toast.error(d.error || "Upscale processing failed"); setIsProcessing(false); setUpscalePredictionId(null); }
+  }, [upscaleJobQuery.data]);
 
   const processSlowMo = async () => {
     if (!videoFile) return toast.error("Upload a video first.");
@@ -884,7 +925,7 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
 
   return (
     <div className="flex flex-col gap-6">
-      <SectionHeader icon={<BrainCircuit size={22}/>} title="AI Enhance" desc="Runway AI slow motion, upscale, and noise reduction" color="#22C55E" />
+      <SectionHeader icon={<BrainCircuit size={22}/>} title="AI Enhance" desc="Replicate RIFE slow motion · Real-ESRGAN upscale · FFmpeg denoise" color="#22C55E" />
       <div className="flex gap-2">
         {OPS.map(op => (
           <button key={op.id} onClick={() => setActiveOp(op.id)} className="flex items-center gap-2 flex-1 justify-center py-2.5 rounded-xl text-sm font-bold transition-all" style={{ background: activeOp === op.id ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeOp === op.id ? "#22C55E" : "rgba(255,255,255,0.08)"}`, color: activeOp === op.id ? "#22C55E" : "#9CA3AF" }}>
@@ -907,7 +948,7 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
             </div>
             <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
               <AlertCircle size={14} color="#22C55E" className="flex-shrink-0 mt-0.5" />
-              <p className="text-xs" style={{ color: "#86EFAC" }}>AI slow motion uses Runway Gen-4 Turbo. Processing takes 2–5 minutes. First 30s of video is used.</p>
+              <p className="text-xs" style={{ color: "#86EFAC" }}>AI slow motion uses <strong>Replicate RIFE v4.6</strong> frame interpolation. Processing takes 2–5 minutes. First 30s of video is used. (Not Runway — Replicate.)</p>
             </div>
             <button onClick={processSlowMo} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg, #22C55E, #15803D)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
               {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Processing AI Slow Motion...</> : <><Timer size={16} /> Generate {selectedFps === "60" ? "2×" : selectedFps === "120" ? "4×" : "8×"} Slow Motion</>}
@@ -921,8 +962,27 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
               <Stars size={18} color="#22C55E" className="flex-shrink-0" />
               <div><p className="text-sm font-bold text-white">2× AI Upscale</p><p className="text-xs mt-1" style={{ color: "#86EFAC" }}>Upscale 720p → 1440p or 1080p → 4K using AI super-resolution. Ideal for older content or low-quality recordings.</p></div>
             </div>
-            <button onClick={async () => { if (!videoFile) return toast.error("Upload a video first."); setIsProcessing(true); try { const fd = new FormData(); fd.append("video", videoFile.file); fd.append("format", "mp4_h264"); fd.append("resolution", "4k"); const result = await callVideoStudio("convert", fd); setOutputUrl(result.url); onOutput(result.url, "AI Upscaled 4K"); toast.success("Upscale complete."); } catch (e: any) { toast.error(e.message); } finally { setIsProcessing(false); } }} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg, #22C55E, #15803D)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
-              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Upscaling...</> : <><Zap size={16} /> Upscale to 4K</>}
+            <div className="flex gap-2 mb-3">
+              {(["FHD", "2k", "4k"] as const).map(r => (
+                <button key={r} onClick={() => setUpscaleResolution(r)} className="flex-1 py-2 rounded-xl text-xs font-bold transition-all" style={{ background: upscaleResolution === r ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${upscaleResolution === r ? "#22C55E" : "rgba(255,255,255,0.08)"}`, color: upscaleResolution === r ? "#22C55E" : "#9CA3AF" }}>{r}</button>
+              ))}
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-xl mb-3" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
+              <AlertCircle size={14} color="#22C55E" className="flex-shrink-0 mt-0.5" />
+              <p className="text-xs" style={{ color: "#86EFAC" }}>AI upscale uses <strong>Replicate Real-ESRGAN</strong>. Processing takes 30–120 seconds. Output is a direct video URL from Replicate.</p>
+            </div>
+            <button onClick={async () => {
+              if (!videoFile) return toast.error("Upload a video first.");
+              setIsProcessing(true); setOutputUrl(null);
+              try {
+                // First trim to 30s max to keep within Replicate limits
+                const fd = new FormData();
+                fd.append("video", videoFile.file); fd.append("start", "0"); fd.append("end", "30");
+                const trimResult = await callVideoStudio("trim", fd);
+                upscaleMut.mutate({ videoUrl: trimResult.url, resolution: upscaleResolution });
+              } catch (e: any) { toast.error(e.message); setIsProcessing(false); }
+            }} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg, #22C55E, #15803D)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
+              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Upscaling via Replicate...</> : <><Zap size={16} /> Upscale to {upscaleResolution} — Real-ESRGAN</>}
             </button>
           </div>
         )}
@@ -932,13 +992,17 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
             <div className="flex justify-between mb-1"><span className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>Denoise Strength</span><span className="text-xs font-bold" style={{ color: "#22C55E" }}>{denoiseIntensity}%</span></div>
             <input type="range" min={20} max={100} step={5} value={denoiseIntensity} onChange={(e) => setDenoiseIntensity(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#22C55E" }} />
             <p className="text-xs" style={{ color: "#6B7280" }}>Removes grain and noise from low-light footage. Higher values = more smoothing.</p>
+            <div className="flex items-start gap-3 p-3 rounded-xl mb-3" style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.3)" }}>
+              <AlertCircle size={14} color="#EAB308" className="flex-shrink-0 mt-0.5" />
+              <p className="text-xs" style={{ color: "#FDE047" }}>Denoise uses <strong>FFmpeg hqdn3d filter</strong> (not AI). A Replicate AI denoising model can be wired here when configured.</p>
+            </div>
             <button onClick={processDenoise} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg, #22C55E, #15803D)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
-              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Denoising...</> : <><Stars size={16} /> Apply AI Denoise</>}
+              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Denoising (FFmpeg)...</> : <><Stars size={16} /> Apply Denoise (FFmpeg)</>}
             </button>
           </div>
         )}
       </div>
-      {isProcessing && <ProcessingBar label={activeOp === "slowmo" ? "AI slow motion processing (2–5 min)..." : "Enhancing video..."} />}
+      {isProcessing && <ProcessingBar label={activeOp === "slowmo" ? "AI slow motion — Replicate RIFE v4.6 (2–5 min)..." : activeOp === "upscale" ? "AI upscale — Replicate Real-ESRGAN (30–120s)..." : "Denoising (FFmpeg)..."} />}
       {outputUrl && <OutputCard url={outputUrl} label="AI Enhanced" accent="#22C55E" onDownload={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-ai-${activeOp}.mp4`; a.click(); }} onUseAsInput={async () => { try { const vf = await fetchVideoAsFile(outputUrl, "ai-output.mp4"); setVideoFile(vf); setOutputUrl(null); toast.success("Output loaded"); } catch { toast.error("Failed to load output"); } }} />}
     </div>
   );
@@ -956,6 +1020,35 @@ function CaptionStudioMode({ onOutput }: { onOutput: (url: string, label: string
   const [endTime, setEndTime] = useState(10);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcribeSegments, setTranscribeSegments] = useState<{ start: number; end: number; text: string }[]>([]);
+
+  const transcribeMut = trpc.videoEnhance.transcribeVideo.useMutation({
+    onSuccess: (data: any) => {
+      setIsTranscribing(false);
+      if (data.segments && data.segments.length > 0) {
+        setTranscribeSegments(data.segments.map((s: any) => ({ start: Math.round(s.start), end: Math.round(s.end), text: s.text.trim() })));
+        setText(data.text);
+        toast.success(`Whisper transcription complete — ${data.segments.length} segments detected`);
+      } else {
+        setText(data.text);
+        toast.success("Whisper transcription complete");
+      }
+    },
+    onError: (e: any) => { setIsTranscribing(false); toast.error(`Transcription failed: ${e.message}`); },
+  });
+
+  const handleAutoTranscribe = async () => {
+    if (!videoFile) return toast.error("Upload a video first.");
+    setIsTranscribing(true); setTranscribeSegments([]);
+    try {
+      // Upload video to get a URL first (use the local upload endpoint)
+      const fd = new FormData();
+      fd.append("video", videoFile.file); fd.append("start", "0"); fd.append("end", "60");
+      const trimResult = await callVideoStudio("trim", fd);
+      transcribeMut.mutate({ videoUrl: trimResult.url });
+    } catch (e: any) { setIsTranscribing(false); toast.error(e.message); }
+  };
 
   const QUICK_CAPTIONS = [
     "🔞 FULL VIDEO ON MY PAGE", "💋 LINK IN BIO", "🔥 SUBSCRIBE FOR MORE",
@@ -986,8 +1079,28 @@ function CaptionStudioMode({ onOutput }: { onOutput: (url: string, label: string
 
   return (
     <div className="flex flex-col gap-6">
-      <SectionHeader icon={<Type size={22}/>} title="Caption Studio" desc="Burn-in captions, text overlays, and title cards" color="#60A5FA" />
+      <SectionHeader icon={<Type size={22}/>} title="Caption Studio" desc="OpenAI Whisper auto-transcription + FFmpeg burn-in" color="#60A5FA" />
       {!videoFile ? <VideoDropZone onFile={setVideoFile} accent="#60A5FA" /> : <VideoPlayer src={videoFile.url} label="Source" accent="#60A5FA" />}
+      {videoFile && (
+        <div className="flex flex-col gap-3">
+          <button onClick={handleAutoTranscribe} disabled={isTranscribing || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: isTranscribing ? "rgba(96,165,250,0.2)" : "linear-gradient(135deg, #3B82F6, #1D4ED8)", color: "white", cursor: isTranscribing ? "not-allowed" : "pointer" }}>
+            {isTranscribing ? <><Loader2 size={16} className="animate-spin" /> Transcribing with OpenAI Whisper...</> : <><BrainCircuit size={16} /> Auto-Transcribe with Whisper</>}
+          </button>
+          {transcribeSegments.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Whisper Segments — click to apply</p>
+              <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
+                {transcribeSegments.map((seg, i) => (
+                  <button key={i} onClick={() => { setText(seg.text); setStartTime(seg.start); setEndTime(seg.end); }} className="flex items-start gap-3 p-3 rounded-xl text-left transition-all" style={{ background: text === seg.text ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.03)", border: `1px solid ${text === seg.text ? "#60A5FA" : "rgba(255,255,255,0.07)"}` }}>
+                    <span className="text-xs font-bold flex-shrink-0" style={{ color: "#60A5FA" }}>{seg.start}s–{seg.end}s</span>
+                    <span className="text-xs" style={{ color: "#E5E7EB" }}>{seg.text}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       <div>
         <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#6B7280" }}>Quick Captions</p>
         <div className="flex flex-wrap gap-2">
