@@ -708,7 +708,6 @@ function Router() {
       <Route path="/chuuch/events" component={ChuuchEvents} />
         <Route path="/loyalty-command" component={ChicaLoyaltyCommand} />
         <Route path="/my-loyalty" component={MyLoyaltyPortal} />
-      <Route component={NotFound} />
       <Route path="/agents/approvals" component={AgentApprovalInbox} />
       <Route path="/agents/command-tower" component={AgentCommandTower} />
       <Route path="/music/album-cover" component={AlbumCoverDesigner} />
@@ -768,6 +767,7 @@ function Router() {
       <Route path="/tools/viral-optimizer-v2" component={ViralOptimizerV2} />
       <Route path="/videoeditor/vaultx" component={VaultXVideoEditorVideoeditorOrphan} />
       <Route path="/videoeditor/vaultx-projects" component={VaultXVideoEditorProjects} />
+      <Route component={NotFound} />
       </Switch>
       </div>
     </>
