@@ -43,7 +43,8 @@ import {
   Lock, Shield, ShieldCheck, DollarSign, Loader2,
   Check, Copy, Timer, Zap, Stars,
   Layers2, Aperture, Contrast, BrainCircuit,
-  MonitorPlay, Settings2, AlertCircle,
+  MonitorPlay, Settings2, AlertCircle, Package, Clapperboard, TrendingUp,
+  CircleCheck, CircleDot, Circle, ChevronDown, ChevronUp, Image,
 } from "lucide-react";
 
 // ============================================================================
@@ -57,7 +58,8 @@ type ModeId =
   | "platform-vault"
   | "ai-enhance"
   | "caption-studio"
-  | "content-vault";
+  | "content-vault"
+  | "final-output-engine";
 
 interface VideoFile {
   file: File;
@@ -79,6 +81,7 @@ interface HistoryItem {
 // CONSTANTS
 // ============================================================================
 const MODES: { id: ModeId; label: string; icon: React.ReactNode; desc: string; color: string; accent: string }[] = [
+  { id: "final-output-engine", label: "Final Output Engine", icon: <Package size={18}/>, desc: "One click → Premium video + Teaser + Clip pack", color: "#F59E0B", accent: "rgba(245,158,11,0.15)" },
   { id: "velvet-suite",    label: "Velvet Suite",    icon: <Sparkles size={18}/>,     desc: "AI skin smoothing & beauty enhancement",   color: "#EC4899", accent: "rgba(236,72,153,0.15)"  },
   { id: "desire-grade",    label: "Desire Grade",    icon: <Palette size={18}/>,      desc: "22 adult cinematic color grades",           color: "#F97316", accent: "rgba(249,115,22,0.15)"  },
   { id: "scene-architect", label: "Scene Architect", icon: <Scissors size={18}/>,     desc: "Trim, cut, speed, audio — full editor",     color: "#EAB308", accent: "rgba(234,179,8,0.15)"   },
@@ -1401,6 +1404,454 @@ function ContentVaultMode() {
 }
 
 // ============================================================================
+// MODE: FINAL OUTPUT ENGINE
+// ============================================================================
+type FOEStep = "idle" | "analyzing" | "enhancing" | "cutting" | "packaging" | "complete" | "error";
+type FOEJob = "premium" | "teaser" | "clips";
+
+interface FOEOutput {
+  jobId: string;
+  job: FOEJob;
+  status: string;
+  sourceUrl: string;
+  outputs: any;
+  enginesUsed: any[];
+  errors?: string[];
+}
+
+const FOE_STEPS: { id: FOEStep; label: string }[] = [
+  { id: "analyzing",  label: "Analyzing" },
+  { id: "enhancing",  label: "Enhancing" },
+  { id: "cutting",    label: "Cutting" },
+  { id: "packaging",  label: "Packaging" },
+  { id: "complete",   label: "Complete" },
+];
+
+function FOEProgressTimeline({ step }: { step: FOEStep }) {
+  const activeIdx = FOE_STEPS.findIndex(s => s.id === step);
+  return (
+    <div className="flex items-center gap-0 w-full">
+      {FOE_STEPS.map((s, i) => {
+        const done = activeIdx > i;
+        const active = activeIdx === i;
+        return (
+          <div key={s.id} className="flex items-center flex-1">
+            <div className="flex flex-col items-center gap-1 flex-shrink-0">
+              <div className="w-7 h-7 rounded-full flex items-center justify-center transition-all" style={{ background: done ? "#22C55E" : active ? "#F59E0B" : "rgba(255,255,255,0.08)", border: `2px solid ${done ? "#22C55E" : active ? "#F59E0B" : "rgba(255,255,255,0.15)"}` }}>
+                {done ? <Check size={12} color="white" /> : active ? <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" /> : <Circle size={10} color="#4B5563" />}
+              </div>
+              <p className="text-[9px] font-bold" style={{ color: done ? "#22C55E" : active ? "#F59E0B" : "#4B5563" }}>{s.label}</p>
+            </div>
+            {i < FOE_STEPS.length - 1 && (
+              <div className="flex-1 h-0.5 mx-1" style={{ background: done ? "#22C55E" : "rgba(255,255,255,0.08)" }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function FOEEngineBadges({ engines }: { engines: any[] }) {
+  if (!engines || engines.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {engines.map((e, i) => (
+        <div key={i} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold" style={{
+          background: e.status === "succeeded" ? "rgba(34,197,94,0.12)" : e.status === "failed" ? "rgba(239,68,68,0.12)" : "rgba(255,255,255,0.06)",
+          border: `1px solid ${e.status === "succeeded" ? "rgba(34,197,94,0.3)" : e.status === "failed" ? "rgba(239,68,68,0.3)" : "rgba(255,255,255,0.12)"}`,
+          color: e.status === "succeeded" ? "#4ADE80" : e.status === "failed" ? "#FCA5A5" : "#9CA3AF",
+        }}>
+          {e.status === "succeeded" ? <CircleCheck size={11} /> : e.status === "failed" ? <AlertCircle size={11} /> : <CircleDot size={11} />}
+          <span>{e.engine}</span>
+          {e.fallbackUsed && <span className="opacity-60">(fallback)</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FOEOutputBundle({ result, onUseAsInput }: { result: FOEOutput; onUseAsInput?: (url: string) => void }) {
+  const [expanded, setExpanded] = useState(true);
+  const o = result.outputs;
+
+  const download = (url: string, name: string) => {
+    const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+  };
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(245,158,11,0.3)", background: "rgba(0,0,0,0.6)" }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid rgba(245,158,11,0.15)", background: "rgba(245,158,11,0.06)" }}>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "rgba(245,158,11,0.2)" }}>
+            <Package size={12} color="#F59E0B" />
+          </div>
+          <p className="text-sm font-black text-white">
+            {result.job === "premium" ? "Premium Video" : result.job === "teaser" ? "Teaser + Full Package" : "Viral Clip Pack"}
+          </p>
+          <span className="px-2 py-0.5 rounded-lg text-[10px] font-black" style={{ background: result.status === "succeeded" ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)", color: result.status === "succeeded" ? "#4ADE80" : "#FCD34D" }}>
+            {result.status.toUpperCase()}
+          </span>
+        </div>
+        <button onClick={() => setExpanded(!expanded)} style={{ color: "#6B7280" }}>
+          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="p-4 flex flex-col gap-5">
+          {/* Engine badges */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>Engines Used</p>
+            <FOEEngineBadges engines={result.enginesUsed} />
+          </div>
+
+          {/* Premium Video: before/after */}
+          {result.job === "premium" && o.premiumVideoUrl && (
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-black uppercase tracking-widest" style={{ color: "#F59E0B" }}>Premium Output</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[10px] font-bold mb-1.5" style={{ color: "#6B7280" }}>BEFORE (Source)</p>
+                  <VideoPlayer src={o.beforeUrl || result.sourceUrl} label="Source" accent="#6B7280" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold mb-1.5" style={{ color: "#22C55E" }}>AFTER (AI Enhanced)</p>
+                  <VideoPlayer src={o.premiumVideoUrl} label="Premium" accent="#22C55E" />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => download(o.premiumVideoUrl, "premium-video.mp4")} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold" style={{ background: "rgba(34,197,94,0.15)", color: "#4ADE80", border: "1px solid rgba(34,197,94,0.3)" }}>
+                  <Download size={14} /> Download Premium
+                </button>
+                {onUseAsInput && (
+                  <button onClick={() => onUseAsInput(o.premiumVideoUrl)} className="px-4 py-2.5 rounded-xl text-sm font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.12)" }}>
+                    Use as Input
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Teaser Package */}
+          {result.job === "teaser" && (
+            <div className="flex flex-col gap-4">
+              {o.teaserUrl && (
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: "#A855F7" }}>Teaser Clip</p>
+                  <VideoPlayer src={o.teaserUrl} label="Teaser" accent="#A855F7" />
+                  <button onClick={() => download(o.teaserUrl, "teaser.mp4")} className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold" style={{ background: "rgba(168,85,247,0.15)", color: "#C084FC", border: "1px solid rgba(168,85,247,0.3)" }}>
+                    <Download size={14} /> Download Teaser
+                  </button>
+                </div>
+              )}
+              {o.fullVideoUrl && (
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: "#22C55E" }}>Full Video</p>
+                  <VideoPlayer src={o.fullVideoUrl} label="Full" accent="#22C55E" />
+                  <button onClick={() => download(o.fullVideoUrl, "full-video.mp4")} className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold" style={{ background: "rgba(34,197,94,0.15)", color: "#4ADE80", border: "1px solid rgba(34,197,94,0.3)" }}>
+                    <Download size={14} /> Download Full Video
+                  </button>
+                </div>
+              )}
+              {o.thumbnails && o.thumbnails.length > 0 && (
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: "#60A5FA" }}>Thumbnail Frames</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {o.thumbnails.map((url: string, i: number) => (
+                      <div key={i} className="relative rounded-xl overflow-hidden cursor-pointer" onClick={() => download(url, `thumbnail-${i + 1}.jpg`)} style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
+                        <img src={url} alt={`Thumb ${i+1}`} className="w-full object-cover" style={{ aspectRatio: "16/9" }} />
+                        <div className="absolute bottom-1 right-1 w-5 h-5 rounded-lg flex items-center justify-center" style={{ background: "rgba(0,0,0,0.7)" }}><Download size={9} color="white" /></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Viral Clip Pack */}
+          {result.job === "clips" && o.clips && o.clips.length > 0 && (
+            <div className="flex flex-col gap-4">
+              <p className="text-xs font-black uppercase tracking-widest" style={{ color: "#EF4444" }}>Clip Pack ({o.clips.length} clips)</p>
+              {o.clips.map((clip: any) => (
+                <div key={clip.index} className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(239,68,68,0.2)" }}>
+                  <VideoPlayer src={clip.url} label={`Clip ${clip.index} — ${clip.duration}s`} accent="#EF4444" />
+                  <div className="p-3 flex flex-col gap-2" style={{ background: "rgba(0,0,0,0.6)" }}>
+                    <p className="text-sm font-black text-white">{clip.title}</p>
+                    {clip.caption && <p className="text-xs" style={{ color: "#9CA3AF" }}>{clip.caption}</p>}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold" style={{ background: "rgba(239,68,68,0.15)", color: "#FCA5A5" }}>{clip.aspectRatio}</span>
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF" }}>{clip.duration}s</span>
+                        {clip.price && <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold" style={{ background: "rgba(245,158,11,0.15)", color: "#FCD34D" }}>${clip.price} PPV</span>}
+                      </div>
+                      <button onClick={() => download(clip.url, `clip-${clip.index}.mp4`)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold" style={{ background: "rgba(239,68,68,0.15)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.3)" }}>
+                        <Download size={12} /> Save
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Hooks & Captions */}
+          {(o.hooks?.length > 0 || o.captions?.length > 0) && (
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-black uppercase tracking-widest" style={{ color: "#60A5FA" }}>AI-Generated Copy</p>
+              {o.hooks?.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-[10px] font-bold" style={{ color: "#6B7280" }}>HOOKS</p>
+                  {o.hooks.map((h: string, i: number) => (
+                    <div key={i} className="flex items-start gap-2 p-3 rounded-xl" style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.2)" }}>
+                      <p className="text-sm text-white flex-1">{h}</p>
+                      <button onClick={() => navigator.clipboard.writeText(h)} className="flex-shrink-0" style={{ color: "#6B7280" }}><Copy size={12} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {o.captions?.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-[10px] font-bold" style={{ color: "#6B7280" }}>CAPTIONS</p>
+                  {o.captions.map((c: string, i: number) => (
+                    <div key={i} className="flex items-start gap-2 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                      <p className="text-sm text-white flex-1">{c}</p>
+                      <button onClick={() => navigator.clipboard.writeText(c)} className="flex-shrink-0" style={{ color: "#6B7280" }}><Copy size={12} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {o.cta && (
+                <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                  <p className="text-[10px] font-bold flex-shrink-0 mt-0.5" style={{ color: "#F59E0B" }}>CTA</p>
+                  <p className="text-sm text-white flex-1">{o.cta}</p>
+                  <button onClick={() => navigator.clipboard.writeText(o.cta)} className="flex-shrink-0" style={{ color: "#6B7280" }}><Copy size={12} /></button>
+                </div>
+              )}
+              {o.suggestedPrice && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
+                  <DollarSign size={14} color="#4ADE80" />
+                  <p className="text-sm font-bold" style={{ color: "#4ADE80" }}>Suggested PPV Price: ${o.suggestedPrice}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Errors */}
+          {result.errors && result.errors.length > 0 && (
+            <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+              <p className="text-xs font-bold" style={{ color: "#FCA5A5" }}>Non-critical errors (partial output delivered):</p>
+              {result.errors.map((e, i) => <p key={i} className="text-xs" style={{ color: "#9CA3AF" }}>• {e}</p>)}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FinalOutputEngineMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
+  const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
+  const [step, setStep] = useState<FOEStep>("idle");
+  const [activeJob, setActiveJob] = useState<FOEJob | null>(null);
+  const [results, setResults] = useState<FOEOutput[]>([]);
+  const [stepLabel, setStepLabel] = useState("");
+
+  const premiumMut = trpc.videoEnhance.createPremiumVideo.useMutation();
+  const teaserMut  = trpc.videoEnhance.createTeaserPackage.useMutation();
+  const clipsMut   = trpc.videoEnhance.createViralClipPack.useMutation();
+
+  const isRunning = step !== "idle" && step !== "complete" && step !== "error";
+
+  const uploadVideoToServer = async (file: VideoFile): Promise<string> => {
+    // Upload via Content Vault chunked upload, return durable HTTPS URL
+    const uploadId = `foe-${Date.now()}`;
+    const totalChunks = Math.ceil(file.size / (5 * 1024 * 1024));
+    const initResp = await fetch("/api/video/upload/init", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uploadId, totalChunks, filename: file.name }),
+    });
+    if (!initResp.ok) throw new Error("Upload init failed");
+
+    let lastResult: any = null;
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * 5 * 1024 * 1024;
+      const chunk = file.file.slice(start, start + 5 * 1024 * 1024);
+      const fd = new FormData();
+      fd.append("uploadId", uploadId);
+      fd.append("chunkIndex", String(i));
+      fd.append("chunk", chunk, file.name);
+      const chunkResp = await fetch("/api/video/upload/chunk", { method: "POST", body: fd });
+      if (!chunkResp.ok) throw new Error(`Chunk ${i} upload failed`);
+      lastResult = await chunkResp.json();
+    }
+    if (lastResult?.file?.url) return lastResult.file.url;
+    // Finalize if not auto-completed
+    const finResp = await fetch("/api/video/upload/finalize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uploadId, filename: file.name }),
+    });
+    const finData = await finResp.json();
+    return finData.file?.url || finData.url;
+  };
+
+  const run = async (job: FOEJob) => {
+    if (!videoFile) return toast.error("Upload a source video first.");
+    if (isRunning) return;
+    setActiveJob(job);
+    setStep("analyzing");
+    setStepLabel("Uploading source video...");
+
+    try {
+      // Upload source video to get durable HTTPS URL
+      const videoUrl = await uploadVideoToServer(videoFile);
+
+      setStep("analyzing");
+      setStepLabel("Analyzing with OpenAI Whisper + GPT-4o-mini...");
+
+      let result: any;
+      if (job === "premium") {
+        setStep("enhancing");
+        setStepLabel("Enhancing with Replicate Real-ESRGAN (this takes 2–5 min)...");
+        result = await premiumMut.mutateAsync({ videoUrl, enableUpscale: true, targetResolution: "4k" });
+      } else if (job === "teaser") {
+        setStep("cutting");
+        setStepLabel("Detecting best moment + cutting teaser with FFmpeg...");
+        result = await teaserMut.mutateAsync({ videoUrl, teaserDuration: 30 });
+      } else {
+        setStep("cutting");
+        setStepLabel("Detecting 3 best moments + cutting clips with FFmpeg...");
+        result = await clipsMut.mutateAsync({ videoUrl, clipCount: 3, aspectRatio: "16:9" });
+      }
+
+      setStep("packaging");
+      setStepLabel("Packaging output bundle...");
+      await new Promise(r => setTimeout(r, 800));
+
+      const foeResult: FOEOutput = { jobId: result.jobId, job, status: result.status, sourceUrl: videoUrl, outputs: result.outputs, enginesUsed: result.enginesUsed, errors: result.errors };
+      setResults(prev => [foeResult, ...prev]);
+      setStep("complete");
+      setStepLabel("");
+
+      // Register primary output in session history
+      const primaryUrl = job === "premium" ? result.outputs?.premiumVideoUrl : job === "teaser" ? result.outputs?.teaserUrl : result.outputs?.clips?.[0]?.url;
+      if (primaryUrl) onOutput(primaryUrl, job === "premium" ? "Premium Video" : job === "teaser" ? "Teaser" : "Viral Clip 1");
+
+      toast.success(`${job === "premium" ? "Premium Video" : job === "teaser" ? "Teaser Package" : "Clip Pack"} ready!`);
+    } catch (e: any) {
+      setStep("error");
+      setStepLabel(e.message || "Processing failed");
+      toast.error(e.message || "Processing failed");
+    }
+  };
+
+  const reset = () => { setStep("idle"); setActiveJob(null); setStepLabel(""); };
+
+  const JOB_BUTTONS: { id: FOEJob; label: string; desc: string; icon: React.ReactNode; color: string; accent: string; engines: string }[] = [
+    { id: "premium", label: "Create Premium Video", desc: "Whisper → GPT analysis → Real-ESRGAN upscale → FFmpeg encode", icon: <Sparkles size={20}/>, color: "#22C55E", accent: "rgba(34,197,94,0.15)", engines: "Whisper · GPT-4o-mini · Replicate ESRGAN · FFmpeg" },
+    { id: "teaser",  label: "Create Teaser + Full Package", desc: "Whisper → GPT best-moment → FFmpeg teaser + full + thumbnails", icon: <Clapperboard size={20}/>, color: "#A855F7", accent: "rgba(168,85,247,0.15)", engines: "Whisper · GPT-4o-mini · FFmpeg" },
+    { id: "clips",   label: "Create Viral Clip Pack", desc: "Whisper → GPT 3 moments → FFmpeg clips + hooks per clip", icon: <TrendingUp size={20}/>, color: "#EF4444", accent: "rgba(239,68,68,0.15)", engines: "Whisper · GPT-4o-mini · FFmpeg" },
+  ];
+
+  return (
+    <div className="flex flex-col gap-6">
+      <SectionHeader icon={<Package size={22}/>} title="Final Output Engine" desc="One upload → Premium video + Teaser package + Viral clip pack" color="#F59E0B" />
+
+      {/* Source Video */}
+      <div>
+        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#6B7280" }}>Source Video</p>
+        {!videoFile ? (
+          <VideoDropZone onFile={setVideoFile} accent="#F59E0B" />
+        ) : (
+          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(245,158,11,0.3)" }}>
+            <VideoPlayer src={videoFile.url} label={videoFile.name} accent="#F59E0B" />
+            <div className="flex items-center justify-between px-4 py-3" style={{ background: "rgba(0,0,0,0.6)" }}>
+              <div>
+                <p className="text-sm font-bold text-white">{videoFile.name}</p>
+                <p className="text-xs" style={{ color: "#6B7280" }}>{fmtSize(videoFile.size)}{videoFile.duration ? ` · ${Math.round(videoFile.duration)}s` : ""}</p>
+              </div>
+              <button onClick={() => { setVideoFile(null); reset(); }} className="text-xs font-bold px-3 py-1.5 rounded-xl" style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)" }}>Change</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Outcome Buttons */}
+      {videoFile && (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Choose Output</p>
+          {JOB_BUTTONS.map(btn => (
+            <button
+              key={btn.id}
+              onClick={() => run(btn.id)}
+              disabled={isRunning}
+              className="flex items-start gap-4 p-5 rounded-2xl text-left transition-all w-full"
+              style={{ background: isRunning && activeJob === btn.id ? btn.accent : "rgba(255,255,255,0.03)", border: `2px solid ${isRunning && activeJob === btn.id ? btn.color : "rgba(255,255,255,0.08)"}`, opacity: isRunning && activeJob !== btn.id ? 0.5 : 1, cursor: isRunning ? "not-allowed" : "pointer" }}
+            >
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: btn.accent, border: `1px solid ${btn.color}40` }}>
+                <span style={{ color: btn.color }}>{btn.icon}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-black text-white">{btn.label}</p>
+                  {isRunning && activeJob === btn.id && <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: btn.color, borderTopColor: "transparent" }} />}
+                </div>
+                <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>{btn.desc}</p>
+                <p className="text-[10px] mt-1.5 font-semibold" style={{ color: btn.color }}>Engines: {btn.engines}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Progress Timeline */}
+      {step !== "idle" && (
+        <div className="flex flex-col gap-3 p-5 rounded-2xl" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}>
+          <FOEProgressTimeline step={step === "error" ? "analyzing" : step} />
+          {step !== "complete" && step !== "error" && stepLabel && (
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-3 h-3 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+              <p className="text-xs font-semibold" style={{ color: "#FCD34D" }}>{stepLabel}</p>
+            </div>
+          )}
+          {step === "complete" && (
+            <div className="flex items-center gap-2 mt-1">
+              <CircleCheck size={14} color="#4ADE80" />
+              <p className="text-xs font-bold" style={{ color: "#4ADE80" }}>Output bundle ready — scroll down to view</p>
+            </div>
+          )}
+          {step === "error" && (
+            <div className="flex items-center gap-2 mt-1">
+              <AlertCircle size={14} color="#EF4444" />
+              <p className="text-xs font-semibold" style={{ color: "#FCA5A5" }}>{stepLabel}</p>
+              <button onClick={reset} className="ml-auto text-xs font-bold px-2 py-1 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444" }}>Retry</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Output Bundles */}
+      {results.length > 0 && (
+        <div className="flex flex-col gap-4">
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Output Bundles ({results.length})</p>
+          {results.map(r => (
+            <FOEOutputBundle key={r.jobId} result={r} onUseAsInput={(url) => {
+              const vf: VideoFile = { file: new File([], "output.mp4"), url, name: "output.mp4", size: 0 };
+              setVideoFile(vf);
+              reset();
+            }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 export default function VaultXStudio() {
@@ -1521,6 +1972,7 @@ export default function VaultXStudio() {
             </div>
           ) : (
             <div className="p-6 max-w-2xl mx-auto">
+              {activeMode === "final-output-engine" && <FinalOutputEngineMode onOutput={handleOutput} />}
               {activeMode === "velvet-suite"    && <VelvetSuiteMode    onOutput={handleOutput} />}
               {activeMode === "desire-grade"    && <DesireGradeMode    onOutput={handleOutput} />}
               {activeMode === "scene-architect" && <SceneArchitectMode onOutput={handleOutput} />}
