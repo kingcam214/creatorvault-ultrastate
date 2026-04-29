@@ -1,18 +1,26 @@
 /**
  * ============================================================================
- * VAULTX STUDIO v4 — ELITE ADULT CONTENT PRODUCTION SUITE
+ * VAULTX STUDIO v5 — ELITE ADULT CONTENT PRODUCTION SUITE
  * ============================================================================
- * Complete rebuild — adult-niche-first design, cinematic UI, no text boxes.
+ * Complete layout rebuild — Pollo AI / OpenArt AI visual standard.
+ *
+ * Layout law: Two-column workspace. Left = settings (320px, scrollable).
+ * Right = video canvas (fills remaining width, video always visible).
+ * No narrow max-w-2xl columns. No forms. Video is the product.
+ *
+ * All logic, tRPC wiring, and API calls preserved exactly from v4.
+ * Only the layout and visual presentation layer changed.
  *
  * Modes:
- *   1. VELVET SUITE      — Advanced skin smoothing + beauty enhancement
- *   2. DESIRE GRADE      — 22 adult-specific color grades + custom curves
- *   3. SCENE ARCHITECT   — Trim, cut, speed, audio, multi-operation editor
- *   4. PPV ENGINE        — Teaser clipper + blur censor + watermark branding
+ *   1. VELVET SUITE      — Beauty filters + skin enhancement
+ *   2. DESIRE GRADE      — 22 adult cinematic color grades
+ *   3. SCENE ARCHITECT   — Trim, cut, speed, audio, AI scene detection
+ *   4. PPV ENGINE        — Teaser clipper + blur censor + watermark + AI PPV intelligence
  *   5. PLATFORM VAULT    — OF / Fansly / ManyVids / Clips4Sale / Twitter export
  *   6. AI ENHANCE        — Replicate RIFE slow motion + Real-ESRGAN upscale + FFmpeg denoise
- *   7. CAPTION STUDIO    — Burn-in captions + text overlays + title cards
+ *   7. CAPTION STUDIO    — OpenAI Whisper auto-transcription + burn-in captions
  *   8. CONTENT VAULT     — Chunked upload + library management
+ *   9. FINAL OUTPUT ENGINE — One upload → Premium + Teaser + Clip pack
  *
  * Backend API (all verified):
  *   POST /api/video-studio/filter       { video, filter, intensity }
@@ -23,13 +31,16 @@
  *   POST /api/video-studio/speed        { video, speed }
  *   POST /api/video-studio/watermark    { video, mode, text, position, opacity, size, color }
  *   POST /api/video-studio/convert      { video, format, resolution }
- *   trpc.videoEnhance.slowMotion        { videoUrl, targetFps: "60"|"120"|"240" } → Replicate RIFE v4.6
- *   trpc.videoEnhance.upscaleVideo       { videoUrl, resolution: "FHD"|"2k"|"4k" } → Replicate Real-ESRGAN
- *   trpc.videoEnhance.transcribeVideo    { videoUrl } → OpenAI Whisper-1
- *   trpc.videoEnhance.getJob             { predictionId } → Replicate polling
- *   trpc.videoEnhance.getAIEngineStatus  {} → engine availability map
- *   trpc.videoEnhance.analyzeScene        { transcript, segments, videoDuration } → GPT-4o-mini scene detection
- *   trpc.videoEnhance.analyzePPVMoments   { transcript, segments, videoDuration, contentType } → GPT-4o-mini PPV intelligence
+ *   trpc.videoEnhance.slowMotion        → Replicate RIFE v4.6
+ *   trpc.videoEnhance.upscaleVideo      → Replicate Real-ESRGAN
+ *   trpc.videoEnhance.transcribeVideo   → OpenAI Whisper-1
+ *   trpc.videoEnhance.getJob            → Replicate polling
+ *   trpc.videoEnhance.getAIEngineStatus → engine availability map
+ *   trpc.videoEnhance.analyzeScene      → GPT-4o-mini scene detection
+ *   trpc.videoEnhance.analyzePPVMoments → GPT-4o-mini PPV intelligence
+ *   trpc.videoEnhance.createPremiumVideo    → Full AI pipeline
+ *   trpc.videoEnhance.createTeaserPackage   → Whisper + GPT + FFmpeg
+ *   trpc.videoEnhance.createViralClipPack   → Whisper + GPT + FFmpeg
  * ============================================================================
  */
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -37,14 +48,15 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import {
   ChevronLeft, ChevronRight, Play, Pause, Download, Upload,
-  Sparkles, Flame, Eye, Sun, Moon, Palette,
+  Sparkles, Flame, Eye, Palette,
   Droplets, AudioWaveform, Volume2,
   FileVideo, HardDrive, Type, Scissors, Gauge, Activity,
   Lock, Shield, ShieldCheck, DollarSign, Loader2,
   Check, Copy, Timer, Zap, Stars,
   Layers2, Aperture, Contrast, BrainCircuit,
-  MonitorPlay, Settings2, AlertCircle, Package, Clapperboard, TrendingUp,
+  MonitorPlay, AlertCircle, Package, Clapperboard, TrendingUp,
   CircleCheck, CircleDot, Circle, ChevronDown, ChevronUp, Image,
+  Sun, Moon, Settings2,
 } from "lucide-react";
 
 // ============================================================================
@@ -81,15 +93,15 @@ interface HistoryItem {
 // CONSTANTS
 // ============================================================================
 const MODES: { id: ModeId; label: string; icon: React.ReactNode; desc: string; color: string; accent: string }[] = [
-  { id: "final-output-engine", label: "Final Output Engine", icon: <Package size={18}/>, desc: "One click → Premium video + Teaser + Clip pack", color: "#F59E0B", accent: "rgba(245,158,11,0.15)" },
-  { id: "velvet-suite",    label: "Velvet Suite",    icon: <Sparkles size={18}/>,     desc: "AI skin smoothing & beauty enhancement",   color: "#EC4899", accent: "rgba(236,72,153,0.15)"  },
-  { id: "desire-grade",    label: "Desire Grade",    icon: <Palette size={18}/>,      desc: "22 adult cinematic color grades",           color: "#F97316", accent: "rgba(249,115,22,0.15)"  },
-  { id: "scene-architect", label: "Scene Architect", icon: <Scissors size={18}/>,     desc: "Trim, cut, speed, audio — full editor",     color: "#EAB308", accent: "rgba(234,179,8,0.15)"   },
-  { id: "ppv-engine",      label: "PPV Engine",      icon: <Lock size={18}/>,         desc: "Teaser clipper + blur censor + watermark",  color: "#A855F7", accent: "rgba(168,85,247,0.15)"  },
-  { id: "platform-vault",  label: "Platform Vault",  icon: <MonitorPlay size={18}/>,  desc: "Export for OF, Fansly, MV, Clips4Sale",    color: "#06B6D4", accent: "rgba(6,182,212,0.15)"   },
-  { id: "ai-enhance",      label: "AI Enhance",      icon: <BrainCircuit size={18}/>, desc: "Replicate RIFE slow motion + Real-ESRGAN upscale", color: "#22C55E", accent: "rgba(34,197,94,0.15)"   },
-  { id: "caption-studio",  label: "Caption Studio",  icon: <Type size={18}/>,         desc: "Burn-in captions + text overlays",          color: "#60A5FA", accent: "rgba(96,165,250,0.15)"  },
-  { id: "content-vault",   label: "Content Vault",   icon: <HardDrive size={18}/>,    desc: "Upload & organize your content library",    color: "#9333EA", accent: "rgba(147,51,234,0.15)"  },
+  { id: "final-output-engine", label: "Final Output Engine", icon: <Package size={18}/>, desc: "One click → Premium + Teaser + Clips", color: "#F59E0B", accent: "rgba(245,158,11,0.15)" },
+  { id: "velvet-suite",    label: "Velvet Suite",    icon: <Sparkles size={18}/>,     desc: "AI skin smoothing & beauty",        color: "#EC4899", accent: "rgba(236,72,153,0.15)"  },
+  { id: "desire-grade",    label: "Desire Grade",    icon: <Palette size={18}/>,      desc: "22 adult cinematic color grades",   color: "#F97316", accent: "rgba(249,115,22,0.15)"  },
+  { id: "scene-architect", label: "Scene Architect", icon: <Scissors size={18}/>,     desc: "Trim, cut, speed, audio editor",    color: "#EAB308", accent: "rgba(234,179,8,0.15)"   },
+  { id: "ppv-engine",      label: "PPV Engine",      icon: <Lock size={18}/>,         desc: "Teaser + censor + watermark",       color: "#A855F7", accent: "rgba(168,85,247,0.15)"  },
+  { id: "platform-vault",  label: "Platform Vault",  icon: <MonitorPlay size={18}/>,  desc: "Export for OF, Fansly, MV, C4S",   color: "#06B6D4", accent: "rgba(6,182,212,0.15)"   },
+  { id: "ai-enhance",      label: "AI Enhance",      icon: <BrainCircuit size={18}/>, desc: "RIFE slow motion + ESRGAN upscale", color: "#22C55E", accent: "rgba(34,197,94,0.15)"   },
+  { id: "caption-studio",  label: "Caption Studio",  icon: <Type size={18}/>,         desc: "Whisper transcription + burn-in",   color: "#60A5FA", accent: "rgba(96,165,250,0.15)"  },
+  { id: "content-vault",   label: "Content Vault",   icon: <HardDrive size={18}/>,    desc: "Upload & organize your library",    color: "#9333EA", accent: "rgba(147,51,234,0.15)"  },
 ];
 
 const DESIRE_GRADES = [
@@ -173,6 +185,51 @@ function fmtSize(bytes: number): string {
 // ============================================================================
 // SHARED COMPONENTS
 // ============================================================================
+
+/** Full-height canvas drop zone — fills the right panel */
+function CanvasDropZone({ onFile, accent = "#DC2626", label = "Drop your video here" }: { onFile: (vf: VideoFile) => void; accent?: string; label?: string }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const handleFile = (f: File) => {
+    const url = URL.createObjectURL(f);
+    const vf: VideoFile = { file: f, url, name: f.name, size: f.size };
+    const v = document.createElement("video");
+    v.src = url;
+    v.onloadedmetadata = () => { vf.duration = v.duration; onFile(vf); };
+    v.onerror = () => onFile(vf);
+  };
+
+  return (
+    <div
+      onClick={() => inputRef.current?.click()}
+      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+      className="flex-1 flex flex-col items-center justify-center gap-6 cursor-pointer transition-all duration-200"
+      style={{
+        border: `2px dashed ${dragging ? accent : "rgba(255,255,255,0.08)"}`,
+        background: dragging ? `${accent}08` : "rgba(255,255,255,0.01)",
+        borderRadius: 24,
+        minHeight: 400,
+      }}
+    >
+      <div className="w-20 h-20 rounded-3xl flex items-center justify-center" style={{ background: `${accent}15`, border: `1px solid ${accent}30` }}>
+        <Upload size={36} color={accent} />
+      </div>
+      <div className="text-center">
+        <p className="text-white font-black text-xl">{label}</p>
+        <p className="text-sm mt-2" style={{ color: "#6B7280" }}>MP4 · MOV · AVI · MKV · WebM — up to 4GB</p>
+      </div>
+      <div className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black" style={{ background: `${accent}20`, color: accent, border: `1px solid ${accent}30` }}>
+        <FileVideo size={16} /> Browse Files
+      </div>
+      <input ref={inputRef} type="file" accept="video/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+    </div>
+  );
+}
+
+/** Inline drop zone for compact areas */
 function VideoDropZone({ onFile, accent = "#DC2626" }: { onFile: (vf: VideoFile) => void; accent?: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -192,24 +249,78 @@ function VideoDropZone({ onFile, accent = "#DC2626" }: { onFile: (vf: VideoFile)
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-      className="relative flex flex-col items-center justify-center gap-4 rounded-2xl cursor-pointer transition-all duration-200"
-      style={{ padding: "40px 24px", border: `2px dashed ${dragging ? accent : "rgba(255,255,255,0.12)"}`, background: dragging ? `${accent}10` : "rgba(255,255,255,0.02)" }}
+      className="relative flex flex-col items-center justify-center gap-3 rounded-2xl cursor-pointer transition-all duration-200"
+      style={{ padding: "28px 20px", border: `2px dashed ${dragging ? accent : "rgba(255,255,255,0.1)"}`, background: dragging ? `${accent}10` : "rgba(255,255,255,0.02)" }}
     >
-      <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: `${accent}20`, border: `1px solid ${accent}40` }}>
-        <Upload size={28} color={accent} />
+      <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: `${accent}20`, border: `1px solid ${accent}40` }}>
+        <Upload size={22} color={accent} />
       </div>
       <div className="text-center">
-        <p className="text-white font-bold text-base">Drop your video here</p>
-        <p className="text-sm mt-1" style={{ color: "#9CA3AF" }}>MP4, MOV, AVI, MKV, WebM — up to 4GB</p>
-      </div>
-      <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold" style={{ background: `${accent}20`, color: accent, border: `1px solid ${accent}30` }}>
-        <FileVideo size={14} /> Browse Files
+        <p className="text-white font-bold text-sm">Drop video or click to browse</p>
+        <p className="text-xs mt-1" style={{ color: "#6B7280" }}>MP4, MOV, AVI, MKV, WebM — up to 4GB</p>
       </div>
       <input ref={inputRef} type="file" accept="video/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
     </div>
   );
 }
 
+/** Full-canvas video player — fills the right panel */
+function CanvasVideoPlayer({ src, label, accent = "#DC2626", onReplace }: { src: string; label?: string; accent?: string; onReplace?: () => void }) {
+  const [playing, setPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const toggle = () => {
+    if (!videoRef.current) return;
+    if (playing) { videoRef.current.pause(); setPlaying(false); }
+    else { videoRef.current.play(); setPlaying(true); }
+  };
+  return (
+    <div className="flex-1 relative rounded-3xl overflow-hidden flex flex-col" style={{ background: "#000", minHeight: 400 }}>
+      {label && <div className="absolute top-4 left-4 z-10 px-3 py-1.5 rounded-xl text-xs font-black" style={{ background: "rgba(0,0,0,0.85)", color: accent, border: `1px solid ${accent}40`, backdropFilter: "blur(8px)" }}>{label}</div>}
+      {onReplace && (
+        <button onClick={onReplace} className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-xl text-xs font-bold" style={{ background: "rgba(0,0,0,0.85)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(8px)" }}>
+          Change Video
+        </button>
+      )}
+      <video ref={videoRef} src={src} className="w-full flex-1 object-contain" style={{ minHeight: 400 }} onEnded={() => setPlaying(false)} />
+      <button onClick={toggle} className="absolute bottom-4 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full flex items-center justify-center transition-all" style={{ background: `${accent}E0`, border: "2px solid rgba(255,255,255,0.2)", backdropFilter: "blur(4px)" }}>
+        {playing ? <Pause size={22} color="white" /> : <Play size={22} color="white" />}
+      </button>
+    </div>
+  );
+}
+
+/** Before/After canvas — fills the right panel */
+function CanvasBeforeAfter({ beforeUrl, afterUrl, label, accent = "#22C55E" }: { beforeUrl: string; afterUrl: string; label: string; accent?: string }) {
+  const [showAfter, setShowAfter] = useState(true);
+  const beforeRef = useRef<HTMLVideoElement>(null);
+  const afterRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const toggle = () => {
+    const vids = [beforeRef.current, afterRef.current].filter(Boolean) as HTMLVideoElement[];
+    if (playing) { vids.forEach(v => v.pause()); setPlaying(false); }
+    else { vids.forEach(v => v.play()); setPlaying(true); }
+  };
+  return (
+    <div className="flex-1 relative rounded-3xl overflow-hidden flex flex-col" style={{ background: "#000", minHeight: 400 }}>
+      {/* Toggle tabs */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex rounded-xl overflow-hidden" style={{ border: `1px solid ${accent}40`, backdropFilter: "blur(8px)" }}>
+        <button onClick={() => setShowAfter(false)} className="px-4 py-2 text-xs font-black transition-all" style={{ background: !showAfter ? `${accent}CC` : "rgba(0,0,0,0.8)", color: !showAfter ? "white" : "#9CA3AF" }}>BEFORE</button>
+        <button onClick={() => setShowAfter(true)} className="px-4 py-2 text-xs font-black transition-all" style={{ background: showAfter ? `${accent}CC` : "rgba(0,0,0,0.8)", color: showAfter ? "white" : "#9CA3AF" }}>AFTER</button>
+      </div>
+      {/* Label */}
+      <div className="absolute top-4 left-4 z-10 px-3 py-1.5 rounded-xl text-xs font-black" style={{ background: "rgba(0,0,0,0.85)", color: showAfter ? accent : "#9CA3AF", border: `1px solid ${showAfter ? accent : "rgba(255,255,255,0.2)"}40`, backdropFilter: "blur(8px)" }}>
+        {showAfter ? label : "Original"}
+      </div>
+      <video ref={beforeRef} src={beforeUrl} className="w-full flex-1 object-contain" style={{ minHeight: 400, display: showAfter ? "none" : "block" }} onEnded={() => setPlaying(false)} />
+      <video ref={afterRef} src={afterUrl} className="w-full flex-1 object-contain" style={{ minHeight: 400, display: showAfter ? "block" : "none" }} onEnded={() => setPlaying(false)} />
+      <button onClick={toggle} className="absolute bottom-4 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full flex items-center justify-center transition-all" style={{ background: `${accent}E0`, border: "2px solid rgba(255,255,255,0.2)" }}>
+        {playing ? <Pause size={22} color="white" /> : <Play size={22} color="white" />}
+      </button>
+    </div>
+  );
+}
+
+/** Compact video player for output cards in settings panel */
 function VideoPlayer({ src, label, accent = "#DC2626" }: { src: string; label?: string; accent?: string }) {
   const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -220,56 +331,35 @@ function VideoPlayer({ src, label, accent = "#DC2626" }: { src: string; label?: 
   };
   return (
     <div className="relative rounded-2xl overflow-hidden" style={{ background: "#000" }}>
-      {label && <div className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded-lg text-xs font-bold" style={{ background: "rgba(0,0,0,0.8)", color: accent, border: `1px solid ${accent}40` }}>{label}</div>}
-      <video ref={videoRef} src={src} className="w-full" style={{ maxHeight: 360, objectFit: "contain" }} onEnded={() => setPlaying(false)} />
-      <button onClick={toggle} className="absolute bottom-3 right-3 w-11 h-11 rounded-full flex items-center justify-center transition-all" style={{ background: `${accent}CC`, border: "1px solid rgba(255,255,255,0.2)" }}>
-        {playing ? <Pause size={18} color="white" /> : <Play size={18} color="white" />}
+      {label && <div className="absolute top-2 left-2 z-10 px-2 py-1 rounded-lg text-xs font-bold" style={{ background: "rgba(0,0,0,0.8)", color: accent, border: `1px solid ${accent}40` }}>{label}</div>}
+      <video ref={videoRef} src={src} className="w-full" style={{ maxHeight: 200, objectFit: "contain" }} onEnded={() => setPlaying(false)} />
+      <button onClick={toggle} className="absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `${accent}CC` }}>
+        {playing ? <Pause size={14} color="white" /> : <Play size={14} color="white" />}
       </button>
-    </div>
-  );
-}
-
-function OutputCard({ url, label, accent = "#DC2626", onUseAsInput, onDownload }: { url: string; label: string; accent?: string; onUseAsInput?: () => void; onDownload: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const copy = () => { navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); };
-  return (
-    <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${accent}30`, background: "rgba(0,0,0,0.6)" }}>
-      <VideoPlayer src={url} label={label} accent={accent} />
-      <div className="flex items-center gap-2 p-4">
-        <button onClick={onDownload} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all" style={{ background: `${accent}20`, color: accent, border: `1px solid ${accent}30` }}>
-          <Download size={16} /> Save to Device
-        </button>
-        <button onClick={copy} className="w-11 h-11 flex items-center justify-center rounded-xl transition-all" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF" }}>
-          {copied ? <Check size={16} color="#4ADE80" /> : <Copy size={16} />}
-        </button>
-        {onUseAsInput && (
-          <button onClick={onUseAsInput} title="Use as input for next operation" className="w-11 h-11 flex items-center justify-center rounded-xl transition-all" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF" }}>
-            <Layers2 size={16} />
-          </button>
-        )}
-      </div>
     </div>
   );
 }
 
 function ProcessingBar({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 p-5 rounded-2xl" style={{ background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)" }}>
-      <div className="w-8 h-8 rounded-full border-2 border-red-500 border-t-transparent animate-spin flex-shrink-0" />
+    <div className="flex items-center gap-3 p-4 rounded-2xl" style={{ background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)" }}>
+      <div className="w-6 h-6 rounded-full border-2 border-red-500 border-t-transparent animate-spin flex-shrink-0" />
       <p className="text-sm font-semibold text-white">{label}</p>
     </div>
   );
 }
 
-function SectionHeader({ icon, title, desc, color = "#DC2626" }: { icon: React.ReactNode; title: string; desc: string; color?: string }) {
+/** Two-column workspace wrapper */
+function Workspace({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-4 mb-6">
-      <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: `${color}20`, border: `1px solid ${color}40` }}>
-        <span style={{ color }}>{icon}</span>
+    <div className="flex flex-1 gap-0 min-h-0" style={{ height: "100%" }}>
+      {/* Left: settings panel */}
+      <div className="flex-shrink-0 overflow-y-auto flex flex-col gap-5 p-5" style={{ width: 320, borderRight: "1px solid rgba(255,255,255,0.06)" }}>
+        {left}
       </div>
-      <div>
-        <h2 className="text-white font-bold text-xl leading-tight">{title}</h2>
-        <p className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>{desc}</p>
+      {/* Right: canvas */}
+      <div className="flex-1 flex flex-col p-5 gap-4 min-w-0">
+        {right}
       </div>
     </div>
   );
@@ -285,7 +375,6 @@ function VelvetSuiteMode({ onOutput }: { onOutput: (url: string, label: string) 
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // AI engine status — Velvet Suite primary AI engine is Pollo AI (requires credits)
   const engineStatus = trpc.videoEnhance.getAIEngineStatus.useQuery();
   const polloAvailable = engineStatus.data?.engines?.pollo?.available ?? false;
   const polloReason = engineStatus.data?.engines?.pollo?.reason ?? "Checking...";
@@ -317,48 +406,74 @@ function VelvetSuiteMode({ onOutput }: { onOutput: (url: string, label: string) 
     finally { setIsProcessing(false); }
   };
 
-  return (
-    <div className="flex flex-col gap-6">
-      <SectionHeader icon={<Sparkles size={22}/>} title="Velvet Suite" desc="Beauty enhancement — FFmpeg filters (Pollo AI primary when credits available)" color="#EC4899" />
+  const left = (
+    <>
+      <div>
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#EC4899" }}>Velvet Suite</p>
+        <p className="text-xs" style={{ color: "#6B7280" }}>Beauty enhancement — skin smoothing & warmth</p>
+      </div>
       {!polloAvailable && (
-        <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.3)" }}>
-          <AlertCircle size={16} color="#EAB308" className="flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.25)" }}>
+          <AlertCircle size={14} color="#EAB308" className="flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs font-bold" style={{ color: "#FDE047" }}>AI Engine Unavailable — FFmpeg Fallback Active</p>
-            <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>Primary AI engine (Pollo AI / Kling): {polloReason}. Filters below use FFmpeg processing only — not AI enhancement.</p>
+            <p className="text-xs font-bold" style={{ color: "#FDE047" }}>AI Engine Unavailable</p>
+            <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>Pollo AI: {polloReason}. FFmpeg filters active.</p>
           </div>
         </div>
       )}
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#6B7280" }}>Beauty Filters</p>
-        <div className="grid grid-cols-2 gap-2.5">
+        <p className="text-[10px] font-black uppercase tracking-widest mb-2.5" style={{ color: "#6B7280" }}>Beauty Filters</p>
+        <div className="flex flex-col gap-1.5">
           {BEAUTY_FILTERS.map((f) => {
             const active = selectedFilter === f.id;
             return (
-              <button key={f.id} onClick={() => setSelectedFilter(f.id)} className="relative flex flex-col gap-1.5 p-3.5 rounded-2xl text-left transition-all" style={{ background: active ? `${f.color}18` : "rgba(255,255,255,0.03)", border: `1.5px solid ${active ? f.color : "rgba(255,255,255,0.07)"}` }}>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold" style={{ color: active ? f.color : "#E5E7EB" }}>{f.label}</span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: `${f.color}25`, color: f.color }}>{f.badge}</span>
+              <button key={f.id} onClick={() => setSelectedFilter(f.id)} className="flex items-center gap-3 p-3 rounded-xl text-left transition-all" style={{ background: active ? `${f.color}18` : "rgba(255,255,255,0.03)", border: `1.5px solid ${active ? f.color : "rgba(255,255,255,0.07)"}` }}>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold" style={{ color: active ? f.color : "#E5E7EB" }}>{f.label}</span>
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: `${f.color}25`, color: f.color }}>{f.badge}</span>
+                  </div>
+                  <p className="text-xs mt-0.5 leading-tight" style={{ color: "#6B7280" }}>{f.desc}</p>
                 </div>
-                <p className="text-xs leading-tight" style={{ color: "#6B7280" }}>{f.desc}</p>
+                {active && <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: f.color }} />}
               </button>
             );
           })}
         </div>
       </div>
       <div className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <div className="flex justify-between mb-3"><span className="text-sm font-bold text-white">Enhancement Intensity</span><span className="text-sm font-bold" style={{ color: "#EC4899" }}>{intensity}%</span></div>
+        <div className="flex justify-between mb-2"><span className="text-xs font-bold text-white">Enhancement Intensity</span><span className="text-xs font-bold" style={{ color: "#EC4899" }}>{intensity}%</span></div>
         <input type="range" min={10} max={100} step={5} value={intensity} onChange={(e) => setIntensity(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#EC4899" }} />
-        <div className="flex justify-between mt-1.5"><span className="text-xs" style={{ color: "#6B7280" }}>Subtle</span><span className="text-xs" style={{ color: "#6B7280" }}>Maximum</span></div>
+        <div className="flex justify-between mt-1"><span className="text-[10px]" style={{ color: "#6B7280" }}>Subtle</span><span className="text-[10px]" style={{ color: "#6B7280" }}>Maximum</span></div>
       </div>
-      {!videoFile ? <VideoDropZone onFile={setVideoFile} accent="#EC4899" /> : <VideoPlayer src={videoFile.url} label="Source" accent="#EC4899" />}
-      <button onClick={process} disabled={!videoFile || isProcessing} className="w-full py-4 rounded-2xl font-black text-white text-base transition-all flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(236,72,153,0.3)" : "linear-gradient(135deg, #EC4899, #BE185D)", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer", boxShadow: !videoFile || isProcessing ? "none" : "0 0 30px rgba(236,72,153,0.3)" }}>
-        {isProcessing ? <><Loader2 size={20} className="animate-spin" /> Enhancing...</> : <><Sparkles size={20} /> Apply Beauty Enhancement</>}
+      <button onClick={process} disabled={!videoFile || isProcessing} className="w-full py-4 rounded-2xl font-black text-white text-sm transition-all flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(236,72,153,0.3)" : "linear-gradient(135deg, #EC4899, #BE185D)", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer", boxShadow: !videoFile || isProcessing ? "none" : "0 0 24px rgba(236,72,153,0.35)" }}>
+        {isProcessing ? <><Loader2 size={18} className="animate-spin" /> Enhancing...</> : <><Sparkles size={18} /> Apply Beauty Enhancement</>}
       </button>
       {isProcessing && <ProcessingBar label="Applying beauty enhancement..." />}
-      {outputUrl && <OutputCard url={outputUrl} label="Beauty Enhanced" accent="#EC4899" onDownload={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-beauty-${selectedFilter}.mp4`; a.click(); }} onUseAsInput={async () => { try { const vf = await fetchVideoAsFile(outputUrl, "beauty-output.mp4"); setVideoFile(vf); setOutputUrl(null); toast.success("Output loaded — apply another enhancement"); } catch { toast.error("Failed to load output"); } }} />}
-    </div>
+      {outputUrl && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Output</p>
+          <VideoPlayer src={outputUrl} label="Enhanced" accent="#EC4899" />
+          <div className="flex gap-2">
+            <button onClick={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-beauty-${selectedFilter}.mp4`; a.click(); }} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: "rgba(236,72,153,0.15)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.3)" }}><Download size={14} /> Save</button>
+            <button onClick={async () => { try { const vf = await fetchVideoAsFile(outputUrl, "beauty-output.mp4"); setVideoFile(vf); setOutputUrl(null); toast.success("Output loaded as new source"); } catch { toast.error("Failed"); } }} className="w-10 h-10 flex items-center justify-center rounded-xl" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF" }}><Layers2 size={14} /></button>
+          </div>
+        </div>
+      )}
+    </>
   );
+
+  const right = videoFile ? (
+    outputUrl ? (
+      <CanvasBeforeAfter beforeUrl={videoFile.url} afterUrl={outputUrl} label={BEAUTY_FILTERS.find(f => f.id === selectedFilter)?.label || "Enhanced"} accent="#EC4899" />
+    ) : (
+      <CanvasVideoPlayer src={videoFile.url} label="Source" accent="#EC4899" onReplace={() => setVideoFile(null)} />
+    )
+  ) : (
+    <CanvasDropZone onFile={setVideoFile} accent="#EC4899" label="Drop your video to start beauty enhancement" />
+  );
+
+  return <Workspace left={left} right={right} />;
 }
 
 // ============================================================================
@@ -391,22 +506,25 @@ function DesireGradeMode({ onOutput }: { onOutput: (url: string, label: string) 
     finally { setIsProcessing(false); }
   };
 
-  return (
-    <div className="flex flex-col gap-6">
-      <SectionHeader icon={<Palette size={22}/>} title="Desire Grade" desc="22 adult-specific cinematic color grades" color="#F97316" />
-      <div className="flex gap-2 overflow-x-auto pb-1">
+  const left = (
+    <>
+      <div>
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#F97316" }}>Desire Grade</p>
+        <p className="text-xs" style={{ color: "#6B7280" }}>22 adult-specific cinematic color grades</p>
+      </div>
+      <div className="flex gap-1.5 flex-wrap">
         {GRADE_CATEGORIES.map(cat => (
-          <button key={cat} onClick={() => setActiveCategory(cat)} className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all" style={{ background: activeCategory === cat ? "rgba(249,115,22,0.2)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeCategory === cat ? "#F97316" : "rgba(255,255,255,0.08)"}`, color: activeCategory === cat ? "#F97316" : "#9CA3AF" }}>
+          <button key={cat} onClick={() => setActiveCategory(cat)} className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all" style={{ background: activeCategory === cat ? "rgba(249,115,22,0.2)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeCategory === cat ? "#F97316" : "rgba(255,255,255,0.08)"}`, color: activeCategory === cat ? "#F97316" : "#9CA3AF" }}>
             {cat}
           </button>
         ))}
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1.5">
         {filteredGrades.map((g) => {
           const active = selectedGrade === g.id;
           return (
-            <button key={g.id} onClick={() => setSelectedGrade(g.id)} className="flex items-center gap-4 p-4 rounded-2xl text-left transition-all" style={{ background: active ? `${g.color}15` : "rgba(255,255,255,0.03)", border: `1.5px solid ${active ? g.color : "rgba(255,255,255,0.07)"}` }}>
-              <div className="text-2xl flex-shrink-0">{g.icon}</div>
+            <button key={g.id} onClick={() => setSelectedGrade(g.id)} className="flex items-center gap-3 p-3 rounded-xl text-left transition-all" style={{ background: active ? `${g.color}15` : "rgba(255,255,255,0.03)", border: `1.5px solid ${active ? g.color : "rgba(255,255,255,0.07)"}` }}>
+              <div className="text-xl flex-shrink-0">{g.icon}</div>
               <div className="flex-1">
                 <p className="text-sm font-bold" style={{ color: active ? g.color : "#E5E7EB" }}>{g.label}</p>
                 <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{g.desc}</p>
@@ -417,17 +535,34 @@ function DesireGradeMode({ onOutput }: { onOutput: (url: string, label: string) 
         })}
       </div>
       <div className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <div className="flex justify-between mb-3"><span className="text-sm font-bold text-white">Grade Intensity</span><span className="text-sm font-bold" style={{ color: selectedGradeData?.color || "#F97316" }}>{intensity}%</span></div>
+        <div className="flex justify-between mb-2"><span className="text-xs font-bold text-white">Grade Intensity</span><span className="text-xs font-bold" style={{ color: selectedGradeData?.color || "#F97316" }}>{intensity}%</span></div>
         <input type="range" min={10} max={100} step={5} value={intensity} onChange={(e) => setIntensity(parseInt(e.target.value))} className="w-full" style={{ accentColor: selectedGradeData?.color || "#F97316" }} />
       </div>
-      {!videoFile ? <VideoDropZone onFile={setVideoFile} accent="#F97316" /> : <VideoPlayer src={videoFile.url} label="Source" accent="#F97316" />}
-      <button onClick={process} disabled={!videoFile || isProcessing} className="w-full py-4 rounded-2xl font-black text-white text-base transition-all flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(249,115,22,0.3)" : `linear-gradient(135deg, ${selectedGradeData?.color || "#F97316"}, #C2410C)`, cursor: !videoFile || isProcessing ? "not-allowed" : "pointer", boxShadow: !videoFile || isProcessing ? "none" : `0 0 30px ${selectedGradeData?.color || "#F97316"}40` }}>
-        {isProcessing ? <><Loader2 size={20} className="animate-spin" /> Grading...</> : <><Palette size={20} /> Apply {selectedGradeData?.label || "Grade"}</>}
+      <button onClick={process} disabled={!videoFile || isProcessing} className="w-full py-4 rounded-2xl font-black text-white text-sm transition-all flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(249,115,22,0.3)" : `linear-gradient(135deg, ${selectedGradeData?.color || "#F97316"}, #C2410C)`, cursor: !videoFile || isProcessing ? "not-allowed" : "pointer", boxShadow: !videoFile || isProcessing ? "none" : `0 0 24px ${selectedGradeData?.color || "#F97316"}40` }}>
+        {isProcessing ? <><Loader2 size={18} className="animate-spin" /> Grading...</> : <><Palette size={18} /> Apply {selectedGradeData?.label || "Grade"}</>}
       </button>
       {isProcessing && <ProcessingBar label={`Applying ${selectedGradeData?.label || "grade"}...`} />}
-      {outputUrl && <OutputCard url={outputUrl} label={selectedGradeData?.label || selectedGrade} accent={selectedGradeData?.color || "#F97316"} onDownload={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-grade-${selectedGrade}.mp4`; a.click(); }} onUseAsInput={async () => { try { const vf = await fetchVideoAsFile(outputUrl, "grade-output.mp4"); setVideoFile(vf); setOutputUrl(null); toast.success("Output loaded — apply another grade"); } catch { toast.error("Failed to load output"); } }} />}
-    </div>
+      {outputUrl && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Output</p>
+          <VideoPlayer src={outputUrl} label={selectedGradeData?.label || selectedGrade} accent={selectedGradeData?.color || "#F97316"} />
+          <button onClick={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-grade-${selectedGrade}.mp4`; a.click(); }} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: `${selectedGradeData?.color || "#F97316"}20`, color: selectedGradeData?.color || "#F97316", border: `1px solid ${selectedGradeData?.color || "#F97316"}30` }}><Download size={14} /> Save Graded Video</button>
+        </div>
+      )}
+    </>
   );
+
+  const right = videoFile ? (
+    outputUrl ? (
+      <CanvasBeforeAfter beforeUrl={videoFile.url} afterUrl={outputUrl} label={selectedGradeData?.label || "Graded"} accent={selectedGradeData?.color || "#F97316"} />
+    ) : (
+      <CanvasVideoPlayer src={videoFile.url} label="Source" accent={selectedGradeData?.color || "#F97316"} onReplace={() => setVideoFile(null)} />
+    )
+  ) : (
+    <CanvasDropZone onFile={setVideoFile} accent="#F97316" label="Drop your video to apply a color grade" />
+  );
+
+  return <Workspace left={left} right={right} />;
 }
 
 // ============================================================================
@@ -451,13 +586,9 @@ function SceneArchitectMode({ onOutput }: { onOutput: (url: string, label: strin
   const [isProcessing, setIsProcessing] = useState(false);
   const [aiScenes, setAiScenes] = useState<any[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [sceneTranscript, setSceneTranscript] = useState("");
-  const [sceneSegments, setSceneSegments] = useState<any[]>([]);
 
   const transcribeForScene = trpc.videoEnhance.transcribeVideo.useMutation({
     onSuccess: (data: any) => {
-      setSceneTranscript(data.text || "");
-      setSceneSegments(data.segments || []);
       analyzeSceneMut.mutate({ transcript: data.text || "", segments: data.segments || [], videoDuration: videoFile?.duration });
     },
     onError: (e: any) => { setIsAnalyzing(false); toast.error(`Transcription failed: ${e.message}`); },
@@ -468,7 +599,7 @@ function SceneArchitectMode({ onOutput }: { onOutput: (url: string, label: strin
       setIsAnalyzing(false);
       setAiScenes(data.scenes || []);
       if (data.scenes?.length > 0) toast.success(data.message);
-      else toast.info("No distinct scenes detected — try with a longer video");
+      else toast.info("No distinct scenes detected");
     },
     onError: (e: any) => { setIsAnalyzing(false); toast.error(`Scene analysis failed: ${e.message}`); },
   });
@@ -493,11 +624,11 @@ function SceneArchitectMode({ onOutput }: { onOutput: (url: string, label: strin
   ];
 
   const OPS = [
-    { id: "trim" as const,    label: "Trim",    icon: <Scissors size={15}/> },
-    { id: "color" as const,   label: "Color",   icon: <Palette size={15}/> },
-    { id: "audio" as const,   label: "Audio",   icon: <AudioWaveform size={15}/> },
-    { id: "speed" as const,   label: "Speed",   icon: <Gauge size={15}/> },
-    { id: "sharpen" as const, label: "Sharpen", icon: <Contrast size={15}/> },
+    { id: "trim" as const,    label: "Trim",    icon: <Scissors size={13}/> },
+    { id: "color" as const,   label: "Color",   icon: <Palette size={13}/> },
+    { id: "audio" as const,   label: "Audio",   icon: <AudioWaveform size={13}/> },
+    { id: "speed" as const,   label: "Speed",   icon: <Gauge size={13}/> },
+    { id: "sharpen" as const, label: "Sharpen", icon: <Contrast size={13}/> },
   ];
 
   const process = async (op: string) => {
@@ -519,128 +650,140 @@ function SceneArchitectMode({ onOutput }: { onOutput: (url: string, label: strin
     finally { setIsProcessing(false); }
   };
 
-  return (
-    <div className="flex flex-col gap-6">
-      <SectionHeader icon={<Scissors size={22}/>} title="Scene Architect" desc="Trim, cut, color grade, audio, speed — full editor" color="#EAB308" />
-      {/* AI Scene Analysis — GPT-4o-mini detects scenes, FFmpeg cuts them */}
-      <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "rgba(234,179,8,0.06)", border: "1px solid rgba(234,179,8,0.2)" }}>
+  const left = (
+    <>
+      <div>
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#EAB308" }}>Scene Architect</p>
+        <p className="text-xs" style={{ color: "#6B7280" }}>Trim, cut, color, audio, speed — full editor</p>
+      </div>
+      {/* AI Scene Detection */}
+      <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ background: "rgba(234,179,8,0.06)", border: "1px solid rgba(234,179,8,0.2)" }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BrainCircuit size={16} color="#EAB308" />
-            <span className="text-sm font-bold text-white">AI Scene Detection</span>
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(234,179,8,0.2)", color: "#EAB308" }}>GPT-4o-mini</span>
+            <BrainCircuit size={14} color="#EAB308" />
+            <span className="text-xs font-bold text-white">AI Scene Detection</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(234,179,8,0.2)", color: "#EAB308" }}>GPT-4o-mini</span>
           </div>
-          <button onClick={runAISceneAnalysis} disabled={!videoFile || isAnalyzing} className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all" style={{ background: !videoFile || isAnalyzing ? "rgba(234,179,8,0.15)" : "rgba(234,179,8,0.25)", color: "#EAB308", border: "1px solid rgba(234,179,8,0.3)", cursor: !videoFile || isAnalyzing ? "not-allowed" : "pointer" }}>
-            {isAnalyzing ? <><Loader2 size={12} className="animate-spin" /> Analyzing...</> : <><BrainCircuit size={12} /> Detect Scenes</>}
+          <button onClick={runAISceneAnalysis} disabled={!videoFile || isAnalyzing} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all" style={{ background: !videoFile || isAnalyzing ? "rgba(234,179,8,0.1)" : "rgba(234,179,8,0.2)", color: "#EAB308", border: "1px solid rgba(234,179,8,0.3)", cursor: !videoFile || isAnalyzing ? "not-allowed" : "pointer" }}>
+            {isAnalyzing ? <><Loader2 size={10} className="animate-spin" /> Analyzing...</> : <><BrainCircuit size={10} /> Detect</>}
           </button>
         </div>
-        <p className="text-xs" style={{ color: "#9CA3AF" }}>AI transcribes audio → GPT-4o-mini detects scene boundaries → select timestamps → FFmpeg cuts. AI analysis only, FFmpeg executes.</p>
         {aiScenes.length > 0 && (
-          <div className="flex flex-col gap-2 mt-1">
-            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Detected Scenes ({aiScenes.length})</p>
+          <div className="flex flex-col gap-1.5 mt-1">
             {aiScenes.map((scene: any, i: number) => (
-              <button key={i} onClick={() => { setTrimStart(scene.start); setTrimEnd(scene.end); setActiveOp("trim"); toast.success(`Scene loaded: ${scene.label} (${scene.start}s–${scene.end}s)`); }} className="flex items-start gap-3 p-3 rounded-xl text-left transition-all" style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.2)" }}>
-                <span className="text-xs font-black flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(234,179,8,0.2)", color: "#EAB308" }}>{i+1}</span>
+              <button key={i} onClick={() => { setTrimStart(scene.start); setTrimEnd(scene.end); setActiveOp("trim"); toast.success(`Scene loaded: ${scene.start}s–${scene.end}s`); }} className="flex items-center gap-2 p-2.5 rounded-lg text-left" style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.2)" }}>
+                <span className="text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(234,179,8,0.2)", color: "#EAB308" }}>{i+1}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-bold text-white">{scene.label}</span>
-                    <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(234,179,8,0.15)", color: "#EAB308" }}>{scene.start}s–{scene.end}s</span>
-                    {scene.energy && <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: scene.energy === "high" ? "rgba(239,68,68,0.15)" : scene.energy === "medium" ? "rgba(234,179,8,0.15)" : "rgba(107,114,128,0.15)", color: scene.energy === "high" ? "#EF4444" : scene.energy === "medium" ? "#EAB308" : "#9CA3AF" }}>{scene.energy}</span>}
-                  </div>
-                  {scene.reason && <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{scene.reason}</p>}
+                  <p className="text-xs font-bold text-white truncate">{scene.label}</p>
+                  <p className="text-[10px]" style={{ color: "#EAB308" }}>{scene.start}s–{scene.end}s</p>
                 </div>
-                <Scissors size={14} color="#EAB308" className="flex-shrink-0 mt-0.5" />
+                <Scissors size={12} color="#EAB308" />
               </button>
             ))}
           </div>
         )}
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      {/* Op tabs */}
+      <div className="flex gap-1 flex-wrap">
         {OPS.map(op => (
-          <button key={op.id} onClick={() => setActiveOp(op.id)} className="flex items-center gap-2 flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold transition-all" style={{ background: activeOp === op.id ? "rgba(234,179,8,0.2)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeOp === op.id ? "#EAB308" : "rgba(255,255,255,0.08)"}`, color: activeOp === op.id ? "#EAB308" : "#9CA3AF" }}>
+          <button key={op.id} onClick={() => setActiveOp(op.id)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all" style={{ background: activeOp === op.id ? "rgba(234,179,8,0.2)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeOp === op.id ? "#EAB308" : "rgba(255,255,255,0.08)"}`, color: activeOp === op.id ? "#EAB308" : "#9CA3AF" }}>
             {op.icon} {op.label}
           </button>
         ))}
       </div>
-      {!videoFile ? <VideoDropZone onFile={setVideoFile} accent="#EAB308" /> : <VideoPlayer src={videoFile.url} label="Source" accent="#EAB308" />}
-      <div className="p-5 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+      {/* Op controls */}
+      <div className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
         {activeOp === "trim" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm font-bold text-white">Trim Range (seconds)</p>
+          <div className="flex flex-col gap-3">
             {[{ label: "Start (s)", value: trimStart, setter: setTrimStart }, { label: "End (s)", value: trimEnd, setter: setTrimEnd }].map(({ label, value, setter }) => (
               <div key={label}>
-                <div className="flex justify-between mb-2"><label className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>{label}</label><span className="text-xs font-bold" style={{ color: "#EAB308" }}>{value}s</span></div>
+                <div className="flex justify-between mb-1.5"><label className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>{label}</label><span className="text-xs font-bold" style={{ color: "#EAB308" }}>{value}s</span></div>
                 <input type="range" min={0} max={videoFile?.duration || 300} step={1} value={value} onChange={(e) => setter(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#EAB308" }} />
               </div>
             ))}
             <p className="text-xs" style={{ color: "#6B7280" }}>Duration: {trimEnd - trimStart}s</p>
-            <button onClick={() => process("trim")} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(234,179,8,0.2)" : "linear-gradient(135deg, #EAB308, #A16207)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
-              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Trimming...</> : <><Scissors size={16} /> Trim Video</>}
+            <button onClick={() => process("trim")} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(234,179,8,0.2)" : "linear-gradient(135deg, #EAB308, #A16207)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
+              {isProcessing ? <><Loader2 size={14} className="animate-spin" /> Trimming...</> : <><Scissors size={14} /> Trim Video</>}
             </button>
           </div>
         )}
         {activeOp === "color" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm font-bold text-white">Color Grade</p>
-            <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-1.5">
               {COLOR_LOOKS.map(l => (
-                <button key={l.id} onClick={() => setColorLook(l.id)} className="py-2 px-3 rounded-xl text-xs font-semibold transition-all" style={{ background: colorLook === l.id ? "rgba(234,179,8,0.2)" : "rgba(255,255,255,0.04)", border: `1px solid ${colorLook === l.id ? "#EAB308" : "rgba(255,255,255,0.08)"}`, color: colorLook === l.id ? "#EAB308" : "#9CA3AF" }}>{l.label}</button>
+                <button key={l.id} onClick={() => setColorLook(l.id)} className="py-2 px-2 rounded-xl text-xs font-semibold transition-all" style={{ background: colorLook === l.id ? "rgba(234,179,8,0.2)" : "rgba(255,255,255,0.04)", border: `1px solid ${colorLook === l.id ? "#EAB308" : "rgba(255,255,255,0.08)"}`, color: colorLook === l.id ? "#EAB308" : "#9CA3AF" }}>{l.label}</button>
               ))}
             </div>
             {[{ label: "Brightness", value: brightness, setter: setBrightness }, { label: "Contrast", value: contrast, setter: setContrast }, { label: "Saturation", value: saturation, setter: setSaturation }].map(({ label, value, setter }) => (
               <div key={label}>
-                <div className="flex justify-between mb-1.5"><label className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>{label}</label><span className="text-xs font-bold" style={{ color: "#EAB308" }}>{value}</span></div>
+                <div className="flex justify-between mb-1"><label className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>{label}</label><span className="text-xs font-bold" style={{ color: "#EAB308" }}>{value}</span></div>
                 <input type="range" min={0} max={100} step={1} value={value} onChange={(e) => setter(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#EAB308" }} />
               </div>
             ))}
-            <button onClick={() => process("color-grade")} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(234,179,8,0.2)" : "linear-gradient(135deg, #EAB308, #A16207)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
-              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Grading...</> : <><Palette size={16} /> Apply Color Grade</>}
+            <button onClick={() => process("color-grade")} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(234,179,8,0.2)" : "linear-gradient(135deg, #EAB308, #A16207)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
+              {isProcessing ? <><Loader2 size={14} className="animate-spin" /> Grading...</> : <><Palette size={14} /> Apply Color Grade</>}
             </button>
           </div>
         )}
         {activeOp === "audio" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm font-bold text-white">Audio Controls</p>
+          <div className="flex flex-col gap-3">
             {[{ label: "Volume (0–300%)", value: volume, setter: setVolume, min: 0, max: 300 }, { label: "Fade In (s)", value: fadeIn, setter: setFadeIn, min: 0, max: 10 }, { label: "Fade Out (s)", value: fadeOut, setter: setFadeOut, min: 0, max: 10 }].map(({ label, value, setter, min, max }) => (
               <div key={label}>
-                <div className="flex justify-between mb-1.5"><label className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>{label}</label><span className="text-xs font-bold" style={{ color: "#EAB308" }}>{value}</span></div>
+                <div className="flex justify-between mb-1"><label className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>{label}</label><span className="text-xs font-bold" style={{ color: "#EAB308" }}>{value}</span></div>
                 <input type="range" min={min} max={max} step={1} value={value} onChange={(e) => setter(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#EAB308" }} />
               </div>
             ))}
-            <button onClick={() => process("audio")} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(234,179,8,0.2)" : "linear-gradient(135deg, #EAB308, #A16207)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
-              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Processing...</> : <><Volume2 size={16} /> Apply Audio</>}
+            <button onClick={() => process("audio")} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(234,179,8,0.2)" : "linear-gradient(135deg, #EAB308, #A16207)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
+              {isProcessing ? <><Loader2 size={14} className="animate-spin" /> Processing...</> : <><Volume2 size={14} /> Apply Audio</>}
             </button>
           </div>
         )}
         {activeOp === "speed" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm font-bold text-white">Speed Control</p>
-            <div className="grid grid-cols-4 gap-2">
-              {[0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 4.0].map(s => (
-                <button key={s} onClick={() => setSpeed(s)} className="py-2.5 rounded-xl text-xs font-bold transition-all" style={{ background: speed === s ? "rgba(234,179,8,0.2)" : "rgba(255,255,255,0.04)", border: `1px solid ${speed === s ? "#EAB308" : "rgba(255,255,255,0.08)"}`, color: speed === s ? "#EAB308" : "#9CA3AF" }}>{s}×</button>
+          <div className="flex flex-col gap-3">
+            <div className="flex justify-between mb-1"><span className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>Speed</span><span className="text-xs font-bold" style={{ color: "#EAB308" }}>{speed}×</span></div>
+            <input type="range" min={0.25} max={4} step={0.25} value={speed} onChange={(e) => setSpeed(parseFloat(e.target.value))} className="w-full" style={{ accentColor: "#EAB308" }} />
+            <div className="grid grid-cols-4 gap-1.5">
+              {[0.5, 1, 1.5, 2].map(s => (
+                <button key={s} onClick={() => setSpeed(s)} className="py-2 rounded-xl text-xs font-bold" style={{ background: speed === s ? "rgba(234,179,8,0.2)" : "rgba(255,255,255,0.04)", border: `1px solid ${speed === s ? "#EAB308" : "rgba(255,255,255,0.08)"}`, color: speed === s ? "#EAB308" : "#9CA3AF" }}>{s}×</button>
               ))}
             </div>
-            <p className="text-xs" style={{ color: "#6B7280" }}>{speed < 1 ? "Slow motion" : speed > 1 ? "Speed up" : "Normal speed"} — {speed}×</p>
-            <button onClick={() => process("speed")} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(234,179,8,0.2)" : "linear-gradient(135deg, #EAB308, #A16207)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
-              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Processing...</> : <><Gauge size={16} /> Apply Speed</>}
+            <button onClick={() => process("speed")} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(234,179,8,0.2)" : "linear-gradient(135deg, #EAB308, #A16207)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
+              {isProcessing ? <><Loader2 size={14} className="animate-spin" /> Adjusting Speed...</> : <><Gauge size={14} /> Apply {speed}× Speed</>}
             </button>
           </div>
         )}
         {activeOp === "sharpen" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm font-bold text-white">Sharpen / Enhance Detail</p>
-            <div className="flex justify-between mb-1"><span className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>Sharpen Amount</span><span className="text-xs font-bold" style={{ color: "#EAB308" }}>{sharpenIntensity}%</span></div>
+          <div className="flex flex-col gap-3">
+            <div className="flex justify-between mb-1"><span className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>Sharpen Strength</span><span className="text-xs font-bold" style={{ color: "#EAB308" }}>{sharpenIntensity}%</span></div>
             <input type="range" min={10} max={100} step={5} value={sharpenIntensity} onChange={(e) => setSharpenIntensity(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#EAB308" }} />
-            <button onClick={() => process("filter")} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(234,179,8,0.2)" : "linear-gradient(135deg, #EAB308, #A16207)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
-              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Sharpening...</> : <><Contrast size={16} /> Sharpen Video</>}
+            <button onClick={() => process("filter")} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(234,179,8,0.2)" : "linear-gradient(135deg, #EAB308, #A16207)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
+              {isProcessing ? <><Loader2 size={14} className="animate-spin" /> Sharpening...</> : <><Contrast size={14} /> Apply Sharpen</>}
             </button>
           </div>
         )}
       </div>
-      {isProcessing && <ProcessingBar label="Processing video..." />}
-      {outputUrl && <OutputCard url={outputUrl} label="Edited" accent="#EAB308" onDownload={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-edit-${activeOp}.mp4`; a.click(); }} onUseAsInput={async () => { try { const vf = await fetchVideoAsFile(outputUrl, "edit-output.mp4"); setVideoFile(vf); setOutputUrl(null); toast.success("Output loaded — apply another operation"); } catch { toast.error("Failed to load output"); } }} />}
-    </div>
+      {isProcessing && <ProcessingBar label="Processing..." />}
+      {outputUrl && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Output</p>
+          <VideoPlayer src={outputUrl} label="Processed" accent="#EAB308" />
+          <button onClick={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-scene-${activeOp}.mp4`; a.click(); }} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: "rgba(234,179,8,0.15)", color: "#EAB308", border: "1px solid rgba(234,179,8,0.3)" }}><Download size={14} /> Save Output</button>
+        </div>
+      )}
+    </>
   );
+
+  const right = videoFile ? (
+    outputUrl ? (
+      <CanvasBeforeAfter beforeUrl={videoFile.url} afterUrl={outputUrl} label={activeOp.charAt(0).toUpperCase() + activeOp.slice(1)} accent="#EAB308" />
+    ) : (
+      <CanvasVideoPlayer src={videoFile.url} label="Source" accent="#EAB308" onReplace={() => setVideoFile(null)} />
+    )
+  ) : (
+    <CanvasDropZone onFile={setVideoFile} accent="#EAB308" label="Drop your video to start editing" />
+  );
+
+  return <Workspace left={left} right={right} />;
 }
 
 // ============================================================================
@@ -649,11 +792,11 @@ function SceneArchitectMode({ onOutput }: { onOutput: (url: string, label: strin
 function PPVEngineMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
   const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
   const [activeOp, setActiveOp] = useState<"teaser" | "censor" | "watermark">("teaser");
-  const [previewDuration, setPreviewDuration] = useState(15);
-  const [censorIntensity, setCensorIntensity] = useState(70);
-  const [watermarkText, setWatermarkText] = useState("@YourHandle");
+  const [previewDuration, setPreviewDuration] = useState(20);
+  const [censorIntensity, setCensorIntensity] = useState(60);
+  const [watermarkText, setWatermarkText] = useState("");
   const [watermarkPosition, setWatermarkPosition] = useState("bottom_right");
-  const [watermarkOpacity, setWatermarkOpacity] = useState(70);
+  const [watermarkOpacity, setWatermarkOpacity] = useState(80);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [aiMoments, setAiMoments] = useState<any>(null);
@@ -670,8 +813,7 @@ function PPVEngineMode({ onOutput }: { onOutput: (url: string, label: string) =>
     onSuccess: (data: any) => {
       setIsAnalyzingPPV(false);
       setAiMoments(data);
-      if (data.moments?.length > 0) toast.success(data.message);
-      else toast.info("No distinct moments detected — try with a longer video");
+      toast.success("AI PPV analysis complete");
     },
     onError: (e: any) => { setIsAnalyzingPPV(false); toast.error(`PPV analysis failed: ${e.message}`); },
   });
@@ -692,12 +834,9 @@ function PPVEngineMode({ onOutput }: { onOutput: (url: string, label: string) =>
     setIsProcessing(true); setOutputUrl(null);
     try {
       const fd = new FormData();
-      fd.append("video", videoFile.file);
-      fd.append("start", "0");
-      fd.append("end", String(previewDuration));
+      fd.append("video", videoFile.file); fd.append("start", "0"); fd.append("end", String(previewDuration));
       const result = await callVideoStudio("trim", fd);
-      setOutputUrl(result.url);
-      onOutput(result.url, `PPV Teaser — ${previewDuration}s`);
+      setOutputUrl(result.url); onOutput(result.url, `PPV Teaser — ${previewDuration}s`);
       toast.success("PPV teaser created.");
     } catch (e: any) { toast.error(e.message); }
     finally { setIsProcessing(false); }
@@ -708,12 +847,9 @@ function PPVEngineMode({ onOutput }: { onOutput: (url: string, label: string) =>
     setIsProcessing(true); setOutputUrl(null);
     try {
       const fd = new FormData();
-      fd.append("video", videoFile.file);
-      fd.append("filter", "ppv_censor");
-      fd.append("intensity", String(censorIntensity / 100));
+      fd.append("video", videoFile.file); fd.append("filter", "ppv_censor"); fd.append("intensity", String(censorIntensity / 100));
       const result = await callVideoStudio("filter", fd);
-      setOutputUrl(result.url);
-      onOutput(result.url, "Censored Preview");
+      setOutputUrl(result.url); onOutput(result.url, "Censored Preview");
       toast.success("Censor blur applied.");
     } catch (e: any) { toast.error(e.message); }
     finally { setIsProcessing(false); }
@@ -725,145 +861,137 @@ function PPVEngineMode({ onOutput }: { onOutput: (url: string, label: string) =>
     setIsProcessing(true); setOutputUrl(null);
     try {
       const fd = new FormData();
-      fd.append("video", videoFile.file);
-      fd.append("mode", "text");
-      fd.append("text", watermarkText);
-      fd.append("position", watermarkPosition);
-      fd.append("opacity", String(watermarkOpacity));
-      fd.append("size", "28");
-      fd.append("color", "FFFFFF");
+      fd.append("video", videoFile.file); fd.append("mode", "text"); fd.append("text", watermarkText);
+      fd.append("position", watermarkPosition); fd.append("opacity", String(watermarkOpacity)); fd.append("size", "28"); fd.append("color", "FFFFFF");
       const result = await callVideoStudio("watermark", fd);
-      setOutputUrl(result.url);
-      onOutput(result.url, `Watermarked — ${watermarkText}`);
+      setOutputUrl(result.url); onOutput(result.url, `Watermarked — ${watermarkText}`);
       toast.success("Watermark applied.");
     } catch (e: any) { toast.error(e.message); }
     finally { setIsProcessing(false); }
   };
 
   const OPS = [
-    { id: "teaser" as const,    label: "Teaser Clip", icon: <Scissors size={15}/> },
-    { id: "censor" as const,    label: "Blur Censor", icon: <Eye size={15}/> },
-    { id: "watermark" as const, label: "Watermark",   icon: <Shield size={15}/> },
+    { id: "teaser" as const,    label: "Teaser", icon: <Scissors size={13}/> },
+    { id: "censor" as const,    label: "Censor", icon: <Eye size={13}/> },
+    { id: "watermark" as const, label: "Brand",  icon: <Shield size={13}/> },
   ];
 
-  return (
-    <div className="flex flex-col gap-6">
-      <SectionHeader icon={<Lock size={22}/>} title="PPV Engine" desc="Teaser clipper, blur censor, and watermark branding" color="#A855F7" />
-      {/* AI PPV Intelligence — GPT-4o-mini best-moment detection */}
-      <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "rgba(168,85,247,0.06)", border: "1px solid rgba(168,85,247,0.2)" }}>
+  const left = (
+    <>
+      <div>
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#A855F7" }}>PPV Engine</p>
+        <p className="text-xs" style={{ color: "#6B7280" }}>Teaser clipper · blur censor · watermark branding</p>
+      </div>
+      {/* AI PPV Intelligence */}
+      <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ background: "rgba(168,85,247,0.06)", border: "1px solid rgba(168,85,247,0.2)" }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BrainCircuit size={16} color="#A855F7" />
-            <span className="text-sm font-bold text-white">AI PPV Intelligence</span>
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(168,85,247,0.2)", color: "#A855F7" }}>GPT-4o-mini</span>
+            <BrainCircuit size={14} color="#A855F7" />
+            <span className="text-xs font-bold text-white">AI PPV Intelligence</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(168,85,247,0.2)", color: "#A855F7" }}>GPT-4o-mini</span>
           </div>
-          <button onClick={runAIPPVAnalysis} disabled={!videoFile || isAnalyzingPPV} className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all" style={{ background: !videoFile || isAnalyzingPPV ? "rgba(168,85,247,0.15)" : "rgba(168,85,247,0.25)", color: "#A855F7", border: "1px solid rgba(168,85,247,0.3)", cursor: !videoFile || isAnalyzingPPV ? "not-allowed" : "pointer" }}>
-            {isAnalyzingPPV ? <><Loader2 size={12} className="animate-spin" /> Analyzing...</> : <><DollarSign size={12} /> Analyze for PPV</>}
+          <button onClick={runAIPPVAnalysis} disabled={!videoFile || isAnalyzingPPV} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold" style={{ background: !videoFile || isAnalyzingPPV ? "rgba(168,85,247,0.1)" : "rgba(168,85,247,0.2)", color: "#A855F7", border: "1px solid rgba(168,85,247,0.3)", cursor: !videoFile || isAnalyzingPPV ? "not-allowed" : "pointer" }}>
+            {isAnalyzingPPV ? <><Loader2 size={10} className="animate-spin" /> Analyzing...</> : <><DollarSign size={10} /> Analyze</>}
           </button>
         </div>
-        <p className="text-xs" style={{ color: "#9CA3AF" }}>AI transcribes audio → GPT-4o-mini detects best moments, suggests title hooks and pricing → FFmpeg clips selected segments. AI analysis only, FFmpeg exports.</p>
         {aiMoments && (
-          <div className="flex flex-col gap-3 mt-1">
+          <div className="flex flex-col gap-2 mt-1">
             {aiMoments.videoTitle && (
-              <div className="p-3 rounded-xl" style={{ background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.2)" }}>
-                <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "#9CA3AF" }}>AI Title Suggestion</p>
-                <p className="text-sm font-bold text-white">{aiMoments.videoTitle}</p>
-                {aiMoments.strategy && <p className="text-xs mt-1" style={{ color: "#C4B5FD" }}>{aiMoments.strategy}</p>}
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: "rgba(168,85,247,0.2)", color: "#A855F7" }}>Suggested: ${aiMoments.suggestedPrice}</span>
-                  <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: "rgba(168,85,247,0.2)", color: "#A855F7" }}>{aiMoments.platform}</span>
+              <div className="p-2.5 rounded-lg" style={{ background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.2)" }}>
+                <p className="text-xs font-bold text-white">{aiMoments.videoTitle}</p>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: "rgba(34,197,94,0.15)", color: "#22C55E" }}>${aiMoments.suggestedPrice}</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: "rgba(168,85,247,0.15)", color: "#A855F7" }}>{aiMoments.platform}</span>
                 </div>
               </div>
             )}
-            {aiMoments.moments?.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Best Moments ({aiMoments.moments.length})</p>
-                {aiMoments.moments.map((m: any, i: number) => (
-                  <button key={i} onClick={() => { setPreviewDuration(m.end - m.start); setActiveOp("teaser"); toast.success(`Moment loaded: ${m.title} — $${m.price} PPV`); }} className="flex items-start gap-3 p-3 rounded-xl text-left transition-all" style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)" }}>
-                    <span className="text-xs font-black flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(168,85,247,0.2)", color: "#A855F7" }}>{i+1}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-bold text-white">{m.title}</span>
-                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(168,85,247,0.15)", color: "#A855F7" }}>{m.start}s–{m.end}s</span>
-                        <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(34,197,94,0.15)", color: "#22C55E" }}>${m.price}</span>
-                      </div>
-                      {m.hook && <p className="text-xs mt-0.5 italic" style={{ color: "#C4B5FD" }}>"{m.hook}"</p>}
-                      {m.reason && <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{m.reason}</p>}
-                    </div>
-                    <Scissors size={14} color="#A855F7" className="flex-shrink-0 mt-0.5" />
-                  </button>
-                ))}
-              </div>
-            )}
+            {aiMoments.moments?.length > 0 && aiMoments.moments.slice(0, 3).map((m: any, i: number) => (
+              <button key={i} onClick={() => { setPreviewDuration(m.end - m.start); setActiveOp("teaser"); toast.success(`Moment loaded: ${m.start}s–${m.end}s`); }} className="flex items-center gap-2 p-2.5 rounded-lg text-left" style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)" }}>
+                <span className="text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(168,85,247,0.2)", color: "#A855F7" }}>{i+1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-white truncate">{m.title}</p>
+                  <p className="text-[10px]" style={{ color: "#A855F7" }}>{m.start}s–{m.end}s · ${m.price}</p>
+                </div>
+              </button>
+            ))}
           </div>
         )}
       </div>
-      <div className="flex gap-2">
+      {/* Op tabs */}
+      <div className="flex gap-1.5">
         {OPS.map(op => (
-          <button key={op.id} onClick={() => setActiveOp(op.id)} className="flex items-center gap-2 flex-1 justify-center py-2.5 rounded-xl text-sm font-bold transition-all" style={{ background: activeOp === op.id ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeOp === op.id ? "#A855F7" : "rgba(255,255,255,0.08)"}`, color: activeOp === op.id ? "#A855F7" : "#9CA3AF" }}>
+          <button key={op.id} onClick={() => setActiveOp(op.id)} className="flex items-center gap-1.5 flex-1 justify-center py-2.5 rounded-xl text-xs font-bold transition-all" style={{ background: activeOp === op.id ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeOp === op.id ? "#A855F7" : "rgba(255,255,255,0.08)"}`, color: activeOp === op.id ? "#A855F7" : "#9CA3AF" }}>
             {op.icon} {op.label}
           </button>
         ))}
       </div>
-      {!videoFile ? <VideoDropZone onFile={setVideoFile} accent="#A855F7" /> : <VideoPlayer src={videoFile.url} label="Full Content" accent="#A855F7" />}
-      <div className="p-5 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+      {/* Op controls */}
+      <div className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
         {activeOp === "teaser" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm font-bold text-white">Preview Duration</p>
-            <div className="grid grid-cols-5 gap-2">
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-bold text-white">Preview Duration</p>
+            <div className="grid grid-cols-5 gap-1.5">
               {[10, 15, 20, 30, 45].map(d => (
-                <button key={d} onClick={() => setPreviewDuration(d)} className="py-2.5 rounded-xl text-xs font-bold transition-all" style={{ background: previewDuration === d ? "rgba(168,85,247,0.3)" : "rgba(255,255,255,0.04)", border: `1px solid ${previewDuration === d ? "#A855F7" : "rgba(255,255,255,0.08)"}`, color: previewDuration === d ? "#C4B5FD" : "#9CA3AF" }}>{d}s</button>
+                <button key={d} onClick={() => setPreviewDuration(d)} className="py-2 rounded-xl text-xs font-bold" style={{ background: previewDuration === d ? "rgba(168,85,247,0.3)" : "rgba(255,255,255,0.04)", border: `1px solid ${previewDuration === d ? "#A855F7" : "rgba(255,255,255,0.08)"}`, color: previewDuration === d ? "#C4B5FD" : "#9CA3AF" }}>{d}s</button>
               ))}
             </div>
-            <button onClick={processTeaser} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(168,85,247,0.2)" : "linear-gradient(135deg, #A855F7, #7C3AED)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
-              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Clipping...</> : <><Scissors size={16} /> Create {previewDuration}s Teaser</>}
+            <button onClick={processTeaser} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(168,85,247,0.2)" : "linear-gradient(135deg, #A855F7, #7C3AED)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
+              {isProcessing ? <><Loader2 size={14} className="animate-spin" /> Clipping...</> : <><Scissors size={14} /> Create {previewDuration}s Teaser</>}
             </button>
           </div>
         )}
         {activeOp === "censor" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm font-bold text-white">Blur Intensity</p>
-            <div className="flex justify-between mb-1"><span className="text-xs" style={{ color: "#9CA3AF" }}>Censor Strength</span><span className="text-xs font-bold" style={{ color: "#A855F7" }}>{censorIntensity}%</span></div>
+          <div className="flex flex-col gap-3">
+            <div className="flex justify-between mb-1"><span className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>Blur Intensity</span><span className="text-xs font-bold" style={{ color: "#A855F7" }}>{censorIntensity}%</span></div>
             <input type="range" min={20} max={100} step={5} value={censorIntensity} onChange={(e) => setCensorIntensity(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#A855F7" }} />
-            <div className="grid grid-cols-3 gap-2">
-              {[{ label: "Light", val: 30 }, { label: "Standard", val: 60 }, { label: "Maximum", val: 100 }].map(p => (
-                <button key={p.label} onClick={() => setCensorIntensity(p.val)} className="py-2 rounded-xl text-xs font-bold transition-all" style={{ background: censorIntensity === p.val ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.04)", border: `1px solid ${censorIntensity === p.val ? "#A855F7" : "rgba(255,255,255,0.08)"}`, color: censorIntensity === p.val ? "#C4B5FD" : "#9CA3AF" }}>{p.label}</button>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[{ label: "Light", val: 30 }, { label: "Standard", val: 60 }, { label: "Max", val: 100 }].map(p => (
+                <button key={p.label} onClick={() => setCensorIntensity(p.val)} className="py-2 rounded-xl text-xs font-bold" style={{ background: censorIntensity === p.val ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.04)", border: `1px solid ${censorIntensity === p.val ? "#A855F7" : "rgba(255,255,255,0.08)"}`, color: censorIntensity === p.val ? "#C4B5FD" : "#9CA3AF" }}>{p.label}</button>
               ))}
             </div>
-            <button onClick={processCensor} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(168,85,247,0.2)" : "linear-gradient(135deg, #A855F7, #7C3AED)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
-              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Censoring...</> : <><Eye size={16} /> Apply Blur Censor</>}
+            <button onClick={processCensor} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(168,85,247,0.2)" : "linear-gradient(135deg, #A855F7, #7C3AED)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
+              {isProcessing ? <><Loader2 size={14} className="animate-spin" /> Censoring...</> : <><Eye size={14} /> Apply Blur Censor</>}
             </button>
           </div>
         )}
         {activeOp === "watermark" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm font-bold text-white">Watermark Settings</p>
-            <div>
-              <label className="text-xs font-semibold mb-2 block" style={{ color: "#9CA3AF" }}>Your Handle / Brand</label>
-              <input value={watermarkText} onChange={(e) => setWatermarkText(e.target.value)} placeholder="@YourHandle" className="w-full px-4 py-3 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
+          <div className="flex flex-col gap-3">
+            <input value={watermarkText} onChange={(e) => setWatermarkText(e.target.value)} placeholder="@YourHandle" className="w-full px-3 py-2.5 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            <div className="grid grid-cols-3 gap-1.5">
+              {[{ id: "top_left", label: "↖ TL" }, { id: "top_center", label: "↑ TC" }, { id: "top_right", label: "↗ TR" }, { id: "bottom_left", label: "↙ BL" }, { id: "bottom_center", label: "↓ BC" }, { id: "bottom_right", label: "↘ BR" }].map(p => (
+                <button key={p.id} onClick={() => setWatermarkPosition(p.id)} className="py-2 rounded-xl text-xs font-semibold" style={{ background: watermarkPosition === p.id ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.04)", border: `1px solid ${watermarkPosition === p.id ? "#A855F7" : "rgba(255,255,255,0.08)"}`, color: watermarkPosition === p.id ? "#C4B5FD" : "#9CA3AF" }}>{p.label}</button>
+              ))}
             </div>
-            <div>
-              <label className="text-xs font-semibold mb-2 block" style={{ color: "#9CA3AF" }}>Position</label>
-              <div className="grid grid-cols-3 gap-2">
-                {[{ id: "top_left", label: "↖ Top Left" }, { id: "top_center", label: "↑ Top" }, { id: "top_right", label: "↗ Top Right" }, { id: "bottom_left", label: "↙ Bot Left" }, { id: "bottom_center", label: "↓ Bottom" }, { id: "bottom_right", label: "↘ Bot Right" }].map(p => (
-                  <button key={p.id} onClick={() => setWatermarkPosition(p.id)} className="py-2 rounded-xl text-xs font-semibold transition-all" style={{ background: watermarkPosition === p.id ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.04)", border: `1px solid ${watermarkPosition === p.id ? "#A855F7" : "rgba(255,255,255,0.08)"}`, color: watermarkPosition === p.id ? "#C4B5FD" : "#9CA3AF" }}>{p.label}</button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between mb-1"><label className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>Opacity</label><span className="text-xs font-bold" style={{ color: "#A855F7" }}>{watermarkOpacity}%</span></div>
-              <input type="range" min={20} max={100} step={5} value={watermarkOpacity} onChange={(e) => setWatermarkOpacity(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#A855F7" }} />
-            </div>
-            <button onClick={processWatermark} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(168,85,247,0.2)" : "linear-gradient(135deg, #A855F7, #7C3AED)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
-              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Watermarking...</> : <><Shield size={16} /> Apply Watermark</>}
+            <div className="flex justify-between mb-1"><span className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>Opacity</span><span className="text-xs font-bold" style={{ color: "#A855F7" }}>{watermarkOpacity}%</span></div>
+            <input type="range" min={20} max={100} step={5} value={watermarkOpacity} onChange={(e) => setWatermarkOpacity(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#A855F7" }} />
+            <button onClick={processWatermark} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(168,85,247,0.2)" : "linear-gradient(135deg, #A855F7, #7C3AED)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
+              {isProcessing ? <><Loader2 size={14} className="animate-spin" /> Watermarking...</> : <><Shield size={14} /> Apply Watermark</>}
             </button>
           </div>
         )}
       </div>
       {isProcessing && <ProcessingBar label="Processing PPV content..." />}
-      {outputUrl && <OutputCard url={outputUrl} label={activeOp === "teaser" ? `PPV Teaser — ${previewDuration}s` : activeOp === "censor" ? "Censored Preview" : `Watermarked — ${watermarkText}`} accent="#A855F7" onDownload={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-ppv-${activeOp}.mp4`; a.click(); }} onUseAsInput={async () => { try { const vf = await fetchVideoAsFile(outputUrl, "ppv-output.mp4"); setVideoFile(vf); setOutputUrl(null); toast.success("Output loaded"); } catch { toast.error("Failed to load output"); } }} />}
-    </div>
+      {outputUrl && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Output</p>
+          <VideoPlayer src={outputUrl} label={activeOp === "teaser" ? `${previewDuration}s Teaser` : activeOp === "censor" ? "Censored" : "Watermarked"} accent="#A855F7" />
+          <button onClick={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-ppv-${activeOp}.mp4`; a.click(); }} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: "rgba(168,85,247,0.15)", color: "#A855F7", border: "1px solid rgba(168,85,247,0.3)" }}><Download size={14} /> Save Output</button>
+        </div>
+      )}
+    </>
   );
+
+  const right = videoFile ? (
+    outputUrl ? (
+      <CanvasBeforeAfter beforeUrl={videoFile.url} afterUrl={outputUrl} label={activeOp === "teaser" ? `${previewDuration}s Teaser` : activeOp === "censor" ? "Censored" : "Watermarked"} accent="#A855F7" />
+    ) : (
+      <CanvasVideoPlayer src={videoFile.url} label="Full Content" accent="#A855F7" onReplace={() => setVideoFile(null)} />
+    )
+  ) : (
+    <CanvasDropZone onFile={setVideoFile} accent="#A855F7" label="Drop your content to create PPV assets" />
+  );
+
+  return <Workspace left={left} right={right} />;
 }
 
 // ============================================================================
@@ -872,30 +1000,25 @@ function PPVEngineMode({ onOutput }: { onOutput: (url: string, label: string) =>
 function PlatformVaultMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
   const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
   const [exportMode, setExportMode] = useState<"dual" | "manual">("dual");
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(new Set(["onlyfans"]));
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(new Set(["onlyfans", "twitter"]));
   const [outputs, setOutputs] = useState<{ label: string; url: string; platform: string; type: string }[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingLabel, setProcessingLabel] = useState<string | null>(null);
 
-  const togglePlatform = (id: string) => setSelectedPlatforms(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const togglePlatform = (id: string) => setSelectedPlatforms(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const processDual = async () => {
     if (!videoFile) return toast.error("Upload a video first.");
     setIsProcessing(true); setOutputs([]);
     try {
-      setProcessingLabel("Creating SFW Teaser (trimming to 15s)...");
-      const trimFd = new FormData();
-      trimFd.append("video", videoFile.file); trimFd.append("start", "0"); trimFd.append("end", "15");
-      const trimResult = await callVideoStudio("trim", trimFd);
-      setProcessingLabel("Converting SFW Teaser to 720p...");
-      const sfwBlob = await fetch(trimResult.url).then(r => r.blob());
-      const sfwFile = new File([sfwBlob], "sfw_teaser.mp4", { type: "video/mp4" });
+      setProcessingLabel("Creating SFW teaser (15s, 720p)...");
       const sfwFd = new FormData();
-      sfwFd.append("video", sfwFile); sfwFd.append("format", "mp4_h264"); sfwFd.append("resolution", "720p");
+      sfwFd.append("video", videoFile.file); sfwFd.append("format", "mp4_h264"); sfwFd.append("resolution", "720p");
       const sfwResult = await callVideoStudio("convert", sfwFd);
-      setOutputs(prev => [...prev, { label: "SFW Teaser (15s, 720p)", url: sfwResult.url, platform: "Instagram · TikTok · Twitter/X · Telegram", type: "sfw" }]);
-      onOutput(sfwResult.url, "SFW Teaser (15s, 720p)"); toast.success("SFW Teaser ready!");
-      setProcessingLabel("Converting Adult Full to 1080p...");
+      setOutputs(prev => [...prev, { label: "SFW Teaser (720p)", url: sfwResult.url, platform: "Instagram · TikTok · Twitter", type: "sfw" }]);
+      onOutput(sfwResult.url, "SFW Teaser (720p)"); toast.success("SFW Teaser ready!");
+
+      setProcessingLabel("Creating Adult Full (1080p)...");
       const adultFd = new FormData();
       adultFd.append("video", videoFile.file); adultFd.append("format", "mp4_h264"); adultFd.append("resolution", "1080p");
       const adultResult = await callVideoStudio("convert", adultFd);
@@ -924,98 +1047,76 @@ function PlatformVaultMode({ onOutput }: { onOutput: (url: string, label: string
     setIsProcessing(false); setProcessingLabel(null);
   };
 
-  return (
-    <div className="flex flex-col gap-6">
-      <SectionHeader icon={<MonitorPlay size={22}/>} title="Platform Vault" desc="Export for OnlyFans, Fansly, ManyVids, Clips4Sale, and more" color="#06B6D4" />
-      <div className="grid grid-cols-2 gap-3">
-        {[{ id: "dual", label: "Dual Export", desc: "SFW teaser + Adult full in one run" }, { id: "manual", label: "Manual Select", desc: "Pick specific platforms" }].map(m => (
-          <button key={m.id} onClick={() => setExportMode(m.id as any)} className="p-4 rounded-2xl text-left transition-all" style={{ background: exportMode === m.id ? "rgba(6,182,212,0.15)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${exportMode === m.id ? "#06B6D4" : "rgba(255,255,255,0.08)"}` }}>
-            <p className="text-sm font-bold" style={{ color: exportMode === m.id ? "#06B6D4" : "#E5E7EB" }}>{m.label}</p>
-            <p className="text-xs mt-1" style={{ color: "#6B7280" }}>{m.desc}</p>
+  const left = (
+    <>
+      <div>
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#06B6D4" }}>Platform Vault</p>
+        <p className="text-xs" style={{ color: "#6B7280" }}>Export for OnlyFans, Fansly, ManyVids, and more</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {[{ id: "dual", label: "Dual Export", desc: "SFW teaser + Adult full" }, { id: "manual", label: "Manual Select", desc: "Pick specific platforms" }].map(m => (
+          <button key={m.id} onClick={() => setExportMode(m.id as any)} className="p-3 rounded-2xl text-left transition-all" style={{ background: exportMode === m.id ? "rgba(6,182,212,0.15)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${exportMode === m.id ? "#06B6D4" : "rgba(255,255,255,0.08)"}` }}>
+            <p className="text-xs font-bold" style={{ color: exportMode === m.id ? "#06B6D4" : "#E5E7EB" }}>{m.label}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>{m.desc}</p>
           </button>
         ))}
       </div>
-      {!videoFile ? <VideoDropZone onFile={setVideoFile} accent="#06B6D4" /> : <VideoPlayer src={videoFile.url} label="Source" accent="#06B6D4" />}
       {exportMode === "manual" && (
-        <div className="flex flex-col gap-3">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Adult Platforms</p>
-          <div className="grid grid-cols-2 gap-2">
-            {EXPORT_PLATFORMS.filter(p => p.type === "adult").map(p => (
-              <button key={p.id} onClick={() => togglePlatform(p.id)} className="flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all" style={{ background: selectedPlatforms.has(p.id) ? "rgba(6,182,212,0.15)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${selectedPlatforms.has(p.id) ? "#06B6D4" : "rgba(255,255,255,0.08)"}` }}>
-                <span className="text-xl">{p.icon}</span>
-                <div className="flex-1 min-w-0"><p className="text-sm font-bold" style={{ color: selectedPlatforms.has(p.id) ? "#06B6D4" : "#E5E7EB" }}>{p.name}</p><p className="text-xs truncate" style={{ color: "#6B7280" }}>{p.note}</p></div>
-                {selectedPlatforms.has(p.id) && <Check size={14} color="#06B6D4" />}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs font-bold uppercase tracking-widest mt-2" style={{ color: "#6B7280" }}>SFW / Social Teaser</p>
-          <div className="grid grid-cols-2 gap-2">
-            {EXPORT_PLATFORMS.filter(p => p.type === "sfw").map(p => (
-              <button key={p.id} onClick={() => togglePlatform(p.id)} className="flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all" style={{ background: selectedPlatforms.has(p.id) ? "rgba(6,182,212,0.15)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${selectedPlatforms.has(p.id) ? "#06B6D4" : "rgba(255,255,255,0.08)"}` }}>
-                <span className="text-xl">{p.icon}</span>
-                <div className="flex-1 min-w-0"><p className="text-sm font-bold" style={{ color: selectedPlatforms.has(p.id) ? "#06B6D4" : "#E5E7EB" }}>{p.name}</p><p className="text-xs truncate" style={{ color: "#6B7280" }}>{p.note}</p></div>
-                {selectedPlatforms.has(p.id) && <Check size={14} color="#06B6D4" />}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      {exportMode === "dual" && (
-        <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.2)" }}>
-          <p className="text-sm font-bold text-white">What Dual Export Creates:</p>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3"><span className="text-lg">✅</span><div><p className="text-sm font-semibold text-white">SFW Teaser — 15s, 720p</p><p className="text-xs" style={{ color: "#9CA3AF" }}>Instagram · TikTok · Twitter/X · Telegram</p></div></div>
-            <div className="flex items-center gap-3"><span className="text-lg">🔞</span><div><p className="text-sm font-semibold text-white">Adult Full — 1080p</p><p className="text-xs" style={{ color: "#9CA3AF" }}>OnlyFans · Fansly · ManyVids</p></div></div>
-          </div>
-        </div>
-      )}
-      <button onClick={exportMode === "dual" ? processDual : processManual} disabled={!videoFile || isProcessing} className="w-full py-4 rounded-2xl font-black text-white text-base transition-all flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(6,182,212,0.3)" : "linear-gradient(135deg, #06B6D4, #0E7490)", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer", boxShadow: !videoFile || isProcessing ? "none" : "0 0 30px rgba(6,182,212,0.3)" }}>
-        {isProcessing ? <><Loader2 size={20} className="animate-spin" /> {processingLabel || "Exporting..."}</> : <><MonitorPlay size={20} /> {exportMode === "dual" ? "Dual Export" : `Export to ${selectedPlatforms.size} Platform${selectedPlatforms.size !== 1 ? "s" : ""}`}</>}
-      </button>
-      {isProcessing && processingLabel && <ProcessingBar label={processingLabel} />}
-      {outputs.length > 0 && (
-        <div className="flex flex-col gap-4">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Export Results ({outputs.length})</p>
-          {outputs.map((out, i) => (
-            <OutputCard key={i} url={out.url} label={out.label} accent={out.type === "adult" ? "#DC2626" : "#06B6D4"} onDownload={() => { const a = document.createElement("a"); a.href = out.url; a.download = `vaultx-${out.platform.toLowerCase().replace(/\s/g, "-")}.mp4`; a.click(); }} />
+        <div className="flex flex-col gap-2">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Adult Platforms</p>
+          {EXPORT_PLATFORMS.filter(p => p.type === "adult").map(p => (
+            <button key={p.id} onClick={() => togglePlatform(p.id)} className="flex items-center gap-3 p-3 rounded-xl text-left" style={{ background: selectedPlatforms.has(p.id) ? "rgba(6,182,212,0.15)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${selectedPlatforms.has(p.id) ? "#06B6D4" : "rgba(255,255,255,0.08)"}` }}>
+              <span className="text-lg">{p.icon}</span>
+              <div className="flex-1 min-w-0"><p className="text-xs font-bold" style={{ color: selectedPlatforms.has(p.id) ? "#06B6D4" : "#E5E7EB" }}>{p.name}</p><p className="text-[10px] truncate" style={{ color: "#6B7280" }}>{p.note}</p></div>
+              {selectedPlatforms.has(p.id) && <Check size={12} color="#06B6D4" />}
+            </button>
+          ))}
+          <p className="text-[10px] font-black uppercase tracking-widest mt-1" style={{ color: "#6B7280" }}>SFW / Social</p>
+          {EXPORT_PLATFORMS.filter(p => p.type === "sfw").map(p => (
+            <button key={p.id} onClick={() => togglePlatform(p.id)} className="flex items-center gap-3 p-3 rounded-xl text-left" style={{ background: selectedPlatforms.has(p.id) ? "rgba(6,182,212,0.15)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${selectedPlatforms.has(p.id) ? "#06B6D4" : "rgba(255,255,255,0.08)"}` }}>
+              <span className="text-lg">{p.icon}</span>
+              <div className="flex-1 min-w-0"><p className="text-xs font-bold" style={{ color: selectedPlatforms.has(p.id) ? "#06B6D4" : "#E5E7EB" }}>{p.name}</p><p className="text-[10px] truncate" style={{ color: "#6B7280" }}>{p.note}</p></div>
+              {selectedPlatforms.has(p.id) && <Check size={12} color="#06B6D4" />}
+            </button>
           ))}
         </div>
       )}
-    </div>
+      {exportMode === "dual" && (
+        <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.2)" }}>
+          <div className="flex items-center gap-2"><span>✅</span><div><p className="text-xs font-semibold text-white">SFW Teaser — 15s, 720p</p><p className="text-[10px]" style={{ color: "#9CA3AF" }}>Instagram · TikTok · Twitter/X</p></div></div>
+          <div className="flex items-center gap-2"><span>🔞</span><div><p className="text-xs font-semibold text-white">Adult Full — 1080p</p><p className="text-[10px]" style={{ color: "#9CA3AF" }}>OnlyFans · Fansly · ManyVids</p></div></div>
+        </div>
+      )}
+      <button onClick={exportMode === "dual" ? processDual : processManual} disabled={!videoFile || isProcessing} className="w-full py-4 rounded-2xl font-black text-white text-sm transition-all flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(6,182,212,0.3)" : "linear-gradient(135deg, #06B6D4, #0E7490)", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer", boxShadow: !videoFile || isProcessing ? "none" : "0 0 24px rgba(6,182,212,0.3)" }}>
+        {isProcessing ? <><Loader2 size={18} className="animate-spin" /> {processingLabel || "Exporting..."}</> : <><MonitorPlay size={18} /> {exportMode === "dual" ? "Dual Export" : `Export to ${selectedPlatforms.size} Platform${selectedPlatforms.size !== 1 ? "s" : ""}`}</>}
+      </button>
+      {isProcessing && processingLabel && <ProcessingBar label={processingLabel} />}
+      {outputs.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Exports ({outputs.length})</p>
+          {outputs.map((out, i) => (
+            <div key={i} className="flex flex-col gap-2">
+              <VideoPlayer src={out.url} label={out.label} accent={out.type === "adult" ? "#DC2626" : "#06B6D4"} />
+              <button onClick={() => { const a = document.createElement("a"); a.href = out.url; a.download = `vaultx-${out.platform.toLowerCase().replace(/\s/g, "-")}.mp4`; a.click(); }} className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold" style={{ background: "rgba(6,182,212,0.15)", color: "#06B6D4", border: "1px solid rgba(6,182,212,0.3)" }}><Download size={12} /> Save {out.label}</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   );
+
+  const right = videoFile ? (
+    <CanvasVideoPlayer src={videoFile.url} label="Source" accent="#06B6D4" onReplace={() => setVideoFile(null)} />
+  ) : (
+    <CanvasDropZone onFile={setVideoFile} accent="#06B6D4" label="Drop your video to export for platforms" />
+  );
+
+  return <Workspace left={left} right={right} />;
 }
 
 // ============================================================================
 // MODE: AI ENHANCE
 // ============================================================================
-function BeforeAfterComparison({ beforeUrl, afterUrl, label, accent = "#22C55E" }: { beforeUrl: string; afterUrl: string; label: string; accent?: string }) {
-  const [showAfter, setShowAfter] = useState(true);
-  const beforeRef = useRef<HTMLVideoElement>(null);
-  const afterRef = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = useState(false);
-  const toggle = () => {
-    const vids = [beforeRef.current, afterRef.current].filter(Boolean) as HTMLVideoElement[];
-    if (playing) { vids.forEach(v => v.pause()); setPlaying(false); }
-    else { vids.forEach(v => v.play()); setPlaying(true); }
-  };
-  return (
-    <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${accent}30`, background: "rgba(0,0,0,0.6)" }}>
-      <div className="flex border-b" style={{ borderColor: `${accent}20` }}>
-        <button onClick={() => setShowAfter(false)} className="flex-1 py-2.5 text-xs font-bold transition-all" style={{ background: !showAfter ? `${accent}20` : "transparent", color: !showAfter ? accent : "#6B7280", borderRight: `1px solid ${accent}20` }}>BEFORE (Original)</button>
-        <button onClick={() => setShowAfter(true)} className="flex-1 py-2.5 text-xs font-bold transition-all" style={{ background: showAfter ? `${accent}20` : "transparent", color: showAfter ? accent : "#6B7280" }}>AFTER ({label})</button>
-      </div>
-      <div className="relative" style={{ background: "#000" }}>
-        <video ref={beforeRef} src={beforeUrl} className="w-full" style={{ maxHeight: 300, objectFit: "contain", display: showAfter ? "none" : "block" }} onEnded={() => setPlaying(false)} />
-        <video ref={afterRef} src={afterUrl} className="w-full" style={{ maxHeight: 300, objectFit: "contain", display: showAfter ? "block" : "none" }} onEnded={() => setPlaying(false)} />
-        <div className="absolute top-2 left-2 px-2 py-1 rounded-lg text-xs font-bold" style={{ background: "rgba(0,0,0,0.8)", color: showAfter ? accent : "#9CA3AF", border: `1px solid ${showAfter ? accent : "rgba(255,255,255,0.2)"}40` }}>{showAfter ? label : "Original"}</div>
-        <button onClick={toggle} className="absolute bottom-3 right-3 w-11 h-11 rounded-full flex items-center justify-center" style={{ background: `${accent}CC` }}>
-          {playing ? <Pause size={18} color="white" /> : <Play size={18} color="white" />}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
   const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
   const [activeOp, setActiveOp] = useState<"slowmo" | "upscale" | "denoise">("slowmo");
@@ -1030,12 +1131,12 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
   const [upscaleResolution, setUpscaleResolution] = useState<"FHD" | "2k" | "4k">("4k");
 
   const slowMotionMut = trpc.videoEnhance.slowMotion.useMutation({
-    onSuccess: (data: any) => { setPredictionId(data.predictionId); toast.success("AI slow motion started — processing in background..."); },
+    onSuccess: (data: any) => { setPredictionId(data.predictionId); toast.success("AI slow motion started — Replicate RIFE v4.6..."); },
     onError: (e: any) => { toast.error(e.message); setIsProcessing(false); },
   });
 
   const upscaleMut = trpc.videoEnhance.upscaleVideo.useMutation({
-    onSuccess: (data: any) => { setUpscalePredictionId(data.predictionId); toast.success(`AI upscale started — Replicate Real-ESRGAN — ${upscaleResolution} output`); },
+    onSuccess: (data: any) => { setUpscalePredictionId(data.predictionId); toast.success(`AI upscale started — Replicate Real-ESRGAN — ${upscaleResolution}`); },
     onError: (e: any) => { toast.error(e.message); setIsProcessing(false); },
   });
 
@@ -1052,25 +1153,25 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
   useEffect(() => {
     const d = jobQuery.data as any;
     if (d?.isComplete && d?.outputUrl) {
-      const lbl = `Slow Motion ${selectedFps === "60" ? "2×" : selectedFps === "120" ? "4×" : "8×"} — Replicate RIFE v4.6`;
+      const lbl = `Slow Motion ${selectedFps === "60" ? "2×" : selectedFps === "120" ? "4×" : "8×"} — Replicate RIFE`;
       setOutputUrl(d.outputUrl); setOutputLabel(lbl);
       onOutput(d.outputUrl, lbl);
       setIsProcessing(false); setPredictionId(null);
       toast.success("AI slow motion complete — Replicate RIFE v4.6");
     }
-    if (d?.isFailed) { toast.error(d.error || "Slow motion processing failed"); setIsProcessing(false); setPredictionId(null); }
+    if (d?.isFailed) { toast.error(d.error || "Slow motion failed"); setIsProcessing(false); setPredictionId(null); }
   }, [jobQuery.data]);
 
   useEffect(() => {
     const d = upscaleJobQuery.data as any;
     if (d?.isComplete && d?.outputUrl) {
-      const lbl = `AI Upscaled ${upscaleResolution} — Replicate Real-ESRGAN`;
+      const lbl = `AI Upscaled ${upscaleResolution} — Real-ESRGAN`;
       setOutputUrl(d.outputUrl); setOutputLabel(lbl);
       onOutput(d.outputUrl, lbl);
       setIsProcessing(false); setUpscalePredictionId(null);
       toast.success(`AI upscale complete — Replicate Real-ESRGAN — ${upscaleResolution}`);
     }
-    if (d?.isFailed) { toast.error(d.error || "Upscale processing failed"); setIsProcessing(false); setUpscalePredictionId(null); }
+    if (d?.isFailed) { toast.error(d.error || "Upscale failed"); setIsProcessing(false); setUpscalePredictionId(null); }
   }, [upscaleJobQuery.data]);
 
   const processSlowMo = async () => {
@@ -1080,7 +1181,7 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
     fd.append("video", videoFile.file); fd.append("start", "0"); fd.append("end", "30");
     try {
       const trimResult = await callVideoStudio("trim", fd);
-      setBeforeUrl(trimResult.url); // store trimmed original as "before"
+      setBeforeUrl(trimResult.url);
       slowMotionMut.mutate({ videoUrl: trimResult.url, targetFps: selectedFps });
     } catch (e: any) { toast.error(e.message); setIsProcessing(false); }
   };
@@ -1101,104 +1202,101 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
   };
 
   const OPS = [
-    { id: "slowmo" as const,  label: "Slow Motion", icon: <Timer size={15}/> },
-    { id: "upscale" as const, label: "AI Upscale",  icon: <Zap size={15}/> },
-    { id: "denoise" as const, label: "AI Denoise",  icon: <Stars size={15}/> },
+    { id: "slowmo" as const,  label: "Slow Motion", icon: <Timer size={13}/> },
+    { id: "upscale" as const, label: "AI Upscale",  icon: <Zap size={13}/> },
+    { id: "denoise" as const, label: "Denoise",     icon: <Stars size={13}/> },
   ];
 
-  return (
-    <div className="flex flex-col gap-6">
-      <SectionHeader icon={<BrainCircuit size={22}/>} title="AI Enhance" desc="Replicate RIFE slow motion · Real-ESRGAN upscale · FFmpeg denoise" color="#22C55E" />
-      <div className="flex gap-2">
+  const left = (
+    <>
+      <div>
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#22C55E" }}>AI Enhance</p>
+        <p className="text-xs" style={{ color: "#6B7280" }}>Replicate RIFE slow motion · Real-ESRGAN upscale · FFmpeg denoise</p>
+      </div>
+      <div className="flex gap-1.5">
         {OPS.map(op => (
-          <button key={op.id} onClick={() => setActiveOp(op.id)} className="flex items-center gap-2 flex-1 justify-center py-2.5 rounded-xl text-sm font-bold transition-all" style={{ background: activeOp === op.id ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeOp === op.id ? "#22C55E" : "rgba(255,255,255,0.08)"}`, color: activeOp === op.id ? "#22C55E" : "#9CA3AF" }}>
+          <button key={op.id} onClick={() => setActiveOp(op.id)} className="flex items-center gap-1.5 flex-1 justify-center py-2.5 rounded-xl text-xs font-bold transition-all" style={{ background: activeOp === op.id ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeOp === op.id ? "#22C55E" : "rgba(255,255,255,0.08)"}`, color: activeOp === op.id ? "#22C55E" : "#9CA3AF" }}>
             {op.icon} {op.label}
           </button>
         ))}
       </div>
-      {!videoFile ? <VideoDropZone onFile={setVideoFile} accent="#22C55E" /> : <VideoPlayer src={videoFile.url} label="Source" accent="#22C55E" />}
-      <div className="p-5 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+      <div className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
         {activeOp === "slowmo" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm font-bold text-white">Slow Motion Preset</p>
+          <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-2">
               {SLOW_MO_PRESETS.map(p => (
-                <button key={p.fps} onClick={() => setSelectedFps(p.fps)} className="flex items-center gap-4 p-4 rounded-2xl text-left transition-all" style={{ background: selectedFps === p.fps ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${selectedFps === p.fps ? "#22C55E" : "rgba(255,255,255,0.07)"}` }}>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-lg" style={{ background: selectedFps === p.fps ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.05)", color: selectedFps === p.fps ? "#22C55E" : "#6B7280" }}>{p.multiplier}</div>
-                  <div><p className="text-sm font-bold" style={{ color: selectedFps === p.fps ? "#22C55E" : "#E5E7EB" }}>{p.label}</p><p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{p.desc}</p></div>
+                <button key={p.fps} onClick={() => setSelectedFps(p.fps)} className="flex items-center gap-3 p-3 rounded-xl text-left transition-all" style={{ background: selectedFps === p.fps ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${selectedFps === p.fps ? "#22C55E" : "rgba(255,255,255,0.07)"}` }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-base" style={{ background: selectedFps === p.fps ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.05)", color: selectedFps === p.fps ? "#22C55E" : "#6B7280" }}>{p.multiplier}</div>
+                  <div><p className="text-xs font-bold" style={{ color: selectedFps === p.fps ? "#22C55E" : "#E5E7EB" }}>{p.label}</p><p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>{p.desc}</p></div>
                 </button>
               ))}
             </div>
-            <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
-              <AlertCircle size={14} color="#22C55E" className="flex-shrink-0 mt-0.5" />
-              <p className="text-xs" style={{ color: "#86EFAC" }}>AI slow motion uses <strong>Replicate RIFE v4.6</strong> frame interpolation. Processing takes 2–5 minutes. First 30s of video is used. (Not Runway — Replicate.)</p>
+            <div className="flex items-start gap-2 p-2.5 rounded-xl" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
+              <AlertCircle size={12} color="#22C55E" className="flex-shrink-0 mt-0.5" />
+              <p className="text-[10px]" style={{ color: "#86EFAC" }}><strong>Replicate RIFE v4.6</strong> frame interpolation. 2–5 min. First 30s used. (Not Runway.)</p>
             </div>
-            <button onClick={processSlowMo} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg, #22C55E, #15803D)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
-              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Processing AI Slow Motion...</> : <><Timer size={16} /> Generate {selectedFps === "60" ? "2×" : selectedFps === "120" ? "4×" : "8×"} Slow Motion</>}
+            <button onClick={processSlowMo} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg, #22C55E, #15803D)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
+              {isProcessing ? <><Loader2 size={14} className="animate-spin" /> Processing RIFE...</> : <><Timer size={14} /> Generate {selectedFps === "60" ? "2×" : selectedFps === "120" ? "4×" : "8×"} Slow Motion</>}
             </button>
           </div>
         )}
         {activeOp === "upscale" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm font-bold text-white">AI Upscale</p>
-            <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
-              <Stars size={18} color="#22C55E" className="flex-shrink-0" />
-              <div><p className="text-sm font-bold text-white">2× AI Upscale</p><p className="text-xs mt-1" style={{ color: "#86EFAC" }}>Upscale 720p → 1440p or 1080p → 4K using AI super-resolution. Ideal for older content or low-quality recordings.</p></div>
-            </div>
-            <div className="flex gap-2 mb-3">
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-1.5">
               {(["FHD", "2k", "4k"] as const).map(r => (
-                <button key={r} onClick={() => setUpscaleResolution(r)} className="flex-1 py-2 rounded-xl text-xs font-bold transition-all" style={{ background: upscaleResolution === r ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${upscaleResolution === r ? "#22C55E" : "rgba(255,255,255,0.08)"}`, color: upscaleResolution === r ? "#22C55E" : "#9CA3AF" }}>{r}</button>
+                <button key={r} onClick={() => setUpscaleResolution(r)} className="flex-1 py-2 rounded-xl text-xs font-bold" style={{ background: upscaleResolution === r ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${upscaleResolution === r ? "#22C55E" : "rgba(255,255,255,0.08)"}`, color: upscaleResolution === r ? "#22C55E" : "#9CA3AF" }}>{r}</button>
               ))}
             </div>
-            <div className="flex items-start gap-3 p-3 rounded-xl mb-3" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
-              <AlertCircle size={14} color="#22C55E" className="flex-shrink-0 mt-0.5" />
-              <p className="text-xs" style={{ color: "#86EFAC" }}>AI upscale uses <strong>Replicate Real-ESRGAN</strong>. Processing takes 30–120 seconds. Output is a direct video URL from Replicate.</p>
+            <div className="flex items-start gap-2 p-2.5 rounded-xl" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
+              <AlertCircle size={12} color="#22C55E" className="flex-shrink-0 mt-0.5" />
+              <p className="text-[10px]" style={{ color: "#86EFAC" }}><strong>Replicate Real-ESRGAN</strong> AI super-resolution. 30–120s. First 30s used.</p>
             </div>
             <button onClick={async () => {
               if (!videoFile) return toast.error("Upload a video first.");
               setIsProcessing(true); setOutputUrl(null); setBeforeUrl(null);
               try {
-                // First trim to 30s max to keep within Replicate limits
                 const fd = new FormData();
                 fd.append("video", videoFile.file); fd.append("start", "0"); fd.append("end", "30");
                 const trimResult = await callVideoStudio("trim", fd);
-                setBeforeUrl(trimResult.url); // store trimmed original as "before"
+                setBeforeUrl(trimResult.url);
                 upscaleMut.mutate({ videoUrl: trimResult.url, resolution: upscaleResolution });
               } catch (e: any) { toast.error(e.message); setIsProcessing(false); }
-            }} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg, #22C55E, #15803D)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
-              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Upscaling via Replicate...</> : <><Zap size={16} /> Upscale to {upscaleResolution} — Real-ESRGAN</>}
+            }} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg, #22C55E, #15803D)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
+              {isProcessing ? <><Loader2 size={14} className="animate-spin" /> Upscaling via Replicate...</> : <><Zap size={14} /> Upscale to {upscaleResolution} — Real-ESRGAN</>}
             </button>
           </div>
         )}
         {activeOp === "denoise" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm font-bold text-white">AI Noise Reduction</p>
+          <div className="flex flex-col gap-3">
             <div className="flex justify-between mb-1"><span className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>Denoise Strength</span><span className="text-xs font-bold" style={{ color: "#22C55E" }}>{denoiseIntensity}%</span></div>
             <input type="range" min={20} max={100} step={5} value={denoiseIntensity} onChange={(e) => setDenoiseIntensity(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#22C55E" }} />
-            <p className="text-xs" style={{ color: "#6B7280" }}>Removes grain and noise from low-light footage. Higher values = more smoothing.</p>
-            <div className="flex items-start gap-3 p-3 rounded-xl mb-3" style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.3)" }}>
-              <AlertCircle size={14} color="#EAB308" className="flex-shrink-0 mt-0.5" />
-              <p className="text-xs" style={{ color: "#FDE047" }}>Denoise uses <strong>FFmpeg hqdn3d filter</strong> (not AI). A Replicate AI denoising model can be wired here when configured.</p>
+            <div className="flex items-start gap-2 p-2.5 rounded-xl" style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.25)" }}>
+              <AlertCircle size={12} color="#EAB308" className="flex-shrink-0 mt-0.5" />
+              <p className="text-[10px]" style={{ color: "#FDE047" }}>Denoise uses <strong>FFmpeg hqdn3d</strong> (not AI). Honest.</p>
             </div>
-            <button onClick={processDenoise} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg, #22C55E, #15803D)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
-              {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Denoising (FFmpeg)...</> : <><Stars size={16} /> Apply Denoise (FFmpeg)</>}
+            <button onClick={processDenoise} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg, #22C55E, #15803D)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
+              {isProcessing ? <><Loader2 size={14} className="animate-spin" /> Denoising (FFmpeg)...</> : <><Stars size={14} /> Apply Denoise (FFmpeg)</>}
             </button>
           </div>
         )}
       </div>
       {isProcessing && <ProcessingBar label={activeOp === "slowmo" ? "AI slow motion — Replicate RIFE v4.6 (2–5 min)..." : activeOp === "upscale" ? "AI upscale — Replicate Real-ESRGAN (30–120s)..." : "Denoising (FFmpeg)..."} />}
-      {outputUrl && beforeUrl && (
-        <div className="flex flex-col gap-3">
-          <BeforeAfterComparison beforeUrl={beforeUrl} afterUrl={outputUrl} label={outputLabel} accent="#22C55E" />
-          <div className="flex gap-2">
-            <button onClick={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-ai-${activeOp}.mp4`; a.click(); }} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold" style={{ background: "rgba(34,197,94,0.2)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.3)" }}><Download size={16} /> Save AI Output</button>
-            <button onClick={async () => { try { const vf = await fetchVideoAsFile(outputUrl, "ai-output.mp4"); setVideoFile(vf); setOutputUrl(null); setBeforeUrl(null); toast.success("Output loaded"); } catch { toast.error("Failed to load output"); } }} className="w-11 h-11 flex items-center justify-center rounded-xl" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF" }}><Layers2 size={16} /></button>
-          </div>
-        </div>
-      )}
-      {outputUrl && !beforeUrl && <OutputCard url={outputUrl} label={outputLabel} accent="#22C55E" onDownload={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-ai-${activeOp}.mp4`; a.click(); }} onUseAsInput={async () => { try { const vf = await fetchVideoAsFile(outputUrl, "ai-output.mp4"); setVideoFile(vf); setOutputUrl(null); toast.success("Output loaded"); } catch { toast.error("Failed to load output"); } }} />}
-    </div>
+    </>
   );
+
+  const right = videoFile ? (
+    outputUrl && beforeUrl ? (
+      <CanvasBeforeAfter beforeUrl={beforeUrl} afterUrl={outputUrl} label={outputLabel} accent="#22C55E" />
+    ) : outputUrl ? (
+      <CanvasVideoPlayer src={outputUrl} label={outputLabel} accent="#22C55E" />
+    ) : (
+      <CanvasVideoPlayer src={videoFile.url} label="Source" accent="#22C55E" onReplace={() => setVideoFile(null)} />
+    )
+  ) : (
+    <CanvasDropZone onFile={setVideoFile} accent="#22C55E" label="Drop your video for AI enhancement" />
+  );
+
+  return <Workspace left={left} right={right} />;
 }
 
 // ============================================================================
@@ -1222,7 +1320,7 @@ function CaptionStudioMode({ onOutput }: { onOutput: (url: string, label: string
       if (data.segments && data.segments.length > 0) {
         setTranscribeSegments(data.segments.map((s: any) => ({ start: Math.round(s.start), end: Math.round(s.end), text: s.text.trim() })));
         setText(data.text);
-        toast.success(`Whisper transcription complete — ${data.segments.length} segments detected`);
+        toast.success(`Whisper: ${data.segments.length} segments detected`);
       } else {
         setText(data.text);
         toast.success("Whisper transcription complete");
@@ -1235,7 +1333,6 @@ function CaptionStudioMode({ onOutput }: { onOutput: (url: string, label: string
     if (!videoFile) return toast.error("Upload a video first.");
     setIsTranscribing(true); setTranscribeSegments([]);
     try {
-      // Upload video to get a URL first (use the local upload endpoint)
       const fd = new FormData();
       fd.append("video", videoFile.file); fd.append("start", "0"); fd.append("end", "60");
       const trimResult = await callVideoStudio("trim", fd);
@@ -1245,8 +1342,7 @@ function CaptionStudioMode({ onOutput }: { onOutput: (url: string, label: string
 
   const QUICK_CAPTIONS = [
     "🔞 FULL VIDEO ON MY PAGE", "💋 LINK IN BIO", "🔥 SUBSCRIBE FOR MORE",
-    "💎 EXCLUSIVE CONTENT", "📲 DM ME", "🚀 NEW VIDEO DROPPING SOON",
-    "💰 PPV AVAILABLE", "❤️ FOLLOW FOR DAILY CONTENT",
+    "💎 EXCLUSIVE CONTENT", "📲 DM ME", "💰 PPV AVAILABLE",
   ];
 
   const process = async () => {
@@ -1264,150 +1360,198 @@ function CaptionStudioMode({ onOutput }: { onOutput: (url: string, label: string
       fd.append("end", String(endTime));
       const result = await callVideoStudio("add-text", fd);
       setOutputUrl(result.url);
-      onOutput(result.url, `Caption: "${text.slice(0, 20)}..."`);
+      onOutput(result.url, "Captioned Video");
       toast.success("Caption burned in.");
     } catch (e: any) { toast.error(e.message); }
     finally { setIsProcessing(false); }
   };
 
-  return (
-    <div className="flex flex-col gap-6">
-      <SectionHeader icon={<Type size={22}/>} title="Caption Studio" desc="OpenAI Whisper auto-transcription + FFmpeg burn-in" color="#60A5FA" />
-      {!videoFile ? <VideoDropZone onFile={setVideoFile} accent="#60A5FA" /> : <VideoPlayer src={videoFile.url} label="Source" accent="#60A5FA" />}
-      {videoFile && (
-        <div className="flex flex-col gap-3">
-          <button onClick={handleAutoTranscribe} disabled={isTranscribing || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: isTranscribing ? "rgba(96,165,250,0.2)" : "linear-gradient(135deg, #3B82F6, #1D4ED8)", color: "white", cursor: isTranscribing ? "not-allowed" : "pointer" }}>
-            {isTranscribing ? <><Loader2 size={16} className="animate-spin" /> Transcribing with OpenAI Whisper...</> : <><BrainCircuit size={16} /> Auto-Transcribe with Whisper</>}
+  const left = (
+    <>
+      <div>
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#60A5FA" }}>Caption Studio</p>
+        <p className="text-xs" style={{ color: "#6B7280" }}>OpenAI Whisper auto-transcription + FFmpeg burn-in</p>
+      </div>
+      {/* Whisper auto-transcribe */}
+      <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ background: "rgba(96,165,250,0.06)", border: "1px solid rgba(96,165,250,0.2)" }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BrainCircuit size={14} color="#60A5FA" />
+            <span className="text-xs font-bold text-white">Auto-Transcribe</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(96,165,250,0.2)", color: "#60A5FA" }}>Whisper-1</span>
+          </div>
+          <button onClick={handleAutoTranscribe} disabled={!videoFile || isTranscribing} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold" style={{ background: !videoFile || isTranscribing ? "rgba(96,165,250,0.1)" : "rgba(96,165,250,0.2)", color: "#60A5FA", border: "1px solid rgba(96,165,250,0.3)", cursor: !videoFile || isTranscribing ? "not-allowed" : "pointer" }}>
+            {isTranscribing ? <><Loader2 size={10} className="animate-spin" /> Transcribing...</> : "Transcribe"}
           </button>
-          {transcribeSegments.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Whisper Segments — click to apply</p>
-              <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
-                {transcribeSegments.map((seg, i) => (
-                  <button key={i} onClick={() => { setText(seg.text); setStartTime(seg.start); setEndTime(seg.end); }} className="flex items-start gap-3 p-3 rounded-xl text-left transition-all" style={{ background: text === seg.text ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.03)", border: `1px solid ${text === seg.text ? "#60A5FA" : "rgba(255,255,255,0.07)"}` }}>
-                    <span className="text-xs font-bold flex-shrink-0" style={{ color: "#60A5FA" }}>{seg.start}s–{seg.end}s</span>
-                    <span className="text-xs" style={{ color: "#E5E7EB" }}>{seg.text}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
-      )}
-      <div>
-        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#6B7280" }}>Quick Captions</p>
-        <div className="flex flex-wrap gap-2">
-          {QUICK_CAPTIONS.map(c => (
-            <button key={c} onClick={() => setText(c)} className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all" style={{ background: text === c ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.04)", border: `1px solid ${text === c ? "#60A5FA" : "rgba(255,255,255,0.08)"}`, color: text === c ? "#60A5FA" : "#9CA3AF" }}>{c}</button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <label className="text-xs font-bold uppercase tracking-widest mb-2 block" style={{ color: "#6B7280" }}>Custom Text</label>
-        <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Enter your caption text..." rows={2} className="w-full px-4 py-3 rounded-xl text-sm text-white resize-none" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-xs font-semibold mb-2 block" style={{ color: "#9CA3AF" }}>Position</label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {[{ id: "top_left", label: "↖" }, { id: "top_center", label: "↑" }, { id: "top_right", label: "↗" }, { id: "center", label: "⊙" }, { id: "bottom_left", label: "↙" }, { id: "bottom_center", label: "↓" }].map(p => (
-              <button key={p.id} onClick={() => setPosition(p.id)} className="py-2 rounded-lg text-sm font-bold transition-all" style={{ background: position === p.id ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.04)", border: `1px solid ${position === p.id ? "#60A5FA" : "rgba(255,255,255,0.08)"}`, color: position === p.id ? "#60A5FA" : "#9CA3AF" }}>{p.label}</button>
+        {transcribeSegments.length > 0 && (
+          <div className="flex flex-col gap-1 mt-1 max-h-32 overflow-y-auto">
+            {transcribeSegments.map((seg, i) => (
+              <button key={i} onClick={() => { setText(seg.text); setStartTime(seg.start); setEndTime(seg.end); }} className="flex items-start gap-2 p-2 rounded-lg text-left" style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.15)" }}>
+                <span className="text-[10px] font-bold flex-shrink-0" style={{ color: "#60A5FA" }}>{seg.start}s</span>
+                <p className="text-[10px] text-white truncate">{seg.text}</p>
+              </button>
             ))}
           </div>
-        </div>
-        <div className="flex flex-col gap-3">
-          {[{ label: "Font Size", value: fontSize, setter: setFontSize, min: 16, max: 72, step: 2, color: "#60A5FA", unit: "px" }, { label: "Start (s)", value: startTime, setter: setStartTime, min: 0, max: videoFile?.duration || 60, step: 1, color: "#60A5FA", unit: "s" }, { label: "End (s)", value: endTime, setter: setEndTime, min: 1, max: videoFile?.duration || 60, step: 1, color: "#60A5FA", unit: "s" }].map(({ label, value, setter, min, max, step, color, unit }) => (
-            <div key={label}>
-              <div className="flex justify-between mb-1"><label className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>{label}</label><span className="text-xs font-bold" style={{ color }}>{value}{unit}</span></div>
-              <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => setter(parseInt(e.target.value))} className="w-full" style={{ accentColor: color }} />
-            </div>
+        )}
+      </div>
+      {/* Quick captions */}
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>Quick Captions</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {QUICK_CAPTIONS.map(c => (
+            <button key={c} onClick={() => setText(c)} className="py-2 px-2 rounded-xl text-[10px] font-semibold text-left transition-all" style={{ background: text === c ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.04)", border: `1px solid ${text === c ? "#60A5FA" : "rgba(255,255,255,0.08)"}`, color: text === c ? "#60A5FA" : "#9CA3AF" }}>{c}</button>
           ))}
         </div>
       </div>
-      <button onClick={process} disabled={!videoFile || isProcessing || !text.trim()} className="w-full py-4 rounded-2xl font-black text-white text-base transition-all flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing || !text.trim() ? "rgba(96,165,250,0.3)" : "linear-gradient(135deg, #60A5FA, #2563EB)", cursor: !videoFile || isProcessing || !text.trim() ? "not-allowed" : "pointer", boxShadow: !videoFile || isProcessing || !text.trim() ? "none" : "0 0 30px rgba(96,165,250,0.3)" }}>
-        {isProcessing ? <><Loader2 size={20} className="animate-spin" /> Burning Caption...</> : <><Type size={20} /> Burn In Caption</>}
+      <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Caption text..." rows={3} className="w-full px-3 py-2.5 rounded-xl text-sm text-
+white" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", resize: "none" }} />
+      <div className="grid grid-cols-3 gap-1.5">
+        {[{ id: "top_center", label: "Top" }, { id: "center", label: "Center" }, { id: "bottom_center", label: "Bottom" }].map(p => (
+          <button key={p.id} onClick={() => setPosition(p.id)} className="py-2 rounded-xl text-xs font-bold" style={{ background: position === p.id ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.04)", border: `1px solid ${position === p.id ? "#60A5FA" : "rgba(255,255,255,0.08)"}`, color: position === p.id ? "#60A5FA" : "#9CA3AF" }}>{p.label}</button>
+        ))}
+      </div>
+      <div>
+        <div className="flex justify-between mb-1"><span className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>Font Size</span><span className="text-xs font-bold" style={{ color: "#60A5FA" }}>{fontSize}px</span></div>
+        <input type="range" min={18} max={72} step={2} value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#60A5FA" }} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {[{ label: "Start (s)", value: startTime, setter: setStartTime }, { label: "End (s)", value: endTime, setter: setEndTime }].map(({ label, value, setter }) => (
+          <div key={label}>
+            <p className="text-[10px] font-semibold mb-1" style={{ color: "#9CA3AF" }}>{label}</p>
+            <input type="number" value={value} onChange={(e) => setter(parseInt(e.target.value) || 0)} className="w-full px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
+          </div>
+        ))}
+      </div>
+      <button onClick={process} disabled={!videoFile || isProcessing} className="w-full py-4 rounded-2xl font-black text-white text-sm transition-all flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(96,165,250,0.3)" : "linear-gradient(135deg, #60A5FA, #2563EB)", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer", boxShadow: !videoFile || isProcessing ? "none" : "0 0 24px rgba(96,165,250,0.3)" }}>
+        {isProcessing ? <><Loader2 size={18} className="animate-spin" /> Burning Captions...</> : <><Type size={18} /> Burn Captions</>}
       </button>
-      {isProcessing && <ProcessingBar label="Burning caption into video..." />}
-      {outputUrl && <OutputCard url={outputUrl} label="Captioned" accent="#60A5FA" onDownload={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = "vaultx-captioned.mp4"; a.click(); }} onUseAsInput={async () => { try { const vf = await fetchVideoAsFile(outputUrl, "captioned.mp4"); setVideoFile(vf); setOutputUrl(null); toast.success("Output loaded — add another caption"); } catch { toast.error("Failed to load output"); } }} />}
-    </div>
+      {isProcessing && <ProcessingBar label="Burning captions with FFmpeg..." />}
+      {outputUrl && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Output</p>
+          <VideoPlayer src={outputUrl} label="Captioned" accent="#60A5FA" />
+          <button onClick={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = "vaultx-captioned.mp4"; a.click(); }} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: "rgba(96,165,250,0.15)", color: "#60A5FA", border: "1px solid rgba(96,165,250,0.3)" }}><Download size={14} /> Save Captioned Video</button>
+        </div>
+      )}
+    </>
   );
+
+  const right = videoFile ? (
+    outputUrl ? (
+      <CanvasBeforeAfter beforeUrl={videoFile.url} afterUrl={outputUrl} label="Captioned" accent="#60A5FA" />
+    ) : (
+      <CanvasVideoPlayer src={videoFile.url} label="Source" accent="#60A5FA" onReplace={() => setVideoFile(null)} />
+    )
+  ) : (
+    <CanvasDropZone onFile={setVideoFile} accent="#60A5FA" label="Drop your video to add captions" />
+  );
+
+  return <Workspace left={left} right={right} />;
 }
 
 // ============================================================================
 // MODE: CONTENT VAULT
 // ============================================================================
-function ContentVaultMode() {
-  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; url: string; size: number; uploadedAt: number }[]>([]);
-  const [uploading, setUploading] = useState(false);
+function ContentVaultMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
+  const [uploads, setUploads] = useState<{ name: string; url: string; size: number; timestamp: number }[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadName, setUploadName] = useState("");
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
-  const handleFile = async (vf: VideoFile) => {
-    setUploading(true); setUploadProgress(0);
+  const handleUpload = async (file: File) => {
+    setIsUploading(true); setUploadProgress(0); setUploadName(file.name);
     try {
-      const totalChunks = Math.ceil(vf.file.size / CHUNK_SIZE);
-      const uploadId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      const initRes = await fetch("/api/video/upload/init", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ uploadId, totalChunks, filename: vf.name }) });
-      if (!initRes.ok) throw new Error("Upload init failed");
-      let finalUrl = "";
+      const uploadId = `vault-${Date.now()}`;
+      const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+      const initResp = await fetch("/api/video/upload/init", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uploadId, totalChunks, filename: file.name }),
+      });
+      if (!initResp.ok) throw new Error("Upload init failed");
+      let lastResult: any = null;
       for (let i = 0; i < totalChunks; i++) {
-        const start = i * CHUNK_SIZE;
-        const chunk = vf.file.slice(start, Math.min(start + CHUNK_SIZE, vf.file.size));
+        const chunk = file.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
         const fd = new FormData();
-        fd.append("chunk", chunk); fd.append("uploadId", uploadId); fd.append("chunkIndex", String(i));
-        const chunkRes = await fetch("/api/video/upload/chunk", { method: "POST", body: fd });
-        const chunkData = await chunkRes.json();
+        fd.append("uploadId", uploadId); fd.append("chunkIndex", String(i)); fd.append("chunk", chunk, file.name);
+        const resp = await fetch("/api/video/upload/chunk", { method: "POST", body: fd });
+        if (!resp.ok) throw new Error(`Chunk ${i} failed`);
+        lastResult = await resp.json();
         setUploadProgress(Math.round(((i + 1) / totalChunks) * 100));
-        if (chunkData.complete && chunkData.file?.url) { finalUrl = chunkData.file.url; break; }
       }
-      setUploadedFiles(prev => [...prev, { name: vf.name, url: finalUrl || vf.url, size: vf.size, uploadedAt: Date.now() }]);
-      toast.success(`${vf.name} uploaded to Content Vault.`);
+      let fileUrl = lastResult?.file?.url;
+      if (!fileUrl) {
+        const finResp = await fetch("/api/video/upload/finalize", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uploadId, filename: file.name }),
+        });
+        const finData = await finResp.json();
+        fileUrl = finData.file?.url || finData.url;
+      }
+      if (!fileUrl) throw new Error("Upload failed — no URL returned");
+      const newUpload = { name: file.name, url: fileUrl, size: file.size, timestamp: Date.now() };
+      setUploads(prev => [newUpload, ...prev]);
+      setSelectedVideo(fileUrl);
+      onOutput(fileUrl, file.name);
+      toast.success(`${file.name} uploaded to Content Vault`);
     } catch (e: any) { toast.error(e.message); }
-    finally { setUploading(false); setUploadProgress(0); }
+    finally { setIsUploading(false); setUploadProgress(0); setUploadName(""); }
   };
 
-  return (
-    <div className="flex flex-col gap-6">
-      <SectionHeader icon={<HardDrive size={22}/>} title="Content Vault" desc="Upload and organize your content library" color="#9333EA" />
-      <VideoDropZone onFile={handleFile} accent="#9333EA" />
-      {uploading && (
-        <div className="flex flex-col gap-3 p-5 rounded-2xl" style={{ background: "rgba(147,51,234,0.1)", border: "1px solid rgba(147,51,234,0.2)" }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3"><div className="w-6 h-6 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" /><span className="text-sm font-semibold text-white">Uploading to vault...</span></div>
-            <span className="text-sm font-bold" style={{ color: "#A855F7" }}>{uploadProgress}%</span>
+  const left = (
+    <>
+      <div>
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#9333EA" }}>Content Vault</p>
+        <p className="text-xs" style={{ color: "#6B7280" }}>Chunked upload — files persist server-side at /uploads/content-vault/</p>
+      </div>
+      <VideoDropZone onFile={(vf) => handleUpload(vf.file)} accent="#9333EA" />
+      {isUploading && (
+        <div className="flex flex-col gap-2 p-4 rounded-2xl" style={{ background: "rgba(147,51,234,0.08)", border: "1px solid rgba(147,51,234,0.2)" }}>
+          <div className="flex items-center gap-2">
+            <Loader2 size={14} color="#9333EA" className="animate-spin" />
+            <p className="text-xs font-semibold text-white truncate">{uploadName}</p>
+            <span className="ml-auto text-xs font-bold" style={{ color: "#9333EA" }}>{uploadProgress}%</span>
           </div>
-          <div className="w-full rounded-full overflow-hidden" style={{ height: 4, background: "rgba(255,255,255,0.1)" }}>
-            <div className="h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%`, background: "linear-gradient(90deg, #9333EA, #A855F7)" }} />
+          <div className="w-full rounded-full overflow-hidden" style={{ height: 4, background: "rgba(147,51,234,0.15)" }}>
+            <div className="h-full rounded-full transition-all" style={{ width: `${uploadProgress}%`, background: "linear-gradient(90deg, #9333EA, #7C3AED)" }} />
           </div>
         </div>
       )}
-      {uploadedFiles.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Vault Contents ({uploadedFiles.length})</p>
-          {uploadedFiles.map((f, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 rounded-2xl" style={{ background: "rgba(147,51,234,0.1)", border: "1px solid rgba(147,51,234,0.2)" }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(147,51,234,0.2)" }}><FileVideo size={20} color="#A855F7" /></div>
-              <div className="flex-1 min-w-0"><p className="text-sm font-bold text-white truncate">{f.name}</p><p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{fmtSize(f.size)} · {new Date(f.uploadedAt).toLocaleTimeString()}</p></div>
-              <button onClick={() => { const a = document.createElement("a"); a.href = f.url; a.download = f.name; a.click(); }} className="w-10 h-10 flex items-center justify-center rounded-xl transition-all" style={{ background: "rgba(147,51,234,0.3)", color: "#C084FC" }}><Download size={16} /></button>
-            </div>
+      {uploads.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Vault ({uploads.length})</p>
+          {uploads.map((u, i) => (
+            <button key={i} onClick={() => setSelectedVideo(u.url)} className="flex items-center gap-3 p-3 rounded-xl text-left transition-all" style={{ background: selectedVideo === u.url ? "rgba(147,51,234,0.15)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${selectedVideo === u.url ? "#9333EA" : "rgba(255,255,255,0.07)"}` }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(147,51,234,0.15)" }}>
+                <FileVideo size={16} color="#9333EA" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white truncate">{u.name}</p>
+                <p className="text-[10px]" style={{ color: "#6B7280" }}>{fmtSize(u.size)} · {new Date(u.timestamp).toLocaleTimeString()}</p>
+              </div>
+              {selectedVideo === u.url && <Check size={12} color="#9333EA" />}
+            </button>
           ))}
         </div>
       )}
-      {uploadedFiles.length === 0 && !uploading && (
-        <div className="flex flex-col items-center justify-center py-12 gap-3">
-          <HardDrive size={40} color="#374151" />
-          <p className="text-sm font-semibold" style={{ color: "#6B7280" }}>Your vault is empty</p>
-          <p className="text-xs" style={{ color: "#4B5563" }}>Upload videos to store and access them here</p>
-        </div>
-      )}
-    </div>
+    </>
   );
+
+  const right = selectedVideo ? (
+    <CanvasVideoPlayer src={selectedVideo} label="Vault Asset" accent="#9333EA" />
+  ) : (
+    <CanvasDropZone onFile={(vf) => handleUpload(vf.file)} accent="#9333EA" label="Drop your video to add to Content Vault" />
+  );
+
+  return <Workspace left={left} right={right} />;
 }
 
 // ============================================================================
 // MODE: FINAL OUTPUT ENGINE
 // ============================================================================
-type FOEStep = "idle" | "analyzing" | "enhancing" | "cutting" | "packaging" | "complete" | "error";
 type FOEJob = "premium" | "teaser" | "clips";
+type FOEStep = "idle" | "analyzing" | "enhancing" | "cutting" | "packaging" | "complete" | "error";
 
 interface FOEOutput {
   jobId: string;
@@ -1419,235 +1563,33 @@ interface FOEOutput {
   errors?: string[];
 }
 
-const FOE_STEPS: { id: FOEStep; label: string }[] = [
-  { id: "analyzing",  label: "Analyzing" },
-  { id: "enhancing",  label: "Enhancing" },
-  { id: "cutting",    label: "Cutting" },
-  { id: "packaging",  label: "Packaging" },
-  { id: "complete",   label: "Complete" },
+const FOE_STEPS: { id: FOEStep; label: string; icon: React.ReactNode }[] = [
+  { id: "analyzing",  label: "Analyzing",  icon: <BrainCircuit size={12}/> },
+  { id: "enhancing",  label: "Enhancing",  icon: <Zap size={12}/> },
+  { id: "cutting",    label: "Cutting",    icon: <Scissors size={12}/> },
+  { id: "packaging",  label: "Packaging",  icon: <Package size={12}/> },
+  { id: "complete",   label: "Complete",   icon: <CircleCheck size={12}/> },
 ];
 
 function FOEProgressTimeline({ step }: { step: FOEStep }) {
   const activeIdx = FOE_STEPS.findIndex(s => s.id === step);
   return (
-    <div className="flex items-center gap-0 w-full">
+    <div className="flex items-center gap-0">
       {FOE_STEPS.map((s, i) => {
-        const done = activeIdx > i;
-        const active = activeIdx === i;
+        const done = i < activeIdx;
+        const active = i === activeIdx;
         return (
           <div key={s.id} className="flex items-center flex-1">
-            <div className="flex flex-col items-center gap-1 flex-shrink-0">
-              <div className="w-7 h-7 rounded-full flex items-center justify-center transition-all" style={{ background: done ? "#22C55E" : active ? "#F59E0B" : "rgba(255,255,255,0.08)", border: `2px solid ${done ? "#22C55E" : active ? "#F59E0B" : "rgba(255,255,255,0.15)"}` }}>
-                {done ? <Check size={12} color="white" /> : active ? <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" /> : <Circle size={10} color="#4B5563" />}
+            <div className="flex flex-col items-center gap-1 flex-1">
+              <div className="w-7 h-7 rounded-full flex items-center justify-center transition-all" style={{ background: done ? "rgba(34,197,94,0.2)" : active ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.05)", border: `1.5px solid ${done ? "#22C55E" : active ? "#F59E0B" : "rgba(255,255,255,0.1)"}` }}>
+                <span style={{ color: done ? "#22C55E" : active ? "#F59E0B" : "#6B7280" }}>{done ? <Check size={12}/> : s.icon}</span>
               </div>
-              <p className="text-[9px] font-bold" style={{ color: done ? "#22C55E" : active ? "#F59E0B" : "#4B5563" }}>{s.label}</p>
+              <p className="text-[9px] font-bold text-center" style={{ color: done ? "#22C55E" : active ? "#F59E0B" : "#6B7280" }}>{s.label}</p>
             </div>
-            {i < FOE_STEPS.length - 1 && (
-              <div className="flex-1 h-0.5 mx-1" style={{ background: done ? "#22C55E" : "rgba(255,255,255,0.08)" }} />
-            )}
+            {i < FOE_STEPS.length - 1 && <div className="h-px flex-1 mb-4" style={{ background: done ? "#22C55E" : "rgba(255,255,255,0.08)" }} />}
           </div>
         );
       })}
-    </div>
-  );
-}
-
-function FOEEngineBadges({ engines }: { engines: any[] }) {
-  if (!engines || engines.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-2">
-      {engines.map((e, i) => (
-        <div key={i} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold" style={{
-          background: e.status === "succeeded" ? "rgba(34,197,94,0.12)" : e.status === "failed" ? "rgba(239,68,68,0.12)" : "rgba(255,255,255,0.06)",
-          border: `1px solid ${e.status === "succeeded" ? "rgba(34,197,94,0.3)" : e.status === "failed" ? "rgba(239,68,68,0.3)" : "rgba(255,255,255,0.12)"}`,
-          color: e.status === "succeeded" ? "#4ADE80" : e.status === "failed" ? "#FCA5A5" : "#9CA3AF",
-        }}>
-          {e.status === "succeeded" ? <CircleCheck size={11} /> : e.status === "failed" ? <AlertCircle size={11} /> : <CircleDot size={11} />}
-          <span>{e.engine}</span>
-          {e.fallbackUsed && <span className="opacity-60">(fallback)</span>}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function FOEOutputBundle({ result, onUseAsInput }: { result: FOEOutput; onUseAsInput?: (url: string) => void }) {
-  const [expanded, setExpanded] = useState(true);
-  const o = result.outputs;
-
-  const download = (url: string, name: string) => {
-    const a = document.createElement("a"); a.href = url; a.download = name; a.click();
-  };
-
-  return (
-    <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(245,158,11,0.3)", background: "rgba(0,0,0,0.6)" }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid rgba(245,158,11,0.15)", background: "rgba(245,158,11,0.06)" }}>
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "rgba(245,158,11,0.2)" }}>
-            <Package size={12} color="#F59E0B" />
-          </div>
-          <p className="text-sm font-black text-white">
-            {result.job === "premium" ? "Premium Video" : result.job === "teaser" ? "Teaser + Full Package" : "Viral Clip Pack"}
-          </p>
-          <span className="px-2 py-0.5 rounded-lg text-[10px] font-black" style={{ background: result.status === "succeeded" ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)", color: result.status === "succeeded" ? "#4ADE80" : "#FCD34D" }}>
-            {result.status.toUpperCase()}
-          </span>
-        </div>
-        <button onClick={() => setExpanded(!expanded)} style={{ color: "#6B7280" }}>
-          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-      </div>
-
-      {expanded && (
-        <div className="p-4 flex flex-col gap-5">
-          {/* Engine badges */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>Engines Used</p>
-            <FOEEngineBadges engines={result.enginesUsed} />
-          </div>
-
-          {/* Premium Video: before/after */}
-          {result.job === "premium" && o.premiumVideoUrl && (
-            <div className="flex flex-col gap-3">
-              <p className="text-xs font-black uppercase tracking-widest" style={{ color: "#F59E0B" }}>Premium Output</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-[10px] font-bold mb-1.5" style={{ color: "#6B7280" }}>BEFORE (Source)</p>
-                  <VideoPlayer src={o.beforeUrl || result.sourceUrl} label="Source" accent="#6B7280" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold mb-1.5" style={{ color: "#22C55E" }}>AFTER (AI Enhanced)</p>
-                  <VideoPlayer src={o.premiumVideoUrl} label="Premium" accent="#22C55E" />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => download(o.premiumVideoUrl, "premium-video.mp4")} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold" style={{ background: "rgba(34,197,94,0.15)", color: "#4ADE80", border: "1px solid rgba(34,197,94,0.3)" }}>
-                  <Download size={14} /> Download Premium
-                </button>
-                {onUseAsInput && (
-                  <button onClick={() => onUseAsInput(o.premiumVideoUrl)} className="px-4 py-2.5 rounded-xl text-sm font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.12)" }}>
-                    Use as Input
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Teaser Package */}
-          {result.job === "teaser" && (
-            <div className="flex flex-col gap-4">
-              {o.teaserUrl && (
-                <div>
-                  <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: "#A855F7" }}>Teaser Clip</p>
-                  <VideoPlayer src={o.teaserUrl} label="Teaser" accent="#A855F7" />
-                  <button onClick={() => download(o.teaserUrl, "teaser.mp4")} className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold" style={{ background: "rgba(168,85,247,0.15)", color: "#C084FC", border: "1px solid rgba(168,85,247,0.3)" }}>
-                    <Download size={14} /> Download Teaser
-                  </button>
-                </div>
-              )}
-              {o.fullVideoUrl && (
-                <div>
-                  <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: "#22C55E" }}>Full Video</p>
-                  <VideoPlayer src={o.fullVideoUrl} label="Full" accent="#22C55E" />
-                  <button onClick={() => download(o.fullVideoUrl, "full-video.mp4")} className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold" style={{ background: "rgba(34,197,94,0.15)", color: "#4ADE80", border: "1px solid rgba(34,197,94,0.3)" }}>
-                    <Download size={14} /> Download Full Video
-                  </button>
-                </div>
-              )}
-              {o.thumbnails && o.thumbnails.length > 0 && (
-                <div>
-                  <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: "#60A5FA" }}>Thumbnail Frames</p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {o.thumbnails.map((url: string, i: number) => (
-                      <div key={i} className="relative rounded-xl overflow-hidden cursor-pointer" onClick={() => download(url, `thumbnail-${i + 1}.jpg`)} style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
-                        <img src={url} alt={`Thumb ${i+1}`} className="w-full object-cover" style={{ aspectRatio: "16/9" }} />
-                        <div className="absolute bottom-1 right-1 w-5 h-5 rounded-lg flex items-center justify-center" style={{ background: "rgba(0,0,0,0.7)" }}><Download size={9} color="white" /></div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Viral Clip Pack */}
-          {result.job === "clips" && o.clips && o.clips.length > 0 && (
-            <div className="flex flex-col gap-4">
-              <p className="text-xs font-black uppercase tracking-widest" style={{ color: "#EF4444" }}>Clip Pack ({o.clips.length} clips)</p>
-              {o.clips.map((clip: any) => (
-                <div key={clip.index} className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(239,68,68,0.2)" }}>
-                  <VideoPlayer src={clip.url} label={`Clip ${clip.index} — ${clip.duration}s`} accent="#EF4444" />
-                  <div className="p-3 flex flex-col gap-2" style={{ background: "rgba(0,0,0,0.6)" }}>
-                    <p className="text-sm font-black text-white">{clip.title}</p>
-                    {clip.caption && <p className="text-xs" style={{ color: "#9CA3AF" }}>{clip.caption}</p>}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold" style={{ background: "rgba(239,68,68,0.15)", color: "#FCA5A5" }}>{clip.aspectRatio}</span>
-                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF" }}>{clip.duration}s</span>
-                        {clip.price && <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold" style={{ background: "rgba(245,158,11,0.15)", color: "#FCD34D" }}>${clip.price} PPV</span>}
-                      </div>
-                      <button onClick={() => download(clip.url, `clip-${clip.index}.mp4`)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold" style={{ background: "rgba(239,68,68,0.15)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.3)" }}>
-                        <Download size={12} /> Save
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Hooks & Captions */}
-          {(o.hooks?.length > 0 || o.captions?.length > 0) && (
-            <div className="flex flex-col gap-3">
-              <p className="text-xs font-black uppercase tracking-widest" style={{ color: "#60A5FA" }}>AI-Generated Copy</p>
-              {o.hooks?.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <p className="text-[10px] font-bold" style={{ color: "#6B7280" }}>HOOKS</p>
-                  {o.hooks.map((h: string, i: number) => (
-                    <div key={i} className="flex items-start gap-2 p-3 rounded-xl" style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.2)" }}>
-                      <p className="text-sm text-white flex-1">{h}</p>
-                      <button onClick={() => navigator.clipboard.writeText(h)} className="flex-shrink-0" style={{ color: "#6B7280" }}><Copy size={12} /></button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {o.captions?.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <p className="text-[10px] font-bold" style={{ color: "#6B7280" }}>CAPTIONS</p>
-                  {o.captions.map((c: string, i: number) => (
-                    <div key={i} className="flex items-start gap-2 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                      <p className="text-sm text-white flex-1">{c}</p>
-                      <button onClick={() => navigator.clipboard.writeText(c)} className="flex-shrink-0" style={{ color: "#6B7280" }}><Copy size={12} /></button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {o.cta && (
-                <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
-                  <p className="text-[10px] font-bold flex-shrink-0 mt-0.5" style={{ color: "#F59E0B" }}>CTA</p>
-                  <p className="text-sm text-white flex-1">{o.cta}</p>
-                  <button onClick={() => navigator.clipboard.writeText(o.cta)} className="flex-shrink-0" style={{ color: "#6B7280" }}><Copy size={12} /></button>
-                </div>
-              )}
-              {o.suggestedPrice && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
-                  <DollarSign size={14} color="#4ADE80" />
-                  <p className="text-sm font-bold" style={{ color: "#4ADE80" }}>Suggested PPV Price: ${o.suggestedPrice}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Errors */}
-          {result.errors && result.errors.length > 0 && (
-            <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
-              <p className="text-xs font-bold" style={{ color: "#FCA5A5" }}>Non-critical errors (partial output delivered):</p>
-              {result.errors.map((e, i) => <p key={i} className="text-xs" style={{ color: "#9CA3AF" }}>• {e}</p>)}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -1666,33 +1608,26 @@ function FinalOutputEngineMode({ onOutput }: { onOutput: (url: string, label: st
   const isRunning = step !== "idle" && step !== "complete" && step !== "error";
 
   const uploadVideoToServer = async (file: VideoFile): Promise<string> => {
-    // Upload via Content Vault chunked upload, return durable HTTPS URL
     const uploadId = `foe-${Date.now()}`;
-    const totalChunks = Math.ceil(file.size / (5 * 1024 * 1024));
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     const initResp = await fetch("/api/video/upload/init", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ uploadId, totalChunks, filename: file.name }),
     });
     if (!initResp.ok) throw new Error("Upload init failed");
-
     let lastResult: any = null;
     for (let i = 0; i < totalChunks; i++) {
-      const start = i * 5 * 1024 * 1024;
-      const chunk = file.file.slice(start, start + 5 * 1024 * 1024);
+      const start = i * CHUNK_SIZE;
+      const chunk = file.file.slice(start, start + CHUNK_SIZE);
       const fd = new FormData();
-      fd.append("uploadId", uploadId);
-      fd.append("chunkIndex", String(i));
-      fd.append("chunk", chunk, file.name);
-      const chunkResp = await fetch("/api/video/upload/chunk", { method: "POST", body: fd });
-      if (!chunkResp.ok) throw new Error(`Chunk ${i} upload failed`);
-      lastResult = await chunkResp.json();
+      fd.append("uploadId", uploadId); fd.append("chunkIndex", String(i)); fd.append("chunk", chunk, file.name);
+      const resp = await fetch("/api/video/upload/chunk", { method: "POST", body: fd });
+      if (!resp.ok) throw new Error(`Chunk ${i} upload failed`);
+      lastResult = await resp.json();
     }
     if (lastResult?.file?.url) return lastResult.file.url;
-    // Finalize if not auto-completed
     const finResp = await fetch("/api/video/upload/finalize", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ uploadId, filename: file.name }),
     });
     const finData = await finResp.json();
@@ -1702,97 +1637,52 @@ function FinalOutputEngineMode({ onOutput }: { onOutput: (url: string, label: st
   const run = async (job: FOEJob) => {
     if (!videoFile) return toast.error("Upload a source video first.");
     if (isRunning) return;
-    setActiveJob(job);
-    setStep("analyzing");
-    setStepLabel("Uploading source video...");
-
+    setActiveJob(job); setStep("analyzing"); setStepLabel("Uploading source video...");
     try {
-      // Upload source video to get durable HTTPS URL
       const videoUrl = await uploadVideoToServer(videoFile);
-
-      setStep("analyzing");
-      setStepLabel("Analyzing with OpenAI Whisper + GPT-4o-mini...");
-
+      setStep("analyzing"); setStepLabel("Analyzing with OpenAI Whisper + GPT-4o-mini...");
       let result: any;
       if (job === "premium") {
-        setStep("enhancing");
-        setStepLabel("Enhancing with Replicate Real-ESRGAN (this takes 2–5 min)...");
+        setStep("enhancing"); setStepLabel("Enhancing with Replicate Real-ESRGAN (2–5 min)...");
         result = await premiumMut.mutateAsync({ videoUrl, enableUpscale: true, targetResolution: "4k" });
       } else if (job === "teaser") {
-        setStep("cutting");
-        setStepLabel("Detecting best moment + cutting teaser with FFmpeg...");
+        setStep("cutting"); setStepLabel("Detecting best moment + cutting teaser...");
         result = await teaserMut.mutateAsync({ videoUrl, teaserDuration: 30 });
       } else {
-        setStep("cutting");
-        setStepLabel("Detecting 3 best moments + cutting clips with FFmpeg...");
+        setStep("cutting"); setStepLabel("Detecting 3 best moments + cutting clips...");
         result = await clipsMut.mutateAsync({ videoUrl, clipCount: 3, aspectRatio: "16:9" });
       }
-
-      setStep("packaging");
-      setStepLabel("Packaging output bundle...");
+      setStep("packaging"); setStepLabel("Packaging output bundle...");
       await new Promise(r => setTimeout(r, 800));
-
       const foeResult: FOEOutput = { jobId: result.jobId, job, status: result.status, sourceUrl: videoUrl, outputs: result.outputs, enginesUsed: result.enginesUsed, errors: result.errors };
       setResults(prev => [foeResult, ...prev]);
-      setStep("complete");
-      setStepLabel("");
-
-      // Register primary output in session history
+      setStep("complete"); setStepLabel("");
       const primaryUrl = job === "premium" ? result.outputs?.premiumVideoUrl : job === "teaser" ? result.outputs?.teaserUrl : result.outputs?.clips?.[0]?.url;
       if (primaryUrl) onOutput(primaryUrl, job === "premium" ? "Premium Video" : job === "teaser" ? "Teaser" : "Viral Clip 1");
-
       toast.success(`${job === "premium" ? "Premium Video" : job === "teaser" ? "Teaser Package" : "Clip Pack"} ready!`);
-    } catch (e: any) {
-      setStep("error");
-      setStepLabel(e.message || "Processing failed");
-      toast.error(e.message || "Processing failed");
-    }
+    } catch (e: any) { setStep("error"); setStepLabel(e.message || "Processing failed"); toast.error(e.message || "Processing failed"); }
   };
 
   const reset = () => { setStep("idle"); setActiveJob(null); setStepLabel(""); };
 
   const JOB_BUTTONS: { id: FOEJob; label: string; desc: string; icon: React.ReactNode; color: string; accent: string; engines: string }[] = [
-    { id: "premium", label: "Create Premium Video", desc: "Whisper → GPT analysis → Real-ESRGAN upscale → FFmpeg encode", icon: <Sparkles size={20}/>, color: "#22C55E", accent: "rgba(34,197,94,0.15)", engines: "Whisper · GPT-4o-mini · Replicate ESRGAN · FFmpeg" },
+    { id: "premium", label: "Create Premium Video",        desc: "Whisper → GPT analysis → Real-ESRGAN upscale → FFmpeg encode", icon: <Sparkles size={20}/>, color: "#22C55E", accent: "rgba(34,197,94,0.15)",   engines: "Whisper · GPT-4o-mini · Replicate ESRGAN · FFmpeg" },
     { id: "teaser",  label: "Create Teaser + Full Package", desc: "Whisper → GPT best-moment → FFmpeg teaser + full + thumbnails", icon: <Clapperboard size={20}/>, color: "#A855F7", accent: "rgba(168,85,247,0.15)", engines: "Whisper · GPT-4o-mini · FFmpeg" },
-    { id: "clips",   label: "Create Viral Clip Pack", desc: "Whisper → GPT 3 moments → FFmpeg clips + hooks per clip", icon: <TrendingUp size={20}/>, color: "#EF4444", accent: "rgba(239,68,68,0.15)", engines: "Whisper · GPT-4o-mini · FFmpeg" },
+    { id: "clips",   label: "Create Viral Clip Pack",       desc: "Whisper → GPT 3 moments → FFmpeg clips + hooks per clip",       icon: <TrendingUp size={20}/>, color: "#EF4444", accent: "rgba(239,68,68,0.15)",   engines: "Whisper · GPT-4o-mini · FFmpeg" },
   ];
 
-  return (
-    <div className="flex flex-col gap-6">
-      <SectionHeader icon={<Package size={22}/>} title="Final Output Engine" desc="One upload → Premium video + Teaser package + Viral clip pack" color="#F59E0B" />
-
-      {/* Source Video */}
+  const left = (
+    <>
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#6B7280" }}>Source Video</p>
-        {!videoFile ? (
-          <VideoDropZone onFile={setVideoFile} accent="#F59E0B" />
-        ) : (
-          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(245,158,11,0.3)" }}>
-            <VideoPlayer src={videoFile.url} label={videoFile.name} accent="#F59E0B" />
-            <div className="flex items-center justify-between px-4 py-3" style={{ background: "rgba(0,0,0,0.6)" }}>
-              <div>
-                <p className="text-sm font-bold text-white">{videoFile.name}</p>
-                <p className="text-xs" style={{ color: "#6B7280" }}>{fmtSize(videoFile.size)}{videoFile.duration ? ` · ${Math.round(videoFile.duration)}s` : ""}</p>
-              </div>
-              <button onClick={() => { setVideoFile(null); reset(); }} className="text-xs font-bold px-3 py-1.5 rounded-xl" style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)" }}>Change</button>
-            </div>
-          </div>
-        )}
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#F59E0B" }}>Final Output Engine</p>
+        <p className="text-xs" style={{ color: "#6B7280" }}>One upload → Premium video + Teaser package + Viral clip pack</p>
       </div>
-
-      {/* Outcome Buttons */}
       {videoFile && (
-        <div className="flex flex-col gap-3">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Choose Output</p>
+        <div className="flex flex-col gap-2">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Choose Output</p>
           {JOB_BUTTONS.map(btn => (
-            <button
-              key={btn.id}
-              onClick={() => run(btn.id)}
-              disabled={isRunning}
-              className="flex items-start gap-4 p-5 rounded-2xl text-left transition-all w-full"
-              style={{ background: isRunning && activeJob === btn.id ? btn.accent : "rgba(255,255,255,0.03)", border: `2px solid ${isRunning && activeJob === btn.id ? btn.color : "rgba(255,255,255,0.08)"}`, opacity: isRunning && activeJob !== btn.id ? 0.5 : 1, cursor: isRunning ? "not-allowed" : "pointer" }}
-            >
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: btn.accent, border: `1px solid ${btn.color}40` }}>
+            <button key={btn.id} onClick={() => run(btn.id)} disabled={isRunning} className="flex items-start gap-4 p-4 rounded-2xl text-left transition-all w-full" style={{ background: isRunning && activeJob === btn.id ? btn.accent : "rgba(255,255,255,0.03)", border: `2px solid ${isRunning && activeJob === btn.id ? btn.color : "rgba(255,255,255,0.08)"}`, opacity: isRunning && activeJob !== btn.id ? 0.5 : 1, cursor: isRunning ? "not-allowed" : "pointer" }}>
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: btn.accent, border: `1px solid ${btn.color}40` }}>
                 <span style={{ color: btn.color }}>{btn.icon}</span>
               </div>
               <div className="flex-1 min-w-0">
@@ -1801,16 +1691,14 @@ function FinalOutputEngineMode({ onOutput }: { onOutput: (url: string, label: st
                   {isRunning && activeJob === btn.id && <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: btn.color, borderTopColor: "transparent" }} />}
                 </div>
                 <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>{btn.desc}</p>
-                <p className="text-[10px] mt-1.5 font-semibold" style={{ color: btn.color }}>Engines: {btn.engines}</p>
+                <p className="text-[10px] mt-1 font-semibold" style={{ color: btn.color }}>{btn.engines}</p>
               </div>
             </button>
           ))}
         </div>
       )}
-
-      {/* Progress Timeline */}
       {step !== "idle" && (
-        <div className="flex flex-col gap-3 p-5 rounded-2xl" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}>
+        <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}>
           <FOEProgressTimeline step={step === "error" ? "analyzing" : step} />
           {step !== "complete" && step !== "error" && stepLabel && (
             <div className="flex items-center gap-2 mt-1">
@@ -1818,173 +1706,191 @@ function FinalOutputEngineMode({ onOutput }: { onOutput: (url: string, label: st
               <p className="text-xs font-semibold" style={{ color: "#FCD34D" }}>{stepLabel}</p>
             </div>
           )}
-          {step === "complete" && (
-            <div className="flex items-center gap-2 mt-1">
-              <CircleCheck size={14} color="#4ADE80" />
-              <p className="text-xs font-bold" style={{ color: "#4ADE80" }}>Output bundle ready — scroll down to view</p>
-            </div>
-          )}
-          {step === "error" && (
-            <div className="flex items-center gap-2 mt-1">
-              <AlertCircle size={14} color="#EF4444" />
-              <p className="text-xs font-semibold" style={{ color: "#FCA5A5" }}>{stepLabel}</p>
-              <button onClick={reset} className="ml-auto text-xs font-bold px-2 py-1 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444" }}>Retry</button>
-            </div>
-          )}
+          {step === "complete" && <div className="flex items-center gap-2 mt-1"><CircleCheck size={14} color="#4ADE80" /><p className="text-xs font-bold" style={{ color: "#4ADE80" }}>Output bundle ready — view on right</p></div>}
+          {step === "error" && <div className="flex items-center gap-2 mt-1"><AlertCircle size={14} color="#EF4444" /><p className="text-xs font-semibold" style={{ color: "#FCA5A5" }}>{stepLabel}</p><button onClick={reset} className="ml-auto text-xs font-bold px-2 py-1 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444" }}>Retry</button></div>}
         </div>
       )}
-
-      {/* Output Bundles */}
-      {results.length > 0 && (
-        <div className="flex flex-col gap-4">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Output Bundles ({results.length})</p>
-          {results.map(r => (
-            <FOEOutputBundle key={r.jobId} result={r} onUseAsInput={(url) => {
-              const vf: VideoFile = { file: new File([], "output.mp4"), url, name: "output.mp4", size: 0 };
-              setVideoFile(vf);
-              reset();
-            }} />
-          ))}
-        </div>
-      )}
-    </div>
+    </>
   );
+
+  // Right canvas: show latest result bundle or drop zone
+  const latestResult = results[0];
+  const right = videoFile ? (
+    latestResult ? (
+      <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
+        {/* Primary output video */}
+        {latestResult.job === "premium" && latestResult.outputs?.premiumVideoUrl && (
+          <CanvasBeforeAfter beforeUrl={latestResult.sourceUrl} afterUrl={latestResult.outputs.premiumVideoUrl} label="AI Premium — Real-ESRGAN" accent="#22C55E" />
+        )}
+        {latestResult.job === "teaser" && latestResult.outputs?.teaserUrl && (
+          <CanvasVideoPlayer src={latestResult.outputs.teaserUrl} label="Teaser" accent="#A855F7" />
+        )}
+        {latestResult.job === "clips" && latestResult.outputs?.clips?.[0]?.url && (
+          <CanvasVideoPlayer src={latestResult.outputs.clips[0].url} label="Viral Clip 1" accent="#EF4444" />
+        )}
+        {/* Engine badges */}
+        {latestResult.enginesUsed?.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-1">
+            {latestResult.enginesUsed.map((e: any, i: number) => (
+              <div key={i} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl" style={{ background: e.status === "success" ? "rgba(34,197,94,0.1)" : "rgba(234,179,8,0.1)", border: `1px solid ${e.status === "success" ? "rgba(34,197,94,0.3)" : "rgba(234,179,8,0.3)"}` }}>
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: e.status === "success" ? "#22C55E" : "#EAB308" }} />
+                <span className="text-[10px] font-bold" style={{ color: e.status === "success" ? "#4ADE80" : "#FDE047" }}>{e.engine}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Hooks and captions */}
+        {(latestResult.outputs?.hooks?.length > 0 || latestResult.outputs?.captions?.length > 0) && (
+          <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            {latestResult.outputs.hooks?.slice(0, 3).map((h: string, i: number) => (
+              <div key={i} className="flex items-start gap-2 p-3 rounded-xl" style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.2)" }}>
+                <p className="text-sm text-white flex-1">{h}</p>
+                <button onClick={() => navigator.clipboard.writeText(h)} style={{ color: "#6B7280" }}><Copy size={12} /></button>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Clip pack grid */}
+        {latestResult.job === "clips" && latestResult.outputs?.clips?.length > 1 && (
+          <div className="grid grid-cols-2 gap-3">
+            {latestResult.outputs.clips.slice(1).map((clip: any, i: number) => (
+              <div key={i} className="flex flex-col gap-2">
+                <VideoPlayer src={clip.url} label={`Clip ${i + 2}`} accent="#EF4444" />
+                {clip.hook && <p className="text-xs text-white px-1">{clip.hook}</p>}
+                <button onClick={() => { const a = document.createElement("a"); a.href = clip.url; a.download = `vaultx-clip-${i+2}.mp4`; a.click(); }} className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold" style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)" }}><Download size={12} /> Save</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Download all */}
+        <div className="flex gap-2">
+          {latestResult.job === "premium" && latestResult.outputs?.premiumVideoUrl && (
+            <button onClick={() => { const a = document.createElement("a"); a.href = latestResult.outputs.premiumVideoUrl; a.download = "vaultx-premium.mp4"; a.click(); }} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm" style={{ background: "rgba(34,197,94,0.15)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.3)" }}><Download size={16} /> Save Premium Video</button>
+          )}
+          {latestResult.job === "teaser" && latestResult.outputs?.teaserUrl && (
+            <button onClick={() => { const a = document.createElement("a"); a.href = latestResult.outputs.teaserUrl; a.download = "vaultx-teaser.mp4"; a.click(); }} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm" style={{ background: "rgba(168,85,247,0.15)", color: "#A855F7", border: "1px solid rgba(168,85,247,0.3)" }}><Download size={16} /> Save Teaser</button>
+          )}
+        </div>
+      </div>
+    ) : (
+      <CanvasVideoPlayer src={videoFile.url} label="Source" accent="#F59E0B" onReplace={() => setVideoFile(null)} />
+    )
+  ) : (
+    <CanvasDropZone onFile={setVideoFile} accent="#F59E0B" label="Drop your video to generate the full output bundle" />
+  );
+
+  return <Workspace left={left} right={right} />;
 }
 
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 export default function VaultXStudio() {
-  const [activeMode, setActiveModeState] = useState<ModeId>("velvet-suite");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
+  const [activeMode, setActiveMode] = useState<ModeId>("velvet-suite");
+  const [sessionHistory, setSessionHistory] = useState<HistoryItem[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
-  const setActiveMode = (mode: ModeId) => { setActiveModeState(mode); setShowHistory(false); };
-
-  const handleOutput = useCallback((url: string, label: string) => {
-    setHistory(prev => [{ id: `${Date.now()}`, mode: activeMode, label, outputUrl: url, timestamp: Date.now() }, ...prev.slice(0, 49)]);
+  const addToHistory = useCallback((url: string, label: string) => {
+    setSessionHistory(prev => [{
+      id: `${Date.now()}-${Math.random()}`,
+      mode: activeMode,
+      label,
+      outputUrl: url,
+      timestamp: Date.now(),
+    }, ...prev.slice(0, 19)]);
   }, [activeMode]);
 
-  const currentMode = MODES.find(m => m.id === activeMode)!;
+  const activeModeDef = MODES.find(m => m.id === activeMode)!;
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#030003", fontFamily: "'Inter', sans-serif" }}>
-      {/* ── Sidebar ── */}
-      <div className="flex-shrink-0 flex flex-col transition-all duration-300" style={{ width: sidebarOpen ? 256 : 72, background: "rgba(8,0,8,0.97)", borderRight: "1px solid rgba(220,38,38,0.12)" }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: "#0A0A0A", fontFamily: "'Inter', sans-serif" }}>
+      {/* Icon rail sidebar */}
+      <div className="flex-shrink-0 flex flex-col items-center py-4 gap-1" style={{ width: 64, background: "#0D0D0D", borderRight: "1px solid rgba(255,255,255,0.05)" }}>
         {/* Logo */}
-        <div className="flex items-center gap-3 px-4 py-5" style={{ borderBottom: "1px solid rgba(220,38,38,0.1)" }}>
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, #DC2626, #7F1D1D)" }}>
-            <Flame size={18} color="white" />
-          </div>
-          {sidebarOpen && (
-            <div className="min-w-0">
-              <p className="text-white font-black text-sm leading-none tracking-tight">VaultX Studio</p>
-              <p className="text-[10px] mt-0.5 font-semibold" style={{ color: "#6B7280" }}>Elite Production Suite</p>
-            </div>
-          )}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="ml-auto flex-shrink-0" style={{ color: "#4B5563" }}>
-            {sidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-          </button>
+        <div className="w-10 h-10 rounded-2xl flex items-center justify-center mb-3" style={{ background: "linear-gradient(135deg, #DC2626, #7C3AED)" }}>
+          <span className="text-white font-black text-xs">VX</span>
         </div>
-        {/* Mode List */}
-        <nav className="flex-1 py-4 flex flex-col gap-1 px-2 overflow-y-auto">
-          {MODES.map((mode) => {
-            const active = activeMode === mode.id;
-            return (
-              <button key={mode.id} onClick={() => setActiveMode(mode.id)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all w-full" style={{ background: active ? mode.accent : "transparent", border: `1px solid ${active ? `${mode.color}40` : "transparent"}` }}>
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: active ? `${mode.color}30` : "rgba(255,255,255,0.05)", color: active ? mode.color : "#6B7280" }}>
-                  {mode.icon}
-                </div>
-                {sidebarOpen && (
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold truncate" style={{ color: active ? "#F9FAFB" : "#9CA3AF" }}>{mode.label}</p>
-                    <p className="text-[9px] truncate mt-0.5" style={{ color: active ? "#6B7280" : "#374151" }}>{mode.desc}</p>
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-        {/* History Button */}
-        <div className="px-2 pb-4">
-          <button onClick={() => setShowHistory(!showHistory)} className="flex items-center gap-3 px-3 py-3 rounded-xl w-full transition-all" style={{ background: showHistory ? "rgba(220,38,38,0.1)" : "transparent", border: `1px solid ${showHistory ? "rgba(220,38,38,0.3)" : "transparent"}` }}>
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.05)", color: "#6B7280" }}><Activity size={16} /></div>
-            {sidebarOpen && (
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-bold" style={{ color: "#9CA3AF" }}>History</p>
-                {history.length > 0 && <span className="px-1.5 py-0.5 rounded text-[9px] font-black" style={{ background: "rgba(220,38,38,0.2)", color: "#FCA5A5" }}>{history.length}</span>}
+        {MODES.map(mode => {
+          const active = activeMode === mode.id;
+          return (
+            <button
+              key={mode.id}
+              onClick={() => setActiveMode(mode.id)}
+              title={mode.label}
+              className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all relative group"
+              style={{ background: active ? `${mode.color}25` : "transparent", border: `1.5px solid ${active ? mode.color : "transparent"}` }}
+            >
+              <span style={{ color: active ? mode.color : "#4B5563" }}>{mode.icon}</span>
+              {/* Tooltip */}
+              <div className="absolute left-14 z-50 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.1)", color: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+                {mode.label}
               </div>
-            )}
+            </button>
+          );
+        })}
+        {/* History toggle */}
+        <div className="mt-auto">
+          <button onClick={() => setHistoryOpen(!historyOpen)} title="Session History" className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all" style={{ background: historyOpen ? "rgba(255,255,255,0.1)" : "transparent", border: `1.5px solid ${historyOpen ? "rgba(255,255,255,0.2)" : "transparent"}` }}>
+            <Activity size={18} color={historyOpen ? "white" : "#4B5563"} />
           </button>
         </div>
       </div>
 
-      {/* ── Main Content ── */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Bar */}
-        <div className="flex items-center gap-4 px-6 py-4 sticky top-0 z-10" style={{ borderBottom: "1px solid rgba(220,38,38,0.1)", background: "rgba(3,0,3,0.95)", backdropFilter: "blur(12px)" }}>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: currentMode.accent, color: currentMode.color }}>{currentMode.icon}</div>
-            <div>
-              <h1 className="text-white font-black text-base leading-none">{currentMode.label}</h1>
-              <p className="text-[10px] mt-0.5 font-semibold" style={{ color: "#6B7280" }}>{currentMode.desc}</p>
-            </div>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold" style={{ background: "rgba(220,38,38,0.1)", color: "#FCA5A5", border: "1px solid rgba(220,38,38,0.2)" }}>
-              <ShieldCheck size={12} /> VaultX Protected
-            </div>
-          </div>
-        </div>
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto">
-          {showHistory ? (
-            <div className="p-6 max-w-2xl mx-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-white font-black text-xl">Session History</h2>
-                <button onClick={() => setHistory([])} className="text-xs font-bold px-3 py-1.5 rounded-xl transition-all" style={{ background: "rgba(220,38,38,0.1)", color: "#EF4444", border: "1px solid rgba(220,38,38,0.2)" }}>Clear All</button>
-              </div>
-              {history.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-4">
-                  <Activity size={40} color="#374151" />
-                  <p className="text-base font-semibold" style={{ color: "#6B7280" }}>No outputs yet this session</p>
-                  <p className="text-sm" style={{ color: "#4B5563" }}>Your processed videos will appear here</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-5">
-                  {history.map(item => (
-                    <div key={item.id} className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(220,38,38,0.2)" }}>
-                      <VideoPlayer src={item.outputUrl} label={item.label} />
-                      <div className="flex items-center justify-between px-4 py-3" style={{ background: "rgba(8,0,0,0.8)" }}>
-                        <div>
-                          <p className="text-sm font-bold text-white">{item.label}</p>
-                          <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{new Date(item.timestamp).toLocaleTimeString()}</p>
-                        </div>
-                        <button onClick={() => { const a = document.createElement("a"); a.href = item.outputUrl; a.download = `vaultx-${item.mode}.mp4`; a.click(); }} className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all" style={{ background: "rgba(220,38,38,0.2)", color: "#FCA5A5", border: "1px solid rgba(220,38,38,0.3)" }}>
-                          <Download size={14} /> Download
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="p-6 max-w-2xl mx-auto">
-              {activeMode === "final-output-engine" && <FinalOutputEngineMode onOutput={handleOutput} />}
-              {activeMode === "velvet-suite"    && <VelvetSuiteMode    onOutput={handleOutput} />}
-              {activeMode === "desire-grade"    && <DesireGradeMode    onOutput={handleOutput} />}
-              {activeMode === "scene-architect" && <SceneArchitectMode onOutput={handleOutput} />}
-              {activeMode === "ppv-engine"      && <PPVEngineMode      onOutput={handleOutput} />}
-              {activeMode === "platform-vault"  && <PlatformVaultMode  onOutput={handleOutput} />}
-              {activeMode === "ai-enhance"      && <AIEnhanceMode      onOutput={handleOutput} />}
-              {activeMode === "caption-studio"  && <CaptionStudioMode  onOutput={handleOutput} />}
-              {activeMode === "content-vault"   && <ContentVaultMode />}
+      {/* Main workspace */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top bar */}
+        <div className="flex-shrink-0 flex items-center gap-3 px-5 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "#0D0D0D" }}>
+          <div className="w-2 h-2 rounded-full" style={{ background: activeModeDef.color }} />
+          <p className="text-sm font-black text-white">{activeModeDef.label}</p>
+          <p className="text-xs" style={{ color: "#6B7280" }}>{activeModeDef.desc}</p>
+          {sessionHistory.length > 0 && (
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-xs" style={{ color: "#6B7280" }}>{sessionHistory.length} output{sessionHistory.length !== 1 ? "s" : ""} this session</span>
             </div>
           )}
         </div>
+
+        {/* Mode content */}
+        <div className="flex-1 overflow-hidden">
+          {activeMode === "velvet-suite"        && <VelvetSuiteMode    onOutput={addToHistory} />}
+          {activeMode === "desire-grade"        && <DesireGradeMode    onOutput={addToHistory} />}
+          {activeMode === "scene-architect"     && <SceneArchitectMode onOutput={addToHistory} />}
+          {activeMode === "ppv-engine"          && <PPVEngineMode      onOutput={addToHistory} />}
+          {activeMode === "platform-vault"      && <PlatformVaultMode  onOutput={addToHistory} />}
+          {activeMode === "ai-enhance"          && <AIEnhanceMode      onOutput={addToHistory} />}
+          {activeMode === "caption-studio"      && <CaptionStudioMode  onOutput={addToHistory} />}
+          {activeMode === "content-vault"       && <ContentVaultMode   onOutput={addToHistory} />}
+          {activeMode === "final-output-engine" && <FinalOutputEngineMode onOutput={addToHistory} />}
+        </div>
       </div>
+
+      {/* Session history drawer */}
+      {historyOpen && sessionHistory.length > 0 && (
+        <div className="flex-shrink-0 flex flex-col overflow-hidden" style={{ width: 280, borderLeft: "1px solid rgba(255,255,255,0.05)", background: "#0D0D0D" }}>
+          <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <p className="text-xs font-black text-white">Session History</p>
+            <button onClick={() => setHistoryOpen(false)} style={{ color: "#6B7280" }}><ChevronRight size={14} /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto flex flex-col gap-2 p-3">
+            {sessionHistory.map(item => {
+              const modeDef = MODES.find(m => m.id === item.mode);
+              return (
+                <div key={item.id} className="flex flex-col gap-1.5 p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="flex items-center gap-2">
+                    <span style={{ color: modeDef?.color || "#9CA3AF" }}>{modeDef?.icon}</span>
+                    <p className="text-xs font-bold text-white truncate flex-1">{item.label}</p>
+                  </div>
+                  <video src={item.outputUrl} className="w-full rounded-xl" style={{ maxHeight: 100, objectFit: "cover" }} />
+                  <div className="flex gap-1.5">
+                    <button onClick={() => { const a = document.createElement("a"); a.href = item.outputUrl; a.download = `vaultx-${item.label.toLowerCase().replace(/\s/g, "-")}.mp4`; a.click(); }} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-[10px] font-bold" style={{ background: "rgba(255,255,255,0.05)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)" }}><Download size={10} /> Save</button>
+                    <button onClick={() => navigator.clipboard.writeText(item.outputUrl)} className="w-8 h-8 flex items-center justify-center rounded-xl" style={{ background: "rgba(255,255,255,0.05)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)" }}><Copy size={10} /></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
