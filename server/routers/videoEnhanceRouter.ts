@@ -249,6 +249,89 @@ export const videoEnhanceRouter = router({
       };
     }),
 
+  // ─── Scene Architect AI — GPT-4o-mini scene analysis ─────────────────────────
+  /**
+   * AI scene analysis for Scene Architect.
+   * Provider: OpenAI GPT-4o-mini
+   * Input: Whisper transcript segments from the video
+   * Output: Detected scene list with timestamps, labels, and recommended cuts
+   * FFmpeg is used ONLY to execute the cuts after the user selects them.
+   */
+  analyzeScene: protectedProcedure
+    .input(z.object({
+      transcript: z.string(),
+      segments: z.array(z.object({ start: z.number(), end: z.number(), text: z.string() })).optional(),
+      videoDuration: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured — AI scene analysis unavailable");
+      const segmentContext = input.segments && input.segments.length > 0
+        ? `\n\nTimestamped segments:\n${input.segments.map(s => `[${s.start}s–${s.end}s]: ${s.text}`).join("\n")}`
+        : "";
+      const prompt = `You are a professional video editor analyzing a video transcript for scene detection.\n\nTranscript:${segmentContext}\n\nFull text: ${input.transcript}\n${input.videoDuration ? `Video duration: ${input.videoDuration}s` : ""}\n\nDetect distinct scenes or segments. For each scene provide:\n1. A short descriptive label (3-5 words)\n2. Recommended start time (seconds)\n3. Recommended end time (seconds)\n4. Scene type (intro/action/dialogue/outro/highlight/transition)\n5. Energy level (low/medium/high)\n\nRespond ONLY with valid JSON array:\n[{"label":"...","start":0,"end":15,"type":"intro","energy":"medium","reason":"..."}]`;
+      const c = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 800,
+        response_format: { type: "json_object" },
+      });
+      let scenes: any[] = [];
+      try {
+        const raw = JSON.parse(c.choices[0].message.content || "{}");
+        scenes = Array.isArray(raw) ? raw : (raw.scenes || raw.segments || []);
+      } catch { scenes = []; }
+      return {
+        scenes,
+        provider: "OpenAI",
+        model: "gpt-4o-mini",
+        sceneCount: scenes.length,
+        message: scenes.length > 0 ? `AI detected ${scenes.length} scenes — select timestamps to cut with FFmpeg` : "No distinct scenes detected — try with a longer transcript",
+      };
+    }),
+
+  // ─── PPV Engine AI — GPT-4o-mini best-moment detection ───────────────────────
+  /**
+   * AI PPV intelligence for PPV Engine.
+   * Provider: OpenAI GPT-4o-mini
+   * Input: Whisper transcript + optional metadata
+   * Output: Best-moment timestamps, title hooks, pricing suggestions
+   * FFmpeg is used ONLY to clip the selected moments after AI analysis.
+   */
+  analyzePPVMoments: protectedProcedure
+    .input(z.object({
+      transcript: z.string(),
+      segments: z.array(z.object({ start: z.number(), end: z.number(), text: z.string() })).optional(),
+      videoDuration: z.number().optional(),
+      contentType: z.enum(["adult", "fitness", "gaming", "lifestyle", "other"]).default("adult"),
+    }))
+    .mutation(async ({ input }) => {
+      if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured — AI PPV analysis unavailable");
+      const segmentContext = input.segments && input.segments.length > 0
+        ? `\n\nTimestamped segments:\n${input.segments.map(s => `[${s.start}s–${s.end}s]: ${s.text}`).join("\n")}`
+        : "";
+      const prompt = `You are a PPV content monetization expert analyzing a video for best clip moments.\n\nContent type: ${input.contentType}\nTranscript:${segmentContext}\nFull text: ${input.transcript}\n${input.videoDuration ? `Video duration: ${input.videoDuration}s` : ""}\n\nAnalyze and provide:\n1. Top 3 best moments for PPV clips (most engaging/valuable segments)\n2. For each moment: start time, end time, hook title, suggested PPV price (USD), reason\n3. Overall video title suggestion\n4. Overall pricing recommendation\n5. Platform recommendation (OnlyFans/Fansly/ManyVids)\n\nRespond ONLY with valid JSON:\n{"moments":[{"start":0,"end":30,"title":"...","hook":"...","price":9.99,"reason":"..."}],"videoTitle":"...","suggestedPrice":14.99,"platform":"OnlyFans","strategy":"..."}`;
+      const c = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 800,
+        response_format: { type: "json_object" },
+      });
+      let result: any = {};
+      try { result = JSON.parse(c.choices[0].message.content || "{}"); } catch { result = {}; }
+      return {
+        moments: result.moments || [],
+        videoTitle: result.videoTitle || "Untitled",
+        suggestedPrice: result.suggestedPrice || 9.99,
+        platform: result.platform || "OnlyFans",
+        strategy: result.strategy || "",
+        provider: "OpenAI",
+        model: "gpt-4o-mini",
+        message: result.moments?.length > 0
+          ? `AI detected ${result.moments.length} best moments — select clips to export with FFmpeg`
+          : "No distinct moments detected — try with a longer transcript",
+      };
+    }),
+
   // ─── Enhancement Plan — OpenAI GPT-4o-mini ──────────────────────────────────
   generateEnhancementPlan: protectedProcedure
     .input(z.object({ videoDescription: z.string(), targetQuality: z.string() }))

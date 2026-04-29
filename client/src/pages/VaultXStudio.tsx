@@ -28,6 +28,8 @@
  *   trpc.videoEnhance.transcribeVideo    { videoUrl } → OpenAI Whisper-1
  *   trpc.videoEnhance.getJob             { predictionId } → Replicate polling
  *   trpc.videoEnhance.getAIEngineStatus  {} → engine availability map
+ *   trpc.videoEnhance.analyzeScene        { transcript, segments, videoDuration } → GPT-4o-mini scene detection
+ *   trpc.videoEnhance.analyzePPVMoments   { transcript, segments, videoDuration, contentType } → GPT-4o-mini PPV intelligence
  * ============================================================================
  */
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -444,6 +446,40 @@ function SceneArchitectMode({ onOutput }: { onOutput: (url: string, label: strin
   const [sharpenIntensity, setSharpenIntensity] = useState(50);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [aiScenes, setAiScenes] = useState<any[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [sceneTranscript, setSceneTranscript] = useState("");
+  const [sceneSegments, setSceneSegments] = useState<any[]>([]);
+
+  const transcribeForScene = trpc.videoEnhance.transcribeVideo.useMutation({
+    onSuccess: (data: any) => {
+      setSceneTranscript(data.text || "");
+      setSceneSegments(data.segments || []);
+      analyzeSceneMut.mutate({ transcript: data.text || "", segments: data.segments || [], videoDuration: videoFile?.duration });
+    },
+    onError: (e: any) => { setIsAnalyzing(false); toast.error(`Transcription failed: ${e.message}`); },
+  });
+
+  const analyzeSceneMut = trpc.videoEnhance.analyzeScene.useMutation({
+    onSuccess: (data: any) => {
+      setIsAnalyzing(false);
+      setAiScenes(data.scenes || []);
+      if (data.scenes?.length > 0) toast.success(data.message);
+      else toast.info("No distinct scenes detected — try with a longer video");
+    },
+    onError: (e: any) => { setIsAnalyzing(false); toast.error(`Scene analysis failed: ${e.message}`); },
+  });
+
+  const runAISceneAnalysis = async () => {
+    if (!videoFile) return toast.error("Upload a video first.");
+    setIsAnalyzing(true); setAiScenes([]);
+    try {
+      const fd = new FormData();
+      fd.append("video", videoFile.file); fd.append("start", "0"); fd.append("end", "60");
+      const trimResult = await callVideoStudio("trim", fd);
+      transcribeForScene.mutate({ videoUrl: trimResult.url });
+    } catch (e: any) { setIsAnalyzing(false); toast.error(e.message); }
+  };
 
   const COLOR_LOOKS = [
     { id: "none", label: "Original" }, { id: "cinematic", label: "Cinematic" },
@@ -483,6 +519,39 @@ function SceneArchitectMode({ onOutput }: { onOutput: (url: string, label: strin
   return (
     <div className="flex flex-col gap-6">
       <SectionHeader icon={<Scissors size={22}/>} title="Scene Architect" desc="Trim, cut, color grade, audio, speed — full editor" color="#EAB308" />
+      {/* AI Scene Analysis — GPT-4o-mini detects scenes, FFmpeg cuts them */}
+      <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "rgba(234,179,8,0.06)", border: "1px solid rgba(234,179,8,0.2)" }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BrainCircuit size={16} color="#EAB308" />
+            <span className="text-sm font-bold text-white">AI Scene Detection</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(234,179,8,0.2)", color: "#EAB308" }}>GPT-4o-mini</span>
+          </div>
+          <button onClick={runAISceneAnalysis} disabled={!videoFile || isAnalyzing} className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all" style={{ background: !videoFile || isAnalyzing ? "rgba(234,179,8,0.15)" : "rgba(234,179,8,0.25)", color: "#EAB308", border: "1px solid rgba(234,179,8,0.3)", cursor: !videoFile || isAnalyzing ? "not-allowed" : "pointer" }}>
+            {isAnalyzing ? <><Loader2 size={12} className="animate-spin" /> Analyzing...</> : <><BrainCircuit size={12} /> Detect Scenes</>}
+          </button>
+        </div>
+        <p className="text-xs" style={{ color: "#9CA3AF" }}>AI transcribes audio → GPT-4o-mini detects scene boundaries → select timestamps → FFmpeg cuts. AI analysis only, FFmpeg executes.</p>
+        {aiScenes.length > 0 && (
+          <div className="flex flex-col gap-2 mt-1">
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Detected Scenes ({aiScenes.length})</p>
+            {aiScenes.map((scene: any, i: number) => (
+              <button key={i} onClick={() => { setTrimStart(scene.start); setTrimEnd(scene.end); setActiveOp("trim"); toast.success(`Scene loaded: ${scene.label} (${scene.start}s–${scene.end}s)`); }} className="flex items-start gap-3 p-3 rounded-xl text-left transition-all" style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.2)" }}>
+                <span className="text-xs font-black flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(234,179,8,0.2)", color: "#EAB308" }}>{i+1}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-white">{scene.label}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(234,179,8,0.15)", color: "#EAB308" }}>{scene.start}s–{scene.end}s</span>
+                    {scene.energy && <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: scene.energy === "high" ? "rgba(239,68,68,0.15)" : scene.energy === "medium" ? "rgba(234,179,8,0.15)" : "rgba(107,114,128,0.15)", color: scene.energy === "high" ? "#EF4444" : scene.energy === "medium" ? "#EAB308" : "#9CA3AF" }}>{scene.energy}</span>}
+                  </div>
+                  {scene.reason && <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{scene.reason}</p>}
+                </div>
+                <Scissors size={14} color="#EAB308" className="flex-shrink-0 mt-0.5" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
         {OPS.map(op => (
           <button key={op.id} onClick={() => setActiveOp(op.id)} className="flex items-center gap-2 flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold transition-all" style={{ background: activeOp === op.id ? "rgba(234,179,8,0.2)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeOp === op.id ? "#EAB308" : "rgba(255,255,255,0.08)"}`, color: activeOp === op.id ? "#EAB308" : "#9CA3AF" }}>
@@ -584,6 +653,36 @@ function PPVEngineMode({ onOutput }: { onOutput: (url: string, label: string) =>
   const [watermarkOpacity, setWatermarkOpacity] = useState(70);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [aiMoments, setAiMoments] = useState<any>(null);
+  const [isAnalyzingPPV, setIsAnalyzingPPV] = useState(false);
+
+  const transcribeForPPV = trpc.videoEnhance.transcribeVideo.useMutation({
+    onSuccess: (data: any) => {
+      analyzePPVMut.mutate({ transcript: data.text || "", segments: data.segments || [], videoDuration: videoFile?.duration, contentType: "adult" });
+    },
+    onError: (e: any) => { setIsAnalyzingPPV(false); toast.error(`Transcription failed: ${e.message}`); },
+  });
+
+  const analyzePPVMut = trpc.videoEnhance.analyzePPVMoments.useMutation({
+    onSuccess: (data: any) => {
+      setIsAnalyzingPPV(false);
+      setAiMoments(data);
+      if (data.moments?.length > 0) toast.success(data.message);
+      else toast.info("No distinct moments detected — try with a longer video");
+    },
+    onError: (e: any) => { setIsAnalyzingPPV(false); toast.error(`PPV analysis failed: ${e.message}`); },
+  });
+
+  const runAIPPVAnalysis = async () => {
+    if (!videoFile) return toast.error("Upload a video first.");
+    setIsAnalyzingPPV(true); setAiMoments(null);
+    try {
+      const fd = new FormData();
+      fd.append("video", videoFile.file); fd.append("start", "0"); fd.append("end", "60");
+      const trimResult = await callVideoStudio("trim", fd);
+      transcribeForPPV.mutate({ videoUrl: trimResult.url });
+    } catch (e: any) { setIsAnalyzingPPV(false); toast.error(e.message); }
+  };
 
   const processTeaser = async () => {
     if (!videoFile) return toast.error("Upload a video first.");
@@ -647,9 +746,54 @@ function PPVEngineMode({ onOutput }: { onOutput: (url: string, label: string) =>
   return (
     <div className="flex flex-col gap-6">
       <SectionHeader icon={<Lock size={22}/>} title="PPV Engine" desc="Teaser clipper, blur censor, and watermark branding" color="#A855F7" />
-      <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.2)" }}>
-        <DollarSign size={18} color="#A855F7" className="flex-shrink-0 mt-0.5" />
-        <p className="text-sm" style={{ color: "#C4B5FD" }}>Create professional PPV previews. Clip a teaser, blur the full content, or watermark with your handle to prevent unauthorized sharing before purchase.</p>
+      {/* AI PPV Intelligence — GPT-4o-mini best-moment detection */}
+      <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "rgba(168,85,247,0.06)", border: "1px solid rgba(168,85,247,0.2)" }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BrainCircuit size={16} color="#A855F7" />
+            <span className="text-sm font-bold text-white">AI PPV Intelligence</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(168,85,247,0.2)", color: "#A855F7" }}>GPT-4o-mini</span>
+          </div>
+          <button onClick={runAIPPVAnalysis} disabled={!videoFile || isAnalyzingPPV} className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all" style={{ background: !videoFile || isAnalyzingPPV ? "rgba(168,85,247,0.15)" : "rgba(168,85,247,0.25)", color: "#A855F7", border: "1px solid rgba(168,85,247,0.3)", cursor: !videoFile || isAnalyzingPPV ? "not-allowed" : "pointer" }}>
+            {isAnalyzingPPV ? <><Loader2 size={12} className="animate-spin" /> Analyzing...</> : <><DollarSign size={12} /> Analyze for PPV</>}
+          </button>
+        </div>
+        <p className="text-xs" style={{ color: "#9CA3AF" }}>AI transcribes audio → GPT-4o-mini detects best moments, suggests title hooks and pricing → FFmpeg clips selected segments. AI analysis only, FFmpeg exports.</p>
+        {aiMoments && (
+          <div className="flex flex-col gap-3 mt-1">
+            {aiMoments.videoTitle && (
+              <div className="p-3 rounded-xl" style={{ background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.2)" }}>
+                <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "#9CA3AF" }}>AI Title Suggestion</p>
+                <p className="text-sm font-bold text-white">{aiMoments.videoTitle}</p>
+                {aiMoments.strategy && <p className="text-xs mt-1" style={{ color: "#C4B5FD" }}>{aiMoments.strategy}</p>}
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: "rgba(168,85,247,0.2)", color: "#A855F7" }}>Suggested: ${aiMoments.suggestedPrice}</span>
+                  <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: "rgba(168,85,247,0.2)", color: "#A855F7" }}>{aiMoments.platform}</span>
+                </div>
+              </div>
+            )}
+            {aiMoments.moments?.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Best Moments ({aiMoments.moments.length})</p>
+                {aiMoments.moments.map((m: any, i: number) => (
+                  <button key={i} onClick={() => { setPreviewDuration(m.end - m.start); setActiveOp("teaser"); toast.success(`Moment loaded: ${m.title} — $${m.price} PPV`); }} className="flex items-start gap-3 p-3 rounded-xl text-left transition-all" style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)" }}>
+                    <span className="text-xs font-black flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(168,85,247,0.2)", color: "#A855F7" }}>{i+1}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-white">{m.title}</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(168,85,247,0.15)", color: "#A855F7" }}>{m.start}s–{m.end}s</span>
+                        <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(34,197,94,0.15)", color: "#22C55E" }}>${m.price}</span>
+                      </div>
+                      {m.hook && <p className="text-xs mt-0.5 italic" style={{ color: "#C4B5FD" }}>"{m.hook}"</p>}
+                      {m.reason && <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{m.reason}</p>}
+                    </div>
+                    <Scissors size={14} color="#A855F7" className="flex-shrink-0 mt-0.5" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div className="flex gap-2">
         {OPS.map(op => (
@@ -841,6 +985,34 @@ function PlatformVaultMode({ onOutput }: { onOutput: (url: string, label: string
 // ============================================================================
 // MODE: AI ENHANCE
 // ============================================================================
+function BeforeAfterComparison({ beforeUrl, afterUrl, label, accent = "#22C55E" }: { beforeUrl: string; afterUrl: string; label: string; accent?: string }) {
+  const [showAfter, setShowAfter] = useState(true);
+  const beforeRef = useRef<HTMLVideoElement>(null);
+  const afterRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const toggle = () => {
+    const vids = [beforeRef.current, afterRef.current].filter(Boolean) as HTMLVideoElement[];
+    if (playing) { vids.forEach(v => v.pause()); setPlaying(false); }
+    else { vids.forEach(v => v.play()); setPlaying(true); }
+  };
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${accent}30`, background: "rgba(0,0,0,0.6)" }}>
+      <div className="flex border-b" style={{ borderColor: `${accent}20` }}>
+        <button onClick={() => setShowAfter(false)} className="flex-1 py-2.5 text-xs font-bold transition-all" style={{ background: !showAfter ? `${accent}20` : "transparent", color: !showAfter ? accent : "#6B7280", borderRight: `1px solid ${accent}20` }}>BEFORE (Original)</button>
+        <button onClick={() => setShowAfter(true)} className="flex-1 py-2.5 text-xs font-bold transition-all" style={{ background: showAfter ? `${accent}20` : "transparent", color: showAfter ? accent : "#6B7280" }}>AFTER ({label})</button>
+      </div>
+      <div className="relative" style={{ background: "#000" }}>
+        <video ref={beforeRef} src={beforeUrl} className="w-full" style={{ maxHeight: 300, objectFit: "contain", display: showAfter ? "none" : "block" }} onEnded={() => setPlaying(false)} />
+        <video ref={afterRef} src={afterUrl} className="w-full" style={{ maxHeight: 300, objectFit: "contain", display: showAfter ? "block" : "none" }} onEnded={() => setPlaying(false)} />
+        <div className="absolute top-2 left-2 px-2 py-1 rounded-lg text-xs font-bold" style={{ background: "rgba(0,0,0,0.8)", color: showAfter ? accent : "#9CA3AF", border: `1px solid ${showAfter ? accent : "rgba(255,255,255,0.2)"}40` }}>{showAfter ? label : "Original"}</div>
+        <button onClick={toggle} className="absolute bottom-3 right-3 w-11 h-11 rounded-full flex items-center justify-center" style={{ background: `${accent}CC` }}>
+          {playing ? <Pause size={18} color="white" /> : <Play size={18} color="white" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
   const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
   const [activeOp, setActiveOp] = useState<"slowmo" | "upscale" | "denoise">("slowmo");
@@ -848,6 +1020,8 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
   const [predictionId, setPredictionId] = useState<string | null>(null);
   const [upscalePredictionId, setUpscalePredictionId] = useState<string | null>(null);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
+  const [beforeUrl, setBeforeUrl] = useState<string | null>(null);
+  const [outputLabel, setOutputLabel] = useState("AI Enhanced");
   const [isProcessing, setIsProcessing] = useState(false);
   const [denoiseIntensity, setDenoiseIntensity] = useState(60);
   const [upscaleResolution, setUpscaleResolution] = useState<"FHD" | "2k" | "4k">("4k");
@@ -875,8 +1049,9 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
   useEffect(() => {
     const d = jobQuery.data as any;
     if (d?.isComplete && d?.outputUrl) {
-      setOutputUrl(d.outputUrl);
-      onOutput(d.outputUrl, `Slow Motion ${selectedFps === "60" ? "2×" : selectedFps === "120" ? "4×" : "8×"} — Replicate RIFE`);
+      const lbl = `Slow Motion ${selectedFps === "60" ? "2×" : selectedFps === "120" ? "4×" : "8×"} — Replicate RIFE v4.6`;
+      setOutputUrl(d.outputUrl); setOutputLabel(lbl);
+      onOutput(d.outputUrl, lbl);
       setIsProcessing(false); setPredictionId(null);
       toast.success("AI slow motion complete — Replicate RIFE v4.6");
     }
@@ -886,8 +1061,9 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
   useEffect(() => {
     const d = upscaleJobQuery.data as any;
     if (d?.isComplete && d?.outputUrl) {
-      setOutputUrl(d.outputUrl);
-      onOutput(d.outputUrl, `AI Upscaled ${upscaleResolution} — Replicate Real-ESRGAN`);
+      const lbl = `AI Upscaled ${upscaleResolution} — Replicate Real-ESRGAN`;
+      setOutputUrl(d.outputUrl); setOutputLabel(lbl);
+      onOutput(d.outputUrl, lbl);
       setIsProcessing(false); setUpscalePredictionId(null);
       toast.success(`AI upscale complete — Replicate Real-ESRGAN — ${upscaleResolution}`);
     }
@@ -896,23 +1072,27 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
 
   const processSlowMo = async () => {
     if (!videoFile) return toast.error("Upload a video first.");
-    setIsProcessing(true); setOutputUrl(null);
+    setIsProcessing(true); setOutputUrl(null); setBeforeUrl(null);
     const fd = new FormData();
     fd.append("video", videoFile.file); fd.append("start", "0"); fd.append("end", "30");
     try {
       const trimResult = await callVideoStudio("trim", fd);
+      setBeforeUrl(trimResult.url); // store trimmed original as "before"
       slowMotionMut.mutate({ videoUrl: trimResult.url, targetFps: selectedFps });
     } catch (e: any) { toast.error(e.message); setIsProcessing(false); }
   };
 
   const processDenoise = async () => {
     if (!videoFile) return toast.error("Upload a video first.");
-    setIsProcessing(true); setOutputUrl(null);
+    setIsProcessing(true); setOutputUrl(null); setBeforeUrl(null);
     try {
       const fd = new FormData();
       fd.append("video", videoFile.file); fd.append("filter", "denoised"); fd.append("intensity", String(denoiseIntensity / 100));
-      const result = await callVideoStudio("filter", fd);
-      setOutputUrl(result.url); onOutput(result.url, "AI Denoised"); toast.success("Denoise complete.");
+      const beforeFd = new FormData();
+      beforeFd.append("video", videoFile.file); beforeFd.append("start", "0"); beforeFd.append("end", "60");
+      const [result, beforeResult] = await Promise.all([callVideoStudio("filter", fd), callVideoStudio("trim", beforeFd)]);
+      setBeforeUrl(beforeResult.url); setOutputUrl(result.url); setOutputLabel("Denoised (FFmpeg hqdn3d)");
+      onOutput(result.url, "Denoised (FFmpeg)"); toast.success("Denoise complete.");
     } catch (e: any) { toast.error(e.message); }
     finally { setIsProcessing(false); }
   };
@@ -973,12 +1153,13 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
             </div>
             <button onClick={async () => {
               if (!videoFile) return toast.error("Upload a video first.");
-              setIsProcessing(true); setOutputUrl(null);
+              setIsProcessing(true); setOutputUrl(null); setBeforeUrl(null);
               try {
                 // First trim to 30s max to keep within Replicate limits
                 const fd = new FormData();
                 fd.append("video", videoFile.file); fd.append("start", "0"); fd.append("end", "30");
                 const trimResult = await callVideoStudio("trim", fd);
+                setBeforeUrl(trimResult.url); // store trimmed original as "before"
                 upscaleMut.mutate({ videoUrl: trimResult.url, resolution: upscaleResolution });
               } catch (e: any) { toast.error(e.message); setIsProcessing(false); }
             }} disabled={!videoFile || isProcessing} className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all" style={{ background: !videoFile || isProcessing ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg, #22C55E, #15803D)", color: "white", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer" }}>
@@ -1003,7 +1184,16 @@ function AIEnhanceMode({ onOutput }: { onOutput: (url: string, label: string) =>
         )}
       </div>
       {isProcessing && <ProcessingBar label={activeOp === "slowmo" ? "AI slow motion — Replicate RIFE v4.6 (2–5 min)..." : activeOp === "upscale" ? "AI upscale — Replicate Real-ESRGAN (30–120s)..." : "Denoising (FFmpeg)..."} />}
-      {outputUrl && <OutputCard url={outputUrl} label="AI Enhanced" accent="#22C55E" onDownload={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-ai-${activeOp}.mp4`; a.click(); }} onUseAsInput={async () => { try { const vf = await fetchVideoAsFile(outputUrl, "ai-output.mp4"); setVideoFile(vf); setOutputUrl(null); toast.success("Output loaded"); } catch { toast.error("Failed to load output"); } }} />}
+      {outputUrl && beforeUrl && (
+        <div className="flex flex-col gap-3">
+          <BeforeAfterComparison beforeUrl={beforeUrl} afterUrl={outputUrl} label={outputLabel} accent="#22C55E" />
+          <div className="flex gap-2">
+            <button onClick={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-ai-${activeOp}.mp4`; a.click(); }} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold" style={{ background: "rgba(34,197,94,0.2)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.3)" }}><Download size={16} /> Save AI Output</button>
+            <button onClick={async () => { try { const vf = await fetchVideoAsFile(outputUrl, "ai-output.mp4"); setVideoFile(vf); setOutputUrl(null); setBeforeUrl(null); toast.success("Output loaded"); } catch { toast.error("Failed to load output"); } }} className="w-11 h-11 flex items-center justify-center rounded-xl" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF" }}><Layers2 size={16} /></button>
+          </div>
+        </div>
+      )}
+      {outputUrl && !beforeUrl && <OutputCard url={outputUrl} label={outputLabel} accent="#22C55E" onDownload={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-ai-${activeOp}.mp4`; a.click(); }} onUseAsInput={async () => { try { const vf = await fetchVideoAsFile(outputUrl, "ai-output.mp4"); setVideoFile(vf); setOutputUrl(null); toast.success("Output loaded"); } catch { toast.error("Failed to load output"); } }} />}
     </div>
   );
 }
