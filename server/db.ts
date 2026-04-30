@@ -404,3 +404,7 @@ export async function getBrandAffiliationsByUserId(userId: number) {
 
   return await db.select().from(brandAffiliations).where(eq(brandAffiliations.userId, userId));
 }
+
+// Re-export schema so routers can use: import * as db from "../db"; db.schema.tableName
+import * as schema from "../drizzle/schema";
+export { schema };
