@@ -279,6 +279,6 @@ export const smartCaptionsRouter = router({
       });
       return { analysis: c.choices[0].message.content };
     }),
-};
+});
 
 export { smartCaptionsRouter as smartCaptions };
