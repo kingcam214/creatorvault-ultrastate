@@ -66,7 +66,7 @@ videoUploadRouter.post("/chunk", upload.single("chunk"), async (req: Request, re
       const combined = Buffer.concat(chunks);
       const finalFilename = meta.filename || `upload-${uploadId}.mp4`;
       const uuid = randomUUID();
-      const uploadsDir = path.resolve(process.cwd(), "dist", "public", "uploads", "content-vault", uuid);
+      const uploadsDir = path.resolve(process.cwd(), "..", "uploads", "content-vault", uuid);
       await mkdir(uploadsDir, { recursive: true });
       await writeFile(path.join(uploadsDir, finalFilename), combined);
 
@@ -110,7 +110,7 @@ videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
     const combined = Buffer.concat(chunks);
     const finalFilename = filename || meta.filename || `upload-${uploadId}.mp4`;
     const uuid = randomUUID();
-    const uploadsDir = path.resolve(process.cwd(), "dist", "public", "uploads", "content-vault", uuid);
+    const uploadsDir = path.resolve(process.cwd(), "..", "uploads", "content-vault", uuid);
     await mkdir(uploadsDir, { recursive: true });
     await writeFile(path.join(uploadsDir, finalFilename), combined);
     const baseUrl = (process.env.APP_URL || "https://creatorvault.live").replace(/\/$/, "");

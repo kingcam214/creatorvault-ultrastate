@@ -1,5 +1,7 @@
 import "dotenv/config";
 import express from "express";
+import path from "path";
+import { existsSync, mkdirSync } from "fs";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -80,6 +82,17 @@ async function startServer() {
       createContext,
     })
   );
+  // Durable uploads directory — persists across frontend redeployments
+  const durableUploadsDir = path.resolve(process.cwd(), "..", "uploads");
+  if (!existsSync(durableUploadsDir)) {
+    mkdirSync(durableUploadsDir, { recursive: true });
+  }
+  app.use("/uploads", express.static(durableUploadsDir, {
+    maxAge: "7d",
+    etag: true,
+    lastModified: true,
+  }));
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
