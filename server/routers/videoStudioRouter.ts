@@ -344,6 +344,29 @@ router.post("/color-grade", upload.single("video"), async (req: Request, res: Re
       "noir":         `eq=brightness=${brightness - 0.08}:contrast=${contrast * 1.5}:saturation=${saturation * 0.2},vignette=PI/3${warmthFilter}`,
       "golden_hour":  `eq=brightness=${brightness + 0.04}:saturation=${saturation * 1.2},colorbalance=rs=0.12:gs=0.06:bs=-0.08${warmthFilter}`,
       "editorial":    `eq=brightness=${brightness}:contrast=${contrast * 1.15}:saturation=${saturation * 0.75},colorbalance=rs=-0.03:gs=0:bs=0.04${warmthFilter}`,
+      // DesireGrade — Beauty
+      "velvet_skin":    `smartblur=lr=1.5:ls=-0.3:cr=0:cs=0,eq=brightness=${brightness + 0.02}:contrast=${contrast * 1.02}:saturation=${saturation * 1.08},colorbalance=rs=0.04:gs=0.02:bs=-0.02${warmthFilter}`,
+      "silk_soft":      `smartblur=lr=2.5:ls=-0.2:cr=0:cs=0,eq=brightness=${brightness + 0.03}:saturation=${saturation * 1.05}${warmthFilter}`,
+      "golden_skin":    `eq=brightness=${brightness + 0.03}:contrast=${contrast}:saturation=${saturation * 1.12},colorbalance=rs=0.07:gs=0.04:bs=-0.04${warmthFilter}`,
+      // DesireGrade — Intimate
+      "boudoir_light":  `eq=brightness=${brightness + 0.05}:contrast=${contrast * 0.96}:saturation=${saturation * 1.05},colorbalance=rs=0.08:gs=0.04:bs=-0.03,vignette=PI/5${warmthFilter}`,
+      "candlelight":    `eq=brightness=${brightness + 0.04}:contrast=${contrast * 1.1}:saturation=${saturation * 1.15},colorbalance=rs=0.14:gs=0.06:bs=-0.10${warmthFilter}`,
+      "desire_haze":    `smartblur=lr=0.8:ls=-0.1:cr=0:cs=0,eq=brightness=${brightness + 0.02}:contrast=${contrast * 1.04}:saturation=${saturation * 1.1},colorbalance=rs=0.06:gs=0.02:bs=-0.03${warmthFilter}`,
+      "deep_sensual":   `eq=brightness=${brightness - 0.02}:contrast=${contrast * 1.18}:saturation=${saturation * 0.88},colorbalance=rs=0.05:gs=0:bs=-0.02,vignette=PI/4${warmthFilter}`,
+      // DesireGrade — Luxury
+      "midnight_luxury":`eq=brightness=${brightness - 0.03}:contrast=${contrast * 1.2}:saturation=${saturation * 0.92},colorbalance=rs=-0.04:gs=0:bs=0.06,vignette=PI/3${warmthFilter}`,
+      "rose_gold":      `eq=brightness=${brightness + 0.03}:contrast=${contrast * 1.05}:saturation=${saturation * 1.1},colorbalance=rs=0.08:gs=0.03:bs=-0.02${warmthFilter}`,
+      "champagne_glow": `eq=brightness=${brightness + 0.05}:contrast=${contrast * 1.02}:saturation=${saturation * 1.08},colorbalance=rs=0.10:gs=0.07:bs=-0.04,vignette=PI/6${warmthFilter}`,
+      "hotel_room":     `eq=brightness=${brightness + 0.02}:contrast=${contrast * 1.06}:saturation=${saturation * 1.04},colorbalance=rs=0.09:gs=0.05:bs=-0.06${warmthFilter}`,
+      // DesireGrade — Platform
+      "onlyfans_master":`eq=brightness=${brightness + 0.01}:contrast=${contrast * 1.05}:saturation=${saturation * 0.95},colorbalance=rs=0.05:gs=0.02:bs=-0.04,vignette=PI/6${warmthFilter}`,
+      "fansly_premium": `eq=brightness=${brightness + 0.02}:contrast=${contrast * 1.08}:saturation=${saturation * 0.98},colorbalance=rs=0.02:gs=0.01:bs=0.02${warmthFilter}`,
+      // DesireGrade — Cinematic
+      "noir_intimacy":  `eq=brightness=${brightness - 0.06}:contrast=${contrast * 1.6}:saturation=${saturation * 0.15},vignette=PI/3${warmthFilter}`,
+      "after_dark":     `eq=brightness=${brightness - 0.04}:contrast=${contrast * 1.3}:saturation=${saturation * 0.85},colorbalance=rs=-0.08:gs=-0.03:bs=0.12,vignette=PI/4${warmthFilter}`,
+      "neon_club":      `eq=brightness=${brightness + 0.03}:contrast=${contrast * 1.25}:saturation=${saturation * 1.4},colorbalance=rs=0.1:gs=-0.08:bs=0.15${warmthFilter}`,
+      "warm_cinematic": `eq=brightness=${brightness + 0.02}:contrast=${contrast * 1.08}:saturation=${saturation * 1.05},colorbalance=rs=0.08:gs=0.04:bs=-0.05${warmthFilter}`,
+      "teal_orange":    `eq=brightness=${brightness}:contrast=${contrast * 1.15}:saturation=${saturation * 1.1},colorbalance=rs=0.12:gs=0.02:bs=-0.08,colorbalance=sh=-0.05:gh=0.02:bh=0.08${warmthFilter}`,
     };
     const vfFilter = gradeMap[look];
     if (!vfFilter) {
