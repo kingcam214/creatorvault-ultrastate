@@ -83,6 +83,9 @@ router.post("/filter", upload.single("video"), async (req: Request, res: Respons
       "pixelate":    `scale=iw/${Math.max(4, Math.round(20 * intensity))}:-1,scale=iw*${Math.max(4, Math.round(20 * intensity))}:-1:flags=neighbor`,
       "mosaic":      `scale=iw/10:-1,scale=iw*10:-1:flags=neighbor`,
       "black_bar":   `drawbox=x=0:y=ih*0.35:w=iw:h=ih*0.3:color=black:t=fill`,
+      // Aliases for PPV Engine censor modes
+      "censor_pixelate": `scale=iw/${Math.max(4, Math.round(20 * intensity))}:-1,scale=iw*${Math.max(4, Math.round(20 * intensity))}:-1:flags=neighbor`,
+      "censor_blackbar": `drawbox=x=0:y=ih*0.35:w=iw:h=ih*0.3:color=black:t=fill`,
     };
     const vfFilter = filterMap[filter];
     if (!vfFilter) {
