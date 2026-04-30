@@ -498,6 +498,11 @@ function DesireGradeMode({ onOutput }: { onOutput: (url: string, label: string) 
   const [selectedGrade, setSelectedGrade] = useState("onlyfans_master");
   const [intensity, setIntensity] = useState(80);
   const [activeCategory, setActiveCategory] = useState<string>("Platform");
+  const [showManual, setShowManual] = useState(false);
+  const [manualBrightness, setManualBrightness] = useState(0);
+  const [manualContrast, setManualContrast] = useState(100);
+  const [manualSaturation, setManualSaturation] = useState(100);
+  const [manualWarmth, setManualWarmth] = useState(0);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -1251,6 +1256,9 @@ function ContentVaultMode({ onOutput }: { onOutput: (url: string, label: string)
   const [library, setLibrary] = useState<{ name: string; url: string; size: number }[]>([]);
   const [vaultLockType, setVaultLockType] = useState<"free" | "subscription" | "ppv">("subscription");
   const [vaultPrice, setVaultPrice] = useState(9.99);
+  const [vaultTitle, setVaultTitle] = useState("");
+  const [vaultDescription, setVaultDescription] = useState("");
+  const [vaultTags, setVaultTags] = useState("");
   const saveContentMut = trpc.vaultx.saveContent.useMutation();
 
   const upload = async () => {
@@ -1290,7 +1298,9 @@ function ContentVaultMode({ onOutput }: { onOutput: (url: string, label: string)
       // Save content record to database
       try {
         await saveContentMut.mutateAsync({
-          title: videoFile.name.replace(/\.[^.]+$/, ""),
+          title: vaultTitle.trim() || videoFile.name.replace(/\.[^.]+$/, ""),
+          description: vaultDescription.trim() || undefined,
+          tags: vaultTags.split(",").map(t => t.trim()).filter(Boolean),
           fileUrl: url,
           mimeType: videoFile.file?.type || "video/mp4",
           fileSizeBytes: videoFile.size,
@@ -1322,6 +1332,31 @@ function ContentVaultMode({ onOutput }: { onOutput: (url: string, label: string)
               <div className="w-full h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.1)" }}><div className="h-full rounded-full transition-all" style={{ width: `${uploadProgress}%`, background: "#9333EA" }} /></div>
             </div>
           )}
+          {/* Title / Description / Tags */}
+          <input
+            type="text"
+            placeholder="Title (optional — defaults to filename)"
+            value={vaultTitle}
+            onChange={e => setVaultTitle(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl text-sm text-white"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+          />
+          <textarea
+            placeholder="Description (optional)"
+            value={vaultDescription}
+            onChange={e => setVaultDescription(e.target.value)}
+            rows={2}
+            className="w-full px-3 py-2 rounded-xl text-sm text-white resize-none"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+          />
+          <input
+            type="text"
+            placeholder="Tags: lingerie, solo, premium (comma separated)"
+            value={vaultTags}
+            onChange={e => setVaultTags(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl text-sm text-white"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+          />
           {/* Lock Type Selector */}
           <div className="flex gap-2">
             {(["free", "subscription", "ppv"] as const).map((t) => (
