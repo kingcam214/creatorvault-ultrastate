@@ -1218,6 +1218,9 @@ function ContentVaultMode({ onOutput }: { onOutput: (url: string, label: string)
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const [library, setLibrary] = useState<{ name: string; url: string; size: number }[]>([]);
+  const [vaultLockType, setVaultLockType] = useState<"free" | "subscription" | "ppv">("subscription");
+  const [vaultPrice, setVaultPrice] = useState(9.99);
+  const saveContentMut = trpc.vaultx.saveContent.useMutation();
 
   const upload = async () => {
     if (!videoFile) return toast.error("Select a video first.");
@@ -1253,7 +1256,20 @@ function ContentVaultMode({ onOutput }: { onOutput: (url: string, label: string)
       setUploadedUrl(url);
       setLibrary(prev => [{ name: videoFile.name, url, size: videoFile.size }, ...prev]);
       onOutput(url, `Vault: ${videoFile.name}`);
-      toast.success("Uploaded to Content Vault.");
+      // Save content record to database
+      try {
+        await saveContentMut.mutateAsync({
+          title: videoFile.name.replace(/\.[^.]+$/, ""),
+          fileUrl: url,
+          mimeType: videoFile.file?.type || "video/mp4",
+          fileSizeBytes: videoFile.size,
+          unlockType: vaultLockType,
+          priceCents: vaultLockType === "ppv" ? Math.round(vaultPrice * 100) : 0,
+        });
+        toast.success("Uploaded and saved to Content Vault.");
+      } catch {
+        toast.success("Uploaded to Content Vault.");
+      }
     } catch (e: any) { toast.error(e.message); }
     finally { setUploading(false); }
   };
@@ -1273,6 +1289,37 @@ function ContentVaultMode({ onOutput }: { onOutput: (url: string, label: string)
             <div>
               <div className="flex justify-between mb-1"><span className="text-xs" style={{ color: "#9333EA" }}>Uploading...</span><span className="text-xs font-bold" style={{ color: "#9333EA" }}>{uploadProgress}%</span></div>
               <div className="w-full h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.1)" }}><div className="h-full rounded-full transition-all" style={{ width: `${uploadProgress}%`, background: "#9333EA" }} /></div>
+            </div>
+          )}
+          {/* Lock Type Selector */}
+          <div className="flex gap-2">
+            {(["free", "subscription", "ppv"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setVaultLockType(t)}
+                className="flex-1 py-2 rounded-xl text-xs font-bold capitalize transition-colors"
+                style={{
+                  background: vaultLockType === t ? "rgba(147,51,234,0.3)" : "rgba(255,255,255,0.04)",
+                  color: vaultLockType === t ? "#C084FC" : "#6B7280",
+                  border: `1px solid ${vaultLockType === t ? "rgba(147,51,234,0.5)" : "rgba(255,255,255,0.08)"}`,
+                }}
+              >
+                {t === "free" ? "Free" : t === "subscription" ? "Sub Only" : "PPV"}
+              </button>
+            ))}
+          </div>
+          {vaultLockType === "ppv" && (
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 text-xs font-semibold">Price $</span>
+              <input
+                type="number"
+                min={0.99}
+                max={999}
+                step={0.01}
+                value={vaultPrice}
+                onChange={(e) => setVaultPrice(Math.max(0.99, Number(e.target.value)))}
+                className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
+              />
             </div>
           )}
           <button onClick={upload} disabled={uploading} className="w-full py-3 rounded-xl font-black text-white text-sm flex items-center justify-center gap-2" style={{ background: uploading ? "rgba(147,51,234,0.3)" : "linear-gradient(135deg, #9333EA, #7C3AED)", cursor: uploading ? "not-allowed" : "pointer" }}>

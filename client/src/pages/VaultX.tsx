@@ -9,6 +9,10 @@
 import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/contexts/AuthContext";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -206,6 +210,240 @@ function CreatorCard({ creator, onClick }: { creator: any; onClick: () => void }
 // ============================================================================
 // DISCOVER TAB
 // ============================================================================
+
+// ============================================================================
+// STRIPE PAYMENT MODAL — Real card input via Stripe Elements
+// ============================================================================
+function StripePaymentForm({
+  clientSecret,
+  intentId,
+  amountCents,
+  label,
+  onSuccess,
+  onError,
+}: {
+  clientSecret: string;
+  intentId: string;
+  amountCents: number;
+  label: string;
+  onSuccess: () => void;
+  onError: (msg: string) => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [loading, setLoading] = useState(false);
+  const [cardError, setCardError] = useState<string | null>(null);
+
+  const handlePay = async () => {
+    if (!stripe || !elements) return;
+    const cardEl = elements.getElement(CardElement);
+    if (!cardEl) return;
+    setLoading(true);
+    setCardError(null);
+    try {
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { card: cardEl },
+      });
+      if (error) throw new Error(error.message);
+      if (paymentIntent?.status !== "succeeded") throw new Error("Payment did not complete");
+      onSuccess();
+    } catch (e: any) {
+      setCardError(e.message || "Payment failed");
+      onError(e.message || "Payment failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-gray-800 rounded-xl p-4">
+        <p className="text-gray-400 text-xs mb-3 font-semibold uppercase tracking-wider">Card Details</p>
+        <CardElement
+          options={{
+            style: {
+              base: { color: "#fff", fontSize: "16px", "::placeholder": { color: "#6B7280" } },
+              invalid: { color: "#EF4444" },
+            },
+          }}
+        />
+      </div>
+      {cardError && <p className="text-red-400 text-sm">{cardError}</p>}
+      <button
+        onClick={handlePay}
+        disabled={loading || !stripe}
+        className="w-full py-3 rounded-xl font-black text-white text-sm transition-opacity"
+        style={{
+          background: loading ? "rgba(239,68,68,0.3)" : "linear-gradient(135deg, #EF4444, #F97316)",
+          cursor: loading ? "not-allowed" : "pointer",
+          opacity: loading ? 0.7 : 1,
+        }}
+      >
+        {loading ? "Processing..." : `Pay $${(amountCents / 100).toFixed(2)} — ${label}`}
+      </button>
+    </div>
+  );
+}
+
+function StripePaymentModal({
+  clientSecret,
+  intentId,
+  amountCents,
+  label,
+  onSuccess,
+  onClose,
+}: {
+  clientSecret: string;
+  intentId: string;
+  amountCents: number;
+  label: string;
+  onSuccess: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={onClose}>
+      <div
+        className="bg-gray-950 border border-red-900/40 rounded-2xl p-8 w-full max-w-sm mx-4 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center mb-6">
+          <h2 className="text-xl font-black text-white">{label}</h2>
+          <p className="text-3xl font-black text-red-400 mt-2">${(amountCents / 100).toFixed(2)}</p>
+        </div>
+        <Elements stripe={stripePromise} options={{ clientSecret }}>
+          <StripePaymentForm
+            clientSecret={clientSecret}
+            intentId={intentId}
+            amountCents={amountCents}
+            label={label}
+            onSuccess={onSuccess}
+            onError={(msg) => toast.error(msg)}
+          />
+        </Elements>
+        <button
+          onClick={onClose}
+          className="w-full mt-3 py-2 text-gray-500 text-sm hover:text-gray-300 transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// TIP MODAL
+// ============================================================================
+function TipModal({ creator, onClose }: { creator: any; onClose: () => void }) {
+  const [amount, setAmount] = useState(5);
+  const [message, setMessage] = useState("");
+  const [step, setStep] = useState<"input" | "pay">("input");
+  const [intentData, setIntentData] = useState<{ clientSecret: string; intentId: string; amountCents: number } | null>(null);
+  const createTipIntent = trpc.vaultx.createTipIntent.useMutation();
+  const confirmTip = trpc.vaultx.confirmTip.useMutation();
+
+  const handleCreateIntent = async () => {
+    try {
+      const result = await createTipIntent.mutateAsync({
+        creatorId: creator.creator_id,
+        amountCents: Math.round(amount * 100),
+        message: message || undefined,
+      });
+      setIntentData({ clientSecret: result.clientSecret!, intentId: result.intentId, amountCents: result.amountCents });
+      setStep("pay");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to create tip");
+    }
+  };
+
+  const handleTipSuccess = async () => {
+    if (!intentData) return;
+    try {
+      await confirmTip.mutateAsync({ intentId: intentData.intentId });
+      toast.success(`Tip sent to ${creator.display_name}!`);
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to confirm tip");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={onClose}>
+      <div
+        className="bg-gray-950 border border-pink-900/40 rounded-2xl p-8 w-full max-w-sm mx-4 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-xl font-black text-white mb-6 text-center">Send a Tip to {creator.display_name}</h2>
+        {step === "input" ? (
+          <div className="space-y-4">
+            <div>
+              <p className="text-gray-400 text-xs mb-2 uppercase tracking-wider font-semibold">Amount</p>
+              <div className="flex gap-2 flex-wrap">
+                {[1, 5, 10, 20, 50, 100].map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setAmount(v)}
+                    className="px-4 py-2 rounded-xl text-sm font-bold transition-colors"
+                    style={{
+                      background: amount === v ? "#EC4899" : "rgba(255,255,255,0.05)",
+                      color: amount === v ? "white" : "#9CA3AF",
+                      border: `1px solid ${amount === v ? "#EC4899" : "rgba(255,255,255,0.1)"}`,
+                    }}
+                  >
+                    ${v}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="number"
+                min={1}
+                max={1000}
+                value={amount}
+                onChange={(e) => setAmount(Math.max(1, Math.min(1000, Number(e.target.value))))}
+                className="w-full mt-3 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-pink-500"
+                placeholder="Custom amount"
+              />
+            </div>
+            <div>
+              <p className="text-gray-400 text-xs mb-2 uppercase tracking-wider font-semibold">Message (optional)</p>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                maxLength={500}
+                rows={3}
+                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-pink-500 resize-none"
+                placeholder="Leave a message..."
+              />
+            </div>
+            <button
+              onClick={handleCreateIntent}
+              disabled={createTipIntent.isPending}
+              className="w-full py-3 rounded-xl font-black text-white text-sm"
+              style={{ background: "linear-gradient(135deg, #EC4899, #F43F5E)" }}
+            >
+              {createTipIntent.isPending ? "Processing..." : `Send $${amount} Tip`}
+            </button>
+          </div>
+        ) : intentData ? (
+          <Elements stripe={stripePromise} options={{ clientSecret: intentData.clientSecret }}>
+            <StripePaymentForm
+              clientSecret={intentData.clientSecret}
+              intentId={intentData.intentId}
+              amountCents={intentData.amountCents}
+              label={`Tip to ${creator.display_name}`}
+              onSuccess={handleTipSuccess}
+              onError={(msg) => toast.error(msg)}
+            />
+          </Elements>
+        ) : null}
+        <button onClick={onClose} className="w-full mt-3 py-2 text-gray-500 text-sm hover:text-gray-300 transition-colors">
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DiscoverTab() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -342,9 +580,65 @@ function DiscoverTab() {
 // ============================================================================
 function CreatorProfile({ creator, onBack }: { creator: any; onBack: () => void }) {
   const tier = TIER_CONFIG[creator.tier as keyof typeof TIER_CONFIG] || TIER_CONFIG.emerging;
-  const [subscribed, setSubscribed] = useState(false);
+  const [subStep, setSubStep] = useState<"idle" | "pay" | "done">("idle");
+  const [subIntentData, setSubIntentData] = useState<{ clientSecret: string; intentId: string; amountCents: number; tierId: number } | null>(null);
+  const [showTip, setShowTip] = useState(false);
+  const subscribeIntent = trpc.vaultx.subscribeToCreator.useMutation();
+  const confirmSub = trpc.vaultx.confirmSubscription.useMutation();
+  const { data: contentData } = trpc.vaultx.getCreatorContent.useQuery(
+    { creatorId: creator.creator_id, limit: 12, offset: 0 },
+    { retry: false, enabled: !!creator.creator_id }
+  );
+  const isSubscribed = contentData?.isSubscribed || subStep === "done";
+
+  const handleSubscribe = async () => {
+    try {
+      const result = await subscribeIntent.mutateAsync({ creatorId: creator.creator_id });
+      setSubIntentData({
+        clientSecret: result.clientSecret!,
+        intentId: result.intentId,
+        amountCents: result.amount,
+        tierId: 0,
+      });
+      setSubStep("pay");
+    } catch (e: any) {
+      if (e.message?.includes("Already subscribed")) {
+        toast.info("You are already subscribed");
+        setSubStep("done");
+      } else {
+        toast.error(e.message || "Failed to start subscription");
+      }
+    }
+  };
+
+  const handleSubSuccess = async () => {
+    if (!subIntentData) return;
+    try {
+      await confirmSub.mutateAsync({
+        intentId: subIntentData.intentId,
+        creatorId: creator.creator_id,
+        tierId: subIntentData.tierId || 1,
+      });
+      setSubStep("done");
+      toast.success(`Subscribed to ${creator.display_name}!`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to confirm subscription");
+    }
+  };
 
   return (
+    <div className="space-y-4">
+      {showTip && <TipModal creator={creator} onClose={() => setShowTip(false)} />}
+      {subStep === "pay" && subIntentData && (
+        <StripePaymentModal
+          clientSecret={subIntentData.clientSecret}
+          intentId={subIntentData.intentId}
+          amountCents={subIntentData.amountCents}
+          label={`Subscribe to ${creator.display_name}`}
+          onSuccess={handleSubSuccess}
+          onClose={() => setSubStep("idle")}
+        />
+      )}
     <div className="space-y-4">
       <button onClick={onBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
         ← Back to Discover
@@ -388,14 +682,15 @@ function CreatorProfile({ creator, onBack }: { creator: any; onBack: () => void 
           {/* Actions */}
           <div className="flex gap-3">
             <button
-              onClick={() => { setSubscribed(true); toast.success(`Subscribed to ${creator.display_name}!`); }}
+              onClick={handleSubscribe}
+              disabled={subscribeIntent.isPending}
               className="flex-1 bg-[#0a0a0a] from-red-500 to-orange-500 text-white font-bold py-3 rounded-xl text-sm hover:opacity-90 transition-opacity"
             >
-              {subscribed ? "✓ Subscribed" : `Subscribe $${creator.base_subscription_price}/mo`}
+              {subscribeIntent.isPending ? "Loading..." : isSubscribed ? "✓ Subscribed" : `Subscribe $$${creator.base_subscription_price || "9.99"}/mo`}
             </button>
             {creator.tips_enabled && (
               <button
-                onClick={() => toast.success("Tip sent!")}
+                onClick={() => setShowTip(true)}
                 className="bg-gray-800 text-white font-bold py-3 px-4 rounded-xl text-sm hover:bg-gray-700 transition-colors"
               >
                 <Gift className="w-4 h-4" />
@@ -405,12 +700,43 @@ function CreatorProfile({ creator, onBack }: { creator: any; onBack: () => void 
         </div>
       </div>
 
-      {/* Content Locked */}
-      <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-6 text-center">
-        <Lock className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-        <div className="text-white font-bold mb-1">Content is locked</div>
-        <div className="text-gray-500 text-sm">Subscribe to unlock all posts, videos, and DMs</div>
-      </div>
+      {/* Content Grid — real data from getCreatorContent */}
+      {contentData && contentData.items.length > 0 ? (
+        <div className="space-y-3">
+          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Content ({contentData.items.length})</p>
+          <div className="grid grid-cols-3 gap-2">
+            {contentData.items.map((item: any) => (
+              <div key={item.id} className="relative rounded-xl overflow-hidden aspect-square bg-gray-900">
+                {item.thumbnail_url ? (
+                  <img
+                    src={item.thumbnail_url}
+                    alt={item.title}
+                    className={`w-full h-full object-cover ${item.locked ? "blur-md" : ""}`}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-600 text-2xl">
+                    {item.content_type === "video" ? "🎬" : item.content_type === "image" ? "🖼️" : "🎵"}
+                  </div>
+                )}
+                {item.locked && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <Lock className="w-5 h-5 text-white" />
+                  </div>
+                )}
+                {item.unlock_type === "ppv" && !item.locked && (
+                  <div className="absolute top-1 right-1 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full">PPV</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : !isSubscribed ? (
+        <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-6 text-center">
+          <Lock className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+          <div className="text-white font-bold mb-1">Content is locked</div>
+          <div className="text-gray-500 text-sm">Subscribe to unlock all posts, videos, and DMs</div>
+        </div>
+      ) : null}
 
       {/* PPV */}
       {creator.ppv_enabled && (
