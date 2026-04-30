@@ -145,7 +145,7 @@ async function processCaptionJob(captionId: string, videoUrl: string, style: any
   }
 }
 
-export const smartCaptionsRouter = {
+export const smartCaptionsRouter = router({
   // ─── Transcribe Video ──────────────────────────────────────────────────
   transcribe: protectedProcedure
     .input(z.object({
