@@ -770,6 +770,8 @@ function PPVEngineMode({ onOutput }: { onOutput: (url: string, label: string) =>
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
 
   const analyzePPVMut = trpc.videoEnhance.analyzePPVMoments.useMutation();
+  const savePpvMut = trpc.vaultx.savePpvOutput.useMutation();
+  const [ppvSaved, setPpvSaved] = useState(false);
 
   const process = async () => {
     if (!videoFile) return toast.error("Upload a video first.");
@@ -888,6 +890,7 @@ function PPVEngineMode({ onOutput }: { onOutput: (url: string, label: string) =>
         <div className="flex flex-col gap-2">
           <VideoPlayer src={outputUrl} label="Output" accent="#A855F7" />
           <button onClick={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-ppv-${activeOp}.mp4`; a.click(); }} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: "rgba(168,85,247,0.15)", color: "#A855F7", border: "1px solid rgba(168,85,247,0.3)" }}><Download size={14} /> Save</button>
+          <button onClick={async () => { try { await savePpvMut.mutateAsync({ fileUrl: outputUrl, outputType: activeOp, priceCents: ppvResult?.suggestedPrice ? Math.round(ppvResult.suggestedPrice * 100) : 999 }); setPpvSaved(true); toast.success("Saved to Vault as PPV content!"); } catch(e: any) { toast.error(e.message); } }} disabled={ppvSaved || savePpvMut.isLoading} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: ppvSaved ? "rgba(34,197,94,0.15)" : "rgba(168,85,247,0.25)", color: ppvSaved ? "#22C55E" : "#C084FC", border: `1px solid ${ppvSaved ? "rgba(34,197,94,0.3)" : "rgba(168,85,247,0.4)"}` }}>{ppvSaved ? <><ShieldCheck size={14} /> Saved to Vault</> : savePpvMut.isLoading ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : <><Lock size={14} /> Save to Vault as PPV</>}</button>
         </div>
       )}
     </>
@@ -908,6 +911,7 @@ function PlatformVaultMode({ onOutput }: { onOutput: (url: string, label: string
   const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState("onlyfans");
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
+  const saveExportMut = trpc.vaultx.saveExportHistory.useMutation();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const platform = EXPORT_PLATFORMS.find(p => p.id === selectedPlatform)!;
@@ -925,6 +929,8 @@ function PlatformVaultMode({ onOutput }: { onOutput: (url: string, label: string
       setOutputUrl(result.url);
       onOutput(result.url, `${platform.name} Export`);
       toast.success(`Exported for ${platform.name} — ${platform.resolution} ${platform.note}`);
+      // Write export history to DB
+      saveExportMut.mutate({ platform: platform.id, outputUrl: result.url, resolution: platform.resolution, format: platform.format });
     } catch (e: any) { toast.error(e.message); }
     finally { setIsProcessing(false); }
   };
@@ -1573,7 +1579,10 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
 // ============================================================================
 function AISoundStudioMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
   const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
-  const [activeTab, setActiveTab] = useState<"sound-effects"|"music">("sound-effects");
+  const [activeTab, setActiveTab] = useState<"sound-effects"|"music"|"cleanup">("sound-effects");
+  const [cleanupMode, setCleanupMode] = useState<"cleanup"|"normalize"|"voice_enhance">("cleanup");
+  const [cleanupProcessing, setCleanupProcessing] = useState(false);
+  const [cleanupOutputUrl, setCleanupOutputUrl] = useState<string | null>(null);
   const [soundPrompt, setSoundPrompt] = useState("");
   const [musicPrompt, setMusicPrompt] = useState("");
   const [musicDuration, setMusicDuration] = useState(30);
@@ -1643,6 +1652,7 @@ function AISoundStudioMode({ onOutput }: { onOutput: (url: string, label: string
         {[
           { id: "sound-effects" as const, label: "Sound Effects", badge: "MMAudio", color: "#8B5CF6" },
           { id: "music" as const,         label: "Music",         badge: "MusicGen", color: "#A78BFA" },
+          { id: "cleanup" as const,       label: "Audio Cleanup", badge: "FFmpeg",   color: "#22C55E" },
         ].map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" style={{ background: activeTab === t.id ? `${t.color}18` : "rgba(255,255,255,0.03)", border: `1.5px solid ${activeTab === t.id ? t.color : "rgba(255,255,255,0.07)"}` }}>
             <span className="text-xs font-black" style={{ color: activeTab === t.id ? t.color : "#6B7280" }}>{t.label}</span>
@@ -1682,6 +1692,56 @@ function AISoundStudioMode({ onOutput }: { onOutput: (url: string, label: string
           <button onClick={generateMusic} disabled={!musicPrompt || isGenerating} className="w-full py-4 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2" style={{ background: !musicPrompt || isGenerating ? "rgba(167,139,250,0.3)" : "linear-gradient(135deg, #A78BFA, #8B5CF6)", cursor: !musicPrompt || isGenerating ? "not-allowed" : "pointer" }}>
             {isGenerating ? <><Loader2 size={18} className="animate-spin" /> {statusMsg || "Generating..."}</> : <><Music size={18} /> Generate Music</>}
           </button>
+        </>
+      )}
+      {activeTab === "cleanup" && (
+        <>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-white">Cleanup Mode</label>
+            <div className="flex flex-col gap-1.5">
+              {[
+                { id: "cleanup" as const,       label: "Noise Cleanup",    desc: "Remove background noise + EQ for clarity", color: "#22C55E" },
+                { id: "normalize" as const,     label: "Loudness Normalize", desc: "EBU R128 broadcast standard (-16 LUFS)", color: "#22C55E" },
+                { id: "voice_enhance" as const, label: "Voice Enhance",    desc: "Noise reduction + presence boost for speech", color: "#22C55E" },
+              ].map(m => (
+                <button key={m.id} onClick={() => setCleanupMode(m.id)} className="flex items-start gap-3 p-3 rounded-xl text-left transition-all" style={{ background: cleanupMode === m.id ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${cleanupMode === m.id ? "#22C55E" : "rgba(255,255,255,0.07)"}` }}>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold" style={{ color: cleanupMode === m.id ? "#22C55E" : "#E5E7EB" }}>{m.label}</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{m.desc}</p>
+                  </div>
+                  {cleanupMode === m.id && <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: "#22C55E" }} />}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button onClick={async () => {
+            if (!videoFile) return toast.error("Upload a video first.");
+            setCleanupProcessing(true); setCleanupOutputUrl(null);
+            try {
+              const fd = new FormData();
+              fd.append("video", videoFile.file);
+              fd.append("mode", cleanupMode);
+              const r = await fetch("/api/video-studio/audio", { method: "POST", body: fd });
+              if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Audio cleanup failed"); }
+              const blob = await r.blob();
+              const url = URL.createObjectURL(blob);
+              setCleanupOutputUrl(url);
+              onOutput(url, `Audio ${cleanupMode}`);
+              toast.success("Audio cleanup complete!");
+            } catch(e: any) { toast.error(e.message); }
+            finally { setCleanupProcessing(false); }
+          }} disabled={!videoFile || cleanupProcessing} className="w-full py-4 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2" style={{ background: !videoFile || cleanupProcessing ? "rgba(34,197,94,0.3)" : "linear-gradient(135deg, #22C55E, #16A34A)", cursor: !videoFile || cleanupProcessing ? "not-allowed" : "pointer" }}>
+            {cleanupProcessing ? <><Loader2 size={18} className="animate-spin" /> Processing Audio...</> : <><Mic size={18} /> Apply {cleanupMode === "cleanup" ? "Noise Cleanup" : cleanupMode === "normalize" ? "Loudness Normalize" : "Voice Enhance"}</>}
+          </button>
+          {cleanupOutputUrl && (
+            <div className="flex flex-col gap-2">
+              <div className="p-4 rounded-2xl" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
+                <p className="text-xs font-bold text-white mb-2">Cleaned Audio Output</p>
+                <video controls src={cleanupOutputUrl} className="w-full rounded-xl" style={{ maxHeight: 200 }} />
+              </div>
+              <button onClick={() => { const a = document.createElement("a"); a.href = cleanupOutputUrl; a.download = `vaultx-audio-${cleanupMode}.mp4`; a.click(); }} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: "rgba(34,197,94,0.15)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.3)" }}><Download size={14} /> Save Cleaned Audio</button>
+            </div>
+          )}
         </>
       )}
       {isGenerating && <ProcessingBar label={statusMsg || "AI generating audio..."} accent="#8B5CF6" />}
@@ -1903,6 +1963,8 @@ interface OutputBundle {
 }
 
 function FinalOutputEngineMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
+  const publishMut = trpc.vaultx.publishToVault.useMutation();
+  const [published, setPublished] = useState(false);
   const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
   const [activeType, setActiveType] = useState<OutputType>("premium-video");
   const [bundle, setBundle] = useState<OutputBundle | null>(null);
@@ -2148,6 +2210,25 @@ function FinalOutputEngineMode({ onOutput }: { onOutput: (url: string, label: st
             {bundle.platform && <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>Platform: {bundle.platform}</p>}
           </div>
         </div>
+      )}
+      {bundle.videos && bundle.videos.length > 0 && (
+        <button onClick={async () => {
+          if (published) return;
+          try {
+            const primaryVideo = bundle.videos[0];
+            await publishMut.mutateAsync({
+              fileUrl: primaryVideo.url,
+              title: bundle.label || "VaultX Output",
+              unlockType: bundle.type === "ppv-bundle" ? "ppv" : "subscription",
+              priceCents: bundle.suggestedPrice ? Math.round(bundle.suggestedPrice * 100) : 0,
+              tags: bundle.enginesUsed?.map((e: any) => e.engine) || [],
+            });
+            setPublished(true);
+            toast.success("Published to your Content Vault!");
+          } catch(e: any) { toast.error(e.message); }
+        }} disabled={published || publishMut.isLoading} className="w-full py-3 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2" style={{ background: published ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg, #F59E0B, #D97706)", opacity: publishMut.isLoading ? 0.7 : 1 }}>
+          {published ? <><ShieldCheck size={16} /> Published to Vault</> : publishMut.isLoading ? <><Loader2 size={16} className="animate-spin" /> Publishing...</> : <><HardDrive size={16} /> Publish to Content Vault</>}
+        </button>
       )}
     </div>
   ) : videoFile ? (
