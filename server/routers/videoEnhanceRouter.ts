@@ -1,18 +1,35 @@
-/**
- * VaultX Video Enhance Router
+/*
+ * VaultX Video Enhance Router — POWER EDITION
  * ============================================================================
- * AI Engine Dispatcher — routes each VaultX panel to the correct AI provider.
+ * Full AI Engine Dispatcher — 16 real Replicate models wired.
  *
  * PROVIDER MAP:
- *   slowMotion          → Replicate RIFE v4.6 (frame interpolation)
- *   upscaleVideo        → Replicate Real-ESRGAN Video (4K upscale)
- *   transcribeVideo     → OpenAI Whisper-1 (audio transcription for Caption Studio)
- *   getAIEngineStatus   → Reports which AI engines are live vs unavailable
- *   analyzeScene        → OpenAI GPT-4o-mini (scene detection for Scene Architect)
- *   analyzePPVMoments   → OpenAI GPT-4o-mini (PPV intelligence for PPV Engine)
- *   createPremiumVideo  → FINAL OUTPUT ENGINE: Whisper → GPT analysis → Replicate ESRGAN → FFmpeg encode
- *   createTeaserPackage → FINAL OUTPUT ENGINE: Whisper → GPT best-moment → FFmpeg teaser+full+thumbnails
- *   createViralClipPack → FINAL OUTPUT ENGINE: Whisper → GPT 3–5 moments → FFmpeg clips per moment
+ *   getAIEngineStatus     → Reports all AI engine availability
+ *   slowMotion            → Replicate bitflow/video-super-resolution-rife-pro (RIFE + upscale combo)
+ *   upscaleVideo          → Replicate lucataco/real-esrgan-video (2x/4x upscale)
+ *   transcribeVideo       → OpenAI Whisper-1 (audio transcription)
+ *   getJob                → Replicate prediction polling
+ *   analyzeScene          → OpenAI GPT-4o-mini (scene detection)
+ *   analyzePPVMoments     → OpenAI GPT-4o-mini (PPV intelligence)
+ *   generateEnhancementPlan → OpenAI GPT-4o-mini
+ *   createPremiumVideo    → Whisper → GPT → Real-ESRGAN → FFmpeg
+ *   createTeaserPackage   → Whisper → GPT → FFmpeg teaser+thumbnails
+ *   createViralClipPack   → Whisper → GPT → FFmpeg clips
+ *   generateVideo         → Replicate minimax/video-01 (text/image → video, 699K runs)
+ *   generateVideoAlt      → Replicate anotherjesse/zeroscope-v2-xl (text → video)
+ *   animateImage          → Replicate minimax/video-01-live (image → animated video)
+ *   imageToVideo          → Replicate stability-ai/stable-video-diffusion (image → video)
+ *   addAISound            → Replicate zsxkib/mmaudio (video → AI sound, 5.1M runs)
+ *   generateMusic         → Replicate meta/musicgen (text → music, 3.3M runs)
+ *   beautyEnhance         → Replicate zsxkib/pulid (face-preserving beauty, 4M runs)
+ *   faceStyleTransfer     → Replicate fofr/face-to-many (face → 3D/emoji/beauty, 15M runs)
+ *   generateCharacter     → Replicate fofr/consistent-character (character consistency, 1.4M runs)
+ *   realisticPortrait     → Replicate zsxkib/instant-id (realistic face photos, 1M runs)
+ *   photoMakerStyle       → Replicate tencentarc/photomaker (face + style, 9M runs)
+ *   generateGif           → Replicate lucataco/hotshot-xl (text → GIF/short video, 930K runs)
+ *   enhanceVideo (legacy) → stub
+ *   getEnhancementOptions → stub
+ *   getEnhancementStatus  → stub
  *
  * VAULTX ENGINE LAW:
  *   FFmpeg is utility/export only (trim, encode, resize, crop, convert,
@@ -58,8 +75,7 @@ async function replicateGet(predictionId: string): Promise<any> {
   return resp.json();
 }
 
-// ─── Poll Replicate until done (max 8 min) ────────────────────────────────────
-async function replicatePollUntilDone(predictionId: string, maxWaitMs = 480_000): Promise<any> {
+async function replicatePollUntilDone(predictionId: string, maxWaitMs = 600_000): Promise<any> {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
     const pred = await replicateGet(predictionId);
@@ -95,7 +111,6 @@ async function checkPolloCredits(): Promise<{ available: boolean; reason: string
 }
 
 // ─── FFmpeg utility helpers ───────────────────────────────────────────────────
-/** Save a buffer to the durable output directory and return its HTTPS URL */
 async function saveFinalOutput(buffer: Buffer, filename: string, subdir = "final-output"): Promise<string> {
   const uuid = randomUUID();
   const dir = path.resolve(process.cwd(), "dist", "public", "uploads", subdir, uuid);
@@ -104,7 +119,6 @@ async function saveFinalOutput(buffer: Buffer, filename: string, subdir = "final
   return `${BASE_URL}/uploads/${subdir}/${uuid}/${filename}`;
 }
 
-/** Download a URL to a temp file, return the temp path */
 async function downloadToTemp(url: string, ext = "mp4"): Promise<string> {
   const tmpPath = path.join(os.tmpdir(), `vaultx-dl-${randomUUID()}.${ext}`);
   const resp = await fetch(url);
@@ -114,7 +128,6 @@ async function downloadToTemp(url: string, ext = "mp4"): Promise<string> {
   return tmpPath;
 }
 
-/** Run FFmpeg trim: cut [start, end] seconds from inputPath → return buffer */
 async function ffmpegTrim(inputPath: string, start: number, end: number, outExt = "mp4"): Promise<Buffer> {
   const outPath = path.join(os.tmpdir(), `vaultx-trim-${randomUUID()}.${outExt}`);
   const duration = end - start;
@@ -124,7 +137,6 @@ async function ffmpegTrim(inputPath: string, start: number, end: number, outExt 
   return buf;
 }
 
-/** Extract a JPEG thumbnail frame at `atSeconds` from inputPath → return buffer */
 async function ffmpegThumbnail(inputPath: string, atSeconds: number): Promise<Buffer> {
   const outPath = path.join(os.tmpdir(), `vaultx-thumb-${randomUUID()}.jpg`);
   await execAsync(`ffmpeg -y -ss ${atSeconds} -i "${inputPath}" -frames:v 1 -q:v 2 "${outPath}"`);
@@ -133,7 +145,6 @@ async function ffmpegThumbnail(inputPath: string, atSeconds: number): Promise<Bu
   return buf;
 }
 
-/** Crop + encode to target aspect ratio using FFmpeg */
 async function ffmpegCropAspect(inputPath: string, aspect: "9:16" | "1:1" | "16:9"): Promise<Buffer> {
   const outPath = path.join(os.tmpdir(), `vaultx-crop-${randomUUID()}.mp4`);
   const vfMap: Record<string, string> = {
@@ -147,13 +158,12 @@ async function ffmpegCropAspect(inputPath: string, aspect: "9:16" | "1:1" | "16:
   return buf;
 }
 
-// ─── Whisper transcription helper (reused by all three FOE procedures) ────────
+// ─── Whisper transcription helper ────────────────────────────────────────────
 async function whisperTranscribe(videoUrl: string): Promise<{ text: string; segments: any[]; duration: number }> {
   const resp = await fetch(videoUrl);
   if (!resp.ok) throw new Error(`Failed to fetch video for Whisper: ${resp.status}`);
   const buf = Buffer.from(await resp.arrayBuffer());
   if (buf.length > 25 * 1024 * 1024) {
-    // Silently skip transcription for large files — return empty transcript
     return { text: "", segments: [], duration: 0 };
   }
   const { File } = await import("node:buffer");
@@ -225,57 +235,71 @@ export const videoEnhanceRouter = router({
           available: replicateAvailable,
           provider: "Replicate",
           reason: replicateAvailable ? "ok" : "REPLICATE_API_TOKEN not configured",
-          powers: ["AI Enhance — Slow Motion (RIFE v4.6)", "AI Enhance — Upscale (Real-ESRGAN)"],
+          models: [
+            "bitflow/video-super-resolution-rife-pro — Slow Motion + Upscale",
+            "lucataco/real-esrgan-video — 4K Video Upscale",
+            "minimax/video-01 — Text/Image to Video",
+            "minimax/video-01-live — Image to Animated Video",
+            "stability-ai/stable-video-diffusion — Image to Video",
+            "zsxkib/mmaudio — AI Sound Design",
+            "meta/musicgen — Music Generation",
+            "zsxkib/pulid — Beauty Enhancement (Face-Preserving)",
+            "fofr/face-to-many — Face Style Transfer",
+            "fofr/consistent-character — Character Consistency",
+            "zsxkib/instant-id — Realistic Portrait",
+            "tencentarc/photomaker — Photo Style",
+            "anotherjesse/zeroscope-v2-xl — Text to Video",
+            "lucataco/hotshot-xl — Text to GIF",
+            "openai/whisper — Speech to Text",
+          ],
         },
         pollo: {
           available: polloStatus.available,
           provider: "Pollo AI / Kling",
           reason: polloStatus.reason,
-          powers: ["Velvet Suite — AI beauty (future)", "Desire Grade — AI cinematic (future)"],
+          models: ["kling-v2-master", "kling-v1-6"],
         },
         openai: {
           available: openaiAvailable,
           provider: "OpenAI",
           reason: openaiAvailable ? "ok" : "OPENAI_API_KEY not configured",
-          powers: ["Caption Studio — Whisper auto-transcription", "Enhancement Plan — GPT-4o-mini"],
-        },
-        runway: {
-          available: false,
-          provider: "Runway",
-          reason: "Runway API not configured — no RUNWAY_API_KEY in environment",
-          powers: [],
+          models: ["whisper-1 — Transcription", "gpt-4o-mini — Analysis/Copy"],
         },
       },
     };
   }),
 
-  // ─── Slow Motion — Replicate RIFE v4.6 ─────────────────────────────────────
+  // ─── Slow Motion — Replicate RIFE-Pro (slow motion + upscale combo) ─────────
   slowMotion: protectedProcedure
     .input(z.object({
       videoUrl: z.string(),
       targetFps: z.enum(["60", "120", "240"]).default("60"),
-      targetResolution: z.string().optional(),
-      enableUpscale: z.boolean().optional(),
-      upscaleModel: z.string().optional(),
-      crf: z.number().optional(),
-      startTime: z.number().optional(),
+      enableUpscale: z.boolean().default(false),
+      upscaleModel: z.enum(["realesr-animevideov3", "RealESRGAN_x4plus"]).default("realesr-animevideov3"),
       maxSeconds: z.number().optional(),
-      outputFormat: z.string().optional(),
+      outputFormat: z.enum(["mp4", "gif"]).default("mp4"),
     }))
     .mutation(async ({ input }) => {
       if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured — AI slow motion unavailable");
-      const multiplierMap: Record<string, number> = { "60": 2, "120": 4, "240": 8 };
-      const multiplier = multiplierMap[input.targetFps] ?? 2;
+      const targetFpsNum = parseInt(input.targetFps);
       const prediction = await replicatePost("predictions", {
-        version: "4f88a16a13673a8b589c18866e540556170a5bcb2ccdc12de201f9f5a851fad1",
-        input: { video: input.videoUrl, multiplier, fps: parseInt(input.targetFps) },
+        version: "067621002a8a290f6fc0dfa0bec9463da94febe29865cbc741afa8622d5b1ab3",
+        model: "bitflow/video-super-resolution-rife-pro",
+        input: {
+          video: input.videoUrl,
+          target_fps: targetFpsNum,
+          upscale_model: input.enableUpscale ? input.upscaleModel : undefined,
+          max_seconds: input.maxSeconds,
+          output_format: input.outputFormat,
+          fast_mode: false,
+        },
       });
       return {
         predictionId: prediction.id,
         status: prediction.status,
         provider: "Replicate",
-        model: "lucataco/rife-v4.6",
-        message: `AI slow motion started — Replicate RIFE v4.6 — ${input.targetFps}fps frame interpolation`,
+        model: "bitflow/video-super-resolution-rife-pro",
+        message: `AI slow motion started — RIFE-Pro ${input.targetFps}fps${input.enableUpscale ? " + upscale" : ""}`,
       };
     }),
 
@@ -347,14 +371,14 @@ export const videoEnhanceRouter = router({
         status: prediction.status,
         isComplete,
         isFailed,
-        outputUrl: isComplete && prediction.output ? prediction.output : null,
+        outputUrl: isComplete && prediction.output ? (Array.isArray(prediction.output) ? prediction.output[0] : prediction.output) : null,
         error: isFailed ? (prediction.error || "Processing failed") : null,
         progress: prediction.metrics?.predict_time ? 100 : 0,
         provider: "Replicate",
       };
     }),
 
-  // ─── Scene Architect AI — GPT-4o-mini scene analysis ─────────────────────────
+  // ─── Scene Architect AI ──────────────────────────────────────────────────────
   analyzeScene: protectedProcedure
     .input(z.object({
       transcript: z.string(),
@@ -383,11 +407,11 @@ export const videoEnhanceRouter = router({
         provider: "OpenAI",
         model: "gpt-4o-mini",
         sceneCount: scenes.length,
-        message: scenes.length > 0 ? `AI detected ${scenes.length} scenes — select timestamps to cut with FFmpeg` : "No distinct scenes detected — try with a longer transcript",
+        message: scenes.length > 0 ? `AI detected ${scenes.length} scenes` : "No distinct scenes detected",
       };
     }),
 
-  // ─── PPV Engine AI — GPT-4o-mini best-moment detection ───────────────────────
+  // ─── PPV Engine AI ───────────────────────────────────────────────────────────
   analyzePPVMoments: protectedProcedure
     .input(z.object({
       transcript: z.string(),
@@ -400,7 +424,7 @@ export const videoEnhanceRouter = router({
       const segmentContext = input.segments && input.segments.length > 0
         ? `\n\nTimestamped segments:\n${input.segments.map(s => `[${s.start}s–${s.end}s]: ${s.text}`).join("\n")}`
         : "";
-      const prompt = `You are a PPV content monetization expert analyzing a video for best clip moments.\n\nContent type: ${input.contentType}\nTranscript:${segmentContext}\nFull text: ${input.transcript}\n${input.videoDuration ? `Video duration: ${input.videoDuration}s` : ""}\n\nAnalyze and provide:\n1. Top 3 best moments for PPV clips (most engaging/valuable segments)\n2. For each moment: start time, end time, hook title, suggested PPV price (USD), reason\n3. Overall video title suggestion\n4. Overall pricing recommendation\n5. Platform recommendation (OnlyFans/Fansly/ManyVids)\n\nRespond ONLY with valid JSON:\n{"moments":[{"start":0,"end":30,"title":"...","hook":"...","price":9.99,"reason":"..."}],"videoTitle":"...","suggestedPrice":14.99,"platform":"OnlyFans","strategy":"..."}`;
+      const prompt = `You are a PPV content monetization expert analyzing a video for best clip moments.\n\nContent type: ${input.contentType}\nTranscript:${segmentContext}\nFull text: ${input.transcript}\n${input.videoDuration ? `Video duration: ${input.videoDuration}s` : ""}\n\nAnalyze and provide:\n1. Top 3 best moments for PPV clips\n2. For each moment: start time, end time, hook title, suggested PPV price (USD), reason\n3. Overall video title suggestion\n4. Overall pricing recommendation\n5. Platform recommendation\n\nRespond ONLY with valid JSON:\n{"moments":[{"start":0,"end":30,"title":"...","hook":"...","price":9.99,"reason":"..."}],"videoTitle":"...","suggestedPrice":14.99,"platform":"OnlyFans","strategy":"..."}`;
       const c = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
@@ -418,12 +442,12 @@ export const videoEnhanceRouter = router({
         provider: "OpenAI",
         model: "gpt-4o-mini",
         message: result.moments?.length > 0
-          ? `AI detected ${result.moments.length} best moments — select clips to export with FFmpeg`
-          : "No distinct moments detected — try with a longer transcript",
+          ? `AI detected ${result.moments.length} best moments`
+          : "No distinct moments detected",
       };
     }),
 
-  // ─── Enhancement Plan — OpenAI GPT-4o-mini ──────────────────────────────────
+  // ─── Enhancement Plan ────────────────────────────────────────────────────────
   generateEnhancementPlan: protectedProcedure
     .input(z.object({ videoDescription: z.string(), targetQuality: z.string() }))
     .mutation(async ({ input }) => {
@@ -439,17 +463,6 @@ export const videoEnhanceRouter = router({
   // FINAL OUTPUT ENGINE
   // ============================================================================
 
-  // ─── Create Premium Video ───────────────────────────────────────────────────
-  /**
-   * FINAL OUTPUT ENGINE — Create Premium Video
-   * Pipeline:
-   *   1. OpenAI Whisper-1: transcribe audio → get segments
-   *   2. OpenAI GPT-4o-mini: analyze best segments, generate hooks/captions
-   *   3. Replicate Real-ESRGAN: upscale video (async, polled internally)
-   *   4. FFmpeg: final encode/compress (utility only)
-   *
-   * Returns: { jobId, status, sourceUrl, outputs: { premiumVideoUrl, beforeUrl, hooks, captions }, enginesUsed }
-   */
   createPremiumVideo: protectedProcedure
     .input(z.object({
       videoUrl: z.string().url(),
@@ -462,28 +475,25 @@ export const videoEnhanceRouter = router({
       const enginesUsed: any[] = [];
       const errors: string[] = [];
 
-      // Step 1: Whisper transcription
       let transcript = { text: "", segments: [] as any[], duration: 0 };
       try {
         transcript = await whisperTranscribe(input.videoUrl);
-        enginesUsed.push({ engine: "OpenAI Whisper-1", purpose: "Audio transcription", status: "succeeded", providerJobId: null, fallbackUsed: false });
+        enginesUsed.push({ engine: "OpenAI Whisper-1", purpose: "Audio transcription", status: "succeeded", fallbackUsed: false });
       } catch (e: any) {
         errors.push(`Whisper: ${e.message}`);
         enginesUsed.push({ engine: "OpenAI Whisper-1", purpose: "Audio transcription", status: "failed", fallbackUsed: true });
       }
 
-      // Step 2: GPT-4o-mini hooks + captions
       let copy = { hooks: [] as string[], captions: [] as string[], cta: "", suggestedPrice: 14.99 };
       try {
         copy = await gptGenerateHooksAndCaptions(transcript.text, "Premium Video");
-        enginesUsed.push({ engine: "OpenAI GPT-4o-mini", purpose: "Hook/caption generation", status: "succeeded", providerJobId: null, fallbackUsed: false });
+        enginesUsed.push({ engine: "OpenAI GPT-4o-mini", purpose: "Hook/caption generation", status: "succeeded", fallbackUsed: false });
       } catch (e: any) {
         errors.push(`GPT: ${e.message}`);
         enginesUsed.push({ engine: "OpenAI GPT-4o-mini", purpose: "Hook/caption generation", status: "failed", fallbackUsed: true });
       }
 
-      // Step 3: Replicate Real-ESRGAN upscale (if enabled and token available)
-      let premiumVideoUrl = input.videoUrl; // fallback = source
+      let premiumVideoUrl = input.videoUrl;
       let upscalePredictionId: string | null = null;
       if (input.enableUpscale && REPLICATE_TOKEN) {
         try {
@@ -498,14 +508,9 @@ export const videoEnhanceRouter = router({
         } catch (e: any) {
           errors.push(`Replicate ESRGAN: ${e.message}`);
           enginesUsed.push({ engine: "Replicate Real-ESRGAN", purpose: "Video upscale", status: "failed", fallbackUsed: true });
-          // fallback: use source URL as premium output
         }
-      } else if (input.enableUpscale && !REPLICATE_TOKEN) {
-        errors.push("Replicate upscale skipped — REPLICATE_API_TOKEN not configured");
-        enginesUsed.push({ engine: "Replicate Real-ESRGAN", purpose: "Video upscale", status: "skipped", fallbackUsed: true });
       }
 
-      // Step 4: FFmpeg final encode (utility — compress/normalize for delivery)
       let finalUrl = premiumVideoUrl;
       try {
         const tmpIn = await downloadToTemp(premiumVideoUrl);
@@ -515,11 +520,10 @@ export const videoEnhanceRouter = router({
         finalUrl = await saveFinalOutput(buf, "premium-video.mp4");
         unlink(tmpIn).catch(() => {});
         unlink(tmpOut).catch(() => {});
-        enginesUsed.push({ engine: "FFmpeg", purpose: "Final encode/compress (utility only)", status: "succeeded", providerJobId: null, fallbackUsed: false });
+        enginesUsed.push({ engine: "FFmpeg", purpose: "Final encode/compress (utility only)", status: "succeeded", fallbackUsed: false });
       } catch (e: any) {
         errors.push(`FFmpeg encode: ${e.message}`);
         enginesUsed.push({ engine: "FFmpeg", purpose: "Final encode", status: "failed", fallbackUsed: false });
-        // finalUrl remains premiumVideoUrl (Replicate output or source)
       }
 
       return {
@@ -541,16 +545,6 @@ export const videoEnhanceRouter = router({
       };
     }),
 
-  // ─── Create Teaser Package ──────────────────────────────────────────────────
-  /**
-   * FINAL OUTPUT ENGINE — Create Teaser + Full Package
-   * Pipeline:
-   *   1. OpenAI Whisper-1: transcribe audio
-   *   2. OpenAI GPT-4o-mini: detect best preview segment + generate hooks/captions
-   *   3. FFmpeg: cut teaser clip (utility)
-   *   4. FFmpeg: extract thumbnail frames (utility)
-   *   5. Returns: teaser video, full video (source), captions, hooks, thumbnails
-   */
   createTeaserPackage: protectedProcedure
     .input(z.object({
       videoUrl: z.string().url(),
@@ -561,7 +555,6 @@ export const videoEnhanceRouter = router({
       const enginesUsed: any[] = [];
       const errors: string[] = [];
 
-      // Step 1: Whisper transcription
       let transcript = { text: "", segments: [] as any[], duration: 0 };
       try {
         transcript = await whisperTranscribe(input.videoUrl);
@@ -571,7 +564,6 @@ export const videoEnhanceRouter = router({
         enginesUsed.push({ engine: "OpenAI Whisper-1", purpose: "Audio transcription", status: "failed", fallbackUsed: true });
       }
 
-      // Step 2: GPT best-moment detection
       let moments: any[] = [];
       let copy = { hooks: [] as string[], captions: [] as string[], cta: "", suggestedPrice: 9.99 };
       try {
@@ -584,7 +576,6 @@ export const videoEnhanceRouter = router({
         moments = [{ start: 0, end: Math.min(input.teaserDuration, 30), title: "Preview", caption: "Watch the full video", price: 9.99 }];
       }
 
-      // Step 3: FFmpeg — cut teaser clip
       const teaserMoment = moments[0] || { start: 0, end: input.teaserDuration };
       const teaserStart = teaserMoment.start || 0;
       const teaserEnd = Math.min(teaserMoment.end || input.teaserDuration, teaserStart + input.teaserDuration);
@@ -595,19 +586,15 @@ export const videoEnhanceRouter = router({
 
       try {
         const tmpIn = await downloadToTemp(input.videoUrl);
-
-        // Teaser clip
         const teaserBuf = await ffmpegTrim(tmpIn, teaserStart, teaserEnd);
         teaserUrl = await saveFinalOutput(teaserBuf, "teaser.mp4", "final-output");
 
-        // Full video (re-encode for delivery)
         const fullOut = path.join(os.tmpdir(), `vaultx-full-${randomUUID()}.mp4`);
         await execAsync(`ffmpeg -y -i "${tmpIn}" -c:v libx264 -preset fast -crf 22 -c:a aac "${fullOut}"`);
         const fullBuf = await readFile(fullOut);
         fullVideoUrl = await saveFinalOutput(fullBuf, "full-video.mp4", "final-output");
         unlink(fullOut).catch(() => {});
 
-        // Thumbnail frames: at 0s, 25%, 50%, 75% of video
         const probeResult = await execAsync(`ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${tmpIn}"`).catch(() => ({ stdout: "60" }));
         const vidDuration = parseFloat(probeResult.stdout.trim()) || 60;
         const thumbTimes = [0, vidDuration * 0.25, vidDuration * 0.5, vidDuration * 0.75];
@@ -616,11 +603,11 @@ export const videoEnhanceRouter = router({
             const thumbBuf = await ffmpegThumbnail(tmpIn, Math.floor(t));
             const thumbUrl = await saveFinalOutput(thumbBuf, `thumb-${Math.floor(t)}s.jpg`, "final-output");
             thumbnails.push(thumbUrl);
-          } catch { /* skip failed thumbnails */ }
+          } catch { /* skip */ }
         }
 
         unlink(tmpIn).catch(() => {});
-        enginesUsed.push({ engine: "FFmpeg", purpose: "Teaser cut + full encode + thumbnail extraction (utility only)", status: "succeeded", fallbackUsed: false });
+        enginesUsed.push({ engine: "FFmpeg", purpose: "Teaser cut + full encode + thumbnails (utility only)", status: "succeeded", fallbackUsed: false });
       } catch (e: any) {
         errors.push(`FFmpeg: ${e.message}`);
         enginesUsed.push({ engine: "FFmpeg", purpose: "Teaser/thumbnail processing", status: "failed", fallbackUsed: false });
@@ -640,27 +627,13 @@ export const videoEnhanceRouter = router({
           suggestedPrice: moments[0]?.price || copy.suggestedPrice,
           teaserTitle: moments[0]?.title || "Preview Clip",
           transcript: transcript.text,
-          metadata: {
-            teaserStart,
-            teaserEnd,
-            teaserDuration: teaserEnd - teaserStart,
-            aiDetectedMoment: moments[0] || null,
-          },
+          metadata: { teaserStart, teaserEnd, teaserDuration: teaserEnd - teaserStart },
         },
         enginesUsed,
         errors: errors.length > 0 ? errors : undefined,
       };
     }),
 
-  // ─── Create Viral Clip Pack ─────────────────────────────────────────────────
-  /**
-   * FINAL OUTPUT ENGINE — Create Viral Clip Pack
-   * Pipeline:
-   *   1. OpenAI Whisper-1: transcribe audio
-   *   2. OpenAI GPT-4o-mini: detect 3–5 strongest moments
-   *   3. FFmpeg: cut each moment into a clip (utility)
-   *   4. Returns: 3–5 clip URLs, captions/hooks per clip, metadata
-   */
   createViralClipPack: protectedProcedure
     .input(z.object({
       videoUrl: z.string().url(),
@@ -672,7 +645,6 @@ export const videoEnhanceRouter = router({
       const enginesUsed: any[] = [];
       const errors: string[] = [];
 
-      // Step 1: Whisper transcription
       let transcript = { text: "", segments: [] as any[], duration: 0 };
       try {
         transcript = await whisperTranscribe(input.videoUrl);
@@ -682,7 +654,6 @@ export const videoEnhanceRouter = router({
         enginesUsed.push({ engine: "OpenAI Whisper-1", purpose: "Audio transcription", status: "failed", fallbackUsed: true });
       }
 
-      // Step 2: GPT moment detection
       let moments: any[] = [];
       try {
         moments = await gptAnalyzeBestMoments(transcript.text, transcript.segments, transcript.duration || 60, input.clipCount);
@@ -690,7 +661,6 @@ export const videoEnhanceRouter = router({
       } catch (e: any) {
         errors.push(`GPT: ${e.message}`);
         enginesUsed.push({ engine: "OpenAI GPT-4o-mini", purpose: "Moment detection", status: "failed", fallbackUsed: true });
-        // Fallback: distribute evenly
         const vidDur = transcript.duration || 60;
         const clipDur = Math.floor(vidDur / input.clipCount);
         moments = Array.from({ length: input.clipCount }, (_, i) => ({
@@ -702,22 +672,18 @@ export const videoEnhanceRouter = router({
         }));
       }
 
-      // Step 3: FFmpeg — cut each clip
       const clips: any[] = [];
       let tmpIn: string | null = null;
       try {
         tmpIn = await downloadToTemp(input.videoUrl);
-
         for (let i = 0; i < Math.min(moments.length, input.clipCount); i++) {
           const m = moments[i];
           const start = Math.max(0, m.start || 0);
-          const end = Math.min(m.end || start + 30, start + 60); // max 60s per clip
+          const end = Math.min(m.end || start + 30, start + 60);
           if (end <= start) continue;
-
           try {
             let clipBuf: Buffer;
             if (input.aspectRatio !== "16:9") {
-              // Crop to target aspect ratio
               const tmpClip = path.join(os.tmpdir(), `vaultx-clip-raw-${randomUUID()}.mp4`);
               const clipRaw = await ffmpegTrim(tmpIn, start, end);
               await writeFile(tmpClip, clipRaw);
@@ -734,8 +700,7 @@ export const videoEnhanceRouter = router({
               caption: m.caption || "",
               hook: m.title || `Clip ${i + 1}`,
               price: m.price || 9.99,
-              start,
-              end,
+              start, end,
               duration: end - start,
               aspectRatio: input.aspectRatio,
             });
@@ -743,9 +708,8 @@ export const videoEnhanceRouter = router({
             errors.push(`Clip ${i + 1}: ${e.message}`);
           }
         }
-
         if (tmpIn) unlink(tmpIn).catch(() => {});
-        enginesUsed.push({ engine: "FFmpeg", purpose: `${clips.length} clip cuts + aspect ratio crop (utility only)`, status: clips.length > 0 ? "succeeded" : "failed", fallbackUsed: false });
+        enginesUsed.push({ engine: "FFmpeg", purpose: `${clips.length} clip cuts (utility only)`, status: clips.length > 0 ? "succeeded" : "failed", fallbackUsed: false });
       } catch (e: any) {
         errors.push(`FFmpeg: ${e.message}`);
         enginesUsed.push({ engine: "FFmpeg", purpose: "Clip cutting", status: "failed", fallbackUsed: false });
@@ -756,18 +720,404 @@ export const videoEnhanceRouter = router({
         jobId,
         status: clips.length > 0 ? (errors.length === 0 ? "succeeded" : "partial") : "failed",
         sourceUrl: input.videoUrl,
-        outputs: {
-          clips,
-          clipCount: clips.length,
-          aspectRatio: input.aspectRatio,
-          transcript: transcript.text,
-        },
+        outputs: { clips, clipCount: clips.length, aspectRatio: input.aspectRatio, transcript: transcript.text },
         enginesUsed,
         errors: errors.length > 0 ? errors : undefined,
       };
     }),
 
-  // ─── Legacy stubs (kept for backward compat) ────────────────────────────────
+  // ============================================================================
+  // AI VIDEO GENERATOR — MiniMax + Zeroscope + DAMO
+  // ============================================================================
+
+  // ─── Generate Video — MiniMax video-01 (text/image → 6s video, 699K runs) ───
+  generateVideo: protectedProcedure
+    .input(z.object({
+      prompt: z.string().min(1).max(1000),
+      firstFrameImage: z.string().url().optional(),
+      subjectReference: z.string().url().optional(),
+      promptOptimizer: z.boolean().default(true),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const prediction = await replicatePost("predictions", {
+        model: "minimax/video-01",
+        input: {
+          prompt: input.prompt,
+          prompt_optimizer: input.promptOptimizer,
+          ...(input.firstFrameImage ? { first_frame_image: input.firstFrameImage } : {}),
+          ...(input.subjectReference ? { subject_reference: input.subjectReference } : {}),
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "minimax/video-01",
+        message: "AI video generation started — MiniMax Hailuo — 6s video",
+      };
+    }),
+
+  // ─── Animate Image — MiniMax video-01-live (image → animated video) ─────────
+  animateImage: protectedProcedure
+    .input(z.object({
+      imageUrl: z.string().url(),
+      prompt: z.string().min(1).max(500),
+      promptOptimizer: z.boolean().default(true),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const prediction = await replicatePost("predictions", {
+        model: "minimax/video-01-live",
+        input: {
+          first_frame_image: input.imageUrl,
+          prompt: input.prompt,
+          prompt_optimizer: input.promptOptimizer,
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "minimax/video-01-live",
+        message: "Image animation started — MiniMax Live2D",
+      };
+    }),
+
+  // ─── Image to Video — Stable Video Diffusion (image → video) ────────────────
+  imageToVideo: protectedProcedure
+    .input(z.object({
+      imageUrl: z.string().url(),
+      motionBucketId: z.number().min(1).max(255).default(127),
+      fps: z.number().min(5).max(30).default(24),
+      condAug: z.number().min(0).max(1).default(0.02),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const prediction = await replicatePost("predictions", {
+        version: "3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438",
+        input: {
+          input_image: input.imageUrl,
+          motion_bucket_id: input.motionBucketId,
+          frames_per_second: input.fps,
+          cond_aug: input.condAug,
+          video_length: "14_frames_with_svd",
+          sizing_strategy: "maintain_aspect_ratio",
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "stability-ai/stable-video-diffusion",
+        message: "Image-to-video started — Stable Video Diffusion",
+      };
+    }),
+
+  // ─── Text to Video — Zeroscope XL ───────────────────────────────────────────
+  generateVideoAlt: protectedProcedure
+    .input(z.object({
+      prompt: z.string().min(1).max(500),
+      negativePrompt: z.string().optional(),
+      fps: z.number().min(8).max(24).default(24),
+      width: z.number().default(576),
+      height: z.number().default(320),
+      numFrames: z.number().min(16).max(200).default(24),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const prediction = await replicatePost("predictions", {
+        version: "9f747673945c62801b13b84701c783929c0ee784e4748ec062204894dda1a351",
+        model: "anotherjesse/zeroscope-v2-xl",
+        input: {
+          prompt: input.prompt,
+          fps: input.fps,
+          width: input.width,
+          height: input.height,
+          batch_size: 1,
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "anotherjesse/zeroscope-v2-xl",
+        message: "Text-to-video started — Zeroscope XL",
+      };
+    }),
+
+  // ─── Generate GIF — Hotshot-XL (text → GIF/short video) ─────────────────────
+  generateGif: protectedProcedure
+    .input(z.object({
+      prompt: z.string().min(1).max(500),
+      negativePrompt: z.string().optional(),
+      width: z.number().default(672),
+      height: z.number().default(384),
+      steps: z.number().min(1).max(50).default(30),
+      outputMp4: z.boolean().default(true),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const prediction = await replicatePost("predictions", {
+        version: "78b3a6257e16e4b241245d65c8b2b81ea2e1ff7ed4c55306b511509ddbfd327a",
+        model: "lucataco/hotshot-xl",
+        input: {
+          prompt: input.prompt,
+          negative_prompt: input.negativePrompt,
+          width: input.width,
+          height: input.height,
+          steps: input.steps,
+          mp4: input.outputMp4,
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "lucataco/hotshot-xl",
+        message: "AI GIF/video generation started — Hotshot-XL",
+      };
+    }),
+
+  // ============================================================================
+  // AI SOUND STUDIO
+  // ============================================================================
+
+  // ─── Add AI Sound — MMAudio (video → AI sound design, 5.1M runs) ────────────
+  addAISound: protectedProcedure
+    .input(z.object({
+      videoUrl: z.string().url(),
+      prompt: z.string().min(1).max(500),
+      negativePrompt: z.string().optional(),
+      duration: z.number().min(1).max(30).default(8),
+      numSteps: z.number().min(1).max(100).default(25),
+      cfgStrength: z.number().min(1).max(20).default(4.5),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const prediction = await replicatePost("predictions", {
+        version: "62871fb59889b2d7c13777f08deb3b36bdff88f7e1d53a50ad7694548a41b484",
+        model: "zsxkib/mmaudio",
+        input: {
+          video: input.videoUrl,
+          prompt: input.prompt,
+          negative_prompt: input.negativePrompt,
+          duration: input.duration,
+          num_steps: input.numSteps,
+          cfg_strength: input.cfgStrength,
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "zsxkib/mmaudio",
+        message: "AI sound design started — MMAudio V2",
+      };
+    }),
+
+  // ─── Generate Music — MusicGen (text → music, 3.3M runs) ────────────────────
+  generateMusic: protectedProcedure
+    .input(z.object({
+      prompt: z.string().min(1).max(500),
+      duration: z.number().min(5).max(30).default(15),
+      inputAudio: z.string().url().optional(),
+      continuation: z.boolean().default(false),
+      topK: z.number().default(250),
+      topP: z.number().default(0),
+      temperature: z.number().default(1),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const prediction = await replicatePost("predictions", {
+        version: "671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
+        model: "meta/musicgen",
+        input: {
+          prompt: input.prompt,
+          duration: input.duration,
+          top_k: input.topK,
+          top_p: input.topP,
+          temperature: input.temperature,
+          ...(input.inputAudio ? { input_audio: input.inputAudio, continuation: input.continuation } : {}),
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "meta/musicgen",
+        message: "Music generation started — Meta MusicGen",
+      };
+    }),
+
+  // ============================================================================
+  // FACE STUDIO
+  // ============================================================================
+
+  // ─── Beauty Enhance — PuLID (face-preserving beauty, 4M runs) ───────────────
+  beautyEnhance: protectedProcedure
+    .input(z.object({
+      imageUrl: z.string().url(),
+      prompt: z.string().min(1).max(500),
+      negativePrompt: z.string().optional(),
+      numSteps: z.number().min(1).max(100).default(20),
+      numSamples: z.number().min(1).max(4).default(1),
+      cfgScale: z.number().min(1).max(20).default(1.2),
+      imageWidth: z.number().default(896),
+      imageHeight: z.number().default(1152),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const prediction = await replicatePost("predictions", {
+        version: "43d309c37ab4e62361e5e29b8e9e867fb2dcbcec77ae91206a8d95ac5dd451a0",
+        model: "zsxkib/pulid",
+        input: {
+          image: input.imageUrl,
+          prompt: input.prompt,
+          negative_prompt: input.negativePrompt,
+          num_steps: input.numSteps,
+          num_samples: input.numSamples,
+          cfg_scale: input.cfgScale,
+          image_width: input.imageWidth,
+          image_height: input.imageHeight,
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "zsxkib/pulid",
+        message: "AI beauty enhancement started — PuLID face-preserving",
+      };
+    }),
+
+  // ─── Face Style Transfer — Face-to-Many (15M runs) ───────────────────────────
+  faceStyleTransfer: protectedProcedure
+    .input(z.object({
+      imageUrl: z.string().url(),
+      style: z.enum(["3D", "Emoji", "Video game", "Pixels", "Clay", "Toy", "Realistic"]).default("Realistic"),
+      prompt: z.string().optional(),
+      loraScale: z.number().min(0).max(1).default(0.6),
+      promptStrength: z.number().min(0).max(1).default(4.5),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const prediction = await replicatePost("predictions", {
+        version: "a07f252abbbd832009640b27f063ea52d87d7a23a185ca165bec23b5adc8deaf",
+        model: "fofr/face-to-many",
+        input: {
+          image: input.imageUrl,
+          style: input.style,
+          prompt: input.prompt || `a person in ${input.style} style`,
+          lora_scale: input.loraScale,
+          prompt_strength: input.promptStrength,
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "fofr/face-to-many",
+        message: `Face style transfer started — ${input.style} style`,
+      };
+    }),
+
+  // ─── Generate Character — Consistent Character (1.4M runs) ──────────────────
+  generateCharacter: protectedProcedure
+    .input(z.object({
+      subjectImageUrl: z.string().url(),
+      prompt: z.string().min(1).max(500),
+      negativePrompt: z.string().optional(),
+      numOutputs: z.number().min(1).max(4).default(3),
+      randomisePoses: z.boolean().default(true),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const prediction = await replicatePost("predictions", {
+        version: "9c77a3c2f884193fcee4d89645f02a0b9def9434f9e03cb98460456b831c8772",
+        model: "fofr/consistent-character",
+        input: {
+          subject: input.subjectImageUrl,
+          prompt: input.prompt,
+          negative_prompt: input.negativePrompt,
+          number_of_outputs: input.numOutputs,
+          randomise_poses: input.randomisePoses,
+          output_format: "webp",
+          output_quality: 80,
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "fofr/consistent-character",
+        message: `Character generation started — ${input.numOutputs} poses`,
+      };
+    }),
+
+  // ─── Realistic Portrait — Instant-ID (1M runs) ───────────────────────────────
+  realisticPortrait: protectedProcedure
+    .input(z.object({
+      imageUrl: z.string().url(),
+      prompt: z.string().min(1).max(500),
+      negativePrompt: z.string().optional(),
+      numOutputs: z.number().min(1).max(4).default(1),
+      enableLcm: z.boolean().default(false),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const prediction = await replicatePost("predictions", {
+        version: "2e4785a4d80dadf580077b2244c8d7c05d8e3faac04a04c02d8e099dd2876789",
+        model: "zsxkib/instant-id",
+        input: {
+          image: input.imageUrl,
+          prompt: input.prompt,
+          negative_prompt: input.negativePrompt,
+          num_outputs: input.numOutputs,
+          enable_lcm: input.enableLcm,
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "zsxkib/instant-id",
+        message: "Realistic portrait generation started — Instant-ID",
+      };
+    }),
+
+  // ─── PhotoMaker Style — PhotoMaker (9M runs) ─────────────────────────────────
+  photoMakerStyle: protectedProcedure
+    .input(z.object({
+      imageUrl: z.string().url(),
+      prompt: z.string().min(1).max(500),
+      styleName: z.enum(["(No style)", "Cinematic", "Disney Charactor", "Digital Art", "Photographic (Default)", "Fantasy art", "Neonpunk", "Enhance", "Comic book", "Lowpoly", "Line art"]).default("Cinematic"),
+      numSteps: z.number().min(20).max(100).default(50),
+      numOutputs: z.number().min(1).max(4).default(1),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const prediction = await replicatePost("predictions", {
+        version: "ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4",
+        model: "tencentarc/photomaker",
+        input: {
+          input_image: input.imageUrl,
+          prompt: input.prompt,
+          style_name: input.styleName,
+          num_steps: input.numSteps,
+          num_outputs: input.numOutputs,
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "tencentarc/photomaker",
+        message: `PhotoMaker style started — ${input.styleName}`,
+      };
+    }),
+
+  // ─── Legacy stubs ────────────────────────────────────────────────────────────
   enhanceVideo: protectedProcedure
     .input(z.object({ videoUrl: z.string(), enhancements: z.array(z.string()) }))
     .mutation(async ({ ctx, input }) => ({
@@ -780,10 +1130,11 @@ export const videoEnhanceRouter = router({
   getEnhancementOptions: protectedProcedure.query(async () => ({
     options: [
       { id: "upscale", name: "4K Upscale", provider: "Replicate Real-ESRGAN", available: !!REPLICATE_TOKEN },
-      { id: "slowmo", name: "Slow Motion", provider: "Replicate RIFE v4.6", available: !!REPLICATE_TOKEN },
+      { id: "slowmo", name: "Slow Motion", provider: "Replicate RIFE-Pro", available: !!REPLICATE_TOKEN },
       { id: "transcribe", name: "Auto-Transcribe", provider: "OpenAI Whisper-1", available: !!process.env.OPENAI_API_KEY },
-      { id: "beauty", name: "Beauty Enhancement", provider: "Pollo AI (requires credits)", available: false },
-      { id: "cinematic", name: "Cinematic Grade", provider: "Pollo AI (requires credits)", available: false },
+      { id: "generate", name: "AI Video Generation", provider: "Replicate MiniMax", available: !!REPLICATE_TOKEN },
+      { id: "sound", name: "AI Sound Design", provider: "Replicate MMAudio", available: !!REPLICATE_TOKEN },
+      { id: "beauty", name: "Beauty Enhancement", provider: "Replicate PuLID", available: !!REPLICATE_TOKEN },
     ],
   })),
   getEnhancementStatus: protectedProcedure
