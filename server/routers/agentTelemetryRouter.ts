@@ -95,16 +95,32 @@ export const agentTelemetryRouter = router({
         const dateFilter = startDate ? `AND created_at >= '${startDate.toISOString().slice(0, 19)}'` : "";
 
         // Combine telemetry events and execution runs into a unified feed
+        // Use CONVERT to ensure consistent utf8mb4_0900_ai_ci collation across UNION
         const query = `
-          SELECT id, agent_id, agent_name, agent_category, task_type, target, status,
-                 started_at as created_at, outcome, revenue_generated, error_message
+          SELECT id COLLATE utf8mb4_0900_ai_ci as id,
+                 agent_id COLLATE utf8mb4_0900_ai_ci as agent_id,
+                 agent_name COLLATE utf8mb4_0900_ai_ci as agent_name,
+                 agent_category COLLATE utf8mb4_0900_ai_ci as agent_category,
+                 task_type COLLATE utf8mb4_0900_ai_ci as task_type,
+                 COALESCE(target, '') COLLATE utf8mb4_0900_ai_ci as target,
+                 status COLLATE utf8mb4_0900_ai_ci as status,
+                 started_at as created_at,
+                 COALESCE(outcome, '') COLLATE utf8mb4_0900_ai_ci as outcome,
+                 revenue_generated, error_message
           FROM agent_telemetry_events
           WHERE 1=1 ${dateFilter} ${statusFilter}
           UNION ALL
-          SELECT CAST(id AS CHAR), CAST(agent_id AS CHAR), agent_name, 'infra' as agent_category,
-                 'agent_run' as task_type, NULL as target,
-                 CASE status WHEN 'completed' THEN 'success' WHEN 'failed' THEN 'failed' ELSE status END,
-                 started_at as created_at, result_summary as outcome, 0 as revenue_generated, error_message
+          SELECT CONVERT(CAST(id AS CHAR) USING utf8mb4) COLLATE utf8mb4_0900_ai_ci,
+                 CONVERT(CAST(agent_id AS CHAR) USING utf8mb4) COLLATE utf8mb4_0900_ai_ci,
+                 agent_name COLLATE utf8mb4_0900_ai_ci,
+                 CONVERT('infra' USING utf8mb4) COLLATE utf8mb4_0900_ai_ci,
+                 CONVERT('agent_run' USING utf8mb4) COLLATE utf8mb4_0900_ai_ci,
+                 CONVERT('' USING utf8mb4) COLLATE utf8mb4_0900_ai_ci,
+                 CASE status WHEN 'completed' THEN CONVERT('success' USING utf8mb4) WHEN 'failed' THEN CONVERT('failed' USING utf8mb4) ELSE CONVERT(status USING utf8mb4) END COLLATE utf8mb4_0900_ai_ci,
+                 started_at as created_at,
+                 CONVERT(COALESCE(result_summary, '') USING utf8mb4) COLLATE utf8mb4_0900_ai_ci,
+                 0 as revenue_generated,
+                 error_message
           FROM agent_execution_runs
           WHERE 1=1 ${dateFilter.replace(/created_at/g, 'started_at')} ${statusFilter}
           ORDER BY created_at DESC
