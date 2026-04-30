@@ -639,7 +639,6 @@ function CreatorProfile({ creator, onBack }: { creator: any; onBack: () => void 
           onClose={() => setSubStep("idle")}
         />
       )}
-    <div className="space-y-4">
       <button onClick={onBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
         ← Back to Discover
       </button>
