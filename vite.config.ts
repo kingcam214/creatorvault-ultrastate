@@ -26,6 +26,20 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          trpc: ['@trpc/client', '@trpc/react-query', '@tanstack/react-query'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
+          stripe: ['@stripe/stripe-js'],
+          socket: ['socket.io-client'],
+          charts: ['recharts'],
+          datefns: ['date-fns'],
+        },
+      },
+    },
   },
   server: {
     host: true,
