@@ -147,6 +147,10 @@ export const content = mysqlTable("content", {
   status: varchar("status", { length: 20 }).default("pending"),
   views: int("views").default(0),
   earnings: int("earnings").default(0),
+  priceCents: int("price_cents").default(0).notNull(),
+  isLocked: boolean("is_locked").default(false).notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  unlockType: mysqlEnum("unlock_type", ["free","subscription","ppv"]).default("free").notNull(),
   metadata: json("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
@@ -1723,3 +1727,118 @@ export const sceneShotMedia = mysqlTable("scene_shot_media", {
   status: mysqlEnum("status", ["missing", "assigned", "approved", "rejected"]).default("missing").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// ============================================================
+// DIRECT MESSAGING + PPV SYSTEM
+// ============================================================
+
+export const conversations = mysqlTable("conversations", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  fanId: int("fan_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  lastMessageAt: timestamp("last_message_at").defaultNow().notNull(),
+  creatorUnreadCount: int("creator_unread_count").default(0).notNull(),
+  fanUnreadCount: int("fan_unread_count").default(0).notNull(),
+  isArchived: boolean("is_archived").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  creatorIdIdx: index("idx_conversations_creator_id").on(table.creatorId),
+  fanIdIdx: index("idx_conversations_fan_id").on(table.fanId),
+  lastMessageAtIdx: index("idx_conversations_last_message_at").on(table.lastMessageAt),
+  uniquePair: index("idx_conversations_unique_pair").on(table.creatorId, table.fanId),
+}));
+
+export const messages = mysqlTable("messages", {
+  id: int("id").autoincrement().primaryKey(),
+  conversationId: int("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+  senderId: int("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  body: text("body"),
+  // PPV fields
+  mediaUrl: text("media_url"),
+  mediaType: mysqlEnum("media_type", ["image", "video", "audio"]),
+  mediaThumbnailUrl: text("media_thumbnail_url"),
+  isPpv: boolean("is_ppv").default(false).notNull(),
+  ppvPriceCents: int("ppv_price_cents").default(0).notNull(),
+  ppvUnlockCount: int("ppv_unlock_count").default(0).notNull(),
+  ppvEarningsCents: int("ppv_earnings_cents").default(0).notNull(),
+  // Mass DM tracking
+  isMassDm: boolean("is_mass_dm").default(false).notNull(),
+  massDmBatchId: varchar("mass_dm_batch_id", { length: 36 }),
+  // Read tracking
+  isReadByRecipient: boolean("is_read_by_recipient").default(false).notNull(),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  conversationIdIdx: index("idx_messages_conversation_id").on(table.conversationId),
+  senderIdIdx: index("idx_messages_sender_id").on(table.senderId),
+  createdAtIdx: index("idx_messages_created_at").on(table.createdAt),
+  massDmBatchIdx: index("idx_messages_mass_dm_batch").on(table.massDmBatchId),
+}));
+
+export const messageUnlocks = mysqlTable("message_unlocks", {
+  id: int("id").autoincrement().primaryKey(),
+  messageId: int("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
+  fanId: int("fan_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  amountPaidCents: int("amount_paid_cents").notNull(),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  unlockedAt: timestamp("unlocked_at").defaultNow().notNull(),
+}, (table) => ({
+  messageIdIdx: index("idx_message_unlocks_message_id").on(table.messageId),
+  fanIdIdx: index("idx_message_unlocks_fan_id").on(table.fanId),
+  uniqueUnlock: index("idx_message_unlocks_unique").on(table.messageId, table.fanId),
+}));
+
+// ============================================================
+// LOCKED CONTENT (PPV POSTS)
+// ============================================================
+
+export const contentUnlocks = mysqlTable("content_unlocks", {
+  id: int("id").autoincrement().primaryKey(),
+  contentId: int("content_id").notNull().references(() => content.id, { onDelete: "cascade" }),
+  fanId: int("fan_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  amountPaidCents: int("amount_paid_cents").notNull(),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  unlockedAt: timestamp("unlocked_at").defaultNow().notNull(),
+}, (table) => ({
+  contentIdIdx: index("idx_content_unlocks_content_id").on(table.contentId),
+  fanIdIdx: index("idx_content_unlocks_fan_id").on(table.fanId),
+  uniqueUnlock: index("idx_content_unlocks_unique").on(table.contentId, table.fanId),
+}));
+
+// ============================================================
+// TIPS
+// ============================================================
+
+export const tips = mysqlTable("tips", {
+  id: int("id").autoincrement().primaryKey(),
+  fanId: int("fan_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contentId: int("content_id").references(() => content.id, { onDelete: "set null" }),
+  messageId: int("message_id").references(() => messages.id, { onDelete: "set null" }),
+  amountCents: int("amount_cents").notNull(),
+  message: varchar("message", { length: 500 }),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  status: mysqlEnum("status", ["pending", "completed", "refunded"]).default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  fanIdIdx: index("idx_tips_fan_id").on(table.fanId),
+  creatorIdIdx: index("idx_tips_creator_id").on(table.creatorId),
+  statusIdx: index("idx_tips_status").on(table.status),
+}));
+
+// ============================================================
+// SSE NOTIFICATION EVENTS (for real-time message delivery)
+// ============================================================
+
+export const notificationEvents = mysqlTable("notification_events", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: mysqlEnum("type", ["new_message", "ppv_unlock", "new_tip", "new_subscriber", "ppv_purchase"]).notNull(),
+  payload: json("payload").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_notification_events_user_id").on(table.userId),
+  isReadIdx: index("idx_notification_events_is_read").on(table.isRead),
+  createdAtIdx: index("idx_notification_events_created_at").on(table.createdAt),
+}));
