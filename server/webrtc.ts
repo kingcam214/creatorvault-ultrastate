@@ -8,7 +8,8 @@
  * - No external media server required (P2P mesh)
  */
 
-import { Server as SocketIOServer } from 'socket.io';
+import { Server as SocketIOServer } from "socket.io";
+import { setIO } from "./_core/socketio";
 import type { Server as HTTPServer } from 'http';
 
 interface StreamRoom {
@@ -29,9 +30,15 @@ export function initializeWebRTC(httpServer: HTTPServer) {
     },
     path: '/socket.io/',
   });
+  setIO(io); // expose io for DM real-time delivery
 
   io.on('connection', (socket) => {
     console.log('[WebRTC] Client connected:', socket.id);
+    // Join personal room for DM real-time delivery
+    socket.on('join-user-room', (userId: number) => {
+      socket.join(`user:${userId}`);
+      console.log(`[WebRTC] Socket ${socket.id} joined user:${userId}`);
+    });
 
     // Broadcaster starts streaming
     socket.on('start-broadcast', ({ streamId, userId }: { streamId: number; userId: number }) => {
