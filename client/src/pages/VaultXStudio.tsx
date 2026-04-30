@@ -510,8 +510,14 @@ function DesireGradeMode({ onOutput }: { onOutput: (url: string, label: string) 
     try {
       const fd = new FormData();
       fd.append("video", videoFile.file);
-      fd.append("filter", selectedGrade);
+      fd.append("look", selectedGrade);
       fd.append("intensity", String(intensity / 100));
+      if (showManual) {
+        fd.append("brightness", String(manualBrightness / 100));
+        fd.append("contrast", String(manualContrast / 100));
+        fd.append("saturation", String(manualSaturation / 100));
+        fd.append("warmth", String(manualWarmth / 100));
+      }
       const result = await callVideoStudio("color-grade", fd);
       setOutputUrl(result.url);
       onOutput(result.url, selectedGradeData?.label || selectedGrade);
@@ -549,6 +555,30 @@ function DesireGradeMode({ onOutput }: { onOutput: (url: string, label: string) 
       <div className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
         <div className="flex justify-between mb-2"><span className="text-xs font-bold text-white">Grade Intensity</span><span className="text-xs font-bold" style={{ color: "#F97316" }}>{intensity}%</span></div>
         <input type="range" min={10} max={100} step={5} value={intensity} onChange={(e) => setIntensity(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#F97316" }} />
+      </div>
+      <div className="p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <button onClick={() => setShowManual(!showManual)} className="w-full flex items-center justify-between text-xs font-bold text-white">
+          <span>Manual Adjustments</span>
+          <span style={{ color: "#F97316" }}>{showManual ? "▲ Hide" : "▼ Show"}</span>
+        </button>
+        {showManual && (
+          <div className="flex flex-col gap-3 mt-3">
+            {[
+              { label: "Brightness", value: manualBrightness, set: setManualBrightness, min: -50, max: 50, step: 1, fmt: (v: number) => v > 0 ? `+${v}` : `${v}` },
+              { label: "Contrast", value: manualContrast, set: setManualContrast, min: 50, max: 200, step: 5, fmt: (v: number) => `${v}%` },
+              { label: "Saturation", value: manualSaturation, set: setManualSaturation, min: 0, max: 200, step: 5, fmt: (v: number) => `${v}%` },
+              { label: "Warmth", value: manualWarmth, set: setManualWarmth, min: -100, max: 100, step: 5, fmt: (v: number) => v > 0 ? `+${v} Warm` : v < 0 ? `${v} Cool` : "Neutral" },
+            ].map(({ label, value, set, min, max, step, fmt }) => (
+              <div key={label}>
+                <div className="flex justify-between mb-1">
+                  <span className="text-xs text-white">{label}</span>
+                  <span className="text-xs font-bold" style={{ color: "#F97316" }}>{fmt(value)}</span>
+                </div>
+                <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => set(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#F97316" }} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <button onClick={process} disabled={!videoFile || isProcessing} className="w-full py-4 rounded-2xl font-black text-white text-sm transition-all flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(249,115,22,0.3)" : "linear-gradient(135deg, #F97316, #C2410C)", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer", boxShadow: !videoFile || isProcessing ? "none" : "0 0 24px rgba(249,115,22,0.35)" }}>
         {isProcessing ? <><Loader2 size={18} className="animate-spin" /> Grading...</> : <><Palette size={18} /> Apply Color Grade</>}
@@ -883,12 +913,13 @@ function PlatformVaultMode({ onOutput }: { onOutput: (url: string, label: string
     try {
       const fd = new FormData();
       fd.append("video", videoFile.file);
-      fd.append("format", platform.format);
+      fd.append("format", platform.format.replace("mp4_h264", "mp4").replace("mp4_h265", "mov"));
       fd.append("resolution", platform.resolution);
+      fd.append("platform", platform.id);
       const result = await callVideoStudio("convert", fd);
       setOutputUrl(result.url);
       onOutput(result.url, `${platform.name} Export`);
-      toast.success(`Exported for ${platform.name}`);
+      toast.success(`Exported for ${platform.name} — ${platform.resolution} ${platform.note}`);
     } catch (e: any) { toast.error(e.message); }
     finally { setIsProcessing(false); }
   };
