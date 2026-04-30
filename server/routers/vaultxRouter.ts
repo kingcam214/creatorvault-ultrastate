@@ -300,4 +300,293 @@ export const vaultxRouter = router({
       avg_monthly_revenue: parseFloat(p.avg_monthly_revenue || "0"),
     };
   }),
+
+// ─── ADDITIONS TO vaultxRouter — append before the closing });
+// These replace the fake Subscribe/Tip/Content buttons in VaultX.tsx
+
+  // ─── Subscribe to Creator (Stripe Checkout) ─────────────────────────────
+  subscribeToCreator: protectedProcedure
+    .input(z.object({
+      creatorId: z.number(),
+      tierId: z.number().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.id === input.creatorId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot subscribe to yourself" });
+      }
+      // Get the creator's default subscription tier
+      let tier: any;
+      if (input.tierId) {
+        const rows = await rawQuery(
+          "SELECT * FROM subscription_tiers WHERE id = ? AND creator_id = ? AND is_active = 1 LIMIT 1",
+          [input.tierId, input.creatorId]
+        );
+        tier = rows[0];
+      } else {
+        const rows = await rawQuery(
+          "SELECT * FROM subscription_tiers WHERE creator_id = ? AND is_active = 1 ORDER BY price_in_cents ASC LIMIT 1",
+          [input.creatorId]
+        );
+        tier = rows[0];
+      }
+      if (!tier) {
+        // No tier configured — create a default $9.99/mo tier
+        await rawExec(
+          "INSERT INTO subscription_tiers (creator_id, name, price_in_cents, billing_interval, is_active) VALUES (?, 'Standard', 999, 'monthly', 1)",
+          [input.creatorId]
+        );
+        const rows = await rawQuery(
+          "SELECT * FROM subscription_tiers WHERE creator_id = ? AND is_active = 1 ORDER BY id DESC LIMIT 1",
+          [input.creatorId]
+        );
+        tier = rows[0];
+      }
+      // Check if already subscribed
+      const existing = await rawQuery(
+        "SELECT id FROM subscriptions WHERE fan_id = ? AND creator_id = ? AND status = 'active' LIMIT 1",
+        [ctx.user.id, input.creatorId]
+      );
+      if (existing.length > 0) {
+        throw new TRPCError({ code: "CONFLICT", message: "Already subscribed" });
+      }
+      // Create Stripe PaymentIntent for the subscription charge
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" });
+      const creatorRows = await rawQuery("SELECT name, username FROM users WHERE id = ? LIMIT 1", [input.creatorId]);
+      const creatorName = creatorRows[0]?.name || creatorRows[0]?.username || `Creator #${input.creatorId}`;
+      const intent = await stripe.paymentIntents.create({
+        amount: tier.price_in_cents,
+        currency: "usd",
+        description: `VaultX subscription to ${creatorName} — ${tier.name}`,
+        metadata: {
+          type: "vaultx_subscription",
+          fanId: ctx.user.id.toString(),
+          creatorId: input.creatorId.toString(),
+          tierId: tier.id.toString(),
+        },
+        automatic_payment_methods: { enabled: true },
+      });
+      return {
+        clientSecret: intent.client_secret,
+        intentId: intent.id,
+        amount: tier.price_in_cents,
+        tierName: tier.name,
+        creatorName,
+      };
+    }),
+
+  // ─── Confirm Subscription After Stripe Payment ───────────────────────────
+  confirmSubscription: protectedProcedure
+    .input(z.object({
+      intentId: z.string(),
+      creatorId: z.number(),
+      tierId: z.number(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" });
+      const intent = await stripe.paymentIntents.retrieve(input.intentId);
+      if (intent.status !== "succeeded") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Payment not completed: ${intent.status}` });
+      }
+      const amountCents = intent.amount;
+      const creatorEarningsCents = Math.round(amountCents * 0.85); // 85% to creator — THIS IS LAW
+      const now = new Date();
+      const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      // Insert subscription record
+      await rawExec(
+        `INSERT INTO subscriptions (fan_id, creator_id, tier_id, stripe_subscription_id, status, current_period_start, current_period_end)
+         VALUES (?, ?, ?, ?, 'active', ?, ?)
+         ON DUPLICATE KEY UPDATE status = 'active', current_period_start = ?, current_period_end = ?, stripe_subscription_id = ?`,
+        [ctx.user.id, input.creatorId, input.tierId, intent.id, now, periodEnd, now, periodEnd, intent.id]
+      );
+      // Record transaction
+      await rawExec(
+        `INSERT INTO transactions (user_id, type, amount, status, stripe_payment_intent_id, description, created_at)
+         VALUES (?, 'subscription', ?, 'completed', ?, ?, NOW())`,
+        [ctx.user.id, amountCents, intent.id, `VaultX subscription to creator #${input.creatorId}`]
+      );
+      // Update creator earnings in vaultx_revenue_stats
+      await rawExec(
+        `INSERT INTO vaultx_revenue_stats (creator_id, period_date, subscription_revenue, gross_revenue, net_revenue, new_subscribers)
+         VALUES (?, CURDATE(), ?, ?, ?, 1)
+         ON DUPLICATE KEY UPDATE
+           subscription_revenue = subscription_revenue + VALUES(subscription_revenue),
+           gross_revenue = gross_revenue + VALUES(gross_revenue),
+           net_revenue = net_revenue + VALUES(net_revenue),
+           new_subscribers = new_subscribers + 1`,
+        [input.creatorId, creatorEarningsCents, amountCents, creatorEarningsCents]
+      );
+      // Update creator profile subscriber count
+      await rawExec(
+        `UPDATE vaultx_creator_profiles SET total_subscribers = total_subscribers + 1 WHERE creator_id = ?`,
+        [input.creatorId]
+      );
+      return { success: true, subscriptionActive: true };
+    }),
+
+  // ─── Send Tip to Creator ─────────────────────────────────────────────────
+  createTipIntent: protectedProcedure
+    .input(z.object({
+      creatorId: z.number(),
+      amountCents: z.number().min(100).max(100000), // $1 min, $1000 max
+      message: z.string().max(500).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.id === input.creatorId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot tip yourself" });
+      }
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" });
+      const creatorRows = await rawQuery("SELECT name, username FROM users WHERE id = ? LIMIT 1", [input.creatorId]);
+      const creatorName = creatorRows[0]?.name || creatorRows[0]?.username || `Creator #${input.creatorId}`;
+      const intent = await stripe.paymentIntents.create({
+        amount: input.amountCents,
+        currency: "usd",
+        description: `VaultX tip to ${creatorName}${input.message ? `: "${input.message}"` : ""}`,
+        metadata: {
+          type: "vaultx_tip",
+          fanId: ctx.user.id.toString(),
+          creatorId: input.creatorId.toString(),
+          message: input.message || "",
+        },
+        automatic_payment_methods: { enabled: true },
+      });
+      // Pre-insert tip record as pending
+      await rawExec(
+        `INSERT INTO tips (fan_id, creator_id, amount_cents, message, stripe_payment_intent_id, status)
+         VALUES (?, ?, ?, ?, ?, 'pending')`,
+        [ctx.user.id, input.creatorId, input.amountCents, input.message || null, intent.id]
+      );
+      return {
+        clientSecret: intent.client_secret,
+        intentId: intent.id,
+        amountCents: input.amountCents,
+        creatorName,
+      };
+    }),
+
+  // ─── Confirm Tip After Payment ────────────────────────────────────────────
+  confirmTip: protectedProcedure
+    .input(z.object({ intentId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" });
+      const intent = await stripe.paymentIntents.retrieve(input.intentId);
+      if (intent.status !== "succeeded") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Payment not completed: ${intent.status}` });
+      }
+      const creatorId = parseInt(intent.metadata.creatorId);
+      const amountCents = intent.amount;
+      const creatorEarningsCents = Math.round(amountCents * 0.85);
+      // Mark tip completed
+      await rawExec(
+        "UPDATE tips SET status = 'completed' WHERE stripe_payment_intent_id = ? AND fan_id = ?",
+        [input.intentId, ctx.user.id]
+      );
+      // Update creator tip revenue
+      await rawExec(
+        `INSERT INTO vaultx_revenue_stats (creator_id, period_date, tip_revenue, gross_revenue, net_revenue)
+         VALUES (?, CURDATE(), ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           tip_revenue = tip_revenue + VALUES(tip_revenue),
+           gross_revenue = gross_revenue + VALUES(gross_revenue),
+           net_revenue = net_revenue + VALUES(net_revenue)`,
+        [creatorId, creatorEarningsCents, amountCents, creatorEarningsCents]
+      );
+      return { success: true };
+    }),
+
+  // ─── Save Content Record After Upload ────────────────────────────────────
+  saveContent: protectedProcedure
+    .input(z.object({
+      title: z.string().min(1).max(255),
+      description: z.string().max(2000).optional(),
+      fileUrl: z.string().url(),
+      thumbnailUrl: z.string().url().optional(),
+      mimeType: z.string().optional(),
+      fileSizeBytes: z.number().optional(),
+      unlockType: z.enum(["free", "subscription", "ppv"]).default("subscription"),
+      priceCents: z.number().min(0).default(0),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const contentType = input.mimeType?.startsWith("video") ? "video"
+        : input.mimeType?.startsWith("image") ? "image"
+        : input.mimeType?.startsWith("audio") ? "audio"
+        : "video";
+      await rawExec(
+        `INSERT INTO content
+           (user_id, title, description, file_url, file_key, mime_type, file_size, content_type,
+            status, price_cents, is_locked, thumbnail_url, unlock_type, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, NOW())`,
+        [
+          ctx.user.id,
+          input.title,
+          input.description || null,
+          input.fileUrl,
+          input.fileUrl, // file_key = url for local storage
+          input.mimeType || "video/mp4",
+          input.fileSizeBytes || 0,
+          contentType,
+          input.priceCents,
+          input.unlockType !== "free" ? 1 : 0,
+          input.thumbnailUrl || null,
+          input.unlockType,
+        ]
+      );
+      const rows = await rawQuery(
+        "SELECT id FROM content WHERE user_id = ? ORDER BY id DESC LIMIT 1",
+        [ctx.user.id]
+      );
+      const contentId = rows[0]?.id;
+      // Update creator post count
+      await rawExec(
+        "UPDATE vaultx_creator_profiles SET total_posts = total_posts + 1 WHERE creator_id = ?",
+        [ctx.user.id]
+      );
+      return { contentId, success: true };
+    }),
+
+  // ─── Get Creator's Published Content ─────────────────────────────────────
+  getCreatorContent: protectedProcedure
+    .input(z.object({
+      creatorId: z.number(),
+      limit: z.number().default(20),
+      offset: z.number().default(0),
+    }))
+    .query(async ({ ctx, input }) => {
+      // Check if fan is subscribed
+      const subRows = await rawQuery(
+        "SELECT id FROM subscriptions WHERE fan_id = ? AND creator_id = ? AND status = 'active' LIMIT 1",
+        [ctx.user.id, input.creatorId]
+      );
+      const isSubscribed = subRows.length > 0 || ctx.user.id === input.creatorId;
+      const rows = await rawQuery(
+        `SELECT id, title, description, file_url, thumbnail_url, mime_type, content_type,
+                price_cents, is_locked, unlock_type, views, created_at
+         FROM content
+         WHERE user_id = ? AND status = 'active'
+         ORDER BY created_at DESC
+         LIMIT ? OFFSET ?`,
+        [input.creatorId, input.limit, input.offset]
+      );
+      // For locked content, mask the file_url unless subscribed or unlocked
+      const items = await Promise.all(rows.map(async (row: any) => {
+        let accessible = !row.is_locked || isSubscribed;
+        if (!accessible && row.unlock_type === "ppv") {
+          // Check if fan has unlocked this specific piece
+          const unlocked = await rawQuery(
+            "SELECT id FROM content_unlocks WHERE fan_id = ? AND content_id = ? LIMIT 1",
+            [ctx.user.id, row.id]
+          );
+          accessible = unlocked.length > 0;
+        }
+        return {
+          ...row,
+          file_url: accessible ? row.file_url : null,
+          locked: !accessible,
+        };
+      }));
+      return { items, isSubscribed };
+    }),
 });
