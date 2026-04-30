@@ -126,8 +126,8 @@ export const whatsappContentRouter = router({
 
       // Save to DB
       await rawQuery(
-        `INSERT INTO whatsapp_generated_posts (feature_id, feature_name, english_post, spanish_post, tone, audience, generated_at) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-        [`wa_video_${prediction.id}`, `WhatsApp Video — ${input.model}`, JSON.stringify({ predictionId: prediction.id, model: input.model, prompt: finalPrompt }), input.prompt, "video", `user_${ctx.user.id}`]
+        `INSERT INTO whatsapp_generated_posts (creator_id, type, feature_id, feature_name, english_post, spanish_post, tone, audience, language, media_url, generated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [ctx.user.id, 'generated', `wa_video_${prediction.id}`, `WhatsApp Video — ${input.model}`, JSON.stringify({ predictionId: prediction.id, model: input.model, prompt: finalPrompt }), input.prompt, "video", `user_${ctx.user.id}`, input.language || 'en', null]
       );
 
       return {
@@ -167,8 +167,8 @@ export const whatsappContentRouter = router({
       });
 
       await rawQuery(
-        `INSERT INTO whatsapp_generated_posts (feature_id, feature_name, english_post, spanish_post, tone, audience, generated_at) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-        [`wa_animate_${prediction.id}`, "WhatsApp Animate Image", JSON.stringify({ predictionId: prediction.id, imageUrl: input.imageUrl, prompt: finalPrompt }), input.prompt, "animation", `user_${ctx.user.id}`]
+        `INSERT INTO whatsapp_generated_posts (creator_id, type, feature_id, feature_name, english_post, spanish_post, tone, audience, language, media_url, generated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [ctx.user.id, 'generated', `wa_animate_${prediction.id}`, "WhatsApp Animate Image", JSON.stringify({ predictionId: prediction.id, imageUrl: input.imageUrl, prompt: finalPrompt }), input.prompt, "animation", `user_${ctx.user.id}`, input.language || 'en', null]
       );
 
       return {
@@ -339,8 +339,8 @@ export const whatsappContentRouter = router({
       }
 
       await rawQuery(
-        `INSERT INTO whatsapp_generated_posts (feature_id, feature_name, english_post, spanish_post, tone, audience, generated_at) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-        [`wa_img_${prediction.id}`, `WhatsApp Image — ${input.model}`, JSON.stringify({ predictionId: prediction.id, model: input.model, prompt: finalPrompt }), input.prompt, "image", `user_${ctx.user.id}`]
+        `INSERT INTO whatsapp_generated_posts (creator_id, type, feature_id, feature_name, english_post, spanish_post, tone, audience, language, media_url, generated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [ctx.user.id, 'generated', `wa_img_${prediction.id}`, `WhatsApp Image — ${input.model}`, JSON.stringify({ predictionId: prediction.id, model: input.model, prompt: finalPrompt }), input.prompt, "image", `user_${ctx.user.id}`, input.language || 'en', null]
       );
 
       return {
@@ -390,8 +390,8 @@ export const whatsappContentRouter = router({
       });
 
       await rawQuery(
-        `INSERT INTO whatsapp_generated_posts (feature_id, feature_name, english_post, spanish_post, tone, audience, generated_at) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-        [`wa_tts_${prediction.id}`, "WhatsApp Voice", JSON.stringify({ predictionId: prediction.id, voice: input.voice, text: finalText.slice(0, 200) }), input.text.slice(0, 200), "voice", `user_${ctx.user.id}`]
+        `INSERT INTO whatsapp_generated_posts (creator_id, type, feature_id, feature_name, english_post, spanish_post, tone, audience, language, media_url, generated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [ctx.user.id, 'generated', `wa_tts_${prediction.id}`, "WhatsApp Voice", JSON.stringify({ predictionId: prediction.id, voice: input.voice, text: finalText.slice(0, 200) }), input.text.slice(0, 200), "voice", `user_${ctx.user.id}`, input.language || 'en', null]
       );
 
       return {
@@ -447,8 +447,8 @@ export const whatsappContentRouter = router({
       const content = completion.choices[0].message.content || "";
 
       await rawQuery(
-        `INSERT INTO whatsapp_generated_posts (feature_id, feature_name, english_post, spanish_post, tone, audience, generated_at) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-        [`wa_copy_${Date.now()}`, `WhatsApp ${input.type}`, input.language === "en" ? content : input.topic, input.language === "es" ? content : "", input.tone, input.platform]
+        `INSERT INTO whatsapp_generated_posts (creator_id, type, feature_id, feature_name, english_post, spanish_post, tone, audience, language, media_url, generated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [ctx.user.id, 'generated', `wa_copy_${Date.now()}`, `WhatsApp ${input.type}`, input.language === "en" ? content : input.topic, input.language === "es" ? content : "", input.tone, input.platform, input.language || 'en', null]
       );
 
       return {
@@ -588,8 +588,8 @@ export const whatsappContentRouter = router({
       // Record the broadcast delivery
       await rawQuery(
         `INSERT INTO whatsapp_content_deliveries
-         (creator_id, community_id, content_type, content_url, message_text, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 'delivered', NOW(), NOW())`,
+         (creator_id, whatsapp_user_id, community_id, content_type, content_url, message_text, status, created_at)
+         VALUES (?, 0, ?, ?, ?, ?, 'delivered', NOW())`,
         [
           ctx.user.id,
           input.channelId,
