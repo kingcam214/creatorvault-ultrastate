@@ -591,4 +591,120 @@ export const vaultxRouter = router({
       }));
       return { items, isSubscribed };
     }),
+
+  // ─── saveExportHistory — Platform Vault writes one row per export ────────────
+  saveExportHistory: protectedProcedure
+    .input(z.object({
+      platform: z.string().min(1),
+      outputUrl: z.string().url(),
+      resolution: z.string().optional(),
+      format: z.string().optional(),
+      fileSizeBytes: z.number().optional(),
+      sourceContentId: z.number().optional(),
+      sourceAssetId: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      await rawQuery(
+        `INSERT INTO platform_export_history
+         (creator_id, source_content_id, source_asset_id, platform, output_url, resolution, format, file_size_bytes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          ctx.user.id,
+          input.sourceContentId ?? null,
+          input.sourceAssetId ?? null,
+          input.platform,
+          input.outputUrl,
+          input.resolution ?? null,
+          input.format ?? null,
+          input.fileSizeBytes ?? null,
+        ]
+      );
+      return { success: true };
+    }),
+
+  // ─── getExportHistory — retrieve past platform exports ───────────────────────
+  getExportHistory: protectedProcedure
+    .input(z.object({
+      platform: z.string().optional(),
+      limit: z.number().min(1).max(100).default(50),
+    }))
+    .query(async ({ input, ctx }) => {
+      const rows = await rawQuery(
+        `SELECT * FROM platform_export_history
+         WHERE creator_id = ?
+         ${input.platform ? "AND platform = ?" : ""}
+         ORDER BY exported_at DESC LIMIT ?`,
+        input.platform
+          ? [ctx.user.id, input.platform, input.limit]
+          : [ctx.user.id, input.limit]
+      );
+      return rows;
+    }),
+
+  // ─── publishToVault — mark a Studio output as a published content item ───────
+  publishToVault: protectedProcedure
+    .input(z.object({
+      fileUrl: z.string().url(),
+      title: z.string().min(1).max(200),
+      description: z.string().optional(),
+      mimeType: z.string().default("video/mp4"),
+      priceCents: z.number().min(0).default(0),
+      unlockType: z.enum(["free", "subscription", "ppv"]).default("subscription"),
+      tags: z.array(z.string()).optional(),
+      sourceAssetId: z.string().optional(),
+      thumbnailUrl: z.string().url().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await rawQuery(
+        `INSERT INTO content
+         (user_id, title, description, file_url, file_key, mime_type, content_type,
+          price_cents, is_locked, unlock_type, status, tags, source_asset_id, thumbnail_url, published_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, NOW())`,
+        [
+          ctx.user.id,
+          input.title,
+          input.description ?? null,
+          input.fileUrl,
+          input.fileUrl.split("/").pop() ?? "output",
+          input.mimeType,
+          input.mimeType.startsWith("video") ? "video" : "audio",
+          input.priceCents,
+          input.unlockType !== "free" ? 1 : 0,
+          input.unlockType,
+          input.tags ? JSON.stringify(input.tags) : null,
+          input.sourceAssetId ?? null,
+          input.thumbnailUrl ?? null,
+        ]
+      );
+      return { success: true, contentId: (result as any).insertId };
+    }),
+
+  // ─── savePpvOutput — PPV Engine saves censor/teaser as locked content ────────
+  savePpvOutput: protectedProcedure
+    .input(z.object({
+      fileUrl: z.string().url(),
+      outputType: z.enum(["teaser", "censor", "watermark"]),
+      priceCents: z.number().min(0).default(999),
+      sourceAssetId: z.string().optional(),
+      title: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const title = input.title ?? `PPV ${input.outputType.charAt(0).toUpperCase() + input.outputType.slice(1)}`;
+      const result = await rawQuery(
+        `INSERT INTO content
+         (user_id, title, file_url, file_key, mime_type, content_type,
+          price_cents, is_locked, unlock_type, status, source_asset_id, published_at)
+         VALUES (?, ?, ?, ?, 'video/mp4', 'video', ?, 1, 'ppv', 'active', ?, NOW())`,
+        [
+          ctx.user.id,
+          title,
+          input.fileUrl,
+          input.fileUrl.split("/").pop() ?? "ppv-output",
+          input.priceCents,
+          input.sourceAssetId ?? null,
+        ]
+      );
+      return { success: true, contentId: (result as any).insertId };
+    }),
+
 });
