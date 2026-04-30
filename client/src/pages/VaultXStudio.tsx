@@ -2114,10 +2114,21 @@ export default function VaultXStudio() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
+  const persistAsset = trpc.creatorVideoEditor.createAsset.useMutation();
   const addToHistory = useCallback((url: string, label: string) => {
     const mode = activeMode;
     setHistory(prev => [{ id: Date.now().toString(), mode, label, outputUrl: url, timestamp: Date.now() }, ...prev.slice(0, 49)]);
-  }, [activeMode]);
+    // Persist to DB — every Studio output is saved as an editor asset
+    const ext = url.split(".").pop()?.toLowerCase() || "mp4";
+    const mimeMap: Record<string, string> = { mp4: "video/mp4", mov: "video/quicktime", mp3: "audio/mpeg", wav: "audio/wav", webm: "video/webm" };
+    persistAsset.mutate({
+      fileUrl: url,
+      assetType: ext === "mp3" || ext === "wav" ? "audio" : "output",
+      filename: `${mode}-${label}-${Date.now()}.${ext}`,
+      mimeType: mimeMap[ext] || "video/mp4",
+      metadata: { mode, label, generatedAt: new Date().toISOString() },
+    });
+  }, [activeMode, persistAsset]);
 
   const activeData = MODES.find(m => m.id === activeMode)!;
 
