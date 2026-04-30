@@ -194,12 +194,19 @@ export const smartCaptionsRouter = router({
   applyCaptionStyle: protectedProcedure
     .input(z.object({
       captionId: z.string(),
+      // Accept either a direct style object OR styleId + customizations (from VaultXVideoEditor)
       style: z.object({
         fontSize: z.number().optional(),
         fontColor: z.string().optional(),
         bgColor: z.string().optional(),
         position: z.enum(["top", "bottom", "center"]).optional(),
-      }),
+      }).optional(),
+      styleId: z.string().optional(),
+      customizations: z.object({
+        fontSize: z.number().optional(),
+        placement: z.enum(["top", "bottom", "center"]).optional(),
+        fontColor: z.string().optional(),
+      }).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const rows = await rawQuery(
@@ -209,12 +216,34 @@ export const smartCaptionsRouter = router({
       if (!rows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Caption job not found" });
       const job = rows[0];
       if (!job.video_url) throw new TRPCError({ code: "BAD_REQUEST", message: "No source video on this job" });
-      // Reset and reprocess with new style
+      // Resolve style: if styleId provided, look it up from getCaptionStyles list and merge customizations
+      const BUILTIN_STYLES: Record<string, { fontSize: number; fontColor: string; bgColor: string; position: "top"|"bottom"|"center" }> = {
+        "clean-white":  { fontSize: 28, fontColor: "white",  bgColor: "black@0.5", position: "bottom" },
+        "bold-yellow":  { fontSize: 32, fontColor: "yellow", bgColor: "black@0.7", position: "bottom" },
+        "minimal-top":  { fontSize: 24, fontColor: "white",  bgColor: "black@0.3", position: "top"    },
+        "cinematic":    { fontSize: 26, fontColor: "white",  bgColor: "black@0.6", position: "bottom" },
+        "fire-red":     { fontSize: 30, fontColor: "red",    bgColor: "black@0.5", position: "bottom" },
+        "neon-green":   { fontSize: 28, fontColor: "#00FF41",bgColor: "black@0.6", position: "bottom" },
+        "luxury-gold":  { fontSize: 30, fontColor: "#FFD700",bgColor: "black@0.7", position: "bottom" },
+      };
+      let resolvedStyle: { fontSize?: number; fontColor?: string; bgColor?: string; position?: "top"|"bottom"|"center" };
+      if (input.styleId) {
+        const base = BUILTIN_STYLES[input.styleId] || BUILTIN_STYLES["clean-white"];
+        resolvedStyle = {
+          ...base,
+          ...(input.customizations?.fontSize ? { fontSize: input.customizations.fontSize } : {}),
+          ...(input.customizations?.fontColor ? { fontColor: input.customizations.fontColor } : {}),
+          ...(input.customizations?.placement ? { position: input.customizations.placement } : {}),
+        };
+      } else {
+        resolvedStyle = input.style || {};
+      }
+      // Reset and reprocess with resolved style
       await rawExec(
-        "UPDATE caption_jobs SET processing_status = 'queued', style_json = ?, captioned_video_url = NULL WHERE id = ?",
-        [JSON.stringify(input.style), input.captionId]
+        "UPDATE caption_jobs SET processing_status = \'queued\', style_json = ?, captioned_video_url = NULL WHERE id = ?",
+        [JSON.stringify(resolvedStyle), input.captionId]
       );
-      processCaptionJob(input.captionId, job.video_url, input.style, ctx.user.id).catch(console.error);
+      processCaptionJob(input.captionId, job.video_url, resolvedStyle, ctx.user.id).catch(console.error);
       return { captionId: input.captionId, status: "queued" };
     }),
 
