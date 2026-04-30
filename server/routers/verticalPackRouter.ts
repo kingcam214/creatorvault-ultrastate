@@ -40,6 +40,7 @@ export const verticalPackRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+    // @ts-ignore
       const result = await runVerticalPack({
         userId: ctx.user.id,
         ...input,

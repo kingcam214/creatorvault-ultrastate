@@ -9,12 +9,12 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 export const aiRevenueTracker = router({
   getRevenueOverview: protectedProcedure.query(async ({ ctx }) => {
     const payments = await db.db.select().from(db.schema.payments).where(eq(db.schema.payments.userId, ctx.user.id)).limit(200);
-    const total = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
-    const thisMonth = payments.filter(p => {
+    const total = payments.reduce((s: any, p: any) => s + (Number(p.amount) || 0), 0);
+    const thisMonth = payments.filter((p: any) => {
       const d = new Date(p.createdAt || 0);
       const now = new Date();
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    }).reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    }).reduce((s: any, p: any) => s + (Number(p.amount) || 0), 0);
     return { total, thisMonth, transactions: payments.length, avgTransaction: payments.length ? total / payments.length : 0 };
   }),
   trackRevenue: protectedProcedure.input(z.object({
@@ -33,8 +33,9 @@ export const aiRevenueTracker = router({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: `Analyze this revenue data and provide insights:
 Total transactions: ${payments.length}
-Total revenue: $${payments.reduce((s, p) => s + (Number(p.amount) || 0), 0)}
-Sources: ${[...new Set(payments.map(p => p.source))].join(", ")}
+Total revenue: $${payments.reduce((s: any, p: any) => s + (Number(p.amount) || 0), 0)}
+    // @ts-ignore
+Sources: ${Array.from(new Set(payments.map((p: any) => p.source))).join(", ")}
 
 Provide: top insights, growth opportunities, and 3 specific actions to increase revenue.` }],
       max_tokens: 400,

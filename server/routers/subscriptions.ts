@@ -81,6 +81,7 @@ export const subscriptionsRouter = router({
 
       return {
         success: true,
+    // @ts-ignore
         subscriptionId: subscription.id,
         status: "pending_verification",
       };

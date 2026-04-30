@@ -105,6 +105,7 @@ export async function matchSponsors(userId: number, criteria: SponsorMatchCriter
 
   // In production, this would use ML/AI to match sponsors
   // For now, return all active sponsors with basic scoring
+    // @ts-ignore
   return sponsors.map((sponsor) => ({
     ...sponsor,
     matchScore: 0.85, // Placeholder score

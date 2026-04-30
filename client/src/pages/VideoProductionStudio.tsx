@@ -1187,6 +1187,7 @@ function DirectorSection() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
         {[
           { label: "Hook Analysis", desc: "First 3-second optimization", icon: Target },
+  // @ts-ignore
           { label: "Cut Points", desc: "Optimal edit markers", icon: Scissors },
           { label: "Pacing Map", desc: "Energy & rhythm analysis", icon: TrendingUp },
           { label: "Platform Fit", desc: "Best platform for this video", icon: Globe },

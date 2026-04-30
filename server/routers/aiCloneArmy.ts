@@ -61,4 +61,21 @@ Generate specific post ideas with hooks, captions, and CTAs for each day.`,
     });
     return { posts: completion.choices[0].message.content };
   }),
+  createWritingClone: protectedProcedure.input(z.object({
+    name: z.string(),
+    style: z.string(),
+    sampleContent: z.string().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    const { OpenAI } = await import("openai");
+    const openai = new OpenAI();
+    const c = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [
+        { role: "system", content: "You are a writing clone creator. Create a detailed writing persona profile." },
+        { role: "user", content: `Create a writing clone named "${input.name}" with style: ${input.style}${input.sampleContent ? `\nBased on: ${input.sampleContent.slice(0, 500)}` : ""}` }
+      ],
+      max_tokens: 600,
+    });
+    return { cloneId: `clone-${Date.now()}`, name: input.name, profile: c.choices[0].message.content ?? "", style: input.style };
+  })
 });

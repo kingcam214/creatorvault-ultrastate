@@ -139,7 +139,7 @@ export async function getPendingManualPayments() {
       .orderBy(desc(marketplaceOrders.createdAt))
       .limit(100);
 
-    return pendingOrders.map(order => ({
+    return pendingOrders.map((order: any) => ({
       orderId: order.id,
       userId: order.buyerId,
       amount: order.grossAmount / 100,
@@ -166,13 +166,13 @@ export async function getRevenueSummary() {
       .select()
       .from(marketplaceOrders);
 
-    const totalRevenue = allOrders.reduce((sum, order) => sum + order.grossAmount, 0) / 100;
+    const totalRevenue = allOrders.reduce((sum: any, order: any) => sum + order.grossAmount, 0) / 100;
     const paidRevenue = allOrders
-      .filter(order => order.status === "paid" || order.status === "fulfilled")
-      .reduce((sum, order) => sum + order.grossAmount, 0) / 100;
+      .filter((order: any) => order.status === "paid" || order.status === "fulfilled")
+      .reduce((sum: any, order: any) => sum + order.grossAmount, 0) / 100;
     const pendingRevenue = allOrders
-      .filter(order => order.status === "pending")
-      .reduce((sum, order) => sum + order.grossAmount, 0) / 100;
+      .filter((order: any) => order.status === "pending")
+      .reduce((sum: any, order: any) => sum + order.grossAmount, 0) / 100;
 
     const commissions = calculateCommissionSplits(paidRevenue);
 
@@ -181,8 +181,8 @@ export async function getRevenueSummary() {
       paidRevenue,
       pendingRevenue,
       orderCount: allOrders.length,
-      paidOrderCount: allOrders.filter(o => o.status === "paid" || o.status === "fulfilled").length,
-      pendingOrderCount: allOrders.filter(o => o.status === "pending").length,
+      paidOrderCount: allOrders.filter((o: any) => o.status === "paid" || o.status === "fulfilled").length,
+      pendingOrderCount: allOrders.filter((o: any) => o.status === "pending").length,
       commissions,
     };
   } catch (error) {

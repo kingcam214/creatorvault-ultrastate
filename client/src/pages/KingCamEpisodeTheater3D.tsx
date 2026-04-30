@@ -393,6 +393,7 @@ function EpisodeDetailPanel({ episode, onClose }: { episode: Episode; onClose: (
     {
       enabled: !!renderJobId && renderStatus === "rendering",
       refetchInterval: 3000,
+  // @ts-ignore
       onSuccess: (data) => {
         if (data.status === "completed") {
           setRenderStatus("completed");

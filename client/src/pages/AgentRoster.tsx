@@ -24,7 +24,7 @@ export function AgentRoster() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         {['all', 'active', 'inactive'].map(f => (<button key={f} onClick={() => setFilter(f)} style={{ background: filter === f ? T.gold : T.surface, color: filter === f ? '#0a0a0a' : T.muted, border: `1px solid ${filter === f ? T.gold : T.border}`, borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize' }}>{f}</button>))}
       </div>
-      {agentsQuery.isLoading && <div style={{ color: T.muted, fontSize: 13, padding: 20 }}>Loading agents...</div>}
+      {agentsQuery.isPending && <div style={{ color: T.muted, fontSize: 13, padding: 20 }}>Loading agents...</div>}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
         {filtered.map((agent, i) => (
           <div key={i} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
@@ -45,7 +45,7 @@ export function AgentRoster() {
             </div>
           </div>
         ))}
-        {filtered.length === 0 && !agentsQuery.isLoading && <div style={{ color: T.muted, fontSize: 13, gridColumn: '1/-1', padding: 20, textAlign: 'center' }}>No agents found.</div>}
+        {filtered.length === 0 && !agentsQuery.isPending && <div style={{ color: T.muted, fontSize: 13, gridColumn: '1/-1', padding: 20, textAlign: 'center' }}>No agents found.</div>}
       </div>
     </div>
   );

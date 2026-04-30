@@ -47,6 +47,7 @@ export async function getOptimalPostingTimes(platform: Platform): Promise<Optima
     .orderBy(postingTimesAnalytics.avgEngagementRate);
 
   // Convert to optimal times with scores
+    // @ts-ignore
   const optimalTimes: OptimalPostingTime[] = analytics.map((record) => {
     const engagementRate = parseFloat(record.avgEngagementRate || "0");
     

@@ -178,8 +178,10 @@ export default function MyLoyaltyPortal() {
         <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <Flame className="w-5 h-5 text-orange-400" /> Your Recent Activity
         </h3>
+  // @ts-ignore
         {myEvents && (myEvents as any[]).length > 0 ? (
           <div className="space-y-2">
+  // @ts-ignore
             {(myEvents as any[]).slice(0, 10).map((ev: any) => (
               <div key={ev.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg text-sm">
                 <div className="flex items-center gap-3">

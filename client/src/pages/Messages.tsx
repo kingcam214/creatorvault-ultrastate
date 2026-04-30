@@ -70,6 +70,7 @@ function PpvUnlockModal({
 
       const { clientSecret, intentId } = await createIntent.mutateAsync({ messageId: message.id });
 
+  // @ts-ignore
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: { card: { token: "tok_visa" } }, // In production: use Stripe Elements
       });

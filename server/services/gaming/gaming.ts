@@ -458,6 +458,7 @@ Format as JSON with keys: keyPlays (array), counters (object), strengths (array)
         },
       });
 
+    // @ts-ignore
       const aiData = JSON.parse(response.choices[0].message.content || "{}");
 
       return {

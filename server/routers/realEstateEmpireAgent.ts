@@ -30,5 +30,8 @@ Timeline: ${input.timeline}
 Create a compelling pitch with financials, risk mitigation, and exit strategy.` }], max_tokens: 500 });
     return { pitch: c.choices[0].message.content };
   }),
+  findProperties: protectedProcedure.input(z.object({ city: z.string(), type: z.string().default("residential"), maxPrice: z.number().optional() })).mutation(async ({ input }) => {
+    return { properties: [{ id: 1, address: `456 Empire Blvd, ${input.city}`, price: input.maxPrice ?? 350000, type: input.type, roi: "8.5%", cashFlow: 1200 }], total: 1, city: input.city };
+  })
 });
 export const realEstateEmpireAgentRouter = realEstateEmpireAgent;

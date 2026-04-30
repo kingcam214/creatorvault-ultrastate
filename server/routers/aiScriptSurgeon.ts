@@ -51,4 +51,21 @@ Each hook should be stronger, more scroll-stopping, and platform-optimized.`,
     });
     return { hooks: completion.choices[0].message.content };
   }),
+  injectViralElements: protectedProcedure.input(z.object({
+    script: z.string(),
+    platform: z.string().default("tiktok"),
+    style: z.string().default("viral"),
+  })).mutation(async ({ input }) => {
+    const { OpenAI } = await import("openai");
+    const openai = new OpenAI();
+    const c = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [
+        { role: "system", content: "You are a viral content expert. Inject viral hooks, pattern interrupts, and engagement triggers into scripts." },
+        { role: "user", content: `Inject viral elements into this ${input.platform} script (style: ${input.style}):\n\n${input.script}` }
+      ],
+      max_tokens: 1000,
+    });
+    return { enhanced: c.choices[0].message.content ?? input.script, platform: input.platform };
+  })
 });

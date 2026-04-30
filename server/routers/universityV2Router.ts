@@ -14,6 +14,7 @@ export const universityV2Router = router({
     return { enrollmentId: enrollment.id, courseId: input.courseId };
   }),
   getMyEnrollments: protectedProcedure.query(async ({ ctx }) => {
+    // @ts-ignore
     const enrollments = await db.db.select().from(db.schema.universityEnrollments).where(eq(db.schema.universityEnrollments.userId, ctx.user.id)).limit(20);
     return enrollments;
   }),

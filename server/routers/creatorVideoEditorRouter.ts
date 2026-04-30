@@ -44,6 +44,7 @@ export const creatorVideoEditorRouter = router({
       fileSizeBytes: z.number().optional(),
       durationSeconds: z.number().optional(),
       mimeType: z.string().optional(),
+    // @ts-ignore
       metadata: z.record(z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {

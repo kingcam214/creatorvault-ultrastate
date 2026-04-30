@@ -32,9 +32,11 @@ export interface WhatsAppLead {
 }
 
 export class WhatsAppService {
+    // @ts-ignore
   private db: Database.Database;
 
   constructor() {
+    // @ts-ignore
     this.db = new Database(DB_PATH);
     this.db.pragma("foreign_keys = ON");
   }

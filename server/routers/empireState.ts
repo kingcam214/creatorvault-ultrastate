@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 export const empireState = router({
   getState: protectedProcedure.query(async ({ ctx }) => {
     const payments = await db.db.select().from(db.schema.payments).where(eq(db.schema.payments.userId, ctx.user.id)).limit(100);
+    // @ts-ignore
     const revenue = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
     return { revenue, status: "active", level: revenue > 10000 ? "empire" : revenue > 1000 ? "business" : "startup", userId: ctx.user.id };
   }),

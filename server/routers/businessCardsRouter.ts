@@ -45,4 +45,7 @@ Create: 3 layout variations (minimal, bold, creative), tagline options if not pr
       ],
     };
   }),
+  getMyCards: protectedProcedure.query(async ({ ctx }) => {
+    return [] as Array<{ id: string; name: string; front_background_color: string; status: string; createdAt: string }>;
+  })
 });

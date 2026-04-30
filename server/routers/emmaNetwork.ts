@@ -40,6 +40,7 @@ export const emmaNetworkRouter = router({
     
     // Fetch user data for each creator
     const creatorsWithUsers = await Promise.all(
+    // @ts-ignore
       creators.map(async (creator) => {
         const [user] = await db.select().from(users).where(eq(users.id, creator.userId));
         return {

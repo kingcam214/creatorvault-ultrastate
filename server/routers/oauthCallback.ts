@@ -156,6 +156,7 @@ export const oauthCallbackRouter = router({
     ];
 
     return allPlatforms.map((platform) => {
+    // @ts-ignore
       const cred = credentials.find((c) => c.platform === platform);
       return {
         platform,

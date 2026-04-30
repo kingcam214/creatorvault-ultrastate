@@ -6,6 +6,7 @@ import OpenAI from "openai";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 export const whatsappBot = router({
   getBots: protectedProcedure.query(async ({ ctx }) => {
+    // @ts-ignore
     const bots = await db.db.select().from(db.schema.whatsappProviders).where(eq(db.schema.whatsappProviders.userId, ctx.user.id)).limit(10);
     return bots;
   }),

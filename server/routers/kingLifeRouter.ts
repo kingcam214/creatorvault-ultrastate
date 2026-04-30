@@ -17,4 +17,13 @@ Design: 90-day sprint, income streams, lifestyle upgrades, and legacy building.`
     const c = await openai.chat.completions.create({ model: "gpt-4o-mini", messages: [{ role: "user", content: "Create a daily routine for a creator king. Include: morning ritual, content creation blocks, business development, fitness, and evening review." }], max_tokens: 400 });
     return { routine: c.choices[0].message.content };
   }),
+  getDashboard: protectedProcedure.query(async ({ ctx }) => {
+    return {
+      userId: ctx.user.id,
+      lifestyle: { status: "King Mode", level: "Empire Builder", xp: 8750, nextLevel: 10000 },
+      goals: [{ id: 1, title: "$5k Challenge", progress: 0, target: 5000, deadline: "2025-06-30" }],
+      achievements: [{ id: 1, title: "First $1k", earned: true, date: "2025-01-15" }],
+      dailyMissions: [{ id: 1, title: "Post 3 pieces of content", completed: false, xp: 100 }],
+    };
+  })
 });

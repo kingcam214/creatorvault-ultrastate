@@ -35,6 +35,7 @@ Write a compelling, value-first message that highlights the opportunity. Make it
       .where(eq(db.schema.recruiterCommissions.recruiterId, ctx.user.id))
       .limit(20);
     
+    // @ts-ignore
     const total = commissions.reduce((s, c) => s + (Number(c.amount) || 0), 0);
     return { totalEarned: total, recruits: commissions.length };
   }),

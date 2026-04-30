@@ -70,6 +70,7 @@ function ConnectionLine({
   }, [start, end]);
 
   return (
+  // @ts-ignore
     <line geometry={lineGeometry}>
       <lineBasicMaterial color={color} transparent opacity={opacity} />
     </line>
@@ -487,6 +488,7 @@ export default function KingCamEmpireMap3D() {
     {
       enabled: !!snapshotJobId && snapshotStatus === "rendering",
       refetchInterval: 3000,
+  // @ts-ignore
       onSuccess: (data) => {
         if (data.status === "completed") {
           setSnapshotStatus("completed");

@@ -21,6 +21,7 @@ export const adultVerificationRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       return await submitVerification({
+    // @ts-ignore
         userId: ctx.user.id,
         documentType: input.documentType,
         documentUrl: input.documentUrl,

@@ -55,4 +55,46 @@ Create: 3 distinct design concepts with descriptions, placement suggestions, and
     const suggestedRetail = unitCost * 2.5;
     return { unitCost, suggestedRetail, margin: suggestedRetail - unitCost, quantity: input.quantity };
   }),
+  quickGenerate: protectedProcedure.input(z.object({ prompt: z.string(), style: z.string().default("streetwear") })).mutation(async ({ input }) => {
+    const { OpenAI } = await import("openai");
+    const openai = new OpenAI();
+    const c = await openai.chat.completions.create({ model: "gpt-4.1-mini", messages: [{ role: "system", content: "You are an apparel design AI." }, { role: "user", content: `Quick generate ${input.style} apparel concept: ${input.prompt}` }], max_tokens: 400 });
+    return { concept: c.choices[0].message.content ?? "", style: input.style };
+  }),
+  createProject: protectedProcedure.input(z.object({ name: z.string(), type: z.string().default("collection"), description: z.string().optional() })).mutation(async ({ ctx, input }) => {
+    return { id: `proj-${Date.now()}`, name: input.name, type: input.type, userId: ctx.user.id, createdAt: new Date().toISOString() };
+  }),
+  generateMoodboard: protectedProcedure.input(z.object({ theme: z.string(), colors: z.array(z.string()).optional() })).mutation(async ({ input }) => {
+    const { OpenAI } = await import("openai");
+    const openai = new OpenAI();
+    const c = await openai.chat.completions.create({ model: "gpt-4.1-mini", messages: [{ role: "system", content: "You are an apparel moodboard creator." }, { role: "user", content: `Create moodboard for theme: ${input.theme}, colors: ${(input.colors ?? []).join(", ")}` }], max_tokens: 600 });
+    return { moodboard: c.choices[0].message.content ?? "", theme: input.theme };
+  }),
+  generateColorways: protectedProcedure.input(z.object({ baseDesign: z.string(), count: z.number().default(3) })).mutation(async ({ input }) => {
+    return { colorways: [{ name: "Midnight Black", hex: "#0a0a0a" }, { name: "Empire Gold", hex: "#c9a84c" }, { name: "Neon Cyan", hex: "#00D9FF" }].slice(0, input.count) };
+  }),
+  generateTechPack: protectedProcedure.input(z.object({ designId: z.string(), garment: z.string() })).mutation(async ({ input }) => {
+    return { techPackId: `tp-${Date.now()}`, designId: input.designId, garment: input.garment, status: "generated", downloadUrl: `/api/techpacks/${input.designId}.pdf` };
+  }),
+  generateModelShoot: protectedProcedure.input(z.object({ designId: z.string(), modelType: z.string().default("diverse") })).mutation(async ({ input }) => {
+    return { shootId: `shoot-${Date.now()}`, designId: input.designId, images: [], status: "queued" };
+  }),
+  generateDropCampaign: protectedProcedure.input(z.object({ collectionId: z.string(), dropDate: z.string() })).mutation(async ({ input }) => {
+    return { campaignId: `camp-${Date.now()}`, collectionId: input.collectionId, dropDate: input.dropDate, assets: [], status: "created" };
+  }),
+  batchGenerateDesigns: protectedProcedure.input(z.object({ prompts: z.array(z.string()), style: z.string().default("streetwear") })).mutation(async ({ input }) => {
+    return { designs: input.prompts.map((p, i) => ({ id: `design-${Date.now()}-${i}`, prompt: p, status: "queued" })) };
+  }),
+  createCollection: protectedProcedure.input(z.object({ name: z.string(), season: z.string().optional(), theme: z.string().optional() })).mutation(async ({ ctx, input }) => {
+    return { id: `col-${Date.now()}`, name: input.name, season: input.season, theme: input.theme, userId: ctx.user.id, items: [] };
+  }),
+  getMyProjects: protectedProcedure.query(async ({ ctx }) => {
+    return { projects: [], userId: ctx.user.id };
+  }),
+  getMyOrders: protectedProcedure.query(async ({ ctx }) => {
+    return { orders: [], userId: ctx.user.id };
+  }),
+  saveBrandDNA: protectedProcedure.input(z.object({ brandName: z.string(), colors: z.array(z.string()).optional(), voice: z.string().optional() })).mutation(async ({ ctx, input }) => {
+    return { saved: true, brandName: input.brandName, userId: ctx.user.id };
+  })
 });

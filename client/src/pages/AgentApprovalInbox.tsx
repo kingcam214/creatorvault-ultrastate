@@ -69,7 +69,7 @@ export default function AgentApprovalInbox() {
       </div>
 
       {/* Event list */}
-      {eventsQuery.isLoading && <div style={{ color: T.muted, fontSize: 13 }}>Loading events...</div>}
+      {eventsQuery.isPending && <div style={{ color: T.muted, fontSize: 13 }}>Loading events...</div>}
       <div style={{ display: 'grid', gap: 8 }}>
         {displayed.map((event: any, i: number) => (
           <div key={i} style={{ background: T.surface, border: `1px solid ${event.status === 'success' ? 'rgba(34,197,94,0.2)' : event.status === 'failed' ? 'rgba(239,68,68,0.2)' : T.border}`, borderRadius: 12, padding: 16 }}>
@@ -89,7 +89,7 @@ export default function AgentApprovalInbox() {
             {event.outcome && <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.5 }}>{String(event.outcome).slice(0, 200)}</div>}
           </div>
         ))}
-        {displayed.length === 0 && !eventsQuery.isLoading && (
+        {displayed.length === 0 && !eventsQuery.isPending && (
           <div style={{ color: T.muted, fontSize: 13, padding: 20, textAlign: 'center' }}>
             No {filter === 'all' ? '' : filter} events found. Run an agent cycle from King Money Mission to generate events.
           </div>

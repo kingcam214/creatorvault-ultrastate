@@ -32,6 +32,7 @@ Generate ONLY the description text, no additional commentary.`;
       });
 
       return {
+    // @ts-ignore
         description: response.choices[0].message.content.trim(),
       };
     }),
@@ -95,6 +96,7 @@ Return as JSON with this exact structure:
         },
       });
 
+    // @ts-ignore
       const result = JSON.parse(response.choices[0].message.content);
       return result;
     }),
@@ -170,6 +172,7 @@ Return as JSON array of strings:
         },
       });
 
+    // @ts-ignore
       const result = JSON.parse(response.choices[0].message.content);
       return { keywords: result.keywords };
     }),

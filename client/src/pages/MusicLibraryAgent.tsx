@@ -25,7 +25,7 @@ export function MusicLibraryAgent() {
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>{moods.map(m => <button key={m} onClick={() => setMood(m)} style={{ background: mood === m ? T.gold : T.surface, color: mood === m ? '#0a0a0a' : T.muted, border: `1px solid ${mood === m ? T.gold : T.border}`, borderRadius: 6, padding: '6px 12px', fontSize: 12, cursor: 'pointer', textTransform: 'capitalize' }}>{m}</button>)}</div>
-      {(libraryQuery.isLoading || searchQuery.isLoading) && <div style={{ color: T.muted, fontSize: 13 }}>Loading tracks...</div>}
+      {(libraryQuery.isPending || searchQuery.isPending) && <div style={{ color: T.muted, fontSize: 13 }}>Loading tracks...</div>}
       <div style={{ display: 'grid', gap: 8 }}>
         {tracks.map((track: any, i: number) => (
           <div key={i} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -40,7 +40,7 @@ export function MusicLibraryAgent() {
             </div>
           </div>
         ))}
-        {tracks.length === 0 && !libraryQuery.isLoading && <div style={{ color: T.muted, fontSize: 13, padding: 20, textAlign: 'center' }}>No tracks found. Add a track above or connect your music library.</div>}
+        {tracks.length === 0 && !libraryQuery.isPending && <div style={{ color: T.muted, fontSize: 13, padding: 20, textAlign: 'center' }}>No tracks found. Add a track above or connect your music library.</div>}
       </div>
     </div>
   );

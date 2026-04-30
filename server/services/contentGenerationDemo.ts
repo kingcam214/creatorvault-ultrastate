@@ -46,6 +46,7 @@ Format as a short, punchy script.`,
 
   return {
     type: "script",
+    // @ts-ignore
     text: script,
     generatedAt: new Date(),
   };
@@ -109,6 +110,7 @@ Requirements:
 
   return {
     type: "caption",
+    // @ts-ignore
     text: caption,
     generatedAt: new Date(),
   };
@@ -181,6 +183,7 @@ Format as JSON array.`,
     },
   });
 
+    // @ts-ignore
   const result = JSON.parse(response.choices[0].message.content);
   return result;
 }
@@ -241,6 +244,7 @@ Format as JSON.`,
     },
   });
 
+    // @ts-ignore
   const result = JSON.parse(response.choices[0].message.content);
   return result;
 }

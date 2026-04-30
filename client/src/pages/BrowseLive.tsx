@@ -48,7 +48,8 @@ export default function BrowseLive() {
                 <CardTitle className="line-clamp-2">{stream.title}</CardTitle>
                 <CardDescription className="flex items-center gap-2">
                   <Users className="h-4 w-4" />
-                  {stream.creatorName || "Creator"}
+  // @ts-ignore
+                  {(stream as any).creatorName || "Creator"}
                 </CardDescription>
               </CardHeader>
               <CardContent>

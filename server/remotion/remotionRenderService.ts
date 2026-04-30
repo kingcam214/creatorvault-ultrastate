@@ -180,9 +180,9 @@ export async function renderWithRemotion(contract: RenderContract): Promise<Rend
     const composition = await selectComposition({
       serveUrl: bundleDir,
       id: compositionId,
-      inputProps: renderProps,
+      inputProps: renderProps as unknown as Record<string, unknown>,
       chromiumOptions: {
-        executablePath: CHROMIUM_PATH,
+        // executablePath: CHROMIUM_PATH, // set via env REMOTION_CHROME_EXECUTABLE
         disableWebSecurity: true,
         headless: true,
       },
@@ -199,9 +199,9 @@ export async function renderWithRemotion(contract: RenderContract): Promise<Rend
       serveUrl: bundleDir,
       codec: "h264",
       outputLocation: rawVideoPath,
-      inputProps: finalInputProps,
+      inputProps: finalInputProps as unknown as Record<string, unknown>,
       chromiumOptions: {
-        executablePath: CHROMIUM_PATH,
+        // executablePath: CHROMIUM_PATH, // set via env REMOTION_CHROME_EXECUTABLE
         disableWebSecurity: true,
         headless: true,
       },

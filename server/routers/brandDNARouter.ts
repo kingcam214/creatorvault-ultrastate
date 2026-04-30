@@ -44,4 +44,17 @@ Content: ${input.content}`,
     });
     return { rewritten: completion.choices[0].message.content };
   }),
+  getBrandProfile: protectedProcedure.input(z.object({ brandId: z.string() })).query(async ({ ctx, input }) => {
+    return {
+      brandId: input.brandId,
+      userId: ctx.user.id,
+      name: "KingCam Empire",
+      colors: ["#c9a84c", "#0a0a0a", "#00D9FF"],
+      fonts: ["BebasNeue", "Montserrat"],
+      voice: "Confident, motivational, authentic",
+      mission: "Empower creators to build 7-figure empires",
+      values: ["Authenticity", "Excellence", "Empire Building"],
+      targetAudience: "Aspiring creators aged 18-35",
+    };
+  })
 });

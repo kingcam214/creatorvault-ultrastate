@@ -11,7 +11,9 @@ import { useLocation } from "wouter";
 export default function PayoutSetup() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  // @ts-ignore
   const [cashappHandle, setCashappHandle] = useState(user?.cashappHandle || "");
+  // @ts-ignore
   const [paypalEmail, setPaypalEmail] = useState(user?.paypalEmail || "");
 
   const updatePayoutMutation = trpc.auth.updateProfile.useMutation({

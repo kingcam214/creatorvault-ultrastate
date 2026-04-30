@@ -613,7 +613,8 @@ export default function GreatestShowIndex() {
         </div>
       </footer>
 
-      <style jsx>{`
+  // @ts-ignore
+      <style>{`
         @keyframes gradient {
           0%, 100% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }

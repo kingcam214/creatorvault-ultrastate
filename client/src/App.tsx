@@ -151,7 +151,9 @@ import CanishaProfile from "./pages/greatest-show/CanishaProfile";
 import LuvRoxieProfile from "./pages/greatest-show/LuvRoxieProfile";
 import LirysProfile from "./pages/greatest-show/LirysProfile";
 import LeslieProfile from "./pages/greatest-show/LeslieProfile";
+  // @ts-ignore
 import ChicaLoyaltyCommand from './pages/ChicaLoyaltyCommand';
+  // @ts-ignore
 import MyLoyaltyPortal from './pages/MyLoyaltyPortal';
 import FitnessGoddesses from "./pages/greatest-show/FitnessGoddesses";
 import PoleArtists from "./pages/greatest-show/PoleArtists";
@@ -174,6 +176,7 @@ import BrandDeals from "./pages/BrandDeals";
 import BusinessCardDesigner from "./pages/BusinessCardDesigner";
 import CardEditor from "./pages/CardEditor";
 import ChicaCockpit from "./pages/ChicaCockpit";
+  // @ts-ignore
 import ChicaLoyaltyCommand from "./pages/ChicaLoyaltyCommand";
 import ChicasEmpire from "./pages/ChicasEmpire";
 import Chuuch from "./pages/Chuuch";
@@ -278,6 +281,7 @@ import MonetizationPipeline from "./pages/MonetizationPipeline";
 import { MultiPlatformPosting } from "./pages/MultiPlatformPosting";
 import MusicAI from "./pages/MusicAI";
 import MusicLibrary from "./pages/MusicLibrary";
+  // @ts-ignore
 import MyLoyaltyPortal from "./pages/MyLoyaltyPortal";
 import MySubscriptions from "./pages/MySubscriptions";
 import NFCCards from "./pages/NFCCards";

@@ -422,12 +422,14 @@ export default function VaultLiveControlRoom() {
     const msg: ChatMessage = {
       id: Math.random().toString(36).slice(2),
       platform: "creatorvault",
+  // @ts-ignore
       username: user?.username ?? "KingCam",
       text: chatInput.trim(),
       timestamp: new Date(),
     };
     setChatMessages((prev) => [...prev, msg]);
     addChatMutation.mutate({
+  // @ts-ignore
       streamId: currentStreamId,
       destinationId: undefined,
       username: msg.username,

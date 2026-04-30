@@ -23,4 +23,31 @@ export const loyaltyRouter = router({
   redeemReward: protectedProcedure.input(z.object({ rewardId: z.number() })).mutation(async ({ ctx, input }) => {
     return { success: true, rewardId: input.rewardId, userId: ctx.user.id };
   }),
+  getAllProfiles: protectedProcedure.query(async ({ ctx }) => {
+    return { profiles: [], total: 0 };
+  }),
+  getRecentEvents: protectedProcedure.query(async ({ ctx }) => {
+    return [] as Array<{ id: string; type: string; userId: number; points: number; reason: string; createdAt: string }>;
+  }),
+  deductPoints: protectedProcedure.input(z.object({ userId: z.number(), amount: z.number(), reason: z.string() })).mutation(async ({ input }) => {
+    return { success: true, userId: input.userId, deducted: input.amount };
+  }),
+  issueWarning: protectedProcedure.input(z.object({ userId: z.number(), reason: z.string(), severity: z.string().default("minor") })).mutation(async ({ input }) => {
+    return { success: true, userId: input.userId, warningId: `warn-${Date.now()}` };
+  }),
+  logLie: protectedProcedure.input(z.object({ userId: z.number(), description: z.string() })).mutation(async ({ input }) => {
+    return { success: true, userId: input.userId, logId: `lie-${Date.now()}` };
+  }),
+  removeFromProgram: protectedProcedure.input(z.object({ userId: z.number(), reason: z.string() })).mutation(async ({ input }) => {
+    return { success: true, userId: input.userId, removed: true };
+  }),
+  getMyEvents: protectedProcedure.query(async ({ ctx }) => {
+    return [] as Array<{ id: string; type: string; userId: number; points: number; reason: string; createdAt: string }>;
+  }),
+  getMyProfile: protectedProcedure.query(async ({ ctx }) => {
+    return { userId: ctx.user.id, points: 0, tier: "bronze", joinedAt: new Date().toISOString() };
+  }),
+  getMyWarnings: protectedProcedure.query(async ({ ctx }) => {
+    return { warnings: [], userId: ctx.user.id };
+  })
 });

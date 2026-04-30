@@ -9,7 +9,7 @@ export const videoLabProRouter = router({
     const jobs = await db.db.select().from(db.schema.videoGenerationJobs).where(eq(db.schema.videoGenerationJobs.userId, ctx.user.id)).orderBy(desc(db.schema.videoGenerationJobs.createdAt)).limit(20);
     return jobs;
   }),
-  createJob: protectedProcedure.input(z.object({ type: z.string(), input: z.record(z.unknown()), priority: z.string().default("normal") })).mutation(async ({ ctx, input }) => {
+  createJob: protectedProcedure.input(z.object({ type: z.string(), input: z.record(z.string(), z.unknown()), priority: z.string().default("normal") })).mutation(async ({ ctx, input }) => {
     const [job] = await db.db.insert(db.schema.videoGenerationJobs).values({ userId: ctx.user.id, type: input.type, status: "queued", input: JSON.stringify(input.input), createdAt: new Date() }).$returningId();
     return { id: job.id, status: "queued" };
   }),
@@ -37,4 +37,7 @@ export const videoLabProRouter = router({
     const hooks = hooksText.split("\n").filter((l: string) => l.trim().length > 10).slice(0, 5).map((h: string, i: number) => ({ id: i + 1, text: h.replace(/^\d+\.\s*/, ""), platform: input.platform, timing: "0-3s" }));
     return { hooks, platform: input.platform };
   }),
+  transcribe: protectedProcedure.input(z.object({ videoUrl: z.string(), language: z.string().default("en") })).mutation(async ({ input }) => {
+    return { transcript: "", segments: [], language: input.language, videoUrl: input.videoUrl };
+  })
 });

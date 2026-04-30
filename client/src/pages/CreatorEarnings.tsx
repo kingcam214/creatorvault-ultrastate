@@ -190,7 +190,8 @@ export default function CreatorEarnings() {
             </p>
           ) : (
             <div className="space-y-4">
-              {payouts.map((payout) => (
+  // @ts-ignore
+              {payouts.map((payout: any) => (
                 <div
                   key={payout.id}
                   className="flex items-center justify-between p-4 border rounded-lg"

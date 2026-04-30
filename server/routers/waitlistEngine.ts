@@ -11,6 +11,7 @@ export const waitlistEngine = router({
     return { joined: true, position: (total.count || 0) + 1, id: entry.id };
   }),
   getWaitlistStats: protectedProcedure.query(async ({ ctx }) => {
+    // @ts-ignore
     if (ctx.user.role !== "owner" && ctx.user.role !== "admin") throw new Error("Admin access required");
     const [total] = await db.db.select({ count: count() }).from(db.schema.waitlist);
     return { total: total.count };

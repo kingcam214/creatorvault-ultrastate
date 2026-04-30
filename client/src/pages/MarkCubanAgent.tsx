@@ -30,7 +30,7 @@ export function MarkCubanAgent() {
           <label style={{ fontSize: 11, color: T.muted, display: 'block', marginBottom: 6 }}>Current Revenue / Valuation (optional)</label>
           <input value={revenue} onChange={e => setRevenue(e.target.value)} style={{ width: '100%', background: '#1a1a1a', border: `1px solid ${T.border}`, borderRadius: 8, padding: '10px 12px', color: T.text, fontSize: 13, boxSizing: 'border-box' }} placeholder="e.g. $10k MRR, $500k valuation" />
         </div>
-        <button onClick={() => { setLoading(true); analyzeMut.mutate({ businessModel: idea || 'Creator monetization platform', revenue: revenue || 'Pre-revenue', growth: `${pitchType} stage` }); }} disabled={loading} style={{ background: loading ? '#1a1a1a' : T.gold, color: loading ? T.muted : '#0a0a0a', border: 'none', borderRadius: 8, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button onClick={() => { setLoading(true); analyzeMut.mutate({ businessModel: idea || 'Creator monetization platform', revenue: parseFloat(revenue.replace(/[^0-9.]/g, '')) || 0, growth: `${pitchType} stage` }); }} disabled={loading} style={{ background: loading ? '#1a1a1a' : T.gold, color: loading ? T.muted : '#0a0a0a', border: 'none', borderRadius: 8, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Zap size={16} />{loading ? 'Analyzing...' : "Get Cuban's Analysis"}
         </button>
       </div>

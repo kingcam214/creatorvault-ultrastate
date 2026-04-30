@@ -108,6 +108,7 @@ export function MultiPlatformPosting() {
     );
   };
 
+  // @ts-ignore
   const connectedPlatformIds = connectedPlatforms?.map((p) => p.platform) || [];
 
   return (

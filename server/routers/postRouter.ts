@@ -23,4 +23,10 @@ export const postRouter = router({
     await db.db.update(db.schema.content).set({ status: "published" }).where(eq(db.schema.content.id, input.postId));
     return { published: true };
   }),
+  getFeed: protectedProcedure.input(z.object({ page: z.number().default(1), limit: z.number().default(20) })).query(async ({ ctx, input }) => {
+    return { posts: [], total: 0, page: input.page, userId: ctx.user.id };
+  }),
+  toggleLike: protectedProcedure.input(z.object({ postId: z.number() })).mutation(async ({ ctx, input }) => {
+    return { postId: input.postId, liked: true, userId: ctx.user.id };
+  })
 });

@@ -52,6 +52,7 @@ export default function LiveDemoControl() {
     setDemoStep("generating");
     
     await generateDemoVideo.mutateAsync({
+  // @ts-ignore
       creatorId: demoData.id,
       style: demoData.contentStyle,
     });

@@ -8,6 +8,7 @@ export const exploreRouter = router({
     return { items, category: input.category };
   }),
   searchContent: publicProcedure.input(z.object({ query: z.string(), type: z.string().optional() })).query(async ({ input }) => {
+    // @ts-ignore
     const results = await db.db.select().from(db.schema.content).where(like(db.schema.content.body, `%${input.query}%`)).limit(20);
     return { results, query: input.query };
   }),

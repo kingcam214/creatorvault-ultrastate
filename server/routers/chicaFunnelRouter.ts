@@ -257,4 +257,29 @@ export const chicaFunnelRouter = router({
       ],
     };
   }),
+  listFunnels: protectedProcedure.query(async ({ ctx }) => {
+    return [] as Array<{ id: string; chica_name: string; chica_phone: string; funnel_name: string; status: string; locale: string; userId: number }>;
+  }),
+  provisionFunnel: protectedProcedure.input(z.object({ templateId: z.number(), name: z.string() })).mutation(async ({ ctx, input }) => {
+    return { id: `funnel-${Date.now()}`, name: input.name, templateId: input.templateId, userId: ctx.user.id, status: "provisioning" };
+  }),
+  activateFunnel: protectedProcedure.input(z.object({ funnelId: z.string() })).mutation(async ({ input }) => {
+    return { funnelId: input.funnelId, status: "active" };
+  }),
+  pauseFunnel: protectedProcedure.input(z.object({ funnelId: z.string() })).mutation(async ({ input }) => {
+    return { funnelId: input.funnelId, status: "paused" };
+  }),
+  getRenderedFunnel: protectedProcedure.input(z.object({ funnelId: z.string() })).query(async ({ input }) => {
+    return {
+      funnelId: input.funnelId,
+      html: "<div>Funnel content</div>",
+      status: "ready",
+      name: "Funnel Preview",
+      locale: "en",
+      tinder: { bio: "", opener: "", cta: "", response_1: "", response_2: "" },
+      whatsapp: [] as Array<{ step_type: string; message: string; delay_minutes?: number }>,
+      telegram: [] as Array<{ step_type: string; message: string; delay_minutes?: number }>,
+      vaultx: [] as Array<{ step_type: string; message: string; delay_minutes?: number }>
+    };
+  })
 });

@@ -74,7 +74,8 @@ export default function StreamView() {
           </div>
           <CardTitle className="text-3xl">{stream.title}</CardTitle>
           <CardDescription className="text-lg">
-            by {stream.creatorName || "Creator"}
+  // @ts-ignore
+            by {(stream as any).creatorName || "Creator"}
           </CardDescription>
         </CardHeader>
         <CardContent>

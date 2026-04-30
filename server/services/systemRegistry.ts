@@ -109,7 +109,7 @@ export async function getAllBots(): Promise<SystemBot[]> {
 
   // Get Telegram bots
   const telegramBotsData = await db.select().from(telegramBots);
-  bots.push(...telegramBotsData.map(bot => ({
+  bots.push(...telegramBotsData.map((bot: any) => ({
     id: bot.id,
     name: bot.name,
     type: "telegram" as const,
@@ -126,7 +126,7 @@ export async function getAllBots(): Promise<SystemBot[]> {
 
   // Get WhatsApp providers
   const whatsappData = await db.select().from(whatsappProviders);
-  bots.push(...whatsappData.map(provider => ({
+  bots.push(...whatsappData.map((provider: any) => ({
     id: provider.id,
     name: provider.name,
     type: "whatsapp" as const,
@@ -239,7 +239,7 @@ export async function getSystemLogs(limit: number = 100): Promise<SystemLog[]> {
     .orderBy(desc(botEvents.createdAt))
     .limit(limit);
 
-  return events.map(event => ({
+  return events.map((event: any) => ({
     id: event.id,
     level: event.outcome === "error" ? "error" : "info",
     component: event.channel,
@@ -349,31 +349,31 @@ export async function getSystemStats() {
   return {
     deployments: {
       total: deployments.length,
-      active: deployments.filter(d => d.status === "active").length,
-      paused: deployments.filter(d => d.status === "paused").length,
-      error: deployments.filter(d => d.status === "error").length,
+      active: deployments.filter((d: any) => d.status === "active").length,
+      paused: deployments.filter((d: any) => d.status === "paused").length,
+      error: deployments.filter((d: any) => d.status === "error").length,
     },
     bots: {
       total: bots.length,
-      active: bots.filter(b => b.status === "active").length,
-      paused: bots.filter(b => b.status === "paused").length,
-      error: bots.filter(b => b.status === "error").length,
+      active: bots.filter((b: any) => b.status === "active").length,
+      paused: bots.filter((b: any) => b.status === "paused").length,
+      error: bots.filter((b: any) => b.status === "error").length,
       byType: {
-        telegram: bots.filter(b => b.type === "telegram").length,
-        whatsapp: bots.filter(b => b.type === "whatsapp").length,
-        ai_assistant: bots.filter(b => b.type === "ai_assistant").length,
-        live: bots.filter(b => b.type === "live").length,
+        telegram: bots.filter((b: any) => b.type === "telegram").length,
+        whatsapp: bots.filter((b: any) => b.type === "whatsapp").length,
+        ai_assistant: bots.filter((b: any) => b.type === "ai_assistant").length,
+        live: bots.filter((b: any) => b.type === "live").length,
       },
     },
     channels: {
       total: channels.length,
-      active: channels.filter(c => c.status === "active").length,
-      paused: channels.filter(c => c.status === "paused").length,
-      error: channels.filter(c => c.status === "error").length,
+      active: channels.filter((c: any) => c.status === "active").length,
+      paused: channels.filter((c: any) => c.status === "paused").length,
+      error: channels.filter((c: any) => c.status === "error").length,
     },
     links: {
       total: links.length,
-      totalAccess: links.reduce((sum, l) => sum + l.accessCount, 0),
+      totalAccess: links.reduce((sum: any, l: any) => sum + l.accessCount, 0),
     },
   };
 }
@@ -387,15 +387,15 @@ export async function getRoleGovernance() {
   return {
     total: allUsers.length,
     byRole: {
-      owner: allUsers.filter(u => u.role === "king").length,
-      admin: allUsers.filter(u => u.role === "admin").length,
-      creator: allUsers.filter(u => u.role === "creator").length,
-      user: allUsers.filter(u => u.role === "user").length,
+      owner: allUsers.filter((u: any) => u.role === "king").length,
+      admin: allUsers.filter((u: any) => u.role === "admin").length,
+      creator: allUsers.filter((u: any) => u.role === "creator").length,
+      user: allUsers.filter((u: any) => u.role === "user").length,
     },
     byStatus: {
-      active: allUsers.filter(u => u.creatorStatus === "active").length,
-      pending: allUsers.filter(u => u.creatorStatus === "pending").length,
-      suspended: allUsers.filter(u => u.creatorStatus === "suspended").length,
+      active: allUsers.filter((u: any) => u.creatorStatus === "active").length,
+      pending: allUsers.filter((u: any) => u.creatorStatus === "pending").length,
+      suspended: allUsers.filter((u: any) => u.creatorStatus === "suspended").length,
     },
   };
 }

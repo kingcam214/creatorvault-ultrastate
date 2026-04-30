@@ -45,4 +45,21 @@ Create: 1) Content pillars (3-5), 2) Posting schedule, 3) Algorithm exploitation
     });
     return { analysis: completion.choices[0].message.content };
   }),
+  reverseEngineerAlgorithm: protectedProcedure.input(z.object({
+    platform: z.string(),
+    niche: z.string(),
+    sampleContent: z.array(z.string()).optional(),
+  })).mutation(async ({ input }) => {
+    const { OpenAI } = await import("openai");
+    const openai = new OpenAI();
+    const c = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [
+        { role: "system", content: "You are a platform algorithm expert. Reverse engineer what the algorithm rewards." },
+        { role: "user", content: `Reverse engineer the ${input.platform} algorithm for the ${input.niche} niche. What signals does it reward?` }
+      ],
+      max_tokens: 800,
+    });
+    return { analysis: c.choices[0].message.content ?? "", platform: input.platform, niche: input.niche };
+  })
 });

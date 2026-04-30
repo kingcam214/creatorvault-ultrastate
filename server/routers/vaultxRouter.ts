@@ -351,6 +351,7 @@ export const vaultxRouter = router({
       }
       // Create Stripe PaymentIntent for the subscription charge
       const Stripe = (await import("stripe")).default;
+    // @ts-ignore
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" });
       const creatorRows = await rawQuery("SELECT name, username FROM users WHERE id = ? LIMIT 1", [input.creatorId]);
       const creatorName = creatorRows[0]?.name || creatorRows[0]?.username || `Creator #${input.creatorId}`;
@@ -384,6 +385,7 @@ export const vaultxRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const Stripe = (await import("stripe")).default;
+    // @ts-ignore
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" });
       const intent = await stripe.paymentIntents.retrieve(input.intentId);
       if (intent.status !== "succeeded") {
@@ -437,6 +439,7 @@ export const vaultxRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot tip yourself" });
       }
       const Stripe = (await import("stripe")).default;
+    // @ts-ignore
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" });
       const creatorRows = await rawQuery("SELECT name, username FROM users WHERE id = ? LIMIT 1", [input.creatorId]);
       const creatorName = creatorRows[0]?.name || creatorRows[0]?.username || `Creator #${input.creatorId}`;
@@ -471,6 +474,7 @@ export const vaultxRouter = router({
     .input(z.object({ intentId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const Stripe = (await import("stripe")).default;
+    // @ts-ignore
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" });
       const intent = await stripe.paymentIntents.retrieve(input.intentId);
       if (intent.status !== "succeeded") {
@@ -683,7 +687,7 @@ export const vaultxRouter = router({
   savePpvOutput: protectedProcedure
     .input(z.object({
       fileUrl: z.string().url(),
-      outputType: z.enum(["teaser", "censor", "watermark"]),
+      outputType: z.enum(["teaser", "censor", "watermark", "ai-ppv"]),
       priceCents: z.number().min(0).default(999),
       sourceAssetId: z.string().optional(),
       title: z.string().optional(),

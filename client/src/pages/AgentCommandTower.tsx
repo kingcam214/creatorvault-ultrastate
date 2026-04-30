@@ -107,7 +107,7 @@ export default function AgentCommandTower() {
               <span>{card.label}</span>
               {card.icon}
             </div>
-            <div style={{ marginTop: 8, fontSize: 26, fontWeight: 700 }}>{summaryQuery.isLoading ? '—' : card.value}</div>
+            <div style={{ marginTop: 8, fontSize: 26, fontWeight: 700 }}>{summaryQuery.isPending ? '—' : card.value}</div>
           </div>
         ))}
       </div>
@@ -132,7 +132,7 @@ export default function AgentCommandTower() {
                 )}
               </div>
             ))}
-            {!recentQuery.isLoading && events.length === 0 && (
+            {!recentQuery.isPending && events.length === 0 && (
               <div style={{ padding: 20, color: '#6b7280' }}>No events found for this time range.</div>
             )}
           </div>
@@ -154,7 +154,7 @@ export default function AgentCommandTower() {
                 </div>
               </div>
             ))}
-            {!leaderboardQuery.isLoading && (leaderboardQuery.data?.length ?? 0) === 0 && (
+            {!leaderboardQuery.isPending && (leaderboardQuery.data?.length ?? 0) === 0 && (
               <div style={{ color: '#6b7280', padding: 8 }}>No leaderboard data yet.</div>
             )}
           </div>
@@ -178,7 +178,7 @@ export default function AgentCommandTower() {
               <div style={{ marginTop: 4 }}>{event.error_message || event.outcome}</div>
             </div>
           ))}
-          {!recentQuery.isLoading && failedEvents.length === 0 && (
+          {!recentQuery.isPending && failedEvents.length === 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#22c55e' }}>
               <AlertTriangle size={16} /> No failures in this range.
             </div>

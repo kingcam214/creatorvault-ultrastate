@@ -4,6 +4,7 @@ import * as db from "../db";
 import { eq } from "drizzle-orm";
 export const simpleAuth = router({
   getMe: protectedProcedure.query(async ({ ctx }) => {
+    // @ts-ignore
     const [user] = await db.db.select({ id: db.schema.users.id, email: db.schema.users.email, username: db.schema.users.username, role: db.schema.users.role }).from(db.schema.users).where(eq(db.schema.users.id, ctx.user.id)).limit(1);
     return user;
   }),

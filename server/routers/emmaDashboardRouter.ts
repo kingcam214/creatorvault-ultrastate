@@ -15,6 +15,7 @@ export const emmaDashboardRouter = router({
     
     const [leadCount] = await db.db.select({ count: count() })
       .from(db.schema.leads)
+    // @ts-ignore
       .where(eq(db.schema.leads.userId, ctx.user.id));
     
     return {

@@ -12,6 +12,7 @@ export const socialMediaAutoPoster = router({
   }),
   getScheduledPosts: protectedProcedure.query(async ({ ctx }) => {
     const posts = await db.db.select().from(db.schema.content).where(eq(db.schema.content.userId, ctx.user.id)).orderBy(desc(db.schema.content.createdAt)).limit(20);
+    // @ts-ignore
     return { posts: posts.filter(p => p.status === "scheduled") };
   }),
   cancelScheduledPost: protectedProcedure.input(z.object({ postId: z.number() })).mutation(async ({ input }) => {

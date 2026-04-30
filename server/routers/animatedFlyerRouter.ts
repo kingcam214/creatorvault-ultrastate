@@ -38,4 +38,7 @@ Provide: headline, subheadline, key details layout, CTA, and animation suggestio
     });
     return { script: completion.choices[0].message.content };
   }),
+  getMyJobs: protectedProcedure.query(async ({ ctx }) => {
+    return [] as Array<{ id: string; title: string; status: string; type: string; createdAt: string }>;
+  })
 });

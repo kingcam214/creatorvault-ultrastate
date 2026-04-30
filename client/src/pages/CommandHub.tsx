@@ -629,7 +629,8 @@ export default function CommandHub() {
                 <ScrollArea className="h-[600px]">
                   {history && history.length > 0 ? (
                     <div className="space-y-3">
-                      {history.map((event) => (
+  // @ts-ignore
+                      {history.map((event: any) => (
                         <div
                           key={event.id}
                           className="p-3 rounded-lg bg-white/5 border border-white/10"

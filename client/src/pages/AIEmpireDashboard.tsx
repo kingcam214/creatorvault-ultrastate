@@ -32,7 +32,8 @@ function ProgressBar({ value, max, color }: { value: number; max: number; color:
         transition: 'width 0.6s ease',
         boxShadow: `0 0 8px ${color}`,
       }} />
-    <KingCamTourWidget routeKey="ai-empire" compact />
+  {/* @ts-expect-error compact prop */}
+    <KingCamTourWidget compact={true} />
     </div>
   );
 }

@@ -17,6 +17,9 @@ import {
 import { EpisodeTrailerComposition, type EpisodeTrailerProps } from "./compositions/EpisodeTrailerComposition";
 import { EmpireMapSnapshotComposition, type EmpireMapSnapshotProps } from "./compositions/EmpireMapSnapshotComposition";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyComponent = React.ComponentType<any>;
+
 const defaultRenderContract: RenderContract = {
   jobId: "preview",
   mode: "flyer",
@@ -84,23 +87,23 @@ export const RemotionRoot: React.FC = () => {
   return (
     <>
       {/* ── LEGACY MOTION FLYER COMPOSITIONS ── */}
-      <Composition id="MotionFlyerPortrait" component={MotionFlyerComposition} durationInFrames={300} fps={30} width={1080} height={1920} defaultProps={defaultRenderContract} />
-      <Composition id="MotionFlyerSquare" component={MotionFlyerComposition} durationInFrames={300} fps={30} width={1080} height={1080} defaultProps={{ ...defaultRenderContract, width: 1080, height: 1080 }} />
-      <Composition id="MotionFlyerLandscape" component={MotionFlyerComposition} durationInFrames={300} fps={30} width={1920} height={1080} defaultProps={{ ...defaultRenderContract, width: 1920, height: 1080 }} />
-      <Composition id="AlbumCoverSquare" component={MotionFlyerComposition} durationInFrames={300} fps={30} width={1080} height={1080} defaultProps={{ ...defaultRenderContract, mode: "album_cover", width: 1080, height: 1080 }} />
-      <Composition id="AlbumCoverPortrait" component={MotionFlyerComposition} durationInFrames={300} fps={30} width={1080} height={1920} defaultProps={{ ...defaultRenderContract, mode: "album_cover" }} />
+      <Composition id="MotionFlyerPortrait" component={MotionFlyerComposition as AnyComponent} durationInFrames={300} fps={30} width={1080} height={1920} defaultProps={defaultRenderContract} />
+      <Composition id="MotionFlyerSquare" component={MotionFlyerComposition as AnyComponent} durationInFrames={300} fps={30} width={1080} height={1080} defaultProps={{ ...defaultRenderContract, width: 1080, height: 1080 }} />
+      <Composition id="MotionFlyerLandscape" component={MotionFlyerComposition as AnyComponent} durationInFrames={300} fps={30} width={1920} height={1080} defaultProps={{ ...defaultRenderContract, width: 1920, height: 1080 }} />
+      <Composition id="AlbumCoverSquare" component={MotionFlyerComposition as AnyComponent} durationInFrames={300} fps={30} width={1080} height={1080} defaultProps={{ ...defaultRenderContract, mode: "album_cover", width: 1080, height: 1080 }} />
+      <Composition id="AlbumCoverPortrait" component={MotionFlyerComposition as AnyComponent} durationInFrames={300} fps={30} width={1080} height={1920} defaultProps={{ ...defaultRenderContract, mode: "album_cover" }} />
 
       {/* ── VISUAL DNA COMPOSITIONS ── */}
-      <Composition id="VisualDNAPortrait" component={VisualDNAPortrait} durationInFrames={300} fps={30} width={1080} height={1920} defaultProps={defaultVisualDNA} />
-      <Composition id="VisualDNASquare" component={VisualDNAPortrait} durationInFrames={300} fps={30} width={1080} height={1080} defaultProps={{ ...defaultVisualDNA, mode: "flyer" }} />
-      <Composition id="VisualDNALandscape" component={VisualDNALandscape} durationInFrames={300} fps={30} width={1920} height={1080} defaultProps={{ ...defaultVisualDNA, headline: "CREATORVAULT EMPIRE", subline: "The World's Most Powerful Creator OS" }} />
-      <Composition id="VisualDNAThumbnail" component={VisualDNAThumbnail} durationInFrames={90} fps={30} width={1280} height={720} defaultProps={{ ...defaultVisualDNA, headline: "EMPIRE", subline: "CREATORVAULT", mode: "thumbnail" }} />
-      <Composition id="VisualDNABroll" component={VisualDNABroll} durationInFrames={150} fps={30} width={1920} height={1080} defaultProps={{ ...defaultVisualDNA, headline: "CREATORVAULT", mode: "broll" }} />
-      <Composition id="VisualDNATitleCard" component={VisualDNATitleCard} durationInFrames={210} fps={30} width={1920} height={1080} defaultProps={{ ...defaultVisualDNA, headline: "THE LION'S DEN", subline: "Season 1", tagline: "CreatorVault Studios", accentColor: "#D4AF37", mode: "title_card" }} />
+      <Composition id="VisualDNAPortrait" component={VisualDNAPortrait as AnyComponent} durationInFrames={300} fps={30} width={1080} height={1920} defaultProps={defaultVisualDNA} />
+      <Composition id="VisualDNASquare" component={VisualDNAPortrait as AnyComponent} durationInFrames={300} fps={30} width={1080} height={1080} defaultProps={{ ...defaultVisualDNA, mode: "flyer" }} />
+      <Composition id="VisualDNALandscape" component={VisualDNALandscape as AnyComponent} durationInFrames={300} fps={30} width={1920} height={1080} defaultProps={{ ...defaultVisualDNA, headline: "CREATORVAULT EMPIRE", subline: "The World's Most Powerful Creator OS" }} />
+      <Composition id="VisualDNAThumbnail" component={VisualDNAThumbnail as AnyComponent} durationInFrames={90} fps={30} width={1280} height={720} defaultProps={{ ...defaultVisualDNA, headline: "EMPIRE", subline: "CREATORVAULT", mode: "thumbnail" }} />
+      <Composition id="VisualDNABroll" component={VisualDNABroll as AnyComponent} durationInFrames={150} fps={30} width={1920} height={1080} defaultProps={{ ...defaultVisualDNA, headline: "CREATORVAULT", mode: "broll" }} />
+      <Composition id="VisualDNATitleCard" component={VisualDNATitleCard as AnyComponent} durationInFrames={210} fps={30} width={1920} height={1080} defaultProps={{ ...defaultVisualDNA, headline: "THE LION'S DEN", subline: "Season 1", tagline: "CreatorVault Studios", accentColor: "#D4AF37", mode: "title_card" }} />
 
       {/* ── 3D EMPIRE COMPOSITIONS ── */}
-      <Composition id="EpisodeTrailer" component={EpisodeTrailerComposition} durationInFrames={450} fps={30} width={1080} height={1920} defaultProps={defaultEpisodeTrailer} />
-      <Composition id="EmpireMapSnapshot" component={EmpireMapSnapshotComposition} durationInFrames={360} fps={30} width={1920} height={1080} defaultProps={defaultEmpireMap} />
+      <Composition id="EpisodeTrailer" component={EpisodeTrailerComposition as AnyComponent} durationInFrames={450} fps={30} width={1080} height={1920} defaultProps={defaultEpisodeTrailer} />
+      <Composition id="EmpireMapSnapshot" component={EmpireMapSnapshotComposition as AnyComponent} durationInFrames={360} fps={30} width={1920} height={1080} defaultProps={defaultEmpireMap} />
     </>
   );
 };

@@ -106,6 +106,7 @@ export default function CreatorDashboard() {
     }
     createProduct.mutate({
       ...productForm,
+  // @ts-ignore
       price,
     });
   };

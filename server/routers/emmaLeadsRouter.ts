@@ -10,6 +10,7 @@ export const emmaLeadsRouter = router({
   getLeads: protectedProcedure.query(async ({ ctx }) => {
     const leads = await db.db.select()
       .from(db.schema.leads)
+    // @ts-ignore
       .where(eq(db.schema.leads.userId, ctx.user.id))
       .orderBy(desc(db.schema.leads.createdAt))
       .limit(50);

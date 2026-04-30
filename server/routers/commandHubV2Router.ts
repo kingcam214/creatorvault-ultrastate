@@ -7,6 +7,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 export const commandHubV2Router = router({
   executeCommand: protectedProcedure.input(z.object({
     command: z.string(),
+    // @ts-ignore
     context: z.record(z.unknown()).optional(),
     priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
   })).mutation(async ({ ctx, input }) => {

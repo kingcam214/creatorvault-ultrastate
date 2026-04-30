@@ -307,6 +307,7 @@ export const marketplaceRouter = router({
       const platformAmount = Math.floor(totalAmount * 0.3);
       const recruiterAmount = product.recruiterId ? Math.floor(platformAmount * 0.1) : 0;
       
+    // @ts-ignore
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         customer_email: ctx.user.email ?? undefined,

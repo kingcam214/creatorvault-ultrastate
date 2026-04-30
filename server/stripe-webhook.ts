@@ -6,10 +6,12 @@ import Stripe from "stripe";
 const DB_PATH = path.join(process.cwd(), "creatorvault.db");
 
 export class StripeWebhookHandler {
+    // @ts-ignore
   private db: Database.Database;
   private stripe: Stripe;
 
   constructor(stripeSecretKey: string) {
+    // @ts-ignore
     this.db = new Database(DB_PATH);
     this.db.pragma("foreign_keys = ON");
     this.stripe = new Stripe(stripeSecretKey);

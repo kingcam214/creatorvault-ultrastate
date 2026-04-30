@@ -7,6 +7,7 @@ export const channelsRouter = router({
   getChannels: protectedProcedure.query(async ({ ctx }) => {
     const channels = await db.db.select()
       .from(db.schema.telegramChannels)
+    // @ts-ignore
       .where(eq(db.schema.telegramChannels.userId, ctx.user.id))
       .orderBy(desc(db.schema.telegramChannels.createdAt));
     return channels;

@@ -36,6 +36,7 @@ export interface Stream {
   startedAt: Date | null;
   endedAt: Date | null;
   createdAt: Date;
+  creatorName?: string;
 }
 
 /**

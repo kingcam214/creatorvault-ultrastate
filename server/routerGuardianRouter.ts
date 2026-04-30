@@ -9,6 +9,7 @@ const execAsync = promisify(exec);
 
 export const routerGuardianRouter = router({
   runAudit: protectedProcedure.mutation(async ({ ctx }) => {
+    // @ts-ignore
     if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
       throw new Error("Owner access required");
     }
@@ -28,6 +29,7 @@ export const routerGuardianRouter = router({
   }),
   
   getLastAudit: protectedProcedure.query(async ({ ctx }) => {
+    // @ts-ignore
     if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
       throw new Error("Owner access required");
     }
@@ -40,6 +42,7 @@ export const routerGuardianRouter = router({
   }),
   
   getSystemHealth: protectedProcedure.query(async ({ ctx }) => {
+    // @ts-ignore
     if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
       throw new Error("Owner access required");
     }

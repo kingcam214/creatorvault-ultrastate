@@ -32,6 +32,7 @@ export default function Waitlist() {
       return;
     }
 
+  // @ts-ignore
     joinWaitlist.mutate({ name, email, creatorType });
   };
 

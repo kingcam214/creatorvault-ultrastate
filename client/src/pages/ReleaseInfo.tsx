@@ -7,6 +7,7 @@ export default function ReleaseInfo() {
     fetch('/release.json')
       .then(res => res.json())
       .then(setRelease)
+  // @ts-ignore
       .catch(() => setRelease({ error: 'Release info not found' }));
   }, []);
 

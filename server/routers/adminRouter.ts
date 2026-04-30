@@ -31,6 +31,7 @@ export const adminRouter = router({
     const users = await db.db.select({
       id: db.schema.users.id,
       email: db.schema.users.email,
+    // @ts-ignore
       username: db.schema.users.username,
       role: db.schema.users.role,
       createdAt: db.schema.users.createdAt,

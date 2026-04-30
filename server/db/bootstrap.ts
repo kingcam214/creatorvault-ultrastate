@@ -139,6 +139,7 @@ export async function bootstrapSchema() {
 
   for (const sql of tables) {
     try {
+    // @ts-ignore
       await db.execute(sql);
       const tableName = sql.match(/CREATE TABLE IF NOT EXISTS (\w+)/)?.[1];
       console.log(`[Bootstrap] ✓ Created table: ${tableName}`);

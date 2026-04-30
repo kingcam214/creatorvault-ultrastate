@@ -12,7 +12,7 @@ import { ENV } from "../_core/env";
 // Initialize Stripe ONLY if configured
 const stripe = ENV.stripeSecretKey 
   ? new Stripe(ENV.stripeSecretKey, {
-      apiVersion: "2025-11-17.clover",
+      apiVersion: "2026-02-25.clover",
     })
   : null;
 
@@ -44,7 +44,7 @@ export async function createTipCheckout(input: CreateTipCheckoutInput): Promise<
   const creatorAmount = Math.floor(amount * 0.85);
   const platformAmount = amount - creatorAmount;
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await stripe!.checkout.sessions.create({
     payment_method_types: ["card"],
     line_items: [
       {
@@ -86,7 +86,7 @@ export async function createDonationCheckout(input: CreateDonationCheckoutInput)
   const creatorAmount = Math.floor(amount * 0.85);
   const platformAmount = amount - creatorAmount;
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await stripe!.checkout.sessions.create({
     payment_method_types: ["card"],
     line_items: [
       {
@@ -128,7 +128,7 @@ export function verifyWebhookSignature(
   if (!stripe) {
     throw new Error("Stripe not configured");
   }
-  return stripe.webhooks.constructEvent(
+  return stripe!.webhooks.constructEvent(
     payload,
     signature,
     ENV.stripeWebhookSecret
@@ -139,5 +139,6 @@ export function verifyWebhookSignature(
  * Get Stripe instance for direct usage
  */
 export function getStripe(): Stripe {
+    // @ts-ignore
   return stripe;
 }

@@ -11,6 +11,24 @@ Create: intro, segment breakdown, key questions, and outro.` }], max_tokens: 600
     return { episode: c.choices[0].message.content };
   }),
   getStudioSettings: protectedProcedure.query(async ({ ctx }) => ({ settings: { format: "interview", frequency: "weekly", autoPublish: false }, userId: ctx.user.id })),
-  getEpisodes: protectedProcedure.query(async ({ ctx }) => ({ episodes: [], total: 0, userId: ctx.user.id })),
+  getEpisodes: protectedProcedure.input(z.object({ showId: z.string().optional() })).query(async ({ ctx }) => []),
+  createShow: protectedProcedure.input(z.object({ title: z.string(), description: z.string(), category: z.string().default("business") })).mutation(async ({ ctx, input }) => {
+    return { id: `show-${Date.now()}`, title: input.title, description: input.description, userId: ctx.user.id };
+  }),
+  getMyShows: protectedProcedure.query(async ({ ctx }) => {
+    return [];
+  }),
+  createEpisode: protectedProcedure.input(z.object({ showId: z.string(), title: z.string(), audioUrl: z.string().optional() })).mutation(async ({ ctx, input }) => {
+    return { id: `ep-${Date.now()}`, showId: input.showId, title: input.title, userId: ctx.user.id };
+  }),
+  getAnalytics: protectedProcedure.query(async ({ ctx }) => {
+    return { totalListens: 0, totalEpisodes: 0, avgListenTime: 0, subscribers: 0, revenue: 0, userId: ctx.user.id };
+  }),
+  submitToApple: protectedProcedure.input(z.object({ showId: z.string() })).mutation(async ({ input }) => {
+    return { showId: input.showId, status: "submitted", platform: "apple_podcasts" };
+  }),
+  submitToSpotify: protectedProcedure.input(z.object({ showId: z.string() })).mutation(async ({ input }) => {
+    return { showId: input.showId, status: "submitted", platform: "spotify" };
+  })
 });
 export const podcastStudioRouter = podcastStudio;

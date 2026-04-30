@@ -57,4 +57,21 @@ Provide: 1) Priority actions (ranked), 2) Content schedule, 3) Revenue opportuni
 
     return { plan: completion.choices[0].message.content, runAt: new Date().toISOString() };
   }),
+  orchestrateEmpire: protectedProcedure.input(z.object({
+    goal: z.string(),
+    timeframe: z.string().default("30 days"),
+    budget: z.number().optional(),
+  })).mutation(async ({ input }) => {
+    const { OpenAI } = await import("openai");
+    const openai = new OpenAI();
+    const c = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [
+        { role: "system", content: "You are an AI empire orchestrator. Create comprehensive action plans for creator empire goals." },
+        { role: "user", content: `Create an empire orchestration plan for: ${input.goal}\nTimeframe: ${input.timeframe}${input.budget ? `\nBudget: $${input.budget}` : ""}` }
+      ],
+      max_tokens: 1200,
+    });
+    return { plan: c.choices[0].message.content ?? "", orchestrationId: `orch-${Date.now()}`, goal: input.goal };
+  })
 });

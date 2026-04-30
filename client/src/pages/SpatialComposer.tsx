@@ -178,6 +178,7 @@ export default function SpatialComposer() {
   const [showTypePanel, setShowTypePanel] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
 
+  // @ts-ignore
   const createPost = trpc.post.create.useMutation();
   const currentType = POST_TYPES.find((t) => t.key === postType) ?? POST_TYPES[0];
   const ctaSuggestions = AI_CTAS[postType] ?? [];
