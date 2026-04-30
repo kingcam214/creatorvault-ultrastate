@@ -508,6 +508,7 @@ export const vaultxRouter = router({
       fileSizeBytes: z.number().optional(),
       unlockType: z.enum(["free", "subscription", "ppv"]).default("subscription"),
       priceCents: z.number().min(0).default(0),
+      tags: z.array(z.string()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const contentType = input.mimeType?.startsWith("video") ? "video"
@@ -517,8 +518,8 @@ export const vaultxRouter = router({
       await rawExec(
         `INSERT INTO content
            (user_id, title, description, file_url, file_key, mime_type, file_size, content_type,
-            status, price_cents, is_locked, thumbnail_url, unlock_type, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, NOW())`,
+            status, price_cents, is_locked, thumbnail_url, unlock_type, tags, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, NOW())`,
         [
           ctx.user.id,
           input.title,
@@ -532,6 +533,7 @@ export const vaultxRouter = router({
           input.unlockType !== "free" ? 1 : 0,
           input.thumbnailUrl || null,
           input.unlockType,
+          input.tags?.length ? JSON.stringify(input.tags) : null,
         ]
       );
       const rows = await rawQuery(
