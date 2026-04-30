@@ -114,7 +114,7 @@ export async function processSubscriptionPayment(
   }
 
   // Calculate 70/30 split
-  const creatorShare = Math.floor(amountInCents * 0.7);
+  const creatorShare = Math.floor(amountInCents * 0.85); // 85% to creator (15% platform fee — LAW)
   const platformShare = amountInCents - creatorShare;
 
   // Create transaction record

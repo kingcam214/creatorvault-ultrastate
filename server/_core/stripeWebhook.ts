@@ -157,8 +157,8 @@ async function handleSubscriptionCheckout(session: Stripe.Checkout.Session) {
   const amountInCents = session.amount_total || 0;
 
   // Calculate 70/30 split
-  const creatorShare = Math.floor(amountInCents * 0.7);
-  const platformShare = amountInCents - creatorShare;
+  const creatorShare = Math.floor(amountInCents * 0.85); // 85% to creator (15% platform fee — THIS IS LAW)
+  const platformShare = amountInCents - creatorShare; // 15% platform fee
 
   // Create transaction record
   await db.insert(transactions).values({

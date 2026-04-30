@@ -303,7 +303,7 @@ export const marketplaceRouter = router({
       const totalAmount = currentPrice + (product.shippingCost || 0);
       
       // Calculate revenue split
-      const creatorAmount = Math.floor(totalAmount * 0.7);
+      const creatorAmount = Math.floor(totalAmount * 0.85); // 85% to creator (15% platform fee — LAW)
       const platformAmount = Math.floor(totalAmount * 0.3);
       const recruiterAmount = product.recruiterId ? Math.floor(platformAmount * 0.1) : 0;
       

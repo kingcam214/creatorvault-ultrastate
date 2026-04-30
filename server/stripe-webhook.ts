@@ -40,7 +40,7 @@ export class StripeWebhookHandler {
 
       // Calculate commission splits
       const grossAmount = session.amount_total || 0; // in cents
-      const creatorAmount = Math.floor(grossAmount * 0.7); // 70%
+      const creatorAmount = Math.floor(grossAmount * 0.85); // 85% to creator (15% platform fee — LAW)
       const recruiterAmount = product.recruiterId ? Math.floor(grossAmount * 0.2) : 0; // 20%
       const platformAmount = grossAmount - creatorAmount - recruiterAmount; // 10%
 
