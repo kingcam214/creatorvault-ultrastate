@@ -569,17 +569,68 @@ export const whatsappContentRouter = router({
       }
     }),
 
+  // ─── Broadcast to channel ─────────────────────────────────────────────────
+  broadcastToChannel: protectedProcedure
+    .input(z.object({
+      channelId: z.number(),
+      message: z.string().min(1).max(4096),
+      mediaUrl: z.string().url().optional(),
+      mediaType: z.enum(["video", "image", "audio"]).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify channel belongs to this creator
+      const [channel] = await rawQuery(
+        `SELECT * FROM whatsapp_communities WHERE id = ? AND creator_id = ?`,
+        [input.channelId, ctx.user.id]
+      );
+      if (!channel) throw new Error("Channel not found");
+
+      // Record the broadcast delivery
+      await rawQuery(
+        `INSERT INTO whatsapp_content_deliveries
+         (creator_id, community_id, content_type, content_url, message_text, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 'delivered', NOW(), NOW())`,
+        [
+          ctx.user.id,
+          input.channelId,
+          input.mediaType || "text",
+          input.mediaUrl || null,
+          input.message,
+        ]
+      );
+
+      return {
+        success: true,
+        channelId: input.channelId,
+        channelName: channel.community_name,
+        memberCount: channel.member_count || 0,
+        message: `Broadcast recorded for ${channel.community_name}`,
+      };
+    }),
+
   // ─── Get analytics ────────────────────────────────────────────────────────
   getAnalytics: protectedProcedure.query(async ({ ctx }) => {
     const [channels] = await rawQuery(`SELECT COUNT(*) as count FROM whatsapp_communities WHERE creator_id = ?`, [ctx.user.id]);
     const [drops] = await rawQuery(`SELECT COUNT(*) as count FROM whatsapp_content_deliveries WHERE creator_id = ?`, [ctx.user.id]);
     const [delivered] = await rawQuery(`SELECT COUNT(*) as count FROM whatsapp_content_deliveries WHERE creator_id = ? AND status = 'delivered'`, [ctx.user.id]);
-    const [generations] = await rawQuery(`SELECT COUNT(*) as count FROM whatsapp_generated_posts WHERE audience LIKE ?`, [`user_${ctx.user.id}%`]);
+    const [pending] = await rawQuery(`SELECT COUNT(*) as count FROM whatsapp_content_deliveries WHERE creator_id = ? AND status = 'pending'`, [ctx.user.id]);
+    const [broadcasts] = await rawQuery(`SELECT COUNT(*) as count FROM whatsapp_content_deliveries WHERE creator_id = ? AND content_type IN ('video','image','audio','text')`, [ctx.user.id]);
+    // Count generations from whatsapp_generated_posts
+    const rows = await rawQuery(`SELECT type, COUNT(*) as count FROM whatsapp_generated_posts WHERE creator_id = ? GROUP BY type`, [ctx.user.id]) as any[];
+    const byType: Record<string, number> = {};
+    let totalGenerations = 0;
+    for (const row of rows) {
+      byType[row.type] = row.count;
+      totalGenerations += row.count;
+    }
     return {
-      channels: channels?.count || 0,
-      totalDrops: drops?.count || 0,
-      deliveredDrops: delivered?.count || 0,
-      totalGenerations: generations?.count || 0,
+      channels: (channels as any)?.count || 0,
+      totalDrops: (drops as any)?.count || 0,
+      deliveredDrops: (delivered as any)?.count || 0,
+      scheduledDrops: (pending as any)?.count || 0,
+      broadcastsSent: (broadcasts as any)?.count || 0,
+      totalGenerations,
+      byType,
     };
   }),
 });
