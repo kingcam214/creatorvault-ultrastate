@@ -21,4 +21,8 @@ ${input.script}
 For each scene: visual description, camera angle, action, and dialogue/narration.` }], max_tokens: 600 });
     return { storyboard: c.choices[0].message.content };
   }),
+  createProject: protectedProcedure.input(z.object({ title: z.string(), script: z.string(), style: z.string().optional(), platform: z.string().optional() })).mutation(async ({ ctx, input }) => {
+    const c = await openai.chat.completions.create({ model: "gpt-4o-mini", messages: [{ role: "user", content: `Create a video production project plan for:\nTitle: ${input.title}\nScript: ${input.script}\nStyle: ${input.style ?? 'cinematic'}\nPlatform: ${input.platform ?? 'youtube'}\n\nGenerate: shot list (5 scenes), visual directions, estimated duration, and post-production checklist.` }], max_tokens: 600 });
+    return { projectId: `proj_${Date.now()}`, title: input.title, status: 'created', productionPlan: c.choices[0].message.content, userId: ctx.user.id, createdAt: new Date().toISOString() };
+  }),
 });

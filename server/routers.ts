@@ -243,6 +243,8 @@ import { agentOrchestratorRouter } from "./routers/agentOrchestratorRouter";
 import { videoEnhanceRouter } from "./routers/videoEnhanceRouter";
 import { cloneEmpireRouter } from "./routers/cloneEmpireRouter";
 import { kingcamAIRouter } from "./routers/kingcamAIRouter";
+import { agentTelemetryRouter } from "./routers/agentTelemetryRouter";
+import { challengeAutomationRouter } from "./routers/challengeAutomationRouter";
 // import { contentProtectionRouter } from "./routers/contentProtection"; // service stubs not implemented
 // import { safetyFeaturesRouter } from "./routers/safetyFeatures"; // service stubs not implemented
 // import { recruiterCommissionsRouter } from "./routers/recruiterCommissions"; // service stubs not implemented
@@ -952,6 +954,8 @@ export const appRouter = router({
   videoEnhance: videoEnhanceRouter,
   kingcamAI: kingcamAIRouter,
   cloneEmpire: cloneEmpireRouter,
+  agentTelemetry: agentTelemetryRouter,
+  challengeAutomation: challengeAutomationRouter,
 });
 
 export type AppRouter = typeof appRouter;

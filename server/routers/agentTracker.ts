@@ -16,7 +16,7 @@ export const agentTrackerRouter = router({
   logAgentEvent: protectedProcedure.input(z.object({
     agentName: z.string(),
     eventType: z.string(),
-    payload: z.record(z.unknown()).optional(),
+    payload: z.record(z.string(), z.unknown()).optional(),
   })).mutation(async ({ ctx, input }) => {
     await db.db.insert(db.schema.botEvents).values({
       userId: ctx.user.id,
