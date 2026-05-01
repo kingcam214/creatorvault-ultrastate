@@ -12,10 +12,15 @@ import { eq, desc, and, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 // Raw MySQL2 connection for tables not in Drizzle schema
+// Uses promise-based pool: db.$client.promise().query()
 async function rawQuery(query: string, params: any[] = []): Promise<any[]> {
-  const conn = (db as any).client || (db as any).$client;
-  if (conn && typeof conn.query === "function") {
-    const [rows] = await conn.query(query, params);
+  const pool = (db as any).$client || (db as any).client;
+  if (pool && typeof pool.promise === "function") {
+    const [rows] = await pool.promise().query(query, params);
+    return rows as any[];
+  }
+  if (pool && typeof pool.execute === "function") {
+    const [rows] = await pool.execute(query, params);
     return rows as any[];
   }
   // Fallback: use drizzle execute
@@ -23,11 +28,15 @@ async function rawQuery(query: string, params: any[] = []): Promise<any[]> {
   return (result as any).rows || result;
 }
 
-async function rawExec(query: string, params: any[] = []): Promise<void> {
-  const conn = (db as any).client || (db as any).$client;
-  if (conn && typeof conn.query === "function") {
-    await conn.query(query, params);
-    return;
+async function rawExec(query: string, params: any[] = []): Promise<any> {
+  const pool = (db as any).$client || (db as any).client;
+  if (pool && typeof pool.promise === "function") {
+    const [result] = await pool.promise().query(query, params);
+    return result;
+  }
+  if (pool && typeof pool.execute === "function") {
+    const [result] = await pool.execute(query, params);
+    return result;
   }
   await (db as any).execute(sql.raw(query));
 }
@@ -424,6 +433,11 @@ export const vaultxRouter = router({
         `UPDATE vaultx_creator_profiles SET total_subscribers = total_subscribers + 1 WHERE creator_id = ?`,
         [input.creatorId]
       );
+      // Credit Empire Challenge
+      try {
+        const { creditChallengePaymentCents } = await import("../challengePaymentHook");
+        await creditChallengePaymentCents(amountCents, "vaultx_subscription", `VaultX subscription — fan #${ctx.user.id} to creator #${input.creatorId}`);
+      } catch { /* never block */ }
       return { success: true, subscriptionActive: true };
     }),
 
@@ -488,6 +502,11 @@ export const vaultxRouter = router({
         "UPDATE tips SET status = 'completed' WHERE stripe_payment_intent_id = ? AND fan_id = ?",
         [input.intentId, ctx.user.id]
       );
+      // Credit Empire Challenge
+      try {
+        const { creditChallengePaymentCents } = await import("../challengePaymentHook");
+        await creditChallengePaymentCents(amountCents, "vaultx_tip", `VaultX tip — fan #${ctx.user.id} to creator #${creatorId}`);
+      } catch { /* never block */ }
       // Update creator tip revenue
       await rawExec(
         `INSERT INTO vaultx_revenue_stats (creator_id, period_date, tip_revenue, gross_revenue, net_revenue)

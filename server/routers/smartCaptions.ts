@@ -25,9 +25,13 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const BASE_URL = (process.env.APP_URL || "https://creatorvault.live").replace(/\/$/, "");
 
 async function rawQuery(query: string, params: any[] = []): Promise<any[]> {
-  const conn = (db as any).client || (db as any).$client;
-  if (conn && typeof conn.query === "function") {
-    const [rows] = await conn.query(query, params);
+  const pool = (db as any).$client || (db as any).client;
+  if (pool && typeof pool.promise === "function") {
+    const [rows] = await pool.promise().query(query, params);
+    return rows as any[];
+  }
+  if (pool && typeof pool.execute === "function") {
+    const [rows] = await pool.execute(query, params);
     return rows as any[];
   }
   const result = await (db as any).execute(sql.raw(query));
@@ -35,9 +39,13 @@ async function rawQuery(query: string, params: any[] = []): Promise<any[]> {
 }
 
 async function rawExec(query: string, params: any[] = []): Promise<any> {
-  const conn = (db as any).client || (db as any).$client;
-  if (conn && typeof conn.query === "function") {
-    const [result] = await conn.query(query, params);
+  const pool = (db as any).$client || (db as any).client;
+  if (pool && typeof pool.promise === "function") {
+    const [result] = await pool.promise().query(query, params);
+    return result;
+  }
+  if (pool && typeof pool.execute === "function") {
+    const [result] = await pool.execute(query, params);
     return result;
   }
   return (db as any).execute(sql.raw(query));
