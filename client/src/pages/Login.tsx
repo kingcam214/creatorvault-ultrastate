@@ -29,13 +29,10 @@ export default function Login() {
         return;
       }
       if (data.token) {
-        // Write to both safeStorage and raw localStorage for maximum compatibility
         safeStorage.setItem("authToken", data.token);
         try { localStorage.setItem("authToken", data.token); } catch (_) {}
       }
-      // Small delay to ensure storage write completes before navigation
       await new Promise(resolve => setTimeout(resolve, 150));
-      // Role-based redirect
       const userRole = data.user?.role || '';
       if (userRole === 'chica') {
         window.location.replace('/chica');
@@ -53,41 +50,114 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Read directly from DOM refs as fallback for mobile browsers
-    // where React synthetic events may not fire for autofill/paste
     const emailVal = emailRef.current?.value ?? "";
     const passwordVal = passwordRef.current?.value ?? "";
     await doLogin(emailVal, passwordVal);
   };
 
   const handleButtonClick = async () => {
-    // Direct click handler as fallback if form onSubmit doesn't fire
     const emailVal = emailRef.current?.value ?? "";
     const passwordVal = passwordRef.current?.value ?? "";
     await doLogin(emailVal, passwordVal);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)] px-4">
-      <div className="max-w-md w-full space-y-8 bg-[var(--bg-surface)] backdrop-blur-lg p-8 rounded-sm border border-[color:rgba(245,240,232,0.10)]">
-        <div>
-          <h2 className="mt-6 text-center text-4xl font-extrabold text-[var(--text-primary)]">
-            Welcome Back
-          </h2>
-          <p className="mt-2 text-center text-sm text-[var(--text-primary)]/70">
-            Sign in to your CreatorVault account
+    <div style={{
+      minHeight: "100vh",
+      background: "#050508",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "20px",
+      fontFamily: "'Inter', sans-serif",
+    }}>
+      {/* Ambient background glow */}
+      <div style={{
+        position: "fixed",
+        inset: 0,
+        background: "radial-gradient(ellipse 60% 40% at 50% 30%, rgba(201,168,76,0.06) 0%, transparent 70%)",
+        pointerEvents: "none",
+        zIndex: 0,
+      }} />
+
+      <div style={{
+        position: "relative",
+        zIndex: 1,
+        width: "100%",
+        maxWidth: "400px",
+      }}>
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: "40px" }}>
+          <img
+            src="/logo-white.png"
+            alt="CreatorVault"
+            style={{ height: 48, objectFit: "contain", margin: "0 auto" }}
+          />
+          <p style={{
+            marginTop: "12px",
+            fontSize: "11px",
+            fontWeight: 700,
+            letterSpacing: "0.25em",
+            textTransform: "uppercase",
+            color: "#c9a84c",
+          }}>
+            Empire OS
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+
+        {/* Card */}
+        <div style={{
+          background: "rgba(20,20,20,0.95)",
+          border: "1px solid rgba(201,168,76,0.15)",
+          borderRadius: "16px",
+          padding: "36px 32px",
+          backdropFilter: "blur(20px)",
+        }}>
+          <h1 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: "28px",
+            fontWeight: 700,
+            color: "#f5f0e8",
+            marginBottom: "6px",
+            textAlign: "center",
+          }}>
+            Welcome Back
+          </h1>
+          <p style={{
+            fontSize: "13px",
+            color: "rgba(255,255,255,0.4)",
+            textAlign: "center",
+            marginBottom: "28px",
+          }}>
+            Sign in to your CreatorVault account
+          </p>
+
           {error && (
-            <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded-lg">
+            <div style={{
+              background: "rgba(239,68,68,0.1)",
+              border: "1px solid rgba(239,68,68,0.4)",
+              color: "#ef4444",
+              padding: "12px 16px",
+              borderRadius: "8px",
+              fontSize: "13px",
+              marginBottom: "20px",
+            }}>
               {error}
             </div>
           )}
-          <div className="rounded-md shadow-sm space-y-4">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
+
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{
+                display: "block",
+                fontSize: "11px",
+                fontWeight: 600,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.5)",
+                marginBottom: "8px",
+              }}>
+                Email
               </label>
               <input
                 ref={emailRef}
@@ -96,12 +166,34 @@ export default function Login() {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none relative block w-full px-3 py-3 border border-[color:rgba(245,240,232,0.12)] placeholder-gray-500 text-[var(--text-primary)] bg-[var(--bg-primary)] rounded-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] focus:border-transparent focus:z-10 sm:text-sm"
-                placeholder="Email address"
+                placeholder="your@email.com"
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "8px",
+                  color: "#f5f0e8",
+                  fontSize: "14px",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  transition: "border-color 0.2s",
+                }}
+                onFocus={e => { e.target.style.borderColor = "rgba(201,168,76,0.5)"; }}
+                onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }}
               />
             </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
+
+            <div style={{ marginBottom: "24px" }}>
+              <label style={{
+                display: "block",
+                fontSize: "11px",
+                fontWeight: 600,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.5)",
+                marginBottom: "8px",
+              }}>
                 Password
               </label>
               <input
@@ -111,33 +203,69 @@ export default function Login() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="appearance-none relative block w-full px-3 py-3 border border-[color:rgba(245,240,232,0.12)] placeholder-gray-500 text-[var(--text-primary)] bg-[var(--bg-primary)] rounded-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] focus:border-transparent focus:z-10 sm:text-sm"
-                placeholder="Password"
+                placeholder="••••••••"
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "8px",
+                  color: "#f5f0e8",
+                  fontSize: "14px",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  transition: "border-color 0.2s",
+                }}
+                onFocus={e => { e.target.style.borderColor = "rgba(201,168,76,0.5)"; }}
+                onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }}
               />
             </div>
-          </div>
-          <div>
+
             <button
               type="submit"
               disabled={loading}
               onClick={handleButtonClick}
-              className="group relative w-full flex justify-center py-3 px-4 border border-[color:rgba(245,240,232,0.10)] text-sm font-medium rounded-sm text-[var(--text-primary)] bg-[var(--bg-surface)] hover:bg-[var(--bg-primary)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent-gold)] disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                width: "100%",
+                padding: "14px",
+                background: loading ? "rgba(201,168,76,0.4)" : "#c9a84c",
+                border: "none",
+                borderRadius: "8px",
+                color: "#050508",
+                fontSize: "14px",
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                cursor: loading ? "not-allowed" : "pointer",
+                transition: "background 0.2s, transform 0.1s",
+                boxShadow: loading ? "none" : "0 4px 20px rgba(201,168,76,0.3)",
+              }}
+              onMouseEnter={e => { if (!loading) (e.target as HTMLButtonElement).style.background = "#d4b05c"; }}
+              onMouseLeave={e => { if (!loading) (e.target as HTMLButtonElement).style.background = "#c9a84c"; }}
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? "Signing in..." : "Sign In"}
             </button>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-[var(--text-primary)]/70">
-              Don't have an account?{" "}
-              <Link
-                to="/signup"
-                className="font-medium text-[var(--accent-gold)] hover:text-[var(--accent-gold)]/85"
-              >
+          </form>
+
+          <p style={{
+            textAlign: "center",
+            marginTop: "20px",
+            fontSize: "13px",
+            color: "rgba(255,255,255,0.35)",
+          }}>
+            Don't have an account?{" "}
+            <Link to="/signup">
+              <span style={{
+                color: "#c9a84c",
+                cursor: "pointer",
+                fontWeight: 600,
+                textDecoration: "none",
+              }}>
                 Sign up
-              </Link>
-            </p>
-          </div>
-        </form>
+              </span>
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

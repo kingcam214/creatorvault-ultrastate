@@ -273,6 +273,16 @@ export async function processPayment(params: {
   const recruiterAmount = params.recruiterId ? Math.round(params.amount * 0.20) : 0; // 20%
   const platformAmount = params.amount - creatorAmount - recruiterAmount; // 10% or 30%
 
+  // Credit Empire Challenge for every payment
+  try {
+    const { creditChallengePaymentCents } = await import("../challengePaymentHook");
+    await creditChallengePaymentCents(
+      params.amount,
+      `checkout_${params.itemType}`,
+      `${params.itemType} purchase — buyer ${params.buyerId}, creator ${params.creatorId}`
+    );
+  } catch { /* never block payment */ }
+
   // Create order/enrollment/sale based on type
   if (params.itemType === "product") {
     const orderId = crypto.randomUUID();

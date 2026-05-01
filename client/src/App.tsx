@@ -8,7 +8,7 @@ import NotFound from "@/pages/NotFound";
 // import Notifications from "@/pages/Notifications";
 // import Messages from "@/pages/Messages";
 // import MessageThread from "@/pages/MessageThread";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -447,6 +447,7 @@ import SubscribeSuccess from "./pages/greatest-show/SubscribeSuccess";
 import CloneCommand from "./pages/king/CloneCommand";
 import CloneStudio from "./pages/king/CloneStudio";
 import MediaVault from "./pages/king/MediaVault";
+import ChallengeStoryEngine from "./pages/king/ChallengeStoryEngine";
 import ViralOptimizerV2 from "./pages/tools/ViralOptimizerV2";
 import VaultXVideoEditorVideoeditorOrphan from "./pages/videoeditor/VaultXVideoEditor";
 import VaultXVideoEditorProjects from "./pages/videoeditor/VaultXVideoEditorProjects";
@@ -469,10 +470,13 @@ import VaultXVideoEditorProjects from "./pages/videoeditor/VaultXVideoEditorProj
 // import KingConnectSocials from "./pages/KingConnectSocials";
 // import KingVaultRemixEngine from "./pages/KingVaultRemixEngine";
 function Router() {
+  const [location] = useLocation();
+  const authPages = ["/login", "/register", "/signup"];
+  const isAuthPage = authPages.some(p => location === p || location.startsWith(p + "?"));
   return (
     <>
       <AppHeader />
-      <div className="pt-16">
+      <div className={isAuthPage ? "" : "pt-16"}>
         <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/__release"} component={ReleaseInfo} />
@@ -768,6 +772,7 @@ function Router() {
       <Route path="/king/clone-command" component={CloneCommand} />
       <Route path="/king/clone-studio" component={CloneStudio} />
       <Route path="/king/media-vault" component={MediaVault} />
+      <Route path="/king/challenge-story" component={ChallengeStoryEngine} />
       <Route path="/tools/viral-optimizer-v2" component={ViralOptimizerV2} />
       <Route path="/videoeditor/vaultx" component={VaultXVideoEditorVideoeditorOrphan} />
       <Route path="/videoeditor/vaultx-projects" component={VaultXVideoEditorProjects} />

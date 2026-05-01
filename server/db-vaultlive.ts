@@ -281,6 +281,12 @@ export async function recordTip(
   // Update stream total tips
   await updateTotalTips(streamId, amount);
 
+  // Credit Empire Challenge
+  try {
+    const { creditChallengePaymentCents } = await import("./challengePaymentHook");
+    await creditChallengePaymentCents(Math.round(amount), "vaultlive_tip", `VaultLive tip — stream ${streamId}, user ${userId}`);
+  } catch { /* never block */ }
+
   const tips = await db.select().from(liveStreamTips).where(eq(liveStreamTips.id, tipId));
   return tips[0] as Tip;
 }
@@ -360,12 +366,17 @@ export async function updateDonationStatus(
     .set({ paymentStatus: status })
     .where(eq(liveStreamDonations.id, donationId));
 
-  // If completed, update stream total tips
+  // If completed, update stream total tips and credit challenge
   if (status === "completed") {
     const donations = await db.select().from(liveStreamDonations).where(eq(liveStreamDonations.id, donationId));
     if (donations.length > 0) {
       const donation = donations[0];
       await updateTotalTips(donation.streamId, parseFloat(donation.amount));
+      // Credit Empire Challenge
+      try {
+        const { creditChallengePaymentCents } = await import("./challengePaymentHook");
+        await creditChallengePaymentCents(Math.round(parseFloat(donation.amount)), "vaultlive_donation", `VaultLive donation completed — stream ${donation.streamId}`);
+      } catch { /* never block */ }
     }
   }
 }

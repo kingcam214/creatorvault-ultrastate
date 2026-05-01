@@ -126,6 +126,35 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       }
     }
 
+    // Handle Telegram Stars successful_payment
+    if (update.message?.successful_payment) {
+      const payment = update.message.successful_payment;
+      const starsAmount = payment.total_amount; // in smallest currency unit (stars = 1:1)
+      const dollarEquiv = starsAmount * 0.013; // ~$0.013 per star
+      try {
+        const { creditChallengePayment } = await import("./challengePaymentHook");
+        await creditChallengePayment(
+          dollarEquiv,
+          "telegram_stars",
+          `Telegram Stars payment — ${starsAmount} stars from user ${update.message.from?.username || update.message.from?.id}`
+        );
+        console.log(`[Telegram Stars] ${starsAmount} stars (~$${dollarEquiv.toFixed(2)}) credited to challenge`);
+      } catch { /* never block */ }
+    }
+
+    // Handle pre_checkout_query (must answer OK)
+    if (update.pre_checkout_query) {
+      const botTokenVal = bot.botToken;
+      try {
+        await fetch(`https://api.telegram.org/bot${botTokenVal}/answerPreCheckoutQuery`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pre_checkout_query_id: update.pre_checkout_query.id, ok: true }),
+        });
+      } catch { /* ignore */ }
+      return res.status(200).json({ ok: true });
+    }
+
     // Extract message data
     const message = update.message || update.edited_message || update.channel_post;
     

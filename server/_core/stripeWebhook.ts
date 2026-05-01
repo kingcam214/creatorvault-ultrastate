@@ -11,6 +11,7 @@ import type { Request, Response } from "express";
 import Stripe from "stripe";
 import { verifyWebhookSignature } from "../services/stripeVaultLive";
 import * as dbVaultLive from "../db-vaultlive";
+import { creditChallengePayment, creditChallengePaymentCents } from "../challengePaymentHook";
 
 /**
  * Stripe webhook endpoint handler
@@ -50,12 +51,38 @@ export async function handleStripeWebhook(req: Request, res: Response) {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       
+      // Credit challenge for every completed checkout
+      if (session.amount_total && session.amount_total > 0) {
+        const desc = session.metadata?.tierId
+          ? `Stripe subscription checkout — tier ${session.metadata.tierId}`
+          : `Stripe checkout — ${session.metadata?.type || 'payment'}`;
+        await creditChallengePaymentCents(session.amount_total, "stripe_checkout", desc);
+      }
+
       // Check if this is a subscription checkout (has tierId in metadata)
       if (session.metadata?.tierId) {
         await handleSubscriptionCheckout(session);
       } else {
         // VaultLive tip/donation
         await handleCheckoutCompleted(session);
+      }
+    } else if (event.type === "payment_intent.succeeded") {
+      const pi = event.data.object as Stripe.PaymentIntent;
+      // Only credit if not already credited via checkout.session.completed
+      // (checkout sessions also fire payment_intent.succeeded — skip duplicates)
+      if (pi.amount > 0 && !pi.metadata?.challengeCredited) {
+        await creditChallengePaymentCents(pi.amount, "stripe_payment_intent", `Stripe payment — ${pi.description || pi.id}`);
+      }
+    } else if (event.type === "invoice.paid") {
+      const invoice = event.data.object as Stripe.Invoice;
+      if (invoice.amount_paid > 0) {
+        await creditChallengePaymentCents(invoice.amount_paid, "stripe_subscription_renewal", `Stripe subscription renewal — ${invoice.customer_email || invoice.customer}`);
+      }
+    } else if (event.type === "charge.succeeded") {
+      const charge = event.data.object as Stripe.Charge;
+      // Only credit standalone charges (not attached to payment intents already credited)
+      if (charge.amount > 0 && !charge.payment_intent) {
+        await creditChallengePaymentCents(charge.amount, "stripe_charge", `Stripe charge — ${charge.description || charge.id}`);
       }
     }
 

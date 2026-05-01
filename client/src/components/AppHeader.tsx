@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Shield, Menu, DollarSign, Users, BarChart3, Podcast, TrendingUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,7 +13,14 @@ import {
 
 export default function AppHeader() {
   const { user } = useAuth();
+  const [location] = useLocation();
   const isOwnerOrAdmin = user?.role === "king" || user?.role === "admin";
+
+  // Hide header on auth pages — login/register/signup should be clean
+  const authPages = ["/login", "/register", "/signup"];
+  if (authPages.some(p => location === p || location.startsWith(p + "?"))) {
+    return null;
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-lg border-b border-white/10">

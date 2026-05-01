@@ -107,6 +107,12 @@ function getPaymentInstructions(method: string, amount: number): string {
 export async function confirmManualPayment(orderId: string) {
   try {
     // Update order status
+    const [orderRows] = await db
+      .select()
+      .from(marketplaceOrders)
+      .where(eq(marketplaceOrders.id, orderId))
+      .limit(1);
+
     await db
       .update(marketplaceOrders)
       .set({
@@ -115,6 +121,18 @@ export async function confirmManualPayment(orderId: string) {
       .where(eq(marketplaceOrders.id, orderId));
 
     console.log("[Manual Pay] Payment confirmed:", orderId);
+
+    // Credit Empire Challenge
+    if (orderRows?.grossAmount) {
+      try {
+        const { creditChallengePaymentCents } = await import("../challengePaymentHook");
+        await creditChallengePaymentCents(
+          orderRows.grossAmount,
+          `manual_${orderRows.paymentProvider || 'payment'}`,
+          `Manual payment confirmed — order ${orderId}`
+        );
+      } catch { /* never block */ }
+    }
 
     return {
       success: true,

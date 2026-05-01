@@ -469,6 +469,11 @@ ${input.soldByChicaId ? `🇩🇴 Sold by Chica ID: ${input.soldByChicaId}` : ""
         await sendTelegram(
           `💰 <b>PACKAGE SOLD!</b>\n@${row.client_handle} (${row.platform})\n$${price} → Your cut: $${(price * 0.5).toFixed(0)}\n${row.sold_by_chica_id ? `Chica ID: ${row.sold_by_chica_id}` : ""}`
         );
+        // Credit Empire Challenge
+        try {
+          const { creditChallengePayment } = await import("../challengePaymentHook");
+          await creditChallengePayment(price, "presentation_package", `Presentation package sold — @${row.client_handle} (${row.platform}) $${price}`);
+        } catch { /* never block */ }
       }
       return { success: true };
     }),
