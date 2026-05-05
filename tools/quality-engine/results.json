@@ -1,0 +1,149 @@
+[
+  {
+    "module": "vaultx-studio",
+    "feature": "Content Upload & PPV Gate",
+    "evaluator": "manus",
+    "timestamp": "2026-05-05T14:00:00Z",
+    "scores": {
+      "FT": 4,
+      "OQ": 4,
+      "CV": 5,
+      "RE": 4,
+      "UX": 4
+    },
+    "verdict": {
+      "average": 4.2,
+      "min_score": 4,
+      "passed": true,
+      "auto_fail_reasons": [],
+      "grade": "B \u2014 Passes Standard"
+    },
+    "notes": "PPV gate works. Checkout flow is clean. Upload progress bar is smooth."
+  },
+  {
+    "module": "vaultx-editor",
+    "feature": "Timeline Trim & Export",
+    "evaluator": "manus",
+    "timestamp": "2026-05-05T14:10:00Z",
+    "scores": {
+      "FT": 4,
+      "OQ": 4,
+      "CV": 4,
+      "RE": 3,
+      "UX": 4
+    },
+    "verdict": {
+      "average": 3.8,
+      "min_score": 3,
+      "passed": false,
+      "auto_fail_reasons": [],
+      "grade": "FAIL"
+    },
+    "notes": "Export works but second export attempt sometimes hangs. RE needs improvement."
+  },
+  {
+    "module": "vaultx-analytics",
+    "feature": "Revenue Overview Chart",
+    "evaluator": "manus",
+    "timestamp": "2026-05-05T14:20:00Z",
+    "scores": {
+      "FT": 5,
+      "OQ": 4,
+      "CV": 5,
+      "RE": 5,
+      "UX": 4
+    },
+    "verdict": {
+      "average": 4.6,
+      "min_score": 4,
+      "passed": true,
+      "auto_fail_reasons": [],
+      "grade": "A \u2014 Premium"
+    },
+    "notes": "Real tRPC data. Recharts styled correctly. Tooltips show formatted currency."
+  },
+  {
+    "module": "clone-engine",
+    "feature": "Talking Head Generation",
+    "evaluator": "manus",
+    "timestamp": "2026-05-05T14:30:00Z",
+    "scores": {
+      "FT": 4,
+      "OQ": 4,
+      "CV": 5,
+      "RE": 4,
+      "UX": 3
+    },
+    "verdict": {
+      "average": 4.0,
+      "min_score": 3,
+      "passed": true,
+      "auto_fail_reasons": [],
+      "grade": "B \u2014 Passes Standard"
+    },
+    "notes": "Generation works. Polling updates correctly. UX needs a better progress indicator."
+  },
+  {
+    "module": "telegram-automation",
+    "feature": "Drip Campaign Sequencer",
+    "evaluator": "manus",
+    "timestamp": "2026-05-05T14:40:00Z",
+    "scores": {
+      "FT": 3,
+      "OQ": 3,
+      "CV": 4,
+      "RE": 3,
+      "UX": 3
+    },
+    "verdict": {
+      "average": 3.2,
+      "min_score": 3,
+      "passed": false,
+      "auto_fail_reasons": [],
+      "grade": "FAIL"
+    },
+    "notes": "Average below 4.0. Sequence fires correctly but UI is basic. Needs redesign."
+  },
+  {
+    "module": "monetization-checkout",
+    "feature": "Stripe PPV Checkout Modal",
+    "evaluator": "manus",
+    "timestamp": "2026-05-05T14:50:00Z",
+    "scores": {
+      "FT": 5,
+      "OQ": 5,
+      "CV": 5,
+      "RE": 5,
+      "UX": 5
+    },
+    "verdict": {
+      "average": 5.0,
+      "min_score": 5,
+      "passed": true,
+      "auto_fail_reasons": [],
+      "grade": "S \u2014 World-Class"
+    },
+    "notes": "Flawless. Instant unlock on webhook. Ledger updates in real time."
+  },
+  {
+    "module": "admin-command-hub",
+    "feature": "Global Revenue Dashboard",
+    "evaluator": "manus",
+    "timestamp": "2026-05-05T15:00:00Z",
+    "scores": {
+      "FT": 4,
+      "OQ": 4,
+      "CV": 4,
+      "RE": 4,
+      "UX": 4
+    },
+    "verdict": {
+      "average": 4.0,
+      "min_score": 4,
+      "passed": true,
+      "auto_fail_reasons": [],
+      "grade": "B \u2014 Passes Standard"
+    },
+    "notes": "All stats load correctly. Impersonation works. Audit log is accurate."
+  }
+]
