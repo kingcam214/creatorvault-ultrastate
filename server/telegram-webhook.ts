@@ -111,7 +111,7 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       .limit(1);
 
     if (!bot) {
-      console.error("[Telegram Webhook] Bot not found:", botToken.substring(0, 10) + "...");
+      // Stale webhook hit from a bot token no longer in the database — return 404 silently.
       return res.status(404).json({ ok: false, error: "Bot not found" });
     }
 
