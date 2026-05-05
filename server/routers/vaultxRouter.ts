@@ -15,6 +15,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync, spawn } from "child_process";
 import { runAutomatedDirector } from "../services/automatedDirectorService";
+import { runTeaseEngine } from "../services/teaseEngineService";
 
 const OWNER_IDS = [6, 33];
 const PLATFORM_FEE = 0.15;
@@ -1816,6 +1817,65 @@ export const vaultxRouter = router({
         processingSteps: result.processingSteps,
         scenesDetected: result.scenesDetected,
         duration: result.duration,
+        success: true,
+      };
+    }),
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROCEDURE 49 — generateDesireTeaser
+  // Full Tease Engine: AI desire peak detection → beauty enhance (Replicate
+  // zsxkib/pulid) → AI animation (Replicate minimax/video-01-live) →
+  // drip-reveal teaser → censored preview for subscriber paywall
+  // ═══════════════════════════════════════════════════════════════════════════
+  generateDesireTeaser: protectedProcedure
+    .input(z.object({
+      sourceUrl: z.string().url(),
+      contentId: z.number().optional(),
+      teaserDurationSeconds: z.number().min(10).max(60).default(30),
+      enableAIAnimation: z.boolean().default(true),
+      enableBeautyEnhance: z.boolean().default(true),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const creatorId = await getCreatorId(ctx.user.id);
+      const cid = creatorId || ctx.user.id;
+      const userRows = await rawQuery("SELECT display_name, username FROM users WHERE id = ?", [ctx.user.id]);
+      const displayName = userRows[0]?.display_name || userRows[0]?.username || "Creator";
+
+      const result = await runTeaseEngine({
+        sourceUrl: input.sourceUrl,
+        creatorId: cid,
+        creatorDisplayName: displayName,
+        teaserDurationSeconds: input.teaserDurationSeconds,
+        enableAIAnimation: input.enableAIAnimation,
+        enableBeautyEnhance: input.enableBeautyEnhance,
+      });
+
+      if (input.contentId) {
+        await rawExec(
+          "UPDATE vaultx_content SET teaser_url = ?, censored_url = ?, thumbnail_url = COALESCE(?, thumbnail_url) WHERE id = ? AND creator_id = ?",
+          [result.teaserUrl, result.censoredPreviewUrl, result.desirePeakFrameUrl || null, input.contentId, cid]
+        ).catch(() => {});
+      }
+
+      await rawExec(
+        "INSERT INTO vaultx_export_history (creator_id, content_id, export_type, output_url, file_size_bytes, processing_time_seconds, created_at) VALUES (?, ?, 'desire_teaser', ?, 0, ?, NOW())",
+        [cid, input.contentId || null, result.teaserUrl, Math.round(result.processingTimeMs / 1000)]
+      ).catch(() => {});
+
+      return {
+        teaserUrl: result.teaserUrl,
+        censoredPreviewUrl: result.censoredPreviewUrl,
+        desirePeakFrameUrl: result.desirePeakFrameUrl,
+        aiAnimatedClipUrl: result.aiAnimatedClipUrl,
+        beautyEnhancedFrameUrl: result.beautyEnhancedFrameUrl,
+        ctaText: result.ctaText,
+        hooks: result.hooks,
+        suggestedPrice: result.suggestedPrice,
+        peakTimeSeconds: result.peakTimeSeconds,
+        energyScore: result.energyScore,
+        sceneDescription: result.sceneDescription,
+        processingSteps: result.processingSteps,
+        processingTimeMs: result.processingTimeMs,
         success: true,
       };
     }),

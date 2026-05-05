@@ -388,112 +388,219 @@ function Workspace({ left, right }: { left: React.ReactNode; right: React.ReactN
 }
 
 // ============================================================================
-// MODE: VELVET SUITE
+// MODE: DESIRE TEASER ENGINE
 // ============================================================================
 function VelvetSuiteMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
   const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
-  const [selectedFilter, setSelectedFilter] = useState("velvet_skin");
-  const [intensity, setIntensity] = useState(70);
-  const [outputUrl, setOutputUrl] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [useUrl, setUseUrl] = useState(false);
+  const [teaserDuration, setTeaserDuration] = useState(30);
+  const [enableAI, setEnableAI] = useState(true);
+  const [enableBeauty, setEnableBeauty] = useState(true);
+  const [result, setResult] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<"teaser"|"censored"|"beauty"|"ai">("teaser");
 
-  const engineStatus = trpc.videoEnhance.getAIEngineStatus.useQuery();
-  const polloAvailable = engineStatus.data?.engines?.pollo?.available ?? false;
-  const polloReason = engineStatus.data?.engines?.pollo?.reason ?? "Checking...";
+  const generateMutation = trpc.vaultx.generateDesireTeaser.useMutation({
+    onSuccess: (data) => {
+      setResult(data);
+      if (data.teaserUrl) onOutput(data.teaserUrl, "Desire Teaser");
+      toast.success("Desire Teaser generated.");
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
-  const BEAUTY_FILTERS = [
-    { id: "velvet_skin",   label: "Velvet Skin",   desc: "Multi-stage smooth + warmth lift",   badge: "BEST",   color: "#EC4899" },
-    { id: "silk_soft",     label: "Silk Soft",     desc: "Extreme airbrushed, max smoothing",  badge: "MAX",    color: "#F472B6" },
-    { id: "golden_skin",   label: "Golden Skin",   desc: "Warm curves for skin tones",         badge: "WARM",   color: "#F59E0B" },
-    { id: "beauty",        label: "Beauty Mode",   desc: "Classic smooth + saturation lift",   badge: "CLASSIC",color: "#FBBF24" },
-    { id: "skin_smooth",   label: "Skin Smooth",   desc: "Lighter detail-preserving smooth",   badge: "LIGHT",  color: "#FCD34D" },
-    { id: "boudoir_light", label: "Boudoir Light", desc: "Warm candle glow + skin lift",       badge: "GLOW",   color: "#F97316" },
-    { id: "desire_haze",   label: "Desire Haze",   desc: "Soft focus bloom + warm grade",      badge: "HAZE",   color: "#FB923C" },
-    { id: "champagne_glow",label: "Champagne Glow",desc: "Ultra-warm highlight bloom",         badge: "LUXURY", color: "#FCD34D" },
-  ];
-
-  const process = async () => {
-    if (!videoFile) return toast.error("Upload a video first.");
-    setIsProcessing(true); setOutputUrl(null);
-    try {
-      const fd = new FormData();
-      fd.append("video", videoFile.file);
-      fd.append("filter", selectedFilter);
-      fd.append("intensity", String(intensity / 100));
-      const result = await callVideoStudio("filter", fd);
-      setOutputUrl(result.url);
-      onOutput(result.url, BEAUTY_FILTERS.find(f => f.id === selectedFilter)?.label || selectedFilter);
-      toast.success("Beauty enhancement applied.");
-    } catch (e: any) { toast.error(e.message); }
-    finally { setIsProcessing(false); }
+  const run = () => {
+    const url = useUrl ? sourceUrl : videoFile?.url;
+    if (!url) return toast.error("Provide a video source.");
+    generateMutation.mutate({
+      sourceUrl: url,
+      teaserDurationSeconds: teaserDuration,
+      enableAIAnimation: enableAI,
+      enableBeautyEnhance: enableBeauty,
+    });
   };
+
+  const isRunning = generateMutation.isPending;
+  const accent = "#EC4899";
+
+  const PIPELINE_STEPS = [
+    "Download source video",
+    "AI desire peak detection (GPT-4o-mini)",
+    "Extract desire peak frame",
+    "Beauty enhance peak frame (Replicate zsxkib/pulid)",
+    "AI animate desire peak (Replicate minimax/video-01-live)",
+    "Build drip-reveal teaser (FFmpeg composite)",
+    "Build censored preview (strategic blur)",
+  ];
 
   const left = (
     <>
       <div>
-        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#EC4899" }}>Velvet Suite</p>
-        <p className="text-xs" style={{ color: "#6B7280" }}>Beauty enhancement — skin smoothing & warmth</p>
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: accent }}>Desire Teaser Engine</p>
+        <p className="text-xs" style={{ color: "#6B7280" }}>GPT-4o-mini desire peak detection → Replicate PuLID beauty → MiniMax AI animation → drip-reveal teaser + censored paywall preview</p>
       </div>
-      {!polloAvailable && (
-        <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.25)" }}>
-          <AlertCircle size={14} color="#EAB308" className="flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-bold" style={{ color: "#FDE047" }}>AI Engine Unavailable</p>
-            <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>Pollo AI: {polloReason}. FFmpeg filters active.</p>
-          </div>
+
+      <div className="p-3 rounded-2xl flex flex-col gap-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setUseUrl(false)} className="flex-1 py-1.5 rounded-xl text-xs font-bold transition-all" style={{ background: !useUrl ? `${accent}20` : "transparent", color: !useUrl ? accent : "#6B7280", border: `1px solid ${!useUrl ? accent : "rgba(255,255,255,0.08)"}` }}>Upload File</button>
+          <button onClick={() => setUseUrl(true)} className="flex-1 py-1.5 rounded-xl text-xs font-bold transition-all" style={{ background: useUrl ? `${accent}20` : "transparent", color: useUrl ? accent : "#6B7280", border: `1px solid ${useUrl ? accent : "rgba(255,255,255,0.08)"}` }}>Paste URL</button>
         </div>
-      )}
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-widest mb-2.5" style={{ color: "#6B7280" }}>Beauty Filters</p>
+        {useUrl ? (
+          <input value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} placeholder="https://... (video URL)" className="w-full px-3 py-2 rounded-xl text-xs text-white" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
+        ) : (
+          videoFile ? (
+            <div className="flex items-center gap-2 p-2 rounded-xl" style={{ background: `${accent}10`, border: `1px solid ${accent}30` }}>
+              <FileVideo size={14} color={accent} />
+              <span className="text-xs font-bold flex-1 truncate" style={{ color: accent }}>{videoFile.name}</span>
+              <button onClick={() => setVideoFile(null)} className="text-xs" style={{ color: "#6B7280" }}>✕</button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center gap-2 p-4 rounded-xl cursor-pointer" style={{ background: "rgba(255,255,255,0.02)", border: `1.5px dashed ${accent}40` }}>
+              <Upload size={20} color={accent} />
+              <span className="text-xs font-bold" style={{ color: accent }}>Drop or click to upload</span>
+              <input type="file" accept="video/*" className="hidden" onChange={e => {
+                const f = e.target.files?.[0]; if (!f) return;
+                setVideoFile({ file: f, url: URL.createObjectURL(f), name: f.name, size: f.size });
+              }} />
+            </label>
+          )
+        )}
+      </div>
+
+      <div className="p-3 rounded-2xl flex flex-col gap-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <div>
+          <div className="flex justify-between mb-1"><span className="text-xs font-bold text-white">Teaser Duration</span><span className="text-xs font-bold" style={{ color: accent }}>{teaserDuration}s</span></div>
+          <input type="range" min={10} max={60} step={5} value={teaserDuration} onChange={e => setTeaserDuration(parseInt(e.target.value))} className="w-full" style={{ accentColor: accent }} />
+          <div className="flex justify-between mt-0.5"><span className="text-[10px]" style={{ color: "#6B7280" }}>10s</span><span className="text-[10px]" style={{ color: "#6B7280" }}>60s</span></div>
+        </div>
+        <label className="flex items-center justify-between cursor-pointer">
+          <div>
+            <p className="text-xs font-bold text-white">AI Animation</p>
+            <p className="text-[10px]" style={{ color: "#6B7280" }}>Replicate MiniMax: animate desire peak frame into video</p>
+          </div>
+          <button onClick={() => setEnableAI(!enableAI)} className="w-10 h-5 rounded-full transition-all relative flex-shrink-0" style={{ background: enableAI ? accent : "rgba(255,255,255,0.1)" }}>
+            <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: enableAI ? "calc(100% - 18px)" : "2px" }} />
+          </button>
+        </label>
+        <label className="flex items-center justify-between cursor-pointer">
+          <div>
+            <p className="text-xs font-bold text-white">Beauty Enhance</p>
+            <p className="text-[10px]" style={{ color: "#6B7280" }}>Replicate PuLID: face-preserving skin beauty grade</p>
+          </div>
+          <button onClick={() => setEnableBeauty(!enableBeauty)} className="w-10 h-5 rounded-full transition-all relative flex-shrink-0" style={{ background: enableBeauty ? accent : "rgba(255,255,255,0.1)" }}>
+            <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: enableBeauty ? "calc(100% - 18px)" : "2px" }} />
+          </button>
+        </label>
+      </div>
+
+      <div className="p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+        <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>AI Pipeline Steps</p>
         <div className="flex flex-col gap-1.5">
-          {BEAUTY_FILTERS.map((f) => {
-            const active = selectedFilter === f.id;
+          {PIPELINE_STEPS.map((step) => {
+            const stepData = result?.processingSteps?.find((s: any) => s.step === step);
+            const status = stepData?.status;
             return (
-              <button key={f.id} onClick={() => setSelectedFilter(f.id)} className="flex items-center gap-3 p-3 rounded-xl text-left transition-all" style={{ background: active ? `${f.color}18` : "rgba(255,255,255,0.03)", border: `1.5px solid ${active ? f.color : "rgba(255,255,255,0.07)"}` }}>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold" style={{ color: active ? f.color : "#E5E7EB" }}>{f.label}</span>
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: `${f.color}25`, color: f.color }}>{f.badge}</span>
-                  </div>
-                  <p className="text-xs mt-0.5 leading-tight" style={{ color: "#6B7280" }}>{f.desc}</p>
-                </div>
-                {active && <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: f.color }} />}
-              </button>
+              <div key={step} className="flex items-start gap-2">
+                {status === "succeeded" ? <CheckCircle size={12} color="#22C55E" className="flex-shrink-0 mt-0.5" /> :
+                 status === "failed" ? <X size={12} color="#EF4444" className="flex-shrink-0 mt-0.5" /> :
+                 status === "skipped" ? <CircleDot size={12} color="#6B7280" className="flex-shrink-0 mt-0.5" /> :
+                 isRunning ? <Loader2 size={12} color={accent} className="animate-spin flex-shrink-0 mt-0.5" /> :
+                 <Circle size={12} color="#374151" className="flex-shrink-0 mt-0.5" />}
+                <span className="text-[10px] leading-tight" style={{ color: status === "succeeded" ? "#22C55E" : status === "failed" ? "#EF4444" : status === "skipped" ? "#6B7280" : "#9CA3AF" }}>{step}</span>
+              </div>
             );
           })}
         </div>
       </div>
-      <div className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <div className="flex justify-between mb-2"><span className="text-xs font-bold text-white">Enhancement Intensity</span><span className="text-xs font-bold" style={{ color: "#EC4899" }}>{intensity}%</span></div>
-        <input type="range" min={10} max={100} step={5} value={intensity} onChange={(e) => setIntensity(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#EC4899" }} />
-        <div className="flex justify-between mt-1"><span className="text-[10px]" style={{ color: "#6B7280" }}>Subtle</span><span className="text-[10px]" style={{ color: "#6B7280" }}>Maximum</span></div>
-      </div>
-      <button onClick={process} disabled={!videoFile || isProcessing} className="w-full py-4 rounded-2xl font-black text-white text-sm transition-all flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(236,72,153,0.3)" : "linear-gradient(135deg, #EC4899, #BE185D)", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer", boxShadow: !videoFile || isProcessing ? "none" : "0 0 24px rgba(236,72,153,0.35)" }}>
-        {isProcessing ? <><Loader2 size={18} className="animate-spin" /> Enhancing...</> : <><Sparkles size={18} /> Apply Beauty Enhancement</>}
+
+      <button onClick={run} disabled={isRunning || (!videoFile && !sourceUrl)} className="w-full py-4 rounded-2xl font-black text-white text-sm transition-all flex items-center justify-center gap-2" style={{ background: isRunning || (!videoFile && !sourceUrl) ? "rgba(236,72,153,0.3)" : `linear-gradient(135deg, ${accent}, #BE185D)`, cursor: isRunning || (!videoFile && !sourceUrl) ? "not-allowed" : "pointer", boxShadow: isRunning || (!videoFile && !sourceUrl) ? "none" : `0 0 28px ${accent}55` }}>
+        {isRunning ? <><Loader2 size={18} className="animate-spin" /> Generating Desire Teaser...</> : <><Flame size={18} /> Generate Desire Teaser</>}
       </button>
-      {isProcessing && <ProcessingBar label="Applying beauty enhancement..." accent="#EC4899" />}
-      {outputUrl && (
+
+      {result && (
         <div className="flex flex-col gap-2">
-          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Output</p>
-          <VideoPlayer src={outputUrl} label="Enhanced" accent="#EC4899" />
-          <div className="flex gap-2">
-            <button onClick={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = `vaultx-beauty-${selectedFilter}.mp4`; a.click(); }} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: "rgba(236,72,153,0.15)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.3)" }}><Download size={14} /> Save</button>
-            <button onClick={async () => { try { const vf = await fetchVideoAsFile(outputUrl, "beauty-output.mp4"); setVideoFile(vf); setOutputUrl(null); toast.success("Output loaded as new source"); } catch { toast.error("Failed"); } }} className="w-10 h-10 flex items-center justify-center rounded-xl" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF" }}><Layers2 size={14} /></button>
+          <div className="p-3 rounded-2xl" style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)" }}>
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle size={14} color="#22C55E" />
+              <span className="text-xs font-black" style={{ color: "#22C55E" }}>Desire Teaser Complete</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+              <div style={{ color: "#9CA3AF" }}>Energy Score</div><div className="font-bold" style={{ color: accent }}>{result.energyScore}/10</div>
+              <div style={{ color: "#9CA3AF" }}>Peak At</div><div className="font-bold text-white">{result.peakTimeSeconds}s</div>
+              <div style={{ color: "#9CA3AF" }}>Suggested Price</div><div className="font-bold" style={{ color: "#22C55E" }}>${result.suggestedPrice}</div>
+              <div style={{ color: "#9CA3AF" }}>Process Time</div><div className="font-bold text-white">{Math.round(result.processingTimeMs / 1000)}s</div>
+            </div>
           </div>
+          {result.ctaText && (
+            <div className="p-2 rounded-xl" style={{ background: `${accent}10`, border: `1px solid ${accent}25` }}>
+              <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: "#6B7280" }}>AI-Generated CTA</p>
+              <p className="text-xs font-bold" style={{ color: accent }}>"{result.ctaText}"</p>
+            </div>
+          )}
+          {result.hooks?.length > 0 && (
+            <div className="p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <p className="text-[10px] font-black uppercase tracking-widest mb-1.5" style={{ color: "#6B7280" }}>Retention Hooks</p>
+              {result.hooks.map((h: string, i: number) => (
+                <p key={i} className="text-xs mb-1" style={{ color: "#D1D5DB" }}>• {h}</p>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-1">
+            {(["teaser", "censored", "beauty", "ai"] as const).map(tab => (
+              <button key={tab} onClick={() => setActiveTab(tab)} className="flex-1 py-1.5 rounded-xl text-[10px] font-bold capitalize transition-all" style={{ background: activeTab === tab ? `${accent}20` : "transparent", color: activeTab === tab ? accent : "#6B7280", border: `1px solid ${activeTab === tab ? accent : "rgba(255,255,255,0.08)"}` }}>{tab}</button>
+            ))}
+          </div>
+          {activeTab === "teaser" && result.teaserUrl && (
+            <div className="flex flex-col gap-1.5">
+              <VideoPlayer src={result.teaserUrl} label="Drip-Reveal Teaser" accent={accent} />
+              <button onClick={() => { const a = document.createElement("a"); a.href = result.teaserUrl; a.download = "desire-teaser.mp4"; a.click(); }} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: `${accent}15`, color: accent, border: `1px solid ${accent}30` }}><Download size={14} /> Download Teaser</button>
+            </div>
+          )}
+          {activeTab === "censored" && result.censoredPreviewUrl && (
+            <div className="flex flex-col gap-1.5">
+              <VideoPlayer src={result.censoredPreviewUrl} label="Censored Preview (Paywall)" accent="#6B7280" />
+              <button onClick={() => { const a = document.createElement("a"); a.href = result.censoredPreviewUrl; a.download = "censored-preview.mp4"; a.click(); }} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: "rgba(107,114,128,0.15)", color: "#9CA3AF", border: "1px solid rgba(107,114,128,0.3)" }}><Download size={14} /> Download Censored Preview</button>
+            </div>
+          )}
+          {activeTab === "beauty" && (
+            result.beautyEnhancedFrameUrl ? (
+              <div className="flex flex-col gap-1.5">
+                <img src={result.beautyEnhancedFrameUrl} alt="Beauty Enhanced Frame" className="w-full rounded-xl object-cover" style={{ aspectRatio: "9/16", maxHeight: 200 }} />
+                <p className="text-[10px] text-center" style={{ color: "#6B7280" }}>Replicate PuLID beauty-enhanced desire peak frame</p>
+              </div>
+            ) : <p className="text-xs text-center py-4" style={{ color: "#6B7280" }}>Beauty enhance not available — check Replicate token</p>
+          )}
+          {activeTab === "ai" && (
+            result.aiAnimatedClipUrl ? (
+              <div className="flex flex-col gap-1.5">
+                <VideoPlayer src={result.aiAnimatedClipUrl} label="MiniMax AI Animation" accent="#8B5CF6" />
+                <button onClick={() => { const a = document.createElement("a"); a.href = result.aiAnimatedClipUrl; a.download = "ai-animated-peak.mp4"; a.click(); }} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: "rgba(139,92,246,0.15)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.3)" }}><Download size={14} /> Download AI Clip</button>
+              </div>
+            ) : <p className="text-xs text-center py-4" style={{ color: "#6B7280" }}>AI animation not available — check Replicate token</p>
+          )}
         </div>
       )}
     </>
   );
 
-  const right = videoFile ? (
-    outputUrl ? (
-      <CanvasBeforeAfter beforeUrl={videoFile.url} afterUrl={outputUrl} label={BEAUTY_FILTERS.find(f => f.id === selectedFilter)?.label || "Enhanced"} accent="#EC4899" />
-    ) : (
-      <CanvasVideoPlayer src={videoFile.url} label="Source" accent="#EC4899" onReplace={() => setVideoFile(null)} />
-    )
-  ) : (
-    <CanvasDropZone onFile={setVideoFile} accent="#EC4899" label="Drop your video to start beauty enhancement" />
-  );
+  const right = (() => {
+    if (result?.teaserUrl && result?.censoredPreviewUrl) {
+      return (
+        <div className="flex flex-col gap-3 h-full">
+          <div className="flex-1 flex flex-col">
+            <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: accent }}>Drip-Reveal Teaser</p>
+            <CanvasVideoPlayer src={result.teaserUrl} label="Desire Teaser" accent={accent} onReplace={() => {}} />
+          </div>
+          <div className="flex-1 flex flex-col">
+            <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>Censored Preview (Paywall)</p>
+            <CanvasVideoPlayer src={result.censoredPreviewUrl} label="Censored" accent="#6B7280" onReplace={() => {}} />
+          </div>
+        </div>
+      );
+    }
+    if (videoFile) return <CanvasVideoPlayer src={videoFile.url} label="Source" accent={accent} onReplace={() => setVideoFile(null)} />;
+    return <CanvasDropZone onFile={setVideoFile} accent={accent} label="Drop your video to generate a Desire Teaser" />;
+  })();
 
   return <Workspace left={left} right={right} />;
 }
