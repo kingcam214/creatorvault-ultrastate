@@ -14,7 +14,10 @@ import { getIO } from "../_core/socketio";
 
 // Raw DB access for new tables not yet in Drizzle schema exports
 async function rawQuery(query: string, params: any[] = []) {
-  return (db as any).execute(sql.raw(query), params);
+  const client = (db as any).$client;
+  const pool = typeof client.promise === 'function' ? client.promise() : client;
+  const [rows] = await pool.query(query, params);
+  return Array.isArray(rows) ? rows : [];
 }
 
 // ─── HELPERS ────────────────────────────────────────────────────────────────

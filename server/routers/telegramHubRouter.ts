@@ -68,7 +68,7 @@ export const telegramHubRouter = router({
       const channels = extractRows([channelRows]);
 
       // Get message stats
-      const [msgRows] = await db.execute("SELECT COUNT(*) as total, SUM(CASE WHEN created_at > DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as this_week FROM telegram_messages WHERE user_id = ?", [ctx.user.id]);
+      const [msgRows] = await db.execute("SELECT COUNT(*) as total, SUM(CASE WHEN created_at > DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as this_week FROM telegram_drops WHERE creator_id = ?", [ctx.user.id]);
       const msgStats = extractRows([msgRows])[0] || { total: 0, this_week: 0 };
 
       // Get leads
@@ -170,7 +170,7 @@ export const telegramHubRouter = router({
           // Log message
           try {
             await db.execute(
-              "INSERT INTO telegram_messages (id, user_id, channel_id, message_text, status, sent_at, created_at) VALUES (?, ?, ?, ?, 'sent', NOW(), NOW())",
+              "INSERT INTO telegram_drops (message_id, channel_id, drop_date, content_type, creator_id, caption, created_at) VALUES (?, ?, NOW(), 'text', ?, ?, NOW())",
               [crypto.randomUUID(), ctx.user.id, channel.id, input.message]
             );
           } catch {}
@@ -219,9 +219,11 @@ export const telegramHubRouter = router({
   })).query(async ({ ctx, input }) => {
     const db = await getDb();
     try {
+      const limit = parseInt(String(input.limit), 10);
+      const offset = parseInt(String(input.offset), 10);
       const [rows] = await db.execute(
-        "SELECT tm.*, tc.channel_name FROM telegram_messages tm LEFT JOIN telegram_channels tc ON tm.channel_id = tc.id WHERE tm.user_id = ? ORDER BY tm.created_at DESC LIMIT ? OFFSET ?",
-        [ctx.user.id, input.limit, input.offset]
+        `SELECT td.*, tc.channel_name FROM telegram_drops td LEFT JOIN telegram_channels tc ON CONVERT(td.channel_id, CHAR) COLLATE utf8mb4_unicode_ci = tc.id WHERE td.creator_id = ? ORDER BY td.created_at DESC LIMIT ${limit} OFFSET ${offset}`,
+        [ctx.user.id]
       );
       return { messages: extractRows([rows]) };
     } finally { db.end(); }
@@ -234,9 +236,10 @@ export const telegramHubRouter = router({
   })).query(async ({ ctx, input }) => {
     const db = await getDb();
     try {
+      const limit = parseInt(String(input.limit), 10);
+      const offset = parseInt(String(input.offset), 10);
       const [rows] = await db.execute(
-        "SELECT * FROM telegram_leads ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        [input.limit, input.offset]
+        `SELECT * FROM telegram_leads ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`
       );
       return { leads: extractRows([rows]) };
     } finally { db.end(); }
@@ -286,7 +289,7 @@ export const telegramHubRouter = router({
   getHubAnalytics: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     try {
-      const [msgRows] = await db.execute("SELECT COUNT(*) as total FROM telegram_messages WHERE user_id = ?", [ctx.user.id]);
+      const [msgRows] = await db.execute("SELECT COUNT(*) as total FROM telegram_drops WHERE creator_id = ?", [ctx.user.id]);
       const total = Number(extractRows([msgRows])[0]?.total) || 0;
       const [leadRows] = await db.execute("SELECT COUNT(*) as total FROM telegram_leads");
       const leads = Number(extractRows([leadRows])[0]?.total) || 0;

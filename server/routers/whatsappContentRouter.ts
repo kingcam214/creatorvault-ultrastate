@@ -63,7 +63,10 @@ const LANG_PROMPTS: Record<string, string> = {
 
 // ─── Raw SQL helper ───────────────────────────────────────────────────────────
 async function rawQuery(sql: string, params: any[] = []): Promise<any[]> {
-  return (db.db as any).execute(sql, params).then((r: any) => r[0] || r);
+  const client = (db.db as any).$client;
+  const pool = typeof client.promise === 'function' ? client.promise() : client;
+  const [rows] = await pool.query(sql, params);
+  return Array.isArray(rows) ? rows : [];
 }
 
 export const whatsappContentRouter = router({

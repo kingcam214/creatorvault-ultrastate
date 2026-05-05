@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CreatorVault QA Report</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0a0a0f; color: #e0e0e0; font-family: 'Inter', system-ui, sans-serif; padding: 32px; }
+    h1 { font-size: 28px; color: #fff; margin-bottom: 8px; }
+    .subtitle { color: #666; margin-bottom: 32px; font-size: 14px; }
+    .summary { display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
+    .stat { background: #111; border: 1px solid #222; border-radius: 12px; padding: 20px 28px; min-width: 140px; }
+    .stat-value { font-size: 36px; font-weight: 800; }
+    .stat-label { font-size: 12px; color: #666; margin-top: 4px; }
+    .pass { color: #27ae60; }
+    .fail { color: #e74c3c; }
+    .warn { color: #f39c12; }
+    .total { color: #3498db; }
+    .rate { color: #27ae60; }
+    table { width: 100%; border-collapse: collapse; background: #111; border-radius: 12px; overflow: hidden; }
+    th { background: #1a1a2e; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 12px 16px; text-align: left; }
+    td { padding: 10px 16px; border-bottom: 1px solid #1a1a1a; font-size: 13px; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #161622; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>🛡️ CreatorVault QA Report</h1>
+  <div class="subtitle">Generated: Tue, 05 May 2026 15:51:44 GMT · Target: https://creatorvault.live</div>
+  <div class="summary">
+    <div class="stat"><div class="stat-value pass">43</div><div class="stat-label">Passed</div></div>
+    <div class="stat"><div class="stat-value fail">0</div><div class="stat-label">Failed</div></div>
+    <div class="stat"><div class="stat-value warn">2</div><div class="stat-label">Warnings</div></div>
+    <div class="stat"><div class="stat-value total">45</div><div class="stat-label">Total Tests</div></div>
+    <div class="stat"><div class="stat-value rate">96%</div><div class="stat-label">Pass Rate</div></div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th><th>Suite</th><th>Test</th><th>Detail</th><th>Error</th><th>Timestamp</th>
+      </tr>
+    </thead>
+    <tbody><tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Health & Connectivity</td>
+      <td>Site root returns 200</td>
+      <td style="color:#aaa;font-size:12px"></td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:08.921Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Health & Connectivity</td>
+      <td>API tRPC endpoint reachable</td>
+      <td style="color:#aaa;font-size:12px">HTTP 404</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:10.388Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Health & Connectivity</td>
+      <td>Frontend bundle served (index-CnBl36rA.js)</td>
+      <td style="color:#aaa;font-size:12px"></td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:11.169Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Authentication</td>
+      <td>JWT token generated successfully</td>
+      <td style="color:#aaa;font-size:12px">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ...</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:11.170Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Authentication</td>
+      <td>Authenticated request succeeds (vaultx.getRevenueStats)</td>
+      <td style="color:#aaa;font-size:12px">200 OK with data</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:11.659Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Authentication</td>
+      <td>Unauthenticated request correctly rejected (401)</td>
+      <td style="color:#aaa;font-size:12px"></td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:12.120Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>VaultX API</td>
+      <td>vaultx.getRevenueStats</td>
+      <td style="color:#aaa;font-size:12px">gross: $0, subscribers: 0</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:13.652Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>VaultX API</td>
+      <td>vaultx.getCreatorProfile</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:14.126Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>VaultX API</td>
+      <td>vaultx.getCreatorContent</td>
+      <td style="color:#aaa;font-size:12px">7 items</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:14.592Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>VaultX API</td>
+      <td>vaultx.saveContent (mutation)</td>
+      <td style="color:#aaa;font-size:12px">id: 10</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:15.266Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>VaultX API</td>
+      <td>vaultx.getExportHistory</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:15.714Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>VaultX API</td>
+      <td>vaultx.getRealmStatus</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:16.252Z</td>
+    </tr>
+<tr>
+      <td style="color:#f39c12;font-weight:bold">⚠️ WARN</td>
+      <td>Clone API</td>
+      <td>Clone getClones</td>
+      <td style="color:#aaa;font-size:12px">No working procedure found in: clone.getClones, kingCamClone.getClones, cloneEmpire.getClones, clone.listClones, clone.getAll</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:19.051Z</td>
+    </tr>
+<tr>
+      <td style="color:#f39c12;font-weight:bold">⚠️ WARN</td>
+      <td>Clone API</td>
+      <td>Clone renderClone</td>
+      <td style="color:#aaa;font-size:12px">No working render procedure found</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:20.960Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Telegram API</td>
+      <td>telegramHub.getHubOverview</td>
+      <td style="color:#aaa;font-size:12px">200 OK with data</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:21.819Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Telegram API</td>
+      <td>telegramHub.getChannels</td>
+      <td style="color:#aaa;font-size:12px">0 channels</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:22.271Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Telegram API</td>
+      <td>telegramHub.getLeads</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:22.944Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Telegram API</td>
+      <td>telegramHub.getMessageHistory</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:23.660Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Telegram API</td>
+      <td>telegramHub.checkBotStatus</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:24.481Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Telegram API</td>
+      <td>telegram.getWebhookInfo</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:25.038Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>WhatsApp API</td>
+      <td>whatsappContent.getChannels</td>
+      <td style="color:#aaa;font-size:12px">0 channels</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:25.489Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>WhatsApp API</td>
+      <td>whatsappContent.getAnalytics</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:25.938Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>WhatsApp API</td>
+      <td>whatsappContent.getScheduledDrops</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:26.619Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>WhatsApp API</td>
+      <td>whatsappContent.generateCopy (mutation)</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:31.260Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>DB Persistence</td>
+      <td>DB write: saveContent creates record</td>
+      <td style="color:#aaa;font-size:12px">id: 11</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:31.711Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>DB Persistence</td>
+      <td>DB read: saved content appears in getCreatorContent</td>
+      <td style="color:#aaa;font-size:12px">id 11 confirmed</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:32.751Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>DB Persistence</td>
+      <td>DB read: Telegram message history accessible</td>
+      <td style="color:#aaa;font-size:12px"></td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:33.424Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>DB Persistence</td>
+      <td>DB read: WhatsApp analytics accessible</td>
+      <td style="color:#aaa;font-size:12px"></td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:34.223Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /vaultx/studio</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:34.674Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /vaultx/onboarding</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:36.444Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /vaultx/video-editor</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:37.156Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /videoeditor/vaultx-projects</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:37.941Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /kingcam-clone</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:38.510Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /clone-empire-home</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:38.997Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /clone/render-studio</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:39.439Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /king/clone-command</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:39.889Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /king/clone-studio</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:40.406Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /king/telegram-hub</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:40.855Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /telegram-setup</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:41.296Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /whatsapp-content</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:41.744Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /king/whatsapp-bot</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:42.184Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /dashboard</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:42.787Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /brand-deals</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:43.230Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /design-department</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:43.685Z</td>
+    </tr>
+<tr>
+      <td style="color:#27ae60;font-weight:bold">✅ PASS</td>
+      <td>Page Routes</td>
+      <td>Route /king/dubbing</td>
+      <td style="color:#aaa;font-size:12px">200 OK</td>
+      <td style="color:#e74c3c;font-size:11px;max-width:300px;word-break:break-word"></td>
+      <td style="color:#666;font-size:11px">2026-05-05T15:51:44.161Z</td>
+    </tr></tbody>
+  </table>
+</body>
+</html>

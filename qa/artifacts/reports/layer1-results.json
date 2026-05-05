@@ -1,0 +1,326 @@
+{
+  "summary": {
+    "passed": 43,
+    "failed": 0,
+    "warned": 2,
+    "total": 45
+  },
+  "results": [
+    {
+      "suite": "Health & Connectivity",
+      "name": "Site root returns 200",
+      "status": "PASS",
+      "detail": "",
+      "ts": "2026-05-05T15:51:08.921Z"
+    },
+    {
+      "suite": "Health & Connectivity",
+      "name": "API tRPC endpoint reachable",
+      "status": "PASS",
+      "detail": "HTTP 404",
+      "ts": "2026-05-05T15:51:10.388Z"
+    },
+    {
+      "suite": "Health & Connectivity",
+      "name": "Frontend bundle served (index-CnBl36rA.js)",
+      "status": "PASS",
+      "detail": "",
+      "ts": "2026-05-05T15:51:11.169Z"
+    },
+    {
+      "suite": "Authentication",
+      "name": "JWT token generated successfully",
+      "status": "PASS",
+      "detail": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ...",
+      "ts": "2026-05-05T15:51:11.170Z"
+    },
+    {
+      "suite": "Authentication",
+      "name": "Authenticated request succeeds (vaultx.getRevenueStats)",
+      "status": "PASS",
+      "detail": "200 OK with data",
+      "ts": "2026-05-05T15:51:11.659Z"
+    },
+    {
+      "suite": "Authentication",
+      "name": "Unauthenticated request correctly rejected (401)",
+      "status": "PASS",
+      "detail": "",
+      "ts": "2026-05-05T15:51:12.120Z"
+    },
+    {
+      "suite": "VaultX API",
+      "name": "vaultx.getRevenueStats",
+      "status": "PASS",
+      "detail": "gross: $0, subscribers: 0",
+      "ts": "2026-05-05T15:51:13.652Z"
+    },
+    {
+      "suite": "VaultX API",
+      "name": "vaultx.getCreatorProfile",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:14.126Z"
+    },
+    {
+      "suite": "VaultX API",
+      "name": "vaultx.getCreatorContent",
+      "status": "PASS",
+      "detail": "7 items",
+      "ts": "2026-05-05T15:51:14.592Z"
+    },
+    {
+      "suite": "VaultX API",
+      "name": "vaultx.saveContent (mutation)",
+      "status": "PASS",
+      "detail": "id: 10",
+      "ts": "2026-05-05T15:51:15.266Z"
+    },
+    {
+      "suite": "VaultX API",
+      "name": "vaultx.getExportHistory",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:15.714Z"
+    },
+    {
+      "suite": "VaultX API",
+      "name": "vaultx.getRealmStatus",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:16.252Z"
+    },
+    {
+      "suite": "Clone API",
+      "name": "Clone getClones",
+      "status": "WARN",
+      "detail": "No working procedure found in: clone.getClones, kingCamClone.getClones, cloneEmpire.getClones, clone.listClones, clone.getAll",
+      "ts": "2026-05-05T15:51:19.051Z"
+    },
+    {
+      "suite": "Clone API",
+      "name": "Clone renderClone",
+      "status": "WARN",
+      "detail": "No working render procedure found",
+      "ts": "2026-05-05T15:51:20.960Z"
+    },
+    {
+      "suite": "Telegram API",
+      "name": "telegramHub.getHubOverview",
+      "status": "PASS",
+      "detail": "200 OK with data",
+      "ts": "2026-05-05T15:51:21.819Z"
+    },
+    {
+      "suite": "Telegram API",
+      "name": "telegramHub.getChannels",
+      "status": "PASS",
+      "detail": "0 channels",
+      "ts": "2026-05-05T15:51:22.271Z"
+    },
+    {
+      "suite": "Telegram API",
+      "name": "telegramHub.getLeads",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:22.944Z"
+    },
+    {
+      "suite": "Telegram API",
+      "name": "telegramHub.getMessageHistory",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:23.660Z"
+    },
+    {
+      "suite": "Telegram API",
+      "name": "telegramHub.checkBotStatus",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:24.481Z"
+    },
+    {
+      "suite": "Telegram API",
+      "name": "telegram.getWebhookInfo",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:25.038Z"
+    },
+    {
+      "suite": "WhatsApp API",
+      "name": "whatsappContent.getChannels",
+      "status": "PASS",
+      "detail": "0 channels",
+      "ts": "2026-05-05T15:51:25.489Z"
+    },
+    {
+      "suite": "WhatsApp API",
+      "name": "whatsappContent.getAnalytics",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:25.938Z"
+    },
+    {
+      "suite": "WhatsApp API",
+      "name": "whatsappContent.getScheduledDrops",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:26.619Z"
+    },
+    {
+      "suite": "WhatsApp API",
+      "name": "whatsappContent.generateCopy (mutation)",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:31.260Z"
+    },
+    {
+      "suite": "DB Persistence",
+      "name": "DB write: saveContent creates record",
+      "status": "PASS",
+      "detail": "id: 11",
+      "ts": "2026-05-05T15:51:31.711Z"
+    },
+    {
+      "suite": "DB Persistence",
+      "name": "DB read: saved content appears in getCreatorContent",
+      "status": "PASS",
+      "detail": "id 11 confirmed",
+      "ts": "2026-05-05T15:51:32.751Z"
+    },
+    {
+      "suite": "DB Persistence",
+      "name": "DB read: Telegram message history accessible",
+      "status": "PASS",
+      "detail": "",
+      "ts": "2026-05-05T15:51:33.424Z"
+    },
+    {
+      "suite": "DB Persistence",
+      "name": "DB read: WhatsApp analytics accessible",
+      "status": "PASS",
+      "detail": "",
+      "ts": "2026-05-05T15:51:34.223Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /vaultx/studio",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:34.674Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /vaultx/onboarding",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:36.444Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /vaultx/video-editor",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:37.156Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /videoeditor/vaultx-projects",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:37.941Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /kingcam-clone",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:38.510Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /clone-empire-home",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:38.997Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /clone/render-studio",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:39.439Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /king/clone-command",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:39.889Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /king/clone-studio",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:40.406Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /king/telegram-hub",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:40.855Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /telegram-setup",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:41.296Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /whatsapp-content",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:41.744Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /king/whatsapp-bot",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:42.184Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /dashboard",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:42.787Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /brand-deals",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:43.230Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /design-department",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:43.685Z"
+    },
+    {
+      "suite": "Page Routes",
+      "name": "Route /king/dubbing",
+      "status": "PASS",
+      "detail": "200 OK",
+      "ts": "2026-05-05T15:51:44.161Z"
+    }
+  ],
+  "generatedAt": "2026-05-05T15:51:44.162Z"
+}
