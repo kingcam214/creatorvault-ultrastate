@@ -74,12 +74,16 @@ export const mediaCoreRouter = router({
     .mutation(async ({ input }) => {
       const tmpId = randomUUID();
       const videoPath = path.join(os.tmpdir(), `cv-scene-${tmpId}.mp4`);
+      const startTime = Date.now();
+      console.log(`[SceneDetect] START jobId=${tmpId} url=${input.videoUrl} threshold=${input.threshold}`);
       try {
         // Download video
+        console.log(`[SceneDetect] Downloading asset from ${input.videoUrl}`);
         const resp = await fetch(input.videoUrl);
-        if (!resp.ok) throw new Error(`Download failed: ${resp.status}`);
+        if (!resp.ok) throw new Error(`Download failed: HTTP ${resp.status} for ${input.videoUrl}`);
         const buf = Buffer.from(await resp.arrayBuffer());
         await writeFile(videoPath, buf);
+        console.log(`[SceneDetect] Asset written to ${videoPath} (${buf.length} bytes)`);
 
         // Run FFmpeg scene detection
         // select=gt(scene\,threshold) outputs the PTS (presentation timestamp) of each scene change
@@ -115,7 +119,12 @@ export const mediaCoreRouter = router({
           duration: (timestamps[i + 1] || duration) - start,
         }));
 
+        const elapsed = Date.now() - startTime;
+        console.log(`[SceneDetect] COMPLETE jobId=${tmpId} scenes=${scenes.length} duration=${duration.toFixed(2)}s elapsed=${elapsed}ms`);
         return { scenes, totalDuration: duration, sceneCount: scenes.length };
+      } catch (err: any) {
+        console.error(`[SceneDetect] FAILED jobId=${tmpId} error=${err.message}`);
+        throw err;
       } finally {
         await unlink(videoPath).catch(() => {});
       }

@@ -741,9 +741,28 @@ function ScenePanel({ clipUrl, onStatus }: { clipUrl: string; onStatus: (s: stri
     if (!clipUrl) { toast.error("Select a clip first"); return; }
     setBusy(true);
     if (activeSub === "scene-detect" || activeSub === "scene-reorder" || activeSub === "scene-transition") {
-      const videoPath = clipUrl.startsWith("/") ? clipUrl : new URL(clipUrl).pathname;
-  // @ts-ignore
-      detectScenesMutation.mutate({ videoPath, threshold, minSceneLen: 15 });
+      // Build absolute URL — backend requires a downloadable URL, not a local path
+      let videoUrl: string;
+      try {
+        if (clipUrl.startsWith("http://") || clipUrl.startsWith("https://")) {
+          videoUrl = clipUrl;
+        } else {
+          // Relative path → absolute URL using current origin
+          videoUrl = `${window.location.origin}${clipUrl.startsWith("/") ? clipUrl : "/" + clipUrl}`;
+        }
+        // Pre-flight check: verify the asset is reachable before calling backend
+        const check = await fetch(videoUrl, { method: "HEAD" });
+        if (!check.ok) {
+          toast.error(`Video file not accessible (HTTP ${check.status}). Upload the file first.`);
+          setBusy(false);
+          return;
+        }
+      } catch (e: any) {
+        toast.error(`Cannot reach video file: ${e.message}`);
+        setBusy(false);
+        return;
+      }
+      detectScenesMutation.mutate({ videoUrl, threshold: threshold / 100 });
     } else if (activeSub === "scene-loop") {
       try {
         const fd = new FormData();
