@@ -6,7 +6,7 @@ import { Link } from "wouter";
 export default function DesignDepartment() {
   const [prompt, setPrompt] = useState("");
   const [style, setStyle] = useState("modern");
-  const genDesign = trpc.designDepartment?.generateDesign?.useMutation?.() || { mutate: () => {}, isPending: false, data: null };
+  const genDesign = (trpc.designDepartment as any)?.generateDesign?.useMutation?.() || { mutate: () => {}, isPending: false, data: null };
 
   const tools = [
     { label: "Flyer Generator", href: "/flyer-generator", icon: "📄", desc: "AI-powered promotional flyers" },

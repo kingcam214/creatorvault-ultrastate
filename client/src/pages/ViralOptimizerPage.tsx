@@ -14,13 +14,13 @@ export function ViralOptimizerPage() {
   const [contentType, setContentType] = useState("video");
   const [result, setResult] = useState<any>(null);
 
-  const analyze = trpc.viralOptimizer?.analyzeContent?.useMutation?.({
+  const analyze = ((trpc.viralOptimizer as any) as any)?.analyzeContent?.useMutation?.({
     onSuccess: (d: any) => { setResult(d); toast({title:"Analysis complete"}); },
     onError: (e: any) => toast({title:"Error",description:e.message,variant:"destructive"}),
   }) || { mutate: ()=>{}, isPending: false };
 
-  const optimize = trpc.viralOptimizer?.optimizeContent?.useMutation?.({
-    onSuccess: (d: any) => { setResult(prev=>({...prev,...d})); toast({title:"Optimization ready"}); },
+  const optimize = ((trpc.viralOptimizer as any) as any)?.optimizeContent?.useMutation?.({
+    onSuccess: (d: any) => { setResult((prev: any) =>({...prev,...d})); toast({title:"Optimization ready"}); },
     onError: (e: any) => toast({title:"Error",description:e.message,variant:"destructive"}),
   }) || { mutate: ()=>{}, isPending: false };
 

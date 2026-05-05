@@ -40,10 +40,10 @@ export default function KingCamClone() {
         {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-8">
           {[
-            { label: "Active Clones", value: clones?.length || 0, icon: Copy, color: "text-yellow-400" },
+            { label: "Active Clones", value: (clones as any)?.clones?.length || 0, icon: Copy, color: "text-yellow-400" },
             { label: "Platforms Covered", value: "8", icon: Globe, color: "text-blue-400" },
             { label: "Content Generated", value: "∞", icon: Zap, color: "text-purple-400" },
-            { label: "Revenue Multiplier", value: `${(clones?.length || 0) + 1}x`, icon: TrendingUp, color: "text-green-400" },
+            { label: "Revenue Multiplier", value: `${((clones as any)?.clones?.length || 0) + 1}x`, icon: TrendingUp, color: "text-green-400" },
           ].map(s => (
             <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
               <s.icon className={`w-5 h-5 ${s.color} mb-2`} />
@@ -86,10 +86,10 @@ export default function KingCamClone() {
         )}
 
         {/* Clone List */}
-        {clones && clones.length > 0 ? (
+        {clones && (clones as any)?.clones?.length > 0 ? (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-gray-300">Your Active Clones</h2>
-            {clones.map((clone: any) => (
+            {((clones as any)?.clones ?? []).map((clone: any) => (
               <div key={clone.id} className="bg-white/5 border border-white/10 hover:border-yellow-500/20 rounded-2xl p-5 transition-all">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">

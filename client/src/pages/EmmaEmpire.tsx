@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { Globe, Users, TrendingUp, DollarSign, Zap, Target } from "lucide-react";
 
 export default function EmmaEmpire() {
-  const { data } = trpc.emmaNetwork?.getEmpireOverview?.useQuery?.(undefined, { retry: false }) || { data: null };
+  const { data } = (trpc as any).emmaNetwork?.getEmpireOverview?.useQuery?.(undefined, { retry: false }) || { data: null };
 
   const regions = [
     { name: "Dominican Republic", flag: "🇩🇴", creators: data?.dr ?? "—", revenue: data?.drRevenue ?? "—" },

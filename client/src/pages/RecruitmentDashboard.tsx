@@ -11,10 +11,10 @@ export function RecruitmentDashboard() {
   const [niche, setNiche] = useState("fitness");
   const [platform, setPlatform] = useState("instagram");
 
-  const { data: leads } = trpc.recruitmentWeapon?.getLeads?.useQuery?.() || { data: null };
-  const { data: sequences } = trpc.recruitmentWeapon?.getSequences?.useQuery?.() || { data: null };
+  const { data: leads } = (trpc as any).recruitmentWeapon?.getLeads?.useQuery?.() || { data: null };
+  const { data: sequences } = (trpc as any).recruitmentWeapon?.getSequences?.useQuery?.() || { data: null };
 
-  const createOutreach = trpc.recruitmentWeapon?.createOutreachSequence?.useMutation?.({
+  const createOutreach = (trpc as any).recruitmentWeapon?.createOutreachSequence?.useMutation?.({
     onSuccess: () => toast({title:"Outreach sequence created"}),
     onError: (e: any) => toast({title:"Error",description:e.message,variant:"destructive"}),
   }) || { mutate: ()=>{}, isPending: false };

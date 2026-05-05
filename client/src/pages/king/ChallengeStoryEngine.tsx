@@ -68,12 +68,12 @@ export function ChallengeStoryEngine() {
               ))}
             </div>
           </div>
-          {channels?.channels?.length > 0 && (
+          {(channels as any)?.channels?.length > 0 && (
             <div style={{background:"#0f0f1a",border:"1px solid #1a1a2e",borderRadius:12,padding:16}}>
               <div style={{fontSize:11,color:"#666",textTransform:"uppercase",letterSpacing:"1px",marginBottom:8}}>Target Channel</div>
               <select value={channel} onChange={e=>setChannel(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"#0a0a1a",border:"1px solid #1a1a2e",borderRadius:8,color:"white",fontSize:13,outline:"none"}}>
                 <option value="">All channels</option>
-                {channels.channels.map((c:any)=><option key={c.id} value={c.chat_id}>{c.name||c.chat_id}</option>)}
+                {(channels as any)?.channels?.map((c:any)=><option key={c.id} value={c.chat_id}>{c.name||c.chat_id}</option>)}
               </select>
             </div>
           )}
@@ -96,7 +96,7 @@ export function ChallengeStoryEngine() {
                     Generated Post
                     <div style={{display:"flex",gap:8}}>
                       <button onClick={()=>{navigator.clipboard.writeText(generatedContent.text);toast({title:"Copied!"});}} style={{padding:"5px 12px",borderRadius:6,border:"1px solid #333",background:"none",color:"#888",cursor:"pointer",fontSize:12}}>Copy</button>
-                      <button onClick={()=>post.mutate({message:generatedContent.text,channelId:channel||undefined})} disabled={post.isPending} style={{padding:"5px 12px",borderRadius:6,border:"none",background:"#00D9FF",color:"#000",cursor:post.isPending?"not-allowed":"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+                      <button onClick={()=>post.mutate({message:generatedContent.text,channelIds: [(channel || undefined) ?? ""]})} disabled={post.isPending} style={{padding:"5px 12px",borderRadius:6,border:"none",background:"#00D9FF",color:"#000",cursor:post.isPending?"not-allowed":"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
                         {post.isPending?<RefreshCw size={12} style={{animation:"spin 1s linear infinite"}}/>:<Send size={12}/>} Post to Telegram
                       </button>
                     </div>

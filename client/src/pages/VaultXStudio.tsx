@@ -30,6 +30,8 @@ import {
   CircleCheck, CircleDot, Circle, ChevronDown, ChevronUp, Image,
   Sun, Moon, Settings2, Music, Mic, Video, User, Wand2,
   Film, Headphones, Radio, Camera,
+  Crown, Send, Bot, Plus, Trash2, Edit2, Globe, X, CheckCircle,
+  EyeOff, Search, MessageSquare, Clock,
 } from "lucide-react";
 
 // ============================================================================
@@ -44,6 +46,9 @@ type ModeId =
   | "ai-enhance"
   | "caption-studio"
   | "content-vault"
+  | "creator-tiers"
+  | "mass-broadcast"
+  | "ai-chatter"
   | "final-output-engine"
   | "ai-video-generator"
   | "ai-sound-studio"
@@ -81,6 +86,9 @@ const MODES: { id: ModeId; label: string; icon: React.ReactNode; desc: string; c
   { id: "ai-sound-studio",     label: "AI Sound Studio",      icon: <Headphones size={18}/>, desc: "MMAudio sound design + MusicGen soundtrack",        color: "#8B5CF6", accent: "rgba(139,92,246,0.15)"  },
   { id: "face-studio",         label: "Face Studio",          icon: <User size={18}/>,       desc: "PuLID enhance + Face-to-Many + Consistent Character",color: "#F472B6", accent: "rgba(244,114,182,0.15)" },
   { id: "content-vault",       label: "Content Vault",        icon: <HardDrive size={18}/>,  desc: "Upload & organize your library",                    color: "#9333EA", accent: "rgba(147,51,234,0.15)"  },
+  { id: "creator-tiers",       label: "Subscription Tiers",   icon: <Crown size={18}/>,       desc: "Manage fan tiers, perks & pricing",                 color: "#F59E0B", accent: "rgba(245,158,11,0.15)"  },
+  { id: "mass-broadcast",      label: "Mass Broadcast",       icon: <Send size={18}/>,        desc: "PPV mass messages to all subscribers",              color: "#10B981", accent: "rgba(16,185,129,0.15)"  },
+  { id: "ai-chatter",          label: "AI Chatter",           icon: <Bot size={18}/>,         desc: "AI replies as you 24/7 — earn while offline",       color: "#8B5CF6", accent: "rgba(139,92,246,0.15)"  },
 ];
 
 const DESIRE_GRADES = [
@@ -2292,6 +2300,362 @@ function FinalOutputEngineMode({ onOutput }: { onOutput: (url: string, label: st
 }
 
 // ============================================================================
+// CREATOR TIERS MODE — Manage subscription tiers, perks & pricing
+// ============================================================================
+function CreatorTiersMode() {
+  const subscribersQ = trpc.vaultx.getSubscriberList.useQuery({ tier: "all", sortBy: "total_spent", limit: 100, offset: 0 });
+  const [activeTier, setActiveTier] = useState<"all" | "basic" | "premium" | "vip">("all");
+  const TIERS = [
+    { id: "basic" as const,   label: "Basic",   color: "#60A5FA", price: "$9.99",  perks: ["All SFW content", "DMs open", "Monthly Q&A"] },
+    { id: "premium" as const, label: "Premium", color: "#A855F7", price: "$19.99", perks: ["All Basic perks", "Explicit content", "Priority DMs", "Weekly lives"] },
+    { id: "vip" as const,     label: "VIP",     color: "#F59E0B", price: "$49.99", perks: ["All Premium perks", "Custom requests", "1-on-1 video calls", "Exclusive drops"] },
+  ];
+  const subs = subscribersQ.data?.subscribers || [];
+  const filtered = activeTier === "all" ? subs : subs.filter(s => s.tier === activeTier);
+  const totalRevenue = subs.reduce((acc, s) => acc + Number(s.price_paid || 0), 0);
+  const totalTips = subs.reduce((acc, s) => acc + Number(s.tips_total || 0), 0);
+  const totalPpv = subs.reduce((acc, s) => acc + Number(s.ppv_total || 0), 0);
+
+  return (
+    <div className="flex h-full overflow-hidden">
+      {/* LEFT — Tier Cards */}
+      <div className="flex-shrink-0 flex flex-col gap-3 p-4 overflow-y-auto" style={{ width: 280, borderRight: "1px solid rgba(255,255,255,0.06)" }}>
+        <p className="text-xs font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Subscription Tiers</p>
+        {TIERS.map(t => (
+          <div key={t.id} onClick={() => setActiveTier(t.id)} className="p-4 rounded-2xl cursor-pointer transition-all" style={{ background: activeTier === t.id ? `${t.color}15` : "rgba(255,255,255,0.03)", border: `1px solid ${activeTier === t.id ? t.color + "50" : "rgba(255,255,255,0.06)"}` }}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-black" style={{ color: t.color }}>{t.label}</span>
+              <span className="text-sm font-black text-white">{t.price}<span className="text-xs font-normal" style={{ color: "#6B7280" }}>/mo</span></span>
+            </div>
+            <div className="flex flex-col gap-1">
+              {t.perks.map((p, i) => <div key={i} className="flex items-center gap-1.5"><div className="w-1 h-1 rounded-full" style={{ background: t.color }} /><span className="text-xs" style={{ color: "#9CA3AF" }}>{p}</span></div>)}
+            </div>
+            <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+              <span className="text-xs font-bold" style={{ color: "#6B7280" }}>{subs.filter(s => s.tier === t.id).length} active subscribers</span>
+            </div>
+          </div>
+        ))}
+        <div className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: "#6B7280" }}>Revenue Summary</p>
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between"><span className="text-xs" style={{ color: "#9CA3AF" }}>Subscriptions</span><span className="text-xs font-bold text-white">${totalRevenue.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-xs" style={{ color: "#9CA3AF" }}>Tips</span><span className="text-xs font-bold text-white">${totalTips.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-xs" style={{ color: "#9CA3AF" }}>PPV</span><span className="text-xs font-bold text-white">${totalPpv.toFixed(2)}</span></div>
+            <div className="flex justify-between pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}><span className="text-xs font-black text-white">Total</span><span className="text-xs font-black" style={{ color: "#22C55E" }}>${(totalRevenue + totalTips + totalPpv).toFixed(2)}</span></div>
+          </div>
+        </div>
+      </div>
+
+      {/* RIGHT — Subscriber List */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-shrink-0 flex items-center gap-2 p-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          {(["all", "basic", "premium", "vip"] as const).map(t => (
+            <button key={t} onClick={() => setActiveTier(t)} className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all" style={{ background: activeTier === t ? "rgba(255,255,255,0.1)" : "transparent", color: activeTier === t ? "white" : "#6B7280", border: "1px solid rgba(255,255,255,0.08)" }}>
+              {t === "all" ? `All (${subs.length})` : `${t.charAt(0).toUpperCase() + t.slice(1)} (${subs.filter(s => s.tier === t).length})`}
+            </button>
+          ))}
+          <div className="flex-1" />
+          {subscribersQ.isLoading && <Loader2 size={14} className="animate-spin" style={{ color: "#6B7280" }} />}
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3">
+              <Crown size={32} style={{ color: "#374151" }} />
+              <p className="text-sm font-bold" style={{ color: "#4B5563" }}>No subscribers yet</p>
+              <p className="text-xs" style={{ color: "#374151" }}>Share your VaultX profile to start earning</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {filtered.map((sub: any) => (
+                <div key={sub.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black" style={{ background: "rgba(255,255,255,0.08)", color: "white" }}>{(sub.name || sub.username || "?").charAt(0).toUpperCase()}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{sub.name || sub.username || `Fan #${sub.fan_id}`}</p>
+                    <p className="text-[10px]" style={{ color: "#6B7280" }}>Joined {new Date(sub.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: sub.tier === "vip" ? "rgba(245,158,11,0.15)" : sub.tier === "premium" ? "rgba(168,85,247,0.15)" : "rgba(96,165,250,0.15)", color: sub.tier === "vip" ? "#F59E0B" : sub.tier === "premium" ? "#A855F7" : "#60A5FA" }}>{sub.tier}</span>
+                    <span className="text-[10px] font-bold" style={{ color: "#22C55E" }}>${Number(sub.total_spent || 0).toFixed(2)} total</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MASS BROADCAST MODE — Send PPV mass messages to all subscribers
+// ============================================================================
+function MassBroadcastMode() {
+  const sendMut = trpc.vaultx.sendMassMessage.useMutation();
+  const subscribersQ = trpc.vaultx.getSubscriberList.useQuery({ tier: "all", sortBy: "join_date", limit: 1, offset: 0 });
+  const [subject, setSubject] = useState("");
+  const [messageText, setMessageText] = useState("");
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [mediaType, setMediaType] = useState<"photo" | "video" | "audio">("video");
+  const [isLocked, setIsLocked] = useState(false);
+  const [unlockPrice, setUnlockPrice] = useState("9.99");
+  const [targetTier, setTargetTier] = useState<"all" | "basic" | "premium" | "vip">("all");
+  const [scheduledFor, setScheduledFor] = useState("");
+  const [sent, setSent] = useState<{ massMessageId: number; recipientCount: number } | null>(null);
+  const totalSubs = subscribersQ.data?.subscribers?.length ?? 0;
+
+  const handleSend = async () => {
+    if (!messageText.trim()) { toast.error("Message text is required"); return; }
+    try {
+      const result = await sendMut.mutateAsync({
+        subject: subject || undefined,
+        messageText,
+        mediaUrl: mediaUrl || undefined,
+        mediaType: mediaUrl ? mediaType : undefined,
+        isLocked,
+        unlockPrice: isLocked ? parseFloat(unlockPrice) : 0,
+        targetTier,
+        scheduledFor: scheduledFor || undefined,
+      });
+      setSent(result);
+      toast.success(scheduledFor ? "Message scheduled!" : `Broadcast sent to ${result.recipientCount} subscribers!`);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  return (
+    <div className="flex h-full overflow-hidden">
+      {/* COMPOSE PANEL */}
+      <div className="flex-1 flex flex-col overflow-y-auto p-6 gap-4">
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: "#6B7280" }}>Compose Broadcast</p>
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest mb-1 block" style={{ color: "#6B7280" }}>Subject (optional)</label>
+              <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. 🔥 New exclusive drop" className="w-full px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest mb-1 block" style={{ color: "#6B7280" }}>Message <span style={{ color: "#EF4444" }}>*</span></label>
+              <textarea value={messageText} onChange={e => setMessageText(e.target.value)} placeholder="Write your message to fans..." rows={5} className="w-full px-3 py-2 rounded-xl text-sm text-white resize-none" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
+              <p className="text-[10px] mt-1" style={{ color: messageText.length > 4500 ? "#EF4444" : "#4B5563" }}>{messageText.length}/5000</p>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest mb-1 block" style={{ color: "#6B7280" }}>Media URL (optional)</label>
+              <input value={mediaUrl} onChange={e => setMediaUrl(e.target.value)} placeholder="https://creatorvault.live/uploads/..." className="w-full px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
+            </div>
+            {mediaUrl && (
+              <div className="flex gap-2">
+                {(["photo", "video", "audio"] as const).map(t => (
+                  <button key={t} onClick={() => setMediaType(t)} className="flex-1 py-2 rounded-xl text-xs font-bold transition-all" style={{ background: mediaType === t ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.04)", color: mediaType === t ? "#A855F7" : "#6B7280", border: `1px solid ${mediaType === t ? "rgba(168,85,247,0.4)" : "rgba(255,255,255,0.08)"}` }}>{t}</button>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <button onClick={() => setIsLocked(l => !l)} className="w-8 h-4 rounded-full transition-all relative" style={{ background: isLocked ? "rgba(168,85,247,0.5)" : "rgba(255,255,255,0.1)" }}>
+                <div className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all" style={{ left: isLocked ? "calc(100% - 14px)" : "2px" }} />
+              </button>
+              <div>
+                <p className="text-xs font-bold text-white">PPV Lock</p>
+                <p className="text-[10px]" style={{ color: "#6B7280" }}>Fans pay to unlock this message</p>
+              </div>
+              {isLocked && (
+                <div className="ml-auto flex items-center gap-1">
+                  <span className="text-xs" style={{ color: "#9CA3AF" }}>$</span>
+                  <input value={unlockPrice} onChange={e => setUnlockPrice(e.target.value)} className="w-16 px-2 py-1 rounded-lg text-xs text-white text-right" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {sent && (
+          <div className="p-4 rounded-2xl" style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)" }}>
+            <div className="flex items-center gap-2 mb-1"><ShieldCheck size={16} style={{ color: "#22C55E" }} /><span className="text-sm font-black" style={{ color: "#22C55E" }}>Broadcast Sent!</span></div>
+            <p className="text-xs" style={{ color: "#9CA3AF" }}>Message ID #{sent.massMessageId} delivered to {sent.recipientCount} subscribers</p>
+          </div>
+        )}
+
+        <button onClick={handleSend} disabled={sendMut.isPending || !messageText.trim()} className="w-full py-3 rounded-2xl text-sm font-black transition-all" style={{ background: sendMut.isPending ? "rgba(255,255,255,0.05)" : "rgba(16,185,129,0.2)", color: sendMut.isPending ? "#4B5563" : "#10B981", border: `1px solid ${sendMut.isPending ? "rgba(255,255,255,0.06)" : "rgba(16,185,129,0.4)"}` }}>
+          {sendMut.isPending ? <><Loader2 size={14} className="animate-spin inline mr-2" />Sending...</> : scheduledFor ? <><Clock size={14} className="inline mr-2" />Schedule Broadcast</> : <><Send size={14} className="inline mr-2" />Send to {targetTier === "all" ? "All" : targetTier.charAt(0).toUpperCase() + targetTier.slice(1)} Subscribers</>}
+        </button>
+      </div>
+
+      {/* RIGHT — Settings Panel */}
+      <div className="flex-shrink-0 flex flex-col gap-4 p-4 overflow-y-auto" style={{ width: 260, borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>Target Audience</p>
+          {(["all", "basic", "premium", "vip"] as const).map(t => (
+            <button key={t} onClick={() => setTargetTier(t)} className="w-full flex items-center justify-between px-3 py-2 rounded-xl mb-1 text-xs font-bold transition-all" style={{ background: targetTier === t ? "rgba(255,255,255,0.08)" : "transparent", color: targetTier === t ? "white" : "#6B7280", border: `1px solid ${targetTier === t ? "rgba(255,255,255,0.12)" : "transparent"}` }}>
+              <span>{t === "all" ? "All Subscribers" : t.charAt(0).toUpperCase() + t.slice(1)}</span>
+              {targetTier === t && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+            </button>
+          ))}
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>Schedule (optional)</p>
+          <input type="datetime-local" value={scheduledFor} onChange={e => setScheduledFor(e.target.value)} className="w-full px-3 py-2 rounded-xl text-xs text-white" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", outline: "none", colorScheme: "dark" }} />
+          {scheduledFor && <button onClick={() => setScheduledFor("")} className="mt-1 text-[10px]" style={{ color: "#EF4444" }}>Clear schedule</button>}
+        </div>
+        <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>Broadcast Stats</p>
+          <div className="flex justify-between"><span className="text-xs" style={{ color: "#9CA3AF" }}>Total subscribers</span><span className="text-xs font-bold text-white">{totalSubs}</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// AI CHATTER MODE — Configure AI to reply as you 24/7
+// ============================================================================
+function AIChatterMode() {
+  const configQ = trpc.vaultx.getAiChatterConfig.useQuery();
+  const saveMut = trpc.vaultx.saveAiChatterConfig.useMutation();
+  const cfg = configQ.data?.config;
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [personaName, setPersonaName] = useState("");
+  const [personaDescription, setPersonaDescription] = useState("");
+  const [greetingMessage, setGreetingMessage] = useState("");
+  const [ppvFreq, setPpvFreq] = useState(3);
+  const [tipFreq, setTipFreq] = useState(5);
+  const [schedStart, setSchedStart] = useState(0);
+  const [schedEnd, setSchedEnd] = useState(24);
+  const [saved, setSaved] = useState(false);
+
+  // Populate from DB when loaded
+  useEffect(() => {
+    if (cfg) {
+      setIsEnabled(!!cfg.is_enabled);
+      setPersonaName(cfg.persona_name || "");
+      setPersonaDescription(cfg.persona_description || "");
+      setGreetingMessage(cfg.greeting_message || "");
+      setPpvFreq(cfg.ppv_pitch_frequency || 3);
+      setTipFreq(cfg.tip_request_frequency || 5);
+      if (cfg.schedule_hours) {
+        try { const s = JSON.parse(cfg.schedule_hours); setSchedStart(s.start || 0); setSchedEnd(s.end || 24); } catch {}
+      }
+    }
+  }, [cfg]);
+
+  const handleSave = async () => {
+    try {
+      await saveMut.mutateAsync({
+        isEnabled,
+        personaName: personaName || undefined,
+        personaDescription: personaDescription || undefined,
+        greetingMessage: greetingMessage || undefined,
+        ppvPitchFrequency: ppvFreq,
+        tipRequestFrequency: tipFreq,
+        scheduleHours: { start: schedStart, end: schedEnd },
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+      toast.success("AI Chatter config saved!");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  if (configQ.isLoading) return <div className="flex items-center justify-center h-full"><Loader2 size={24} className="animate-spin" style={{ color: "#8B5CF6" }} /></div>;
+
+  return (
+    <div className="flex h-full overflow-hidden">
+      {/* LEFT — Config */}
+      <div className="flex-1 flex flex-col overflow-y-auto p-6 gap-5">
+        {/* Enable toggle */}
+        <div className="flex items-center justify-between p-4 rounded-2xl" style={{ background: isEnabled ? "rgba(139,92,246,0.1)" : "rgba(255,255,255,0.03)", border: `1px solid ${isEnabled ? "rgba(139,92,246,0.4)" : "rgba(255,255,255,0.06)"}` }}>
+          <div>
+            <p className="text-sm font-black text-white">AI Chatter {isEnabled ? "Active" : "Disabled"}</p>
+            <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>AI replies as you 24/7 — earn while offline</p>
+          </div>
+          <button onClick={() => setIsEnabled(e => !e)} className="w-12 h-6 rounded-full transition-all relative" style={{ background: isEnabled ? "rgba(139,92,246,0.6)" : "rgba(255,255,255,0.1)" }}>
+            <div className="absolute top-1 w-4 h-4 rounded-full bg-white transition-all" style={{ left: isEnabled ? "calc(100% - 20px)" : "4px" }} />
+          </button>
+        </div>
+
+        {/* Persona */}
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: "#6B7280" }}>AI Persona</p>
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest mb-1 block" style={{ color: "#6B7280" }}>Persona Name</label>
+              <input value={personaName} onChange={e => setPersonaName(e.target.value)} placeholder="e.g. Luna, Aria, your creator name" className="w-full px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest mb-1 block" style={{ color: "#6B7280" }}>Persona Description</label>
+              <textarea value={personaDescription} onChange={e => setPersonaDescription(e.target.value)} placeholder="Describe how the AI should talk, what topics to discuss, what to avoid..." rows={4} className="w-full px-3 py-2 rounded-xl text-sm text-white resize-none" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest mb-1 block" style={{ color: "#6B7280" }}>Greeting Message</label>
+              <textarea value={greetingMessage} onChange={e => setGreetingMessage(e.target.value)} placeholder="First message sent to new subscribers..." rows={3} className="w-full px-3 py-2 rounded-xl text-sm text-white resize-none" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Monetization frequency */}
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: "#6B7280" }}>Monetization Frequency</p>
+          <div className="flex flex-col gap-3">
+            <div>
+              <div className="flex justify-between mb-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>PPV Pitch — every {ppvFreq} messages</label>
+                <span className="text-[10px] font-bold" style={{ color: "#A855F7" }}>{ppvFreq}</span>
+              </div>
+              <input type="range" min={1} max={20} value={ppvFreq} onChange={e => setPpvFreq(Number(e.target.value))} className="w-full" style={{ accentColor: "#A855F7" }} />
+            </div>
+            <div>
+              <div className="flex justify-between mb-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#6B7280" }}>Tip Request — every {tipFreq} messages</label>
+                <span className="text-[10px] font-bold" style={{ color: "#F59E0B" }}>{tipFreq}</span>
+              </div>
+              <input type="range" min={1} max={20} value={tipFreq} onChange={e => setTipFreq(Number(e.target.value))} className="w-full" style={{ accentColor: "#F59E0B" }} />
+            </div>
+          </div>
+        </div>
+
+        {saved && (
+          <div className="p-3 rounded-xl" style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)" }}>
+            <div className="flex items-center gap-2"><ShieldCheck size={14} style={{ color: "#22C55E" }} /><span className="text-xs font-bold" style={{ color: "#22C55E" }}>Config saved to database</span></div>
+          </div>
+        )}
+
+        <button onClick={handleSave} disabled={saveMut.isPending} className="w-full py-3 rounded-2xl text-sm font-black transition-all" style={{ background: saveMut.isPending ? "rgba(255,255,255,0.05)" : "rgba(139,92,246,0.2)", color: saveMut.isPending ? "#4B5563" : "#8B5CF6", border: `1px solid ${saveMut.isPending ? "rgba(255,255,255,0.06)" : "rgba(139,92,246,0.4)"}` }}>
+          {saveMut.isPending ? <><Loader2 size={14} className="animate-spin inline mr-2" />Saving...</> : "Save AI Chatter Config"}
+        </button>
+      </div>
+
+      {/* RIGHT — Schedule */}
+      <div className="flex-shrink-0 flex flex-col gap-4 p-4 overflow-y-auto" style={{ width: 260, borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: "#6B7280" }}>Active Hours</p>
+          <p className="text-xs mb-3" style={{ color: "#9CA3AF" }}>AI only replies during these hours (your timezone)</p>
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest mb-1 block" style={{ color: "#6B7280" }}>Start Hour: {schedStart}:00</label>
+              <input type="range" min={0} max={23} value={schedStart} onChange={e => setSchedStart(Number(e.target.value))} className="w-full" style={{ accentColor: "#8B5CF6" }} />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest mb-1 block" style={{ color: "#6B7280" }}>End Hour: {schedEnd}:00</label>
+              <input type="range" min={1} max={24} value={schedEnd} onChange={e => setSchedEnd(Number(e.target.value))} className="w-full" style={{ accentColor: "#8B5CF6" }} />
+            </div>
+          </div>
+          <div className="mt-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <p className="text-xs font-bold text-white">{schedStart}:00 — {schedEnd}:00</p>
+            <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>{schedEnd - schedStart} hour window</p>
+          </div>
+        </div>
+        <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>How It Works</p>
+          {["Fan sends a message", "AI reads conversation history", "AI replies as your persona", "Pitches PPV/tips at set frequency", "You review & override anytime"].map((s, i) => (
+            <div key={i} className="flex items-start gap-2 mb-1.5">
+              <div className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black flex-shrink-0 mt-0.5" style={{ background: "rgba(139,92,246,0.2)", color: "#8B5CF6" }}>{i + 1}</div>
+              <span className="text-xs" style={{ color: "#9CA3AF" }}>{s}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // MAIN VAULTX STUDIO COMPONENT
 // ============================================================================
 export default function VaultXStudio() {
@@ -2332,6 +2696,9 @@ export default function VaultXStudio() {
       case "ai-video-generator":  return <AIVideoGeneratorMode {...props} />;
       case "ai-sound-studio":     return <AISoundStudioMode {...props} />;
       case "face-studio":         return <FaceStudioMode {...props} />;
+      case "creator-tiers":       return <CreatorTiersMode />;
+      case "mass-broadcast":      return <MassBroadcastMode />;
+      case "ai-chatter":          return <AIChatterMode />;
       default:                    return null;
     }
   };

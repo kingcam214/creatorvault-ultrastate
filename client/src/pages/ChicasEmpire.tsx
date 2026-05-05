@@ -30,10 +30,10 @@ export default function ChicasEmpire() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
-            { label: "Total Chicas", value: data?.totalChicas ?? "—", icon: Users, color: "text-pink-400" },
-            { label: "Active Today", value: data?.activeToday ?? "—", icon: TrendingUp, color: "text-green-400" },
-            { label: "Empire Revenue", value: data?.empireRevenue ? `$${data.empireRevenue}` : "—", icon: DollarSign, color: "text-yellow-400" },
-            { label: "Top Performers", value: data?.topPerformers ?? "—", icon: Star, color: "text-purple-400" },
+            { label: "Total Chicas", value: data?.resources?.length ?? "—", icon: Users, color: "text-pink-400" },
+            { label: "Active Today", value: data?.resources?.filter((r: any) => r.type === "active")?.length ?? "—", icon: TrendingUp, color: "text-green-400" },
+            { label: "Empire Revenue", value: "—", icon: DollarSign, color: "text-yellow-400" },
+            { label: "Top Performers", value: data?.resources?.slice(0, 3)?.length ?? 0, icon: Star, color: "text-purple-400" },
           ].map(s => (
             <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
               <s.icon className={`w-5 h-5 ${s.color} mb-2`} />
@@ -44,10 +44,10 @@ export default function ChicasEmpire() {
         </div>
 
         {/* Empire Strategy */}
-        {data?.strategy && (
+        {data?.resources && (
           <div className="bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-xl p-5 mb-8">
             <h3 className="font-bold text-pink-400 mb-2 flex items-center gap-2"><Target className="w-4 h-4" /> Empire Strategy</h3>
-            <p className="text-gray-300 text-sm">{data.strategy}</p>
+            <p className="text-gray-300 text-sm">{data?.resources?.map((r: any) => r.title).join(", ") ?? "No strategy data"}</p>
           </div>
         )}
 

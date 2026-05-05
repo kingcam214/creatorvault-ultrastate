@@ -9,7 +9,7 @@ export default function EditProfile() {
   const [username, setUsername] = useState((user as any)?.username || "");
   const [bio, setBio] = useState((user as any)?.bio || "");
   const [saved, setSaved] = useState(false);
-  const updateProfile = trpc.users?.updateProfile?.useMutation?.({ onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2000); } }) || { mutate: () => {}, isPending: false };
+  const updateProfile = (trpc.users as any)?.updateProfile?.useMutation?.({ onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2000); } }) || { mutate: () => {}, isPending: false };
 
   useEffect(() => {
     if (user) {

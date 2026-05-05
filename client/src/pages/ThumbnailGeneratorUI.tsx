@@ -15,7 +15,7 @@ export function ThumbnailGeneratorUI() {
   const [mainText, setMainText] = useState("");
   const [generated, setGenerated] = useState<any[]>([]);
 
-  const generate = trpc.thumbnailGenerator?.generateThumbnail?.useMutation?.({
+  const generate = (trpc as any).thumbnailGenerator?.generateThumbnail?.useMutation?.({
     onSuccess: (d: any) => { toast({title:"Thumbnail generated"}); setGenerated(prev=>[d,...prev]); },
     onError: (e: any) => toast({title:"Error",description:e.message,variant:"destructive"}),
   }) || { mutate: ()=>{}, isPending: false };

@@ -25,7 +25,9 @@ import {
   Instagram, Twitter, Bell, Crown, Sparkles, Play, Image,
   CreditCard, Gift, Unlock, Plus, ChevronRight, Globe,
   Camera, Video, FileText, Hash, AtSign, Link2, Bot,
-  Layers, Radio, ShoppingBag, Wallet, ArrowUpRight
+  Layers, Radio, ShoppingBag, Wallet, ArrowUpRight,
+  Inbox, Filter, Bookmark, ThumbsUp, Share2, MoreHorizontal,
+  ChevronDown, X as XIcon
 } from "lucide-react";
 
 // ============================================================================
@@ -212,6 +214,409 @@ function CreatorCard({ creator, onClick }: { creator: any; onClick: () => void }
 // ============================================================================
 
 // ============================================================================
+// FOR YOU FEED — Real content from vaultx_content table
+// ============================================================================
+function ForYouFeed() {
+  const { data: feedData, isLoading } = trpc.vaultx.getForYouFeed.useQuery(
+    { limit: 20, offset: 0 },
+    { retry: false }
+  );
+  const items = (feedData as any)?.items || [];
+  const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const buyPPV = trpc.vaultx.purchasePpv.useMutation();
+
+  if (isLoading) return (
+    <div className="space-y-3">
+      {[1,2,3].map(i => (
+        <div key={i} className="bg-gray-900 rounded-2xl h-48 animate-pulse" />
+      ))}
+    </div>
+  );
+
+  if (items.length === 0) return (
+    <div className="text-center py-12 text-gray-600">
+      <Flame className="w-10 h-10 mx-auto mb-3 opacity-30" />
+      <div className="font-semibold">No content yet</div>
+      <div className="text-sm mt-1">Be the first to post on VaultX</div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {items.map((item: any) => (
+        <div key={item.id} className="bg-gray-900/70 border border-gray-800 rounded-2xl overflow-hidden">
+          {/* Creator header */}
+          <div className="flex items-center gap-3 p-4 pb-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-black text-sm flex-shrink-0">
+              {item.creator_name?.[0]?.toUpperCase() || "?"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-white font-bold text-sm truncate">{item.creator_name || "Creator"}</div>
+              <div className="text-gray-500 text-xs">{item.created_at ? new Date(item.created_at).toLocaleDateString() : ""}</div>
+            </div>
+            {item.unlock_type === "ppv" && (
+              <span className="bg-amber-500/20 text-amber-400 text-xs font-bold px-2 py-0.5 rounded-full">PPV</span>
+            )}
+            {item.unlock_type === "free" && (
+              <span className="bg-green-500/20 text-green-400 text-xs font-bold px-2 py-0.5 rounded-full">FREE</span>
+            )}
+          </div>
+
+          {/* Media */}
+          <div className="relative">
+            {item.thumbnail_url ? (
+              <div className="relative">
+                <img
+                  src={item.thumbnail_url}
+                  alt={item.title}
+                  className={`w-full object-cover max-h-80 ${item.locked ? "blur-xl" : ""}`}
+                />
+                {item.locked && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50">
+                    <Lock className="w-8 h-8 text-white mb-2" />
+                    <div className="text-white font-bold text-sm">
+                      {item.unlock_type === "ppv" ? `Unlock for $${(item.price_cents / 100).toFixed(2)}` : "Subscribe to unlock"}
+                    </div>
+                    {item.unlock_type === "ppv" && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await buyPPV.mutateAsync({ contentId: item.id });
+                            toast.success("PPV purchase initiated");
+                          } catch (e: any) { toast.error(e.message); }
+                        }}
+                        className="mt-3 bg-amber-500 text-black font-bold px-5 py-2 rounded-xl text-sm hover:bg-amber-400 transition-colors"
+                      >
+                        Buy PPV
+                      </button>
+                    )}
+                  </div>
+                )}
+                {item.content_type === "video" && !item.locked && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-full bg-black/60 flex items-center justify-center">
+                      <Play className="w-6 h-6 text-white ml-1" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-gray-800 h-32 flex items-center justify-center">
+                <div className="text-4xl">
+                  {item.content_type === "video" ? "🎬" : item.content_type === "audio" ? "🎵" : "🖼️"}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Caption + actions */}
+          <div className="p-4 space-y-3">
+            {item.title && (
+              <div className="text-white text-sm font-semibold">{item.title}</div>
+            )}
+            {item.description && (
+              <div className="text-gray-400 text-sm leading-relaxed">
+                {expandedItem === item.id ? item.description : item.description?.slice(0, 120)}
+                {item.description?.length > 120 && (
+                  <button
+                    onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
+                    className="text-red-400 ml-1 text-xs font-semibold"
+                  >
+                    {expandedItem === item.id ? " less" : "...more"}
+                  </button>
+                )}
+              </div>
+            )}
+            {item.tags?.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {item.tags.map((tag: string) => (
+                  <span key={tag} className="text-red-400/70 text-xs">#{tag}</span>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-4 pt-1">
+              <button className="flex items-center gap-1.5 text-gray-500 hover:text-red-400 transition-colors text-sm">
+                <Heart className="w-4 h-4" />
+                <span>{item.like_count || 0}</span>
+              </button>
+              <button className="flex items-center gap-1.5 text-gray-500 hover:text-blue-400 transition-colors text-sm">
+                <MessageCircle className="w-4 h-4" />
+                <span>{item.comment_count || 0}</span>
+              </button>
+              <button className="flex items-center gap-1.5 text-gray-500 hover:text-green-400 transition-colors text-sm">
+                <Share2 className="w-4 h-4" />
+              </button>
+              <div className="ml-auto">
+                <span className="text-gray-600 text-xs">{item.view_count || 0} views</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// CONTENT FEED TAB — Subscribed creator content with free preview / blur gate
+// ============================================================================
+function ContentFeedTab({ userId }: { userId: number }) {
+  const [creatorId, setCreatorId] = useState<number | null>(null);
+  const { data: subsData } = trpc.vaultx.getMySubscriptions.useQuery(undefined, { retry: false });
+  const subscriptions = (subsData as any)?.subscriptions || [];
+
+  const { data: contentData, isLoading } = trpc.vaultx.getCreatorContent.useQuery(
+    { creatorId: creatorId || 0, limit: 24, offset: 0 },
+    { retry: false, enabled: !!creatorId }
+  );
+  const items = (contentData as any)?.items || [];
+  const isSubscribed = (contentData as any)?.isSubscribed || false;
+
+  const buyPPV = trpc.vaultx.purchasePpv.useMutation();
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-white font-black text-xl mb-1">Content Feed</h2>
+        <p className="text-gray-500 text-sm">Browse content from creators you follow.</p>
+      </div>
+
+      {/* Creator selector */}
+      {subscriptions.length > 0 ? (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {subscriptions.map((sub: any) => (
+            <button
+              key={sub.creator_id}
+              onClick={() => setCreatorId(sub.creator_id)}
+              className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                creatorId === sub.creator_id
+                  ? "bg-red-500 text-white"
+                  : "bg-gray-900 text-gray-400 border border-gray-800 hover:border-red-500/50"
+              }`}
+            >
+              <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-black text-xs">
+                {sub.creator_name?.[0]?.toUpperCase() || "?"}
+              </div>
+              {sub.creator_name || `Creator ${sub.creator_id}`}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-6 text-center">
+          <Users className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+          <div className="text-white font-bold mb-1">No subscriptions yet</div>
+          <div className="text-gray-500 text-sm">Subscribe to creators in the Discover tab to see their content here.</div>
+        </div>
+      )}
+
+      {/* Content grid */}
+      {creatorId && (
+        isLoading ? (
+          <div className="grid grid-cols-3 gap-2">
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} className="aspect-square bg-gray-900 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="text-center py-12 text-gray-600">
+            <Image className="w-10 h-10 mx-auto mb-3 opacity-30" />
+            <div className="font-semibold">No content posted yet</div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            {items.map((item: any) => (
+              <div key={item.id} className="relative rounded-xl overflow-hidden aspect-square bg-gray-900 group cursor-pointer">
+                {item.thumbnail_url ? (
+                  <img
+                    src={item.thumbnail_url}
+                    alt={item.title}
+                    className={`w-full h-full object-cover transition-transform group-hover:scale-105 ${
+                      item.locked ? "blur-lg" : ""
+                    }`}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-3xl">
+                    {item.content_type === "video" ? "🎬" : item.content_type === "audio" ? "🎵" : "🖼️"}
+                  </div>
+                )}
+                {item.locked && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50">
+                    <Lock className="w-5 h-5 text-white mb-1" />
+                    {item.unlock_type === "ppv" && (
+                      <>
+                        <div className="text-white text-xs font-bold">${(item.price_cents / 100).toFixed(2)}</div>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await buyPPV.mutateAsync({ contentId: item.id });
+                              toast.success("PPV purchase initiated");
+                            } catch (e: any) { toast.error(e.message); }
+                          }}
+                          className="mt-1 bg-amber-500 text-black font-bold px-2 py-0.5 rounded-lg text-xs"
+                        >
+                          Buy
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+                {item.content_type === "video" && !item.locked && (
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Play className="w-8 h-8 text-white drop-shadow-lg" />
+                  </div>
+                )}
+                {item.unlock_type === "ppv" && !item.locked && (
+                  <div className="absolute top-1 right-1 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full">PPV</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// MESSAGING TAB — Real DMs via vaultx_messages table
+// ============================================================================
+function MessagingTab({ userId }: { userId: number }) {
+  const [selectedConvo, setSelectedConvo] = useState<number | null>(null);
+  const [messageText, setMessageText] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { data: convoData, refetch: refetchConvos } = trpc.vaultx.getInbox.useQuery(undefined, { retry: false });
+  const threads = (convoData as any)?.conversations || [];
+
+  const { data: msgData, refetch: refetchMsgs } = trpc.vaultx.getConversation.useQuery(
+    { otherUserId: selectedConvo || 0 },
+    { retry: false, enabled: !!selectedConvo }
+  );
+  const messages = (msgData as any)?.messages || [];
+
+  const sendMsg = trpc.vaultx.sendMessage.useMutation({
+    onSuccess: () => {
+      setMessageText("");
+      refetchMsgs();
+      refetchConvos();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = () => {
+    if (!messageText.trim() || !selectedConvo) return;
+    sendMsg.mutate({ recipientId: selectedConvo, messageText: messageText.trim() });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-white font-black text-xl">Messages</h2>
+        {selectedConvo && (
+          <button
+            onClick={() => setSelectedConvo(null)}
+            className="text-gray-400 hover:text-white text-sm flex items-center gap-1"
+          >
+            <XIcon className="w-4 h-4" /> Back
+          </button>
+        )}
+      </div>
+
+      {!selectedConvo ? (
+        // Thread list
+        threads.length === 0 ? (
+          <div className="text-center py-12 text-gray-600">
+            <Inbox className="w-10 h-10 mx-auto mb-3 opacity-30" />
+            <div className="font-semibold">No messages yet</div>
+            <div className="text-sm mt-1">Subscribe to a creator and send them a DM</div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {threads.map((thread: any) => (
+              <button
+                key={thread.other_user_id}
+                onClick={() => setSelectedConvo(thread.other_user_id)}
+                className="w-full flex items-center gap-3 bg-gray-900/60 border border-gray-800 rounded-2xl p-4 hover:border-red-500/40 transition-colors text-left"
+              >
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-black text-sm flex-shrink-0">
+                  {thread.other_name?.[0]?.toUpperCase() || "?"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-bold text-sm truncate">{thread.other_name || `User ${thread.other_user_id}`}</div>
+                  <div className="text-gray-500 text-xs truncate">{thread.last_message || "No messages yet"}</div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <div className="text-gray-600 text-xs">
+                    {thread.last_at ? new Date(thread.last_at).toLocaleDateString() : ""}
+                  </div>
+                  {thread.unread_count > 0 && (
+                    <div className="w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                      {thread.unread_count}
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )
+      ) : (
+        // Message view
+        <div className="flex flex-col" style={{ height: "60vh" }}>
+          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            {messages.length === 0 ? (
+              <div className="text-center py-8 text-gray-600 text-sm">No messages yet. Say hello!</div>
+            ) : (
+              messages.map((msg: any) => (
+                <div
+                  key={msg.id}
+                  className={`flex ${msg.sender_id === userId ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-xs px-4 py-2.5 rounded-2xl text-sm ${
+                      msg.sender_id === userId
+                        ? "bg-red-500 text-white rounded-br-sm"
+                        : "bg-gray-800 text-gray-200 rounded-bl-sm"
+                    }`}
+                  >
+                    {msg.content}
+                    <div className={`text-xs mt-1 ${
+                      msg.sender_id === userId ? "text-red-200" : "text-gray-500"
+                    }`}>
+                      {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          <div className="flex gap-2 mt-3 pt-3 border-t border-gray-800">
+            <input
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              placeholder="Type a message..."
+              className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500"
+            />
+            <button
+              onClick={handleSend}
+              disabled={sendMsg.isPending || !messageText.trim()}
+              className="bg-red-500 text-white font-bold px-4 py-3 rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // STRIPE PAYMENT MODAL — Real card input via Stripe Elements
 // ============================================================================
 function StripePaymentForm({
@@ -347,9 +752,8 @@ function TipModal({ creator, onClose }: { creator: any; onClose: () => void }) {
       const result = await createTipIntent.mutateAsync({
         creatorId: creator.creator_id,
         amountCents: Math.round(amount * 100),
-        message: message || undefined,
       });
-      setIntentData({ clientSecret: result.clientSecret!, intentId: result.intentId, amountCents: result.amountCents });
+      setIntentData({ clientSecret: result.clientSecret ?? "", intentId: String(result.tipId), amountCents: Math.round(amount * 100) });
       setStep("pay");
     } catch (e: any) {
       toast.error(e.message || "Failed to create tip");
@@ -359,7 +763,7 @@ function TipModal({ creator, onClose }: { creator: any; onClose: () => void }) {
   const handleTipSuccess = async () => {
     if (!intentData) return;
     try {
-      await confirmTip.mutateAsync({ intentId: intentData.intentId });
+      await confirmTip.mutateAsync({ tipId: Number(intentData.intentId) });
       toast.success(`Tip sent to ${creator.display_name}!`);
       onClose();
     } catch (e: any) {
@@ -445,6 +849,7 @@ function TipModal({ creator, onClose }: { creator: any; onClose: () => void }) {
 }
 
 function DiscoverTab() {
+  const [showFeed, setShowFeed] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedCreator, setSelectedCreator] = useState<any>(null);
@@ -470,6 +875,30 @@ function DiscoverTab() {
 
   return (
     <div className="space-y-6">
+      {/* Feed / Discover toggle */}
+      <div className="flex gap-2 p-1 bg-gray-900 rounded-2xl">
+        <button
+          onClick={() => setShowFeed(false)}
+          className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${
+            !showFeed ? "bg-red-500 text-white" : "text-gray-500 hover:text-gray-300"
+          }`}
+        >
+          Discover Creators
+        </button>
+        <button
+          onClick={() => setShowFeed(true)}
+          className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${
+            showFeed ? "bg-red-500 text-white" : "text-gray-500 hover:text-gray-300"
+          }`}
+        >
+          For You
+        </button>
+      </div>
+
+      {showFeed ? (
+        <ForYouFeed />
+      ) : (
+      <>
       {/* Hero */}
       <div className="relative rounded-3xl overflow-hidden bg-[#0a0a0a] from-red-950 via-gray-900 to-black border border-red-900/30 p-8">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(239,68,68,0.15),_transparent_60%)]" />
@@ -571,34 +1000,52 @@ function DiscoverTab() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
 
 // ============================================================================
-// CREATOR PROFILE VIEW
+// CREATOR PROFILE VIEW — with 3-tier subscription modal
 // ============================================================================
 function CreatorProfile({ creator, onBack }: { creator: any; onBack: () => void }) {
   const tier = TIER_CONFIG[creator.tier as keyof typeof TIER_CONFIG] || TIER_CONFIG.emerging;
-  const [subStep, setSubStep] = useState<"idle" | "pay" | "done">("idle");
+  const [subStep, setSubStep] = useState<"idle" | "tiers" | "pay" | "done">("idle");
+  const [selectedTier, setSelectedTier] = useState<{ id: number; name: string; price: number } | null>(null);
   const [subIntentData, setSubIntentData] = useState<{ clientSecret: string; intentId: string; amountCents: number; tierId: number } | null>(null);
   const [showTip, setShowTip] = useState(false);
   const subscribeIntent = trpc.vaultx.subscribeToCreator.useMutation();
   const confirmSub = trpc.vaultx.confirmSubscription.useMutation();
+  const { data: tiersData } = trpc.vaultx.getCreatorProfile.useQuery(
+    { creatorId: creator.creator_id },
+    { retry: false, enabled: !!creator.creator_id }
+  );
   const { data: contentData } = trpc.vaultx.getCreatorContent.useQuery(
     { creatorId: creator.creator_id, limit: 12, offset: 0 },
     { retry: false, enabled: !!creator.creator_id }
   );
-  const isSubscribed = contentData?.isSubscribed || subStep === "done";
+  const isSubscribed = (contentData as any)?.isSubscribed || subStep === "done";
 
-  const handleSubscribe = async () => {
+  // Build tiers: use DB tiers if available, else derive from creator's base price
+  const tiers = (tiersData as any)?.creator?.tiers?.length > 0
+    ? (tiersData as any).creator.tiers
+    : [
+        { id: 1, name: "Fan", price: creator.base_subscription_price || 9.99, description: "Access to all posts and DMs", perks: ["All posts unlocked", "DM access", "Subscriber badge"] },
+        { id: 2, name: "Super Fan", price: (creator.base_subscription_price || 9.99) * 2, description: "Everything in Fan + PPV discounts", perks: ["All Fan perks", "20% PPV discount", "Priority DM reply", "Exclusive content"] },
+        { id: 3, name: "VIP", price: (creator.base_subscription_price || 9.99) * 5, description: "Full access + custom requests", perks: ["All Super Fan perks", "1 custom request/month", "VIP badge", "First access to new content"] },
+      ];
+
+  const handleSubscribe = async (tierOverride?: { id: number; price: number }) => {
+    const t = tierOverride || selectedTier;
+    if (!t) { setSubStep("tiers"); return; }
     try {
-      const result = await subscribeIntent.mutateAsync({ creatorId: creator.creator_id });
+      const result = await subscribeIntent.mutateAsync({ creatorId: creator.creator_id, tier: (t.id === 1 ? "basic" : t.id === 2 ? "premium" : "vip") as any });
       setSubIntentData({
-        clientSecret: result.clientSecret!,
-        intentId: result.intentId,
-        amountCents: result.amount,
-        tierId: 0,
+        clientSecret: "",
+        intentId: String(result.subscriptionId),
+        amountCents: Math.round((t.price || 9.99) * 100),
+        tierId: t.id,
       });
       setSubStep("pay");
     } catch (e: any) {
@@ -615,9 +1062,7 @@ function CreatorProfile({ creator, onBack }: { creator: any; onBack: () => void 
     if (!subIntentData) return;
     try {
       await confirmSub.mutateAsync({
-        intentId: subIntentData.intentId,
-        creatorId: creator.creator_id,
-        tierId: subIntentData.tierId || 1,
+        subscriptionId: Number(subIntentData.intentId),
       });
       setSubStep("done");
       toast.success(`Subscribed to ${creator.display_name}!`);
@@ -678,14 +1123,58 @@ function CreatorProfile({ creator, onBack }: { creator: any; onBack: () => void 
             </div>
           </div>
 
+          {/* 3-Tier Subscription Modal */}
+          {subStep === "tiers" && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setSubStep("idle")}>
+              <div className="bg-gray-950 border border-red-900/40 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="text-center mb-5">
+                  <div className="text-xl font-black text-white">Subscribe to {creator.display_name}</div>
+                  <div className="text-gray-500 text-sm mt-1">Choose your tier</div>
+                </div>
+                <div className="space-y-3">
+                  {tiers.map((t: any, i: number) => (
+                    <button
+                      key={t.id}
+                      onClick={() => { setSelectedTier(t); handleSubscribe(t); }}
+                      disabled={subscribeIntent.isPending}
+                      className={`w-full text-left border rounded-2xl p-4 transition-all hover:border-red-500/60 ${
+                        i === 1 ? "border-red-500/50 bg-red-950/20" : "border-gray-800 bg-gray-900/60"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          {i === 1 && <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">POPULAR</span>}
+                          <span className="text-white font-bold">{t.name}</span>
+                        </div>
+                        <span className="text-red-400 font-black">${typeof t.price === "number" ? t.price.toFixed(2) : t.price}<span className="text-gray-600 font-normal text-xs">/mo</span></span>
+                      </div>
+                      <div className="text-gray-500 text-xs mb-2">{t.description || t.perks?.[0]}</div>
+                      <div className="space-y-1">
+                        {(t.perks || []).map((perk: string) => (
+                          <div key={perk} className="flex items-center gap-2 text-xs text-gray-400">
+                            <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+                            {perk}
+                          </div>
+                        ))}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setSubStep("idle")} className="w-full mt-3 py-2 text-gray-500 text-sm hover:text-gray-300">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-3">
             <button
-              onClick={handleSubscribe}
+              onClick={() => isSubscribed ? null : setSubStep("tiers")}
               disabled={subscribeIntent.isPending}
-              className="flex-1 bg-[#0a0a0a] from-red-500 to-orange-500 text-white font-bold py-3 rounded-xl text-sm hover:opacity-90 transition-opacity"
+              className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold py-3 rounded-xl text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {subscribeIntent.isPending ? "Loading..." : isSubscribed ? "✓ Subscribed" : `Subscribe $$${creator.base_subscription_price || "9.99"}/mo`}
+              {subscribeIntent.isPending ? "Loading..." : isSubscribed ? "✓ Subscribed" : `Subscribe from $${creator.base_subscription_price || "9.99"}/mo`}
             </button>
             {creator.tips_enabled && (
               <button
@@ -779,7 +1268,7 @@ function MyProfileTab({ userId }: { userId: number }) {
   });
   const [saved, setSaved] = useState(false);
 
-  const { data: profileData } = trpc.vaultx.getCreatorProfile.useQuery(undefined, { retry: false });
+  const { data: profileData } = trpc.vaultx.getMyCreatorProfile.useQuery(undefined, { retry: false });
 
   useEffect(() => {
     if (profileData && (profileData as any).profile) {
@@ -962,7 +1451,6 @@ function MyProfileTab({ userId }: { userId: number }) {
     </div>
   );
 }
-
 // ============================================================================
 // TELEGRAM TAB
 // ============================================================================
@@ -1484,7 +1972,7 @@ export function RealmToggle() {
 export default function VaultX() {
   const { user } = useAuth();
   const [verified, setVerified] = useState(false);
-  const [activeTab, setActiveTab] = useState<"discover" | "profile" | "telegram" | "xcom" | "earnings">("discover");
+  const [activeTab, setActiveTab] = useState<"discover" | "feed" | "messages" | "profile" | "telegram" | "xcom" | "earnings">("discover");
 
   const { data: realmData, isLoading } = trpc.vaultx.getRealmStatus.useQuery(undefined, {
     retry: false,
@@ -1525,6 +2013,8 @@ export default function VaultX() {
 
   const tabs = [
     { id: "discover", label: "Discover", icon: Flame },
+    { id: "feed", label: "Feed", icon: Layers },
+    { id: "messages", label: "Messages", icon: Inbox },
     { id: "profile", label: "My Profile", icon: Settings },
     { id: "telegram", label: "Telegram", icon: Send },
     { id: "xcom", label: "X.com", icon: Twitter },
@@ -1574,6 +2064,8 @@ export default function VaultX() {
       {/* Content */}
       <div className="max-w-2xl mx-auto px-4 py-6">
         {activeTab === "discover" && <DiscoverTab />}
+        {activeTab === "feed" && <ContentFeedTab userId={user.id} />}
+        {activeTab === "messages" && <MessagingTab userId={user.id} />}
         {activeTab === "profile" && <MyProfileTab userId={user.id} />}
         {activeTab === "telegram" && <TelegramTab userId={user.id} />}
         {activeTab === "xcom" && <XComTab userId={user.id} />}

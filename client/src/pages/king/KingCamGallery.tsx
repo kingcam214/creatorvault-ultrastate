@@ -7,7 +7,7 @@ import { Image, ChevronLeft, Video, Download, Send, RefreshCw, Film, Filter } fr
 export function KingCamGallery() {
   const { toast } = useToast();
   const [filter, setFilter] = useState<"all"|"videos"|"images">("all");
-  const { data: videosData, isLoading } = trpc.cloneEmpire.listCloneVideos.useQuery({ limit: 100, offset: 0 });
+  const { data: videosData, isLoading } = trpc.cloneEmpire.listCloneVideos.useQuery(undefined);
 
   const videos = videosData?.videos || [];
   const filtered = filter === "images" ? [] : filter === "videos" ? videos : videos;

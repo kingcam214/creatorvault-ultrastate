@@ -21,9 +21,9 @@ export function ScriptDirectorPage() {
   const [generatedScript, setGeneratedScript] = useState("");
   const [scenes, setScenes] = useState<any[]>([]);
 
-  const { data: savedScripts, refetch } = trpc.kingcamScriptWriter?.getScripts?.useQuery?.() || { data: null, refetch: ()=>{} };
+  const { data: savedScripts, refetch } = (trpc.kingcamScriptWriter as any)?.getScripts?.useQuery?.() || { data: null, refetch: ()=>{} };
 
-  const generate = trpc.kingcamScriptWriter?.generateScript?.useMutation?.({
+  const generate = (trpc.kingcamScriptWriter as any)?.generateScript?.useMutation?.({
     onSuccess: (d: any) => {
       setGeneratedScript(d.script||"");
       if(d.scenes) setScenes(d.scenes);

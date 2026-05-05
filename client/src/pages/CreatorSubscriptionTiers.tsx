@@ -8,8 +8,8 @@ export default function CreatorSubscriptionTiers() {
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
 
-  const { data: tiers, refetch } = trpc.subscriptionTiers?.getMyTiers?.useQuery?.(undefined, { retry: false }) || { data: [], refetch: () => {} };
-  const createTier = trpc.subscriptionTiers?.createTier?.useMutation?.({ onSuccess: () => { refetch(); setShowCreate(false); } }) || { mutate: () => {}, isPending: false };
+  const { data: tiers, refetch } = (trpc as any).subscriptionTiers?.getMyTiers?.useQuery?.(undefined, { retry: false }) || { data: [], refetch: () => {} };
+  const createTier = (trpc as any).subscriptionTiers?.createTier?.useMutation?.({ onSuccess: () => { refetch(); setShowCreate(false); } }) || { mutate: () => {}, isPending: false };
 
   const defaultTiers = [
     { name: "Fan", price: 4.99, icon: Star, color: "from-blue-500 to-blue-600", features: ["Exclusive posts", "Early access", "Fan badge"] },

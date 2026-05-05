@@ -71,10 +71,10 @@ export function KingCamEngine() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const { data: videosData, refetch: refetchVideos } = trpc.cloneEmpire.listCloneVideos.useQuery({ limit: 50, offset: 0 });
+  const { data: videosData, refetch: refetchVideos } = trpc.cloneEmpire.listCloneVideos.useQuery(undefined);
 
   // Poll for rendering status
-  const { data: pollingData } = trpc.cloneEmpire.getCloneVideo.useQuery(
+  const { data: pollingData } = (trpc.cloneEmpire as any).getCloneVideo.useQuery(
     { videoId: pollingId! },
     { enabled: !!pollingId, refetchInterval: pollingId ? 3000 : false }
   );
@@ -199,7 +199,7 @@ export function KingCamEngine() {
           {/* Right Panel — Script / Prompt Input */}
           <div style={{ display: "flex", flexDirection: "column", background: "#080810" }}>
             <div style={{ padding: "12px 20px", borderBottom: "1px solid #1a1a2e", background: "#09090f", display: "flex", alignItems: "center", gap: 8 }}>
-              <selectedOutput.icon size={14} color={selectedOutput?.color} />
+              {selectedOutput && (() => { const Icon = selectedOutput.icon; return <Icon size={14} color={selectedOutput.color} />; })()}
               <span style={{ fontSize: 13, color: "#888" }}>{selectedOutput?.label} — {selectedOutput?.desc}</span>
               <Link href="/king/script-writer" style={{ marginLeft: "auto" }}>
                 <button style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid #333", background: "none", color: "#888", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>

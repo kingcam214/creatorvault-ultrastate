@@ -5,7 +5,7 @@ import { Play, TrendingUp, DollarSign, Users, Video, Star, ArrowRight, Zap } fro
 
 export default function CreatorHome() {
   const { user } = useAuth();
-  const { data: stats } = trpc.vaultAnalytics.getOverview.useQuery(undefined, { retry: false });
+  const { data: stats } = (trpc.vaultAnalytics as any).getOverview?.useQuery(undefined, { retry: false });
 
   const tools = [
     { label: "VaultX Studio", href: "/creator/video-studio", icon: "🎬", desc: "Edit & monetize videos" },

@@ -14,7 +14,7 @@ function StatCard({ icon: Icon, label, value, sub, color }: any) {
 }
 
 export function VaultAnalytics() {
-  const { data: analytics, isLoading, refetch } = trpc.vaultAnalytics.getAnalytics?.useQuery?.() || { data: null, isLoading: false, refetch: ()=>{} };
+  const { data: analytics, isLoading, refetch } = (trpc as any).vaultAnalytics?.getAnalytics?.useQuery?.() || { data: null, isLoading: false, refetch: ()=>{} };
 
   return (
     <div style={{minHeight:"100vh",background:"#080810",color:"white",fontFamily:"system-ui,sans-serif"}}>

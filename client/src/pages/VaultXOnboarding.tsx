@@ -16,22 +16,29 @@ const niches = ["lifestyle","fitness","music","comedy","education","cooking","tr
 export default function VaultXOnboarding() {
   const [, navigate] = useLocation();
   const [step, setStep] = useState(1);
-  const [profile, setProfile] = useState({ displayName: "", bio: "", niche: "lifestyle" });
-  const [channel, setChannel] = useState({ handle: "", channelId: "" });
-  const [monetization, setMonetization] = useState({ ppvEnabled: true, subscriptionEnabled: true, tipsEnabled: true, defaultPpvPrice: "9.99", subscriptionPrice: "14.99" });
+  const [selectedNiche, setSelectedNiche] = useState("");
+  const [profile, setProfile] = useState({ displayName: "", bio: "" });
+  const [channel, setChannel] = useState({ channelId: "", channelName: "" });
+  const [monetization, setMonetization] = useState({
+    ppvEnabled: true,
+    subscriptionEnabled: true,
+    tipsEnabled: true,
+    defaultPpvPrice: "9.99",
+    subscriptionPrice: "14.99",
+  });
 
-  const updateProfile = trpc.vaultx?.updateCreatorProfile?.useMutation?.({ onSuccess: () => {} }) || { mutate: () => {}, isPending: false };
-  const linkChannel = trpc.vaultx?.linkChannel?.useMutation?.({ onSuccess: () => {} }) || { mutate: () => {}, isPending: false };
+  const updateProfile = trpc.vaultx.updateCreatorProfile.useMutation({ onSuccess: () => {} });
+  const linkChannel = trpc.vaultx.linkChannel.useMutation({ onSuccess: () => {} });
 
   const handleNext = () => {
     if (step === 2 && profile.displayName) {
-      updateProfile.mutate?.({ displayName: profile.displayName, bio: profile.bio, niche: profile.niche });
+      updateProfile.mutate({ displayName: profile.displayName, bio: profile.bio, subscriptionPrice: 9.99 });
     }
     if (step === 3 && channel.channelId) {
-      linkChannel.mutate?.({ channelId: channel.channelId, channelHandle: channel.handle });
+      linkChannel.mutate({ channelId: channel.channelId, channelName: channel.channelName || channel.channelId });
     }
     if (step < 5) setStep(s => s + 1);
-    else navigate("/vaultx/studio");
+    else navigate("/vault-x/studio");
   };
 
   return (
@@ -47,14 +54,13 @@ export default function VaultXOnboarding() {
             </div>
           ))}
         </div>
+        <div className="text-center mt-4">
+          <h1 className="text-2xl font-black">{STEPS[step - 1]?.title}</h1>
+          <p className="text-gray-400 text-sm mt-1">{STEPS[step - 1]?.subtitle}</p>
+        </div>
       </div>
 
-      <div className="w-full max-w-2xl bg-white/5 border border-white/10 rounded-2xl p-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-yellow-400">{STEPS[step - 1].title}</h1>
-          <p className="text-gray-400 mt-1">{STEPS[step - 1].subtitle}</p>
-        </div>
-
+      <div className="w-full max-w-2xl bg-white/5 border border-white/10 rounded-3xl p-8">
         {step === 1 && (
           <div className="space-y-6">
             <div className="grid grid-cols-3 gap-4">
@@ -72,7 +78,7 @@ export default function VaultXOnboarding() {
             </div>
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
               <p className="text-yellow-400 font-semibold mb-1 flex items-center gap-2"><Star className="w-4 h-4" /> Why VaultX?</p>
-              <p className="text-gray-300 text-sm">VaultX is the only platform built specifically for Caribbean creators. Upload once, monetize everywhere — Telegram, web, and mobile. Keep 85% of every dollar you earn.</p>
+              <p className="text-gray-300 text-sm">Keep 85% of every dollar you earn. Upload once, monetize everywhere.</p>
             </div>
           </div>
         )}
@@ -81,7 +87,7 @@ export default function VaultXOnboarding() {
           <div className="space-y-4">
             <div>
               <label className="text-sm text-gray-400 mb-1 block">Display Name *</label>
-              <input value={profile.displayName} onChange={e => setProfile(p => ({ ...p, displayName: e.target.value }))} placeholder="e.g., KingCam Official" className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500" />
+              <input value={profile.displayName} onChange={e => setProfile(p => ({ ...p, displayName: e.target.value }))} placeholder="Your creator name" className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500" />
             </div>
             <div>
               <label className="text-sm text-gray-400 mb-1 block">Bio</label>
@@ -91,7 +97,7 @@ export default function VaultXOnboarding() {
               <label className="text-sm text-gray-400 mb-1 block">Content Niche</label>
               <div className="flex flex-wrap gap-2">
                 {niches.map(n => (
-                  <button key={n} onClick={() => setProfile(p => ({ ...p, niche: n }))} className={`px-3 py-1.5 rounded-full text-sm capitalize transition-all ${profile.niche === n ? "bg-yellow-500 text-black font-bold" : "bg-white/10 text-gray-400 hover:bg-white/20"}`}>{n}</button>
+                  <button key={n} onClick={() => setSelectedNiche(n)} className={`px-3 py-1.5 rounded-full text-xs font-semibold capitalize transition-colors ${selectedNiche === n ? "bg-yellow-500 text-black" : "bg-white/10 text-gray-400 hover:bg-white/20"}`}>{n}</button>
                 ))}
               </div>
             </div>
@@ -100,22 +106,13 @@ export default function VaultXOnboarding() {
 
         {step === 3 && (
           <div className="space-y-4">
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-sm text-blue-300">
-              <p className="font-semibold mb-1">How to connect your Telegram channel:</p>
-              <ol className="list-decimal list-inside space-y-1 text-gray-300">
-                <li>Open your Telegram channel settings</li>
-                <li>Add <span className="text-yellow-400 font-mono">@CreatorVaultBot</span> as an admin</li>
-                <li>Copy your channel ID (starts with -100...)</li>
-                <li>Paste it below</li>
-              </ol>
-            </div>
-            <div>
-              <label className="text-sm text-gray-400 mb-1 block">Channel Handle (optional)</label>
-              <input value={channel.handle} onChange={e => setChannel(c => ({ ...c, handle: e.target.value }))} placeholder="@yourchannel" className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500" />
-            </div>
             <div>
               <label className="text-sm text-gray-400 mb-1 block">Channel ID</label>
-              <input value={channel.channelId} onChange={e => setChannel(c => ({ ...c, channelId: e.target.value }))} placeholder="-1001234567890" className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500" />
+              <input value={channel.channelId} onChange={e => setChannel(c => ({ ...c, channelId: e.target.value }))} placeholder="-1001234567890 or @yourchannel" className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500" />
+            </div>
+            <div>
+              <label className="text-sm text-gray-400 mb-1 block">Channel Name</label>
+              <input value={channel.channelName} onChange={e => setChannel(c => ({ ...c, channelName: e.target.value }))} placeholder="My VaultX Channel" className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500" />
             </div>
             <button onClick={() => setStep(s => s + 1)} className="text-sm text-gray-500 underline">Skip for now</button>
           </div>
@@ -123,36 +120,24 @@ export default function VaultXOnboarding() {
 
         {step === 4 && (
           <div className="space-y-4">
-            <div className="space-y-3">
-              {[
-                { key: "ppvEnabled" as const, label: "Pay-Per-View", desc: "Charge fans to unlock individual videos", icon: Lock },
-                { key: "subscriptionEnabled" as const, label: "Subscriptions", desc: "Monthly recurring fan memberships", icon: Star },
-                { key: "tipsEnabled" as const, label: "Tips", desc: "Accept direct fan support payments", icon: DollarSign },
-              ].map(opt => (
-                <div key={opt.key} onClick={() => setMonetization(m => ({ ...m, [opt.key]: !m[opt.key] }))} className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${monetization[opt.key] ? "bg-yellow-500/10 border-yellow-500/30" : "bg-white/5 border-white/10"}`}>
-                  <div className="flex items-center gap-3">
-                    <opt.icon className={`w-5 h-5 ${monetization[opt.key] ? "text-yellow-400" : "text-gray-500"}`} />
-                    <div>
-                      <p className="font-semibold text-sm">{opt.label}</p>
-                      <p className="text-gray-500 text-xs">{opt.desc}</p>
-                    </div>
-                  </div>
-                  <div className={`w-10 h-6 rounded-full transition-all relative ${monetization[opt.key] ? "bg-yellow-500" : "bg-white/20"}`}>
-                    <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${monetization[opt.key] ? "left-5" : "left-1"}`} />
+            {[
+              { key: "ppvEnabled" as const, label: "Pay-Per-View", desc: "Charge fans to unlock individual videos", icon: Lock },
+              { key: "subscriptionEnabled" as const, label: "Subscriptions", desc: "Monthly recurring fan memberships", icon: Star },
+              { key: "tipsEnabled" as const, label: "Tips", desc: "Accept direct fan support payments", icon: DollarSign },
+            ].map(opt => (
+              <div key={opt.key} onClick={() => setMonetization(m => ({ ...m, [opt.key]: !m[opt.key] }))} className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${monetization[opt.key] ? "bg-yellow-500/10 border-yellow-500/30" : "bg-white/5 border-white/10"}`}>
+                <div className="flex items-center gap-3">
+                  <opt.icon className={`w-5 h-5 ${monetization[opt.key] ? "text-yellow-400" : "text-gray-500"}`} />
+                  <div>
+                    <p className="font-semibold text-sm">{opt.label}</p>
+                    <p className="text-gray-500 text-xs">{opt.desc}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm text-gray-400 mb-1 block">Default PPV Price ($)</label>
-                <input value={monetization.defaultPpvPrice} onChange={e => setMonetization(m => ({ ...m, defaultPpvPrice: e.target.value }))} type="number" className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-yellow-500" />
+                <div className={`w-10 h-6 rounded-full transition-all relative ${monetization[opt.key] ? "bg-yellow-500" : "bg-white/20"}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${monetization[opt.key] ? "left-5" : "left-1"}`} />
+                </div>
               </div>
-              <div>
-                <label className="text-sm text-gray-400 mb-1 block">Subscription Price ($/mo)</label>
-                <input value={monetization.subscriptionPrice} onChange={e => setMonetization(m => ({ ...m, subscriptionPrice: e.target.value }))} type="number" className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-yellow-500" />
-              </div>
-            </div>
+            ))}
           </div>
         )}
 
@@ -163,15 +148,7 @@ export default function VaultXOnboarding() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-yellow-400">Your VaultX is Live!</h2>
-              <p className="text-gray-400 mt-2">You're all set to start monetizing your content. Upload your first video to the studio and start earning.</p>
-            </div>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              {[{ label: "85%", desc: "Revenue share" }, { label: "0%", desc: "Setup fees" }, { label: "24h", desc: "Payout speed" }].map(s => (
-                <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
-                  <p className="text-2xl font-bold text-yellow-400">{s.label}</p>
-                  <p className="text-gray-400 text-sm">{s.desc}</p>
-                </div>
-              ))}
+              <p className="text-gray-400 mt-2">Start uploading content and earning from your fans.</p>
             </div>
           </div>
         )}

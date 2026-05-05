@@ -7,9 +7,9 @@ export default function VaultXVideoEditorProjects() {
   const [, navigate] = useLocation();
   const [filter, setFilter] = useState("all");
 
-  const { data: projects, refetch } = trpc.vaultx?.getCreatorContent?.useQuery?.(undefined, { retry: false }) || { data: [], refetch: () => {} };
+  const { data: projects, refetch } = trpc.vaultx.getMyEditorProjects.useQuery(undefined, { retry: false });
 
-  const filtered = (projects || []).filter((p: any) => filter === "all" || p.unlockType === filter);
+  const filtered = ((projects as any)?.projects || []).filter((p: any) => filter === "all" || p.unlockType === filter);
 
   return (
     <div className="min-h-screen bg-black text-white p-6">
@@ -32,10 +32,10 @@ export default function VaultXVideoEditorProjects() {
         {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           {[
-            { label: "Total Projects", value: projects?.length || 0, icon: Film, color: "text-yellow-400" },
-            { label: "PPV Content", value: projects?.filter((p: any) => p.unlockType === "ppv").length || 0, icon: Lock, color: "text-red-400" },
-            { label: "Free Content", value: projects?.filter((p: any) => p.unlockType === "free").length || 0, icon: Unlock, color: "text-green-400" },
-            { label: "Total Revenue", value: `$${(projects?.reduce((acc: number, p: any) => acc + (p.priceCents || 0) / 100, 0) || 0).toFixed(2)}`, icon: DollarSign, color: "text-green-400" },
+            { label: "Total Projects", value: ((projects as any)?.projects?.length ?? 0) || 0, icon: Film, color: "text-yellow-400" },
+            { label: "PPV Content", value: ((projects as any)?.projects ?? []).filter((p: any) => p.unlockType === "ppv").length || 0, icon: Lock, color: "text-red-400" },
+            { label: "Free Content", value: ((projects as any)?.projects ?? []).filter((p: any) => p.unlockType === "free").length || 0, icon: Unlock, color: "text-green-400" },
+            { label: "Total Revenue", value: `$${(((projects as any)?.projects ?? []).reduce((acc: number, p: any) => acc + (p.priceCents || 0) / 100, 0) || 0).toFixed(2)}`, icon: DollarSign, color: "text-green-400" },
           ].map(s => (
             <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
               <s.icon className={`w-5 h-5 ${s.color} mb-2`} />

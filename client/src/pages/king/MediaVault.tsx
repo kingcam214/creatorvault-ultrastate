@@ -13,9 +13,9 @@ export function MediaVault() {
   const [search, setSearch] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const { data: media, isLoading, refetch } = trpc.kingcamImport?.getImportedMedia?.useQuery?.() || { data: null, isLoading: false, refetch: ()=>{} };
+  const { data: media, isLoading, refetch } = (trpc.kingcamImport as any)?.getImportedMedia?.useQuery?.() || { data: null, isLoading: false, refetch: ()=>{} };
 
-  const importMedia = trpc.kingcamImport?.importMedia?.useMutation?.({
+  const importMedia = (trpc.kingcamImport as any)?.importMedia?.useMutation?.({
     onSuccess: () => { toast({title:"Media imported"}); refetch(); },
     onError: (e: any) => toast({title:"Error",description:e.message,variant:"destructive"}),
   }) || { mutate: ()=>{}, isPending: false };

@@ -18,9 +18,9 @@ export function MusicAI() {
   const [duration, setDuration] = useState(30);
   const [playing, setPlaying] = useState<string|null>(null);
 
-  const { data: tracks, refetch } = trpc.musicAI?.getTracks?.useQuery?.() || { data: null, refetch: ()=>{} };
+  const { data: tracks, refetch } = (trpc as any).musicAI?.getTracks?.useQuery?.() || { data: null, refetch: ()=>{} };
 
-  const generate = trpc.musicAI?.generateTrack?.useMutation?.({
+  const generate = (trpc as any).musicAI?.generateTrack?.useMutation?.({
     onSuccess: () => { toast({title:"Track generation started"}); refetch(); },
     onError: (e: any) => toast({title:"Error",description:e.message,variant:"destructive"}),
   }) || { mutate: ()=>{}, isPending: false };

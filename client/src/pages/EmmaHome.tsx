@@ -27,10 +27,10 @@ export default function EmmaHome() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
-            { label: "Network Size", value: stats?.networkSize ?? "—", icon: Users, color: "text-emerald-400" },
-            { label: "Active Agents", value: stats?.activeAgents ?? "49", icon: Zap, color: "text-yellow-400" },
-            { label: "Monthly Revenue", value: stats?.monthlyRevenue ? `$${stats.monthlyRevenue}` : "—", icon: DollarSign, color: "text-green-400" },
-            { label: "Success Rate", value: stats?.successRate ? `${stats.successRate}%` : "—", icon: Star, color: "text-purple-400" },
+            { label: "Network Size", value: stats?.total ?? "—", icon: Users, color: "text-emerald-400" },
+            { label: "Active Agents", value: stats?.total ?? "49", icon: Zap, color: "text-yellow-400" },
+            { label: "Monthly Revenue", value: stats?.total ? `$${(stats as any).monthlyRevenue ?? 0}` : "—", icon: DollarSign, color: "text-green-400" },
+            { label: "Success Rate", value: stats?.total ? `${(stats as any).successRate ?? 0}%` : "—", icon: Star, color: "text-purple-400" },
           ].map(s => (
             <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
               <s.icon className={`w-5 h-5 ${s.color} mb-2`} />

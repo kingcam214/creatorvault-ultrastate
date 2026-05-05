@@ -37,9 +37,9 @@ export default function CloneRenderStudio() {
     if (!script && mode !== "image-to-video") return;
     setRendering(true);
     setRenderedUrl(null);
-    if (mode === "talking-head") generateTalkingHead.mutate?.({ script, voiceStyle, duration: 60 });
-    else if (mode === "full-body") generateFullBody.mutate?.({ script, voiceStyle, style: "cinematic" });
-    else if (mode === "image-to-video") generateImage.mutate?.({ prompt: script || "animate this image", style: "cinematic" });
+    if (mode === "talking-head") generateTalkingHead.mutate?.({ script });
+    else if (mode === "full-body") generateFullBody.mutate?.({ script, style: "studio" });
+    else if (mode === "image-to-video") generateImage.mutate?.({ prompt: script || "animate this image", style: "studio" });
   };
 
   const isPending = generateTalkingHead.isPending || generateFullBody.isPending || generateImage.isPending || rendering;
@@ -101,7 +101,7 @@ export default function CloneRenderStudio() {
                 <label className="text-sm text-gray-400 mb-2 block font-medium">Voice Style</label>
                 <div className="flex gap-2">
                   {["natural","energetic","calm","authoritative"].map(v => (
-                    <button key={v} onClick={() => setVoiceStyle(v)} className={`flex-1 py-2 rounded-lg text-sm capitalize transition-all ${voiceStyle === v ? "bg-purple-500 text-white font-bold" : "bg-white/10 text-gray-400 hover:bg-white/20"}`}>{v}</button>
+                    <button key={v} onClick={() => (setVoiceStyle as (v: string) => void)(v)} className={`flex-1 py-2 rounded-lg text-sm capitalize transition-all ${voiceStyle === v ? "bg-purple-500 text-white font-bold" : "bg-white/10 text-gray-400 hover:bg-white/20"}`}>{v}</button>
                   ))}
                 </div>
               </div>
@@ -163,9 +163,9 @@ export default function CloneRenderStudio() {
             {/* History */}
             <div>
               <h3 className="font-semibold text-gray-300 mb-3">Recent Renders</h3>
-              {history && history.length > 0 ? (
+              {history && (history as any)?.videos?.length > 0 ? (
                 <div className="space-y-2">
-                  {(history as any[]).slice(0, 5).map((item: any, i: number) => (
+                  {((history as any)?.videos ?? []).slice(0, 5).map((item: any, i: number) => (
                     <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
                         <Film className="w-5 h-5 text-gray-500" />

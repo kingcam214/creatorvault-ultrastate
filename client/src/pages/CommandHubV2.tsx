@@ -5,7 +5,7 @@ import { Link } from "wouter";
 
 export default function CommandHubV2() {
   const [activeTab, setActiveTab] = useState("overview");
-  const { data: status } = trpc.commandHubV2?.getStatus?.useQuery?.(undefined, { retry: false }) || { data: null };
+  const { data: status } = (trpc.commandHubV2 as any)?.getStatus?.useQuery?.(undefined, { retry: false }) || { data: null };
 
   const commands = [
     { id: "empire-launch", label: "Launch Empire Sequence", icon: "🚀", desc: "Activate all 49 AI agents", status: "ready" },
