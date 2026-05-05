@@ -16,6 +16,7 @@ import {
 } from "./VisualDNAComposition";
 import { EpisodeTrailerComposition, type EpisodeTrailerProps } from "./compositions/EpisodeTrailerComposition";
 import { EmpireMapSnapshotComposition, type EmpireMapSnapshotProps } from "./compositions/EmpireMapSnapshotComposition";
+import { AutomatedDirectorComposition, type AutomatedDirectorProps } from "./compositions/AutomatedDirectorComposition";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = React.ComponentType<any>;
@@ -100,6 +101,10 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="VisualDNAThumbnail" component={VisualDNAThumbnail as AnyComponent} durationInFrames={90} fps={30} width={1280} height={720} defaultProps={{ ...defaultVisualDNA, headline: "EMPIRE", subline: "CREATORVAULT", mode: "thumbnail" }} />
       <Composition id="VisualDNABroll" component={VisualDNABroll as AnyComponent} durationInFrames={150} fps={30} width={1920} height={1080} defaultProps={{ ...defaultVisualDNA, headline: "CREATORVAULT", mode: "broll" }} />
       <Composition id="VisualDNATitleCard" component={VisualDNATitleCard as AnyComponent} durationInFrames={210} fps={30} width={1920} height={1080} defaultProps={{ ...defaultVisualDNA, headline: "THE LION'S DEN", subline: "Season 1", tagline: "CreatorVault Studios", accentColor: "#D4AF37", mode: "title_card" }} />
+
+      {/* ── AUTOMATED DIRECTOR COMPOSITIONS ── */}
+      <Composition id="AutomatedDirectorPortrait" component={AutomatedDirectorComposition as AnyComponent} durationInFrames={150} fps={30} width={1080} height={1920} defaultProps={{ sourceVideoUrl: "", hookOverlayUrl: "", ctaOverlayUrl: "", hookText: "EXCLUSIVE CONTENT", ctaText: "SUBSCRIBE NOW", creatorName: "Creator", platform: "onlyfans", aiPacingApplied: true, scenesDetected: 3 } as AutomatedDirectorProps} />
+      <Composition id="AutomatedDirectorLandscape" component={AutomatedDirectorComposition as AnyComponent} durationInFrames={150} fps={30} width={1920} height={1080} defaultProps={{ sourceVideoUrl: "", hookOverlayUrl: "", ctaOverlayUrl: "", hookText: "EXCLUSIVE CONTENT", ctaText: "SUBSCRIBE NOW", creatorName: "Creator", platform: "onlyfans", aiPacingApplied: true, scenesDetected: 3 } as AutomatedDirectorProps} />
 
       {/* ── 3D EMPIRE COMPOSITIONS ── */}
       <Composition id="EpisodeTrailer" component={EpisodeTrailerComposition as AnyComponent} durationInFrames={450} fps={30} width={1080} height={1920} defaultProps={defaultEpisodeTrailer} />
