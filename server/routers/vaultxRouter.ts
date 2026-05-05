@@ -14,6 +14,7 @@ import { randomUUID } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { execSync, spawn } from "child_process";
+import { runAutomatedDirector } from "../services/automatedDirectorService";
 
 const OWNER_IDS = [6, 33];
 const PLATFORM_FEE = 0.15;
@@ -1747,6 +1748,76 @@ export const vaultxRouter = router({
       }
       const updated = await rawQuery("SELECT * FROM vaultx_creator_profiles WHERE creator_id = ? LIMIT 1", [ctx.user.id]);
       return { profile: updated[0] };
+    }),
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROCEDURE 48 — automatedDirectorExport
+  // The Automated Director — every export gets Desire-Grade LUT, AI pacing,
+  // and Viral-Clip-Pack template. This is not optional. This is the standard.
+  // ═══════════════════════════════════════════════════════════════════════════
+  automatedDirectorExport: protectedProcedure
+    .input(z.object({
+      sourceUrl: z.string(),
+      platform: z.enum(["onlyfans", "fansly", "tiktok", "instagram_reel", "master"]).default("master"),
+      hookText: z.string().max(80).optional(),
+      ctaText: z.string().max(80).optional(),
+      enableAIPacing: z.boolean().default(true),
+      projectId: z.number().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const creatorId = await getCreatorId(ctx.user.id);
+      const cid = creatorId || ctx.user.id;
+      const dir = await ensureUploadDir(cid);
+
+      // Resolve source path — relative URL → absolute file path
+      let sourcePath = input.sourceUrl;
+      if (sourcePath.startsWith("/uploads/") || sourcePath.startsWith("/videos/")) {
+        sourcePath = `/root/creatorvault/dist/public${sourcePath}`;
+      }
+      if (!fs.existsSync(sourcePath) && !sourcePath.startsWith("http")) {
+        throw new TRPCError({ code: "NOT_FOUND", message: `Source video not found: ${sourcePath}` });
+      }
+
+      const profileRows = await rawQuery(
+        "SELECT display_name FROM vaultx_creator_profiles WHERE creator_id = ? LIMIT 1",
+        [cid]
+      );
+      const creatorName = profileRows[0]?.display_name || "CREATORVAULT";
+
+      const result = await runAutomatedDirector({
+        sourceUrl: sourcePath,
+        outputDir: dir,
+        creatorName,
+        hookText: input.hookText,
+        ctaText: input.ctaText,
+        platform: input.platform,
+        enableAIPacing: input.enableAIPacing,
+        enableDesireGrade: true,
+        enableTemplate: true,
+      });
+
+      if (input.projectId) {
+        await rawExec(
+          "UPDATE vaultx_editor_projects SET output_url = ?, status = 'completed', updated_at = NOW() WHERE id = ? AND creator_id = ?",
+          [result.outputUrl, input.projectId, cid]
+        );
+      }
+
+      await rawExec(
+        `INSERT INTO vaultx_editor_exports (project_id, creator_id, export_format, export_preset, output_url, file_size_bytes, processing_time_seconds, status)
+         VALUES (?, ?, 'mp4_hd', ?, ?, ?, ?, 'completed')`,
+        [input.projectId || null, cid, input.platform, result.outputUrl, result.fileSizeBytes, Math.round(result.processingTimeMs / 1000)]
+      );
+
+      return {
+        outputUrl: result.outputUrl,
+        fileSizeBytes: result.fileSizeBytes,
+        processingTimeMs: result.processingTimeMs,
+        processingSteps: result.processingSteps,
+        scenesDetected: result.scenesDetected,
+        duration: result.duration,
+        success: true,
+      };
     }),
 
 });

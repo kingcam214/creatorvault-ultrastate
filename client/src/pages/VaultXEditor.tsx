@@ -131,6 +131,7 @@ export default function VaultXEditor() {
   const saveTimelineMut = trpc.vaultx.saveProjectTimeline.useMutation();
   const processEditMut = trpc.vaultx.processVideoEdit.useMutation();
   const exportMut = trpc.vaultx.exportProject.useMutation();
+  const directorMut = trpc.vaultx.automatedDirectorExport.useMutation();
   const genCensoredMut = trpc.vaultx.generateCensoredVersion.useMutation();
   const genThumbMut = trpc.vaultx.generateThumbnail.useMutation();
 
@@ -163,7 +164,11 @@ export default function VaultXEditor() {
   const [activePanel, setActivePanel] = useState<"properties" | "effects" | "export">("properties");
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<string>("onlyfans");
-  const [exportResult, setExportResult] = useState<{ downloadUrl: string; processingTime: number } | null>(null);
+  const [exportResult, setExportResult] = useState<{ downloadUrl: string; processingTime: number; steps?: string[] } | null>(null);
+  const [hookText, setHookText] = useState("You need to see this");
+  const [ctaText, setCtaText] = useState("Subscribe for full access");
+  const [enableAIPacing, setEnableAIPacing] = useState(true);
+  const [directorMode, setDirectorMode] = useState(true);
   const [processingResult, setProcessingResult] = useState<{ outputUrl: string; processingTime: number } | null>(null);
 
   // Properties for selected clip
@@ -257,13 +262,24 @@ export default function VaultXEditor() {
   const handleExport = async () => {
     if (!projectId) { toast.error("Save and process project first"); return; }
     try {
-      const result = await exportMut.mutateAsync({
-        projectId,
-        exportFormat: "mp4_hd",
-        exportPreset: selectedPreset as any,
-      });
-      setExportResult({ downloadUrl: result.outputUrl, processingTime: result.processingTimeSeconds * 1000 });
-      toast.success("Export complete!");
+      if (directorMode) {
+        const proj = myProjectsQ.data?.projects?.find((p: any) => p.id === projectId) as any;
+        const sourceUrl = proj?.output_url || proj?.outputUrl || "/videos/kingcam-hero-cam.mp4";
+        const result = await directorMut.mutateAsync({
+          sourceUrl,
+          platform: selectedPreset as any,
+          hookText,
+          ctaText,
+          enableAIPacing,
+          projectId,
+        });
+        setExportResult({ downloadUrl: result.outputUrl, processingTime: result.processingTimeMs, steps: result.processingSteps });
+        toast.success("✨ Automated Director export complete!");
+      } else {
+        const result = await exportMut.mutateAsync({ projectId, exportFormat: "mp4_hd", exportPreset: selectedPreset as any });
+        setExportResult({ downloadUrl: result.outputUrl, processingTime: result.processingTimeSeconds * 1000 });
+        toast.success("Export complete!");
+      }
     } catch (e: any) { toast.error(e.message); }
   };
 
@@ -642,7 +658,62 @@ export default function VaultXEditor() {
 
             {activePanel === "export" && (
               <div className="flex flex-col gap-3">
-                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Export Preset</p>
+                {/* Automated Director toggle */}
+                <div
+                  className="flex items-center justify-between p-2.5 rounded-xl cursor-pointer"
+                  style={{ background: directorMode ? "rgba(139,92,246,0.12)" : "rgba(255,255,255,0.03)", border: `1px solid ${directorMode ? "rgba(139,92,246,0.4)" : "rgba(255,255,255,0.06)"}` }}
+                  onClick={() => setDirectorMode(d => !d)}
+                >
+                  <div>
+                    <p className="text-xs font-black" style={{ color: directorMode ? "#A78BFA" : "#6B7280" }}>✨ Automated Director</p>
+                    <p className="text-[9px]" style={{ color: "#4B5563" }}>Desire-Grade + AI Pacing + Viral Template</p>
+                  </div>
+                  <div className="w-8 h-4 rounded-full relative flex-shrink-0" style={{ background: directorMode ? "#7C3AED" : "#374151" }}>
+                    <div className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all" style={{ left: directorMode ? "18px" : "2px" }} />
+                  </div>
+                </div>
+
+                {directorMode && (
+                  <>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: "#6B7280" }}>Hook Text</p>
+                      <input
+                        value={hookText}
+                        onChange={e => setHookText(e.target.value)}
+                        maxLength={80}
+                        className="w-full px-2.5 py-2 rounded-xl text-xs text-white outline-none"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                        placeholder="You need to see this"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: "#6B7280" }}>Outro CTA</p>
+                      <input
+                        value={ctaText}
+                        onChange={e => setCtaText(e.target.value)}
+                        maxLength={80}
+                        className="w-full px-2.5 py-2 rounded-xl text-xs text-white outline-none"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                        placeholder="Subscribe for full access"
+                      />
+                    </div>
+                    <div
+                      className="flex items-center justify-between p-2 rounded-xl cursor-pointer"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+                      onClick={() => setEnableAIPacing(p => !p)}
+                    >
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>AI Pacing</p>
+                        <p className="text-[9px]" style={{ color: "#4B5563" }}>1.2x speed on slow scenes + xfade transitions</p>
+                      </div>
+                      <div className="w-8 h-4 rounded-full relative flex-shrink-0" style={{ background: enableAIPacing ? "#10B981" : "#374151" }}>
+                        <div className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all" style={{ left: enableAIPacing ? "18px" : "2px" }} />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Platform</p>
                 {EXPORT_PRESETS.map(preset => (
                   <button key={preset.id} onClick={() => setSelectedPreset(preset.id)} className="flex items-center gap-2 p-2.5 rounded-xl text-left transition-all" style={{ background: selectedPreset === preset.id ? `${preset.color}15` : "rgba(255,255,255,0.03)", border: `1px solid ${selectedPreset === preset.id ? preset.color + "50" : "rgba(255,255,255,0.06)"}` }}>
                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: selectedPreset === preset.id ? preset.color : "#374151" }} />
@@ -655,15 +726,48 @@ export default function VaultXEditor() {
 
                 {exportResult ? (
                   <div className="p-3 rounded-xl" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
-                    <div className="flex items-center gap-2 mb-2"><CheckCircle size={14} style={{ color: "#10B981" }} /><span className="text-xs font-bold" style={{ color: "#10B981" }}>Export Complete</span></div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle size={14} style={{ color: "#10B981" }} />
+                      <span className="text-xs font-bold" style={{ color: "#10B981" }}>Export Complete</span>
+                    </div>
                     <p className="text-[10px] mb-2" style={{ color: "#6B7280" }}>Processed in {(exportResult.processingTime / 1000).toFixed(1)}s</p>
+                    {exportResult.steps && exportResult.steps.length > 0 && (
+                      <div className="mb-2 flex flex-col gap-1">
+                        {exportResult.steps.map((step, i) => (
+                          <div key={i} className="flex items-start gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0" style={{ background: "#10B981" }} />
+                            <p className="text-[9px]" style={{ color: "#6B7280" }}>{step}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <a href={exportResult.downloadUrl} download className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-bold" style={{ background: "rgba(16,185,129,0.2)", color: "#10B981", border: "1px solid rgba(16,185,129,0.3)" }}>
-                      <Download size={12} /> Download
+                      <Download size={12} /> Download Cinematic Output
                     </a>
+                    <button onClick={() => setExportResult(null)} className="w-full mt-1.5 py-1.5 rounded-xl text-[10px]" style={{ color: "#6B7280" }}>Export Again</button>
                   </div>
                 ) : (
-                  <button onClick={handleExport} disabled={exportMut.isPending} className="w-full py-3 rounded-2xl text-sm font-black" style={{ background: exportMut.isPending ? "rgba(255,255,255,0.05)" : "rgba(16,185,129,0.2)", color: exportMut.isPending ? "#4B5563" : "#10B981", border: `1px solid ${exportMut.isPending ? "rgba(255,255,255,0.06)" : "rgba(16,185,129,0.4)"}` }}>
-                    {exportMut.isPending ? <><Loader2 size={14} className="animate-spin inline mr-2" />Exporting...</> : <><HardDrive size={14} className="inline mr-2" />Export Now</>}
+                  <button
+                    onClick={handleExport}
+                    disabled={directorMut.isPending || exportMut.isPending}
+                    className="w-full py-3 rounded-2xl text-sm font-black"
+                    style={{
+                      background: (directorMut.isPending || exportMut.isPending)
+                        ? "rgba(255,255,255,0.05)"
+                        : directorMode ? "rgba(139,92,246,0.2)" : "rgba(16,185,129,0.2)",
+                      color: (directorMut.isPending || exportMut.isPending)
+                        ? "#4B5563"
+                        : directorMode ? "#A78BFA" : "#10B981",
+                      border: `1px solid ${(directorMut.isPending || exportMut.isPending)
+                        ? "rgba(255,255,255,0.06)"
+                        : directorMode ? "rgba(139,92,246,0.4)" : "rgba(16,185,129,0.4)"}`,
+                    }}
+                  >
+                    {(directorMut.isPending || exportMut.isPending)
+                      ? <><Loader2 size={14} className="animate-spin inline mr-2" />{directorMode ? "Directing..." : "Exporting..."}</>
+                      : directorMode
+                        ? <><HardDrive size={14} className="inline mr-2" />✨ Director Export</>
+                        : <><HardDrive size={14} className="inline mr-2" />Export Now</>}
                   </button>
                 )}
               </div>
