@@ -16,6 +16,10 @@ import * as path from "path";
 import { execSync, spawn } from "child_process";
 import { runAutomatedDirector } from "../services/automatedDirectorService";
 import { runTeaseEngine } from "../services/teaseEngineService";
+import { distributionEngineExport } from "../services/distributionEngineService";
+import { enhanceSceneByScene } from "../services/sceneEnhancementService";
+import { buildPpvBundle, createTipUnlockContent, suggestContentPrice } from "../services/monetizationBundleService";
+import { generateRecutSuggestions, generateAbThumbnails, analyzeHookStrength } from "../services/analyticsEditingService";
 
 const OWNER_IDS = [6, 33];
 const PLATFORM_FEE = 0.15;
@@ -1878,6 +1882,151 @@ export const vaultxRouter = router({
         processingTimeMs: result.processingTimeMs,
         success: true,
       };
+    }),
+
+  // ─── PROCEDURE 50: distributeContent ─────────────────────────────────────
+  distributeContent: protectedProcedure
+    .input(z.object({
+      sourceUrl: z.string().url(),
+      platforms: z.array(z.enum(["onlyfans", "fansly", "mym", "tiktok", "twitter", "telegram"])),
+      title: z.string().optional(),
+      description: z.string().optional(),
+      applyWatermark: z.boolean().default(true),
+      contentType: z.enum(["full_scene", "teaser", "clip", "ppv"]).default("clip"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Map simple platform IDs to full preset IDs
+      const platformMap: Record<string, string> = {
+        onlyfans: "onlyfans_full",
+        onlyfans_trailer: "onlyfans_trailer",
+        fansly: "fansly",
+        mym: "mym",
+        tiktok: "tiktok",
+        twitter: "twitter",
+        instagram_reel: "instagram_reel",
+        telegram: "telegram",
+        ppv: "ppv_preview",
+      };
+      const mappedPlatforms = input.platforms.map((p: string) => platformMap[p] || p);
+      const result = await distributionEngineExport({
+        sourceUrl: input.sourceUrl,
+        creatorId: ctx.user.id,
+        creatorUsername: ctx.user.name || `creator_${ctx.user.id}`,
+        platforms: mappedPlatforms as any,
+      });
+      return result;
+    }),
+
+  // ─── PROCEDURE 51: enhanceScenes ─────────────────────────────────────────
+  enhanceScenes: protectedProcedure
+    .input(z.object({ sourceUrl: z.string().url() }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await enhanceSceneByScene({
+        sourceUrl: input.sourceUrl,
+        creatorId: ctx.user.id,
+      });
+      return result;
+    }),
+
+  // ─── PROCEDURE 52: buildPpvBundle ─────────────────────────────────────────
+  buildPpvBundle: protectedProcedure
+    .input(z.object({
+      sourceUrl: z.string().url(),
+      desireScore: z.number().min(1).max(10).default(7),
+      teaserDurationSec: z.number().optional(),
+      previewDurationSec: z.number().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await buildPpvBundle({
+        sourceUrl: input.sourceUrl,
+        creatorId: ctx.user.id,
+        creatorUsername: ctx.user.name || `creator_${ctx.user.id}`,
+        desireScore: input.desireScore,
+        teaserDurationSec: input.teaserDurationSec,
+        previewDurationSec: input.previewDurationSec,
+      });
+      return result;
+    }),
+
+  // ─── PROCEDURE 53: createTipUnlock ───────────────────────────────────────
+  createTipUnlock: protectedProcedure
+    .input(z.object({
+      sourceUrl: z.string().url(),
+      tipAmountCents: z.number().min(100).max(100000),
+      revealStyle: z.enum(["progressive", "instant", "timed"]).default("progressive"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await createTipUnlockContent({
+        sourceUrl: input.sourceUrl,
+        creatorUsername: ctx.user.name || `creator_${ctx.user.id}`,
+        tipAmountCents: input.tipAmountCents,
+        revealStyle: input.revealStyle,
+      });
+      return result;
+    }),
+
+  // ─── PROCEDURE 54: suggestPrice ──────────────────────────────────────────
+  suggestPrice: protectedProcedure
+    .input(z.object({
+      durationSec: z.number(),
+      desireScore: z.number().min(1).max(10),
+      contentType: z.enum(["full_scene", "clip", "custom_request", "live_replay", "photoset"]),
+      platformTarget: z.enum(["onlyfans", "fansly", "mym", "direct"]).default("onlyfans"),
+    }))
+    .query(async ({ ctx, input }) => {
+      const result = await suggestContentPrice({
+        durationSec: input.durationSec,
+        desireScore: input.desireScore,
+        contentType: input.contentType,
+        creatorTier: "established",
+        platformTarget: input.platformTarget,
+      });
+      return result;
+    }),
+
+  // ─── PROCEDURE 55: generateThumbnails ────────────────────────────────────
+  generateThumbnails: protectedProcedure
+    .input(z.object({
+      videoUrl: z.string().url(),
+      count: z.number().min(2).max(6).default(4),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await generateAbThumbnails({
+        videoUrl: input.videoUrl,
+        creatorUsername: ctx.user.name || `creator_${ctx.user.id}`,
+        count: input.count,
+      });
+      return result;
+    }),
+
+  // ─── PROCEDURE 56: analyzeHook ───────────────────────────────────────────
+  analyzeHook: protectedProcedure
+    .input(z.object({
+      videoUrl: z.string().url(),
+      hookDurationSec: z.number().default(5),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await analyzeHookStrength({
+        videoUrl: input.videoUrl,
+        hookDurationSec: input.hookDurationSec,
+      });
+      return result;
+    }),
+
+  // ─── PROCEDURE 57: getRecutSuggestions ───────────────────────────────────
+  getRecutSuggestions: protectedProcedure
+    .input(z.object({
+      videoUrl: z.string().url(),
+      totalDurationSec: z.number(),
+      contentType: z.enum(["full_scene", "clip", "teaser"]).default("clip"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await generateRecutSuggestions({
+        videoUrl: input.videoUrl,
+        totalDurationSec: input.totalDurationSec,
+        contentType: input.contentType,
+      });
+      return result;
     }),
 
 });

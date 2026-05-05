@@ -368,12 +368,12 @@ export default function VaultXEditor() {
       </div>
 
       {/* ── MAIN AREA ── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative z-10">
 
         {/* ── LEFT: MEDIA LIBRARY ── */}
-        <div className="flex-shrink-0 flex flex-col overflow-hidden" style={{ width: 220, borderRight: "1px solid rgba(255,255,255,0.06)", background: "#080808" }}>
-          <div className="p-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#6B7280" }}>Media Library</p>
+        <div className="flex-shrink-0 flex flex-col overflow-hidden" style={{ width: 220, borderRight: "1px solid rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(20px)" }}>
+          <div className="p-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#374151" }}>Media Library</p>
           </div>
           <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1.5">
             {/* Quick-add from VPS uploads */}

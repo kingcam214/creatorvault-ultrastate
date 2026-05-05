@@ -44,7 +44,7 @@ function StatCard({ label, value, sub, icon: Icon, color, trend }: {
   icon: any; color: string; trend?: number;
 }) {
   return (
-    <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "#0F0F0F", border: "1px solid rgba(255,255,255,0.06)" }}>
+    <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
       <div className="flex items-center justify-between">
         <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color}18`, border: `1px solid ${color}30` }}>
           <Icon size={16} style={{ color }} />
@@ -155,7 +155,7 @@ export default function VaultXAnalytics() {
   // ── Loading state ─────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#080808" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#000000" }}>
         <div className="flex flex-col items-center gap-3">
           <Loader2 size={28} className="animate-spin" style={{ color: "#8B5CF6" }} />
           <p className="text-sm font-bold" style={{ color: "#6B7280" }}>Loading analytics…</p>
@@ -165,10 +165,11 @@ export default function VaultXAnalytics() {
   }
 
   return (
-    <div className="min-h-screen pb-16" style={{ background: "#080808", fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen pb-16 relative" style={{ background: "#000000", fontFamily: "'Inter', sans-serif" }}>
+      <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 70% 40% at 50% -5%, rgba(139,92,246,0.10) 0%, transparent 70%)" }} />
 
       {/* ── HEADER ── */}
-      <div className="sticky top-0 z-30 px-6 py-4" style={{ background: "rgba(8,8,8,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="sticky top-0 z-30 px-6 py-4" style={{ background: "rgba(0,0,0,0.92)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.05)", position: "relative", zIndex: 30 }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
             <h1 className="text-xl font-black text-white">Analytics</h1>

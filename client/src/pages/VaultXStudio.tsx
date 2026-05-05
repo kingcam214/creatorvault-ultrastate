@@ -52,7 +52,11 @@ type ModeId =
   | "final-output-engine"
   | "ai-video-generator"
   | "ai-sound-studio"
-  | "face-studio";
+  | "face-studio"
+  | "distribution-engine"
+  | "scene-enhancement"
+  | "monetization-bundle"
+  | "analytics-editing";
 
 interface VideoFile {
   file: File;
@@ -89,6 +93,10 @@ const MODES: { id: ModeId; label: string; icon: React.ReactNode; desc: string; c
   { id: "creator-tiers",       label: "Subscription Tiers",   icon: <Crown size={18}/>,       desc: "Manage fan tiers, perks & pricing",                 color: "#F59E0B", accent: "rgba(245,158,11,0.15)"  },
   { id: "mass-broadcast",      label: "Mass Broadcast",       icon: <Send size={18}/>,        desc: "PPV mass messages to all subscribers",              color: "#10B981", accent: "rgba(16,185,129,0.15)"  },
   { id: "ai-chatter",          label: "AI Chatter",           icon: <Bot size={18}/>,         desc: "AI replies as you 24/7 — earn while offline",       color: "#8B5CF6", accent: "rgba(139,92,246,0.15)"  },
+  { id: "distribution-engine",  label: "Distribution Engine",  icon: <Globe size={18}/>,       desc: "One upload → all platforms simultaneously with subscriber watermarks", color: "#0EA5E9", accent: "rgba(14,165,233,0.15)" },
+  { id: "scene-enhancement",    label: "Scene Enhancement",    icon: <Wand2 size={18}/>,       desc: "Replicate beauty grade per scene — skin, lighting, body-aware framing", color: "#D946EF", accent: "rgba(217,70,239,0.15)" },
+  { id: "monetization-bundle",  label: "Monetization Bundle",  icon: <DollarSign size={18}/>,  desc: "PPV bundle builder, tip-unlock, subscription tier packager",           color: "#10B981", accent: "rgba(16,185,129,0.15)" },
+  { id: "analytics-editing",    label: "Analytics Editing",    icon: <TrendingUp size={18}/>,  desc: "Retention curve, drop-off detection, re-cut suggestions, A/B thumbnails", color: "#F59E0B", accent: "rgba(245,158,11,0.15)" },
 ];
 
 const DESIRE_GRADES = [
@@ -176,7 +184,6 @@ function fmtSize(bytes: number): string {
 function CanvasDropZone({ onFile, accent = "#DC2626", label = "Drop your video here" }: { onFile: (vf: VideoFile) => void; accent?: string; label?: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-
   const handleFile = (f: File) => {
     const url = URL.createObjectURL(f);
     const vf: VideoFile = { file: f, url, name: f.name, size: f.size };
@@ -185,29 +192,48 @@ function CanvasDropZone({ onFile, accent = "#DC2626", label = "Drop your video h
     v.onloadedmetadata = () => { vf.duration = v.duration; onFile(vf); };
     v.onerror = () => onFile(vf);
   };
-
   return (
     <div
       onClick={() => inputRef.current?.click()}
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-      className="flex-1 flex flex-col items-center justify-center gap-6 cursor-pointer transition-all duration-200"
+      className="flex-1 flex flex-col items-center justify-center gap-8 cursor-pointer transition-all duration-300 relative overflow-hidden"
       style={{
-        border: `2px dashed ${dragging ? accent : "rgba(255,255,255,0.08)"}`,
-        background: dragging ? `${accent}08` : "rgba(255,255,255,0.01)",
+        border: `1.5px dashed ${dragging ? accent : "rgba(255,255,255,0.08)"}`,
+        background: dragging ? `${accent}06` : "rgba(255,255,255,0.01)",
         borderRadius: 24,
-        minHeight: 400,
+        minHeight: 420,
       }}
     >
-      <div className="w-20 h-20 rounded-3xl flex items-center justify-center" style={{ background: `${accent}15`, border: `1px solid ${accent}30` }}>
-        <Upload size={36} color={accent} />
+      {/* Ambient glow when dragging */}
+      {dragging && (
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: `radial-gradient(ellipse 60% 50% at 50% 50%, ${accent}12 0%, transparent 70%)`,
+        }} />
+      )}
+      <div
+        className="relative w-24 h-24 rounded-3xl flex items-center justify-center transition-all duration-300"
+        style={{
+          background: dragging ? `${accent}20` : `${accent}10`,
+          border: `1.5px solid ${dragging ? accent : accent + "30"}`,
+          boxShadow: dragging ? `0 0 40px ${accent}30` : "none",
+        }}
+      >
+        <Upload size={40} color={accent} />
       </div>
-      <div className="text-center">
-        <p className="text-white font-black text-xl">{label}</p>
-        <p className="text-sm mt-2" style={{ color: "#6B7280" }}>MP4 · MOV · AVI · MKV · WebM — up to 4GB</p>
+      <div className="text-center relative z-10">
+        <p className="text-white font-black text-2xl tracking-tight">{label}</p>
+        <p className="text-sm mt-2 font-medium" style={{ color: "#4B5563" }}>MP4 · MOV · AVI · MKV · WebM — up to 4GB</p>
       </div>
-      <div className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black" style={{ background: `${accent}20`, color: accent, border: `1px solid ${accent}30` }}>
+      <div
+        className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-black transition-all"
+        style={{
+          background: dragging ? accent : `${accent}18`,
+          color: dragging ? "white" : accent,
+          border: `1.5px solid ${accent}40`,
+        }}
+      >
         <FileVideo size={16} /> Browse Files
       </div>
       <input ref={inputRef} type="file" accept="video/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
@@ -286,6 +312,8 @@ function VideoDropZone({ onFile, accent = "#DC2626" }: { onFile: (vf: VideoFile)
 
 function CanvasVideoPlayer({ src, label, accent = "#DC2626", onReplace }: { src: string; label?: string; accent?: string; onReplace?: () => void }) {
   const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const toggle = () => {
     if (!videoRef.current) return;
@@ -293,17 +321,49 @@ function CanvasVideoPlayer({ src, label, accent = "#DC2626", onReplace }: { src:
     else { videoRef.current.play(); setPlaying(true); }
   };
   return (
-    <div className="flex-1 relative rounded-3xl overflow-hidden flex flex-col" style={{ background: "#000", minHeight: 400 }}>
-      {label && <div className="absolute top-4 left-4 z-10 px-3 py-1.5 rounded-xl text-xs font-black" style={{ background: "rgba(0,0,0,0.85)", color: accent, border: `1px solid ${accent}40`, backdropFilter: "blur(8px)" }}>{label}</div>}
-      {onReplace && (
-        <button onClick={onReplace} className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-xl text-xs font-bold" style={{ background: "rgba(0,0,0,0.85)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(8px)" }}>
-          Change Video
+    <div className="relative flex-1 flex flex-col overflow-hidden" style={{ background: "#000", minHeight: 360 }}>
+      {/* Ambient glow from video */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: `radial-gradient(ellipse 60% 40% at 50% 100%, ${accent}15 0%, transparent 70%)`,
+      }} />
+      <video
+        ref={videoRef}
+        src={src}
+        className="w-full flex-1 object-contain"
+        style={{ minHeight: 320 }}
+        onTimeUpdate={() => {
+          if (videoRef.current) setProgress(videoRef.current.currentTime);
+        }}
+        onLoadedMetadata={() => {
+          if (videoRef.current) setDuration(videoRef.current.duration);
+        }}
+        onEnded={() => setPlaying(false)}
+      />
+      {/* Overlay controls */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+        <button
+          onClick={toggle}
+          className="w-16 h-16 rounded-full flex items-center justify-center transition-all"
+          style={{ background: `${accent}E0`, backdropFilter: "blur(8px)", border: "2px solid rgba(255,255,255,0.2)" }}
+        >
+          {playing ? <Pause size={24} color="white" /> : <Play size={24} color="white" />}
         </button>
-      )}
-      <video ref={videoRef} src={src} className="w-full flex-1 object-contain" style={{ minHeight: 400 }} onEnded={() => setPlaying(false)} />
-      <button onClick={toggle} className="absolute bottom-4 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full flex items-center justify-center transition-all" style={{ background: `${accent}E0`, border: "2px solid rgba(255,255,255,0.2)", backdropFilter: "blur(4px)" }}>
-        {playing ? <Pause size={22} color="white" /> : <Play size={22} color="white" />}
-      </button>
+      </div>
+      {/* Bottom bar */}
+      <div className="absolute bottom-0 left-0 right-0 px-4 py-3 flex items-center gap-3" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.9), transparent)" }}>
+        <button onClick={toggle} className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `${accent}30` }}>
+          {playing ? <Pause size={14} color="white" /> : <Play size={14} color="white" />}
+        </button>
+        {/* Progress bar */}
+        <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+          <div className="h-full rounded-full transition-all" style={{ width: duration > 0 ? `${(progress / duration) * 100}%` : "0%", background: accent }} />
+        </div>
+        <span className="text-[10px] font-bold text-white/60">{Math.floor(progress)}s / {Math.floor(duration)}s</span>
+        {label && <span className="text-[10px] font-black px-2 py-1 rounded-lg" style={{ background: `${accent}20`, color: accent }}>{label}</span>}
+        {onReplace && (
+          <button onClick={onReplace} className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all hover:bg-white/10" style={{ color: "#6B7280" }}>Replace</button>
+        )}
+      </div>
     </div>
   );
 }
@@ -357,9 +417,23 @@ function VideoPlayer({ src, label, accent = "#DC2626" }: { src: string; label?: 
 
 function ProcessingBar({ label, accent = "#DC2626" }: { label: string; accent?: string }) {
   return (
-    <div className="flex items-center gap-3 p-4 rounded-2xl" style={{ background: `${accent}10`, border: `1px solid ${accent}30` }}>
-      <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin flex-shrink-0" style={{ borderColor: accent, borderTopColor: "transparent" }} />
-      <p className="text-sm font-semibold text-white">{label}</p>
+    <div className="flex items-center gap-4 p-5 rounded-3xl relative overflow-hidden" style={{ background: `${accent}08`, border: `1px solid ${accent}25` }}>
+      {/* Animated glow sweep */}
+      <div className="absolute inset-0 opacity-30" style={{
+        background: `linear-gradient(90deg, transparent 0%, ${accent}30 50%, transparent 100%)`,
+        animation: "sweep 2s ease-in-out infinite",
+      }} />
+      <div className="relative flex-shrink-0 w-8 h-8 rounded-2xl flex items-center justify-center" style={{ background: `${accent}20`, border: `1px solid ${accent}40` }}>
+        <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: accent, borderTopColor: "transparent" }} />
+      </div>
+      <div className="relative">
+        <p className="text-sm font-black text-white">{label}</p>
+        <div className="flex gap-1 mt-1.5">
+          {[0,1,2,3,4].map(i => (
+            <div key={i} className="h-1 rounded-full" style={{ width: 20 + i * 8, background: `${accent}${i < 3 ? "CC" : "40"}`, transition: "all 0.3s" }} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -376,11 +450,21 @@ function EngineBadge({ engine, status, fallback }: { engine: string; status: str
 
 function Workspace({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
   return (
-    <div className="flex flex-1 gap-0 min-h-0" style={{ height: "100%" }}>
-      <div className="flex-shrink-0 overflow-y-auto flex flex-col gap-5 p-5" style={{ width: 320, borderRight: "1px solid rgba(255,255,255,0.06)" }}>
+    <div className="flex flex-1 min-h-0 overflow-hidden" style={{ height: "100%" }}>
+      {/* Controls panel — compact, scrollable */}
+      <div
+        className="flex-shrink-0 overflow-y-auto flex flex-col gap-4 py-5 px-4"
+        style={{
+          width: 300,
+          borderRight: "1px solid rgba(255,255,255,0.05)",
+          background: "rgba(0,0,0,0.4)",
+          scrollbarWidth: "none",
+        }}
+      >
         {left}
       </div>
-      <div className="flex-1 flex flex-col p-5 gap-4 min-w-0">
+      {/* Canvas — video-dominant, full height */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ background: "#000" }}>
         {right}
       </div>
     </div>
@@ -2763,18 +2847,572 @@ function AIChatterMode() {
 }
 
 // ============================================================================
+// DISTRIBUTION ENGINE MODE
+// ============================================================================
+function DistributionEngineMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
+  const accent = "#0EA5E9";
+  const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
+  const [platforms, setPlatforms] = useState<string[]>(["onlyfans", "fansly"]);
+  const [contentType, setContentType] = useState<"full_scene"|"teaser"|"clip"|"ppv">("clip");
+  const [applyWatermark, setApplyWatermark] = useState(true);
+  const [title, setTitle] = useState("");
+  const [result, setResult] = useState<any>(null);
+
+  const distributeMutation = trpc.vaultx.distributeContent.useMutation({
+    onSuccess: (data) => {
+      setResult(data);
+      if (data.results?.[0]?.outputUrl) onOutput(data.results[0].outputUrl, "Distribution Engine");
+      toast.success(`Distributed to ${data.results?.length || 0} platforms`);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const PLATFORMS = [
+    { id: "onlyfans", label: "OnlyFans", color: "#00AFF0" },
+    { id: "fansly", label: "Fansly", color: "#3B82F6" },
+    { id: "mym", label: "MYM", color: "#EC4899" },
+    { id: "tiktok", label: "TikTok", color: "#EF4444" },
+    { id: "twitter", label: "Twitter/X", color: "#1D9BF0" },
+    { id: "telegram", label: "Telegram", color: "#26A5E4" },
+  ];
+
+  const togglePlatform = (id: string) => {
+    setPlatforms(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+  };
+
+  return (
+    <Workspace
+      left={
+        <div className="flex flex-col gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: accent }}>Source Video</p>
+            {videoFile ? (
+              <CanvasVideoPlayer src={videoFile.url} label={videoFile.name} accent={accent} onReplace={() => setVideoFile(null)} />
+            ) : (
+              <CanvasDropZone onFile={setVideoFile} accent={accent} label="Drop your video — we'll format it for every platform" />
+            )}
+          </div>
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: accent }}>Target Platforms</p>
+            <div className="grid grid-cols-3 gap-2">
+              {PLATFORMS.map(p => (
+                <button key={p.id} onClick={() => togglePlatform(p.id)}
+                  className="py-2 px-3 rounded-xl text-xs font-bold transition-all"
+                  style={{ background: platforms.includes(p.id) ? `${p.color}20` : "rgba(255,255,255,0.04)", border: `1.5px solid ${platforms.includes(p.id) ? p.color : "rgba(255,255,255,0.08)"}`, color: platforms.includes(p.id) ? p.color : "#6B7280" }}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: accent }}>Content Type</p>
+            <div className="grid grid-cols-2 gap-2">
+              {(["full_scene","teaser","clip","ppv"] as const).map(t => (
+                <button key={t} onClick={() => setContentType(t)}
+                  className="py-2 px-3 rounded-xl text-xs font-bold capitalize transition-all"
+                  style={{ background: contentType === t ? `${accent}20` : "rgba(255,255,255,0.04)", border: `1.5px solid ${contentType === t ? accent : "rgba(255,255,255,0.08)"}`, color: contentType === t ? accent : "#6B7280" }}>
+                  {t.replace("_", " ")}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: accent }}>Title (Optional)</p>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Scene title for metadata..."
+              className="w-full px-3 py-2 rounded-xl text-xs text-white bg-transparent outline-none"
+              style={{ border: "1px solid rgba(255,255,255,0.1)" }} />
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div>
+              <p className="text-xs font-bold text-white">Subscriber Watermark</p>
+              <p className="text-[10px] text-gray-500">Invisible ID watermark — traces leaks to specific fans</p>
+            </div>
+            <button onClick={() => setApplyWatermark(v => !v)} className="w-10 h-5 rounded-full transition-all relative" style={{ background: applyWatermark ? accent : "rgba(255,255,255,0.1)" }}>
+              <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: applyWatermark ? "calc(100% - 18px)" : "2px" }} />
+            </button>
+          </div>
+          <button
+            onClick={() => videoFile && distributeMutation.mutate({ sourceUrl: videoFile.url, platforms: platforms as any[], contentType, applyWatermark, title: title || undefined })}
+            disabled={!videoFile || platforms.length === 0 || distributeMutation.isPending}
+            className="w-full py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all"
+            style={{ background: videoFile && platforms.length > 0 ? `linear-gradient(135deg, ${accent}, #0284C7)` : "rgba(255,255,255,0.05)", color: videoFile && platforms.length > 0 ? "white" : "#4B5563" }}>
+            {distributeMutation.isPending ? <><Loader2 size={14} className="animate-spin" /> Distributing to {platforms.length} platforms...</> : <><Globe size={14} /> Distribute Now — {platforms.length} Platforms</>}
+          </button>
+        </div>
+      }
+      right={
+        <div className="flex flex-col gap-4">
+          <EngineBadge engine="Distribution Engine" status={distributeMutation.isPending ? "processing" : result ? "complete" : "ready"} />
+          {distributeMutation.isPending && <ProcessingBar label="Encoding platform-specific versions..." accent={accent} />}
+          {result && (
+            <div className="flex flex-col gap-3">
+              <div className="p-3 rounded-xl" style={{ background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.2)" }}>
+                <p className="text-xs font-black text-white mb-2">Distribution Complete</p>
+                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <div><span className="text-gray-500">Platforms</span><p className="font-bold" style={{ color: accent }}>{result.results?.length || 0}</p></div>
+                  <div><span className="text-gray-500">Watermarked</span><p className="font-bold text-green-400">{result.successCount > 0 ? "Yes" : "No"}</p></div>
+                  <div><span className="text-gray-500">Success</span><p className="font-bold text-white">{result.successCount || 0}/{(result.results?.length || 0)}</p></div>
+                  <div><span className="text-gray-500">Processing</span><p className="font-bold text-white">{result.totalProcessingTimeMs ? `${(result.totalProcessingTimeMs/1000).toFixed(1)}s` : "—"}</p></div>
+                </div>
+              </div>
+              {result.results?.map((d: any, i: number) => (
+                <div key={i} className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-white capitalize">{d.platformName || d.platformId}</p>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: d.status === "ready" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: d.status === "ready" ? "#22C55E" : "#EF4444" }}>{d.status}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mb-1">{d.durationSec?.toFixed(1)}s · {(d.fileSizeBytes/1024/1024).toFixed(1)}MB</p>
+                  {d.outputUrl && (
+                    <a href={d.outputUrl} download className="flex items-center gap-1 text-[10px] font-bold" style={{ color: accent }}><Download size={10} /> Download {d.platformName || d.platformId} version</a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {!result && !distributeMutation.isPending && (
+            <div className="flex flex-col gap-2 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <p className="text-xs font-bold text-white">Platform Presets</p>
+              <div className="flex flex-col gap-1 text-[10px] text-gray-500">
+                <p>OnlyFans: 1080p MP4, max 2GB, watermark</p>
+                <p>Fansly: 1080p MP4, max 1.5GB, watermark</p>
+                <p>TikTok: 1080×1920 vertical, 60s max, no watermark</p>
+                <p>Twitter/X: 1280×720, 2min 20s max, no watermark</p>
+                <p>Telegram: 720p, unlimited, no watermark</p>
+              </div>
+            </div>
+          )}
+        </div>
+      }
+    />
+  );
+}
+
+// ============================================================================
+// SCENE ENHANCEMENT MODE
+// ============================================================================
+function SceneEnhancementMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
+  const accent = "#D946EF";
+  const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
+  const [result, setResult] = useState<any>(null);
+
+  const enhanceMutation = trpc.vaultx.enhanceScenes.useMutation({
+    onSuccess: (data) => {
+      setResult(data);
+      if (data.outputUrl) onOutput(data.outputUrl, "Scene Enhancement");
+      toast.success("Scene enhancement complete");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  return (
+    <Workspace
+      left={
+        <div className="flex flex-col gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: accent }}>Scene Enhancement</p>
+            <p className="text-[11px] text-gray-500 mb-3">AI analyzes every scene — applies Replicate beauty grade, skin tone correction, and body-aware framing per scene. Not a filter. A per-scene neural enhancement.</p>
+          </div>
+          {videoFile ? (
+            <CanvasVideoPlayer src={videoFile.url} label={videoFile.name} accent={accent} onReplace={() => { setVideoFile(null); setResult(null); }} />
+          ) : (
+            <CanvasDropZone onFile={setVideoFile} accent={accent} label="Drop your video — AI enhances every scene individually" />
+          )}
+          <div className="p-3 rounded-xl" style={{ background: "rgba(217,70,239,0.06)", border: "1px solid rgba(217,70,239,0.15)" }}>
+            <p className="text-xs font-bold text-white mb-2">What Gets Enhanced</p>
+            <div className="flex flex-col gap-1 text-[10px] text-gray-400">
+              <p>✦ Skin tone warmth and smoothness per scene</p>
+              <p>✦ Shadow lift and highlight bloom tuned to body</p>
+              <p>✦ Body-aware framing — AI detects composition</p>
+              <p>✦ Lighting correction for indoor/outdoor/studio</p>
+              <p>✦ Desire-Grade color science applied per scene</p>
+            </div>
+          </div>
+          <button
+            onClick={() => videoFile && enhanceMutation.mutate({ sourceUrl: videoFile.url })}
+            disabled={!videoFile || enhanceMutation.isPending}
+            className="w-full py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all"
+            style={{ background: videoFile ? `linear-gradient(135deg, ${accent}, #A21CAF)` : "rgba(255,255,255,0.05)", color: videoFile ? "white" : "#4B5563" }}>
+            {enhanceMutation.isPending ? <><Loader2 size={14} className="animate-spin" /> Enhancing scenes...</> : <><Wand2 size={14} /> Enhance All Scenes</>}
+          </button>
+        </div>
+      }
+      right={
+        <div className="flex flex-col gap-4">
+          <EngineBadge engine="Replicate zsxkib/pulid + Desire-Grade" status={enhanceMutation.isPending ? "processing" : result ? "complete" : "ready"} />
+          {enhanceMutation.isPending && <ProcessingBar label="Analyzing and enhancing scenes with AI..." accent={accent} />}
+          {result && (
+            <div className="flex flex-col gap-3">
+              {result.outputUrl && (
+                <VideoPlayer src={result.outputUrl} label="Enhanced Video" accent={accent} />
+              )}
+              <div className="p-3 rounded-xl" style={{ background: "rgba(217,70,239,0.08)", border: "1px solid rgba(217,70,239,0.2)" }}>
+                <p className="text-xs font-black text-white mb-2">Enhancement Summary</p>
+                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <div><span className="text-gray-500">Scenes Processed</span><p className="font-bold" style={{ color: accent }}>{result.scenesProcessed || "—"}</p></div>
+                  <div><span className="text-gray-500">Top Desire</span><p className="font-bold text-white">{result.topDesireScene?.desireEnergy?.toFixed(1) || "—"}/10</p></div>
+                  <div><span className="text-gray-500">Enhanced</span><p className="font-bold text-green-400">{result.scenesProcessed > 0 ? "Yes" : "No"}</p></div>
+                  <div><span className="text-gray-500">Processing</span><p className="font-bold text-white">{result.totalProcessingTimeMs ? `${(result.totalProcessingTimeMs/1000).toFixed(1)}s` : "—"}</p></div>
+                </div>
+              </div>
+              {result.sceneAnalyses?.map((s: any, i: number) => (
+                <div key={i} className="p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold text-white">Scene {i + 1} — {s.startSec?.toFixed(1)}s–{s.endSec?.toFixed(1)}s</p>
+                    <span className="text-[10px] font-bold" style={{ color: accent }}>Desire {s.desireScore}/10</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-0.5">{s.grade} · {s.lightingType}</p>
+                </div>
+              ))}
+              {result.outputUrl && (
+                <a href={result.outputUrl} download className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: "rgba(217,70,239,0.15)", color: accent, border: "1px solid rgba(217,70,239,0.3)" }}><Download size={14} /> Download Enhanced Video</a>
+              )}
+            </div>
+          )}
+        </div>
+      }
+    />
+  );
+}
+
+// ============================================================================
+// MONETIZATION BUNDLE MODE
+// ============================================================================
+function MonetizationBundleMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
+  const accent = "#10B981";
+  const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
+  const [activeTab, setActiveTab] = useState<"ppv"|"tip-unlock"|"price">("ppv");
+  const [desireScore, setDesireScore] = useState(7);
+  const [tipAmount, setTipAmount] = useState(500);
+  const [revealStyle, setRevealStyle] = useState<"progressive"|"instant"|"timed">("progressive");
+  const [priceInput, setPriceInput] = useState({ durationSec: 60, desireScore: 7, contentType: "clip" as const, platformTarget: "onlyfans" as const });
+  const [result, setResult] = useState<any>(null);
+  const [priceResult, setPriceResult] = useState<any>(null);
+
+  const ppvMutation = trpc.vaultx.buildPpvBundle.useMutation({
+    onSuccess: (data) => { setResult(data); if (data.teaserUrl) onOutput(data.teaserUrl, "PPV Bundle"); toast.success("PPV Bundle created"); },
+    onError: (e) => toast.error(e.message),
+  });
+  const tipMutation = trpc.vaultx.createTipUnlock.useMutation({
+    onSuccess: (data) => { setResult(data); if (data.lockedPreviewUrl) onOutput(data.lockedPreviewUrl, "Tip Unlock"); toast.success("Tip unlock content created"); },
+    onError: (e) => toast.error(e.message),
+  });
+  const priceQuery = trpc.vaultx.suggestPrice.useQuery(priceInput, { enabled: false });
+
+  const TABS = [
+    { id: "ppv" as const, label: "PPV Bundle", color: "#A855F7" },
+    { id: "tip-unlock" as const, label: "Tip Unlock", color: "#F59E0B" },
+    { id: "price" as const, label: "Price AI", color: "#10B981" },
+  ];
+
+  return (
+    <Workspace
+      left={
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-2">
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => setActiveTab(t.id)} className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                style={{ background: activeTab === t.id ? `${t.color}20` : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeTab === t.id ? t.color : "rgba(255,255,255,0.08)"}`, color: activeTab === t.id ? t.color : "#6B7280" }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {activeTab !== "price" && (
+            videoFile ? (
+              <CanvasVideoPlayer src={videoFile.url} label={videoFile.name} accent={accent} onReplace={() => { setVideoFile(null); setResult(null); }} />
+            ) : (
+              <CanvasDropZone onFile={setVideoFile} accent={accent} label="Drop your video to build a monetization bundle" />
+            )
+          )}
+
+          {activeTab === "ppv" && (
+            <>
+              <div>
+                <p className="text-xs font-bold text-white mb-2">Desire Score: <span style={{ color: "#A855F7" }}>{desireScore}/10</span></p>
+                <input type="range" min={1} max={10} value={desireScore} onChange={e => setDesireScore(+e.target.value)} className="w-full" />
+                <p className="text-[10px] text-gray-500 mt-1">Higher score = shorter teaser, higher suggested price</p>
+              </div>
+              <button onClick={() => videoFile && ppvMutation.mutate({ sourceUrl: videoFile.url, desireScore })}
+                disabled={!videoFile || ppvMutation.isPending}
+                className="w-full py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2"
+                style={{ background: videoFile ? "linear-gradient(135deg, #A855F7, #7C3AED)" : "rgba(255,255,255,0.05)", color: videoFile ? "white" : "#4B5563" }}>
+                {ppvMutation.isPending ? <><Loader2 size={14} className="animate-spin" /> Building PPV Bundle...</> : <><Package size={14} /> Build PPV Bundle</>}
+              </button>
+            </>
+          )}
+
+          {activeTab === "tip-unlock" && (
+            <>
+              <div>
+                <p className="text-xs font-bold text-white mb-2">Tip Amount: <span style={{ color: "#F59E0B" }}>${(tipAmount/100).toFixed(2)}</span></p>
+                <input type="range" min={100} max={10000} step={100} value={tipAmount} onChange={e => setTipAmount(+e.target.value)} className="w-full" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white mb-2">Reveal Style</p>
+                <div className="flex gap-2">
+                  {(["progressive","instant","timed"] as const).map(s => (
+                    <button key={s} onClick={() => setRevealStyle(s)} className="flex-1 py-1.5 rounded-xl text-[10px] font-bold capitalize"
+                      style={{ background: revealStyle === s ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.04)", border: `1px solid ${revealStyle === s ? "#F59E0B" : "rgba(255,255,255,0.08)"}`, color: revealStyle === s ? "#F59E0B" : "#6B7280" }}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button onClick={() => videoFile && tipMutation.mutate({ sourceUrl: videoFile.url, tipAmountCents: tipAmount, revealStyle })}
+                disabled={!videoFile || tipMutation.isPending}
+                className="w-full py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2"
+                style={{ background: videoFile ? "linear-gradient(135deg, #F59E0B, #D97706)" : "rgba(255,255,255,0.05)", color: videoFile ? "white" : "#4B5563" }}>
+                {tipMutation.isPending ? <><Loader2 size={14} className="animate-spin" /> Creating tip unlock...</> : <><Lock size={14} /> Create Tip Unlock</>}
+              </button>
+            </>
+          )}
+
+          {activeTab === "price" && (
+            <div className="flex flex-col gap-3">
+              <div>
+                <p className="text-xs font-bold text-white mb-1">Duration (seconds)</p>
+                <input type="number" value={priceInput.durationSec} onChange={e => setPriceInput(p => ({ ...p, durationSec: +e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl text-xs text-white bg-transparent outline-none" style={{ border: "1px solid rgba(255,255,255,0.1)" }} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white mb-1">Desire Score: {priceInput.desireScore}/10</p>
+                <input type="range" min={1} max={10} value={priceInput.desireScore} onChange={e => setPriceInput(p => ({ ...p, desireScore: +e.target.value }))} className="w-full" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white mb-1">Content Type</p>
+                <div className="grid grid-cols-2 gap-1">
+                  {(["full_scene","clip","custom_request","live_replay","photoset"] as const).map(t => (
+                    <button key={t} onClick={() => setPriceInput(p => ({ ...p, contentType: t as typeof p.contentType }))} className="py-1.5 rounded-xl text-[10px] font-bold capitalize"
+                      style={{ background: priceInput.contentType === t ? `${accent}20` : "rgba(255,255,255,0.04)", border: `1px solid ${priceInput.contentType === t ? accent : "rgba(255,255,255,0.08)"}`, color: priceInput.contentType === t ? accent : "#6B7280" }}>
+                      {t.replace(/_/g, " ")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button onClick={() => priceQuery.refetch().then(r => setPriceResult(r.data))}
+                disabled={priceQuery.isFetching}
+                className="w-full py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2"
+                style={{ background: `linear-gradient(135deg, ${accent}, #059669)`, color: "white" }}>
+                {priceQuery.isFetching ? <><Loader2 size={14} className="animate-spin" /> Analyzing...</> : <><DollarSign size={14} /> Get AI Price Suggestion</>}
+              </button>
+              {priceResult && (
+                <div className="p-3 rounded-xl" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                  <p className="text-xs font-black text-white mb-2">AI Price Recommendation</p>
+                  <div className="grid grid-cols-3 gap-2 text-[10px]">
+                    <div className="text-center"><p className="text-gray-500">Min</p><p className="font-black text-white">${priceResult.minPrice}</p></div>
+                    <div className="text-center"><p className="text-gray-500">Suggested</p><p className="font-black text-2xl" style={{ color: accent }}>${priceResult.suggestedPrice}</p></div>
+                    <div className="text-center"><p className="text-gray-500">Max</p><p className="font-black text-white">${priceResult.maxPrice}</p></div>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2">{priceResult.reasoning}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      }
+      right={
+        <div className="flex flex-col gap-4">
+          <EngineBadge engine="Monetization Bundle Builder" status={(ppvMutation.isPending || tipMutation.isPending) ? "processing" : result ? "complete" : "ready"} />
+          {(ppvMutation.isPending || tipMutation.isPending) && <ProcessingBar label="Building monetization assets..." accent={accent} />}
+          {result && activeTab === "ppv" && (
+            <div className="flex flex-col gap-3">
+              <div className="p-3 rounded-xl" style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)" }}>
+                <p className="text-xs font-black text-white mb-2">PPV Bundle Ready</p>
+                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <div><span className="text-gray-500">Suggested Price</span><p className="font-black text-lg" style={{ color: "#A855F7" }}>${result.suggestedPriceDollars}</p></div>
+                  <div><span className="text-gray-500">Desire Score</span><p className="font-bold text-white">{result.desireScore}/10</p></div>
+                </div>
+              </div>
+              {result.teaserUrl && <VideoPlayer src={result.teaserUrl} label="Teaser (Public)" accent="#A855F7" />}
+              {result.censoredPreviewUrl && <VideoPlayer src={result.censoredPreviewUrl} label="Censored Preview (Paywall)" accent="#6B7280" />}
+              {result.hooks?.length > 0 && (
+                <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <p className="text-[10px] font-black text-white mb-2">AI-Generated Hooks</p>
+                  {result.hooks.map((h: string, i: number) => (
+                    <p key={i} className="text-[10px] text-gray-400 mb-1">"{h}"</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {result && activeTab === "tip-unlock" && (
+            <div className="flex flex-col gap-3">
+              <div className="p-3 rounded-xl" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                <p className="text-xs font-black text-white mb-1">Tip Unlock Created</p>
+                <p className="text-[10px] text-gray-400">Tip ${(tipAmount/100).toFixed(2)} to unlock · {revealStyle} reveal</p>
+              </div>
+              {result.lockedPreviewUrl && <VideoPlayer src={result.lockedPreviewUrl} label="Locked Preview" accent="#F59E0B" />}
+              {result.ctaText && (
+                <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <p className="text-[10px] font-black text-white mb-1">CTA Copy</p>
+                  <p className="text-[10px] text-gray-400">"{result.ctaText}"</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      }
+    />
+  );
+}
+
+// ============================================================================
+// ANALYTICS EDITING MODE
+// ============================================================================
+function AnalyticsEditingMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
+  const accent = "#F59E0B";
+  const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
+  const [activeTab, setActiveTab] = useState<"thumbnails"|"hook"|"recut">("thumbnails");
+  const [result, setResult] = useState<any>(null);
+
+  const thumbnailMutation = trpc.vaultx.generateThumbnails.useMutation({
+    onSuccess: (data) => { setResult(data); toast.success(`${Array.isArray(data) ? data.length : 0} thumbnails generated`); },
+    onError: (e) => toast.error(e.message),
+  });
+  const hookMutation = trpc.vaultx.analyzeHook.useMutation({
+    onSuccess: (data) => { setResult(data); toast.success("Hook analysis complete"); },
+    onError: (e) => toast.error(e.message),
+  });
+  const recutMutation = trpc.vaultx.getRecutSuggestions.useMutation({
+    onSuccess: (data) => { setResult(data); toast.success("Re-cut suggestions ready"); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const TABS = [
+    { id: "thumbnails" as const, label: "A/B Thumbnails", color: "#F59E0B" },
+    { id: "hook" as const, label: "Hook Analyzer", color: "#EF4444" },
+    { id: "recut" as const, label: "Re-Cut AI", color: "#8B5CF6" },
+  ];
+
+  const isPending = thumbnailMutation.isPending || hookMutation.isPending || recutMutation.isPending;
+
+  return (
+    <Workspace
+      left={
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-2">
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => { setActiveTab(t.id); setResult(null); }} className="flex-1 py-2 rounded-xl text-[10px] font-bold transition-all"
+                style={{ background: activeTab === t.id ? `${t.color}20` : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeTab === t.id ? t.color : "rgba(255,255,255,0.08)"}`, color: activeTab === t.id ? t.color : "#6B7280" }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {videoFile ? (
+            <CanvasVideoPlayer src={videoFile.url} label={videoFile.name} accent={accent} onReplace={() => { setVideoFile(null); setResult(null); }} />
+          ) : (
+            <CanvasDropZone onFile={setVideoFile} accent={accent} label="Drop your video for analytics-driven editing" />
+          )}
+          {activeTab === "thumbnails" && (
+            <button onClick={() => videoFile && thumbnailMutation.mutate({ videoUrl: videoFile.url, count: 4 })}
+              disabled={!videoFile || isPending}
+              className="w-full py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2"
+              style={{ background: videoFile ? `linear-gradient(135deg, ${accent}, #D97706)` : "rgba(255,255,255,0.05)", color: videoFile ? "white" : "#4B5563" }}>
+              {thumbnailMutation.isPending ? <><Loader2 size={14} className="animate-spin" /> Generating thumbnails...</> : <><Image size={14} /> Generate 4 A/B Thumbnails</>}
+            </button>
+          )}
+          {activeTab === "hook" && (
+            <button onClick={() => videoFile && hookMutation.mutate({ videoUrl: videoFile.url, hookDurationSec: 5 })}
+              disabled={!videoFile || isPending}
+              className="w-full py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2"
+              style={{ background: videoFile ? "linear-gradient(135deg, #EF4444, #DC2626)" : "rgba(255,255,255,0.05)", color: videoFile ? "white" : "#4B5563" }}>
+              {hookMutation.isPending ? <><Loader2 size={14} className="animate-spin" /> Analyzing hook...</> : <><Zap size={14} /> Analyze First 5s Hook</>}
+            </button>
+          )}
+          {activeTab === "recut" && (
+            <button onClick={() => videoFile && recutMutation.mutate({ videoUrl: videoFile.url, totalDurationSec: videoFile.duration || 60, contentType: "clip" })}
+              disabled={!videoFile || isPending}
+              className="w-full py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2"
+              style={{ background: videoFile ? "linear-gradient(135deg, #8B5CF6, #7C3AED)" : "rgba(255,255,255,0.05)", color: videoFile ? "white" : "#4B5563" }}>
+              {recutMutation.isPending ? <><Loader2 size={14} className="animate-spin" /> Generating suggestions...</> : <><Scissors size={14} /> Get AI Re-Cut Suggestions</>}
+            </button>
+          )}
+        </div>
+      }
+      right={
+        <div className="flex flex-col gap-4">
+          <EngineBadge engine="Analytics Editing AI" status={isPending ? "processing" : result ? "complete" : "ready"} />
+          {isPending && <ProcessingBar label="Analyzing content for maximum retention..." accent={accent} />}
+          {result && activeTab === "thumbnails" && (
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-black text-white">A/B Thumbnail Variants</p>
+              <div className="grid grid-cols-2 gap-2">
+                {(Array.isArray(result) ? result as any[] : []).map((t: any, i: number) => (
+                  <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <img src={t.thumbnailUrl || t.url} alt={`Thumbnail ${i+1}`} className="w-full aspect-video object-cover" />
+                    <div className="p-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-bold text-white">Variant {i+1}</p>
+                        <span className="text-[10px] font-black" style={{ color: accent }}>CTR {t.predictedCtrScore ?? t.predictedCtr ?? "—"}%</span>
+                      </div>
+                      <p className="text-[10px] text-gray-500">{t.variant || t.strategy || ""}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {result && activeTab === "hook" && (
+            <div className="flex flex-col gap-3">
+              <div className="p-3 rounded-xl" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                <p className="text-xs font-black text-white mb-2">Hook Strength Analysis</p>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="text-4xl font-black" style={{ color: result.hookScore >= 7 ? "#22C55E" : result.hookScore >= 5 ? "#F59E0B" : "#EF4444" }}>{result.hookScore}</div>
+                  <div>
+                    <p className="text-xs font-bold text-white">/10 Hook Score</p>
+                    <p className="text-[10px] text-gray-500">{result.verdict}</p>
+                  </div>
+                </div>
+                {result.issues?.length > 0 && (
+                  <div className="mb-2">
+                    <p className="text-[10px] font-bold text-red-400 mb-1">Issues</p>
+                    {result.issues.map((issue: string, i: number) => <p key={i} className="text-[10px] text-gray-400">• {issue}</p>)}
+                  </div>
+                )}
+                {result.improvements?.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold text-green-400 mb-1">Improvements</p>
+                    {result.improvements.map((imp: string, i: number) => <p key={i} className="text-[10px] text-gray-400">• {imp}</p>)}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {result && activeTab === "recut" && (
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-black text-white">AI Re-Cut Suggestions</p>
+              {result.suggestions?.map((s: any, i: number) => (
+                <div key={i} className="p-3 rounded-xl" style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-bold text-white">{s.type}</p>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(139,92,246,0.2)", color: "#8B5CF6" }}>+{s.retentionGain}% retention</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400">{s.description}</p>
+                  <p className="text-[10px] text-gray-500 mt-1">{s.startSec?.toFixed(1)}s → {s.endSec?.toFixed(1)}s</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      }
+    />
+  );
+}
+
+
+// ============================================================================
 // MAIN VAULTX STUDIO COMPONENT
 // ============================================================================
 export default function VaultXStudio() {
   const [activeMode, setActiveMode] = useState<ModeId>("final-output-engine");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const persistAsset = trpc.creatorVideoEditor.createAsset.useMutation();
+
   const addToHistory = useCallback((url: string, label: string) => {
     const mode = activeMode;
     setHistory(prev => [{ id: Date.now().toString(), mode, label, outputUrl: url, timestamp: Date.now() }, ...prev.slice(0, 49)]);
-    // Persist to DB — every Studio output is saved as an editor asset
     const ext = url.split(".").pop()?.toLowerCase() || "mp4";
     const mimeMap: Record<string, string> = { mp4: "video/mp4", mov: "video/quicktime", mp3: "audio/mpeg", wav: "audio/wav", webm: "video/webm" };
     persistAsset.mutate({
@@ -2806,46 +3444,138 @@ export default function VaultXStudio() {
       case "creator-tiers":       return <CreatorTiersMode />;
       case "mass-broadcast":      return <MassBroadcastMode />;
       case "ai-chatter":          return <AIChatterMode />;
+      case "distribution-engine": return <DistributionEngineMode {...props} />;
+      case "scene-enhancement":   return <SceneEnhancementMode {...props} />;
+      case "monetization-bundle": return <MonetizationBundleMode {...props} />;
+      case "analytics-editing":   return <AnalyticsEditingMode {...props} />;
       default:                    return null;
     }
   };
 
+  // Group modes for sidebar sections
+  const MODE_GROUPS = [
+    { label: "Production", ids: ["final-output-engine", "ai-video-generator", "velvet-suite", "desire-grade", "scene-architect", "scene-enhancement"] },
+    { label: "AI Tools", ids: ["ai-enhance", "face-studio", "ai-sound-studio", "caption-studio"] },
+    { label: "Monetize", ids: ["ppv-engine", "monetization-bundle", "distribution-engine", "platform-vault"] },
+    { label: "Audience", ids: ["creator-tiers", "mass-broadcast", "ai-chatter", "analytics-editing"] },
+    { label: "Library", ids: ["content-vault"] },
+  ];
+
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#0A0A0A", fontFamily: "'Inter', sans-serif" }}>
-      {/* ICON RAIL */}
-      <div className="flex-shrink-0 flex flex-col items-center gap-1 py-4" style={{ width: 64, borderRight: "1px solid rgba(255,255,255,0.06)", background: "#080808" }}>
-        {MODES.map(m => {
-          const active = activeMode === m.id;
-          return (
-            <button
-              key={m.id}
-              onClick={() => setActiveMode(m.id)}
-              title={m.label}
-              className="relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all group"
-              style={{ background: active ? `${m.color}20` : "transparent", border: active ? `1.5px solid ${m.color}50` : "1.5px solid transparent" }}
-            >
-              <span style={{ color: active ? m.color : "#4B5563" }}>{m.icon}</span>
-              {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-r-full" style={{ background: m.color }} />}
-              <div className="absolute left-14 top-1/2 -translate-y-1/2 px-2.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50" style={{ background: "rgba(0,0,0,0.95)", color: "white", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(8px)" }}>
-                {m.label}
+    <div className="flex h-screen overflow-hidden" style={{ background: "#000000", fontFamily: "'Inter', sans-serif" }}>
+      {/* ── AMBIENT GLOW ── */}
+      <div className="pointer-events-none fixed inset-0 z-0" style={{
+        background: `radial-gradient(ellipse 80% 60% at 50% -10%, ${activeData.color}18 0%, transparent 70%)`,
+        transition: "background 0.8s ease",
+      }} />
+
+      {/* ── LEFT SIDEBAR ── */}
+      <div
+        className="relative flex-shrink-0 flex flex-col z-10 transition-all duration-300"
+        style={{
+          width: sidebarExpanded ? 220 : 64,
+          borderRight: "1px solid rgba(255,255,255,0.06)",
+          background: "rgba(0,0,0,0.95)",
+          backdropFilter: "blur(20px)",
+        }}
+      >
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-4 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)", minHeight: 60 }}>
+          <div className="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, #DC2626, #9333EA)` }}>
+            <span className="text-white font-black text-sm">V</span>
+          </div>
+          {sidebarExpanded && (
+            <div>
+              <p className="text-sm font-black text-white leading-none">VaultX</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5" style={{ color: "#DC2626" }}>Studio</p>
+            </div>
+          )}
+          <div className="flex-1" />
+          <button
+            onClick={() => setSidebarExpanded(v => !v)}
+            className="w-6 h-6 rounded-lg flex items-center justify-center transition-all hover:bg-white/10"
+            style={{ color: "#4B5563" }}
+          >
+            {sidebarExpanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+          </button>
+        </div>
+
+        {/* Mode Groups */}
+        <div className="flex-1 overflow-y-auto py-3 flex flex-col gap-1 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
+          {MODE_GROUPS.map(group => {
+            const groupModes = group.ids.map(id => MODES.find(m => m.id === id)).filter(Boolean) as typeof MODES;
+            if (groupModes.length === 0) return null;
+            return (
+              <div key={group.label} className="mb-1">
+                {sidebarExpanded && (
+                  <p className="px-4 py-1 text-[9px] font-black uppercase tracking-widest" style={{ color: "#374151" }}>{group.label}</p>
+                )}
+                {groupModes.map(m => {
+                  const active = activeMode === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => setActiveMode(m.id)}
+                      title={!sidebarExpanded ? m.label : undefined}
+                      className="relative w-full flex items-center gap-3 transition-all group"
+                      style={{
+                        padding: sidebarExpanded ? "8px 16px" : "8px",
+                        justifyContent: sidebarExpanded ? "flex-start" : "center",
+                        background: active ? `${m.color}15` : "transparent",
+                        borderLeft: active ? `2px solid ${m.color}` : "2px solid transparent",
+                      }}
+                    >
+                      <div
+                        className="flex-shrink-0 w-7 h-7 rounded-xl flex items-center justify-center transition-all"
+                        style={{
+                          background: active ? `${m.color}25` : "rgba(255,255,255,0.04)",
+                          border: `1px solid ${active ? m.color + "50" : "rgba(255,255,255,0.06)"}`,
+                        }}
+                      >
+                        <span style={{ color: active ? m.color : "#6B7280", display: "flex" }}>{m.icon}</span>
+                      </div>
+                      {sidebarExpanded && (
+                        <span
+                          className="text-xs font-bold truncate"
+                          style={{ color: active ? "white" : "#9CA3AF" }}
+                        >
+                          {m.label}
+                        </span>
+                      )}
+                      {/* Tooltip when collapsed */}
+                      {!sidebarExpanded && (
+                        <div className="absolute left-16 top-1/2 -translate-y-1/2 px-2.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50" style={{ background: "rgba(0,0,0,0.95)", color: "white", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(8px)" }}>
+                          {m.label}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-            </button>
-          );
-        })}
-        <div className="flex-1" />
-        <button
-          onClick={() => setShowHistory(h => !h)}
-          title="Session History"
-          className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all"
-          style={{ background: showHistory ? "rgba(255,255,255,0.08)" : "transparent", border: "1.5px solid transparent", color: "#4B5563" }}
-        >
-          <Activity size={18} />
-        </button>
+            );
+          })}
+        </div>
+
+        {/* Bottom: History toggle */}
+        <div className="border-t p-3" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          <button
+            onClick={() => setShowHistory(h => !h)}
+            className="w-full flex items-center gap-3 py-2 px-3 rounded-xl transition-all hover:bg-white/05"
+            style={{
+              justifyContent: sidebarExpanded ? "flex-start" : "center",
+              background: showHistory ? "rgba(255,255,255,0.06)" : "transparent",
+              color: showHistory ? "white" : "#4B5563",
+            }}
+          >
+            <Activity size={16} />
+            {sidebarExpanded && <span className="text-xs font-bold">History</span>}
+          </button>
+        </div>
       </div>
 
-      {/* HISTORY PANEL */}
+      {/* ── HISTORY PANEL ── */}
       {showHistory && (
-        <div className="flex-shrink-0 flex flex-col overflow-hidden" style={{ width: 240, borderRight: "1px solid rgba(255,255,255,0.06)", background: "#080808" }}>
+        <div className="flex-shrink-0 flex flex-col overflow-hidden z-10" style={{ width: 220, borderRight: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.9)" }}>
           <div className="p-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
             <p className="text-xs font-black uppercase tracking-widest text-white">Session History</p>
             <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>{history.length} outputs</p>
@@ -2856,15 +3586,13 @@ export default function VaultXStudio() {
             ) : history.map(item => {
               const modeData = MODES.find(m => m.id === item.mode);
               return (
-                <div key={item.id} className="flex flex-col gap-1.5 p-3 rounded-xl cursor-pointer" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }} onClick={() => setActiveMode(item.mode)}>
+                <div key={item.id} className="flex flex-col gap-1.5 p-3 rounded-xl cursor-pointer transition-all hover:bg-white/05" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }} onClick={() => setActiveMode(item.mode)}>
                   <div className="flex items-center gap-2">
                     <span style={{ color: modeData?.color || "#6B7280" }}>{modeData?.icon}</span>
                     <span className="text-xs font-bold text-white truncate">{item.label}</span>
                   </div>
                   <video src={item.outputUrl} className="w-full rounded-lg" style={{ maxHeight: 80, objectFit: "cover" }} muted />
-                  <div className="flex gap-1.5">
-                    <button onClick={(e) => { e.stopPropagation(); const a = document.createElement("a"); a.href = item.outputUrl; a.download = `vaultx-${item.mode}.mp4`; a.click(); }} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF" }}><Download size={10} /> Save</button>
-                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); const a = document.createElement("a"); a.href = item.outputUrl; a.download = `vaultx-${item.mode}.mp4`; a.click(); }} className="w-full flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF" }}><Download size={10} /> Save</button>
                 </div>
               );
             })}
@@ -2872,25 +3600,46 @@ export default function VaultXStudio() {
         </div>
       )}
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* TOP BAR */}
-        <div className="flex-shrink-0 flex items-center gap-3 px-5 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "#080808" }}>
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `${activeData.color}20`, border: `1px solid ${activeData.color}30` }}>
-            <span style={{ color: activeData.color }}>{activeData.icon}</span>
+      {/* ── MAIN CONTENT AREA ── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
+        {/* TOP BAR — Pollo AI style */}
+        <div
+          className="flex-shrink-0 flex items-center gap-4 px-6 py-3"
+          style={{
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            background: "rgba(0,0,0,0.8)",
+            backdropFilter: "blur(20px)",
+            minHeight: 60,
+          }}
+        >
+          {/* Active mode info */}
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: `${activeData.color}20`, border: `1px solid ${activeData.color}40` }}
+            >
+              <span style={{ color: activeData.color, display: "flex" }}>{activeData.icon}</span>
+            </div>
+            <div>
+              <p className="text-sm font-black text-white leading-none">{activeData.label}</p>
+              <p className="text-[10px] mt-0.5 max-w-xs truncate" style={{ color: "#6B7280" }}>{activeData.desc}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-black text-white">{activeData.label}</p>
-            <p className="text-[10px]" style={{ color: "#6B7280" }}>{activeData.desc}</p>
-          </div>
+
           <div className="flex-1" />
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            <span className="text-[10px] font-bold" style={{ color: "#9CA3AF" }}>VaultX Studio v6</span>
+
+          {/* Status pill */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: activeData.color }} />
+            <span className="text-[10px] font-bold" style={{ color: "#9CA3AF" }}>VaultX Studio</span>
           </div>
+
+          {/* Nav links */}
+          <a href="/vault-x/editor" className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:bg-white/10" style={{ color: "#6B7280" }}>Editor</a>
+          <a href="/vault-x/analytics" className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:bg-white/10" style={{ color: "#6B7280" }}>Analytics</a>
         </div>
 
-        {/* MODE CONTENT */}
+        {/* MODE CONTENT — full height, no padding, content owns the space */}
         <div className="flex-1 overflow-hidden">
           {renderMode()}
         </div>
