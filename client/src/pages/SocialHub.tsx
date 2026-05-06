@@ -853,6 +853,9 @@ function AuditTab() {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
+  // Real tRPC call — fires real OpenAI GPT-4o-mini call on the server
+  const analyzeProfile = trpc.socialScraper.analyzeProfile.useMutation();
+
   const AUDIT_PLATFORMS = [
     { id: "instagram", label: "Instagram", icon: "📷" },
     { id: "tiktok", label: "TikTok", icon: "🎵" },
@@ -865,35 +868,40 @@ function AuditTab() {
   const runAudit = async () => {
     if (!username.trim()) return toast({ title: "Error", description: "Enter a username", variant: "destructive" });
     setLoading(true);
-    // Simulate audit analysis using GPT via the existing AI infrastructure
-    await new Promise(r => setTimeout(r, 2000));
-    const followerCount = Math.floor(Math.random() * 50000) + 5000;
-    const engagementRate = (Math.random() * 5 + 1).toFixed(2);
-    const monthlyRevenuePotential = Math.floor(followerCount * 0.02 * 25);
-    setResult({
-      platform,
-      username,
-      followerCount,
-      engagementRate,
-      monthlyRevenuePotential,
-      strengths: [
-        "High engagement rate vs platform average",
-        "Consistent posting schedule detected",
-        "Strong niche audience alignment",
-      ],
-      opportunities: [
-        `Subscription revenue: $${Math.floor(monthlyRevenuePotential * 0.4).toLocaleString()}/mo at $15/sub`,
-        `PPV content: $${Math.floor(monthlyRevenuePotential * 0.35).toLocaleString()}/mo at $25/PPV`,
-        `Custom requests: $${Math.floor(monthlyRevenuePotential * 0.25).toLocaleString()}/mo at $75/request`,
-      ],
-      roadmap: [
-        "Week 1: Create VaultX profile, upload 10 premium pieces",
-        "Week 2: Post teasers to social, drive traffic to VaultX",
-        "Week 3: Launch $15/mo subscription tier",
-        "Week 4: First PPV drop — $25 exclusive content",
-      ],
-    });
-    setLoading(false);
+    try {
+      // Real GPT call via socialScraper.analyzeProfile — returns AI analysis of the profile
+      const gptResult = await analyzeProfile.mutateAsync({
+        handle: username.replace("@", ""),
+        platform,
+      });
+      // Parse the GPT JSON response — the server returns structured analysis
+      let parsed: any = {};
+      try {
+        const jsonMatch = (gptResult.analysis || "").match(/\{[\s\S]*\}/);
+        if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+      } catch { /* GPT returned prose instead of JSON — use raw text */ }
+
+      const followerEstimate = parsed.follower_estimate || null;
+      const engagementRate = parsed.engagement_rate ? String(parsed.engagement_rate) : null;
+      const monthlyRevenuePotential = parsed.monthly_revenue_potential || null;
+      const monetizationMethods: string[] = parsed.monetization_methods || [];
+
+      setResult({
+        platform,
+        username,
+        rawAnalysis: gptResult.analysis,
+        followerEstimate,
+        engagementRate,
+        monthlyRevenuePotential,
+        contentStyle: parsed.content_style || null,
+        audienceType: parsed.audience_type || null,
+        monetizationMethods,
+      });
+    } catch (err: any) {
+      toast({ title: "Audit failed", description: err.message || "Could not analyze profile", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -952,53 +960,63 @@ function AuditTab() {
         </div>
       </div>
 
-      {/* Results */}
+      {/* Results — all data from real GPT response */}
       {result && (
         <div className="space-y-4">
-          {/* Revenue potential */}
-          <div className="p-5 rounded-2xl bg-gradient-to-r from-green-900/40 to-emerald-900/40 border border-green-500/30 text-center">
-            <p className="text-gray-400 text-sm mb-1">Monthly Revenue Potential on VaultX</p>
-            <p className="text-5xl font-black text-green-400">${result.monthlyRevenuePotential.toLocaleString()}</p>
-            <p className="text-gray-500 text-xs mt-1">Based on {result.followerCount.toLocaleString()} followers · {result.engagementRate}% engagement</p>
-          </div>
+          {/* Revenue potential — shown only if GPT returned a number */}
+          {result.monthlyRevenuePotential ? (
+            <div className="p-5 rounded-2xl bg-gradient-to-r from-green-900/40 to-emerald-900/40 border border-green-500/30 text-center">
+              <p className="text-gray-400 text-sm mb-1">Monthly Revenue Potential on VaultX</p>
+              <p className="text-5xl font-black text-green-400">${Number(result.monthlyRevenuePotential).toLocaleString()}</p>
+              {result.followerEstimate && (
+                <p className="text-gray-500 text-xs mt-1">
+                  Est. {Number(result.followerEstimate).toLocaleString()} followers
+                  {result.engagementRate ? ` · ${result.engagementRate}/10 engagement` : ""}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="p-5 rounded-2xl bg-white/5 border border-white/10 text-center">
+              <p className="text-gray-400 text-sm">Revenue estimate not available for this profile — see full analysis below</p>
+            </div>
+          )}
 
-          {/* Breakdown */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {result.opportunities.map((opp: string, i: number) => (
-              <div key={i} className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="w-4 h-4 text-green-400" />
-                  <span className="text-white text-xs font-bold">{["Subscriptions", "PPV Content", "Custom Requests"][i]}</span>
-                </div>
-                <p className="text-gray-400 text-xs">{opp}</p>
+          {/* Profile insights from GPT */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {result.contentStyle && (
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Content Style</p>
+                <p className="text-white text-sm">{result.contentStyle}</p>
               </div>
-            ))}
+            )}
+            {result.audienceType && (
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Audience</p>
+                <p className="text-white text-sm">{result.audienceType}</p>
+              </div>
+            )}
           </div>
 
-          {/* Strengths */}
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-            <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2"><Trophy className="w-4 h-4 text-yellow-400" /> Your Strengths</h4>
-            <div className="space-y-2">
-              {result.strengths.map((s: string, i: number) => (
-                <div key={i} className="flex items-center gap-2 text-sm text-gray-300">
-                  <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" />
-                  {s}
-                </div>
-              ))}
+          {/* Monetization methods from GPT */}
+          {result.monetizationMethods.length > 0 && (
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+              <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-green-400" /> Current Monetization Methods
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {result.monetizationMethods.map((m: string, i: number) => (
+                  <span key={i} className="px-3 py-1 rounded-full bg-green-900/30 border border-green-500/20 text-green-400 text-xs font-semibold">{m}</span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* 30-day roadmap */}
+          {/* Full raw GPT analysis */}
           <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-            <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2"><Target className="w-4 h-4 text-purple-400" /> 30-Day Roadmap to First $1,000</h4>
-            <div className="space-y-3">
-              {result.roadmap.map((step: string, i: number) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-purple-600/30 border border-purple-500/30 flex items-center justify-center text-purple-400 text-xs font-black flex-shrink-0 mt-0.5">{i + 1}</div>
-                  <p className="text-gray-300 text-sm">{step}</p>
-                </div>
-              ))}
-            </div>
+            <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-yellow-400" /> Full AI Analysis
+            </h4>
+            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{result.rawAnalysis}</p>
           </div>
 
           <a
@@ -1021,6 +1039,12 @@ function FactoryTab() {
   const [generating, setGenerating] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
 
+  // Real tRPC mutations — each fires a real GPT-4o-mini call on the server
+  const optimizeTwitter = trpc.viralOptimizer.optimizeForViral.useMutation();
+  const optimizeInstagram = trpc.viralOptimizer.optimizeForViral.useMutation();
+  const optimizeTikTok = trpc.viralOptimizer.optimizeForViral.useMutation();
+  const optimizeReddit = trpc.viralOptimizer.optimizeForViral.useMutation();
+
   const NICHES = [
     { id: "adult_creator", label: "Adult Creator", icon: "🔥" },
     { id: "fitness", label: "Fitness", icon: "💪" },
@@ -1029,25 +1053,30 @@ function FactoryTab() {
     { id: "art", label: "Art/Creative", icon: "🎨" },
   ];
 
-  const TEMPLATES = [
-    { platform: "Twitter/X", icon: "𝕏", content: "🔥 New content just dropped — link in bio. Subscribers get first access. 👀 #VaultX #ExclusiveContent", type: "teaser" },
-    { platform: "Instagram", icon: "📷", content: "Behind the scenes energy today ✨ Full content available for my VaultX subscribers. Link in bio 💜 #ContentCreator #Exclusive", type: "teaser" },
-    { platform: "TikTok", icon: "🎵", content: "POV: You just found out I have a VaultX page 👀🔥 Link in bio for exclusive content. #FYP #ContentCreator", type: "viral" },
-    { platform: "YouTube", icon: "▶", content: "New video up! This is just the preview — full uncensored version on my VaultX. Check the description for the link. 🔗", type: "promo" },
-  ];
-
   const generatePosts = async () => {
     if (!topic.trim()) return toast({ title: "Error", description: "Enter a topic or content idea", variant: "destructive" });
     setGenerating(true);
-    await new Promise(r => setTimeout(r, 1500));
-    const generated = TEMPLATES.map(t => ({
-      ...t,
-      customContent: `${t.content}\n\n💡 Topic: ${topic}`,
-      copied: false,
-    }));
-    setPosts(generated);
-    setGenerating(false);
-    toast({ title: "Generated!", description: "4 platform-optimized posts ready" });
+    try {
+      // Fire all 4 real GPT calls in parallel — each returns platform-optimized content
+      const baseContent = `${topic} \u2014 exclusive content available on my VaultX page. Link in bio.`;
+      const [twitterRes, instagramRes, tiktokRes, redditRes] = await Promise.all([
+        optimizeTwitter.mutateAsync({ content: baseContent, platform: "Twitter/X", niche }),
+        optimizeInstagram.mutateAsync({ content: baseContent, platform: "Instagram", niche }),
+        optimizeTikTok.mutateAsync({ content: baseContent, platform: "TikTok", niche }),
+        optimizeReddit.mutateAsync({ content: baseContent, platform: "Reddit", niche }),
+      ]);
+      setPosts([
+        { platform: "Twitter/X", icon: "𝕏", customContent: twitterRes.optimized || "", type: "teaser", copied: false },
+        { platform: "Instagram", icon: "📷", customContent: instagramRes.optimized || "", type: "teaser", copied: false },
+        { platform: "TikTok", icon: "🎵", customContent: tiktokRes.optimized || "", type: "viral", copied: false },
+        { platform: "Reddit", icon: "👽", customContent: redditRes.optimized || "", type: "promo", copied: false },
+      ]);
+      toast({ title: "Generated!", description: "4 real AI-optimized posts ready" });
+    } catch (err: any) {
+      toast({ title: "Generation failed", description: err.message || "GPT call failed", variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const copyPost = (idx: number) => {

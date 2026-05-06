@@ -82,15 +82,29 @@ async function scrapeRedditProfiles(subreddit: string, count: number = 20): Prom
     const posts = data.data?.children || [];
     const authorSet = new Set<string>(posts.map((p: any) => p.data.author as string));
     const authors = Array.from(authorSet).filter(a => a !== "[deleted]");
-    return authors.slice(0, count).map((author: any) => ({
-      handle: author,
-      display_name: author,
-      bio: `Active creator on r/${subreddit}`,
-      followers: Math.floor(Math.random() * 50000) + 1000,
-      engagement_rate: 4.2,
-      recent_post: posts.find((p: any) => p.data.author === author)?.data.title || "Recent post",
-      platforms: ["reddit"],
-    }));
+    return authors.slice(0, count).map((author: string) => {
+      // Use real karma scores from the Reddit API response — not Math.random()
+      const authorPosts = posts.filter((p: any) => p.data.author === author);
+      const topPost = authorPosts.reduce((best: any, p: any) =>
+        (p.data.score > (best?.data?.score || 0)) ? p : best, authorPosts[0]);
+      const totalKarma = authorPosts.reduce((sum: number, p: any) => sum + (p.data.score || 0), 0);
+      // Engagement: comment-to-upvote ratio on top post (real Reddit signal)
+      const topComments = topPost?.data?.num_comments || 0;
+      const topScore = topPost?.data?.score || 1;
+      const engagementRate = parseFloat(Math.min(10, (topComments / topScore) * 100).toFixed(1));
+      return {
+        handle: author,
+        display_name: author,
+        bio: `Active creator on r/${subreddit}`,
+        // Reddit does not expose follower counts — karma_score is the real metric
+        karma_score: totalKarma,
+        followers: totalKarma, // use karma as the engagement proxy for scoring
+        engagement_rate: engagementRate,
+        recent_post: topPost?.data?.title || "Recent post",
+        recent_post_score: topPost?.data?.score || 0,
+        platforms: ["reddit"],
+      };
+    });
   } catch (e) {
     console.error("Reddit API error:", e);
     return [];
