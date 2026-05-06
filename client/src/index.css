@@ -659,3 +659,36 @@ html:not(.dark) body {
   background: var(--kc-black) !important;
   color: var(--kc-bone) !important;
 }
+
+
+/* VAULTX ANIMATION SYSTEM */
+@keyframes vx-sweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+@keyframes vx-float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+@keyframes vx-fade-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes vx-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vx-scale-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+@keyframes vx-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes vx-border-glow { 0%, 100% { box-shadow: 0 0 20px rgba(220,38,38,0.2); } 50% { box-shadow: 0 0 40px rgba(220,38,38,0.5); } }
+@keyframes vx-ring-expand { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
+.vx-fade-up { animation: vx-fade-up 0.4s ease forwards; }
+.vx-fade-in { animation: vx-fade-in 0.3s ease forwards; }
+.vx-scale-in { animation: vx-scale-in 0.3s ease forwards; }
+.vx-float { animation: vx-float 3s ease-in-out infinite; }
+.vx-border-glow { animation: vx-border-glow 2s ease-in-out infinite; }
+.vx-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.vx-stagger > *:nth-child(2) { animation-delay: 80ms; }
+.vx-stagger > *:nth-child(3) { animation-delay: 160ms; }
+.vx-stagger > *:nth-child(4) { animation-delay: 240ms; }
+.vx-stagger > *:nth-child(5) { animation-delay: 320ms; }
+.vx-stagger > *:nth-child(6) { animation-delay: 400ms; }
+.vx-glass { background: rgba(10,10,10,0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.07); }
+.vx-glass-hover { transition: all 0.3s ease; }
+.vx-glass-hover:hover { background: rgba(20,20,20,0.9); border-color: rgba(255,255,255,0.12); transform: translateY(-2px); box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.vx-shimmer { background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%); background-size: 200% 100%; animation: vx-shimmer 1.5s ease-in-out infinite; }
+.vx-video-card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+.vx-video-card:hover { transform: translateY(-6px) scale(1.01); }
+.vx-gradient-text { background: linear-gradient(135deg, #DC2626, #EC4899, #9333EA); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.vx-gradient-text-purple { background: linear-gradient(135deg, #8B5CF6, #EC4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.vx-cta { background: linear-gradient(135deg, #DC2626, #9333EA); color: white; font-weight: 900; border-radius: 16px; transition: all 0.3s ease; box-shadow: 0 0 40px rgba(220,38,38,0.3); }
+.vx-cta:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 0 60px rgba(220,38,38,0.5); }
+.vx-mode-enter { animation: vx-fade-up 0.3s ease forwards; }

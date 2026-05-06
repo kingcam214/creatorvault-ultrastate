@@ -899,33 +899,39 @@ function DiscoverTab() {
         <ForYouFeed />
       ) : (
       <>
-      {/* Hero */}
-      <div className="relative rounded-3xl overflow-hidden bg-[#0a0a0a] from-red-950 via-gray-900 to-black border border-red-900/30 p-8">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(239,68,68,0.15),_transparent_60%)]" />
+      {/* Hero — cinematic, full-bleed */}
+      <div className="relative rounded-3xl overflow-hidden p-10 mb-2" style={{
+        background: "linear-gradient(135deg, rgba(220,38,38,0.15) 0%, rgba(147,51,234,0.10) 50%, rgba(0,0,0,0.8) 100%)",
+        border: "1px solid rgba(220,38,38,0.2)",
+        boxShadow: "0 0 80px rgba(220,38,38,0.15) inset",
+      }}>
+        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 60% at 80% 20%, rgba(239,68,68,0.12), transparent 60%)" }} />
         <div className="relative">
-          <div className="flex items-center gap-2 mb-3">
-            <Flame className="w-5 h-5 text-red-400" />
-            <span className="text-red-400 text-xs font-bold uppercase tracking-widest">The Uncensored Network</span>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#EF4444" }} />
+            <span className="text-xs font-black uppercase tracking-widest" style={{ color: "#EF4444" }}>The Uncensored Creator Economy</span>
           </div>
-          <h1 className="text-3xl font-black text-white mb-2">VaultX</h1>
-          <p className="text-gray-400 text-sm max-w-md">
-            The first social economy where adult creators own their audience, set their prices, and keep 85% of every dollar.
+          <h1 className="font-black text-white mb-3" style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
+            Where Creators<br />
+            <span style={{ background: "linear-gradient(135deg, #DC2626, #EC4899, #9333EA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Own Everything.
+            </span>
+          </h1>
+          <p className="text-sm max-w-lg mb-6" style={{ color: "#9CA3AF", lineHeight: 1.7 }}>
+            The first platform where adult creators own their audience, set their prices, and keep <strong style={{ color: "white" }}>85% of every dollar</strong> — powered by the most powerful creator OS ever built.
           </p>
-          <div className="flex items-center gap-6 mt-5">
-            <div className="text-center">
-              <div className="text-2xl font-black text-white">{creators.length}</div>
-              <div className="text-gray-500 text-xs">Creators</div>
-            </div>
-            <div className="w-px h-8 bg-gray-800" />
-            <div className="text-center">
-              <div className="text-2xl font-black text-white">85%</div>
-              <div className="text-gray-500 text-xs">Revenue Share</div>
-            </div>
-            <div className="w-px h-8 bg-gray-800" />
-            <div className="text-center">
-              <div className="text-2xl font-black text-white">0</div>
-              <div className="text-gray-500 text-xs">Censorship</div>
-            </div>
+          <div className="flex items-center gap-8 flex-wrap">
+            {[
+              { value: creators.length.toString(), label: "Creators" },
+              { value: "85%", label: "Revenue Share" },
+              { value: "0", label: "Censorship" },
+              { value: "∞", label: "Earning Potential" },
+            ].map((stat, i) => (
+              <div key={i} className="text-center">
+                <div className="text-2xl font-black text-white">{stat.value}</div>
+                <div className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{stat.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -967,8 +973,8 @@ function DiscoverTab() {
             <Crown className="w-4 h-4 text-amber-400" />
             <span className="text-white font-bold text-sm">Featured Creators</span>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {filtered.filter((c: any) => c.is_featured).slice(0, 4).map((c: any) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {filtered.filter((c: any) => c.is_featured).slice(0, 6).map((c: any) => (
               <CreatorCard key={c.id} creator={c} onClick={() => setSelectedCreator(c)} />
             ))}
           </div>
@@ -993,7 +999,7 @@ function DiscoverTab() {
             </a>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {filtered.map((c: any) => (
               <CreatorCard key={c.id} creator={c} onClick={() => setSelectedCreator(c)} />
             ))}
@@ -1983,14 +1989,89 @@ export default function VaultX() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-6">
-        <div className="text-center">
-          <Flame className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <div className="text-white font-black text-2xl mb-2">VaultX</div>
-          <div className="text-gray-400 text-sm mb-6">Sign in to access the uncensored social economy</div>
-          <a href="/login" className="bg-red-500 text-white font-bold px-8 py-3 rounded-xl text-sm hover:bg-red-600 transition-colors">
-            Sign In
-          </a>
+      <div className="min-h-screen overflow-hidden relative" style={{ background: "#000" }}>
+        {/* Full-bleed ambient background */}
+        <div className="absolute inset-0 z-0" style={{
+          background: "radial-gradient(ellipse 100% 80% at 50% 0%, rgba(220,38,38,0.18) 0%, rgba(147,51,234,0.10) 40%, transparent 70%)",
+        }} />
+        <div className="absolute inset-0 z-0" style={{
+          background: "radial-gradient(ellipse 60% 40% at 80% 60%, rgba(239,68,68,0.08) 0%, transparent 60%)",
+        }} />
+        {/* Animated grid overlay */}
+        <div className="absolute inset-0 z-0 opacity-[0.03]" style={{
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
+        }} />
+        {/* Nav */}
+        <nav className="relative z-10 flex items-center justify-between px-8 py-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #DC2626, #9333EA)" }}>
+              <Flame className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-white font-black text-xl tracking-tight">VaultX</span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(220,38,38,0.2)", color: "#EF4444", border: "1px solid rgba(220,38,38,0.3)" }}>18+</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <a href="/login" className="text-sm font-bold px-5 py-2.5 rounded-xl transition-all hover:text-white" style={{ color: "#9CA3AF" }}>Sign In</a>
+            <a href="/login" className="text-sm font-black px-6 py-2.5 rounded-xl transition-all" style={{ background: "linear-gradient(135deg, #DC2626, #9333EA)", color: "white" }}>Join Free</a>
+          </div>
+        </nav>
+        {/* Hero */}
+        <div className="relative z-10 flex flex-col items-center text-center px-6 pt-16 pb-20">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8" style={{ background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.25)" }}>
+            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#EF4444" }} />
+            <span className="text-xs font-bold" style={{ color: "#EF4444" }}>The Uncensored Creator Economy</span>
+          </div>
+          <h1 className="font-black text-white mb-6 leading-none" style={{ fontSize: "clamp(3rem, 8vw, 7rem)", letterSpacing: "-0.04em" }}>
+            Create.<br />
+            <span style={{ background: "linear-gradient(135deg, #DC2626, #EC4899, #9333EA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Own.
+            </span><br />
+            Earn.
+          </h1>
+          <p className="text-lg max-w-xl mb-10" style={{ color: "#9CA3AF", lineHeight: 1.6 }}>
+            The first platform where adult creators own their audience, set their prices, and keep <strong style={{ color: "white" }}>85% of every dollar</strong>. Powered by the most powerful creator OS ever built.
+          </p>
+          <div className="flex items-center gap-4 flex-wrap justify-center">
+            <a href="/login" className="flex items-center gap-2 text-base font-black px-8 py-4 rounded-2xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #DC2626, #9333EA)", color: "white", boxShadow: "0 0 40px rgba(220,38,38,0.4)" }}>
+              <Flame className="w-5 h-5" />
+              Start Creating Free
+            </a>
+            <a href="/login" className="text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "white", border: "1px solid rgba(255,255,255,0.15)" }}>
+              Explore Creators →
+            </a>
+          </div>
+          {/* Stats */}
+          <div className="flex items-center gap-8 mt-16 flex-wrap justify-center">
+            {[
+              { value: "85%", label: "Revenue to Creators" },
+              { value: "0", label: "Censorship" },
+              { value: "∞", label: "Earning Potential" },
+              { value: "1", label: "Platform to Rule Them All" },
+            ].map(stat => (
+              <div key={stat.label} className="text-center">
+                <div className="text-3xl font-black text-white mb-1">{stat.value}</div>
+                <div className="text-xs font-medium" style={{ color: "#6B7280" }}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Feature strip */}
+        <div className="relative z-10 border-t border-b py-8 px-8" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              { icon: "🎬", title: "AI Video Studio", desc: "Professional-grade AI tools built for adult creators" },
+              { icon: "💰", title: "PPV & Subscriptions", desc: "Set your prices, own your income, no middlemen" },
+              { icon: "🔥", title: "Uncensored", desc: "Zero censorship, zero deplatforming risk" },
+              { icon: "📊", title: "Creator Analytics", desc: "Real-time revenue, fan intelligence, growth data" },
+            ].map(f => (
+              <div key={f.title} className="flex flex-col gap-2">
+                <span className="text-2xl">{f.icon}</span>
+                <p className="text-sm font-black text-white">{f.title}</p>
+                <p className="text-xs" style={{ color: "#6B7280" }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

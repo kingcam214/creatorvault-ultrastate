@@ -166,14 +166,24 @@ export default function VaultXAnalytics() {
 
   return (
     <div className="min-h-screen pb-16 relative" style={{ background: "#000000", fontFamily: "'Inter', sans-serif" }}>
-      <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 70% 40% at 50% -5%, rgba(139,92,246,0.10) 0%, transparent 70%)" }} />
+      {/* Multi-layer ambient glow */}
+      <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(139,92,246,0.15) 0%, transparent 60%)" }} />
+      <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 40% 30% at 80% 80%, rgba(236,72,153,0.06) 0%, transparent 60%)" }} />
 
-      {/* ── HEADER ── */}
-      <div className="sticky top-0 z-30 px-6 py-4" style={{ background: "rgba(0,0,0,0.92)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.05)", position: "relative", zIndex: 30 }}>
+      {/* ── HEADER — Command Center ── */}
+      <div className="sticky top-0 z-30 px-6 py-4" style={{ background: "rgba(0,0,0,0.92)", backdropFilter: "blur(24px)", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "relative", zIndex: 30 }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-black text-white">Analytics</h1>
-            <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>Real-time revenue, subscriber, and content intelligence</p>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}>
+              <span className="text-white font-black text-sm">V</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-black text-white">Analytics</h1>
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(139,92,246,0.2)", color: "#A78BFA", border: "1px solid rgba(139,92,246,0.3)" }}>Command Center</span>
+              </div>
+              <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>Real-time revenue, subscriber, and content intelligence</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => { revenueQ.refetch(); contentQ.refetch(); fanQ.refetch(); requestsQ.refetch(); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold" style={{ background: "rgba(255,255,255,0.05)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)" }}>

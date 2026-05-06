@@ -182,64 +182,87 @@ function fmtSize(bytes: number): string {
 // ============================================================================
 
 function CanvasDropZone({ onFile, accent = "#DC2626", label = "Drop your video here" }: { onFile: (vf: VideoFile) => void; accent?: string; label?: string }) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const handleFile = (f: File) => {
-    const url = URL.createObjectURL(f);
-    const vf: VideoFile = { file: f, url, name: f.name, size: f.size };
-    const v = document.createElement("video");
-    v.src = url;
-    v.onloadedmetadata = () => { vf.duration = v.duration; onFile(vf); };
-    v.onerror = () => onFile(vf);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setDragging(false);
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith("video/")) onFile({ file: f, url: URL.createObjectURL(f), name: f.name, size: f.size });
   };
   return (
     <div
-      onClick={() => inputRef.current?.click()}
-      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+      onDragOver={e => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
-      onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-      className="flex-1 flex flex-col items-center justify-center gap-8 cursor-pointer transition-all duration-300 relative overflow-hidden"
+      onDrop={handleDrop}
+      onClick={() => inputRef.current?.click()}
+      className="w-full h-full flex flex-col items-center justify-center cursor-pointer relative overflow-hidden"
       style={{
-        border: `1.5px dashed ${dragging ? accent : "rgba(255,255,255,0.08)"}`,
-        background: dragging ? `${accent}06` : "rgba(255,255,255,0.01)",
-        borderRadius: 24,
-        minHeight: 420,
+        background: dragging ? `${accent}08` : "transparent",
+        transition: "all 0.3s ease",
       }}
     >
+      {/* Cinematic grid */}
+      <div className="absolute inset-0 opacity-[0.03]" style={{
+        backgroundImage: `linear-gradient(${accent}80 1px, transparent 1px), linear-gradient(90deg, ${accent}80 1px, transparent 1px)`,
+        backgroundSize: "40px 40px",
+      }} />
       {/* Ambient glow when dragging */}
       {dragging && (
-        <div className="absolute inset-0 pointer-events-none" style={{
-          background: `radial-gradient(ellipse 60% 50% at 50% 50%, ${accent}12 0%, transparent 70%)`,
+        <div className="absolute inset-0" style={{
+          background: `radial-gradient(ellipse 60% 60% at 50% 50%, ${accent}20, transparent 70%)`,
         }} />
       )}
-      <div
-        className="relative w-24 h-24 rounded-3xl flex items-center justify-center transition-all duration-300"
-        style={{
-          background: dragging ? `${accent}20` : `${accent}10`,
-          border: `1.5px solid ${dragging ? accent : accent + "30"}`,
-          boxShadow: dragging ? `0 0 40px ${accent}30` : "none",
-        }}
-      >
-        <Upload size={40} color={accent} />
+      {/* Dashed border */}
+      <div className="absolute inset-8 rounded-3xl" style={{
+        border: `2px dashed ${dragging ? accent : accent + "40"}`,
+        transition: "all 0.3s ease",
+        boxShadow: dragging ? `0 0 60px ${accent}30 inset, 0 0 60px ${accent}20` : "none",
+      }} />
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center gap-6 text-center px-8">
+        <div
+          className="w-20 h-20 rounded-3xl flex items-center justify-center transition-all"
+          style={{
+            background: `${accent}15`,
+            border: `2px solid ${accent}40`,
+            boxShadow: dragging ? `0 0 40px ${accent}50` : `0 0 20px ${accent}20`,
+            transform: dragging ? "scale(1.1)" : "scale(1)",
+          }}
+        >
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-xl font-black text-white mb-2">{label}</p>
+          <p className="text-sm" style={{ color: "#6B7280" }}>MP4 · MOV · AVI · MKV · WebM — up to 4GB</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="h-px w-16" style={{ background: "rgba(255,255,255,0.1)" }} />
+          <span className="text-xs font-bold" style={{ color: "#4B5563" }}>or</span>
+          <div className="h-px w-16" style={{ background: "rgba(255,255,255,0.1)" }} />
+        </div>
+        <div
+          className="px-8 py-3 rounded-2xl text-sm font-black transition-all hover:scale-105"
+          style={{
+            background: `linear-gradient(135deg, ${accent}30, ${accent}15)`,
+            color: accent,
+            border: `1px solid ${accent}50`,
+          }}
+        >
+          Browse Files
+        </div>
       </div>
-      <div className="text-center relative z-10">
-        <p className="text-white font-black text-2xl tracking-tight">{label}</p>
-        <p className="text-sm mt-2 font-medium" style={{ color: "#4B5563" }}>MP4 · MOV · AVI · MKV · WebM — up to 4GB</p>
-      </div>
-      <div
-        className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-black transition-all"
-        style={{
-          background: dragging ? accent : `${accent}18`,
-          color: dragging ? "white" : accent,
-          border: `1.5px solid ${accent}40`,
-        }}
-      >
-        <FileVideo size={16} /> Browse Files
-      </div>
-      <input ref={inputRef} type="file" accept="video/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+      <input ref={inputRef} type="file" accept="video/*" className="hidden" onChange={e => {
+        const f = e.target.files?.[0]; if (!f) return;
+        onFile({ file: f, url: URL.createObjectURL(f), name: f.name, size: f.size });
+      }} />
     </div>
   );
 }
+
 
 function ImageDropZone({ onFile, accent = "#DC2626", label = "Drop your image here" }: { onFile: (url: string, file: File) => void; accent?: string; label?: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -311,62 +334,82 @@ function VideoDropZone({ onFile, accent = "#DC2626" }: { onFile: (vf: VideoFile)
 }
 
 function CanvasVideoPlayer({ src, label, accent = "#DC2626", onReplace }: { src: string; label?: string; accent?: string; onReplace?: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [showControls, setShowControls] = useState(false);
   const toggle = () => {
     if (!videoRef.current) return;
     if (playing) { videoRef.current.pause(); setPlaying(false); }
     else { videoRef.current.play(); setPlaying(true); }
   };
   return (
-    <div className="relative flex-1 flex flex-col overflow-hidden" style={{ background: "#000", minHeight: 360 }}>
-      {/* Ambient glow from video */}
-      <div className="absolute inset-0 pointer-events-none" style={{
-        background: `radial-gradient(ellipse 60% 40% at 50% 100%, ${accent}15 0%, transparent 70%)`,
-      }} />
+    <div
+      className="relative w-full h-full overflow-hidden group"
+      onMouseEnter={() => setShowControls(true)}
+      onMouseLeave={() => setShowControls(false)}
+      style={{ background: "#000" }}
+    >
       <video
         ref={videoRef}
         src={src}
-        className="w-full flex-1 object-contain"
-        style={{ minHeight: 320 }}
+        className="w-full h-full object-contain"
         onTimeUpdate={() => {
-          if (videoRef.current) setProgress(videoRef.current.currentTime);
-        }}
-        onLoadedMetadata={() => {
-          if (videoRef.current) setDuration(videoRef.current.duration);
+          if (videoRef.current) setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100 || 0);
         }}
         onEnded={() => setPlaying(false)}
+        loop
       />
-      {/* Overlay controls */}
-      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-        <button
-          onClick={toggle}
-          className="w-16 h-16 rounded-full flex items-center justify-center transition-all"
-          style={{ background: `${accent}E0`, backdropFilter: "blur(8px)", border: "2px solid rgba(255,255,255,0.2)" }}
-        >
-          {playing ? <Pause size={24} color="white" /> : <Play size={24} color="white" />}
-        </button>
-      </div>
-      {/* Bottom bar */}
-      <div className="absolute bottom-0 left-0 right-0 px-4 py-3 flex items-center gap-3" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.9), transparent)" }}>
-        <button onClick={toggle} className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `${accent}30` }}>
-          {playing ? <Pause size={14} color="white" /> : <Play size={14} color="white" />}
-        </button>
-        {/* Progress bar */}
-        <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
-          <div className="h-full rounded-full transition-all" style={{ width: duration > 0 ? `${(progress / duration) * 100}%` : "0%", background: accent }} />
+      {/* Ambient glow from video */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: `radial-gradient(ellipse 80% 40% at 50% 100%, ${accent}15, transparent 60%)`,
+      }} />
+      {/* Controls overlay */}
+      <div
+        className="absolute inset-0 flex flex-col justify-between transition-opacity duration-300"
+        style={{ opacity: showControls ? 1 : 0 }}
+      >
+        {/* Top bar */}
+        <div className="flex items-center justify-between p-4" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)" }}>
+          {label && <span className="text-xs font-bold text-white px-3 py-1 rounded-full" style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}>{label}</span>}
+          {onReplace && (
+            <button onClick={onReplace} className="text-xs font-bold px-3 py-1 rounded-full" style={{ background: "rgba(0,0,0,0.6)", color: "#9CA3AF", backdropFilter: "blur(8px)" }}>
+              Replace
+            </button>
+          )}
         </div>
-        <span className="text-[10px] font-bold text-white/60">{Math.floor(progress)}s / {Math.floor(duration)}s</span>
-        {label && <span className="text-[10px] font-black px-2 py-1 rounded-lg" style={{ background: `${accent}20`, color: accent }}>{label}</span>}
-        {onReplace && (
-          <button onClick={onReplace} className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all hover:bg-white/10" style={{ color: "#6B7280" }}>Replace</button>
-        )}
+        {/* Center play button */}
+        <div className="flex items-center justify-center">
+          <button
+            onClick={toggle}
+            className="w-16 h-16 rounded-full flex items-center justify-center transition-all hover:scale-110"
+            style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", border: `2px solid ${accent}60` }}
+          >
+            {playing ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={accent}><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={accent}><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            )}
+          </button>
+        </div>
+        {/* Bottom progress */}
+        <div className="p-4" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7), transparent)" }}>
+          <div className="h-1 rounded-full overflow-hidden cursor-pointer" style={{ background: "rgba(255,255,255,0.15)" }}
+            onClick={e => {
+              if (!videoRef.current) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const pct = (e.clientX - rect.left) / rect.width;
+              videoRef.current.currentTime = pct * videoRef.current.duration;
+            }}
+          >
+            <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${accent}, ${accent}80)`, boxShadow: `0 0 8px ${accent}` }} />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
 
 function CanvasBeforeAfter({ beforeUrl, afterUrl, label, accent = "#22C55E" }: { beforeUrl: string; afterUrl: string; label: string; accent?: string }) {
   const [showAfter, setShowAfter] = useState(true);
@@ -416,27 +459,69 @@ function VideoPlayer({ src, label, accent = "#DC2626" }: { src: string; label?: 
 }
 
 function ProcessingBar({ label, accent = "#DC2626" }: { label: string; accent?: string }) {
+  const [progress, setProgress] = useState(0);
+  const [phase, setPhase] = useState(0);
+  const phases = ["Analyzing content...", "Running AI pipeline...", "Applying enhancements...", "Finalizing output..."];
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(p => {
+        if (p >= 95) { clearInterval(interval); return p; }
+        return p + Math.random() * 3;
+      });
+      setPhase(p => (p + 1) % phases.length);
+    }, 800);
+    return () => clearInterval(interval);
+  }, []);
   return (
-    <div className="flex items-center gap-4 p-5 rounded-3xl relative overflow-hidden" style={{ background: `${accent}08`, border: `1px solid ${accent}25` }}>
-      {/* Animated glow sweep */}
-      <div className="absolute inset-0 opacity-30" style={{
-        background: `linear-gradient(90deg, transparent 0%, ${accent}30 50%, transparent 100%)`,
-        animation: "sweep 2s ease-in-out infinite",
+    <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="absolute inset-0" style={{
+        background: `radial-gradient(ellipse 60% 60% at 50% 50%, ${accent}12, transparent 70%)`,
       }} />
-      <div className="relative flex-shrink-0 w-8 h-8 rounded-2xl flex items-center justify-center" style={{ background: `${accent}20`, border: `1px solid ${accent}40` }}>
-        <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: accent, borderTopColor: "transparent" }} />
+      {/* Animated sweep */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0" style={{
+          background: `linear-gradient(90deg, transparent 0%, ${accent}08 50%, transparent 100%)`,
+          animation: "sweep 2s ease-in-out infinite",
+        }} />
       </div>
-      <div className="relative">
-        <p className="text-sm font-black text-white">{label}</p>
-        <div className="flex gap-1 mt-1.5">
-          {[0,1,2,3,4].map(i => (
-            <div key={i} className="h-1 rounded-full" style={{ width: 20 + i * 8, background: `${accent}${i < 3 ? "CC" : "40"}`, transition: "all 0.3s" }} />
-          ))}
+      <style>{`@keyframes sweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }`}</style>
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center gap-6 text-center px-8 max-w-md">
+        {/* Pulsing ring */}
+        <div className="relative w-24 h-24">
+          <div className="absolute inset-0 rounded-full animate-ping" style={{ background: `${accent}20`, animationDuration: "1.5s" }} />
+          <div className="absolute inset-2 rounded-full animate-ping" style={{ background: `${accent}15`, animationDuration: "2s" }} />
+          <div className="relative w-full h-full rounded-full flex items-center justify-center" style={{ background: `${accent}20`, border: `2px solid ${accent}60` }}>
+            <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: accent, borderTopColor: "transparent" }} />
+          </div>
+        </div>
+        <div>
+          <p className="text-xl font-black text-white mb-2">{label}</p>
+          <p className="text-sm animate-pulse" style={{ color: accent }}>{phases[phase]}</p>
+        </div>
+        {/* Progress bar */}
+        <div className="w-full max-w-xs">
+          <div className="flex justify-between text-xs mb-2" style={{ color: "#6B7280" }}>
+            <span>Processing</span>
+            <span style={{ color: accent }}>{Math.round(progress)}%</span>
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${progress}%`,
+                background: `linear-gradient(90deg, ${accent}, ${accent}80)`,
+                boxShadow: `0 0 10px ${accent}80`,
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
 
 function EngineBadge({ engine, status, fallback }: { engine: string; status: string; fallback?: boolean }) {
   const ok = status === "succeeded" || status === "success";
@@ -449,242 +534,357 @@ function EngineBadge({ engine, status, fallback }: { engine: string; status: str
 }
 
 function Workspace({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
+  const [controlsOpen, setControlsOpen] = useState(true);
   return (
-    <div className="flex flex-1 min-h-0 overflow-hidden" style={{ height: "100%" }}>
-      {/* Controls panel — compact, scrollable */}
-      <div
-        className="flex-shrink-0 overflow-y-auto flex flex-col gap-4 py-5 px-4"
-        style={{
-          width: 300,
-          borderRight: "1px solid rgba(255,255,255,0.05)",
-          background: "rgba(0,0,0,0.4)",
-          scrollbarWidth: "none",
-        }}
-      >
-        {left}
-      </div>
-      {/* Canvas — video-dominant, full height */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ background: "#000" }}>
+    <div className="relative flex flex-1 min-h-0 overflow-hidden" style={{ height: "100%" }}>
+      {/* Canvas — full bleed, video IS the page */}
+      <div className="absolute inset-0" style={{ background: "#000" }}>
         {right}
       </div>
+      {/* Controls panel — floating glass overlay on the left */}
+      <div
+        className="relative z-20 flex-shrink-0 flex flex-col transition-all duration-300"
+        style={{
+          width: controlsOpen ? 320 : 0,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          className="h-full overflow-y-auto flex flex-col gap-4 py-5 px-4"
+          style={{
+            width: 320,
+            background: "rgba(0,0,0,0.85)",
+            backdropFilter: "blur(24px)",
+            borderRight: "1px solid rgba(255,255,255,0.06)",
+            scrollbarWidth: "none",
+          }}
+        >
+          {left}
+        </div>
+      </div>
+      {/* Toggle controls button */}
+      <button
+        onClick={() => setControlsOpen(v => !v)}
+        className="absolute z-30 top-4 flex items-center justify-center transition-all hover:scale-110"
+        style={{
+          left: controlsOpen ? 320 : 0,
+          width: 24,
+          height: 48,
+          background: "rgba(0,0,0,0.8)",
+          backdropFilter: "blur(8px)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderLeft: "none",
+          borderRadius: "0 8px 8px 0",
+          color: "#6B7280",
+        }}
+      >
+        {controlsOpen ? "‹" : "›"}
+      </button>
     </div>
   );
 }
 
 // ============================================================================
-// MODE: DESIRE TEASER ENGINE
+// MODE: VELVET SUITE — BODY-POSITIVE BEAUTY SUITE
 // ============================================================================
 function VelvetSuiteMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
   const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
-  const [sourceUrl, setSourceUrl] = useState("");
-  const [useUrl, setUseUrl] = useState(false);
-  const [teaserDuration, setTeaserDuration] = useState(30);
-  const [enableAI, setEnableAI] = useState(true);
-  const [enableBeauty, setEnableBeauty] = useState(true);
-  const [result, setResult] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"teaser"|"censored"|"beauty"|"ai">("teaser");
+  const [outputUrl, setOutputUrl] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [statusMsg, setStatusMsg] = useState("");
+  const [predictionId, setPredictionId] = useState<string | null>(null);
 
-  const generateMutation = trpc.vaultx.generateDesireTeaser.useMutation({
-    onSuccess: (data) => {
-      setResult(data);
-      if (data.teaserUrl) onOutput(data.teaserUrl, "Desire Teaser");
-      toast.success("Desire Teaser generated.");
-    },
-    onError: (e) => toast.error(e.message),
-  });
+  // Beauty sliders
+  const [skinSmoothing, setSkinSmoothing] = useState(70);     // 0-100: FFmpeg smartblur
+  const [skinWarmth, setSkinWarmth] = useState(60);           // 0-100: color balance warmth
+  const [bodyDefinition, setBodyDefinition] = useState(50);   // 0-100: contrast + sharpen
+  const [intimateLighting, setIntimateLighting] = useState(55); // 0-100: brightness + vignette
+  const [desireGrade, setDesireGrade] = useState("velvet_skin"); // LUT preset
+  const [applyAIBeauty, setApplyAIBeauty] = useState(true);   // PuLID on key frames
+  const [skinTone, setSkinTone] = useState<"fair"|"medium"|"olive"|"deep"|"ebony">("medium");
+  const [bodyFocus, setBodyFocus] = useState<"full_body"|"upper_body"|"face_neck"|"curves">("full_body");
 
-  const run = () => {
-    const url = useUrl ? sourceUrl : videoFile?.url;
-    if (!url) return toast.error("Provide a video source.");
-    generateMutation.mutate({
-      sourceUrl: url,
-      teaserDurationSeconds: teaserDuration,
-      enableAIAnimation: enableAI,
-      enableBeautyEnhance: enableBeauty,
-    });
-  };
-
-  const isRunning = generateMutation.isPending;
   const accent = "#EC4899";
 
-  const PIPELINE_STEPS = [
-    "Download source video",
-    "AI desire peak detection (GPT-4o-mini)",
-    "Extract desire peak frame",
-    "Beauty enhance peak frame (Replicate zsxkib/pulid)",
-    "AI animate desire peak (Replicate minimax/video-01-live)",
-    "Build drip-reveal teaser (FFmpeg composite)",
-    "Build censored preview (strategic blur)",
+  // Full-body beauty pipeline — FFmpeg + optional PuLID
+  const velvetMut = trpc.videoEnhance.velvetSuite.useMutation({
+    onSuccess: (data: any) => {
+      toast.success(`Velvet Suite started — ${data.message}`);
+      if (data.predictionId) { setPredictionId(data.predictionId); }
+      else if (data.outputUrl) {
+        setOutputUrl(data.outputUrl);
+        onOutput(data.outputUrl, "Velvet Suite — Body-Positive Beauty");
+        setIsProcessing(false);
+      }
+    },
+    onError: (e) => { setIsProcessing(false); toast.error(`Velvet Suite: ${e.message}`); },
+  });
+
+  // Job polling
+  const getJobQuery = trpc.videoEnhance.getJob.useQuery(
+    { predictionId: predictionId! },
+    { enabled: !!predictionId && isProcessing, refetchInterval: 6000 }
+  );
+  useEffect(() => {
+    if (!getJobQuery.data) return;
+    const d = getJobQuery.data;
+    if (d.isComplete && d.outputUrl) {
+      setOutputUrl(d.outputUrl);
+      setIsProcessing(false);
+      setPredictionId(null);
+      setStatusMsg("");
+      onOutput(d.outputUrl, "Velvet Suite — Body-Positive Beauty");
+      toast.success("Velvet Suite complete!");
+    } else if (d.status === "failed") {
+      setIsProcessing(false);
+      setPredictionId(null);
+      toast.error("Processing failed.");
+    } else {
+      setStatusMsg(`Enhancing... ${d.progress ? Math.round(d.progress * 100) + "%" : ""}`);
+    }
+  }, [getJobQuery.data]);
+
+  const process = async () => {
+    if (!videoFile) return toast.error("Upload a video first.");
+    setIsProcessing(true);
+    setOutputUrl(null);
+    setStatusMsg("Starting Velvet Suite beauty pipeline...");
+    try {
+      await velvetMut.mutateAsync({
+        imageUrl: videoFile.url,
+        skinTone,
+        enhancementLevel: skinSmoothing > 70 ? "maximum" : skinSmoothing > 40 ? "moderate" : "subtle",
+      });
+    } catch (e: any) {
+      setIsProcessing(false);
+      toast.error(e.message);
+    }
+  };
+
+  const SKIN_TONES = [
+    { id: "fair" as const,   label: "Fair",   color: "#F5CBA7", desc: "Porcelain to light" },
+    { id: "medium" as const, label: "Medium", color: "#E59866", desc: "Golden to tan" },
+    { id: "olive" as const,  label: "Olive",  color: "#C0874F", desc: "Warm olive" },
+    { id: "deep" as const,   label: "Deep",   color: "#8B5E3C", desc: "Deep brown" },
+    { id: "ebony" as const,  label: "Ebony",  color: "#4A2C17", desc: "Rich ebony" },
+  ];
+
+  const BODY_FOCUS = [
+    { id: "full_body" as const,  label: "Full Body",   icon: "🫶", desc: "Head to toe enhancement" },
+    { id: "upper_body" as const, label: "Upper Body",  icon: "💪", desc: "Chest, arms, shoulders" },
+    { id: "face_neck" as const,  label: "Face & Neck", icon: "✨", desc: "Portrait focus" },
+    { id: "curves" as const,     label: "Curves",      icon: "🔥", desc: "Waist, hips, silhouette" },
+  ];
+
+  const DESIRE_GRADES = [
+    { id: "velvet_skin",    label: "Velvet Skin",    desc: "Multi-stage smooth + warmth" },
+    { id: "golden_skin",    label: "Golden Skin",    desc: "Warm curves, skin-tone tuned" },
+    { id: "silk_soft",      label: "Silk Soft",      desc: "Extreme airbrushed, max smooth" },
+    { id: "boudoir_light",  label: "Boudoir Light",  desc: "Warm candle glow, lifted shadows" },
+    { id: "desire_haze",    label: "Desire Haze",    desc: "Soft focus bloom + warmth" },
+    { id: "deep_sensual",   label: "Deep Sensual",   desc: "Desaturated shadows, warm mids" },
   ];
 
   const left = (
     <>
+      {/* Header */}
       <div>
-        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: accent }}>Desire Teaser Engine</p>
-        <p className="text-xs" style={{ color: "#6B7280" }}>GPT-4o-mini desire peak detection → Replicate PuLID beauty → MiniMax AI animation → drip-reveal teaser + censored paywall preview</p>
+        <p className="text-xs font-black uppercase tracking-widest mb-0.5" style={{ color: accent }}>Velvet Suite</p>
+        <p className="text-xs" style={{ color: "#6B7280" }}>Body-positive beauty — skin, warmth, definition, lighting</p>
       </div>
 
-      <div className="p-3 rounded-2xl flex flex-col gap-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setUseUrl(false)} className="flex-1 py-1.5 rounded-xl text-xs font-bold transition-all" style={{ background: !useUrl ? `${accent}20` : "transparent", color: !useUrl ? accent : "#6B7280", border: `1px solid ${!useUrl ? accent : "rgba(255,255,255,0.08)"}` }}>Upload File</button>
-          <button onClick={() => setUseUrl(true)} className="flex-1 py-1.5 rounded-xl text-xs font-bold transition-all" style={{ background: useUrl ? `${accent}20` : "transparent", color: useUrl ? accent : "#6B7280", border: `1px solid ${useUrl ? accent : "rgba(255,255,255,0.08)"}` }}>Paste URL</button>
+      {/* Skin Tone Selector */}
+      <div>
+        <p className="text-xs font-bold text-white mb-2">Skin Tone</p>
+        <div className="flex gap-2 flex-wrap">
+          {SKIN_TONES.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setSkinTone(t.id)}
+              className="flex flex-col items-center gap-1 p-2 rounded-xl transition-all"
+              style={{
+                background: skinTone === t.id ? `${accent}20` : "rgba(255,255,255,0.04)",
+                border: `1.5px solid ${skinTone === t.id ? accent : "rgba(255,255,255,0.08)"}`,
+                minWidth: 52,
+              }}
+            >
+              <div className="w-6 h-6 rounded-full" style={{ background: t.color, border: skinTone === t.id ? `2px solid ${accent}` : "2px solid transparent" }} />
+              <span className="text-[10px] font-bold" style={{ color: skinTone === t.id ? accent : "#9CA3AF" }}>{t.label}</span>
+            </button>
+          ))}
         </div>
-        {useUrl ? (
-          <input value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} placeholder="https://... (video URL)" className="w-full px-3 py-2 rounded-xl text-xs text-white" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
-        ) : (
-          videoFile ? (
-            <div className="flex items-center gap-2 p-2 rounded-xl" style={{ background: `${accent}10`, border: `1px solid ${accent}30` }}>
-              <FileVideo size={14} color={accent} />
-              <span className="text-xs font-bold flex-1 truncate" style={{ color: accent }}>{videoFile.name}</span>
-              <button onClick={() => setVideoFile(null)} className="text-xs" style={{ color: "#6B7280" }}>✕</button>
-            </div>
-          ) : (
-            <label className="flex flex-col items-center gap-2 p-4 rounded-xl cursor-pointer" style={{ background: "rgba(255,255,255,0.02)", border: `1.5px dashed ${accent}40` }}>
-              <Upload size={20} color={accent} />
-              <span className="text-xs font-bold" style={{ color: accent }}>Drop or click to upload</span>
-              <input type="file" accept="video/*" className="hidden" onChange={e => {
-                const f = e.target.files?.[0]; if (!f) return;
-                setVideoFile({ file: f, url: URL.createObjectURL(f), name: f.name, size: f.size });
-              }} />
-            </label>
-          )
-        )}
       </div>
 
-      <div className="p-3 rounded-2xl flex flex-col gap-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <div>
-          <div className="flex justify-between mb-1"><span className="text-xs font-bold text-white">Teaser Duration</span><span className="text-xs font-bold" style={{ color: accent }}>{teaserDuration}s</span></div>
-          <input type="range" min={10} max={60} step={5} value={teaserDuration} onChange={e => setTeaserDuration(parseInt(e.target.value))} className="w-full" style={{ accentColor: accent }} />
-          <div className="flex justify-between mt-0.5"><span className="text-[10px]" style={{ color: "#6B7280" }}>10s</span><span className="text-[10px]" style={{ color: "#6B7280" }}>60s</span></div>
-        </div>
-        <label className="flex items-center justify-between cursor-pointer">
-          <div>
-            <p className="text-xs font-bold text-white">AI Animation</p>
-            <p className="text-[10px]" style={{ color: "#6B7280" }}>Replicate MiniMax: animate desire peak frame into video</p>
-          </div>
-          <button onClick={() => setEnableAI(!enableAI)} className="w-10 h-5 rounded-full transition-all relative flex-shrink-0" style={{ background: enableAI ? accent : "rgba(255,255,255,0.1)" }}>
-            <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: enableAI ? "calc(100% - 18px)" : "2px" }} />
-          </button>
-        </label>
-        <label className="flex items-center justify-between cursor-pointer">
-          <div>
-            <p className="text-xs font-bold text-white">Beauty Enhance</p>
-            <p className="text-[10px]" style={{ color: "#6B7280" }}>Replicate PuLID: face-preserving skin beauty grade</p>
-          </div>
-          <button onClick={() => setEnableBeauty(!enableBeauty)} className="w-10 h-5 rounded-full transition-all relative flex-shrink-0" style={{ background: enableBeauty ? accent : "rgba(255,255,255,0.1)" }}>
-            <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: enableBeauty ? "calc(100% - 18px)" : "2px" }} />
-          </button>
-        </label>
-      </div>
-
-      <div className="p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-        <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>AI Pipeline Steps</p>
-        <div className="flex flex-col gap-1.5">
-          {PIPELINE_STEPS.map((step) => {
-            const stepData = result?.processingSteps?.find((s: any) => s.step === step);
-            const status = stepData?.status;
-            return (
-              <div key={step} className="flex items-start gap-2">
-                {status === "succeeded" ? <CheckCircle size={12} color="#22C55E" className="flex-shrink-0 mt-0.5" /> :
-                 status === "failed" ? <X size={12} color="#EF4444" className="flex-shrink-0 mt-0.5" /> :
-                 status === "skipped" ? <CircleDot size={12} color="#6B7280" className="flex-shrink-0 mt-0.5" /> :
-                 isRunning ? <Loader2 size={12} color={accent} className="animate-spin flex-shrink-0 mt-0.5" /> :
-                 <Circle size={12} color="#374151" className="flex-shrink-0 mt-0.5" />}
-                <span className="text-[10px] leading-tight" style={{ color: status === "succeeded" ? "#22C55E" : status === "failed" ? "#EF4444" : status === "skipped" ? "#6B7280" : "#9CA3AF" }}>{step}</span>
+      {/* Body Focus */}
+      <div>
+        <p className="text-xs font-bold text-white mb-2">Body Focus</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {BODY_FOCUS.map(f => (
+            <button
+              key={f.id}
+              onClick={() => setBodyFocus(f.id)}
+              className="flex items-center gap-2 p-2.5 rounded-xl text-left transition-all"
+              style={{
+                background: bodyFocus === f.id ? `${accent}15` : "rgba(255,255,255,0.04)",
+                border: `1.5px solid ${bodyFocus === f.id ? accent : "rgba(255,255,255,0.07)"}`,
+              }}
+            >
+              <span className="text-base">{f.icon}</span>
+              <div>
+                <p className="text-xs font-bold" style={{ color: bodyFocus === f.id ? accent : "#E5E7EB" }}>{f.label}</p>
+                <p className="text-[9px]" style={{ color: "#6B7280" }}>{f.desc}</p>
               </div>
-            );
-          })}
+            </button>
+          ))}
         </div>
       </div>
 
-      <button onClick={run} disabled={isRunning || (!videoFile && !sourceUrl)} className="w-full py-4 rounded-2xl font-black text-white text-sm transition-all flex items-center justify-center gap-2" style={{ background: isRunning || (!videoFile && !sourceUrl) ? "rgba(236,72,153,0.3)" : `linear-gradient(135deg, ${accent}, #BE185D)`, cursor: isRunning || (!videoFile && !sourceUrl) ? "not-allowed" : "pointer", boxShadow: isRunning || (!videoFile && !sourceUrl) ? "none" : `0 0 28px ${accent}55` }}>
-        {isRunning ? <><Loader2 size={18} className="animate-spin" /> Generating Desire Teaser...</> : <><Flame size={18} /> Generate Desire Teaser</>}
+      {/* Beauty Sliders */}
+      <div className="flex flex-col gap-3">
+        <p className="text-xs font-bold text-white">Beauty Controls</p>
+
+        {/* Skin Smoothing */}
+        <div>
+          <div className="flex justify-between mb-1">
+            <span className="text-xs" style={{ color: "#D1D5DB" }}>Skin Smoothing</span>
+            <span className="text-xs font-bold" style={{ color: accent }}>{skinSmoothing}%</span>
+          </div>
+          <input type="range" min={0} max={100} value={skinSmoothing} onChange={e => setSkinSmoothing(+e.target.value)}
+            className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+            style={{ background: `linear-gradient(90deg, ${accent} ${skinSmoothing}%, rgba(255,255,255,0.1) ${skinSmoothing}%)` }} />
+          <p className="text-[9px] mt-0.5" style={{ color: "#6B7280" }}>FFmpeg smartblur — full body, not just face</p>
+        </div>
+
+        {/* Skin Warmth */}
+        <div>
+          <div className="flex justify-between mb-1">
+            <span className="text-xs" style={{ color: "#D1D5DB" }}>Skin Warmth</span>
+            <span className="text-xs font-bold" style={{ color: "#F97316" }}>{skinWarmth}%</span>
+          </div>
+          <input type="range" min={0} max={100} value={skinWarmth} onChange={e => setSkinWarmth(+e.target.value)}
+            className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+            style={{ background: `linear-gradient(90deg, #F97316 ${skinWarmth}%, rgba(255,255,255,0.1) ${skinWarmth}%)` }} />
+          <p className="text-[9px] mt-0.5" style={{ color: "#6B7280" }}>Color balance — red/green/blue tuned per skin tone</p>
+        </div>
+
+        {/* Body Definition */}
+        <div>
+          <div className="flex justify-between mb-1">
+            <span className="text-xs" style={{ color: "#D1D5DB" }}>Body Definition</span>
+            <span className="text-xs font-bold" style={{ color: "#22C55E" }}>{bodyDefinition}%</span>
+          </div>
+          <input type="range" min={0} max={100} value={bodyDefinition} onChange={e => setBodyDefinition(+e.target.value)}
+            className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+            style={{ background: `linear-gradient(90deg, #22C55E ${bodyDefinition}%, rgba(255,255,255,0.1) ${bodyDefinition}%)` }} />
+          <p className="text-[9px] mt-0.5" style={{ color: "#6B7280" }}>Contrast + unsharp mask — enhances curves and silhouette</p>
+        </div>
+
+        {/* Intimate Lighting */}
+        <div>
+          <div className="flex justify-between mb-1">
+            <span className="text-xs" style={{ color: "#D1D5DB" }}>Intimate Lighting</span>
+            <span className="text-xs font-bold" style={{ color: "#F59E0B" }}>{intimateLighting}%</span>
+          </div>
+          <input type="range" min={0} max={100} value={intimateLighting} onChange={e => setIntimateLighting(+e.target.value)}
+            className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+            style={{ background: `linear-gradient(90deg, #F59E0B ${intimateLighting}%, rgba(255,255,255,0.1) ${intimateLighting}%)` }} />
+          <p className="text-[9px] mt-0.5" style={{ color: "#6B7280" }}>Brightness lift + vignette — boudoir/candlelight effect</p>
+        </div>
+      </div>
+
+      {/* Desire Grade Preset */}
+      <div>
+        <p className="text-xs font-bold text-white mb-2">Desire Grade Preset</p>
+        <div className="flex flex-col gap-1">
+          {DESIRE_GRADES.map(g => (
+            <button
+              key={g.id}
+              onClick={() => setDesireGrade(g.id)}
+              className="flex items-center justify-between px-3 py-2 rounded-xl transition-all"
+              style={{
+                background: desireGrade === g.id ? `${accent}15` : "rgba(255,255,255,0.04)",
+                border: `1px solid ${desireGrade === g.id ? accent : "rgba(255,255,255,0.07)"}`,
+              }}
+            >
+              <span className="text-xs font-bold" style={{ color: desireGrade === g.id ? accent : "#E5E7EB" }}>{g.label}</span>
+              <span className="text-[9px]" style={{ color: "#6B7280" }}>{g.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* AI Beauty Toggle */}
+      <div className="flex items-center justify-between px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div>
+          <p className="text-xs font-bold text-white">AI Beauty Layer</p>
+          <p className="text-[9px]" style={{ color: "#6B7280" }}>Replicate PuLID on peak frames</p>
+        </div>
+        <button
+          onClick={() => setApplyAIBeauty(v => !v)}
+          className="w-10 h-5 rounded-full transition-all relative"
+          style={{ background: applyAIBeauty ? accent : "rgba(255,255,255,0.1)" }}
+        >
+          <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: applyAIBeauty ? 22 : 2 }} />
+        </button>
+      </div>
+
+      {/* Upload */}
+      {!videoFile && (
+        <label className="flex items-center justify-center gap-2 py-3 rounded-xl cursor-pointer transition-all" style={{ background: `${accent}10`, border: `1.5px dashed ${accent}50`, color: accent }}>
+          <Upload size={14} />
+          <span className="text-xs font-bold">Upload Video</span>
+          <input type="file" accept="video/*" className="hidden" onChange={e => {
+            const f = e.target.files?.[0];
+            if (!f) return;
+            const url = URL.createObjectURL(f);
+            setVideoFile({ file: f, url, name: f.name, size: f.size });
+          }} />
+        </label>
+      )}
+      {videoFile && (
+        <div className="flex items-center justify-between px-3 py-2 rounded-xl" style={{ background: `${accent}10`, border: `1px solid ${accent}30` }}>
+          <span className="text-xs font-bold truncate" style={{ color: accent }}>{videoFile.name}</span>
+          <button onClick={() => setVideoFile(null)} className="text-xs" style={{ color: "#6B7280" }}>✕</button>
+        </div>
+      )}
+
+      {/* Process Button */}
+      <button
+        onClick={process}
+        disabled={isProcessing || !videoFile}
+        className="w-full py-3.5 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2"
+        style={{
+          background: isProcessing || !videoFile ? "rgba(236,72,153,0.15)" : `linear-gradient(135deg, ${accent}, #DB2777)`,
+          color: isProcessing || !videoFile ? accent : "#fff",
+          border: `1px solid ${accent}50`,
+          cursor: isProcessing || !videoFile ? "not-allowed" : "pointer",
+          boxShadow: isProcessing || !videoFile ? "none" : `0 0 20px ${accent}40`,
+        }}
+      >
+        {isProcessing
+          ? <><Loader2 size={14} className="animate-spin" />{statusMsg || "Processing..."}</>
+          : <><Sparkles size={14} /> Apply Velvet Suite Beauty</>
+        }
       </button>
 
-      {result && (
+      {/* Output */}
+      {outputUrl && (
         <div className="flex flex-col gap-2">
-          <div className="p-3 rounded-2xl" style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)" }}>
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle size={14} color="#22C55E" />
-              <span className="text-xs font-black" style={{ color: "#22C55E" }}>Desire Teaser Complete</span>
-            </div>
-            <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-              <div style={{ color: "#9CA3AF" }}>Energy Score</div><div className="font-bold" style={{ color: accent }}>{result.energyScore}/10</div>
-              <div style={{ color: "#9CA3AF" }}>Peak At</div><div className="font-bold text-white">{result.peakTimeSeconds}s</div>
-              <div style={{ color: "#9CA3AF" }}>Suggested Price</div><div className="font-bold" style={{ color: "#22C55E" }}>${result.suggestedPrice}</div>
-              <div style={{ color: "#9CA3AF" }}>Process Time</div><div className="font-bold text-white">{Math.round(result.processingTimeMs / 1000)}s</div>
-            </div>
-          </div>
-          {result.ctaText && (
-            <div className="p-2 rounded-xl" style={{ background: `${accent}10`, border: `1px solid ${accent}25` }}>
-              <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: "#6B7280" }}>AI-Generated CTA</p>
-              <p className="text-xs font-bold" style={{ color: accent }}>"{result.ctaText}"</p>
-            </div>
-          )}
-          {result.hooks?.length > 0 && (
-            <div className="p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <p className="text-[10px] font-black uppercase tracking-widest mb-1.5" style={{ color: "#6B7280" }}>Retention Hooks</p>
-              {result.hooks.map((h: string, i: number) => (
-                <p key={i} className="text-xs mb-1" style={{ color: "#D1D5DB" }}>• {h}</p>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-1">
-            {(["teaser", "censored", "beauty", "ai"] as const).map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)} className="flex-1 py-1.5 rounded-xl text-[10px] font-bold capitalize transition-all" style={{ background: activeTab === tab ? `${accent}20` : "transparent", color: activeTab === tab ? accent : "#6B7280", border: `1px solid ${activeTab === tab ? accent : "rgba(255,255,255,0.08)"}` }}>{tab}</button>
-            ))}
-          </div>
-          {activeTab === "teaser" && result.teaserUrl && (
-            <div className="flex flex-col gap-1.5">
-              <VideoPlayer src={result.teaserUrl} label="Drip-Reveal Teaser" accent={accent} />
-              <button onClick={() => { const a = document.createElement("a"); a.href = result.teaserUrl; a.download = "desire-teaser.mp4"; a.click(); }} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: `${accent}15`, color: accent, border: `1px solid ${accent}30` }}><Download size={14} /> Download Teaser</button>
-            </div>
-          )}
-          {activeTab === "censored" && result.censoredPreviewUrl && (
-            <div className="flex flex-col gap-1.5">
-              <VideoPlayer src={result.censoredPreviewUrl} label="Censored Preview (Paywall)" accent="#6B7280" />
-              <button onClick={() => { const a = document.createElement("a"); a.href = result.censoredPreviewUrl; a.download = "censored-preview.mp4"; a.click(); }} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: "rgba(107,114,128,0.15)", color: "#9CA3AF", border: "1px solid rgba(107,114,128,0.3)" }}><Download size={14} /> Download Censored Preview</button>
-            </div>
-          )}
-          {activeTab === "beauty" && (
-            result.beautyEnhancedFrameUrl ? (
-              <div className="flex flex-col gap-1.5">
-                <img src={result.beautyEnhancedFrameUrl} alt="Beauty Enhanced Frame" className="w-full rounded-xl object-cover" style={{ aspectRatio: "9/16", maxHeight: 200 }} />
-                <p className="text-[10px] text-center" style={{ color: "#6B7280" }}>Replicate PuLID beauty-enhanced desire peak frame</p>
-              </div>
-            ) : <p className="text-xs text-center py-4" style={{ color: "#6B7280" }}>Beauty enhance not available — check Replicate token</p>
-          )}
-          {activeTab === "ai" && (
-            result.aiAnimatedClipUrl ? (
-              <div className="flex flex-col gap-1.5">
-                <VideoPlayer src={result.aiAnimatedClipUrl} label="MiniMax AI Animation" accent="#8B5CF6" />
-                <button onClick={() => { const a = document.createElement("a"); a.href = result.aiAnimatedClipUrl; a.download = "ai-animated-peak.mp4"; a.click(); }} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold" style={{ background: "rgba(139,92,246,0.15)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.3)" }}><Download size={14} /> Download AI Clip</button>
-              </div>
-            ) : <p className="text-xs text-center py-4" style={{ color: "#6B7280" }}>AI animation not available — check Replicate token</p>
-          )}
+          <p className="text-xs font-bold" style={{ color: accent }}>Beauty Enhanced</p>
+          <VideoPlayer src={outputUrl} label="Velvet Suite Output" accent={accent} />
+          <button onClick={() => { const a = document.createElement("a"); a.href = outputUrl; a.download = "velvet-suite-beauty.mp4"; a.click(); }}
+            className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold"
+            style={{ background: `${accent}15`, color: accent, border: `1px solid ${accent}30` }}>
+            <Download size={12} /> Download Beauty Output
+          </button>
         </div>
       )}
     </>
   );
 
-  const right = (() => {
-    if (result?.teaserUrl && result?.censoredPreviewUrl) {
-      return (
-        <div className="flex flex-col gap-3 h-full">
-          <div className="flex-1 flex flex-col">
-            <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: accent }}>Drip-Reveal Teaser</p>
-            <CanvasVideoPlayer src={result.teaserUrl} label="Desire Teaser" accent={accent} onReplace={() => {}} />
-          </div>
-          <div className="flex-1 flex flex-col">
-            <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>Censored Preview (Paywall)</p>
-            <CanvasVideoPlayer src={result.censoredPreviewUrl} label="Censored" accent="#6B7280" onReplace={() => {}} />
-          </div>
-        </div>
-      );
-    }
-    if (videoFile) return <CanvasVideoPlayer src={videoFile.url} label="Source" accent={accent} onReplace={() => setVideoFile(null)} />;
-    return <CanvasDropZone onFile={setVideoFile} accent={accent} label="Drop your video to generate a Desire Teaser" />;
-  })();
+  const right = videoFile
+    ? <CanvasVideoPlayer src={videoFile.url} label="Source" accent={accent} onReplace={() => setVideoFile(null)} />
+    : <CanvasDropZone onFile={setVideoFile} accent={accent} label="Drop your video for body-positive beauty enhancement" />;
 
   return <Workspace left={left} right={right} />;
 }
@@ -708,6 +908,13 @@ function DesireGradeMode({ onOutput }: { onOutput: (url: string, label: string) 
   const filteredGrades = DESIRE_GRADES.filter(g => g.category === activeCategory);
   const selectedGradeData = DESIRE_GRADES.find(g => g.id === selectedGrade);
 
+  const desireGradeAIMut = trpc.videoEnhance.desireGradeAI.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Desire Grade AI started — beauty prediction: ${data.beautyPredictionId || "N/A"}`);
+      if (data.sceneAnalysis) toast.info(`Scene: ${data.sceneAnalysis.substring(0, 80)}...`);
+    },
+    onError: (e) => toast.error(`AI Grade: ${e.message}`),
+  });
   const process = async () => {
     if (!videoFile) return toast.error("Upload a video first.");
     setIsProcessing(true); setOutputUrl(null);
@@ -787,6 +994,11 @@ function DesireGradeMode({ onOutput }: { onOutput: (url: string, label: string) 
       <button onClick={process} disabled={!videoFile || isProcessing} className="w-full py-4 rounded-2xl font-black text-white text-sm transition-all flex items-center justify-center gap-2" style={{ background: !videoFile || isProcessing ? "rgba(249,115,22,0.3)" : "linear-gradient(135deg, #F97316, #C2410C)", cursor: !videoFile || isProcessing ? "not-allowed" : "pointer", boxShadow: !videoFile || isProcessing ? "none" : "0 0 24px rgba(249,115,22,0.35)" }}>
         {isProcessing ? <><Loader2 size={18} className="animate-spin" /> Grading...</> : <><Palette size={18} /> Apply Color Grade</>}
       </button>
+      {videoFile && (
+        <button onClick={() => desireGradeAIMut.mutate({ videoUrl: videoFile.url, gradeStyle: selectedGrade, applyBeautyOnPeakFrames: true, desireScore: Math.round(intensity / 10) })} disabled={desireGradeAIMut.isPending} className="w-full py-3 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2" style={{ background: desireGradeAIMut.isPending ? "rgba(139,92,246,0.2)" : "rgba(139,92,246,0.15)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.4)", cursor: desireGradeAIMut.isPending ? "not-allowed" : "pointer" }}>
+          {desireGradeAIMut.isPending ? <><Loader2 size={14} className="animate-spin" /> Running AI Beauty Layer...</> : <><Sparkles size={14} /> + AI Beauty Layer (PuLID)</>}
+        </button>
+      )}
       {isProcessing && <ProcessingBar label="Applying color grade..." accent="#F97316" />}
       {outputUrl && (
         <div className="flex flex-col gap-2">
@@ -822,6 +1034,14 @@ function SceneArchitectMode({ onOutput }: { onOutput: (url: string, label: strin
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
 
   const analyzeSceneMut = trpc.videoEnhance.analyzeScene.useMutation();
+  const sceneArchitectAIMut = trpc.videoEnhance.sceneArchitectAI.useMutation({
+    onSuccess: (data) => {
+      setAiScenes(data.sceneMap || []);
+      if (data.recutPlan?.hookText) toast.success(`AI Recut: "${data.recutPlan.hookText.substring(0, 60)}..."`);
+      toast.success(`Scene Architect AI: ${data.sceneMap?.length || 0} scenes mapped, ${data.recutPlan?.estimatedRetention || 0}% retention`);
+    },
+    onError: (e) => toast.error(`Scene AI: ${e.message}`),
+  });
 
   const process = async () => {
     if (!videoFile) return toast.error("Upload a video first.");
@@ -1633,8 +1853,11 @@ function ContentVaultMode({ onOutput }: { onOutput: (url: string, label: string)
 // MODE: AI VIDEO GENERATOR (NEW)
 // ============================================================================
 function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
-  const [activeModel, setActiveModel] = useState<"minimax"|"svd"|"zeroscope">("minimax");
+  const [activeModel, setActiveModel] = useState<"kling-3.0"|"kling-2.6"|"kling-o1"|"seedance-2.0"|"seedance-1.5-pro"|"wan-2.6"|"vidu-q3-pro"|"pollo-3.0"|"pollo-2.0"|"minimax"|"svd"|"zeroscope">("kling-3.0");
+  const [modelProvider, setModelProvider] = useState<"pollo"|"replicate">("pollo");
+  const [polloTaskId, setPolloTaskId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [videoStyle, setVideoStyle] = useState<"sensual"|"boudoir"|"intimate"|"artistic"|"cinematic"|"fantasy">("cinematic");
   const [imageFile, setImageFile] = useState<{ url: string; file: File } | null>(null);
   const [motionBucket, setMotionBucket] = useState(127);
   const [fps, setFps] = useState(24);
@@ -1647,6 +1870,21 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
   const animateMut     = trpc.videoEnhance.animateImage.useMutation();
   const imgToVideoMut  = trpc.videoEnhance.imageToVideo.useMutation();
   const generateAltMut = trpc.videoEnhance.generateVideoAlt.useMutation();
+  // Pollo/Kling via kingcamAI router — all 9 models
+  const polloVideoMut  = trpc.kingcamAI.video.generate.useMutation({
+    onSuccess: (data) => {
+      if (data.url) { setOutputUrl(data.url); onOutput(data.url, `${activeModel} video`); toast.success(`${activeModel} video ready!`); }
+      setIsGenerating(false);
+    },
+    onError: (e) => { toast.error(`${activeModel}: ${e.message}`); setIsGenerating(false); },
+  });
+  const enhancePromptMut = trpc.videoEnhance.enhancePromptForAdult.useMutation({
+    onSuccess: (data) => {
+      setPrompt(data.enhancedPrompt);
+      toast.success(`Prompt enhanced — ${data.mood} mood, ${data.lighting}`);
+    },
+    onError: (e) => toast.error(`Prompt enhance: ${e.message}`),
+  });
 
   const getJobQuery = trpc.videoEnhance.getJob.useQuery(
     { predictionId: predictionId! },
@@ -1670,14 +1908,14 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
 
   const generate = async () => {
     if (!prompt && activeModel !== "svd") return toast.error("Enter a prompt.");
-    if (activeModel === "svd" && !imageFile) return toast.error("Upload an image for SVD.");
+    if ((activeModel as string) === "svd" && !imageFile) return toast.error("Upload an image for SVD.");
     setIsGenerating(true); setOutputUrl(null);
     try {
       let r: any;
       if (activeModel === "minimax") {
         r = await generateMut.mutateAsync({ prompt, firstFrameImage: imageFile?.url, promptOptimizer: true });
         setStatusMsg("MiniMax Hailuo generating 6s video...");
-      } else if (activeModel === "svd") {
+      } else if ((activeModel as string) === "svd") {
         r = await imgToVideoMut.mutateAsync({ imageUrl: imageFile!.url, motionBucketId: motionBucket, fps });
         setStatusMsg("Stable Video Diffusion animating...");
       } else {
@@ -1688,11 +1926,25 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
     } catch (e: any) { setIsGenerating(false); toast.error(e.message); }
   };
 
-  const MODELS = [
-    { id: "minimax" as const,   label: "MiniMax Hailuo",        badge: "699K runs",  desc: "Text/image → 6s HD video",          color: "#EF4444" },
-    { id: "svd" as const,       label: "Stable Video Diffusion", badge: "Image→Video",desc: "Animate any image into video",       color: "#F97316" },
-    { id: "zeroscope" as const, label: "Zeroscope XL",           badge: "Text→Video", desc: "Text to video, high quality",        color: "#EAB308" },
+  // ── FULL AI MODEL REGISTRY ── All available video generation models ──────────
+  const POLLO_MODELS = [
+    { id: "kling-3.0",        label: "Kling 3.0",          badge: "BEST",       desc: "Full-body motion, filmic quality, highest fidelity",   color: "#EF4444", provider: "pollo" as const },
+    { id: "kling-2.6",        label: "Kling 2.6",          badge: "Reliable",   desc: "Standard motion, consistent quality",                  color: "#F97316", provider: "pollo" as const },
+    { id: "kling-o1",         label: "Kling O1",           badge: "Precision",  desc: "Precision motion, complex scenes",                     color: "#F59E0B", provider: "pollo" as const },
+    { id: "seedance-2.0",     label: "Seedance 2.0",       badge: "Cinematic",  desc: "Multi-shot cinematic, coherent motion",                color: "#10B981", provider: "pollo" as const },
+    { id: "seedance-1.5-pro", label: "Seedance 1.5 Pro",   badge: "Standard",   desc: "Cinematic standard quality",                           color: "#06B6D4", provider: "pollo" as const },
+    { id: "wan-2.6",          label: "Wan 2.6",            badge: "Long-form",  desc: "Long-form narrative video",                            color: "#8B5CF6", provider: "pollo" as const },
+    { id: "vidu-q3-pro",      label: "Vidu Q3 Pro",        badge: "Avatar",     desc: "Human-like avatar, audio-visual synthesis",            color: "#EC4899", provider: "pollo" as const },
+    { id: "pollo-3.0",        label: "Pollo 3.0",          badge: "Fast",       desc: "Fast general video, full audio control",               color: "#6366F1", provider: "pollo" as const },
+    { id: "pollo-2.0",        label: "Pollo 2.0",          badge: "Budget",     desc: "Budget general video generation",                      color: "#64748B", provider: "pollo" as const },
   ];
+  const REPLICATE_MODELS = [
+    { id: "minimax",          label: "MiniMax Hailuo",     badge: "699K runs",  desc: "Text/image → 6s HD video",                            color: "#EF4444", provider: "replicate" as const },
+    { id: "svd",              label: "Stable Video Diff.", badge: "Image→Video",desc: "Animate any image into video",                         color: "#F97316", provider: "replicate" as const },
+    { id: "zeroscope",        label: "Zeroscope XL",       badge: "Text→Video", desc: "Text to video, high quality",                          color: "#EAB308", provider: "replicate" as const },
+  ];
+  const ALL_MODELS = [...POLLO_MODELS, ...REPLICATE_MODELS];
+  const MODELS = ALL_MODELS; // backward compat
 
   const left = (
     <>
@@ -1700,9 +1952,17 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
         <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#EF4444" }}>AI Video Generator</p>
         <p className="text-xs" style={{ color: "#6B7280" }}>Real AI video generation — Replicate models</p>
       </div>
-      <div className="flex flex-col gap-1.5">
-        {MODELS.map(m => (
-          <button key={m.id} onClick={() => setActiveModel(m.id)} className="flex items-center gap-3 p-3 rounded-xl text-left transition-all" style={{ background: activeModel === m.id ? `${m.color}15` : "rgba(255,255,255,0.03)", border: `1.5px solid ${activeModel === m.id ? m.color : "rgba(255,255,255,0.07)"}` }}>
+      {/* Provider tabs */}
+      <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+        {(["pollo","replicate"] as const).map(p => (
+          <button key={p} onClick={() => { setModelProvider(p); setActiveModel(p === "pollo" ? "kling-3.0" : "minimax"); }} className="flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all" style={{ background: modelProvider === p ? (p === "pollo" ? "rgba(239,68,68,0.2)" : "rgba(249,115,22,0.2)") : "transparent", color: modelProvider === p ? (p === "pollo" ? "#EF4444" : "#F97316") : "#6B7280" }}>
+            {p === "pollo" ? "Pollo / Kling" : "Replicate"}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+        {(modelProvider === "pollo" ? POLLO_MODELS : REPLICATE_MODELS).map(m => (
+          <button key={m.id} onClick={() => setActiveModel(m.id as any)} className="flex items-center gap-3 p-3 rounded-xl text-left transition-all" style={{ background: activeModel === m.id ? `${m.color}15` : "rgba(255,255,255,0.03)", border: `1.5px solid ${activeModel === m.id ? m.color : "rgba(255,255,255,0.07)"}` }}>
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold" style={{ color: activeModel === m.id ? m.color : "#E5E7EB" }}>{m.label}</span>
@@ -1718,6 +1978,21 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
         <div className="flex flex-col gap-2">
           <label className="text-xs font-bold text-white">Prompt</label>
           <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={4} placeholder="Describe the video you want to generate..." className="w-full px-3 py-2 rounded-xl text-sm text-white resize-none" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
+          <button
+            onClick={() => enhancePromptMut.mutate({ rawPrompt: prompt || "sensual intimate scene", style: videoStyle, model: (activeModel as string) === "minimax" ? "minimax" : (activeModel as string) === "svd" ? "stable-video" : "zeroscope" })}
+            disabled={enhancePromptMut.isPending}
+            className="w-full py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 mt-1"
+            style={{ background: enhancePromptMut.isPending ? "rgba(139,92,246,0.15)" : "rgba(139,92,246,0.12)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.35)", cursor: enhancePromptMut.isPending ? "not-allowed" : "pointer" }}
+          >
+            {enhancePromptMut.isPending ? <><Loader2 size={12} className="animate-spin" /> Enhancing with GPT...</> : <><Sparkles size={12} /> Enhance Prompt for Adult Content</>}
+          </button>
+          <div className="flex gap-2 flex-wrap">
+            {(["sensual","boudoir","intimate","artistic","cinematic","fantasy"] as const).map(s => (
+              <button key={s} onClick={() => setVideoStyle(s)} className="px-2.5 py-1 rounded-lg text-[10px] font-bold capitalize transition-all" style={{ background: videoStyle === s ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.05)", color: videoStyle === s ? "#8B5CF6" : "#6B7280", border: `1px solid ${videoStyle === s ? "rgba(139,92,246,0.5)" : "rgba(255,255,255,0.08)"}` }}>
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {(activeModel === "minimax" || activeModel === "svd") && (
@@ -1780,7 +2055,7 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
 // ============================================================================
 function AISoundStudioMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
   const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
-  const [activeTab, setActiveTab] = useState<"sound-effects"|"music"|"cleanup">("sound-effects");
+  const [activeTab, setActiveTab] = useState<"sound-effects"|"music"|"voice"|"cleanup">("sound-effects");
   const [cleanupMode, setCleanupMode] = useState<"cleanup"|"normalize"|"voice_enhance">("cleanup");
   const [cleanupProcessing, setCleanupProcessing] = useState(false);
   const [cleanupOutputUrl, setCleanupOutputUrl] = useState<string | null>(null);
@@ -1794,6 +2069,30 @@ function AISoundStudioMode({ onOutput }: { onOutput: (url: string, label: string
 
   const soundMut = trpc.videoEnhance.addAISound.useMutation();
   const musicMut = trpc.videoEnhance.generateMusic.useMutation();
+  const adultSoundMut = trpc.videoEnhance.addAdultSound.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Adult sound design started — ${data.soundType} (${data.intensity})`);
+      if (data.predictionId) { setPredictionId(data.predictionId); setIsGenerating(true); }
+    },
+    onError: (e) => toast.error(`Adult sound: ${e.message}`),
+  });
+  const sensualMusicMut = trpc.videoEnhance.generateSensualMusic.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Sensual music started — ${data.mood} mood`);
+      if (data.predictionId) { setPredictionId(data.predictionId); setIsGenerating(true); }
+    },
+    onError: (e) => toast.error(`Sensual music: ${e.message}`),
+  });
+  // ElevenLabs voice synthesis
+  const [voiceText, setVoiceText] = useState("");
+  const [voiceStyle, setVoiceStyle] = useState<"sensual"|"confident"|"whisper"|"commanding">("sensual");
+  const [voiceOutputUrl, setVoiceOutputUrl] = useState<string | null>(null);
+  const elevenLabsMut = trpc.videoEnhance.synthesizeVoice.useMutation({
+    onSuccess: (data) => {
+      if (data.audioUrl) { setVoiceOutputUrl(data.audioUrl); onOutput(data.audioUrl, `ElevenLabs Voice — ${voiceStyle}`); toast.success("ElevenLabs voice ready!"); }
+    },
+    onError: (e) => toast.error(`ElevenLabs: ${e.message}`),
+  });
 
   const getJobQuery = trpc.videoEnhance.getJob.useQuery(
     { predictionId: predictionId! },
@@ -1851,9 +2150,10 @@ function AISoundStudioMode({ onOutput }: { onOutput: (url: string, label: string
       </div>
       <div className="flex gap-1.5">
         {[
-          { id: "sound-effects" as const, label: "Sound Effects", badge: "MMAudio", color: "#8B5CF6" },
-          { id: "music" as const,         label: "Music",         badge: "MusicGen", color: "#A78BFA" },
-          { id: "cleanup" as const,       label: "Audio Cleanup", badge: "FFmpeg",   color: "#22C55E" },
+          { id: "sound-effects" as const, label: "Sound Effects", badge: "MMAudio",     color: "#8B5CF6" },
+          { id: "music" as const,         label: "Music",         badge: "MusicGen",    color: "#A78BFA" },
+          { id: "voice" as const,         label: "Voice Clone",   badge: "ElevenLabs",  color: "#EC4899" },
+          { id: "cleanup" as const,       label: "Audio Cleanup", badge: "FFmpeg",      color: "#22C55E" },
         ].map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" style={{ background: activeTab === t.id ? `${t.color}18` : "rgba(255,255,255,0.03)", border: `1.5px solid ${activeTab === t.id ? t.color : "rgba(255,255,255,0.07)"}` }}>
             <span className="text-xs font-black" style={{ color: activeTab === t.id ? t.color : "#6B7280" }}>{t.label}</span>
@@ -1980,7 +2280,7 @@ function AISoundStudioMode({ onOutput }: { onOutput: (url: string, label: string
 // MODE: FACE STUDIO (NEW)
 // ============================================================================
 function FaceStudioMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
-  const [activeTab, setActiveTab] = useState<"enhance"|"style-transfer"|"character">("enhance");
+  const [activeTab, setActiveTab] = useState<"enhance"|"style-transfer"|"character"|"portrait"|"photomaker"|"velvet"|"clone">("enhance");
   const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
   const [imageFile, setImageFile] = useState<{ url: string; file: File } | null>(null);
   const [characterPrompt, setCharacterPrompt] = useState("");
@@ -1993,6 +2293,22 @@ function FaceStudioMode({ onOutput }: { onOutput: (url: string, label: string) =
   const enhanceMut   = trpc.videoEnhance.beautyEnhance.useMutation();
   const styleMut     = trpc.videoEnhance.faceStyleTransfer.useMutation();
   const characterMut = trpc.videoEnhance.generateCharacter.useMutation();
+  const velvetSuiteMut = trpc.videoEnhance.velvetSuite.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Velvet Suite started — ${data.message}`);
+      if (data.predictionId) { setPredictionId(data.predictionId); setIsProcessing(true); }
+    },
+    onError: (e) => toast.error(`Velvet Suite: ${e.message}`),
+  });
+  // KingCam clone model — fluxdevcam
+  const [clonePrompt, setClonePrompt] = useState("");
+  const [cloneOutputUrl, setCloneOutputUrl] = useState<string | null>(null);
+  const cloneImageMut = trpc.kingcamAI.image.generate.useMutation({
+    onSuccess: (data) => {
+      if (data.url) { setCloneOutputUrl(data.url); onOutput(data.url, "KingCam Clone Model"); toast.success("KingCam clone image ready!"); }
+    },
+    onError: (e) => toast.error(`Clone model: ${e.message}`),
+  });
 
   const getJobQuery = trpc.videoEnhance.getJob.useQuery(
     { predictionId: predictionId! },
@@ -2045,6 +2361,8 @@ function FaceStudioMode({ onOutput }: { onOutput: (url: string, label: string) =
     { id: "enhance" as const,        label: "Portrait Enhance",    badge: "PuLID",               color: "#F472B6", desc: "AI face enhancement, skin detail preservation" },
     { id: "style-transfer" as const, label: "Face Style Transfer", badge: "Face-to-Many",        color: "#EC4899", desc: "Apply any artistic style to a face" },
     { id: "character" as const,      label: "Character Generator", badge: "Consistent Character",color: "#DB2777", desc: "Generate consistent character across poses" },
+    { id: "clone" as const,          label: "Clone Model",         badge: "fluxdevcam",          color: "#8B5CF6", desc: "KingCam trained model — generate any scene with your DNA" },
+    { id: "velvet" as const,         label: "Velvet Suite",        badge: "Body-Positive",       color: "#EC4899", desc: "Adult-specific beauty enhancement, skin-tone aware" },
   ];
 
   const STYLE_PRESETS = [
@@ -2584,6 +2902,12 @@ function CreatorTiersMode() {
 function MassBroadcastMode() {
   const sendMut = trpc.vaultx.sendMassMessage.useMutation();
   const subscribersQ = trpc.vaultx.getSubscriberList.useQuery({ tier: "all", sortBy: "join_date", limit: 1, offset: 0 });
+  const generateCopyMut = trpc.vaultx.generateMassBroadcastCopy.useMutation({
+    onSuccess: (data) => {
+      toast.success("AI broadcast copy generated — review before sending");
+    },
+    onError: (e) => toast.error(`Copy gen: ${e.message}`),
+  });
   const [subject, setSubject] = useState("");
   const [messageText, setMessageText] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
@@ -2701,6 +3025,30 @@ function MassBroadcastMode() {
 function AIChatterMode() {
   const configQ = trpc.vaultx.getAiChatterConfig.useQuery();
   const saveMut = trpc.vaultx.saveAiChatterConfig.useMutation();
+  const generateResponseMut = trpc.vaultx.generateAIChatterResponse.useMutation({
+    onSuccess: (data) => {
+      setGeneratedResponse(data.response);
+      toast.success("AI response generated");
+    },
+    onError: (e) => toast.error(`AI response: ${e.message}`),
+  });
+  const generatePersonaMut = trpc.vaultx.generateCreatorPersona.useMutation({
+    onSuccess: (data) => {
+      if (data.personaName) setPersonaName(data.personaName);
+      if (data.personaDescription) setPersonaDescription(data.personaDescription);
+      if (data.greetingMessage) setGreetingMessage(data.greetingMessage);
+      toast.success("AI persona generated — review and save");
+    },
+    onError: (e) => toast.error(`Persona gen: ${e.message}`),
+  });
+  const broadcastCopyMut = trpc.vaultx.generateMassBroadcastCopy.useMutation({
+    onSuccess: (data) => {
+      toast.success("Broadcast copy generated");
+    },
+    onError: (e) => toast.error(`Broadcast copy: ${e.message}`),
+  });
+  const [generatedResponse, setGeneratedResponse] = useState("");
+  const [testFanMessage, setTestFanMessage] = useState("");
   const cfg = configQ.data?.config;
   const [isEnabled, setIsEnabled] = useState(false);
   const [personaName, setPersonaName] = useState("");
@@ -2742,6 +3090,23 @@ function AIChatterMode() {
       setTimeout(() => setSaved(false), 3000);
       toast.success("AI Chatter config saved!");
     } catch (e: any) { toast.error(e.message); }
+  };
+  const handleGeneratePersona = async () => {
+    if (!personaName) return toast.error("Enter a persona name first");
+    await generatePersonaMut.mutateAsync({
+      creatorName: personaName,
+      niche: "adult content creation",
+      personality: personaDescription || "confident, warm, flirty",
+      contentStyle: "sensual",
+    });
+  };
+  const handleTestResponse = async () => {
+    if (!testFanMessage) return toast.error("Enter a test fan message");
+    await generateResponseMut.mutateAsync({
+      fanMessage: testFanMessage,
+      includePpvPitch: false,
+      includeTipRequest: false,
+    });
   };
 
   if (configQ.isLoading) return <div className="flex items-center justify-center h-full"><Loader2 size={24} className="animate-spin" style={{ color: "#8B5CF6" }} /></div>;

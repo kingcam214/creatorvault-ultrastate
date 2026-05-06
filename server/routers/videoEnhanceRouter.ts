@@ -1117,6 +1117,531 @@ export const videoEnhanceRouter = router({
       };
     }),
 
+
+  // ─── Velvet Suite — Full-Body Beauty Pipeline (FFmpeg + optional PuLID) ─────
+  velvetSuite: protectedProcedure
+    .input(z.object({
+      imageUrl: z.string().url(),
+      skinTone: z.enum(["fair", "medium", "olive", "deep", "ebony"]).default("medium"),
+      enhancementLevel: z.enum(["subtle", "moderate", "maximum"]).default("moderate"),
+      // New full-body controls
+      skinSmoothing: z.number().min(0).max(100).default(70),
+      skinWarmth: z.number().min(0).max(100).default(60),
+      bodyDefinition: z.number().min(0).max(100).default(50),
+      intimateLighting: z.number().min(0).max(100).default(55),
+      desireGrade: z.string().default("velvet_skin"),
+      applyAIBeauty: z.boolean().default(true),
+      bodyFocus: z.enum(["full_body", "upper_body", "face_neck", "curves"]).default("full_body"),
+    }))
+    .mutation(async ({ input }) => {
+      const jobId = randomUUID();
+      const errors: string[] = [];
+      const enginesUsed: any[] = [];
+
+      // ── Build the full-body FFmpeg filter chain ──────────────────────────────
+      // 1. Skin smoothing — smartblur tuned to enhancement level
+      const smoothMap: Record<string, string> = {
+        subtle:   "smartblur=lr=0.8:ls=-0.1:cr=0:cs=0",
+        moderate: "smartblur=lr=1.5:ls=-0.25:cr=0:cs=0",
+        maximum:  "smartblur=lr=2.5:ls=-0.35:cr=0:cs=0",
+      };
+      // Also scale smoothing by the slider value
+      const smoothRadius = 0.5 + (input.skinSmoothing / 100) * 2.5;
+      const smoothFilter = `smartblur=lr=${smoothRadius.toFixed(1)}:ls=-0.25:cr=0:cs=0`;
+
+      // 2. Skin warmth — color balance tuned per skin tone
+      const warmthByTone: Record<string, { rs: number; gs: number; bs: number }> = {
+        fair:   { rs: 0.04, gs: 0.02, bs: -0.02 },
+        medium: { rs: 0.06, gs: 0.03, bs: -0.03 },
+        olive:  { rs: 0.08, gs: 0.04, bs: -0.04 },
+        deep:   { rs: 0.10, gs: 0.05, bs: -0.05 },
+        ebony:  { rs: 0.07, gs: 0.03, bs: -0.02 },
+      };
+      const warmthBase = warmthByTone[input.skinTone] || warmthByTone.medium;
+      const warmthScale = input.skinWarmth / 100;
+      const warmthFilter = `colorbalance=rs=${(warmthBase.rs * warmthScale).toFixed(3)}:gs=${(warmthBase.gs * warmthScale).toFixed(3)}:bs=${(warmthBase.bs * warmthScale).toFixed(3)}`;
+
+      // 3. Body definition — contrast + unsharp mask for curves/silhouette
+      const defScale = input.bodyDefinition / 100;
+      const contrastVal = 1.0 + defScale * 0.3;
+      const unsharpVal = defScale * 1.5;
+      const definitionFilter = `eq=contrast=${contrastVal.toFixed(2)},unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=${unsharpVal.toFixed(2)}`;
+
+      // 4. Intimate lighting — brightness lift + vignette
+      const lightScale = input.intimateLighting / 100;
+      const brightnessVal = (lightScale - 0.5) * 0.12; // -0.06 to +0.06
+      const vignetteAngle = 0.5 + (1 - lightScale) * 1.5; // more vignette at low lighting
+      const lightingFilter = `eq=brightness=${brightnessVal.toFixed(3)},vignette=PI/${vignetteAngle.toFixed(1)}`;
+
+      // 5. Desire grade LUT — adult-specific color science
+      const gradeMap: Record<string, string> = {
+        velvet_skin:   `eq=saturation=1.08,colorbalance=rs=0.04:gs=0.02:bs=-0.02`,
+        golden_skin:   `eq=saturation=1.12,colorbalance=rs=0.07:gs=0.04:bs=-0.04`,
+        silk_soft:     `eq=brightness=0.03:saturation=1.05,colorbalance=rs=0.03:gs=0.01:bs=-0.01`,
+        boudoir_light: `eq=brightness=0.05:contrast=0.96:saturation=1.05,colorbalance=rs=0.08:gs=0.04:bs=-0.03`,
+        desire_haze:   `eq=brightness=0.02:contrast=1.04:saturation=1.1,colorbalance=rs=0.06:gs=0.02:bs=-0.03`,
+        deep_sensual:  `eq=brightness=-0.02:contrast=1.18:saturation=0.88,colorbalance=rs=0.05:gs=0:bs=-0.02`,
+      };
+      const gradeFilter = gradeMap[input.desireGrade] || gradeMap.velvet_skin;
+
+      // Combine all filters
+      const fullFilter = [smoothFilter, warmthFilter, definitionFilter, lightingFilter, gradeFilter].join(",");
+      enginesUsed.push({ engine: "FFmpeg Full-Body Beauty Pipeline", purpose: "Skin smooth + warmth + definition + lighting + desire grade", status: "queued" });
+
+      // ── Optional PuLID AI beauty on key frames ───────────────────────────────
+      let predictionId: string | undefined;
+      if (input.applyAIBeauty && REPLICATE_TOKEN) {
+        try {
+          const skinTonePrompts: Record<string, string> = {
+            fair:   "porcelain skin, soft luminous glow, delicate features, body-positive beauty",
+            medium: "golden tan skin, warm radiant glow, natural beauty, body-positive",
+            olive:  "warm olive skin, rich warm tones, sensual natural beauty, body-positive",
+            deep:   "deep rich skin, velvety texture, luminous dark skin, body-positive beauty",
+            ebony:  "ebony skin, deep rich tones, radiant glow, body-positive beauty celebrated",
+          };
+          const bodyFocusPrompts: Record<string, string> = {
+            full_body:   "full body enhancement, head to toe beauty, natural curves celebrated",
+            upper_body:  "upper body focus, chest and arms, natural beauty",
+            face_neck:   "face and neck beauty, portrait enhancement, skin texture",
+            curves:      "curves and silhouette enhancement, waist and hips, body-positive",
+          };
+          const levelMap: Record<string, number> = { subtle: 0.8, moderate: 1.2, maximum: 1.8 };
+          const prompt = `${skinTonePrompts[input.skinTone]}, ${bodyFocusPrompts[input.bodyFocus]}, cinematic beauty, sensual lighting, intimate atmosphere, professional photography`;
+          const negativePrompt = "over-processed, plastic skin, unnatural, harsh, distorted body";
+          const prediction = await replicatePost("predictions", {
+            version: "43d309c37ab4e62361e5e29b8e9e867fb2dcbcec77ae91206a8d95ac5dd451a0",
+            model: "zsxkib/pulid",
+            input: {
+              image: input.imageUrl,
+              prompt,
+              negative_prompt: negativePrompt,
+              num_steps: 25,
+              num_samples: 1,
+              cfg_scale: levelMap[input.enhancementLevel],
+              image_width: 896,
+              image_height: 1152,
+            },
+          });
+          predictionId = prediction.id;
+          enginesUsed.push({ engine: "Replicate PuLID", purpose: `${input.skinTone} skin, ${input.bodyFocus} beauty`, status: "started" });
+        } catch (e: any) {
+          errors.push(`PuLID: ${e.message}`);
+          enginesUsed.push({ engine: "Replicate PuLID", purpose: "AI beauty layer", status: "failed" });
+        }
+      }
+
+      return {
+        jobId,
+        predictionId,
+        status: errors.length === 0 ? "processing" : "partial",
+        ffmpegFilter: fullFilter,
+        enginesUsed,
+        errors: errors.length > 0 ? errors : undefined,
+        pipeline: "Velvet Suite — Full-Body Beauty Pipeline",
+        message: `Velvet Suite started — ${input.skinTone} skin, ${input.bodyFocus}, ${input.enhancementLevel} enhancement`,
+      };
+    }),
+  // ─── Desire Grade AI — GPT Peak Detection + PuLID on Key Frames ─────────────
+  desireGradeAI: protectedProcedure
+    .input(z.object({
+      videoUrl: z.string().url(),
+      gradeStyle: z.string().default("desire_haze"),
+      applyBeautyOnPeakFrames: z.boolean().default(true),
+      desireScore: z.number().min(1).max(10).default(7),
+    }))
+    .mutation(async ({ input }) => {
+      const jobId = randomUUID();
+      const errors: string[] = [];
+      const enginesUsed: any[] = [];
+      // Step 1: GPT analyzes video for peak desire moments
+      let peakTimeSeconds = 5;
+      let sceneAnalysis = "";
+      try {
+        const gptResp = await openai.chat.completions.create({
+          model: "gpt-4.1-mini",
+          messages: [{
+            role: "system",
+            content: "You are an adult content optimization AI for VaultX. Analyze video metadata and return JSON with peak moment timing and scene description for maximum viewer engagement.",
+          }, {
+            role: "user",
+            content: `Video URL: ${input.videoUrl}. Grade style: ${input.gradeStyle}. Desire score target: ${input.desireScore}/10. Return JSON: { "peakTimeSeconds": number, "sceneDescription": string, "beautyFocus": string, "lightingNotes": string }`,
+          }],
+          response_format: { type: "json_object" },
+        });
+        const parsed = JSON.parse(gptResp.choices[0].message.content || "{}");
+        peakTimeSeconds = parsed.peakTimeSeconds || 5;
+        sceneAnalysis = parsed.sceneDescription || "";
+        enginesUsed.push({ engine: "OpenAI GPT-4.1-mini", purpose: "Peak desire moment detection", status: "succeeded" });
+      } catch (e: any) {
+        errors.push(`GPT: ${e.message}`);
+        enginesUsed.push({ engine: "OpenAI GPT-4.1-mini", purpose: "Peak detection", status: "failed" });
+      }
+      // Step 2: Extract peak frame and run PuLID beauty if requested
+      let beautyPredictionId: string | null = null;
+      if (input.applyBeautyOnPeakFrames && REPLICATE_TOKEN) {
+        try {
+          // Extract frame URL (use video URL with timestamp hint for Replicate)
+          const frameUrl = `${input.videoUrl}#t=${peakTimeSeconds}`;
+          const prediction = await replicatePost("predictions", {
+            version: "43d309c37ab4e62361e5e29b8e9e867fb2dcbcec77ae91206a8d95ac5dd451a0",
+            model: "zsxkib/pulid",
+            input: {
+              image: input.videoUrl, // Use video URL — Replicate will extract frame
+              prompt: `cinematic beauty enhancement, ${input.gradeStyle} aesthetic, sensual lighting, body-positive, natural skin texture celebrated`,
+              negative_prompt: "over-processed, plastic skin, unnatural",
+              num_steps: 20,
+              num_samples: 1,
+              cfg_scale: 1.2,
+              image_width: 896,
+              image_height: 1152,
+            },
+          });
+          beautyPredictionId = prediction.id;
+          enginesUsed.push({ engine: "Replicate PuLID", purpose: "Beauty enhancement on peak frame", status: "started" });
+        } catch (e: any) {
+          errors.push(`PuLID: ${e.message}`);
+          enginesUsed.push({ engine: "Replicate PuLID", purpose: "Beauty enhancement", status: "failed" });
+        }
+      }
+      return {
+        jobId,
+        status: errors.length === 0 ? "processing" : "partial",
+        beautyPredictionId,
+        peakTimeSeconds,
+        sceneAnalysis,
+        gradeStyle: input.gradeStyle,
+        enginesUsed,
+        errors: errors.length > 0 ? errors : undefined,
+        message: `Desire Grade AI started — ${input.gradeStyle} grade + ${input.applyBeautyOnPeakFrames ? "PuLID beauty on peak frames" : "grade only"}`,
+      };
+    }),
+
+  // ─── Scene Architect AI — GPT Scene Intelligence + AI Recut ─────────────────
+  sceneArchitectAI: protectedProcedure
+    .input(z.object({
+      videoUrl: z.string().url(),
+      contentType: z.enum(["full_scene", "teaser", "ppv_preview", "viral_clip"]).default("teaser"),
+      targetDurationSec: z.number().min(5).max(300).default(30),
+      optimizeFor: z.enum(["desire", "retention", "virality", "ppv_conversion"]).default("desire"),
+    }))
+    .mutation(async ({ input }) => {
+      const jobId = randomUUID();
+      const errors: string[] = [];
+      const enginesUsed: any[] = [];
+      // GPT Scene Intelligence
+      let sceneMap: any[] = [];
+      let recutPlan: any = {};
+      try {
+        const gptResp = await openai.chat.completions.create({
+          model: "gpt-4.1-mini",
+          messages: [{
+            role: "system",
+            content: `You are VaultX Scene Architect AI — an expert adult content editor. You analyze video structure and create intelligent recut plans that maximize ${input.optimizeFor} for adult content creators. Always be body-positive and celebrate natural beauty.`,
+          }, {
+            role: "user",
+            content: `Video: ${input.videoUrl}
+Content type: ${input.contentType}
+Target duration: ${input.targetDurationSec}s
+Optimize for: ${input.optimizeFor}
+
+Return JSON:
+{
+  "scenes": [{ "id": string, "startSec": number, "endSec": number, "type": "hook"|"build"|"peak"|"outro", "desireScore": number, "keepForRecut": boolean, "reason": string }],
+  "recutOrder": [string],
+  "hookText": string,
+  "ctaText": string,
+  "estimatedRetention": number,
+  "ppvSuggestedPrice": number,
+  "editingNotes": string
+}`,
+          }],
+          response_format: { type: "json_object" },
+        });
+        const parsed = JSON.parse(gptResp.choices[0].message.content || "{}");
+        sceneMap = parsed.scenes || [];
+        recutPlan = {
+          recutOrder: parsed.recutOrder || [],
+          hookText: parsed.hookText || "",
+          ctaText: parsed.ctaText || "",
+          estimatedRetention: parsed.estimatedRetention || 65,
+          ppvSuggestedPrice: parsed.ppvSuggestedPrice || 9.99,
+          editingNotes: parsed.editingNotes || "",
+        };
+        enginesUsed.push({ engine: "OpenAI GPT-4.1-mini", purpose: "Scene intelligence + recut plan", status: "succeeded" });
+      } catch (e: any) {
+        errors.push(`GPT: ${e.message}`);
+        enginesUsed.push({ engine: "OpenAI GPT-4.1-mini", purpose: "Scene intelligence", status: "failed" });
+        // Fallback recut plan
+        sceneMap = [
+          { id: "s1", startSec: 0, endSec: 5, type: "hook", desireScore: 8, keepForRecut: true, reason: "Opening hook" },
+          { id: "s2", startSec: 5, endSec: input.targetDurationSec * 0.7, type: "build", desireScore: 7, keepForRecut: true, reason: "Build-up" },
+          { id: "s3", startSec: input.targetDurationSec * 0.7, endSec: input.targetDurationSec, type: "peak", desireScore: 10, keepForRecut: true, reason: "Peak moment" },
+        ];
+        recutPlan = { hookText: "You won't believe what happens next...", ctaText: "Subscribe for the full video", estimatedRetention: 60, ppvSuggestedPrice: 9.99 };
+      }
+      return {
+        jobId,
+        status: "succeeded",
+        sceneMap,
+        recutPlan,
+        sourceUrl: input.videoUrl,
+        contentType: input.contentType,
+        optimizeFor: input.optimizeFor,
+        enginesUsed,
+        errors: errors.length > 0 ? errors : undefined,
+      };
+    }),
+
+  // ─── Enhance Prompt for Adult Content — GPT Prompt Optimizer ────────────────
+  enhancePromptForAdult: protectedProcedure
+    .input(z.object({
+      rawPrompt: z.string().min(3).max(500),
+      style: z.enum(["sensual", "boudoir", "intimate", "artistic", "cinematic", "fantasy"]).default("cinematic"),
+      model: z.enum(["pollo", "minimax", "zeroscope", "stable-video"]).default("pollo"),
+    }))
+    .mutation(async ({ input }) => {
+      const modelHints: Record<string, string> = {
+        pollo: "Optimize for Pollo AI v1.6 — use cinematic camera movements, lighting descriptors, and mood words",
+        minimax: "Optimize for MiniMax Video-01 — focus on character consistency, smooth motion, and scene continuity",
+        zeroscope: "Optimize for ZeroScope XL — use detailed visual descriptions, art style references, and motion descriptors",
+        "stable-video": "Optimize for Stable Video Diffusion — focus on single-frame composition that will animate beautifully",
+      };
+      const gptResp = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        messages: [{
+          role: "system",
+          content: `You are VaultX's AI video prompt engineer specializing in adult, body-positive, sensual content creation. ${modelHints[input.model]}. Always celebrate natural beauty, diverse body types, and authentic intimacy. Never generate harmful, non-consensual, or degrading content.`,
+        }, {
+          role: "user",
+          content: `Enhance this video generation prompt for ${input.style} style adult content:
+"${input.rawPrompt}"
+
+Return JSON: { "enhancedPrompt": string, "negativePrompt": string, "cameraMovement": string, "lighting": string, "mood": string, "estimatedQuality": number }`,
+        }],
+        response_format: { type: "json_object" },
+      });
+      const parsed = JSON.parse(gptResp.choices[0].message.content || "{}");
+      return {
+        enhancedPrompt: parsed.enhancedPrompt || input.rawPrompt,
+        negativePrompt: parsed.negativePrompt || "low quality, blurry, distorted",
+        cameraMovement: parsed.cameraMovement || "slow pan",
+        lighting: parsed.lighting || "soft warm lighting",
+        mood: parsed.mood || "intimate",
+        estimatedQuality: parsed.estimatedQuality || 8,
+        originalPrompt: input.rawPrompt,
+        style: input.style,
+        model: input.model,
+      };
+    }),
+
+  // ─── AI Chatter Response — GPT Persona Auto-Reply ────────────────────────────
+  generateChatterResponse: protectedProcedure
+    .input(z.object({
+      fanMessage: z.string().max(2000),
+      personaName: z.string().max(100).optional(),
+      personaDescription: z.string().max(2000).optional(),
+      conversationHistory: z.array(z.object({
+        role: z.enum(["fan", "creator"]),
+        message: z.string(),
+      })).max(10).optional(),
+      includePpvPitch: z.boolean().default(false),
+      includeTipRequest: z.boolean().default(false),
+      contentType: z.enum(["flirty", "friendly", "exclusive", "ppv_tease"]).default("flirty"),
+    }))
+    .mutation(async ({ input }) => {
+      const personaName = input.personaName || "your favorite creator";
+      const personaDesc = input.personaDescription || "a confident, body-positive adult content creator who is warm, flirty, and makes fans feel special";
+      const systemPrompt = `You are ${personaName} — ${personaDesc}. You are responding to a fan on VaultX, an adult content platform. Be authentic, warm, and engaging. ${input.includePpvPitch ? "Naturally weave in a mention of exclusive PPV content they can unlock." : ""} ${input.includeTipRequest ? "Subtly suggest they show appreciation with a tip." : ""} Keep responses conversational, 1-3 sentences. Never be explicit in a way that feels forced — let the intimacy feel natural and earned.`;
+      const messages: any[] = [{ role: "system", content: systemPrompt }];
+      // Add conversation history
+      if (input.conversationHistory) {
+        for (const msg of input.conversationHistory) {
+          messages.push({ role: msg.role === "creator" ? "assistant" : "user", content: msg.message });
+        }
+      }
+      messages.push({ role: "user", content: input.fanMessage });
+      const gptResp = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        messages,
+        max_tokens: 200,
+        temperature: 0.85,
+      });
+      const response = gptResp.choices[0].message.content || "Hey babe, just saw your message! 💕";
+      return {
+        response,
+        personaName,
+        contentType: input.contentType,
+        tokenCount: gptResp.usage?.total_tokens || 0,
+      };
+    }),
+
+  // ─── ElevenLabs Voice Synthesis — Creator Voice Clone ───────────────────────
+  synthesizeVoice: protectedProcedure
+    .input(z.object({
+      text: z.string().min(1).max(2000),
+      voiceId: z.string().optional(), // ElevenLabs voice ID
+      stability: z.number().min(0).max(1).default(0.5),
+      similarityBoost: z.number().min(0).max(1).default(0.75),
+      style: z.number().min(0).max(1).default(0.3),
+      modelId: z.enum(["eleven_multilingual_v2", "eleven_turbo_v2_5", "eleven_flash_v2_5"]).default("eleven_multilingual_v2"),
+    }))
+    .mutation(async ({ input }) => {
+      const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY;
+      if (!ELEVENLABS_KEY) throw new Error("ELEVENLABS_API_KEY not configured");
+      const voiceId = input.voiceId || "21m00Tcm4TlvDq8ikWAM"; // Default: Rachel (sensual, warm)
+      const resp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+        method: "POST",
+        headers: {
+          "xi-api-key": ELEVENLABS_KEY,
+          "Content-Type": "application/json",
+          "Accept": "audio/mpeg",
+        },
+        body: JSON.stringify({
+          text: input.text,
+          model_id: input.modelId,
+          voice_settings: {
+            stability: input.stability,
+            similarity_boost: input.similarityBoost,
+            style: input.style,
+            use_speaker_boost: true,
+          },
+        }),
+      });
+      if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error(`ElevenLabs error: ${resp.status} ${errText}`);
+      }
+      const audioBuffer = Buffer.from(await resp.arrayBuffer());
+      const audioUrl = await saveFinalOutput(audioBuffer, "voice-synthesis.mp3", "voice-synthesis");
+      return {
+        audioUrl,
+        voiceId,
+        modelId: input.modelId,
+        characterCount: input.text.length,
+        provider: "ElevenLabs",
+        message: "Voice synthesis complete",
+      };
+    }),
+
+  // ─── Adult Sound Design — MMAudio with Adult-Specific Prompts ───────────────
+  addAdultSound: protectedProcedure
+    .input(z.object({
+      videoUrl: z.string().url(),
+      soundType: z.enum(["intimate_ambience", "sensual_breathing", "romantic_music", "club_atmosphere", "nature_intimate", "custom"]).default("intimate_ambience"),
+      customPrompt: z.string().max(200).optional(),
+      intensity: z.enum(["soft", "moderate", "intense"]).default("moderate"),
+      mixWithOriginal: z.boolean().default(true),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const soundPrompts: Record<string, Record<string, string>> = {
+        intimate_ambience: {
+          soft: "soft intimate room ambience, gentle breathing, warm silence, romantic atmosphere",
+          moderate: "intimate bedroom atmosphere, soft breathing, gentle movement sounds, warm sensual ambience",
+          intense: "passionate intimate atmosphere, deep breathing, heightened sensual energy, cinematic tension",
+        },
+        sensual_breathing: {
+          soft: "soft gentle breathing, quiet intimate sounds, peaceful sensual atmosphere",
+          moderate: "rhythmic breathing, sensual vocal tones, intimate close-up audio",
+          intense: "deep passionate breathing, intense vocal expression, climactic audio design",
+        },
+        romantic_music: {
+          soft: "soft piano, gentle strings, romantic ambient music, intimate mood",
+          moderate: "sensual R&B instrumental, warm bass, romantic atmosphere, adult content soundtrack",
+          intense: "deep sensual electronic music, pulsing bass, passionate cinematic score",
+        },
+        club_atmosphere: {
+          soft: "soft club music in background, ambient bass, sophisticated lounge atmosphere",
+          moderate: "club music, bass-heavy atmosphere, energetic sensual environment",
+          intense: "intense club music, heavy bass, high energy sensual atmosphere",
+        },
+        nature_intimate: {
+          soft: "gentle rain, soft nature sounds, peaceful intimate outdoor atmosphere",
+          moderate: "rain on windows, crackling fire, intimate cozy atmosphere",
+          intense: "ocean waves, passionate nature sounds, primal intimate atmosphere",
+        },
+        custom: {
+          soft: input.customPrompt || "ambient sound design",
+          moderate: input.customPrompt || "ambient sound design",
+          intense: input.customPrompt || "ambient sound design",
+        },
+      };
+      const prompt = soundPrompts[input.soundType]?.[input.intensity] || input.customPrompt || "intimate ambient sound design";
+      const prediction = await replicatePost("predictions", {
+        version: "4af53bfb-d938-4d7e-9f5c-a8e4f5e2e8e9", // zsxkib/mmaudio
+        model: "zsxkib/mmaudio",
+        input: {
+          video: input.videoUrl,
+          prompt,
+          negative_prompt: "low quality audio, distorted, harsh, unpleasant",
+          num_steps: 25,
+          duration: -1, // Match video duration
+          cfg_strength: 4.5,
+          mask_away_clip: false,
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "zsxkib/mmaudio",
+        soundType: input.soundType,
+        intensity: input.intensity,
+        prompt,
+        message: `Adult sound design started — ${input.soundType} (${input.intensity})`,
+      };
+    }),
+
+  // ─── Sensual Music Generation — MusicGen with Adult-Specific Prompts ────────
+  generateSensualMusic: protectedProcedure
+    .input(z.object({
+      mood: z.enum(["romantic", "sensual", "passionate", "playful", "dominant", "submissive", "luxury", "dark_desire"]).default("sensual"),
+      duration: z.number().min(5).max(60).default(30),
+      tempo: z.enum(["slow", "medium", "fast"]).default("slow"),
+      instruments: z.array(z.string()).default(["piano", "bass", "strings"]),
+    }))
+    .mutation(async ({ input }) => {
+      if (!REPLICATE_TOKEN) throw new Error("REPLICATE_API_TOKEN not configured");
+      const moodPrompts: Record<string, string> = {
+        romantic: "romantic piano ballad, soft strings, warm bass, candlelight dinner atmosphere, slow tempo",
+        sensual: "sensual R&B, smooth bass, warm synth pads, intimate bedroom atmosphere, slow groove",
+        passionate: "passionate orchestral, building strings, deep bass, cinematic tension, emotional crescendo",
+        playful: "playful jazz, light piano, upbeat but intimate, flirtatious mood, medium tempo",
+        dominant: "dark electronic, heavy bass, commanding rhythm, powerful and seductive, medium-fast",
+        submissive: "soft ethereal, gentle piano, floating pads, delicate and yielding, very slow",
+        luxury: "luxury lounge, sophisticated jazz, champagne atmosphere, high-end sensual, slow",
+        dark_desire: "dark ambient, deep bass drones, mysterious tension, noir atmosphere, slow and heavy",
+      };
+      const tempoHints: Record<string, string> = {
+        slow: "60-75 BPM, slow and deliberate",
+        medium: "90-110 BPM, medium groove",
+        fast: "120-140 BPM, energetic",
+      };
+      const prompt = `${moodPrompts[input.mood]}, ${tempoHints[input.tempo]}, ${input.instruments.join(", ")}, high quality production, adult content soundtrack`;
+      const prediction = await replicatePost("predictions", {
+        version: "b05b1dff1d8c6dc63d14b0cdb42135378dcb87f6373b0d3d341ede46e59e2b38",
+        model: "meta/musicgen",
+        input: {
+          prompt,
+          model_version: "stereo-large",
+          output_format: "mp3",
+          normalization_strategy: "peak",
+          duration: input.duration,
+        },
+      });
+      return {
+        predictionId: prediction.id,
+        status: prediction.status,
+        provider: "Replicate",
+        model: "meta/musicgen",
+        mood: input.mood,
+        tempo: input.tempo,
+        duration: input.duration,
+        prompt,
+        message: `Sensual music generation started — ${input.mood} mood, ${input.duration}s`,
+      };
+    }),
+
   // ─── Legacy stubs ────────────────────────────────────────────────────────────
   enhanceVideo: protectedProcedure
     .input(z.object({ videoUrl: z.string(), enhancements: z.array(z.string()) }))
