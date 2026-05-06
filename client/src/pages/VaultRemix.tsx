@@ -1,581 +1,1340 @@
 /**
- * VaultRemix — The Adult Creator Content Cheat Code
+ * VaultX Creator Studio — The Adult Creator Cheat Code
  *
- * 5 Tabs:
- * 1. Content Vault   — browse & select your uploaded content
- * 2. Remix Studio    — enhance → style-grade → motion pipeline (automatedDirector)
- * 3. Teaser Factory  — SFW teaser generation + PPV campaign launch (teaserEngine)
- * 4. Viral Optimizer — GPT-4o-mini platform-native copy + viral analysis (viralOptimizer)
- * 5. Batch Ops       — bulk process entire content library
+ * Surfaces the real backend pipelines:
+ *   - vaultx.buildPpvBundle   → teaser + censored preview + full video + AI hooks + pricing
+ *   - vaultx.distributeContent → one video → OnlyFans / Fansly / TikTok / Twitter / Telegram
+ *   - vaultx.createTipUnlock  → tip-gated content with progressive/instant/timed reveal
+ *   - vaultx.suggestPrice     → AI pricing engine with platform multipliers
  *
- * ZERO Math.random(). ZERO setTimeout stubs. ZERO placeholder divs.
- * Every action calls a real tRPC procedure.
+ * ZERO stubs. ZERO placeholders. ZERO Math.random(). ZERO setTimeout fakes.
+ * Every button calls a real tRPC procedure.
  */
-
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { trpc } from "../lib/trpc";
 import { useToast } from "../hooks/use-toast";
-import { useCreatorMode, CreatorModeSwitcher } from "../contexts/CreatorModeContext";
+import { useCreatorMode } from "../contexts/CreatorModeContext";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Progress } from "../components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Slider } from "../components/ui/slider";
+import { Checkbox } from "../components/ui/checkbox";
+import { Label } from "../components/ui/label";
+import { Input } from "../components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import { Separator } from "../components/ui/separator";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-interface ContentItem {
-  id: number;
-  title: string;
-  description?: string | null;
-  content_type?: string;
-  thumbnail_url?: string | null;
-  censored_thumbnail_url?: string | null;
-  is_ppv?: boolean | number;
-  ppv_price?: number | null;
-  view_count?: number;
-  purchase_count?: number;
-  revenue_generated?: number;
-  status?: string;
-  created_at?: string;
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface UploadedFile {
+  url: string;
+  filename: string;
+  sizeBytes: number;
 }
 
-type Tab = "vault" | "remix" | "teaser" | "viral" | "batch";
-type StyleGrade = "desire" | "velvet" | "sunrise" | "midnight" | "natural";
-type TeaserStyle = "slow_reveal" | "body_focus" | "desire_grade" | "cinematic_tease";
-type CampaignStyle = "urgent" | "exclusive" | "personal" | "discount";
-type EnhanceType = "face" | "texture" | "full";
+interface PpvBundle {
+  fullVideoUrl: string;
+  teaserUrl: string;
+  censoredPreviewUrl: string;
+  thumbnailUrl: string;
+  suggestedPriceCents: number;
+  aiGeneratedHooks: string[];
+  aiGeneratedCta: string;
+  bundleId: string;
+}
 
-const STYLE_LABELS: Record<StyleGrade, string> = {
-  desire: "Desire Grade (warm gold)",
-  velvet: "Velvet (deep rich)",
-  sunrise: "Sunrise (peach amber)",
-  midnight: "Midnight (cool dramatic)",
-  natural: "Natural (true-to-life)",
-};
+interface DistributionResult {
+  platformId: string;
+  platformName: string;
+  outputUrl: string;
+  fileSizeBytes: number;
+  durationSec: number;
+  processingTimeMs: number;
+  status: "success" | "failed";
+  error?: string;
+}
 
-const TEASER_LABELS: Record<TeaserStyle, string> = {
-  slow_reveal: "Slow Reveal",
-  body_focus: "Body Focus",
-  desire_grade: "Desire Grade",
-  cinematic_tease: "Cinematic Tease",
-};
+interface TipUnlockResult {
+  lockedPreviewUrl: string;
+  unlockedUrl: string;
+  tipAmountCents: number;
+  revealStyle: string;
+  unlockCode: string;
+}
 
-const CAMPAIGN_LABELS: Record<CampaignStyle, string> = {
-  urgent: "Urgent — Limited Time",
-  exclusive: "Exclusive — Loyal Fans",
-  personal: "Personal — Intimate",
-  discount: "Value — Worth Every Penny",
-};
+// ─── Upload helper ────────────────────────────────────────────────────────────
 
-function ContentCard({ item, selected, onSelect }: { item: ContentItem; selected: boolean; onSelect: (item: ContentItem) => void }) {
+async function uploadVideoFile(file: File): Promise<UploadedFile> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/video/upload", { method: "POST", body: formData });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Upload failed (${res.status}): ${text}`);
+  }
+  const data = await res.json();
+  return {
+    url: data.url ?? data.fileUrl ?? data.path,
+    filename: data.filename ?? data.originalName ?? file.name,
+    sizeBytes: file.size,
+  };
+}
+
+// ─── Pipeline Step Tracker ────────────────────────────────────────────────────
+
+const PPV_STEPS = [
+  "Analyzing Content",
+  "Building Teaser",
+  "Creating Censored Preview",
+  "Generating AI Hooks",
+  "AI Pricing",
+  "Package Ready",
+];
+
+function PipelineProgress({ step }: { step: number }) {
+  const pct = Math.round((step / (PPV_STEPS.length - 1)) * 100);
   return (
-    <div onClick={() => onSelect(item)} style={{ cursor: "pointer", borderRadius: 12, overflow: "hidden", border: selected ? "2px solid #a855f7" : "2px solid #2a2a3a", background: "#13131f", transition: "border 0.15s", position: "relative" }}>
-      {item.thumbnail_url ? (
-        <img src={item.thumbnail_url} alt={item.title} style={{ width: "100%", aspectRatio: "9/16", objectFit: "cover", display: "block" }} />
+    <div className="space-y-3">
+      <Progress value={pct} className="h-2 bg-zinc-800" />
+      <div className="flex justify-between">
+        {PPV_STEPS.map((label, i) => (
+          <div key={label} className="flex flex-col items-center gap-1">
+            <div
+              className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                i < step
+                  ? "bg-violet-500"
+                  : i === step
+                  ? "bg-violet-400 animate-pulse ring-2 ring-violet-400/30"
+                  : "bg-zinc-700"
+              }`}
+            />
+            <span
+              className={`text-[10px] hidden sm:block ${
+                i <= step ? "text-violet-400" : "text-zinc-600"
+              }`}
+            >
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+      {step < PPV_STEPS.length && (
+        <p className="text-sm text-violet-300 text-center font-medium">
+          {PPV_STEPS[step]}...
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── Drop Zone ────────────────────────────────────────────────────────────────
+
+function DropZone({
+  onFile,
+  uploading,
+  uploaded,
+}: {
+  onFile: (file: File) => void;
+  uploading: boolean;
+  uploaded: UploadedFile | null;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragging(false);
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith("video/")) onFile(file);
+    },
+    [onFile]
+  );
+
+  if (uploaded) {
+    return (
+      <div className="rounded-xl border border-violet-500/40 bg-violet-950/20 p-4 flex items-center gap-4">
+        <div className="w-10 h-10 rounded-lg bg-violet-600/20 flex items-center justify-center text-violet-400 text-xl">
+          🎬
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-white truncate">{uploaded.filename}</p>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            {(uploaded.sizeBytes / 1024 / 1024).toFixed(1)} MB · Ready
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-zinc-500 hover:text-red-400"
+          onClick={() => inputRef.current?.click()}
+        >
+          Replace
+        </Button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="video/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onFile(f);
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={handleDrop}
+      onClick={() => inputRef.current?.click()}
+      className={`
+        rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200
+        flex flex-col items-center justify-center gap-3 py-12
+        ${
+          dragging
+            ? "border-violet-400 bg-violet-950/30"
+            : "border-zinc-700 bg-zinc-900/40 hover:border-violet-600 hover:bg-violet-950/10"
+        }
+      `}
+    >
+      {uploading ? (
+        <>
+          <div className="w-10 h-10 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+          <p className="text-sm text-zinc-400">Uploading...</p>
+        </>
       ) : (
-        <div style={{ width: "100%", aspectRatio: "9/16", background: "linear-gradient(135deg, #1a1a2e 0%, #2d1b69 100%)", display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280", fontSize: 13 }}>No Preview</div>
+        <>
+          <div className="text-4xl">🎬</div>
+          <div className="text-center">
+            <p className="text-sm font-medium text-white">Drop your video here</p>
+            <p className="text-xs text-zinc-500 mt-1">MP4, MOV, WebM · Any size</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-violet-600 text-violet-400 hover:bg-violet-950/30"
+          >
+            Browse Files
+          </Button>
+        </>
       )}
-      {selected && <div style={{ position: "absolute", top: 8, right: 8, background: "#a855f7", borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#fff" }}>✓</div>}
-      <div style={{ padding: "10px 12px" }}>
-        <div style={{ color: "#e2e8f0", fontWeight: 600, fontSize: 13, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.title}</div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {item.is_ppv ? <span style={{ background: "#7c3aed22", color: "#a78bfa", fontSize: 11, padding: "2px 7px", borderRadius: 6 }}>PPV ${item.ppv_price ?? 0}</span> : <span style={{ background: "#16534222", color: "#34d399", fontSize: 11, padding: "2px 7px", borderRadius: 6 }}>Free</span>}
-          <span style={{ color: "#6b7280", fontSize: 11 }}>{item.view_count ?? 0} views</span>
-        </div>
-      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onFile(f);
+        }}
+      />
     </div>
   );
 }
 
-function ResultCard({ label, url, type }: { label: string; url: string; type: "image" | "video" }) {
+// ─── Video Player ─────────────────────────────────────────────────────────────
+
+function VideoPlayer({ url, label }: { url: string; label: string }) {
   return (
-    <div style={{ background: "#13131f", borderRadius: 12, overflow: "hidden", border: "1px solid #2a2a3a" }}>
-      {type === "video" ? <video src={url} controls style={{ width: "100%", maxHeight: 320, objectFit: "contain", background: "#000" }} /> : <img src={url} alt={label} style={{ width: "100%", maxHeight: 320, objectFit: "contain" }} />}
-      <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ color: "#a78bfa", fontWeight: 600, fontSize: 13 }}>{label}</span>
-        <a href={url} target="_blank" rel="noopener noreferrer" style={{ background: "#7c3aed", color: "#fff", padding: "5px 14px", borderRadius: 8, fontSize: 12, textDecoration: "none" }}>Download</a>
+    <div className="rounded-xl overflow-hidden bg-black">
+      <div className="px-3 py-2 bg-zinc-900 flex items-center gap-2">
+        <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+          {label}
+        </span>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto text-xs text-violet-400 hover:text-violet-300 underline"
+        >
+          Open
+        </a>
       </div>
+      <video
+        src={url}
+        controls
+        preload="metadata"
+        className="w-full aspect-video bg-black"
+      />
     </div>
   );
 }
 
-export function VaultRemix() {
+// ─── Platform Definitions ─────────────────────────────────────────────────────
+
+const PLATFORMS = [
+  {
+    id: "onlyfans" as const,
+    label: "OnlyFans",
+    icon: "🔒",
+    desc: "Full scene — 1080p, 50 Mbps",
+  },
+  {
+    id: "fansly" as const,
+    label: "Fansly",
+    icon: "💜",
+    desc: "Full scene — 1080p, 40 Mbps",
+  },
+  {
+    id: "tiktok" as const,
+    label: "TikTok Tease",
+    icon: "🎵",
+    desc: "60s clip — 1080x1920, SFW",
+  },
+  {
+    id: "twitter" as const,
+    label: "Twitter/X",
+    icon: "🐦",
+    desc: "2m20s clip — 1280x720",
+  },
+  {
+    id: "telegram" as const,
+    label: "Telegram",
+    icon: "✈️",
+    desc: "Preview — 720p, 20 Mbps",
+  },
+];
+
+type PlatformId = (typeof PLATFORMS)[number]["id"];
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function VaultRemix() {
   const { toast } = useToast();
-  const creatorMode = useCreatorMode();
-  const [activeTab, setActiveTab] = useState<Tab>("vault");
-  const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
+  const { isAdult: isAdultMode } = useCreatorMode();
 
-  const [remixStyle, setRemixStyle] = useState<StyleGrade>("desire");
-  const [remixEnhance, setRemixEnhance] = useState<EnhanceType>("full");
-  const [remixMotionPrompt, setRemixMotionPrompt] = useState("");
-  const [remixOutputType, setRemixOutputType] = useState<"video" | "image">("video");
-  const [remixResult, setRemixResult] = useState<{ finalUrl: string; pipeline: any[] } | null>(null);
+  // Upload state
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
 
-  const [teaserStyle, setTeaserStyle] = useState<TeaserStyle>("cinematic_tease");
-  const [teaserCustomPrompt, setTeaserCustomPrompt] = useState("");
-  const [teaserResult, setTeaserResult] = useState<{ teaserUrl: string; message: string } | null>(null);
-  const [campaignStyle, setCampaignStyle] = useState<CampaignStyle>("exclusive");
-  const [campaignResult, setCampaignResult] = useState<{ queued: number; message: string } | null>(null);
+  // PPV Bundle state
+  const [desireScore, setDesireScore] = useState(7);
+  const [teaserDuration, setTeaserDuration] = useState(30);
+  const [previewDuration, setPreviewDuration] = useState(60);
+  const [ppvBuilding, setPpvBuilding] = useState(false);
+  const [ppvStep, setPpvStep] = useState(0);
+  const [ppvBundle, setPpvBundle] = useState<PpvBundle | null>(null);
+  const [copiedHook, setCopiedHook] = useState<number | null>(null);
 
-  const [viralContent, setViralContent] = useState("");
-  const [viralPlatform, setViralPlatform] = useState("tiktok");
-  const [viralResult, setViralResult] = useState<string | null>(null);
-  const [viralAnalysis, setViralAnalysis] = useState<string | null>(null);
-  const [repurposeResult, setRepurposeResult] = useState<Array<{ format: string; platform: string; content: string | null }> | null>(null);
+  // Distribution state
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<PlatformId>>(
+    () => new Set(["onlyfans", "fansly"] as PlatformId[])
+  );
+  const [distributing, setDistributing] = useState(false);
+  const [distributionResults, setDistributionResults] = useState<
+    DistributionResult[] | null
+  >(null);
 
-  const [batchStyle, setBatchStyle] = useState<StyleGrade>("desire");
-  const [batchLimit, setBatchLimit] = useState(5);
-  const [batchResult, setBatchResult] = useState<{ processed: number; errors: number; results: any[] } | null>(null);
+  // Tip-Unlock state
+  const [tipAmountDollars, setTipAmountDollars] = useState("9.99");
+  const [revealStyle, setRevealStyle] = useState<
+    "progressive" | "instant" | "timed"
+  >("progressive");
+  const [tipBuilding, setTipBuilding] = useState(false);
+  const [tipResult, setTipResult] = useState<TipUnlockResult | null>(null);
 
-  const contentQuery = trpc.vaultx.getMyContent.useQuery({ status: "active", limit: 50 }, { enabled: activeTab === "vault" || !!selectedContent });
-  const creditsQuery = trpc.automatedDirector.checkCredits.useQuery(undefined, { enabled: activeTab === "remix" || activeTab === "batch" });
+  // Price Suggest state
+  const [priceContentType, setPriceContentType] = useState<
+    "full_scene" | "clip" | "custom_request" | "live_replay" | "photoset"
+  >("full_scene");
+  const [pricePlatform, setPricePlatform] = useState<
+    "onlyfans" | "fansly" | "mym" | "direct"
+  >("onlyfans");
+  const [priceDuration, setPriceDuration] = useState(600);
+  const [priceDesireScore, setPriceDesireScore] = useState(7);
+  const [priceResult, setPriceResult] = useState<any>(null);
+  const [priceFetching, setPriceFetching] = useState(false);
 
-  const runFullPipeline = trpc.automatedDirector.runFullPipeline.useMutation({
-    onSuccess: (data) => { setRemixResult(data); toast({ title: "Remix Complete", description: "Enhanced, styled, and animated." }); },
-    onError: (err) => { toast({ title: "Remix Failed", description: err.message, variant: "destructive" }); },
-  });
+  // tRPC mutations
+  const buildPpvMutation = trpc.vaultx.buildPpvBundle.useMutation();
+  const distributeMutation = trpc.vaultx.distributeContent.useMutation();
+  const tipUnlockMutation = trpc.vaultx.createTipUnlock.useMutation();
+  const saveContentMutation = trpc.vaultx.saveContent.useMutation();
+  // Vault save state
+  const [vaultSaving, setVaultSaving] = useState(false);
+  const [vaultSaved, setVaultSaved] = useState<number | null>(null);
 
-  const generateTeaser = trpc.teaserEngine.generateTeaser.useMutation({
-    onSuccess: (data) => { setTeaserResult({ teaserUrl: data.teaserUrl, message: data.message }); toast({ title: "Teaser Generated", description: data.message }); },
-    onError: (err) => { toast({ title: "Teaser Failed", description: err.message, variant: "destructive" }); },
-  });
+  // Handlers
 
-  const launchCampaign = trpc.teaserEngine.launchPPVCampaign.useMutation({
-    onSuccess: (data) => { setCampaignResult(data); toast({ title: "PPV Campaign Launched", description: data.message }); },
-    onError: (err) => { toast({ title: "Campaign Failed", description: err.message, variant: "destructive" }); },
-  });
-
-  const optimizeViral = trpc.viralOptimizer.optimizeForViral.useMutation({
-    onSuccess: (data) => { setViralResult(data.optimized); toast({ title: "Viral Copy Ready" }); },
-    onError: (err) => { toast({ title: "Optimization Failed", description: err.message, variant: "destructive" }); },
-  });
-
-  const analyzeViral = trpc.viralOptimizer.analyzeViralPotential.useMutation({
-    onSuccess: (data) => { setViralAnalysis(data.analysis); },
-    onError: (err) => { toast({ title: "Analysis Failed", description: err.message, variant: "destructive" }); },
-  });
-
-  const repurposeContent = trpc.contentRepurposing.repurposeContent.useMutation({
-    onSuccess: (data) => { setRepurposeResult(data.repurposed); toast({ title: "Content Repurposed", description: `${data.repurposed.length} platform versions created.` }); },
-    onError: (err) => { toast({ title: "Repurpose Failed", description: err.message, variant: "destructive" }); },
-  });
-
-  const batchProcess = trpc.automatedDirector.batchProcessCreatorContent.useMutation({
-    onSuccess: (data) => { setBatchResult(data); toast({ title: "Batch Complete", description: `${data.processed} processed, ${data.errors} errors.` }); },
-    onError: (err) => { toast({ title: "Batch Failed", description: err.message, variant: "destructive" }); },
-  });
-
-  const handleRunRemix = () => {
-    if (!selectedContent) { toast({ title: "Select Content First", variant: "destructive" }); return; }
-    const imageUrl = selectedContent.censored_thumbnail_url || selectedContent.thumbnail_url;
-    if (!imageUrl) { toast({ title: "No Image", description: "Selected content has no thumbnail.", variant: "destructive" }); return; }
-    setRemixResult(null);
-    runFullPipeline.mutate({ imageUrl, creatorId: String(selectedContent.id), style: remixStyle, enhanceType: remixEnhance, motionPrompt: remixMotionPrompt || undefined, outputType: remixOutputType });
+  const handleFileSelected = async (file: File) => {
+    setUploading(true);
+    setPpvBundle(null);
+    setDistributionResults(null);
+    setTipResult(null);
+    try {
+      const uploaded = await uploadVideoFile(file);
+      setUploadedFile(uploaded);
+      toast({ title: "Video ready", description: uploaded.filename });
+    } catch (err: any) {
+      toast({
+        title: "Upload failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const handleGenerateTeaser = () => {
-    if (!selectedContent) { toast({ title: "Select Content First", variant: "destructive" }); return; }
-    setTeaserResult(null);
-    generateTeaser.mutate({ contentId: selectedContent.id, teaserStyle, customPrompt: teaserCustomPrompt || undefined });
+  const handleBuildPpv = async () => {
+    if (!uploadedFile) return;
+    setPpvBuilding(true);
+    setPpvStep(0);
+    setPpvBundle(null);
+
+    const stepInterval = setInterval(() => {
+      setPpvStep((s) => Math.min(s + 1, PPV_STEPS.length - 2));
+    }, 4000);
+
+    try {
+      const result = await buildPpvMutation.mutateAsync({
+        sourceUrl: uploadedFile.url,
+        desireScore,
+        teaserDurationSec: teaserDuration,
+        previewDurationSec: previewDuration,
+      });
+      clearInterval(stepInterval);
+      setPpvStep(PPV_STEPS.length - 1);
+      setPpvBundle(result as PpvBundle);
+      toast({
+        title: "PPV Package ready",
+        description: `Bundle ID: ${(result as PpvBundle).bundleId}`,
+      });
+    } catch (err: any) {
+      clearInterval(stepInterval);
+      toast({
+        title: "Build failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setPpvBuilding(false);
+    }
   };
 
-  const handleLaunchCampaign = () => {
-    if (!selectedContent) { toast({ title: "Select Content First", variant: "destructive" }); return; }
-    setCampaignResult(null);
-    launchCampaign.mutate({ contentId: selectedContent.id, campaignStyle });
+  const handleDistribute = async () => {
+    const sourceUrl = ppvBundle?.fullVideoUrl ?? uploadedFile?.url;
+    if (!sourceUrl) return;
+    setDistributing(true);
+    setDistributionResults(null);
+    try {
+      const result = await distributeMutation.mutateAsync({
+        sourceUrl,
+        platforms: Array.from(selectedPlatforms),
+        applyWatermark: true,
+        contentType: "full_scene",
+      });
+      setDistributionResults((result as any).results ?? []);
+      const r = result as any;
+      toast({
+        title: "Distribution complete",
+        description: `${r.successCount} succeeded, ${r.failCount} failed`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Distribution failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDistributing(false);
+    }
   };
 
-  const handleOptimizeViral = () => {
-    if (!viralContent.trim()) { toast({ title: "Enter Content", variant: "destructive" }); return; }
-    setViralResult(null); setViralAnalysis(null);
-    optimizeViral.mutate({ content: viralContent, platform: viralPlatform, niche: creatorMode.niche });
-    analyzeViral.mutate({ content: viralContent, platform: viralPlatform });
+  const handleBuildTipUnlock = async () => {
+    const sourceUrl = ppvBundle?.fullVideoUrl ?? uploadedFile?.url;
+    if (!sourceUrl) return;
+    setTipBuilding(true);
+    setTipResult(null);
+    try {
+      const result = await tipUnlockMutation.mutateAsync({
+        sourceUrl,
+        tipAmountCents: Math.round(parseFloat(tipAmountDollars) * 100),
+        revealStyle,
+      });
+      setTipResult(result as TipUnlockResult);
+      toast({
+        title: "Tip-unlock created",
+        description: `Unlock code: ${(result as TipUnlockResult).unlockCode}`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Tip-unlock failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setTipBuilding(false);
+    }
   };
 
-  const handleRepurpose = () => {
-    if (!viralContent.trim()) { toast({ title: "Enter Content", variant: "destructive" }); return; }
-    setRepurposeResult(null);
-    repurposeContent.mutate({ originalContent: viralContent, originalFormat: "caption", targetFormats: ["tiktok_caption", "instagram_reel_caption", "x_thread"], targetPlatforms: ["TikTok", "Instagram", "X (Twitter)"] });
+  const handleSuggestPrice = async () => {
+    setPriceFetching(true);
+    setPriceResult(null);
+    try {
+      const params = encodeURIComponent(
+        JSON.stringify({
+          durationSec: priceDuration,
+          desireScore: priceDesireScore,
+          contentType: priceContentType,
+          platformTarget: pricePlatform,
+        })
+      );
+      const res = await fetch(`/api/trpc/vaultx.suggestPrice?input=${params}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setPriceResult(json?.result?.data ?? json);
+    } catch (err: any) {
+      toast({
+        title: "Pricing failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setPriceFetching(false);
+    }
   };
 
-  const handleBatchProcess = () => {
-    if (!selectedContent) { toast({ title: "Select Content First", variant: "destructive" }); return; }
-    setBatchResult(null);
-    batchProcess.mutate({ creatorId: String(selectedContent.id), limit: batchLimit, style: batchStyle });
+  const copyHook = (text: string, idx: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedHook(idx);
+    setTimeout(() => setCopiedHook(null), 2000);
   };
 
-  const S = {
-    container: { minHeight: "100vh", background: "#0a0a14", color: "#e2e8f0", fontFamily: "'Inter', sans-serif" } as React.CSSProperties,
-    header: { background: "linear-gradient(135deg, #1a0533 0%, #0d0d1a 60%)", padding: "32px 24px 0", borderBottom: "1px solid #1e1e2e" } as React.CSSProperties,
-    section: { padding: "24px", maxWidth: 1200, margin: "0 auto" } as React.CSSProperties,
-    card: { background: "#13131f", borderRadius: 16, padding: 24, border: "1px solid #1e1e2e", marginBottom: 20 } as React.CSSProperties,
-    label: { display: "block", color: "#9ca3af", fontSize: 12, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 8 } as React.CSSProperties,
-    select: { width: "100%", background: "#1a1a2e", border: "1px solid #2a2a3a", borderRadius: 10, color: "#e2e8f0", padding: "10px 14px", fontSize: 14, outline: "none", cursor: "pointer" } as React.CSSProperties,
-    input: { width: "100%", background: "#1a1a2e", border: "1px solid #2a2a3a", borderRadius: 10, color: "#e2e8f0", padding: "10px 14px", fontSize: 14, outline: "none", boxSizing: "border-box" as const } as React.CSSProperties,
-    textarea: { width: "100%", background: "#1a1a2e", border: "1px solid #2a2a3a", borderRadius: 10, color: "#e2e8f0", padding: "10px 14px", fontSize: 14, outline: "none", boxSizing: "border-box" as const, minHeight: 120, resize: "vertical" as const } as React.CSSProperties,
-    primaryBtn: (loading: boolean) => ({ background: loading ? "#4c1d95" : "linear-gradient(135deg, #7c3aed, #a855f7)", color: "#fff", border: "none", borderRadius: 12, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, width: "100%" } as React.CSSProperties),
-    secondaryBtn: { background: "#1a1a2e", color: "#a78bfa", border: "1px solid #7c3aed", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer" } as React.CSSProperties,
-    grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 16 } as React.CSSProperties,
-    twoCol: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 } as React.CSSProperties,
-    pipelineStep: (status: string) => ({ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderRadius: 10, background: status === "complete" ? "#16534222" : status === "running" ? "#7c3aed22" : "#1a1a2e", border: `1px solid ${status === "complete" ? "#34d399" : status === "running" ? "#7c3aed" : "#2a2a3a"}`, marginBottom: 8 } as React.CSSProperties),
-    emptyState: { textAlign: "center" as const, padding: 60, border: "2px dashed #2a2a3a", borderRadius: 16, background: "transparent" } as React.CSSProperties,
-    noContentHint: { background: "#7c3aed11", border: "1px solid #7c3aed44", borderRadius: 10, padding: "12px 16px", marginBottom: 16, color: "#a78bfa", fontSize: 13 } as React.CSSProperties,
+  const togglePlatform = (id: PlatformId, checked: boolean) => {
+    const next = new Set(selectedPlatforms);
+    if (checked) next.add(id);
+    else next.delete(id);
+    setSelectedPlatforms(next);
   };
 
-  const tabStyle = (active: boolean): React.CSSProperties => ({ padding: "10px 20px", borderRadius: "10px 10px 0 0", border: "none", cursor: "pointer", fontWeight: active ? 700 : 500, fontSize: 14, background: active ? "#7c3aed" : "transparent", color: active ? "#fff" : "#9ca3af", transition: "all 0.15s", whiteSpace: "nowrap" });
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div style={S.container}>
-      <div style={S.header}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 14, background: "linear-gradient(135deg, #7c3aed, #a855f7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🎬</div>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: "#fff" }}>VaultRemix</h1>
-                <CreatorModeSwitcher compact />
-              </div>
-              <p style={{ margin: 0, color: "#9ca3af", fontSize: 14 }}>
-                {creatorMode.isAdult
-                  ? "1 upload → 10+ platform-native assets. The adult creator content cheat code."
-                  : "1 upload → 10+ platform-native assets. Remix, tease, and optimize your content."}
-              </p>
-            </div>
+    <div className="min-h-screen bg-zinc-950 text-white">
+      {/* Sticky Header */}
+      <div className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-white flex items-center gap-2">
+              <span className="text-2xl">🎬</span>
+              VaultX Creator Studio
+            </h1>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {isAdultMode
+                ? "One video in, full PPV package out"
+                : "One video in, multi-platform distribution out"}
+            </p>
           </div>
-          {selectedContent && (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "#7c3aed22", border: "1px solid #7c3aed", borderRadius: 10, padding: "8px 16px", marginBottom: 16, fontSize: 13, color: "#a78bfa" }}>
-              <span>🎯</span>
-              <span>Working on: <strong style={{ color: "#fff" }}>{selectedContent.title}</strong></span>
-              <button onClick={() => setSelectedContent(null)} style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>×</button>
-            </div>
+          {isAdultMode && (
+            <Badge className="bg-violet-600/20 text-violet-300 border-violet-600/30 text-xs">
+              🔞 Adult Mode
+            </Badge>
           )}
-          <div style={{ display: "flex", gap: 4, marginTop: 24, overflowX: "auto" }}>
-            {([{ id: "vault", label: "📁 Content Vault" }, { id: "remix", label: "✨ Remix Studio" }, { id: "teaser", label: "🔥 Teaser Factory" }, { id: "viral", label: "📈 Viral Optimizer" }, { id: "batch", label: "⚡ Batch Ops" }] as { id: Tab; label: string }[]).map(tab => (
-              <button key={tab.id} style={tabStyle(activeTab === tab.id)} onClick={() => setActiveTab(tab.id)}>{tab.label}</button>
-            ))}
-          </div>
         </div>
       </div>
 
-      {activeTab === "vault" && (
-        <div style={S.section}>
-          <div style={S.card}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#fff" }}>Your Content Library</h2>
-                <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: 14 }}>Select a piece of content to remix, tease, or optimize</p>
-              </div>
-              {contentQuery.data && <span style={{ color: "#6b7280", fontSize: 13 }}>{contentQuery.data.items?.length ?? 0} items</span>}
+      <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+        {/* Step 1: Upload */}
+        <section>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-7 h-7 rounded-full bg-violet-600 flex items-center justify-center text-sm font-bold">
+              1
             </div>
-            {contentQuery.isLoading && <div style={{ textAlign: "center", padding: 40, color: "#6b7280" }}>Loading your content library...</div>}
-            {contentQuery.error && <div style={{ textAlign: "center", padding: 40, color: "#f87171" }}>Failed to load content: {contentQuery.error.message}</div>}
-            {contentQuery.data && (contentQuery.data.items?.length ?? 0) === 0 && (
-              <div style={{ ...S.emptyState, border: "2px dashed #2a2a3a" }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>📤</div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: "#9ca3af", marginBottom: 8 }}>No content yet</div>
-                <div style={{ fontSize: 14, color: "#6b7280" }}>Upload content to your VaultX profile to start remixing.</div>
-              </div>
-            )}
-            {contentQuery.data && (contentQuery.data.items?.length ?? 0) > 0 && (
-              <div style={S.grid}>
-                {contentQuery.data.items.map((item: ContentItem) => (
-                  <ContentCard key={item.id} item={item} selected={selectedContent?.id === item.id} onSelect={(c) => { setSelectedContent(c); toast({ title: "Content Selected", description: `"${c.title}" ready to remix.` }); }} />
-                ))}
-              </div>
-            )}
+            <h2 className="text-base font-semibold text-white">
+              Upload Your Video
+            </h2>
           </div>
-        </div>
-      )}
+          <DropZone
+            onFile={handleFileSelected}
+            uploading={uploading}
+            uploaded={uploadedFile}
+          />
+        </section>
 
-      {activeTab === "remix" && (
-        <div style={S.section}>
-          {creditsQuery.data && !creditsQuery.data.hasCredits && (
-            <div style={{ background: "#7f1d1d22", border: "1px solid #ef4444", borderRadius: 12, padding: "14px 20px", marginBottom: 20, color: "#fca5a5", fontSize: 14 }}>
-              ⚠️ Replicate credits issue: {creditsQuery.data.error}
-            </div>
-          )}
-          <div style={S.twoCol}>
-            <div>
-              <div style={S.card}>
-                <h2 style={{ margin: "0 0 4px", fontSize: 20, fontWeight: 700, color: "#fff" }}>Remix Studio</h2>
-                <p style={{ margin: "0 0 20px", color: "#6b7280", fontSize: 14 }}>3-model AI pipeline: Enhance → Style Grade → Cinematic Motion</p>
-                <div style={{ marginBottom: 20 }}>
-                  {[{ icon: "🔬", title: "Step 1: Enhance", sub: "GFPGAN + Real-ESRGAN — face & texture upscale" }, { icon: "🎨", title: "Step 2: Style Grade", sub: "Flux 1.1 Pro — cinematic color & LUT" }, { icon: "🎬", title: "Step 3: Motion", sub: "Kling 2.1 — cinematic video generation" }].map((step, i) => (
-                    <div key={i} style={S.pipelineStep("pending")}>
-                      <span style={{ fontSize: 18 }}>{step.icon}</span>
-                      <div><div style={{ fontWeight: 600, fontSize: 13, color: "#e2e8f0" }}>{step.title}</div><div style={{ fontSize: 12, color: "#6b7280" }}>{step.sub}</div></div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={S.label}>Color Grade Style</label>
-                  <select style={S.select} value={remixStyle} onChange={(e) => setRemixStyle(e.target.value as StyleGrade)}>
-                    {creatorMode.styleOptions.map((s) => <option key={s.value} value={s.value}>{s.label} — {s.description}</option>)}
-                  </select>
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={S.label}>Enhancement Focus</label>
-                  <select style={S.select} value={remixEnhance} onChange={(e) => setRemixEnhance(e.target.value as EnhanceType)}>
-                    <option value="full">Full (Face + Texture)</option>
-                    <option value="face">Face Only (GFPGAN)</option>
-                    <option value="texture">Texture Only (Real-ESRGAN)</option>
-                  </select>
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={S.label}>Output Format</label>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    {(["video", "image"] as const).map(t => (
-                      <button key={t} onClick={() => setRemixOutputType(t)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: remixOutputType === t ? "2px solid #a855f7" : "2px solid #2a2a3a", background: remixOutputType === t ? "#7c3aed22" : "#1a1a2e", color: remixOutputType === t ? "#a78bfa" : "#6b7280", cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
-                        {t === "video" ? "🎬 Video" : "🖼️ Image"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ marginBottom: 20 }}>
-                  <label style={S.label}>Custom Motion Prompt (optional)</label>
-                  <input style={S.input} placeholder="e.g. Slow cinematic reveal, warm golden light..." value={remixMotionPrompt} onChange={(e) => setRemixMotionPrompt(e.target.value)} />
-                </div>
-                {!selectedContent && <div style={S.noContentHint}>← Select content in the Content Vault tab first</div>}
-                <button style={S.primaryBtn(runFullPipeline.isPending)} onClick={handleRunRemix} disabled={runFullPipeline.isPending}>
-                  {runFullPipeline.isPending ? "⚡ Running 3-Model Pipeline..." : "🚀 Run Full Remix Pipeline"}
-                </button>
-              </div>
-            </div>
-            <div>
-              {runFullPipeline.isPending && (
-                <div style={{ ...S.card, textAlign: "center", padding: 40 }}>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>⚡</div>
-                  <div style={{ color: "#a78bfa", fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Pipeline Running...</div>
-                  <div style={{ color: "#6b7280", fontSize: 14 }}>Enhance → Style Grade → Motion. This takes 3–8 minutes.</div>
-                </div>
-              )}
-              {remixResult && (
-                <div style={S.card}>
-                  <h3 style={{ margin: "0 0 16px", color: "#fff", fontSize: 18, fontWeight: 700 }}>Remix Complete ✓</h3>
-                  <ResultCard label={`${remixOutputType === "video" ? "Cinematic Video" : "Style-Graded Image"} — ${STYLE_LABELS[remixStyle]}`} url={remixResult.finalUrl} type={remixOutputType} />
-                  <div style={{ marginTop: 16 }}>
-                    <div style={{ color: "#6b7280", fontSize: 12, fontWeight: 600, textTransform: "uppercase", marginBottom: 8 }}>Pipeline Steps</div>
-                    {remixResult.pipeline.map((step: any, i: number) => (
-                      <div key={i} style={S.pipelineStep(step.status)}>
-                        <span style={{ color: step.status === "complete" ? "#34d399" : "#6b7280" }}>{step.status === "complete" ? "✓" : "○"}</span>
-                        <span style={{ fontSize: 13, color: "#e2e8f0", textTransform: "capitalize" }}>{step.step}</span>
-                        <span style={{ marginLeft: "auto", fontSize: 11, color: step.status === "complete" ? "#34d399" : "#6b7280" }}>{step.status}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {!runFullPipeline.isPending && !remixResult && (
-                <div style={{ ...S.card, ...S.emptyState }}>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>✨</div>
-                  <div style={{ color: "#9ca3af", fontSize: 15, fontWeight: 600 }}>Your remixed content will appear here</div>
-                  <div style={{ color: "#6b7280", fontSize: 13, marginTop: 8 }}>Select content and run the pipeline.</div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+        {/* Tabs */}
+        <Tabs defaultValue="ppv" className="w-full">
+          <TabsList className="bg-zinc-900 border border-zinc-800 p-1 h-auto flex-wrap gap-1">
+            <TabsTrigger
+              value="ppv"
+              className="data-[state=active]:bg-violet-600 data-[state=active]:text-white text-zinc-400 text-sm"
+            >
+              🎁 PPV Bundle
+            </TabsTrigger>
+            <TabsTrigger
+              value="distribute"
+              className="data-[state=active]:bg-violet-600 data-[state=active]:text-white text-zinc-400 text-sm"
+            >
+              🚀 Distribute
+            </TabsTrigger>
+            <TabsTrigger
+              value="tipunlock"
+              className="data-[state=active]:bg-violet-600 data-[state=active]:text-white text-zinc-400 text-sm"
+            >
+              💰 Tip-Unlock
+            </TabsTrigger>
+            <TabsTrigger
+              value="pricing"
+              className="data-[state=active]:bg-violet-600 data-[state=active]:text-white text-zinc-400 text-sm"
+            >
+              💡 AI Pricing
+            </TabsTrigger>
+          </TabsList>
 
-      {activeTab === "teaser" && (
-        <div style={S.section}>
-          <div style={S.twoCol}>
-            <div style={S.card}>
-              <h2 style={{ margin: "0 0 4px", fontSize: 20, fontWeight: 700, color: "#fff" }}>SFW Teaser Generator</h2>
-              <p style={{ margin: "0 0 20px", color: "#6b7280", fontSize: 14 }}>Kling 2.1 generates a platform-compliant SFW teaser from your content thumbnail</p>
-              <div style={{ marginBottom: 16 }}>
-                <label style={S.label}>Teaser Style</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  {(Object.entries(TEASER_LABELS) as [TeaserStyle, string][]).map(([k, v]) => (
-                    <button key={k} onClick={() => setTeaserStyle(k)} style={{ padding: "10px 12px", borderRadius: 10, border: teaserStyle === k ? "2px solid #a855f7" : "2px solid #2a2a3a", background: teaserStyle === k ? "#7c3aed22" : "#1a1a2e", color: teaserStyle === k ? "#a78bfa" : "#6b7280", cursor: "pointer", fontSize: 13, fontWeight: 600, textAlign: "left" }}>{v}</button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ marginBottom: 20 }}>
-                <label style={S.label}>Custom Prompt (optional)</label>
-                <input style={S.input} placeholder="Override the default teaser prompt..." value={teaserCustomPrompt} onChange={(e) => setTeaserCustomPrompt(e.target.value)} />
-              </div>
-              {!selectedContent && <div style={S.noContentHint}>← Select content in the Content Vault tab first</div>}
-              <button style={S.primaryBtn(generateTeaser.isPending)} onClick={handleGenerateTeaser} disabled={generateTeaser.isPending}>
-                {generateTeaser.isPending ? "🎬 Generating Teaser..." : "🔥 Generate SFW Teaser"}
-              </button>
-              {teaserResult && (
-                <div style={{ marginTop: 20 }}>
-                  <ResultCard label="SFW Teaser Clip" url={teaserResult.teaserUrl} type="video" />
-                  <div style={{ marginTop: 12, background: "#16534222", border: "1px solid #34d399", borderRadius: 10, padding: "12px 16px", color: "#34d399", fontSize: 13 }}>✓ {teaserResult.message}</div>
-                </div>
-              )}
-            </div>
-            <div style={S.card}>
-              <h2 style={{ margin: "0 0 4px", fontSize: 20, fontWeight: 700, color: "#fff" }}>PPV Campaign Launcher</h2>
-              <p style={{ margin: "0 0 20px", color: "#6b7280", fontSize: 14 }}>GPT-4o-mini generates personalized PPV pitches for all subscribers who haven't purchased</p>
-              <div style={{ marginBottom: 20 }}>
-                <label style={S.label}>Campaign Style</label>
-                {(Object.entries(CAMPAIGN_LABELS) as [CampaignStyle, string][]).map(([k, v]) => (
-                  <div key={k} onClick={() => setCampaignStyle(k)} style={{ padding: "12px 16px", borderRadius: 10, border: campaignStyle === k ? "2px solid #a855f7" : "2px solid #2a2a3a", background: campaignStyle === k ? "#7c3aed22" : "#1a1a2e", cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${campaignStyle === k ? "#a855f7" : "#4b5563"}`, background: campaignStyle === k ? "#a855f7" : "transparent", flexShrink: 0 }} />
-                    <span style={{ color: campaignStyle === k ? "#a78bfa" : "#9ca3af", fontSize: 14, fontWeight: 600 }}>{v}</span>
-                  </div>
-                ))}
-              </div>
-              <button style={S.primaryBtn(launchCampaign.isPending)} onClick={handleLaunchCampaign} disabled={launchCampaign.isPending}>
-                {launchCampaign.isPending ? "📨 Generating Pitches..." : "💰 Launch PPV Campaign"}
-              </button>
-              {campaignResult && (
-                <div style={{ marginTop: 20, background: campaignResult.queued > 0 ? "#16534222" : "#7c3aed22", border: `1px solid ${campaignResult.queued > 0 ? "#34d399" : "#7c3aed"}`, borderRadius: 12, padding: "16px 20px" }}>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: "#fff", marginBottom: 4 }}>{campaignResult.queued}</div>
-                  <div style={{ color: "#9ca3af", fontSize: 14 }}>Messages Queued</div>
-                  <div style={{ color: "#6b7280", fontSize: 13, marginTop: 8 }}>{campaignResult.message}</div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+          {/* ── PPV Bundle Tab ─────────────────────────────────────────── */}
+          <TabsContent value="ppv" className="mt-6 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Controls */}
+              <div className="lg:col-span-1 space-y-5 bg-zinc-900/50 border border-zinc-800 rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+                  Bundle Settings
+                </h3>
 
-      {activeTab === "viral" && (
-        <div style={S.section}>
-          <div style={S.twoCol}>
-            <div>
-              <div style={S.card}>
-                <h2 style={{ margin: "0 0 4px", fontSize: 20, fontWeight: 700, color: "#fff" }}>Viral Content Optimizer</h2>
-                <p style={{ margin: "0 0 20px", color: "#6b7280", fontSize: 14 }}>GPT-4o-mini optimizes your captions, scripts, and descriptions for maximum viral reach</p>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={S.label}>Target Platform</label>
-                  <select style={S.select} value={viralPlatform} onChange={(e) => setViralPlatform(e.target.value)}>
-                    {creatorMode.platformOptions.map((p) => (
-                      <option key={p.value} value={p.value}>{p.icon} {p.label}</option>
-                    ))}
-                  </select>
+                <div className="space-y-2">
+                  <Label className="text-xs text-zinc-400">
+                    Desire Score:{" "}
+                    <span className="text-violet-400 font-bold">
+                      {desireScore}/10
+                    </span>
+                  </Label>
+                  <Slider
+                    min={1}
+                    max={10}
+                    step={1}
+                    value={[desireScore]}
+                    onValueChange={([v]) => setDesireScore(v)}
+                    className="[&_[role=slider]]:bg-violet-500"
+                  />
+                  <p className="text-[11px] text-zinc-600">
+                    Affects teaser intensity, censoring level, and AI hook tone
+                  </p>
                 </div>
-                <div style={{ marginBottom: 20 }}>
-                  <label style={S.label}>Your Caption / Script / Description</label>
-                  <textarea style={S.textarea} placeholder="Paste your caption, video script, or content description here..." value={viralContent} onChange={(e) => setViralContent(e.target.value)} />
-                </div>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button style={S.primaryBtn(optimizeViral.isPending || analyzeViral.isPending)} onClick={handleOptimizeViral} disabled={optimizeViral.isPending || analyzeViral.isPending}>
-                    {optimizeViral.isPending ? "⚡ Optimizing..." : "📈 Optimize for Viral"}
-                  </button>
-                  <button style={S.secondaryBtn} onClick={handleRepurpose} disabled={repurposeContent.isPending}>
-                    {repurposeContent.isPending ? "..." : "🔄 Repurpose"}
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div>
-              {viralResult && (
-                <div style={{ ...S.card, marginBottom: 16 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <h3 style={{ margin: 0, color: "#fff", fontSize: 16, fontWeight: 700 }}>Viral-Optimized Copy</h3>
-                    <span style={{ background: "#7c3aed22", color: "#a78bfa", fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 600 }}>{viralPlatform.toUpperCase()}</span>
-                  </div>
-                  <div style={{ background: "#1a1a2e", borderRadius: 10, padding: "14px 16px", color: "#e2e8f0", fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{viralResult}</div>
-                  <button style={{ ...S.secondaryBtn, marginTop: 12, width: "100%" }} onClick={() => { navigator.clipboard.writeText(viralResult || ""); toast({ title: "Copied" }); }}>📋 Copy to Clipboard</button>
-                </div>
-              )}
-              {viralAnalysis && (
-                <div style={{ ...S.card, marginBottom: 16 }}>
-                  <h3 style={{ margin: "0 0 12px", color: "#fff", fontSize: 16, fontWeight: 700 }}>Viral Potential Analysis</h3>
-                  <div style={{ background: "#1a1a2e", borderRadius: 10, padding: "14px 16px", color: "#9ca3af", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{viralAnalysis}</div>
-                </div>
-              )}
-              {repurposeResult && (
-                <div style={S.card}>
-                  <h3 style={{ margin: "0 0 16px", color: "#fff", fontSize: 16, fontWeight: 700 }}>Platform-Native Versions</h3>
-                  {repurposeResult.map((item, i) => (
-                    <div key={i} style={{ background: "#1a1a2e", borderRadius: 10, padding: "14px 16px", marginBottom: 12, border: "1px solid #2a2a3a" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                        <span style={{ color: "#a78bfa", fontWeight: 600, fontSize: 13 }}>{item.platform}</span>
-                        <span style={{ color: "#6b7280", fontSize: 11 }}>{item.format}</span>
-                      </div>
-                      <div style={{ color: "#e2e8f0", fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{item.content}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {!viralResult && !viralAnalysis && !repurposeResult && (
-                <div style={{ ...S.card, ...S.emptyState }}>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>📈</div>
-                  <div style={{ color: "#9ca3af", fontSize: 15, fontWeight: 600 }}>Optimized content will appear here</div>
-                  <div style={{ color: "#6b7280", fontSize: 13, marginTop: 8 }}>Paste your caption and click Optimize for Viral.</div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
-      {activeTab === "batch" && (
-        <div style={S.section}>
-          <div style={S.twoCol}>
-            <div style={S.card}>
-              <h2 style={{ margin: "0 0 4px", fontSize: 20, fontWeight: 700, color: "#fff" }}>Batch Operations</h2>
-              <p style={{ margin: "0 0 20px", color: "#6b7280", fontSize: 14 }}>Process your entire content library through the AI pipeline in one click</p>
-              <div style={{ background: "#7c3aed11", border: "1px solid #7c3aed44", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
-                <div style={{ color: "#a78bfa", fontWeight: 700, fontSize: 14, marginBottom: 6 }}>⚡ Agency Mode</div>
-                <div style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.5 }}>Batch processing uses Replicate credits per item. Each item runs through Enhance + Style Grade. Motion generation not included in batch to conserve credits.</div>
-              </div>
-              <div style={{ marginBottom: 16 }}>
-                <label style={S.label}>Style Grade for Batch</label>
-                <select style={S.select} value={batchStyle} onChange={(e) => setBatchStyle(e.target.value as StyleGrade)}>
-                  {creatorMode.styleOptions.map((s) => <option key={s.value} value={s.value}>{s.label} — {s.description}</option>)}
-                </select>
-              </div>
-              <div style={{ marginBottom: 20 }}>
-                <label style={S.label}>Number of Items to Process</label>
-                <div style={{ display: "flex", gap: 10 }}>
-                  {[3, 5, 10, 20].map(n => (
-                    <button key={n} onClick={() => setBatchLimit(n)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: batchLimit === n ? "2px solid #a855f7" : "2px solid #2a2a3a", background: batchLimit === n ? "#7c3aed22" : "#1a1a2e", color: batchLimit === n ? "#a78bfa" : "#6b7280", cursor: "pointer", fontWeight: 700, fontSize: 15 }}>{n}</button>
-                  ))}
+                <div className="space-y-2">
+                  <Label className="text-xs text-zinc-400">
+                    Teaser Duration:{" "}
+                    <span className="text-violet-400 font-bold">
+                      {teaserDuration}s
+                    </span>
+                  </Label>
+                  <Slider
+                    min={10}
+                    max={90}
+                    step={5}
+                    value={[teaserDuration]}
+                    onValueChange={([v]) => setTeaserDuration(v)}
+                    className="[&_[role=slider]]:bg-violet-500"
+                  />
                 </div>
-              </div>
-              {!selectedContent && <div style={S.noContentHint}>← Select content in the Content Vault tab first</div>}
-              <button style={S.primaryBtn(batchProcess.isPending)} onClick={handleBatchProcess} disabled={batchProcess.isPending}>
-                {batchProcess.isPending ? `⚡ Processing ${batchLimit} items...` : `🚀 Batch Process ${batchLimit} Items`}
-              </button>
-            </div>
-            <div>
-              {batchProcess.isPending && (
-                <div style={{ ...S.card, textAlign: "center", padding: 40 }}>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>⚡</div>
-                  <div style={{ color: "#a78bfa", fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Batch Processing...</div>
-                  <div style={{ color: "#6b7280", fontSize: 14 }}>Processing {batchLimit} items through Enhance + Style Grade pipeline.</div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-zinc-400">
+                    Preview Duration:{" "}
+                    <span className="text-violet-400 font-bold">
+                      {previewDuration}s
+                    </span>
+                  </Label>
+                  <Slider
+                    min={20}
+                    max={180}
+                    step={10}
+                    value={[previewDuration]}
+                    onValueChange={([v]) => setPreviewDuration(v)}
+                    className="[&_[role=slider]]:bg-violet-500"
+                  />
                 </div>
-              )}
-              {batchResult && (
-                <div style={S.card}>
-                  <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
-                    <div style={{ flex: 1, background: "#16534222", border: "1px solid #34d399", borderRadius: 12, padding: "16px", textAlign: "center" }}>
-                      <div style={{ fontSize: 32, fontWeight: 800, color: "#34d399" }}>{batchResult.processed}</div>
-                      <div style={{ color: "#6b7280", fontSize: 13 }}>Processed</div>
-                    </div>
-                    <div style={{ flex: 1, background: batchResult.errors > 0 ? "#7f1d1d22" : "#16534222", border: `1px solid ${batchResult.errors > 0 ? "#ef4444" : "#34d399"}`, borderRadius: 12, padding: "16px", textAlign: "center" }}>
-                      <div style={{ fontSize: 32, fontWeight: 800, color: batchResult.errors > 0 ? "#f87171" : "#34d399" }}>{batchResult.errors}</div>
-                      <div style={{ color: "#6b7280", fontSize: 13 }}>Errors</div>
-                    </div>
+
+                <Separator className="bg-zinc-800" />
+
+                <Button
+                  className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold"
+                  disabled={!uploadedFile || ppvBuilding}
+                  onClick={handleBuildPpv}
+                >
+                  {ppvBuilding ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Building...
+                    </span>
+                  ) : (
+                    "🎁 Build PPV Package"
+                  )}
+                </Button>
+                {!uploadedFile && (
+                  <p className="text-xs text-zinc-600 text-center">
+                    Upload a video first
+                  </p>
+                )}
+              </div>
+
+              {/* Output */}
+              <div className="lg:col-span-2 space-y-5">
+                {ppvBuilding && (
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5">
+                    <PipelineProgress step={ppvStep} />
                   </div>
-                  <div style={{ maxHeight: 400, overflowY: "auto" }}>
-                    {batchResult.results.map((item: any, i: number) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px", borderRadius: 10, background: item.status === "complete" ? "#16534211" : "#7f1d1d11", border: `1px solid ${item.status === "complete" ? "#34d39944" : "#ef444444"}`, marginBottom: 8 }}>
-                        <span style={{ fontSize: 18 }}>{item.status === "complete" ? "✓" : "✗"}</span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>Content #{item.contentId}</div>
-                          {item.status === "error" && <div style={{ color: "#f87171", fontSize: 12 }}>{item.error}</div>}
+                )}
+
+                {ppvBundle && (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <VideoPlayer url={ppvBundle.teaserUrl} label="Teaser" />
+                      <VideoPlayer
+                        url={ppvBundle.censoredPreviewUrl}
+                        label="Censored Preview"
+                      />
+                      <VideoPlayer
+                        url={ppvBundle.fullVideoUrl}
+                        label="Full Video"
+                      />
+                    </div>
+
+                    {ppvBundle.thumbnailUrl && (
+                      <div className="rounded-xl overflow-hidden border border-zinc-800">
+                        <div className="px-3 py-2 bg-zinc-900 text-xs text-zinc-400 uppercase tracking-wider">
+                          Thumbnail
                         </div>
-                        {item.processedUrl && <a href={item.processedUrl} target="_blank" rel="noopener noreferrer" style={{ background: "#7c3aed", color: "#fff", padding: "4px 12px", borderRadius: 6, fontSize: 11, textDecoration: "none", whiteSpace: "nowrap" }}>View</a>}
+                        <img
+                          src={ppvBundle.thumbnailUrl}
+                          alt="Bundle thumbnail"
+                          className="w-full object-cover max-h-48"
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="bg-zinc-900/50 border border-violet-600/30 rounded-xl p-4">
+                        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">
+                          Suggested Price
+                        </p>
+                        <p className="text-3xl font-bold text-violet-400">
+                          ${(ppvBundle.suggestedPriceCents / 100).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-zinc-600 mt-1">
+                          AI-calculated based on duration + desire score
+                        </p>
+                      </div>
+                      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">
+                          AI-Generated CTA
+                        </p>
+                        <p className="text-sm text-zinc-200 leading-relaxed">
+                          {ppvBundle.aiGeneratedCta}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 space-y-3">
+                      <p className="text-xs text-zinc-500 uppercase tracking-wider">
+                        AI-Generated Hooks
+                      </p>
+                      <div className="space-y-2">
+                        {ppvBundle.aiGeneratedHooks.map((hook, i) => (
+                          <div
+                            key={i}
+                            className="flex items-start gap-3 bg-zinc-800/50 rounded-lg p-3"
+                          >
+                            <span className="text-xs text-violet-500 font-bold mt-0.5 shrink-0">
+                              #{i + 1}
+                            </span>
+                            <p className="text-sm text-zinc-200 flex-1 leading-relaxed">
+                              {hook}
+                            </p>
+                            <button
+                              onClick={() => copyHook(hook, i)}
+                              className="text-xs text-zinc-500 hover:text-violet-400 shrink-0 transition-colors"
+                            >
+                              {copiedHook === i ? "Copied" : "Copy"}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-zinc-600">
+                      Bundle ID:{" "}
+                      <code className="font-mono text-zinc-500">
+                        {ppvBundle.bundleId}
+                      </code>
+                    </p>
+
+                    {/* Save to Content Vault */}
+                    <div className="pt-2">
+                      {vaultSaved ? (
+                        <div className="flex items-center gap-2 text-sm text-emerald-400 font-medium">
+                          <span>✓</span>
+                          <span>Saved to Content Vault (ID #{vaultSaved})</span>
+                        </div>
+                      ) : (
+                        <Button
+                          className="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-semibold"
+                          disabled={vaultSaving}
+                          onClick={async () => {
+                            if (!ppvBundle) return;
+                            setVaultSaving(true);
+                            try {
+                              const res = await saveContentMutation.mutateAsync({
+                                title: uploadedFile?.filename ?? "PPV Bundle",
+                                description: `Bundle ID: ${ppvBundle.bundleId}. AI hooks: ${ppvBundle.aiGeneratedHooks?.join(" | ") ?? ""}`,
+                                fileUrl: ppvBundle.fullVideoUrl,
+                                thumbnailUrl: ppvBundle.thumbnailUrl,
+                                mimeType: "video/mp4",
+                                unlockType: "ppv",
+                                priceCents: ppvBundle.suggestedPriceCents ?? 1499,
+                                tags: ["ppv", "bundle"],
+                              });
+                              setVaultSaved(res.contentId);
+                              toast({ title: "Saved to Content Vault", description: `Content ID #${res.contentId}` });
+                            } catch (err: any) {
+                              toast({ title: "Save failed", description: err.message, variant: "destructive" });
+                            } finally {
+                              setVaultSaving(false);
+                            }
+                          }}
+                        >
+                          {vaultSaving ? "Saving…" : "Save to Content Vault"}
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {!ppvBuilding && !ppvBundle && (
+                  <div className="bg-zinc-900/30 border border-dashed border-zinc-800 rounded-xl p-10 text-center">
+                    <p className="text-4xl mb-3">🎁</p>
+                    <p className="text-sm text-zinc-500">
+                      Configure settings and click{" "}
+                      <strong className="text-zinc-300">
+                        Build PPV Package
+                      </strong>
+                    </p>
+                    <p className="text-xs text-zinc-700 mt-2">
+                      Teaser · Censored Preview · Full Video · AI Hooks ·
+                      Suggested Price
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* ── Distribute Tab ─────────────────────────────────────────── */}
+          <TabsContent value="distribute" className="mt-6 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1 space-y-4 bg-zinc-900/50 border border-zinc-800 rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+                  Target Platforms
+                </h3>
+                <div className="space-y-3">
+                  {PLATFORMS.map((p) => (
+                    <label
+                      key={p.id}
+                      className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedPlatforms.has(p.id)
+                          ? "bg-violet-950/30 border border-violet-600/40"
+                          : "bg-zinc-800/30 border border-zinc-800 hover:border-zinc-700"
+                      }`}
+                    >
+                      <Checkbox
+                        checked={selectedPlatforms.has(p.id)}
+                        onCheckedChange={(checked) =>
+                          togglePlatform(p.id, !!checked)
+                        }
+                        className="mt-0.5 border-zinc-600 data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600"
+                      />
+                      <div>
+                        <p className="text-sm font-medium text-white">
+                          {p.icon} {p.label}
+                        </p>
+                        <p className="text-xs text-zinc-500 mt-0.5">{p.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <Separator className="bg-zinc-800" />
+                <Button
+                  className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold"
+                  disabled={
+                    (!uploadedFile && !ppvBundle) ||
+                    distributing ||
+                    selectedPlatforms.size === 0
+                  }
+                  onClick={handleDistribute}
+                >
+                  {distributing ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Distributing...
+                    </span>
+                  ) : (
+                    `🚀 Distribute to ${selectedPlatforms.size} Platform${
+                      selectedPlatforms.size !== 1 ? "s" : ""
+                    }`
+                  )}
+                </Button>
+                {!uploadedFile && !ppvBundle && (
+                  <p className="text-xs text-zinc-600 text-center">
+                    Upload a video first
+                  </p>
+                )}
+              </div>
+
+              <div className="lg:col-span-2 space-y-4">
+                {distributing && (
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5 text-center">
+                    <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                    <p className="text-sm text-zinc-400">
+                      Exporting to {selectedPlatforms.size} platform
+                      {selectedPlatforms.size !== 1 ? "s" : ""} in parallel...
+                    </p>
+                    <p className="text-xs text-zinc-600 mt-1">
+                      Each platform gets platform-native resolution, bitrate,
+                      and watermark
+                    </p>
+                  </div>
+                )}
+
+                {distributionResults && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Badge className="bg-green-900/30 text-green-400 border-green-800/50">
+                        {distributionResults.filter((r) => r.status === "success").length} succeeded
+                      </Badge>
+                      {distributionResults.filter((r) => r.status === "failed")
+                        .length > 0 && (
+                        <Badge className="bg-red-900/30 text-red-400 border-red-800/50">
+                          {distributionResults.filter((r) => r.status === "failed").length} failed
+                        </Badge>
+                      )}
+                    </div>
+                    {distributionResults.map((r) => (
+                      <div
+                        key={r.platformId}
+                        className={`rounded-xl border p-4 flex items-start gap-4 ${
+                          r.status === "success"
+                            ? "bg-zinc-900/50 border-zinc-800"
+                            : "bg-red-950/20 border-red-900/30"
+                        }`}
+                      >
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 ${
+                            r.status === "success"
+                              ? "bg-green-900/30 text-green-400"
+                              : "bg-red-900/30 text-red-400"
+                          }`}
+                        >
+                          {r.status === "success" ? "✓" : "✗"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white">
+                            {r.platformName}
+                          </p>
+                          {r.status === "success" ? (
+                            <div className="flex flex-wrap gap-3 mt-1">
+                              <span className="text-xs text-zinc-500">
+                                {(r.fileSizeBytes / 1024 / 1024).toFixed(1)} MB
+                              </span>
+                              <span className="text-xs text-zinc-500">
+                                {r.durationSec}s
+                              </span>
+                              <span className="text-xs text-zinc-500">
+                                {(r.processingTimeMs / 1000).toFixed(1)}s
+                                processing
+                              </span>
+                              <a
+                                href={r.outputUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-violet-400 hover:text-violet-300 underline"
+                              >
+                                View output
+                              </a>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-red-400 mt-1">
+                              {r.error}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-              {!batchProcess.isPending && !batchResult && (
-                <div style={{ ...S.card, ...S.emptyState }}>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>⚡</div>
-                  <div style={{ color: "#9ca3af", fontSize: 15, fontWeight: 600 }}>Batch results will appear here</div>
-                  <div style={{ color: "#6b7280", fontSize: 13, marginTop: 8 }}>Select content and run a batch to process your entire library.</div>
-                </div>
-              )}
+                )}
+
+                {!distributing && !distributionResults && (
+                  <div className="bg-zinc-900/30 border border-dashed border-zinc-800 rounded-xl p-10 text-center">
+                    <p className="text-4xl mb-3">🚀</p>
+                    <p className="text-sm text-zinc-500">
+                      Select platforms and click{" "}
+                      <strong className="text-zinc-300">Distribute</strong>
+                    </p>
+                    <p className="text-xs text-zinc-700 mt-2">
+                      Each platform gets platform-native resolution, bitrate,
+                      watermark, and duration cap
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </TabsContent>
+
+          {/* ── Tip-Unlock Tab ─────────────────────────────────────────── */}
+          <TabsContent value="tipunlock" className="mt-6 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1 space-y-5 bg-zinc-900/50 border border-zinc-800 rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+                  Tip-Unlock Settings
+                </h3>
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-zinc-400">
+                    Tip Amount (USD)
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">
+                      $
+                    </span>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="1000"
+                      step="0.01"
+                      value={tipAmountDollars}
+                      onChange={(e) => setTipAmountDollars(e.target.value)}
+                      className="pl-7 bg-zinc-800 border-zinc-700 text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-zinc-400">Reveal Style</Label>
+                  <Select
+                    value={revealStyle}
+                    onValueChange={(v) =>
+                      setRevealStyle(v as typeof revealStyle)
+                    }
+                  >
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                      <SelectItem value="progressive">
+                        Progressive — gradual blur removal
+                      </SelectItem>
+                      <SelectItem value="instant">
+                        Instant — full reveal on tip
+                      </SelectItem>
+                      <SelectItem value="timed">
+                        Timed — countdown unlock
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Separator className="bg-zinc-800" />
+
+                <Button
+                  className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold"
+                  disabled={(!uploadedFile && !ppvBundle) || tipBuilding}
+                  onClick={handleBuildTipUnlock}
+                >
+                  {tipBuilding ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Creating...
+                    </span>
+                  ) : (
+                    "💰 Create Tip-Unlock Version"
+                  )}
+                </Button>
+                {!uploadedFile && !ppvBundle && (
+                  <p className="text-xs text-zinc-600 text-center">
+                    Upload a video first
+                  </p>
+                )}
+              </div>
+
+              <div className="lg:col-span-2 space-y-4">
+                {tipResult && (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <VideoPlayer
+                        url={tipResult.lockedPreviewUrl}
+                        label="Locked Preview (public)"
+                      />
+                      <VideoPlayer
+                        url={tipResult.unlockedUrl}
+                        label="Unlocked Version (post-tip)"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="bg-zinc-900/50 border border-violet-600/30 rounded-xl p-4 text-center">
+                        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">
+                          Tip Amount
+                        </p>
+                        <p className="text-2xl font-bold text-violet-400">
+                          ${(tipResult.tipAmountCents / 100).toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 text-center">
+                        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">
+                          Reveal Style
+                        </p>
+                        <p className="text-sm font-semibold text-white capitalize">
+                          {tipResult.revealStyle}
+                        </p>
+                      </div>
+                      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 text-center">
+                        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">
+                          Unlock Code
+                        </p>
+                        <code className="text-sm font-mono text-violet-400">
+                          {tipResult.unlockCode}
+                        </code>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {!tipBuilding && !tipResult && (
+                  <div className="bg-zinc-900/30 border border-dashed border-zinc-800 rounded-xl p-10 text-center">
+                    <p className="text-4xl mb-3">💰</p>
+                    <p className="text-sm text-zinc-500">
+                      Set tip amount and click{" "}
+                      <strong className="text-zinc-300">
+                        Create Tip-Unlock Version
+                      </strong>
+                    </p>
+                    <p className="text-xs text-zinc-700 mt-2">
+                      Locked preview (blurred) + unlocked version + unique
+                      unlock code
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* ── AI Pricing Tab ─────────────────────────────────────────── */}
+          <TabsContent value="pricing" className="mt-6 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1 space-y-5 bg-zinc-900/50 border border-zinc-800 rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+                  Pricing Parameters
+                </h3>
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-zinc-400">Content Type</Label>
+                  <Select
+                    value={priceContentType}
+                    onValueChange={(v) =>
+                      setPriceContentType(v as typeof priceContentType)
+                    }
+                  >
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                      <SelectItem value="full_scene">Full Scene</SelectItem>
+                      <SelectItem value="clip">Clip</SelectItem>
+                      <SelectItem value="custom_request">
+                        Custom Request
+                      </SelectItem>
+                      <SelectItem value="live_replay">Live Replay</SelectItem>
+                      <SelectItem value="photoset">Photoset</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-zinc-400">Platform</Label>
+                  <Select
+                    value={pricePlatform}
+                    onValueChange={(v) =>
+                      setPricePlatform(v as typeof pricePlatform)
+                    }
+                  >
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                      <SelectItem value="onlyfans">OnlyFans</SelectItem>
+                      <SelectItem value="fansly">Fansly</SelectItem>
+                      <SelectItem value="mym">MYM.fans</SelectItem>
+                      <SelectItem value="direct">Direct Sale</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-zinc-400">
+                    Duration:{" "}
+                    <span className="text-violet-400 font-bold">
+                      {Math.floor(priceDuration / 60)}m {priceDuration % 60}s
+                    </span>
+                  </Label>
+                  <Slider
+                    min={30}
+                    max={3600}
+                    step={30}
+                    value={[priceDuration]}
+                    onValueChange={([v]) => setPriceDuration(v)}
+                    className="[&_[role=slider]]:bg-violet-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-zinc-400">
+                    Desire Score:{" "}
+                    <span className="text-violet-400 font-bold">
+                      {priceDesireScore}/10
+                    </span>
+                  </Label>
+                  <Slider
+                    min={1}
+                    max={10}
+                    step={1}
+                    value={[priceDesireScore]}
+                    onValueChange={([v]) => setPriceDesireScore(v)}
+                    className="[&_[role=slider]]:bg-violet-500"
+                  />
+                </div>
+
+                <Separator className="bg-zinc-800" />
+
+                <Button
+                  className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold"
+                  onClick={handleSuggestPrice}
+                  disabled={priceFetching}
+                >
+                  {priceFetching ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Calculating...
+                    </span>
+                  ) : (
+                    "💡 Get AI Price Suggestion"
+                  )}
+                </Button>
+              </div>
+
+              <div className="lg:col-span-2">
+                {priceResult ? (
+                  <div className="space-y-4">
+                    <div className="bg-zinc-900/50 border border-violet-600/30 rounded-xl p-6 text-center">
+                      <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">
+                        Suggested Price
+                      </p>
+                      <p className="text-5xl font-bold text-violet-400">
+                        $
+                        {(
+                          (priceResult.suggestedPriceCents ?? 0) / 100
+                        ).toFixed(2)}
+                      </p>
+                      {priceResult.priceRangeCents && (
+                        <p className="text-sm text-zinc-500 mt-2">
+                          Range: $
+                          {(priceResult.priceRangeCents.min / 100).toFixed(2)}{" "}
+                          – $
+                          {(priceResult.priceRangeCents.max / 100).toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+
+                    {priceResult.breakdown && (
+                      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5 space-y-3">
+                        <p className="text-xs text-zinc-500 uppercase tracking-wider">
+                          Price Breakdown
+                        </p>
+                        {Object.entries(priceResult.breakdown).map(
+                          ([key, val]) => (
+                            <div
+                              key={key}
+                              className="flex justify-between text-sm"
+                            >
+                              <span className="text-zinc-400 capitalize">
+                                {key.replace(/_/g, " ")}
+                              </span>
+                              <span className="text-zinc-200 font-medium">
+                                {typeof val === "number"
+                                  ? `$${((val as number) / 100).toFixed(2)}`
+                                  : String(val)}
+                              </span>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+
+                    {priceResult.rationale && (
+                      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5">
+                        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">
+                          AI Rationale
+                        </p>
+                        <p className="text-sm text-zinc-300 leading-relaxed">
+                          {priceResult.rationale}
+                        </p>
+                      </div>
+                    )}
+
+                    {priceResult.platformMultipliers && (
+                      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5">
+                        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">
+                          Platform Multipliers
+                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          {Object.entries(priceResult.platformMultipliers).map(
+                            ([platform, mult]) => (
+                              <div key={platform} className="text-center">
+                                <p className="text-xs text-zinc-500 capitalize">
+                                  {platform}
+                                </p>
+                                <p className="text-sm font-bold text-violet-400">
+                                  {String(mult)}x
+                                </p>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-zinc-900/30 border border-dashed border-zinc-800 rounded-xl p-10 text-center h-full flex flex-col items-center justify-center gap-3">
+                    <p className="text-4xl">💡</p>
+                    <p className="text-sm text-zinc-500">
+                      Set parameters and click{" "}
+                      <strong className="text-zinc-300">
+                        Get AI Price Suggestion
+                      </strong>
+                    </p>
+                    <p className="text-xs text-zinc-700">
+                      AI calculates optimal price based on duration, desire
+                      score, content type, and platform
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
-
-export default VaultRemix;

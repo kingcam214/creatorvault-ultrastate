@@ -431,6 +431,7 @@ import SocialHub from "./pages/SocialHub";
 import OutreachCommandCenter from "./pages/OutreachCommandCenter";
 import VaultXChallenges from "./pages/VaultXChallenges";
 import ForYouFeed from "./pages/ForYouFeed";
+import VaultXFanLibrary from "./pages/VaultXFanLibrary";
 import AIChatter from "./pages/AIChatter";
 // SocialFactory, SocialPostingHub, PlatformWarRoom, KingConnectSocials, SocialMediaAudit — MERGED into SocialHub tabs
 // import SocialFactory from "./pages/SocialFactory";
@@ -773,6 +774,7 @@ function Router() {
       <Route path="/vault-x/studio" component={VaultXStudio} />
       <Route path="/vault-x/editor" component={VaultXEditor} />
       <Route path="/vault-x/analytics" component={VaultXAnalytics} />
+      <Route path="/vault-x/fan-library" component={VaultXFanLibrary} />
       <Route path="/vaultx/video-editor/:projectId">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
       <Route path="/vaultx/video-editor">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
       {/* Redirect aliases for OwnerCockpit and legacy links */}

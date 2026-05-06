@@ -25,9 +25,11 @@ async function replicateRun(
 
   // Determine if model includes a version hash (owner/name:version) or is a model path
   const hasVersion = model.includes(":");
+  // When using /models/owner/name/predictions endpoint, body must only contain { input }
+  // When using /predictions endpoint with version hash, body must contain { version, input }
   const body = hasVersion
     ? JSON.stringify({ version: model.split(":")[1], input })
-    : JSON.stringify({ model, input });
+    : JSON.stringify({ input });
 
   const endpoint = hasVersion
     ? "https://api.replicate.com/v1/predictions"

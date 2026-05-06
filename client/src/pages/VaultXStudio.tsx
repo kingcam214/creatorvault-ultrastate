@@ -80,7 +80,7 @@ interface HistoryItem {
 const MODES: { id: ModeId; label: string; icon: React.ReactNode; desc: string; color: string; accent: string }[] = [
   { id: "final-output-engine", label: "Final Output Engine", icon: <Package size={18}/>,    desc: "One click → Premium + Teaser + Clips + AI Video",  color: "#F59E0B", accent: "rgba(245,158,11,0.15)" },
   { id: "ai-video-generator",  label: "AI Video Generator",  icon: <Film size={18}/>,        desc: "MiniMax · SVD · Zeroscope — text/image to video",   color: "#EF4444", accent: "rgba(239,68,68,0.15)"  },
-  { id: "velvet-suite",        label: "Velvet Suite",         icon: <Sparkles size={18}/>,   desc: "AI skin smoothing & beauty",                        color: "#EC4899", accent: "rgba(236,72,153,0.15)"  },
+  { id: "velvet-suite",        label: "Velvet Suite",         icon: <Sparkles size={18}/>,   desc: "Skin smoothing, warmth & body definition — Replicate PuLID beauty layer",  color: "#EC4899", accent: "rgba(236,72,153,0.15)"  },
   { id: "desire-grade",        label: "Desire Grade",         icon: <Palette size={18}/>,    desc: "22 adult cinematic color grades",                   color: "#F97316", accent: "rgba(249,115,22,0.15)"  },
   { id: "scene-architect",     label: "Scene Architect",      icon: <Scissors size={18}/>,   desc: "Trim, cut, speed, audio + AI scene detection",      color: "#EAB308", accent: "rgba(234,179,8,0.15)"   },
   { id: "ppv-engine",          label: "PPV Engine",           icon: <Lock size={18}/>,       desc: "Teaser + censor + watermark + AI PPV intelligence", color: "#A855F7", accent: "rgba(168,85,247,0.15)"  },
@@ -816,7 +816,7 @@ function VelvetSuiteMode({ onOutput }: { onOutput: (url: string, label: string) 
       {/* AI Beauty Toggle */}
       <div className="flex items-center justify-between px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
         <div>
-          <p className="text-xs font-bold text-white">AI Beauty Layer</p>
+          <p className="text-xs font-bold text-white">PuLID Beauty Layer (Replicate)</p>
           <p className="text-[9px]" style={{ color: "#6B7280" }}>Replicate PuLID on peak frames</p>
         </div>
         <button
@@ -996,7 +996,7 @@ function DesireGradeMode({ onOutput }: { onOutput: (url: string, label: string) 
       </button>
       {videoFile && (
         <button onClick={() => desireGradeAIMut.mutate({ videoUrl: videoFile.url, gradeStyle: selectedGrade, applyBeautyOnPeakFrames: true, desireScore: Math.round(intensity / 10) })} disabled={desireGradeAIMut.isPending} className="w-full py-3 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2" style={{ background: desireGradeAIMut.isPending ? "rgba(139,92,246,0.2)" : "rgba(139,92,246,0.15)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.4)", cursor: desireGradeAIMut.isPending ? "not-allowed" : "pointer" }}>
-          {desireGradeAIMut.isPending ? <><Loader2 size={14} className="animate-spin" /> Running AI Beauty Layer...</> : <><Sparkles size={14} /> + AI Beauty Layer (PuLID)</>}
+          {desireGradeAIMut.isPending ? <><Loader2 size={14} className="animate-spin" /> Running PuLID Beauty Layer...</> : <><Sparkles size={14} /> + PuLID Beauty Layer (Replicate)</>}
         </button>
       )}
       {isProcessing && <ProcessingBar label="Applying color grade..." accent="#F97316" />}
