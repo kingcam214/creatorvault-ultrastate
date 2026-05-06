@@ -92,6 +92,8 @@ import { recruitmentWeaponRouter } from "./routers/recruitmentWeaponRouter";
 import { creatorOutreachRouter } from "./routers/creatorOutreachRouter";
 import { automatedDirectorRouter } from "./routers/automatedDirectorRouter";
 import { revenueReportingRouter } from "./routers/revenueReportingRouter";
+import { teaserEngineRouter } from "./routers/teaserEngineRouter";
+import { aiChatterRouter } from "./routers/aiChatterRouter";
 import { chicasEmpireRouter } from "./routers/chicasEmpireRouter";
 import { competitorIntelRouter } from "./routers/competitorIntelRouter";
 import { appleQRouter } from "./routers/appleQRouter";
@@ -984,6 +986,8 @@ export const appRouter = router({
   creatorOutreach: creatorOutreachRouter,
   automatedDirector: automatedDirectorRouter,
   revenueReporting: revenueReportingRouter,
+  teaserEngine: teaserEngineRouter,
+  aiChatter: aiChatterRouter,
 });
 
 export type AppRouter = typeof appRouter;

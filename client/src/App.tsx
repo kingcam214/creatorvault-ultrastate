@@ -429,6 +429,8 @@ import Shop from "./pages/Shop";
 import SocialHub from "./pages/SocialHub";
 import OutreachCommandCenter from "./pages/OutreachCommandCenter";
 import VaultXChallenges from "./pages/VaultXChallenges";
+import ForYouFeed from "./pages/ForYouFeed";
+import AIChatter from "./pages/AIChatter";
 // SocialFactory, SocialPostingHub, PlatformWarRoom, KingConnectSocials, SocialMediaAudit — MERGED into SocialHub tabs
 // import SocialFactory from "./pages/SocialFactory";
 // import SocialPostingHub from "./pages/SocialPostingHub";
@@ -540,6 +542,8 @@ function Router() {
       <Route path="/outreach" component={OutreachCommandCenter} />
       <Route path="/vaultx-challenges" component={VaultXChallenges} />
       <Route path="/challenges" component={VaultXChallenges} />
+      <Route path="/for-you" component={ForYouFeed} />
+      <Route path="/ai-chatter" component={AIChatter} />
 
 
 
