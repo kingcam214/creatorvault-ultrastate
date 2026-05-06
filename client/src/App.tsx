@@ -128,7 +128,7 @@ import VerticalPackLauncher from "./pages/VerticalPackLauncher";
 // import AdminPayouts from "./pages/AdminPayouts";
 // import AdminManualPayments from "./pages/AdminManualPayments";
 // import PodcastStudio from "./pages/PodcastStudio";
-import SocialMediaAudit from "./pages/SocialMediaAudit";
+// import SocialMediaAudit from "./pages/SocialMediaAudit"; // MERGED into SocialHub Audit tab
 import PerformanceInsights from "./pages/PerformanceInsights";
 import LiveDemoControl from "./pages/LiveDemoControl";
 import RecruiterDashboard from "./pages/RecruiterDashboard";
@@ -428,8 +428,10 @@ import Shop from "./pages/Shop";
 // import SocialAutoposterAgent from "./pages/SocialAutoposterAgent"; // MERGED into SocialHub
 import SocialHub from "./pages/SocialHub";
 import OutreachCommandCenter from "./pages/OutreachCommandCenter";
-import SocialFactory from "./pages/SocialFactory";
-import SocialPostingHub from "./pages/SocialPostingHub";
+import VaultXChallenges from "./pages/VaultXChallenges";
+// SocialFactory, SocialPostingHub, PlatformWarRoom, KingConnectSocials, SocialMediaAudit — MERGED into SocialHub tabs
+// import SocialFactory from "./pages/SocialFactory";
+// import SocialPostingHub from "./pages/SocialPostingHub";
 import SpatialComposer from "./pages/SpatialComposer";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import TestCheckout from "./pages/TestCheckout";
@@ -536,6 +538,8 @@ function Router() {
       <Route path={"/influencer"} component={InfluencerDashboard} />
       <Route path="/social-hub" component={SocialHub} />
       <Route path="/outreach" component={OutreachCommandCenter} />
+      <Route path="/vaultx-challenges" component={VaultXChallenges} />
+      <Route path="/challenges" component={VaultXChallenges} />
 
 
 
@@ -609,7 +613,7 @@ function Router() {
       <Route path={"/launch-trailer-studio"} component={LaunchTrailerStudio} />
       <Route path={"/shows/:slug/episodes/:episodeId"} component={EpisodeDetailPage} />
       <Route path={"/shows/:slug"} component={ShowPage} />
-      <Route path={"/social-audit"} component={SocialMediaAudit} />
+      {/* /social-audit merged into SocialHub */}
       <Route path={"/performance-insights"} component={PerformanceInsights} />
       <Route path={"/live-demo"} component={LiveDemoControl} />
       <Route path={"/recruiter"} component={RecruiterDashboard} />
@@ -748,9 +752,9 @@ function Router() {
       <Route path="/podcasting-home" component={Podcasting} />
       <Route path="/realgpt/dashboard" component={RealGPTDashboard} />
       <Route path="/shop" component={Shop} />
-      {/* social-autoposter-agent merged into /social-hub */}
-      <Route path="/social/factory" component={SocialFactory} />
-      <Route path="/social/posting-hub" component={SocialPostingHub} />
+      {/* social-autoposter-agent, factory, posting-hub merged into /social-hub */}
+      <Route path="/social/factory" component={SocialHub} />
+      <Route path="/social/posting-hub" component={SocialHub} />
       <Route path="/tools/spatial-composer" component={SpatialComposer} />
       <Route path="/subscription/success" component={SubscriptionSuccess} />
       <Route path="/_dev/test-checkout" component={TestCheckout} />
