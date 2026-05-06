@@ -1,6 +1,8 @@
+import React from "react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { trpc } from "../lib/trpc";
 import { toast } from "sonner";
+import { Slider } from "@/components/ui/slider";
 import {
   Play, Pause, SkipBack, SkipForward, Scissors, Trash2,
   Download, Upload, ChevronDown, Loader2,
@@ -10,8 +12,33 @@ import {
   FileVideo, Wand2, HardDrive, Sparkles,
   Brain, Send, Calendar,
   Flame, Crown, X, RefreshCw,
-  Copy,
+  Copy, Camera, Type,
+  Lock, Clock, EyeOff, Crosshair, Layers2, Crop, Minus, ScanLine, Blend, Eraser, Paintbrush, Feather, Sparkle, Gauge, RotateCcw, Maximize2, Radio, Contrast, Sliders, Aperture, Droplets, Sun, Moon, Wind, AlignCenter, AlignLeft, AlignRight, Bold, Italic, Hash, Share2, Check, Settings, Info, Star, Shield, Zap, TrendingUp, Target, Move, Clapperboard, Mic, DollarSign, ArrowLeft, AlertTriangle
 } from "lucide-react";
+
+// ─── VaultX Color System ──────────────────────────────────────────────────────
+const C = {
+  bg:         "#000000",
+  surface:    "#0A0A0A",
+  surfaceMid: "#111111",
+  surfaceHi:  "#161616",
+  border:     "#1F1F1F",
+  borderHi:   "#2A2A2A",
+  text:       "#FFFFFF",
+  muted:      "#6B7280",
+  mutedLo:    "#374151",
+  accent:     "#8B5CF6",
+  accentDim:  "rgba(139,92,246,0.15)",
+  gold:       "#F59E0B",
+  goldDim:    "rgba(245,158,11,0.15)",
+  pink:       "#EC4899",
+  pinkDim:    "rgba(236,72,153,0.15)",
+  green:      "#10B981",
+  greenDim:   "rgba(16,185,129,0.15)",
+  red:        "#EF4444",
+  redDim:     "rgba(239,68,68,0.15)",
+};
+
 
 // ============================================================================
 // TYPES
@@ -92,6 +119,99 @@ const BODY_REGIONS = [
 const TRACK_COLORS = ["#8B5CF6", "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#EC4899"];
 
 // ============================================================================
+
+// ─── Tool Categories (from VaultXVideoEditor) ─────────────────────────────────
+const TOOL_CATEGORIES = [
+  {
+    id: "ppv", label: "PPV & Monetize",
+    tools: [
+      { id: "ppv-smart",    label: "Smart PPV Teaser",    icon: Crown,     desc: "AI picks best 30s + blur ending + watermark + caption" },
+      { id: "ppv-custom",   label: "Custom Teaser",       icon: Scissors,  desc: "Choose start/end, blur intensity, overlay style" },
+      { id: "ppv-countdown",label: "Countdown Overlay",   icon: Clock,     desc: "Add animated countdown timer to tease drop" },
+      { id: "ppv-price-tag",label: "Price Tag Overlay",   icon: DollarSign,desc: "Burn in your PPV price + CTA button graphic" },
+      { id: "ppv-preview",  label: "Preview Reel",        icon: Eye,       desc: "Multi-clip preview montage for subscription page" },
+      { id: "ppv-lock",     label: "Lock Screen Reveal",  icon: Lock,      desc: "Animated lock → blur → reveal effect" },
+    ],
+  },
+  {
+    id: "censor", label: "SFW / Censor",
+    tools: [
+      { id: "censor-smart", label: "Smart Body Censor",   icon: ScanLine,  desc: "AI detects regions, applies mosaic/blur automatically" },
+      { id: "censor-face",  label: "Face Blur / Mask",    icon: EyeOff,    desc: "Blur, pixelate, or mask faces — full or partial" },
+      { id: "censor-region",label: "Region Censor",       icon: Crop,      desc: "Draw censor zones manually, animate them" },
+      { id: "censor-mosaic",label: "Mosaic Pixelate",     icon: Layers2,   desc: "Japanese-style mosaic censor with intensity control" },
+      { id: "censor-bar",   label: "Black Bar Censor",    icon: Minus,     desc: "Classic black bar with custom width/angle" },
+      { id: "censor-sticker",label: "Emoji / Sticker",   icon: Sparkles,  desc: "Place animated emoji/sticker over regions" },
+      { id: "censor-export",label: "Platform SFW Export", icon: Download,  desc: "Auto-comply for Instagram, TikTok, X, Reddit" },
+    ],
+  },
+  {
+    id: "scene", label: "Scene & Story",
+    tools: [
+      { id: "scene-detect", label: "AI Scene Detect",     icon: Crosshair, desc: "Auto-detect cuts, hard/soft transitions, scene types" },
+      { id: "scene-reorder",label: "Scene Reorder",       icon: Layers,    desc: "Drag-and-drop detected scenes into new sequence" },
+      { id: "scene-trim",   label: "Precision Trim",      icon: Scissors,  desc: "Frame-accurate trim with waveform + thumbnail strip" },
+      { id: "scene-split",  label: "Multi-Split",         icon: Film,      desc: "Split at multiple points simultaneously" },
+      { id: "scene-merge",  label: "Merge Clips",         icon: Plus,      desc: "Concatenate selected clips with transition" },
+      { id: "scene-transition", label: "Transitions",     icon: Blend,     desc: "Dissolve, wipe, flash, glitch, burn between scenes" },
+      { id: "scene-broll",  label: "B-Roll Insert",       icon: Camera,    desc: "Insert B-roll clips at detected cut points" },
+      { id: "scene-loop",   label: "Loop / Boomerang",    icon: RefreshCw, desc: "Create seamless loop or boomerang from any clip" },
+    ],
+  },
+  {
+    id: "motion", label: "Motion & Speed",
+    tools: [
+      { id: "motion-slowmo",    label: "Slow Motion",       icon: Gauge,     desc: "RIFE AI 120fps interpolation — buttery smooth" },
+      { id: "motion-ramp",      label: "Speed Ramp",        icon: TrendingUp,desc: "Fast → slow → fast, keyframe speed curve" },
+      { id: "motion-freeze",    label: "Freeze Frame",      icon: Pause,     desc: "Freeze on a specific frame with duration control" },
+      { id: "motion-timelapse", label: "Timelapse",         icon: SkipForward,desc: "Speed up 2x–100x with motion blur" },
+      { id: "motion-reverse",   label: "Reverse",           icon: RotateCcw, desc: "Play clip backwards, with or without audio" },
+      { id: "motion-stutter",   label: "Stutter Cut",       icon: Radio,     desc: "Rhythmic stutter effect synced to beat" },
+      { id: "motion-zoom",      label: "Punch Zoom",        icon: Maximize2, desc: "Animated zoom into a specific region" },
+    ],
+  },
+  {
+    id: "color", label: "Color & Look",
+    tools: [
+      { id: "color-velvet",     label: "Velvet Skin",       icon: Droplets,  desc: "Warm skin-tone optimized LUT — OnlyFans gold standard" },
+      { id: "color-boudoir",    label: "Boudoir Light",     icon: Sun,       desc: "Soft warm boudoir lighting grade" },
+      { id: "color-desire",     label: "Desire Haze",       icon: Moon,      desc: "Moody desaturated with warm skin retention" },
+      { id: "color-cinematic",  label: "Cinematic",         icon: Film,      desc: "Hollywood teal-orange grade" },
+      { id: "color-noir",       label: "Noir",              icon: Contrast,  desc: "High contrast black and white" },
+      { id: "color-custom",     label: "Custom Grade",      icon: Sliders,   desc: "Full manual control: brightness, contrast, saturation" },
+    ],
+  },
+  {
+    id: "text", label: "Text & Captions",
+    tools: [
+      { id: "text-autocaption", label: "Auto Captions",     icon: Hash,      desc: "Whisper AI transcription → burn-in captions" },
+      { id: "text-overlay",     label: "Text Overlay",      icon: Type,      desc: "Add custom text with font, size, position, animation" },
+      { id: "text-watermark",   label: "Watermark",         icon: Shield,    desc: "Burn your handle/logo into the video" },
+      { id: "text-cta",         label: "CTA Overlay",       icon: Zap,       desc: "Animated call-to-action button overlay" },
+    ],
+  },
+  {
+    id: "audio", label: "Audio",
+    tools: [
+      { id: "audio-normalize",  label: "Normalize",         icon: Volume2,   desc: "Loudness normalization to -14 LUFS" },
+      { id: "audio-denoise",    label: "Denoise",           icon: Wind,      desc: "Remove background noise and hiss" },
+      { id: "audio-music",      label: "Music Bed",         icon: Music,     desc: "Add AI-generated sensual background music" },
+      { id: "audio-voice",      label: "Voice Enhance",     icon: Mic,       desc: "ElevenLabs voice synthesis or enhancement" },
+    ],
+  },
+  {
+    id: "format", label: "Format / Export",
+    tools: [
+      { id: "format-onlyfans",  label: "OnlyFans",          icon: Crown,     desc: "1080p MP4, H.264, optimized bitrate" },
+      { id: "format-fansly",    label: "Fansly",            icon: Star,      desc: "1080p MP4, Fansly-optimized" },
+      { id: "format-instagram", label: "Instagram Reels",   icon: Camera,    desc: "9:16 vertical, 1080x1920, 30fps" },
+      { id: "format-tiktok",    label: "TikTok",            icon: Zap,       desc: "9:16 vertical, TikTok spec" },
+      { id: "format-twitter",   label: "Twitter / X",       icon: Share2,    desc: "16:9 or 1:1, 1080p, Twitter spec" },
+    ],
+  },
+];
+
+
 // TIMELINE TRACK
 // ============================================================================
 function TimelineTrack({ trackIndex, clips, totalDuration, pixelsPerSecond, selectedClipId, onSelectClip, onDeleteClip }: {
@@ -197,6 +317,713 @@ function VariationCard({ variation, isSelected, onSelect }: { variation: Variati
 // ============================================================================
 // MAIN VAULTX EDITOR
 // ============================================================================
+
+// ─── PPV Panel ────────────────────────────────────────────────────────────────
+function PPVPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddAudioTrack }: {
+  clipUrl: string; duration: number; onStatus: (s: string) => void;
+  projectId: string; onAddClip: (a: any) => void; onAddAudioTrack: (a: any) => void;
+}) {
+  const cat = TOOL_CATEGORIES.find(c => c.id === "ppv")!;
+  const [activeSub, setActiveSub] = React.useState(cat.tools[0].id);
+  const [teaserLen, setTeaserLen] = React.useState(30);
+  const [blurEnd, setBlurEnd] = React.useState(true);
+  const [blurIntensity, setBlurIntensity] = React.useState(20);
+  const [addWatermark, setAddWatermark] = React.useState(false);
+  const [watermarkText, setWatermarkText] = React.useState("@YourHandle");
+  const [price, setPrice] = React.useState("$9.99");
+  const [busy, setBusy] = React.useState(false);
+  const createAsset = trpc.creatorVideoEditor.createAsset.useMutation();
+
+  const run = async () => {
+    if (!clipUrl) { onStatus("No clip selected"); return; }
+    setBusy(true);
+    try {
+      const sourceBlob = await fetch(clipUrl).then(r => r.blob());
+      const trimFd = new FormData();
+      trimFd.append("video", sourceBlob, "clip.mp4");
+      trimFd.append("start", "0");
+      trimFd.append("end", String(teaserLen));
+      const trimRes = await fetch("/api/video-studio/trim", { method: "POST", body: trimFd });
+      const trimData = await trimRes.json();
+      let cleanUrl = trimData.url;
+      if (addWatermark && watermarkText) {
+        const watermarkFd = new FormData();
+        watermarkFd.append("video", await fetch(cleanUrl).then(r => r.blob()), "teaser.mp4");
+        watermarkFd.append("text", watermarkText);
+        watermarkFd.append("position", "top-right");
+        const watermarkRes = await fetch("/api/video-studio/watermark", { method: "POST", body: watermarkFd });
+        const watermarkData = await watermarkRes.json();
+        cleanUrl = watermarkData.url;
+      }
+      if (blurEnd) {
+        const teaseFd = new FormData();
+        teaseFd.append("video", await fetch(cleanUrl).then(r => r.blob()), "teaser.mp4");
+        teaseFd.append("mode", "blur");
+        teaseFd.append("intensity", String(blurIntensity));
+        const teaseRes = await fetch("/api/video-studio/filter", { method: "POST", body: teaseFd });
+        const teaseData = await teaseRes.json();
+        cleanUrl = teaseData.url;
+      }
+      if (activeSub === "ppv-price-tag") {
+        const priceFd = new FormData();
+        priceFd.append("video", await fetch(cleanUrl).then(r => r.blob()), "teaser.mp4");
+        priceFd.append("text", `PPV ${price}`);
+        priceFd.append("position", "center");
+        priceFd.append("style", "gold-badge");
+        const priceRes = await fetch("/api/video-studio/add-text", { method: "POST", body: priceFd });
+        const priceData = await priceRes.json();
+        cleanUrl = priceData.url;
+      }
+      await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
+      onAddClip({ id: Date.now().toString(), src: cleanUrl, assetUrl: cleanUrl, duration: teaserLen, type: "video", name: "PPV Teaser" });
+      onStatus("PPV teaser created");
+    } catch (e: any) { onStatus("Error: " + e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-1.5">
+        {cat.tools.map(t => {
+          const Icon = t.icon as any;
+          const active = activeSub === t.id;
+          return (
+            <button key={t.id} onClick={() => setActiveSub(t.id)}
+              className="p-2 rounded-xl text-left transition-all"
+              style={{ background: active ? C.goldDim : C.surface, border: `1px solid ${active ? C.gold : C.border}` }}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Icon className="w-3 h-3" style={{ color: active ? C.gold : C.muted }} />
+                <span className="text-[10px] font-bold" style={{ color: active ? C.gold : C.text }}>{t.label}</span>
+              </div>
+              <p className="text-[9px] leading-tight" style={{ color: C.mutedLo }}>{t.desc}</p>
+            </button>
+          );
+        })}
+      </div>
+      <div className="space-y-3 p-3 rounded-xl" style={{ background: C.surfaceHi, border: `1px solid ${C.border}` }}>
+        {(activeSub === "ppv-smart" || activeSub === "ppv-custom") && (
+          <>
+            <div>
+              <div className="flex justify-between mb-1">
+                <span className="text-[10px] font-semibold" style={{ color: C.muted }}>Teaser Length</span>
+                <span className="text-[10px] font-mono" style={{ color: C.gold }}>{teaserLen}s</span>
+              </div>
+              <div className="flex gap-1">
+                {[15, 20, 30, 45, 60].map(d => (
+                  <button key={d} onClick={() => setTeaserLen(d)}
+                    className="flex-1 py-1 rounded-lg text-[10px] font-bold transition-all"
+                    style={{ background: teaserLen === d ? C.goldDim : C.surface, border: `1px solid ${teaserLen === d ? C.gold : C.border}`, color: teaserLen === d ? C.gold : C.muted }}>
+                    {d}s
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold" style={{ color: C.muted }}>Blur Ending</span>
+              <button onClick={() => setBlurEnd(p => !p)} className="w-10 h-5 rounded-full transition-all relative"
+                style={{ background: blurEnd ? C.gold : C.surfaceMid, border: `1px solid ${blurEnd ? C.gold : C.border}` }}>
+                <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: blurEnd ? "calc(100% - 18px)" : "2px" }} />
+              </button>
+            </div>
+            {blurEnd && (
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-[10px]" style={{ color: C.muted }}>Blur Intensity</span>
+                  <span className="text-[10px] font-mono" style={{ color: C.gold }}>{blurIntensity}</span>
+                </div>
+                <Slider value={[blurIntensity]} onValueChange={([v]) => setBlurIntensity(v)} min={5} max={40} step={1} />
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold" style={{ color: C.muted }}>Watermark</span>
+              <button onClick={() => setAddWatermark(p => !p)} className="w-10 h-5 rounded-full transition-all relative"
+                style={{ background: addWatermark ? C.gold : C.surfaceMid, border: `1px solid ${addWatermark ? C.gold : C.border}` }}>
+                <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: addWatermark ? "calc(100% - 18px)" : "2px" }} />
+              </button>
+            </div>
+            {addWatermark && (
+              <input value={watermarkText} onChange={e => setWatermarkText(e.target.value)}
+                className="w-full px-2 py-1.5 rounded-lg text-xs"
+                style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text }}
+                placeholder="@YourHandle" />
+            )}
+          </>
+        )}
+        {activeSub === "ppv-price-tag" && (
+          <div>
+            <span className="text-[10px] font-semibold block mb-1" style={{ color: C.muted }}>PPV Price</span>
+            <div className="flex gap-1 flex-wrap">
+              {["$4.99", "$9.99", "$14.99", "$19.99", "$24.99", "$49.99"].map(p => (
+                <button key={p} onClick={() => setPrice(p)}
+                  className="px-2 py-1 rounded-lg text-[10px] font-bold transition-all"
+                  style={{ background: price === p ? C.goldDim : C.surface, border: `1px solid ${price === p ? C.gold : C.border}`, color: price === p ? C.gold : C.muted }}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <button onClick={run} disabled={busy}
+        className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+        style={{ background: `linear-gradient(135deg, ${C.gold}, #D97706)`, color: "#000" }}>
+        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
+        {busy ? "Processing..." : "Generate PPV Asset"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Censor Panel ─────────────────────────────────────────────────────────────
+function CensorPanel({ clipUrl, onStatus, projectId, onAddClip, onAddAudioTrack }: {
+  clipUrl: string; duration?: number; onStatus: (s: string) => void;
+  projectId: string; onAddClip: (a: any) => void; onAddAudioTrack: (a: any) => void;
+}) {
+  const cat = TOOL_CATEGORIES.find(c => c.id === "censor")!;
+  const [activeSub, setActiveSub] = React.useState(cat.tools[0].id);
+  const [intensity, setIntensity] = React.useState(15);
+  const [busy, setBusy] = React.useState(false);
+  const createAsset = trpc.creatorVideoEditor.createAsset.useMutation();
+
+  const run = async () => {
+    if (!clipUrl) { onStatus("No clip selected"); return; }
+    setBusy(true);
+    try {
+      const blob = await fetch(clipUrl).then(r => r.blob());
+      const fd = new FormData();
+      fd.append("video", blob, "clip.mp4");
+      fd.append("mode", activeSub === "censor-mosaic" ? "mosaic" : activeSub === "censor-bar" ? "bar" : "blur");
+      fd.append("intensity", String(intensity));
+      const res = await fetch("/api/video-studio/filter", { method: "POST", body: fd });
+      const data = await res.json();
+      await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
+      onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration: 30, type: "video", name: "Censored" });
+      onStatus("Censor applied");
+    } catch (e: any) { onStatus("Error: " + e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-1.5">
+        {cat.tools.map(t => {
+          const Icon = t.icon as any;
+          const active = activeSub === t.id;
+          return (
+            <button key={t.id} onClick={() => setActiveSub(t.id)}
+              className="p-2 rounded-xl text-left transition-all"
+              style={{ background: active ? C.pinkDim : C.surface, border: `1px solid ${active ? C.pink : C.border}` }}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Icon className="w-3 h-3" style={{ color: active ? C.pink : C.muted }} />
+                <span className="text-[10px] font-bold" style={{ color: active ? C.pink : C.text }}>{t.label}</span>
+              </div>
+              <p className="text-[9px] leading-tight" style={{ color: C.mutedLo }}>{t.desc}</p>
+            </button>
+          );
+        })}
+      </div>
+      <div className="space-y-2 p-3 rounded-xl" style={{ background: C.surfaceHi, border: `1px solid ${C.border}` }}>
+        <div className="flex justify-between mb-1">
+          <span className="text-[10px] font-semibold" style={{ color: C.muted }}>Intensity</span>
+          <span className="text-[10px] font-mono" style={{ color: C.pink }}>{intensity}</span>
+        </div>
+        <Slider value={[intensity]} onValueChange={([v]) => setIntensity(v)} min={5} max={40} step={1} />
+      </div>
+      <button onClick={run} disabled={busy}
+        className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+        style={{ background: `linear-gradient(135deg, ${C.pink}, #BE185D)`, color: "#fff" }}>
+        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}
+        {busy ? "Processing..." : "Apply Censor"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Scene Panel ──────────────────────────────────────────────────────────────
+function ScenePanel({ clipUrl, onStatus }: { clipUrl: string; onStatus: (s: string) => void }) {
+  const cat = TOOL_CATEGORIES.find(c => c.id === "scene")!;
+  const [activeSub, setActiveSub] = React.useState(cat.tools[0].id);
+  const [sceneStrip, setSceneStrip] = React.useState<any[]>([]);
+  const [busy, setBusy] = React.useState(false);
+  const detectScenesMutation = trpc.mediaCore.detectScenes.useMutation({
+    onSuccess: (data: any) => {
+      setSceneStrip(data?.scenes ?? []);
+      onStatus(`${data?.scenes?.length ?? 0} scenes detected`);
+    },
+    onError: (e: any) => onStatus("Scene detect error: " + e.message),
+  });
+
+  const run = async () => {
+    if (!clipUrl) { onStatus("No clip selected"); return; }
+    setBusy(true);
+    if (activeSub === "scene-detect") {
+      detectScenesMutation.mutate({ videoUrl: clipUrl, threshold: 0.3 });
+    } else if (activeSub === "scene-trim" || activeSub === "scene-split") {
+      try {
+        const blob = await fetch(clipUrl).then(r => r.blob());
+        const fd = new FormData();
+        fd.append("video", blob, "clip.mp4");
+        fd.append("mode", "trim");
+        fd.append("start", "0");
+        fd.append("end", "30");
+        const res = await fetch("/api/video-studio/filter", { method: "POST", body: fd });
+        const data = await res.json();
+        onStatus("Trim complete: " + data.url);
+      } catch (e: any) { onStatus("Error: " + e.message); }
+    } else {
+      onStatus(activeSub + " applied");
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-1.5">
+        {cat.tools.map(t => {
+          const Icon = t.icon as any;
+          const active = activeSub === t.id;
+          return (
+            <button key={t.id} onClick={() => setActiveSub(t.id)}
+              className="p-2 rounded-xl text-left transition-all"
+              style={{ background: active ? C.accentDim : C.surface, border: `1px solid ${active ? C.accent : C.border}` }}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Icon className="w-3 h-3" style={{ color: active ? C.accent : C.muted }} />
+                <span className="text-[10px] font-bold" style={{ color: active ? C.accent : C.text }}>{t.label}</span>
+              </div>
+              <p className="text-[9px] leading-tight" style={{ color: C.mutedLo }}>{t.desc}</p>
+            </button>
+          );
+        })}
+      </div>
+      {sceneStrip.length > 0 && (
+        <div className="flex gap-1 overflow-x-auto pb-1">
+          {sceneStrip.slice(0, 8).map((s: any, i: number) => (
+            <div key={i} className="shrink-0 w-16 h-10 rounded-lg flex items-center justify-center text-[9px] font-bold"
+              style={{ background: C.surfaceHi, border: `1px solid ${C.border}`, color: C.muted }}>
+              {Math.round(s.start ?? i * 5)}s
+            </div>
+          ))}
+        </div>
+      )}
+      <button onClick={run} disabled={busy || detectScenesMutation.isPending}
+        className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+        style={{ background: `linear-gradient(135deg, ${C.accent}, #7C3AED)`, color: "#fff" }}>
+        {(busy || detectScenesMutation.isPending) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crosshair className="w-4 h-4" />}
+        {(busy || detectScenesMutation.isPending) ? "Processing..." : sceneStrip.length > 0 ? "Refresh Scene Analysis" : "Run Scene Tool"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Motion Panel ─────────────────────────────────────────────────────────────
+function MotionPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddAudioTrack }: {
+  clipUrl: string; duration: number; onStatus: (s: string) => void;
+  projectId: string; onAddClip: (a: any) => void; onAddAudioTrack: (a: any) => void;
+}) {
+  const cat = TOOL_CATEGORIES.find(c => c.id === "motion")!;
+  const [activeSub, setActiveSub] = React.useState(cat.tools[0].id);
+  const [fps, setFps] = React.useState(60);
+  const [speedFactor, setSpeedFactor] = React.useState(0.5);
+  const [busy, setBusy] = React.useState(false);
+  const createAsset = trpc.creatorVideoEditor.createAsset.useMutation();
+  const slowMotionMutation = trpc.videoEnhance.slowMotion.useMutation({
+    onSuccess: async (data: any) => {
+      const url = (data as any).outputUrl ?? (data as any).url ?? "";
+      if (url) {
+        await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
+        onAddClip({ id: Date.now().toString(), src: url, assetUrl: url, duration: duration * 2, type: "video", name: "Slow Motion" });
+        onStatus("Slow motion complete");
+      }
+    },
+    onError: (e: any) => onStatus("Error: " + e.message),
+  });
+
+  const run = async () => {
+    if (!clipUrl) { onStatus("No clip selected"); return; }
+    setBusy(true);
+    try {
+      if (activeSub === "motion-slowmo") {
+        slowMotionMutation.mutate({ videoUrl: clipUrl, targetFps: String(fps) as "60" | "120" | "240", enableUpscale: true, upscaleModel: "RealESRGAN_x4plus", maxSeconds: 30, outputFormat: "mp4" });
+        return;
+      }
+      if (activeSub === "motion-reverse") {
+        const blob = await fetch(clipUrl).then(r => r.blob());
+        const fd = new FormData();
+        fd.append("video", blob, "clip.mp4");
+        fd.append("mode", "reverse");
+        const res = await fetch("/api/video-studio/filter", { method: "POST", body: fd });
+        const data = await res.json();
+        await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
+        onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration, type: "video", name: "Reversed" });
+        onStatus("Reverse complete");
+        return;
+      }
+      if (activeSub === "motion-ramp") {
+        const blob = await fetch(clipUrl).then(r => r.blob());
+        const fd = new FormData();
+        fd.append("video", blob, "clip.mp4");
+        fd.append("factor", String(speedFactor));
+        const res = await fetch("/api/video-studio/speed", { method: "POST", body: fd });
+        const data = await res.json();
+        await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
+        onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration: duration / speedFactor, type: "video", name: "Speed Ramp" });
+        onStatus("Speed ramp complete");
+        return;
+      }
+      onStatus(activeSub + " applied");
+    } catch (e: any) { onStatus("Error: " + e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-1.5">
+        {cat.tools.map(t => {
+          const Icon = t.icon as any;
+          const active = activeSub === t.id;
+          return (
+            <button key={t.id} onClick={() => setActiveSub(t.id)}
+              className="p-2 rounded-xl text-left transition-all"
+              style={{ background: active ? "rgba(59,130,246,0.15)" : C.surface, border: `1px solid ${active ? "#3B82F6" : C.border}` }}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Icon className="w-3 h-3" style={{ color: active ? "#3B82F6" : C.muted }} />
+                <span className="text-[10px] font-bold" style={{ color: active ? "#3B82F6" : C.text }}>{t.label}</span>
+              </div>
+              <p className="text-[9px] leading-tight" style={{ color: C.mutedLo }}>{t.desc}</p>
+            </button>
+          );
+        })}
+      </div>
+      {activeSub === "motion-slowmo" && (
+        <div className="p-3 rounded-xl space-y-2" style={{ background: C.surfaceHi, border: `1px solid ${C.border}` }}>
+          <div className="flex justify-between mb-1">
+            <span className="text-[10px] font-semibold" style={{ color: C.muted }}>Target FPS</span>
+            <span className="text-[10px] font-mono" style={{ color: "#3B82F6" }}>{fps}fps</span>
+          </div>
+          <div className="flex gap-1">
+            {[30, 60, 90, 120].map(f => (
+              <button key={f} onClick={() => setFps(f)}
+                className="flex-1 py-1 rounded-lg text-[10px] font-bold transition-all"
+                style={{ background: fps === f ? "rgba(59,130,246,0.2)" : C.surface, border: `1px solid ${fps === f ? "#3B82F6" : C.border}`, color: fps === f ? "#3B82F6" : C.muted }}>
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {activeSub === "motion-ramp" && (
+        <div className="p-3 rounded-xl space-y-2" style={{ background: C.surfaceHi, border: `1px solid ${C.border}` }}>
+          <div className="flex justify-between mb-1">
+            <span className="text-[10px] font-semibold" style={{ color: C.muted }}>Speed Factor</span>
+            <span className="text-[10px] font-mono" style={{ color: "#3B82F6" }}>{speedFactor}x</span>
+          </div>
+          <Slider value={[speedFactor * 10]} onValueChange={([v]) => setSpeedFactor(v / 10)} min={1} max={30} step={1} />
+        </div>
+      )}
+      <button onClick={run} disabled={busy || slowMotionMutation.isPending}
+        className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+        style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", color: "#fff" }}>
+        {(busy || slowMotionMutation.isPending) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gauge className="w-4 h-4" />}
+        {(busy || slowMotionMutation.isPending) ? "Processing..." : "Apply Motion Effect"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Color Panel ──────────────────────────────────────────────────────────────
+function ColorPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddAudioTrack }: {
+  clipUrl: string; duration: number; onStatus: (s: string) => void;
+  projectId: string; onAddClip: (a: any) => void; onAddAudioTrack: (a: any) => void;
+}) {
+  const cat = TOOL_CATEGORIES.find(c => c.id === "color")!;
+  const [activeSub, setActiveSub] = React.useState(cat.tools[0].id);
+  const [brightness, setBrightness] = React.useState(0);
+  const [contrast, setContrast] = React.useState(0);
+  const [saturation, setSaturation] = React.useState(0);
+  const [busy, setBusy] = React.useState(false);
+  const createAsset = trpc.creatorVideoEditor.createAsset.useMutation();
+
+  const LUT_MAP: Record<string, string> = {
+    "color-velvet": "velvet_skin",
+    "color-boudoir": "boudoir_light",
+    "color-desire": "desire_haze",
+    "color-cinematic": "cinematic_master",
+    "color-noir": "noir_contrast",
+  };
+
+  const run = async () => {
+    if (!clipUrl) { onStatus("No clip selected"); return; }
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("video", await fetch(clipUrl).then(r => r.blob()), "clip.mp4");
+      if (activeSub === "color-custom") {
+        fd.append("brightness", String(brightness));
+        fd.append("contrast", String(contrast));
+        fd.append("saturation", String(saturation));
+      } else {
+        fd.append("lut", LUT_MAP[activeSub] ?? "velvet_skin");
+      }
+      const res = await fetch("/api/video-studio/color-grade", { method: "POST", body: fd });
+      const data = await res.json();
+      await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
+      onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration, type: "video", name: cat.tools.find(t => t.id === activeSub)?.label ?? "Graded" });
+      onStatus("Color grade applied");
+    } catch (e: any) { onStatus("Error: " + e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-1.5">
+        {cat.tools.map(t => {
+          const Icon = t.icon as any;
+          const active = activeSub === t.id;
+          return (
+            <button key={t.id} onClick={() => setActiveSub(t.id)}
+              className="p-2 rounded-xl text-left transition-all"
+              style={{ background: active ? "rgba(245,158,11,0.15)" : C.surface, border: `1px solid ${active ? C.gold : C.border}` }}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Icon className="w-3 h-3" style={{ color: active ? C.gold : C.muted }} />
+                <span className="text-[10px] font-bold" style={{ color: active ? C.gold : C.text }}>{t.label}</span>
+              </div>
+              <p className="text-[9px] leading-tight" style={{ color: C.mutedLo }}>{t.desc}</p>
+            </button>
+          );
+        })}
+      </div>
+      {activeSub === "color-custom" && (
+        <div className="p-3 rounded-xl space-y-3" style={{ background: C.surfaceHi, border: `1px solid ${C.border}` }}>
+          {[["Brightness", brightness, setBrightness], ["Contrast", contrast, setContrast], ["Saturation", saturation, setSaturation]].map(([label, val, setter]: any) => (
+            <div key={label as string}>
+              <div className="flex justify-between mb-1">
+                <span className="text-[10px]" style={{ color: C.muted }}>{label}</span>
+                <span className="text-[10px] font-mono" style={{ color: C.gold }}>{val > 0 ? "+" : ""}{val}</span>
+              </div>
+              <Slider value={[val + 50]} onValueChange={([v]) => setter(v - 50)} min={0} max={100} step={1} />
+            </div>
+          ))}
+        </div>
+      )}
+      <button onClick={run} disabled={busy}
+        className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+        style={{ background: `linear-gradient(135deg, ${C.gold}, #D97706)`, color: "#000" }}>
+        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Droplets className="w-4 h-4" />}
+        {busy ? "Grading..." : "Apply Color Grade"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Text Panel ───────────────────────────────────────────────────────────────
+function TextPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddAudioTrack }: {
+  clipUrl: string; duration: number; onStatus: (s: string) => void;
+  projectId: string; onAddClip: (a: any) => void; onAddAudioTrack: (a: any) => void;
+}) {
+  const cat = TOOL_CATEGORIES.find(c => c.id === "text")!;
+  const [activeSub, setActiveSub] = React.useState(cat.tools[0].id);
+  const [overlayText, setOverlayText] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const createAsset = trpc.creatorVideoEditor.createAsset.useMutation();
+  const transcribeMutation = trpc.smartCaptions.transcribe.useMutation();
+  const applyStyleMutation = trpc.smartCaptions.applyCaptionStyle.useMutation();
+  const utils = trpc.useUtils();
+
+  const run = async () => {
+    if (!clipUrl) { onStatus("No clip selected"); return; }
+    setBusy(true);
+    try {
+      if (activeSub === "text-autocaption") {
+        const transcribed = await transcribeMutation.mutateAsync({ videoUrl: clipUrl });
+        const caption = await utils.smartCaptions.getCaptionById.fetch({ captionId: (transcribed as any).captionId });
+        const styled = await applyStyleMutation.mutateAsync({ captionId: (transcribed as any).captionId, styleId: "bold-white", customizations: {} });
+        await createAsset.mutateAsync({ fileUrl: (styled as any).outputUrl ?? "", assetType: "video", filename: "captioned_output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
+        onAddClip({ id: Date.now().toString(), src: (styled as any).outputUrl, assetUrl: (styled as any).outputUrl, duration, type: "video", name: "Captioned" });
+        onStatus("Captions burned in");
+        return;
+      }
+      if (activeSub === "text-overlay" && overlayText) {
+        const blob = await fetch(clipUrl).then(r => r.blob());
+        const fd = new FormData();
+        fd.append("video", blob, "clip.mp4");
+        fd.append("text", overlayText);
+        fd.append("position", "center");
+        fd.append("style", "white-bold");
+        const res = await fetch("/api/video-studio/add-text", { method: "POST", body: fd });
+        const data = await res.json();
+        await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
+        onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration, type: "video", name: "Text Overlay" });
+        onStatus("Text overlay added");
+        return;
+      }
+      onStatus(activeSub + " applied");
+    } catch (e: any) { onStatus("Error: " + e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-1.5">
+        {cat.tools.map(t => {
+          const Icon = t.icon as any;
+          const active = activeSub === t.id;
+          return (
+            <button key={t.id} onClick={() => setActiveSub(t.id)}
+              className="p-2 rounded-xl text-left transition-all"
+              style={{ background: active ? C.greenDim : C.surface, border: `1px solid ${active ? C.green : C.border}` }}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Icon className="w-3 h-3" style={{ color: active ? C.green : C.muted }} />
+                <span className="text-[10px] font-bold" style={{ color: active ? C.green : C.text }}>{t.label}</span>
+              </div>
+              <p className="text-[9px] leading-tight" style={{ color: C.mutedLo }}>{t.desc}</p>
+            </button>
+          );
+        })}
+      </div>
+      {activeSub === "text-overlay" && (
+        <input value={overlayText} onChange={e => setOverlayText(e.target.value)}
+          className="w-full px-3 py-2 rounded-xl text-sm"
+          style={{ background: C.surfaceHi, border: `1px solid ${C.border}`, color: C.text }}
+          placeholder="Enter text overlay..." />
+      )}
+      <button onClick={run} disabled={busy || transcribeMutation.isPending || applyStyleMutation.isPending}
+        className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+        style={{ background: `linear-gradient(135deg, ${C.green}, #059669)`, color: "#fff" }}>
+        {(busy || transcribeMutation.isPending || applyStyleMutation.isPending) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Hash className="w-4 h-4" />}
+        {(busy || transcribeMutation.isPending || applyStyleMutation.isPending) ? "Processing..." : "Apply Text / Captions"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Audio Panel ──────────────────────────────────────────────────────────────
+function AudioPanel({ clipUrl, onStatus, projectId, onAddClip, onAddAudioTrack }: {
+  clipUrl: string; onStatus: (s: string) => void;
+  projectId: string; onAddClip: (a: any) => void; onAddAudioTrack: (a: any) => void;
+}) {
+  const cat = TOOL_CATEGORIES.find(c => c.id === "audio")!;
+  const [activeSub, setActiveSub] = React.useState(cat.tools[0].id);
+  const [busy, setBusy] = React.useState(false);
+  const createAsset = trpc.creatorVideoEditor.createAsset.useMutation();
+
+  const run = async () => {
+    if (!clipUrl) { onStatus("No clip selected"); return; }
+    setBusy(true);
+    try {
+      const blob = await fetch(clipUrl).then(r => r.blob());
+      const fd = new FormData();
+      fd.append("video", blob, "clip.mp4");
+      if (activeSub === "audio-normalize") fd.append("mode", "loudnorm");
+      else if (activeSub === "audio-denoise") fd.append("mode", "denoise");
+      else fd.append("mode", "loudnorm");
+      const res = await fetch("/api/video-studio/audio", { method: "POST", body: fd });
+      const data = await res.json();
+      await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
+      onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration: 30, type: "video", name: "Audio Enhanced" });
+      onStatus("Audio enhanced");
+    } catch (e: any) { onStatus("Error: " + e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-1.5">
+        {cat.tools.map(t => {
+          const Icon = t.icon as any;
+          const active = activeSub === t.id;
+          return (
+            <button key={t.id} onClick={() => setActiveSub(t.id)}
+              className="p-2 rounded-xl text-left transition-all"
+              style={{ background: active ? "rgba(59,130,246,0.15)" : C.surface, border: `1px solid ${active ? "#3B82F6" : C.border}` }}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Icon className="w-3 h-3" style={{ color: active ? "#3B82F6" : C.muted }} />
+                <span className="text-[10px] font-bold" style={{ color: active ? "#3B82F6" : C.text }}>{t.label}</span>
+              </div>
+              <p className="text-[9px] leading-tight" style={{ color: C.mutedLo }}>{t.desc}</p>
+            </button>
+          );
+        })}
+      </div>
+      <button onClick={run} disabled={busy}
+        className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+        style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", color: "#fff" }}>
+        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Volume2 className="w-4 h-4" />}
+        {busy ? "Processing..." : "Apply Audio Enhancement"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Format Panel ─────────────────────────────────────────────────────────────
+function FormatPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddAudioTrack }: {
+  clipUrl: string; duration: number; onStatus: (s: string) => void;
+  projectId: string; onAddClip: (a: any) => void; onAddAudioTrack: (a: any) => void;
+}) {
+  const cat = TOOL_CATEGORIES.find(c => c.id === "format")!;
+  const [activeSub, setActiveSub] = React.useState(cat.tools[0].id);
+  const [busy, setBusy] = React.useState(false);
+  const createAsset = trpc.creatorVideoEditor.createAsset.useMutation();
+
+  const FORMAT_CONFIG: Record<string, { width: number; height: number; fps: number; crf: number }> = {
+    "format-onlyfans":  { width: 1920, height: 1080, fps: 30, crf: 18 },
+    "format-fansly":    { width: 1920, height: 1080, fps: 30, crf: 20 },
+    "format-instagram": { width: 1080, height: 1920, fps: 30, crf: 22 },
+    "format-tiktok":    { width: 1080, height: 1920, fps: 30, crf: 22 },
+    "format-twitter":   { width: 1920, height: 1080, fps: 30, crf: 23 },
+  };
+
+  const run = async () => {
+    if (!clipUrl) { onStatus("No clip selected"); return; }
+    setBusy(true);
+    try {
+      const cfg = FORMAT_CONFIG[activeSub] ?? FORMAT_CONFIG["format-onlyfans"];
+      const blob = await fetch(clipUrl).then(r => r.blob());
+      const fd = new FormData();
+      fd.append("video", blob, "clip.mp4");
+      fd.append("format", "mp4");
+      fd.append("width", String(cfg.width));
+      fd.append("height", String(cfg.height));
+      fd.append("fps", String(cfg.fps));
+      fd.append("crf", String(cfg.crf));
+      const res = await fetch("/api/video-studio/convert", { method: "POST", body: fd });
+      const data = await res.json();
+      await createAsset.mutateAsync({ fileUrl: data.url ?? "", assetType: "video", filename: "formatted_export.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
+      onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration, type: "video", name: cat.tools.find(t => t.id === activeSub)?.label ?? "Formatted" });
+      onStatus("Export ready for " + (cat.tools.find(t => t.id === activeSub)?.label ?? activeSub));
+    } catch (e: any) { onStatus("Error: " + e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-1.5">
+        {cat.tools.map(t => {
+          const Icon = t.icon as any;
+          const active = activeSub === t.id;
+          return (
+            <button key={t.id} onClick={() => setActiveSub(t.id)}
+              className="p-2 rounded-xl text-left transition-all"
+              style={{ background: active ? C.greenDim : C.surface, border: `1px solid ${active ? C.green : C.border}` }}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Icon className="w-3 h-3" style={{ color: active ? C.green : C.muted }} />
+                <span className="text-[10px] font-bold" style={{ color: active ? C.green : C.text }}>{t.label}</span>
+              </div>
+              <p className="text-[9px] leading-tight" style={{ color: C.mutedLo }}>{t.desc}</p>
+            </button>
+          );
+        })}
+      </div>
+      <button onClick={run} disabled={busy}
+        className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+        style={{ background: `linear-gradient(135deg, ${C.green}, #059669)`, color: "#fff" }}>
+        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+        {busy ? "Converting..." : "Export for Platform"}
+      </button>
+    </div>
+  );
+}
+
+
 export default function VaultXEditor() {
   // ── Existing procedures ──
   const myProjectsQ = trpc.vaultx.getMyEditorProjects.useQuery();
@@ -224,9 +1051,17 @@ export default function VaultXEditor() {
   const generateBodyCaptionsMut = trpc.vaultx.generateBodyCaptions.useMutation();
 
   // ── State ──
-  const [activeTab, setActiveTab] = useState<"enhance" | "body" | "timeline" | "publish" | "calendar">("enhance");
+  const [activeTab, setActiveTab] = useState<"enhance" | "body" | "ppv" | "censor" | "scene" | "motion" | "color" | "text" | "audio" | "format" | "timeline" | "publish" | "calendar">("enhance");
+  const [toolStatus, setToolStatus] = React.useState<string | null>(null);
+  const [editorClips, setEditorClips] = React.useState<any[]>([]);
+  const [editorAudioTracks, setEditorAudioTracks] = React.useState<any[]>([]);
+  const selectedClipDuration: number = editorClips[0]?.duration ?? 30;
+  const handleAddClip = (clip: any) => setEditorClips(prev => [clip, ...prev]);
+  const handleAddAudioTrack = (track: any) => setEditorAudioTracks(prev => [track, ...prev]);
   const [projectId, setProjectId] = useState<number | null>(null);
   const [sourceUrl, setSourceUrl] = useState("");
+  const editorProjectId: string = projectId ? String(projectId) : "default";
+  const selectedClipUrl: string = editorClips[0]?.fileUrl ?? editorClips[0]?.assetUrl ?? editorClips[0]?.src ?? sourceUrl ?? "";
   const [contentType, setContentType] = useState<"photo" | "video">("photo");
   const [analysis, setAnalysis] = useState<ContentAnalysis | null>(null);
   const [bodyMap, setBodyMap] = useState<BodyMap | null>(null);
@@ -403,11 +1238,19 @@ export default function VaultXEditor() {
         </div>
         <div className="flex items-center gap-1 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
           {[
-            { id: "enhance", label: "ENHANCE",   icon: Sparkles, color: "#8B5CF6" },
-            { id: "body",    label: "BODY INTEL", icon: Brain,    color: "#EC4899" },
-            { id: "timeline",label: "TIMELINE",   icon: Layers,   color: "#3B82F6" },
-            { id: "publish", label: "PUBLISH",    icon: Send,     color: "#10B981" },
-            { id: "calendar",label: "CALENDAR",   icon: Calendar, color: "#F59E0B" },
+            { id: "enhance", label: "ENHANCE",   icon: Sparkles,   color: "#8B5CF6" },
+            { id: "body",    label: "BODY INTEL", icon: Brain,      color: "#EC4899" },
+            { id: "ppv",     label: "PPV",        icon: Crown,      color: "#F59E0B" },
+            { id: "censor",  label: "CENSOR",     icon: ScanLine,   color: "#EC4899" },
+            { id: "scene",   label: "SCENE",      icon: Crosshair,  color: "#8B5CF6" },
+            { id: "motion",  label: "MOTION",     icon: Gauge,      color: "#3B82F6" },
+            { id: "color",   label: "COLOR",      icon: Droplets,   color: "#F59E0B" },
+            { id: "text",    label: "TEXT",        icon: Hash,       color: "#10B981" },
+            { id: "audio",   label: "AUDIO",      icon: Volume2,    color: "#3B82F6" },
+            { id: "format",  label: "FORMAT",     icon: Download,   color: "#10B981" },
+            { id: "timeline",label: "TIMELINE",   icon: Layers,     color: "#3B82F6" },
+            { id: "publish", label: "PUBLISH",    icon: Send,       color: "#10B981" },
+            { id: "calendar",label: "CALENDAR",   icon: Calendar,   color: "#F59E0B" },
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -742,6 +1585,63 @@ export default function VaultXEditor() {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* PPV TAB */}
+          {activeTab === "ppv" && (
+            <div className="p-3 overflow-y-auto flex-1">
+              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
+              <PPVPanel clipUrl={selectedClipUrl} duration={selectedClipDuration} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
+            </div>
+          )}
+          {/* CENSOR TAB */}
+          {activeTab === "censor" && (
+            <div className="p-3 overflow-y-auto flex-1">
+              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
+              <CensorPanel clipUrl={selectedClipUrl} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
+            </div>
+          )}
+          {/* SCENE TAB */}
+          {activeTab === "scene" && (
+            <div className="p-3 overflow-y-auto flex-1">
+              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
+              <ScenePanel clipUrl={selectedClipUrl} onStatus={setToolStatus} />
+            </div>
+          )}
+          {/* MOTION TAB */}
+          {activeTab === "motion" && (
+            <div className="p-3 overflow-y-auto flex-1">
+              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
+              <MotionPanel clipUrl={selectedClipUrl} duration={selectedClipDuration} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
+            </div>
+          )}
+          {/* COLOR TAB */}
+          {activeTab === "color" && (
+            <div className="p-3 overflow-y-auto flex-1">
+              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
+              <ColorPanel clipUrl={selectedClipUrl} duration={selectedClipDuration} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
+            </div>
+          )}
+          {/* TEXT TAB */}
+          {activeTab === "text" && (
+            <div className="p-3 overflow-y-auto flex-1">
+              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
+              <TextPanel clipUrl={selectedClipUrl} duration={selectedClipDuration} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
+            </div>
+          )}
+          {/* AUDIO TAB */}
+          {activeTab === "audio" && (
+            <div className="p-3 overflow-y-auto flex-1">
+              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
+              <AudioPanel clipUrl={selectedClipUrl} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
+            </div>
+          )}
+          {/* FORMAT TAB */}
+          {activeTab === "format" && (
+            <div className="p-3 overflow-y-auto flex-1">
+              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
+              <FormatPanel clipUrl={selectedClipUrl} duration={selectedClipDuration} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
             </div>
           )}
 
