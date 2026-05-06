@@ -148,7 +148,7 @@ export const teaserEngineRouter = router({
       const rows = await rawQuery(
         `SELECT c.*, cp.display_name as creator_name
          FROM vaultx_content c
-         LEFT JOIN vaultx_creator_profiles cp ON cp.user_id = c.creator_id
+         LEFT JOIN vaultx_creator_profiles cp ON cp.creator_id = c.creator_id
          WHERE c.id = ? AND c.creator_id = ?
          LIMIT 1`,
         [input.contentId, ctx.user.id]

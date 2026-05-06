@@ -13,6 +13,18 @@ export const profileRouter = router({
     await db.db.update(db.schema.users).set({ ...input, updatedAt: new Date() }).where(eq(db.schema.users.id, ctx.user.id));
     return { updated: true };
   }),
+  // Persist creator mode override to DB — called by CreatorModeContext when user manually switches mode
+  updateContentType: protectedProcedure
+    .input(z.object({
+      contentType: z.array(z.string()).min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await db.db
+        .update(db.schema.users)
+        .set({ contentType: input.contentType, updatedAt: new Date() })
+        .where(eq(db.schema.users.id, ctx.user.id));
+      return { updated: true, contentType: input.contentType };
+    }),
   getPublicProfile: protectedProcedure.input(z.object({ userId: z.number() })).query(async ({ input }) => {
     // @ts-ignore
     const [user] = await db.db.select({ id: db.schema.users.id, username: db.schema.users.username, bio: db.schema.users.bio, avatar: db.schema.users.avatar }).from(db.schema.users).where(eq(db.schema.users.id, input.userId)).limit(1);

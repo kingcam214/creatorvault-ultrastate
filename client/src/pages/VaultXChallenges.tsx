@@ -250,14 +250,18 @@ export default function VaultXChallenges() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-bold mb-4"
             style={{ background: `${accentColor}15`, borderColor: `${accentColor}40`, color: accentColor }}>
             <Flame className="w-4 h-4" />
-            VaultX Revenue Challenges
+            {isAdult ? "VaultX Revenue Challenges" : "Creator Revenue Challenges"}
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-white mb-3 tracking-tight">
-            Turn Your Content Into
-            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent"> Real Money</span>
+            {isAdult ? "Turn Your Vault Into" : "Turn Your Content Into"}
+            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent">
+              {isAdult ? " Real Income" : " Real Money"}
+            </span>
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Structured 30 and 90-day challenges with 7 proven revenue pathways. AI agents handle distribution, outreach, and optimization automatically.
+            {isAdult
+              ? "Structured 30 and 90-day challenges built for adult creators. Hit your income targets using PPV drops, subscriptions, tips, custom requests, and live events. AI agents handle distribution and optimization automatically."
+              : "Structured 30 and 90-day challenges with proven revenue pathways. Hit your income targets using brand deals, sponsorships, digital products, and platform monetization. AI agents handle outreach and optimization automatically."}
           </p>
         </div>
 

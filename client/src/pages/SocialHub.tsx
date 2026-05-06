@@ -138,6 +138,7 @@ export default function SocialHub() {
 function ConnectTab() {
   const { toast } = useToast();
   const utils = trpc.useUtils();
+  const { isAdult, accentColor } = useCreatorMode();
   const [connecting, setConnecting] = useState<string | null>(null);
 
   const { data: connectionStatus, isLoading } = trpc.oauthCallback.getConnectionStatus.useQuery();
@@ -192,18 +193,32 @@ function ConnectTab() {
         </button>
       </div>
 
-      {/* Important note for adult creators */}
-      <div className="p-4 rounded-2xl bg-amber-900/20 border border-amber-500/30">
-        <div className="flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-amber-300 font-bold text-sm mb-1">Adult Content Distribution Note</p>
-            <p className="text-amber-400/70 text-xs leading-relaxed">
-              Instagram, TikTok, Facebook, and YouTube enforce SFW-only policies. Use these platforms for teasers, SFW previews, and traffic driving only. Twitter/X supports adult content with the 18+ toggle enabled. For full uncensored distribution, use VaultX direct publishing and your subscriber messaging channels.
-            </p>
+      {/* Mode-specific distribution note */}
+      {isAdult ? (
+        <div className="p-4 rounded-2xl bg-amber-900/20 border border-amber-500/30">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-amber-300 font-bold text-sm mb-1">VaultX Adult Content Distribution</p>
+              <p className="text-amber-400/70 text-xs leading-relaxed">
+                Instagram, TikTok, Facebook, and YouTube enforce SFW-only policies. Use these platforms for teasers, SFW previews, and traffic funnels only. Twitter/X supports adult content with the 18+ toggle enabled. For full uncensored distribution, use VaultX direct publishing and your subscriber messaging channels.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="p-4 rounded-2xl bg-blue-900/20 border border-blue-500/30">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-blue-300 font-bold text-sm mb-1">Platform Distribution Tips</p>
+              <p className="text-blue-400/70 text-xs leading-relaxed">
+                Connect your accounts to enable one-click publishing across TikTok, Instagram, YouTube, and X. Use the Viral Optimizer to get platform-native captions and hashtags before publishing.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Platform cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

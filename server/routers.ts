@@ -190,6 +190,7 @@ import { vaultMomentRouter } from "./routers/vaultMomentRouter";
 import { vaultPassRouter } from "./routers/vaultPassRouter";
 import { vaultPayRouter } from "./routers/vaultPay";
 import { vaultRemixRouter } from "./routers/vaultRemixRouter";
+import { signatureTransformEngine } from "./routers/signatureTransformEngine";
 import { vaultRiseRouter } from "./routers/vaultRiseRouter";
 import { vaultSnapRouter } from "./routers/vaultSnapRouter";
 import { vaultliveProRouter } from "./routers/vaultliveProRouter";
@@ -902,6 +903,7 @@ export const appRouter = router({
   vaultPass: vaultPassRouter,
   vaultPay: vaultPayRouter,
   vaultRemix: vaultRemixRouter,
+  signatureTransform: signatureTransformEngine,
   vaultRise: vaultRiseRouter,
   vaultSnap: vaultSnapRouter,
   vaultlivePro: vaultliveProRouter,

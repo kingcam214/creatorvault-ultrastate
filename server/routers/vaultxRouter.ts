@@ -169,7 +169,7 @@ export const vaultxRouter = router({
   getMyCreatorProfile: protectedProcedure.query(async ({ ctx }) => {
     const rows = await rawQuery(
       `SELECT c.*, u.username, u.name, u.email,
-              (SELECT SUM(amount_paid) FROM vaultx_tips WHERE creator_id = c.id AND status='completed') AS total_tips,
+              (SELECT SUM(amount) FROM vaultx_tips WHERE creator_id = c.id AND status='completed') AS total_tips,
               (SELECT SUM(price_paid) FROM vaultx_subscriptions WHERE creator_id = c.id AND status='active') AS active_sub_revenue,
               (SELECT COUNT(*) FROM vaultx_subscriptions WHERE creator_id = c.id AND status='active') AS active_subscribers
        FROM vaultx_creators c

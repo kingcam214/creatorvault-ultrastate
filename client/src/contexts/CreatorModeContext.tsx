@@ -1,42 +1,26 @@
 /**
  * CreatorModeContext
  *
- * The single source of truth for whether a creator is operating in
- * ADULT (VaultX) mode or SFW (general creator) mode.
+ * Single source of truth for Adult (VaultX) vs SFW (General Creator) mode.
  *
- * How it works:
- * 1. Reads the user's `contentType` array from their profile (already in AuthContext).
- * 2. If contentType includes "adult", "vaultx", "nsfw", or "body_positive" → ADULT mode.
- * 3. Otherwise → SFW mode.
- * 4. The user can also manually override their mode via the UI (stored in localStorage
- *    so it persists across sessions without a DB round-trip).
- * 5. Every tool that imports `useCreatorMode()` gets the correct mode automatically.
+ * Persistence chain (in priority order):
+ * 1. DB: user.contentType — set during onboarding and persisted via profile.updateContentType
+ * 2. localStorage: fallback for guests or when DB hasn't loaded yet
  *
- * What each mode changes:
- * ─────────────────────────────────────────────────────────────────────────────
- * ADULT MODE (VaultX)
- *   - VaultRemix: body-positive style grades, SFW teaser generation, PPV campaigns
- *   - Thumbnail Generator: adult-niche prompts, desire-grade aesthetics, censored previews
- *   - Viral Optimizer: OnlyFans/Fansly platform options shown, adult-niche copy
- *   - Batch Ops: processes VaultX content library
- *   - All AI prompts include adult creator context
+ * When the user manually switches mode via the UI:
+ *   → profile.updateContentType mutation fires → writes to DB
+ *   → localStorage is also updated as a fast-read cache
+ *   → On next load, DB value takes precedence
  *
- * SFW MODE (General Creator)
- *   - VaultRemix: standard style grades (vibrant, clean, cinematic, etc.)
- *   - Thumbnail Generator: YouTube/TikTok/Instagram niche prompts
- *   - Viral Optimizer: standard platform options (no OF/Fansly)
- *   - Batch Ops: processes general content library
- *   - All AI prompts use general creator context
- * ─────────────────────────────────────────────────────────────────────────────
- *
- * Adding a new tool:
+ * Adding a new tool (3 lines):
  *   import { useCreatorMode } from "@/contexts/CreatorModeContext";
- *   const { isAdult, mode, niche, platformOptions, styleOptions } = useCreatorMode();
- *   // Then branch on `isAdult` or use the pre-built config objects.
+ *   const { isAdult, platformOptions, styleOptions, thumbnailNiches } = useCreatorMode();
+ *   // Branch on isAdult or use the pre-built config objects
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { useAuth } from "./AuthContext";
+import { trpc } from "@/lib/trpc";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -61,27 +45,17 @@ export interface ThumbnailNicheOption {
 }
 
 export interface CreatorModeConfig {
-  /** Whether the creator is in adult/VaultX mode */
   isAdult: boolean;
-  /** The raw mode string */
   mode: CreatorMode;
-  /** The creator's primary niche string for AI prompts */
   niche: string;
-  /** Available color grade / style options for Remix Studio */
   styleOptions: StyleOption[];
-  /** Available platforms for Viral Optimizer */
   platformOptions: PlatformOption[];
-  /** Available thumbnail niches for Thumbnail Generator */
   thumbnailNiches: ThumbnailNicheOption[];
-  /** The teaser generation context for Teaser Factory */
   teaserContext: string;
-  /** The batch processing content type label */
   batchLabel: string;
-  /** The primary brand color for this mode */
   accentColor: string;
-  /** The mode badge label shown in the UI */
   modeBadge: string;
-  /** Allow the user to manually switch mode */
+  isPersisting: boolean;
   setMode: (mode: CreatorMode) => void;
 }
 
@@ -106,7 +80,7 @@ const SFW_STYLE_OPTIONS: StyleOption[] = [
 const ADULT_PLATFORM_OPTIONS: PlatformOption[] = [
   { value: "onlyfans", label: "OnlyFans", icon: "💎" },
   { value: "fansly", label: "Fansly", icon: "🔥" },
-  { value: "tiktok", label: "TikTok (SFW)", icon: "🎵" },
+  { value: "tiktok", label: "TikTok (SFW Funnel)", icon: "🎵" },
   { value: "instagram", label: "Instagram Reels", icon: "📸" },
   { value: "x", label: "X (Twitter)", icon: "🐦" },
   { value: "reddit", label: "Reddit", icon: "🤖" },
@@ -152,40 +126,60 @@ function detectModeFromContentType(contentType: string[] | null | undefined): Cr
   return lower.some((t) => ADULT_CONTENT_TYPES.some((a) => t.includes(a))) ? "adult" : "sfw";
 }
 
+function getLocalStorageMode(): CreatorMode | null {
+  try {
+    const stored = localStorage.getItem("creatorMode");
+    return stored === "adult" || stored === "sfw" ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+function setLocalStorageMode(mode: CreatorMode) {
+  try {
+    localStorage.setItem("creatorMode", mode);
+  } catch {}
+}
+
 export function CreatorModeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
 
-  // Detect mode from user profile, fall back to localStorage override
-  const detectedMode = detectModeFromContentType(user?.contentType);
-  const [manualOverride, setManualOverride] = useState<CreatorMode | null>(() => {
-    try {
-      const stored = localStorage.getItem("creatorMode");
-      return stored === "adult" || stored === "sfw" ? stored : null;
-    } catch {
-      return null;
+  // Determine initial mode: DB value > localStorage > default sfw
+  const dbMode = detectModeFromContentType(user?.contentType);
+  const [mode, setModeState] = useState<CreatorMode>(() => {
+    // If user is loaded and has a content_type, use DB value
+    if (user?.contentType && user.contentType.length > 0) {
+      return dbMode;
     }
+    // Otherwise fall back to localStorage
+    return getLocalStorageMode() ?? "sfw";
   });
+  const [isPersisting, setIsPersisting] = useState(false);
 
-  const mode: CreatorMode = manualOverride ?? detectedMode;
-  const isAdult = mode === "adult";
-
-  const setMode = (newMode: CreatorMode) => {
-    setManualOverride(newMode);
-    try {
-      localStorage.setItem("creatorMode", newMode);
-    } catch {}
-  };
-
-  // If user profile loads and has a content type, clear any stale override
+  // When user profile loads (async), sync mode from DB
   useEffect(() => {
     if (user?.contentType && user.contentType.length > 0) {
-      // Only auto-clear if the detected mode matches — don't override intentional switches
       const detected = detectModeFromContentType(user.contentType);
-      if (detected === manualOverride) {
-        setManualOverride(null);
-      }
+      setModeState(detected);
+      setLocalStorageMode(detected);
     }
-  }, [user?.contentType]);
+  }, [user?.contentType?.join(",")]);
+
+  // tRPC mutation to persist mode to DB
+  const updateContentType = trpc.profile.updateContentType.useMutation({
+    onSuccess: () => setIsPersisting(false),
+    onError: () => setIsPersisting(false),
+  });
+
+  const setMode = useCallback((newMode: CreatorMode) => {
+    setModeState(newMode);
+    setLocalStorageMode(newMode);
+    // Persist to DB
+    setIsPersisting(true);
+    updateContentType.mutate({ contentType: [newMode] });
+  }, [updateContentType]);
+
+  const isAdult = mode === "adult";
 
   const config: CreatorModeConfig = {
     isAdult,
@@ -200,6 +194,7 @@ export function CreatorModeProvider({ children }: { children: ReactNode }) {
     batchLabel: isAdult ? "VaultX Content Library" : "Content Library",
     accentColor: isAdult ? "#a855f7" : "#3b82f6",
     modeBadge: isAdult ? "VaultX Adult" : "General Creator",
+    isPersisting,
     setMode,
   };
 
@@ -219,15 +214,15 @@ export function useCreatorMode(): CreatorModeConfig {
 }
 
 // ── Mode Switcher Component ───────────────────────────────────────────────────
-// Drop this anywhere in the UI to let the creator switch modes
 
 export function CreatorModeSwitcher({ compact = false }: { compact?: boolean }) {
-  const { mode, isAdult, setMode, modeBadge, accentColor } = useCreatorMode();
+  const { mode, isAdult, setMode, modeBadge, accentColor, isPersisting } = useCreatorMode();
 
   if (compact) {
     return (
       <button
         onClick={() => setMode(isAdult ? "sfw" : "adult")}
+        disabled={isPersisting}
         style={{
           display: "inline-flex",
           alignItems: "center",
@@ -239,13 +234,14 @@ export function CreatorModeSwitcher({ compact = false }: { compact?: boolean }) 
           color: accentColor,
           fontSize: 11,
           fontWeight: 700,
-          cursor: "pointer",
+          cursor: isPersisting ? "wait" : "pointer",
           letterSpacing: "0.03em",
+          opacity: isPersisting ? 0.7 : 1,
         }}
-        title={`Switch to ${isAdult ? "SFW" : "Adult"} mode`}
+        title={isPersisting ? "Saving mode..." : `Switch to ${isAdult ? "SFW" : "Adult"} mode`}
       >
         <span>{isAdult ? "🔞" : "✅"}</span>
-        <span>{modeBadge}</span>
+        <span>{isPersisting ? "Saving..." : modeBadge}</span>
       </button>
     );
   }
@@ -269,12 +265,16 @@ export function CreatorModeSwitcher({ compact = false }: { compact?: boolean }) 
             ? "Adult / VaultX — all adult creator tools enabled"
             : "General Creator — SFW tools and platforms only"}
         </div>
+        {isPersisting && (
+          <div style={{ fontSize: 11, color: accentColor, marginTop: 2 }}>Saving to your profile...</div>
+        )}
       </div>
       <div style={{ display: "flex", gap: 6 }}>
         {(["adult", "sfw"] as CreatorMode[]).map((m) => (
           <button
             key={m}
             onClick={() => setMode(m)}
+            disabled={isPersisting}
             style={{
               padding: "6px 14px",
               borderRadius: 8,
@@ -283,7 +283,7 @@ export function CreatorModeSwitcher({ compact = false }: { compact?: boolean }) 
               color: mode === m ? accentColor : "#6b7280",
               fontSize: 12,
               fontWeight: 700,
-              cursor: "pointer",
+              cursor: isPersisting ? "wait" : "pointer",
               textTransform: "capitalize",
             }}
           >
