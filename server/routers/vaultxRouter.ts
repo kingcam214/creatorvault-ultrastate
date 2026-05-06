@@ -577,6 +577,7 @@ export const vaultxRouter = router({
       if (!input.messageText && !input.mediaUrl) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Message or media required." });
       }
+      // Save the fan's message
       const result = await rawExec(
         `INSERT INTO vaultx_messages
          (sender_id, recipient_id, message_text, media_url, media_type, is_locked, unlock_price)
@@ -584,7 +585,65 @@ export const vaultxRouter = router({
         [ctx.user.id, input.recipientId, input.messageText || null, input.mediaUrl || null,
          input.mediaType || null, input.isLocked ? 1 : 0, input.unlockPrice]
       );
-      return { messageId: (result as any).insertId, success: true };
+      const messageId = (result as any).insertId;
+
+      // ─── AI Chatter Auto-Response ─────────────────────────────────────────
+      // If the recipient is a creator with AI chatter enabled, trigger GPT auto-reply
+      if (input.messageText) {
+        try {
+          const chatterConfig = await rawQuery(
+            `SELECT c.is_enabled, c.persona_name, c.persona_description, c.ppv_pitch_frequency
+             FROM vaultx_ai_chatter_config c
+             WHERE c.creator_id = ? AND c.is_enabled = 1 LIMIT 1`,
+            [input.recipientId]
+          );
+          if (chatterConfig.length > 0) {
+            const cfg = chatterConfig[0];
+            const personaName = cfg.persona_name || "your creator";
+            const personaDesc = cfg.persona_description || "a confident, body-positive adult content creator who is warm, flirty, and makes fans feel special";
+            // Load recent conversation history (last 6 messages)
+            const history = await rawQuery(
+              `SELECT sender_id, message_text FROM vaultx_messages
+               WHERE ((sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?))
+               AND message_text IS NOT NULL
+               ORDER BY created_at DESC LIMIT 6`,
+              [ctx.user.id, input.recipientId, input.recipientId, ctx.user.id]
+            );
+            const conversationHistory = history.reverse().map((m: any) => ({
+              role: m.sender_id === input.recipientId ? "assistant" : "user",
+              content: m.message_text || "",
+            }));
+            // Decide if we should pitch PPV (every N messages based on frequency setting)
+            const pitchFreq = cfg.ppv_pitch_frequency || 5;
+            const msgCount = history.length;
+            const includePpvPitch = msgCount > 0 && msgCount % pitchFreq === 0;
+            // Build GPT messages array
+            const systemPrompt = `You are ${personaName} — ${personaDesc}. You are responding to a fan on VaultX, an adult content platform. Be authentic, warm, and engaging. ${includePpvPitch ? "Naturally weave in a mention of exclusive PPV content they can unlock to see more." : ""} Keep responses conversational, 1-3 sentences max. Sound like a real person, not a bot.`;
+            const gptMessages: any[] = [{ role: "system", content: systemPrompt }, ...conversationHistory, { role: "user", content: input.messageText }];
+            const { OpenAI } = await import("openai");
+            const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+            const gptResp = await openaiClient.chat.completions.create({
+              model: "gpt-4.1-mini",
+              messages: gptMessages,
+              max_tokens: 200,
+              temperature: 0.85,
+            });
+            const aiReply = gptResp.choices[0].message.content || `Hey! Thanks for reaching out 💕`;
+            // Save AI reply as a message from the creator (is_ai_generated flag)
+            await rawExec(
+              `INSERT INTO vaultx_messages
+               (sender_id, recipient_id, message_text, is_locked, unlock_price, is_ai_generated)
+               VALUES (?, ?, ?, 0, 0, 1)`,
+              [input.recipientId, ctx.user.id, aiReply]
+            );
+          }
+        } catch (aiErr) {
+          // AI chatter errors are non-fatal — fan message was already saved
+          console.error("[AI Chatter] Auto-response failed:", aiErr);
+        }
+      }
+
+      return { messageId, success: true };
     }),
 
   // ═══════════════════════════════════════════════════════════════════════════

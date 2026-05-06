@@ -516,7 +516,7 @@ export default function OwnerCockpit() {
                 { path: "/dayshift-doctor",    label: "DayShift Doctor",       category: "Ops"     },
                 { path: "/kingcam-clone",      label: "KingCam Clone",         category: "AI"      },
                 { path: "/vaultx",             label: "VaultX",                category: "VaultX"  },
-                { path: "/vaultx-video-editor",label: "VaultX Video Editor",   category: "VaultX"  },
+                { path: "/vault-x/editor",label: "VaultX Editor",   category: "VaultX"  },
                 { path: "/telegram-money-hub", label: "Telegram Money Hub",    category: "Revenue" },
                 { path: "/podcast-studio",     label: "Podcast Studio",        category: "Media"   },
                 { path: "/image-lab",          label: "Image Lab",             category: "Design"  },

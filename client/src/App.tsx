@@ -440,7 +440,6 @@ import VaultXOnboarding from "./pages/VaultXOnboarding";
 import VaultXStudio from "./pages/VaultXStudio";
 import VaultXEditor from "./pages/VaultXEditor";
 import VaultXAnalytics from "./pages/VaultXAnalytics";
-import VaultXVideoEditor from "./pages/VaultXVideoEditor";
 import VideoOS from "./pages/VideoOS";
 import Waitlist from "./pages/Waitlist";
 import LirysMissedRevenue from "./pages/greatest-show/LirysMissedRevenue";
@@ -451,8 +450,6 @@ import CloneStudio from "./pages/king/CloneStudio";
 import MediaVault from "./pages/king/MediaVault";
 import ChallengeStoryEngine from "./pages/king/ChallengeStoryEngine";
 import ViralOptimizerV2 from "./pages/tools/ViralOptimizerV2";
-import VaultXVideoEditorVideoeditorOrphan from "./pages/videoeditor/VaultXVideoEditor";
-import VaultXVideoEditorProjects from "./pages/videoeditor/VaultXVideoEditorProjects";
 // import ChuuchCode from "./pages/ChuuchCode";
 // import ChuuchEvents from "./pages/ChuuchEvents";
 // import ShowPage from "./pages/ShowPage";
@@ -764,8 +761,8 @@ function Router() {
       <Route path="/vault-x/studio" component={VaultXStudio} />
       <Route path="/vault-x/editor" component={VaultXEditor} />
       <Route path="/vault-x/analytics" component={VaultXAnalytics} />
-      <Route path="/vaultx/video-editor/:projectId" component={VaultXVideoEditor} />
-      <Route path="/vaultx/video-editor" component={VaultXVideoEditor} />
+      <Route path="/vaultx/video-editor/:projectId">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+      <Route path="/vaultx/video-editor">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
       {/* Redirect aliases for OwnerCockpit and legacy links */}
       <Route path="/vaultx">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
       <Route path="/vaultx-video-editor">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
@@ -779,8 +776,8 @@ function Router() {
       <Route path="/king/media-vault" component={MediaVault} />
       <Route path="/king/challenge-story" component={ChallengeStoryEngine} />
       <Route path="/tools/viral-optimizer-v2" component={ViralOptimizerV2} />
-      <Route path="/videoeditor/vaultx" component={VaultXVideoEditorVideoeditorOrphan} />
-      <Route path="/videoeditor/vaultx-projects" component={VaultXVideoEditorProjects} />
+      <Route path="/videoeditor/vaultx">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+      <Route path="/videoeditor/vaultx-projects">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
       <Route component={NotFound} />
       </Switch>
       </div>

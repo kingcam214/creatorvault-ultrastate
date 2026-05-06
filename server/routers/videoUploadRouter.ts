@@ -1,18 +1,54 @@
 /**
- * Video Upload Router — Chunked Upload for Content Vault
+ * VaultX Content Vault — Chunked Upload Router
  * ============================================================================
- * Auto-finalizes on last chunk. Returns { complete: true, file: { url } }
- * when all chunks received. Uses local file serving instead of storagePut.
+ * Chunks land on temp disk → assembled → pushed to storagePut CDN
+ * Returns persistent CDN URL. No local disk storage for final files.
  * ============================================================================
  */
 import { Router, Request, Response } from "express";
-    // @ts-ignore
+// @ts-ignore
 import multer from "multer";
-import { writeFile, readFile, unlink, mkdir } from "fs/promises";
+import { writeFile, readFile, unlink, mkdir, rmdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 import os from "os";
 import { randomUUID } from "crypto";
+import { storagePut } from "../storage";
+
+// ─── Helper: mime type from filename ─────────────────────────────────────────
+function getMimeType(filename: string): string {
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  const map: Record<string, string> = {
+    mp4: "video/mp4", mov: "video/quicktime", avi: "video/x-msvideo",
+    mkv: "video/x-matroska", webm: "video/webm", m4v: "video/mp4",
+    jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
+    gif: "image/gif", webp: "image/webp",
+    mp3: "audio/mpeg", wav: "audio/wav", m4a: "audio/mp4", aac: "audio/aac",
+  };
+  return map[ext] ?? "application/octet-stream";
+}
+
+// ─── Helper: assemble chunks + push to CDN ───────────────────────────────────
+async function assembleAndUpload(sessionDir: string, meta: any): Promise<{ url: string; filename: string }> {
+  const chunks: Buffer[] = [];
+  for (let i = 0; i < meta.totalChunks; i++) {
+    const cp = path.join(sessionDir, `chunk-${i.toString().padStart(5, "0")}`);
+    chunks.push(await readFile(cp));
+  }
+  const combined = Buffer.concat(chunks);
+  const finalFilename = meta.filename || `upload-${meta.uploadId}.mp4`;
+  const uuid = randomUUID();
+  const storageKey = `vaultx/content-vault/${uuid}/${finalFilename}`;
+  const mimeType = getMimeType(finalFilename);
+  const { url } = await storagePut(storageKey, combined, mimeType);
+  // Cleanup temp chunks
+  for (let i = 0; i < meta.totalChunks; i++) {
+    await unlink(path.join(sessionDir, `chunk-${i.toString().padStart(5, "0")}`)).catch(() => {});
+  }
+  await unlink(path.join(sessionDir, "meta.json")).catch(() => {});
+  await rmdir(sessionDir).catch(() => {});
+  return { url, filename: finalFilename };
+}
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 export const videoUploadRouter = Router();
@@ -59,33 +95,13 @@ videoUploadRouter.post("/chunk", upload.single("chunk"), async (req: Request, re
     meta.receivedChunks = (meta.receivedChunks || 0) + 1;
     await writeFile(path.join(sessionDir, "meta.json"), JSON.stringify(meta));
 
-    // Auto-finalize when all chunks received
+    // Auto-finalize when all chunks received — push to CDN
     if (meta.receivedChunks >= meta.totalChunks) {
-      const chunks: Buffer[] = [];
-      for (let i = 0; i < meta.totalChunks; i++) {
-        const cp = path.join(sessionDir, `chunk-${i.toString().padStart(5, "0")}`);
-        chunks.push(await readFile(cp));
-      }
-      const combined = Buffer.concat(chunks);
-      const finalFilename = meta.filename || `upload-${uploadId}.mp4`;
-      const uuid = randomUUID();
-      const uploadsDir = path.resolve(process.cwd(), "..", "uploads", "content-vault", uuid);
-      await mkdir(uploadsDir, { recursive: true });
-      await writeFile(path.join(uploadsDir, finalFilename), combined);
-
-      const baseUrl = (process.env.APP_URL || "https://creatorvault.live").replace(/\/$/, "");
-      const url = `${baseUrl}/uploads/content-vault/${uuid}/${finalFilename}`;
-
-      // Cleanup temp chunks
-      for (let i = 0; i < meta.totalChunks; i++) {
-        await unlink(path.join(sessionDir, `chunk-${i.toString().padStart(5, "0")}`)).catch(() => {});
-      }
-      await unlink(path.join(sessionDir, "meta.json")).catch(() => {});
-
+      const { url, filename: finalFilename } = await assembleAndUpload(sessionDir, meta);
       return res.json({
         uploadId, chunkIndex, received: meta.receivedChunks, total: meta.totalChunks,
         complete: true,
-        file: { url, filename: finalFilename, size: combined.length }
+        file: { url, filename: finalFilename }
       });
     }
 
@@ -105,25 +121,9 @@ videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Upload session not found" });
     }
     const meta = JSON.parse(await readFile(path.join(sessionDir, "meta.json"), "utf-8"));
-    const chunks: Buffer[] = [];
-    for (let i = 0; i < meta.totalChunks; i++) {
-      const chunkPath = path.join(sessionDir, `chunk-${i.toString().padStart(5, "0")}`);
-      chunks.push(await readFile(chunkPath));
-    }
-    const combined = Buffer.concat(chunks);
-    const finalFilename = filename || meta.filename || `upload-${uploadId}.mp4`;
-    const uuid = randomUUID();
-    const uploadsDir = path.resolve(process.cwd(), "..", "uploads", "content-vault", uuid);
-    await mkdir(uploadsDir, { recursive: true });
-    await writeFile(path.join(uploadsDir, finalFilename), combined);
-    const baseUrl = (process.env.APP_URL || "https://creatorvault.live").replace(/\/$/, "");
-    const url = `${baseUrl}/uploads/content-vault/${uuid}/${finalFilename}`;
-    // Cleanup
-    for (let i = 0; i < meta.totalChunks; i++) {
-      await unlink(path.join(sessionDir, `chunk-${i.toString().padStart(5, "0")}`)).catch(() => {});
-    }
-    await unlink(path.join(sessionDir, "meta.json")).catch(() => {});
-    res.json({ url, filename: finalFilename, size: combined.length });
+    if (filename) meta.filename = filename;
+    const { url, filename: finalFilename } = await assembleAndUpload(sessionDir, meta);
+    res.json({ url, filename: finalFilename });
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }
