@@ -8,6 +8,7 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "../hooks/use-toast";
+import { useCreatorMode, CreatorModeSwitcher } from "@/contexts/CreatorModeContext";
 import {
   Link2, Link2Off, CheckCircle2, XCircle, RefreshCw, Trash2,
   Send, Calendar, Zap, Globe, Clock, TrendingUp, Users,
@@ -69,6 +70,7 @@ const TABS = [
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function SocialHub() {
   const [activeTab, setActiveTab] = useState("connect");
+  const { isAdult, accentColor } = useCreatorMode();
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -81,14 +83,23 @@ export default function SocialHub() {
       <div className="relative z-10 max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
-              <Globe className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${accentColor}20`, border: `1px solid ${accentColor}40` }}>
+                <Globe className="w-5 h-5" style={{ color: accentColor }} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-white tracking-tight">
+                  {isAdult ? "Social Distribution Hub" : "Social Hub"}
+                </h1>
+                <p className="text-gray-500 text-sm">
+                  {isAdult
+                    ? "Drive fans from free social to your paid vault — teaser strategy, SFW funnels, and autopilot"
+                    : "Connect, post, schedule, and automate across every platform"}
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-black text-white tracking-tight">Social Hub</h1>
-              <p className="text-gray-500 text-sm">Connect, post, schedule, and automate across every platform</p>
-            </div>
+            <CreatorModeSwitcher compact />
           </div>
         </div>
 

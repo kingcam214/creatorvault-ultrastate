@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "../hooks/use-toast";
+import { useCreatorMode, CreatorModeSwitcher } from "@/contexts/CreatorModeContext";
 import {
   Trophy, Target, DollarSign, TrendingUp, Zap, Users, Star,
   Lock, CheckCircle2, ArrowRight, Flame, Crown, Clock,
@@ -192,6 +193,7 @@ const PATHWAYS = [
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function VaultXChallenges() {
   const { toast } = useToast();
+  const { isAdult, accentColor, modeBadge } = useCreatorMode();
   const [activeChallenge, setActiveChallenge] = useState<"5k" | "15k">("5k");
   const [expandedPathway, setExpandedPathway] = useState<string | null>("subscriptions");
   const [joinLoading, setJoinLoading] = useState(false);
@@ -242,7 +244,11 @@ export default function VaultXChallenges() {
 
         {/* Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-purple-500/30 text-purple-300 text-sm font-bold mb-4">
+          <div className="flex justify-end mb-4">
+            <CreatorModeSwitcher compact />
+          </div>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-bold mb-4"
+            style={{ background: `${accentColor}15`, borderColor: `${accentColor}40`, color: accentColor }}>
             <Flame className="w-4 h-4" />
             VaultX Revenue Challenges
           </div>
