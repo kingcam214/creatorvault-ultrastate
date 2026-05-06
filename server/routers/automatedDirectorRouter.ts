@@ -1,15 +1,15 @@
 /**
  * VaultX Automated Director — Replicate Multi-Model Pipeline
- * Model A (Motion): Kling 2.1 / Stable Video Diffusion — cinematic motion effects
- * Model B (Style): Flux + ControlNet — Desire-Grade color/LUT application
+ * Model A (Motion): minimax/video-01 — cinematic image-to-video
+ * Model B (Style): Flux 1.1 Pro — Desire-Grade color/LUT application
  * Model C (Enhance): GFPGAN + Real-ESRGAN — facial and texture enhancement
- * 
+ *
  * Pipeline: raw_clip → enhance → style_grade → motion_add → schedule_post
  */
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import { db } from "../db";
-import { eq, desc, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;
 
@@ -23,14 +23,24 @@ async function replicateRun(
     throw new Error("REPLICATE_API_TOKEN not configured — stopping pipeline as instructed");
   }
 
-  // Create prediction
-  const createRes = await fetch("https://api.replicate.com/v1/predictions", {
+  // Determine if model includes a version hash (owner/name:version) or is a model path
+  const hasVersion = model.includes(":");
+  const body = hasVersion
+    ? JSON.stringify({ version: model.split(":")[1], input })
+    : JSON.stringify({ model, input });
+
+  const endpoint = hasVersion
+    ? "https://api.replicate.com/v1/predictions"
+    : "https://api.replicate.com/v1/models/" + model + "/predictions";
+
+  const createRes = await fetch(endpoint, {
     method: "POST",
     headers: {
       Authorization: `Token ${REPLICATE_TOKEN}`,
       "Content-Type": "application/json",
+      "Prefer": "wait",
     },
-    body: JSON.stringify({ version: model, input }),
+    body,
   });
 
   if (!createRes.ok) {
@@ -42,6 +52,12 @@ async function replicateRun(
   }
 
   const prediction = await createRes.json();
+
+  // If Prefer: wait returned a completed prediction immediately
+  if (prediction.status === "succeeded") {
+    return { output: prediction.output, status: "succeeded" };
+  }
+
   const predictionId = prediction.id;
 
   // Poll for completion
@@ -65,17 +81,15 @@ async function replicateRun(
   return { output: null, status: "timeout", error: "Prediction timed out" };
 }
 
-// ── Model A: Motion (Kling 2.1 via Replicate) ─────────────────────────────────
+// ── Model A: Motion (minimax/video-01 via Replicate) ─────────────────────────
 async function applyMotionEffects(imageUrl: string, prompt: string): Promise<string> {
-  // Kling 2.1 image-to-video
+  // minimax/video-01: image-to-video, takes first_frame_image + prompt
   const result = await replicateRun(
-    "klingai/kling-v2-1-standard-image-to-video:latest",
+    "minimax/video-01:5aa835260ff7f40f4069c41185f72036accf99e29957bb4a3b3a911f3b6c1912",
     {
-      image: imageUrl,
-      prompt: prompt || "Cinematic slow motion, soft bokeh, golden hour lighting, professional film look",
-      duration: 5,
-      aspect_ratio: "9:16",
-      cfg_scale: 0.5,
+      first_frame_image: imageUrl,
+      prompt: prompt || "Cinematic slow motion, soft bokeh, golden hour lighting, body-positive celebration, professional film look",
+      prompt_optimizer: true,
     }
   );
   if (result.status !== "succeeded" || !result.output) {
@@ -84,7 +98,7 @@ async function applyMotionEffects(imageUrl: string, prompt: string): Promise<str
   return Array.isArray(result.output) ? result.output[0] : result.output;
 }
 
-// ── Model B: Style/Color Grade (Flux + SDXL ControlNet) ──────────────────────
+// ── Model B: Style/Color Grade (Flux 1.1 Pro) ────────────────────────────────
 async function applyDesireGrade(imageUrl: string, style: string): Promise<string> {
   const stylePrompts: Record<string, string> = {
     "desire": "warm golden tones, soft shadows, cinematic color grade, skin-flattering warm highlights, professional photography",
@@ -177,7 +191,7 @@ export const automatedDirectorRouter = router({
       );
       return {
         outputUrl: videoUrl,
-        model: "kling-v2.1",
+        model: "minimax/video-01",
         type: "motion",
         inputUrl: input.imageUrl,
         timestamp: new Date().toISOString(),
@@ -233,20 +247,20 @@ export const automatedDirectorRouter = router({
       outputType: z.enum(["video", "image"]).default("video"),
     }))
     .mutation(async ({ input }) => {
-      const pipeline = [];
+      const pipeline: Array<{ step: string; status: string; outputUrl?: string }> = [];
       let currentUrl = input.imageUrl;
 
       // Step 1: Enhance
       pipeline.push({ step: "enhance", status: "running" });
       const enhanced = await applyEnhancement(currentUrl, input.enhanceType);
       currentUrl = enhanced;
-      pipeline[0].status = "complete";
+      pipeline[0] = { step: "enhance", status: "complete", outputUrl: enhanced };
 
       // Step 2: Style Grade
       pipeline.push({ step: "style", status: "running" });
       const styled = await applyDesireGrade(currentUrl, input.style);
       currentUrl = styled;
-      pipeline[1].status = "complete";
+      pipeline[1] = { step: "style", status: "complete", outputUrl: styled };
 
       // Step 3: Motion (only if video output requested)
       let finalUrl = currentUrl;
@@ -254,10 +268,10 @@ export const automatedDirectorRouter = router({
         pipeline.push({ step: "motion", status: "running" });
         const video = await applyMotionEffects(
           currentUrl,
-          input.motionPrompt || "Cinematic slow motion, professional quality"
+          input.motionPrompt || "Cinematic slow motion, professional quality, body-positive aesthetic"
         );
         finalUrl = video;
-        pipeline[2].status = "complete";
+        pipeline[2] = { step: "motion", status: "complete", outputUrl: video };
       }
 
       return {
@@ -278,7 +292,6 @@ export const automatedDirectorRouter = router({
       style: z.enum(["desire", "velvet", "sunrise", "midnight", "natural"]).default("desire"),
     }))
     .mutation(async ({ input }) => {
-      // Pull creator's best performing raw content via raw query
       const pool = (db as any).$client || (db as any).client;
       let content: any[] = [];
       try {

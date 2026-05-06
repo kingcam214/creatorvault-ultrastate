@@ -144,6 +144,14 @@ export const teaserEngineRouter = router({
       customPrompt: z.string().max(500).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // Resolve creator_id from user_id via vaultx_creators table
+      const creatorLookup = await rawQuery(
+        `SELECT id FROM vaultx_creators WHERE user_id = ? LIMIT 1`,
+        [ctx.user.id]
+      ) as Array<{ id: number }>;
+      const creatorId = creatorLookup.length ? creatorLookup[0].id : null;
+      if (!creatorId) throw new Error("Creator profile not found — complete VaultX onboarding first");
+
       // 1. Fetch the content item — must belong to this creator
       const rows = await rawQuery(
         `SELECT c.*, cp.display_name as creator_name
@@ -151,7 +159,7 @@ export const teaserEngineRouter = router({
          LEFT JOIN vaultx_creator_profiles cp ON cp.creator_id = c.creator_id
          WHERE c.id = ? AND c.creator_id = ?
          LIMIT 1`,
-        [input.contentId, ctx.user.id]
+        [input.contentId, creatorId]
       ) as Array<{
         id: number;
         title: string;
@@ -179,15 +187,13 @@ export const teaserEngineRouter = router({
 
       const finalPrompt = input.customPrompt || stylePrompts[input.teaserStyle];
 
-      // 4. Call Replicate Kling 2.1 — real API call
+      // 4. Call Replicate minimax/video-01 — image-to-video, real API call
       const teaserUrl = await replicatePredictByModel(
-        "klingai/kling-v2-1-standard-image-to-video",
+        "minimax/video-01",
         {
-          image: sourceImageUrl,
+          first_frame_image: sourceImageUrl,
           prompt: finalPrompt,
-          duration: 5,
-          aspect_ratio: "9:16",
-          cfg_scale: 0.5,
+          prompt_optimizer: true,
         }
       );
 
@@ -196,7 +202,7 @@ export const teaserEngineRouter = router({
         `UPDATE vaultx_content
          SET censored_url = ?, is_free_preview = 1, free_preview_seconds = 15, updated_at = NOW()
          WHERE id = ? AND creator_id = ?`,
-        [teaserUrl, input.contentId, ctx.user.id]
+        [teaserUrl, input.contentId, creatorId]
       );
 
       return {
