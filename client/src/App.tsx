@@ -12,6 +12,7 @@ import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { CreatorModeProvider } from "./contexts/CreatorModeContext";
 import Home from "./pages/Home";
 // import BusinessCardDesigner from "./pages/BusinessCardDesigner";
 // import CardEditor from "./pages/CardEditor";
@@ -804,7 +805,9 @@ function App() {
       >
         <TooltipProvider>
           <AuthProvider>
-            <Router />
+            <CreatorModeProvider>
+              <Router />
+            </CreatorModeProvider>
           </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>
