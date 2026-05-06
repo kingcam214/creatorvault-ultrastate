@@ -1,14 +1,11 @@
 name: Deploy to CreatorVault VPS
-
 on:
   push:
     branches:
       - main
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -17,26 +14,28 @@ jobs:
         run: |
           echo "{\"commit\":\"${{ github.sha }}\",\"branch\":\"${{ github.ref_name }}\",\"timestamp\":\"$(date -Iseconds)\",\"environment\":\"production\"}" > public/release.json
 
-      - name: Sync repo to VPS and deploy
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.CREATORVAULT_VPS_HOST }}
-          username: ${{ secrets.CREATORVAULT_VPS_USER }}
-          key: ${{ secrets.CREATORVAULT_VPS_SSH_KEY }}
-          port: 22
-          script: |
+      - name: Deploy to VPS via SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          cat << 'SSHKEY' > ~/.ssh/deploy_key
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACBbvshh3As/xeZuNY363aKYwbcp0P/dz56/65vLLGXyZAAAAJgszduILM3b
+iAAAAAtzc2gtZWQyNTUxOQAAACBbvshh3As/xeZuNY363aKYwbcp0P/dz56/65vLLGXyZA
+AAAEB3MjakLcgM1pyqEt6rEc0w0UhuvljPJtLajdjNi7LXk1u+yGHcCz/F5m41jfrdopjB
+tynQ/93Pnr/rm8ssZfJkAAAAE21hbnVzLXZhdWx0eC1kZXBsb3kBAg==
+-----END OPENSSH PRIVATE KEY-----
+SSHKEY
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H 134.199.202.69 >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no root@134.199.202.69 "
             set -euo pipefail
-
             cd /root/creatorvault
-
             git fetch origin main
-            git checkout main
             git reset --hard origin/main
-
             pnpm install --frozen-lockfile
             pnpm build
-
-            chmod +x ./deploy_work_to_prod.sh
-            ./deploy_work_to_prod.sh
-
             pm2 reload all || pm2 restart all
+            echo DEPLOY_OK
+          "
