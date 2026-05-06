@@ -89,6 +89,9 @@ import { emmaCaseStudyRouter } from "./routers/emmaCaseStudyRouter";
 import { chicaCockpitRouter } from './routers/chicaCockpitRouter';
 import { chicaFunnelRouter } from './routers/chicaFunnelRouter';
 import { recruitmentWeaponRouter } from "./routers/recruitmentWeaponRouter";
+import { creatorOutreachRouter } from "./routers/creatorOutreachRouter";
+import { automatedDirectorRouter } from "./routers/automatedDirectorRouter";
+import { revenueReportingRouter } from "./routers/revenueReportingRouter";
 import { chicasEmpireRouter } from "./routers/chicasEmpireRouter";
 import { competitorIntelRouter } from "./routers/competitorIntelRouter";
 import { appleQRouter } from "./routers/appleQRouter";
@@ -977,6 +980,10 @@ export const appRouter = router({
   cloneEmpire: cloneEmpireRouter,
   agentTelemetry: agentTelemetryRouter,
   challengeAutomation: challengeAutomationRouter,
+  // ── VaultX Revenue Operations Pipeline ──────────────────────────────────────
+  creatorOutreach: creatorOutreachRouter,
+  automatedDirector: automatedDirectorRouter,
+  revenueReporting: revenueReportingRouter,
 });
 
 export type AppRouter = typeof appRouter;

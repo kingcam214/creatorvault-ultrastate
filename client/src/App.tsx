@@ -71,11 +71,11 @@ import CreatorVideoStudio from "./pages/CreatorVideoStudio";
 import AdultSalesBot from "./pages/AdultSalesBot";
 // import CreatorManagement from "./pages/CreatorManagement";
 // import Onboard from "./pages/Onboard";
-// import { MultiPlatformPosting } from "./pages/MultiPlatformPosting";
-// import { ContentScheduler } from "./pages/ContentScheduler";
+// // import { MultiPlatformPosting } from "./pages/MultiPlatformPosting"; // MERGED into SocialHub
+// // import { ContentScheduler } from "./pages/ContentScheduler"; // MERGED into SocialHub
 // import { CreatorAnalyticsDashboard } from "./pages/CreatorAnalyticsDashboard";
-// import { PlatformConnections } from "./pages/PlatformConnections";
-// import UnifiedContentPublisher from "./pages/UnifiedContentPublisher";
+// // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
+// // import UnifiedContentPublisher from "./pages/UnifiedContentPublisher"; // MERGED into SocialHub
 // import VaultLiveSimple from "./pages/VaultLiveSimple";
 import EmmaNetwork from "./pages/EmmaNetwork";
 // import InfluencerOnboarding from "./pages/InfluencerOnboarding";
@@ -190,7 +190,7 @@ import ChuuchTeaching from "./pages/ChuuchTeaching";
 import ChuuchTransition from "./pages/ChuuchTransition";
 import CommandHubV2 from "./pages/CommandHubV2";
 import ContentDashboard from "./pages/ContentDashboard";
-import { ContentScheduler } from "./pages/ContentScheduler";
+// import { ContentScheduler } from "./pages/ContentScheduler"; // MERGED into SocialHub
 import ControlRoom from "./pages/ControlRoom";
 import { CreatorAnalyticsDashboard } from "./pages/CreatorAnalyticsDashboard";
 import CreatorEarnings from "./pages/CreatorEarnings";
@@ -278,7 +278,7 @@ import MarketplaceProduct from "./pages/MarketplaceProduct";
 import MessageThread from "./pages/MessageThread";
 import Messages from "./pages/Messages";
 import MonetizationPipeline from "./pages/MonetizationPipeline";
-import { MultiPlatformPosting } from "./pages/MultiPlatformPosting";
+// import { MultiPlatformPosting } from "./pages/MultiPlatformPosting"; // MERGED into SocialHub
 import MusicAI from "./pages/MusicAI";
 import MusicLibrary from "./pages/MusicLibrary";
   // @ts-ignore
@@ -292,7 +292,7 @@ import OnboardingV2 from "./pages/OnboardingV2";
 import OperatorDashboard from "./pages/OperatorDashboard";
 import OwnerCockpit from "./pages/OwnerCockpit";
 import PerformanceAnalytics from "./pages/PerformanceAnalytics";
-import { PlatformConnections } from "./pages/PlatformConnections";
+// import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
 import PlatformWarRoom from "./pages/PlatformWarRoom";
 import PodcastStudio from "./pages/PodcastStudio";
 import PresentationBuilder from "./pages/PresentationBuilder";
@@ -311,7 +311,7 @@ import StudioSlots from "./pages/StudioSlots";
 import Subscriptions from "./pages/Subscriptions";
 import TelegramMoneyHub from "./pages/TelegramMoneyHub";
 import ThumbnailGeneratorUI from "./pages/ThumbnailGeneratorUI";
-import UnifiedContentPublisher from "./pages/UnifiedContentPublisher";
+// import UnifiedContentPublisher from "./pages/UnifiedContentPublisher"; // MERGED into SocialHub
 import University from "./pages/University";
 import VaultAnalytics from "./pages/VaultAnalytics";
 import VaultCulture from "./pages/VaultCulture";
@@ -425,7 +425,9 @@ import OpsStatusPage from "./pages/OpsStatusPage";
 import Podcasting from "./pages/Podcasting";
 import RealGPTDashboard from "./pages/RealGPTDashboard";
 import Shop from "./pages/Shop";
-import SocialAutoposterAgent from "./pages/SocialAutoposterAgent";
+// import SocialAutoposterAgent from "./pages/SocialAutoposterAgent"; // MERGED into SocialHub
+import SocialHub from "./pages/SocialHub";
+import OutreachCommandCenter from "./pages/OutreachCommandCenter";
 import SocialFactory from "./pages/SocialFactory";
 import SocialPostingHub from "./pages/SocialPostingHub";
 import SpatialComposer from "./pages/SpatialComposer";
@@ -532,10 +534,11 @@ function Router() {
       <Route path={"/onboard/influencer"} component={InfluencerOnboarding} />
       <Route path={"/onboard/creator"} component={CreatorOnboarding} />
       <Route path={"/influencer"} component={InfluencerDashboard} />
-      <Route path={"/multi-platform-posting"} component={MultiPlatformPosting} />
-      <Route path={"/content-scheduler"} component={ContentScheduler} />
-      <Route path={"/platform-connections"} component={PlatformConnections} />
-      <Route path={"/unified-publisher"} component={UnifiedContentPublisher} />
+      <Route path="/social-hub" component={SocialHub} />
+      <Route path="/outreach" component={OutreachCommandCenter} />
+
+
+
       <Route path={"/vaultlive"} component={VaultLiveSimple} />
       <Route path={"/vault-live"} component={VaultLiveSimple} />
       <Route path={"/live"} component={BrowseLive} />
@@ -745,7 +748,7 @@ function Router() {
       <Route path="/podcasting-home" component={Podcasting} />
       <Route path="/realgpt/dashboard" component={RealGPTDashboard} />
       <Route path="/shop" component={Shop} />
-      <Route path="/agents/social-autoposter-agent" component={SocialAutoposterAgent} />
+      {/* social-autoposter-agent merged into /social-hub */}
       <Route path="/social/factory" component={SocialFactory} />
       <Route path="/social/posting-hub" component={SocialPostingHub} />
       <Route path="/tools/spatial-composer" component={SpatialComposer} />

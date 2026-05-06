@@ -1058,7 +1058,19 @@ export const vaultxRouter = router({
                 u.username,
                 (SELECT censored_thumbnail_url FROM vaultx_content
                  WHERE creator_id = c.id AND status = 'active'
-                 ORDER BY created_at DESC LIMIT 1) AS latest_censored_thumb
+                 ORDER BY created_at DESC LIMIT 1) AS latest_censored_thumb,
+                (SELECT video_url FROM vaultx_content
+                 WHERE creator_id = c.id AND status = 'active' AND content_type = 'video'
+                 ORDER BY created_at DESC LIMIT 1) AS latest_video_url,
+                (SELECT title FROM vaultx_content
+                 WHERE creator_id = c.id AND status = 'active'
+                 ORDER BY created_at DESC LIMIT 1) AS latest_content_title,
+                (SELECT like_count FROM vaultx_content
+                 WHERE creator_id = c.id AND status = 'active'
+                 ORDER BY created_at DESC LIMIT 1) AS latest_like_count,
+                (SELECT view_count FROM vaultx_content
+                 WHERE creator_id = c.id AND status = 'active'
+                 ORDER BY created_at DESC LIMIT 1) AS latest_view_count
          FROM vaultx_creators c
          LEFT JOIN users u ON u.id = c.user_id
          WHERE c.is_active = 1 ${langWhere}

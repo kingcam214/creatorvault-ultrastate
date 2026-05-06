@@ -214,145 +214,294 @@ function CreatorCard({ creator, onClick }: { creator: any; onClick: () => void }
 // ============================================================================
 
 // ============================================================================
-// FOR YOU FEED — Real content from vaultx_content table
+// ============================================================================
+// FOR YOU FEED — Full-screen vertical video player (TikTok/Pollo-style)
 // ============================================================================
 function ForYouFeed() {
-  const { data: feedData, isLoading } = trpc.vaultx.getForYouFeed.useQuery(
-    { limit: 20, offset: 0 },
-    { retry: false }
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [allItems, setAllItems] = useState<any[]>([]);
+  const [likedItems, setLikedItems] = useState<Set<number>>(new Set());
+  const [sort, setSort] = useState<"trending" | "top_earners" | "new" | "price_low">("trending");
+  const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const { data, isLoading } = trpc.vaultx.getForYouFeed.useQuery(
+    { sort, limit: 10, offset },
+    { placeholderData: (prev: any) => prev }
   );
-  const items = (feedData as any)?.items || [];
-  const [expandedItem, setExpandedItem] = useState<string | null>(null);
+
+  const subscribeMut = trpc.vaultx.subscribeToCreator.useMutation();
   const buyPPV = trpc.vaultx.purchasePpv.useMutation();
 
-  if (isLoading) return (
-    <div className="space-y-3">
-      {[1,2,3].map(i => (
-        <div key={i} className="bg-gray-900 rounded-2xl h-48 animate-pulse" />
-      ))}
-    </div>
-  );
+  // Accumulate items as user scrolls
+  useEffect(() => {
+    if (data?.creators) {
+      if (offset === 0) {
+        setAllItems(data.creators);
+      } else {
+        setAllItems(prev => [...prev, ...data.creators]);
+      }
+    }
+  }, [data, offset]);
 
-  if (items.length === 0) return (
-    <div className="text-center py-12 text-gray-600">
-      <Flame className="w-10 h-10 mx-auto mb-3 opacity-30" />
-      <div className="font-semibold">No content yet</div>
-      <div className="text-sm mt-1">Be the first to post on VaultX</div>
-    </div>
-  );
+  // Autoplay current video, pause others
+  useEffect(() => {
+    videoRefs.current.forEach((video, idx) => {
+      if (idx === currentIndex) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+        video.currentTime = 0;
+      }
+    });
+  }, [currentIndex]);
+
+  // Load more when near end
+  useEffect(() => {
+    if (currentIndex >= allItems.length - 3 && data?.creators?.length === 10) {
+      setOffset(prev => prev + 10);
+    }
+  }, [currentIndex, allItems.length]);
+
+  const handleScroll = (e: React.WheelEvent) => {
+    if (e.deltaY > 50 && currentIndex < allItems.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else if (e.deltaY < -50 && currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
+    }
+  };
+
+  // Touch support
+  const touchStartY = useRef(0);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const delta = touchStartY.current - e.changedTouches[0].clientY;
+    if (delta > 60 && currentIndex < allItems.length - 1) setCurrentIndex(prev => prev + 1);
+    else if (delta < -60 && currentIndex > 0) setCurrentIndex(prev => prev - 1);
+  };
+
+  if (isLoading && allItems.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-2 border-red-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-gray-400 text-sm">Loading feed...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (allItems.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center space-y-4 px-8">
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-red-900/40 to-purple-900/40 flex items-center justify-center">
+          <Play className="w-8 h-8 text-red-400" />
+        </div>
+        <h3 className="text-white font-bold text-xl">No Content Yet</h3>
+        <p className="text-gray-400 text-sm">Be the first creator to go live on VaultX.</p>
+      </div>
+    );
+  }
+
+  const item = allItems[currentIndex];
+  if (!item) return null;
 
   return (
-    <div className="space-y-4">
-      {items.map((item: any) => (
-        <div key={item.id} className="bg-gray-900/70 border border-gray-800 rounded-2xl overflow-hidden">
-          {/* Creator header */}
-          <div className="flex items-center gap-3 p-4 pb-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-black text-sm flex-shrink-0">
-              {item.creator_name?.[0]?.toUpperCase() || "?"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-white font-bold text-sm truncate">{item.creator_name || "Creator"}</div>
-              <div className="text-gray-500 text-xs">{item.created_at ? new Date(item.created_at).toLocaleDateString() : ""}</div>
-            </div>
-            {item.unlock_type === "ppv" && (
-              <span className="bg-amber-500/20 text-amber-400 text-xs font-bold px-2 py-0.5 rounded-full">PPV</span>
-            )}
-            {item.unlock_type === "free" && (
-              <span className="bg-green-500/20 text-green-400 text-xs font-bold px-2 py-0.5 rounded-full">FREE</span>
-            )}
-          </div>
+    <div
+      ref={containerRef}
+      className="relative w-full h-full overflow-hidden bg-black select-none"
+      onWheel={handleScroll}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Sort pills — top */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex gap-2">
+        {(["trending", "new", "top_earners"] as const).map(s => (
+          <button
+            key={s}
+            onClick={() => { setSort(s); setOffset(0); setCurrentIndex(0); }}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+              sort === s
+                ? "bg-red-600 text-white shadow-lg shadow-red-900/50"
+                : "bg-black/60 text-gray-400 backdrop-blur-sm border border-white/10"
+            }`}
+          >
+            {s === "trending" ? "🔥 Hot" : s === "new" ? "✨ New" : "💰 Top"}
+          </button>
+        ))}
+      </div>
 
-          {/* Media */}
-          <div className="relative">
-            {item.thumbnail_url ? (
-              <div className="relative">
-                <img
-                  src={item.thumbnail_url}
-                  alt={item.title}
-                  className={`w-full object-cover max-h-80 ${item.locked ? "blur-xl" : ""}`}
-                />
-                {item.locked && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50">
-                    <Lock className="w-8 h-8 text-white mb-2" />
-                    <div className="text-white font-bold text-sm">
-                      {item.unlock_type === "ppv" ? `Unlock for $${(item.price_cents / 100).toFixed(2)}` : "Subscribe to unlock"}
-                    </div>
-                    {item.unlock_type === "ppv" && (
-                      <button
-                        onClick={async () => {
-                          try {
-                            await buyPPV.mutateAsync({ contentId: item.id });
-                            toast.success("PPV purchase initiated");
-                          } catch (e: any) { toast.error(e.message); }
-                        }}
-                        className="mt-3 bg-amber-500 text-black font-bold px-5 py-2 rounded-xl text-sm hover:bg-amber-400 transition-colors"
-                      >
-                        Buy PPV
-                      </button>
-                    )}
-                  </div>
-                )}
-                {item.content_type === "video" && !item.locked && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-14 h-14 rounded-full bg-black/60 flex items-center justify-center">
-                      <Play className="w-6 h-6 text-white ml-1" />
-                    </div>
-                  </div>
-                )}
-              </div>
+      {/* Video / thumbnail */}
+      <div className="absolute inset-0">
+        {item.latest_video_url ? (
+          <video
+            ref={el => { if (el) videoRefs.current.set(currentIndex, el); }}
+            src={item.latest_video_url}
+            className="w-full h-full object-cover"
+            loop
+            muted
+            playsInline
+          />
+        ) : item.latest_censored_thumb ? (
+          <img
+            src={item.latest_censored_thumb}
+            alt={item.display_name}
+            className="w-full h-full object-cover"
+          />
+        ) : item.profile_image_url ? (
+          <img
+            src={item.profile_image_url}
+            alt={item.display_name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-red-950 via-black to-purple-950 flex items-center justify-center">
+            <div className="text-8xl opacity-20">🔥</div>
+          </div>
+        )}
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent" />
+      </div>
+
+      {/* Right action bar */}
+      <div className="absolute right-4 bottom-32 z-20 flex flex-col items-center gap-6">
+        {/* Creator avatar */}
+        <div className="relative">
+          <div className="w-12 h-12 rounded-full border-2 border-red-500 overflow-hidden">
+            {item.profile_image_url ? (
+              <img src={item.profile_image_url} alt={item.display_name} className="w-full h-full object-cover" />
             ) : (
-              <div className="bg-gray-800 h-32 flex items-center justify-center">
-                <div className="text-4xl">
-                  {item.content_type === "video" ? "🎬" : item.content_type === "audio" ? "🎵" : "🖼️"}
-                </div>
+              <div className="w-full h-full bg-gradient-to-br from-red-600 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                {item.display_name?.[0] || "?"}
               </div>
             )}
           </div>
-
-          {/* Caption + actions */}
-          <div className="p-4 space-y-3">
-            {item.title && (
-              <div className="text-white text-sm font-semibold">{item.title}</div>
-            )}
-            {item.description && (
-              <div className="text-gray-400 text-sm leading-relaxed">
-                {expandedItem === item.id ? item.description : item.description?.slice(0, 120)}
-                {item.description?.length > 120 && (
-                  <button
-                    onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
-                    className="text-red-400 ml-1 text-xs font-semibold"
-                  >
-                    {expandedItem === item.id ? " less" : "...more"}
-                  </button>
-                )}
-              </div>
-            )}
-            {item.tags?.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {item.tags.map((tag: string) => (
-                  <span key={tag} className="text-red-400/70 text-xs">#{tag}</span>
-                ))}
-              </div>
-            )}
-            <div className="flex items-center gap-4 pt-1">
-              <button className="flex items-center gap-1.5 text-gray-500 hover:text-red-400 transition-colors text-sm">
-                <Heart className="w-4 h-4" />
-                <span>{item.like_count || 0}</span>
-              </button>
-              <button className="flex items-center gap-1.5 text-gray-500 hover:text-blue-400 transition-colors text-sm">
-                <MessageCircle className="w-4 h-4" />
-                <span>{item.comment_count || 0}</span>
-              </button>
-              <button className="flex items-center gap-1.5 text-gray-500 hover:text-green-400 transition-colors text-sm">
-                <Share2 className="w-4 h-4" />
-              </button>
-              <div className="ml-auto">
-                <span className="text-gray-600 text-xs">{item.view_count || 0} views</span>
-              </div>
-            </div>
-          </div>
+          <button
+            onClick={async () => {
+              try {
+                await subscribeMut.mutateAsync({ creatorId: item.id, tier: "basic" });
+                toast.success(`Subscribed to ${item.display_name}`);
+              } catch (e: any) { toast.error(e.message); }
+            }}
+            className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold hover:bg-red-500 transition-colors"
+          >
+            +
+          </button>
         </div>
-      ))}
+
+        {/* Like */}
+        <button
+          onClick={() => setLikedItems(prev => {
+            const next = new Set(prev);
+            if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
+            return next;
+          })}
+          className="flex flex-col items-center gap-1"
+        >
+          <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
+            likedItems.has(item.id) ? "bg-red-600 shadow-lg shadow-red-900/50" : "bg-black/60 backdrop-blur-sm border border-white/10"
+          }`}>
+            <Heart className={`w-5 h-5 ${likedItems.has(item.id) ? "text-white fill-white" : "text-white"}`} />
+          </div>
+          <span className="text-white text-xs font-semibold">{((item.latest_like_count || 0) + (likedItems.has(item.id) ? 1 : 0)).toLocaleString()}</span>
+        </button>
+
+        {/* Comment */}
+        <button className="flex flex-col items-center gap-1">
+          <div className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 flex items-center justify-center">
+            <MessageCircle className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-white text-xs font-semibold">{(item.latest_view_count || 0).toLocaleString()}</span>
+        </button>
+
+        {/* Share */}
+        <button className="flex flex-col items-center gap-1">
+          <div className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 flex items-center justify-center">
+            <Share2 className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-white text-xs font-semibold">Share</span>
+        </button>
+
+        {/* Tip / PPV */}
+        <button
+          onClick={async () => {
+            try {
+              await buyPPV.mutateAsync({ contentId: item.id });
+              toast.success("PPV unlocked!");
+            } catch (e: any) { toast.error(e.message); }
+          }}
+          className="flex flex-col items-center gap-1"
+        >
+          <div className="w-11 h-11 rounded-full bg-amber-600/80 backdrop-blur-sm border border-amber-500/30 flex items-center justify-center">
+            <DollarSign className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-white text-xs font-semibold">Tip</span>
+        </button>
+      </div>
+
+      {/* Bottom creator info */}
+      <div className="absolute bottom-0 left-0 right-16 z-20 p-5 pb-8">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-full border-2 border-red-500/60 overflow-hidden flex-shrink-0">
+            {item.profile_image_url ? (
+              <img src={item.profile_image_url} alt={item.display_name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-red-600 to-purple-600 flex items-center justify-center text-white font-bold">
+                {item.display_name?.[0] || "?"}
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="text-white font-bold text-sm">{item.display_name}</div>
+            <div className="text-gray-400 text-xs">@{item.username} · {(item.total_subscribers || 0).toLocaleString()} fans</div>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                await subscribeMut.mutateAsync({ creatorId: item.id, tier: "basic" });
+                toast.success(`Subscribed!`);
+              } catch (e: any) { toast.error(e.message); }
+            }}
+            className="ml-auto px-4 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold hover:bg-red-500 transition-colors"
+          >
+            Subscribe ${(item.subscription_price_basic || 0).toFixed(0)}/mo
+          </button>
+        </div>
+        {item.latest_content_title && (
+          <p className="text-white/90 text-sm font-medium mb-1 line-clamp-2">{item.latest_content_title}</p>
+        )}
+        {item.bio && (
+          <p className="text-gray-400 text-xs line-clamp-2">{item.bio}</p>
+        )}
+      </div>
+
+      {/* Scroll indicators */}
+      <div className="absolute right-1 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1.5">
+        {allItems.slice(Math.max(0, currentIndex - 2), currentIndex + 5).map((_, i) => {
+          const absIdx = Math.max(0, currentIndex - 2) + i;
+          return (
+            <button
+              key={absIdx}
+              onClick={() => setCurrentIndex(absIdx)}
+              className={`rounded-full transition-all ${
+                absIdx === currentIndex ? "w-1.5 h-4 bg-white" : "w-1 h-1.5 bg-white/30"
+              }`}
+            />
+          );
+        })}
+      </div>
+
+      {/* Progress bar at top */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-white/10 z-30">
+        <div
+          className="h-full bg-gradient-to-r from-red-500 to-purple-500 transition-all duration-300"
+          style={{ width: `${allItems.length > 0 ? ((currentIndex + 1) / allItems.length) * 100 : 0}%` }}
+        />
+      </div>
     </div>
   );
 }
