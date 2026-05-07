@@ -204,6 +204,23 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       }
       return res.status(200).json({ ok: true });
     }
+    // ── chat_member update handler (user joined channel) ─────────────────────
+    if (update.chat_member) {
+      const cm = update.chat_member;
+      const newStatus = cm.new_chat_member?.status;
+      const cmUserId = cm.new_chat_member?.user?.id;
+      const cmChatId = String(cm.chat?.id);
+      if ((newStatus === "member" || newStatus === "creator" || newStatus === "administrator") && cmUserId) {
+        console.log("[Telegram Webhook] chat_member joined:", cmUserId, "chat:", cmChatId);
+        try {
+          const { handleVipJoin } = await import("./services/telegramStartHandler");
+          await handleVipJoin(cmUserId, cmChatId, 2);
+        } catch (e: any) {
+          console.error("[Telegram Webhook] chat_member join error:", e.message);
+        }
+      }
+      return res.status(200).json({ ok: true });
+    }
 
     // Extract message data
     const message = update.message || update.edited_message || update.channel_post;
@@ -289,6 +306,24 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       }
 
       if (command === "/start") {
+        // Deep link handler: /start purchase_<id>_<token>
+        const startParam = args.join("_");
+        if (startParam && startParam.startsWith("purchase_")) {
+          try {
+            const { handleStartDeepLink } = await import("./services/telegramStartHandler");
+            await handleStartDeepLink(chatId, {
+              id: userId,
+              username: message.from?.username,
+              first_name: message.from?.first_name,
+              last_name: message.from?.last_name,
+            }, startParam);
+          } catch (e: any) {
+            console.error("[Telegram Webhook] start deep link error:", e.message);
+          }
+          res.status(200).json({ ok: true });
+          return;
+        }
+        // Generic /start — show welcome
         const trackingCode = `tgstart${Date.now().toString(36)}`;
         await sendInlineMsg(
           `🔥 <b>Welcome to VaultX</b>\n\nThe premium content platform built for creators who demand more.\n\n💎 <b>What you get:</b>\n• Exclusive PPV drops\n• VIP creator content\n• Direct unlock access\n\nTap below to explore 👇`,

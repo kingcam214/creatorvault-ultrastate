@@ -18,6 +18,8 @@ import { handleStripeWebhook } from "./stripeWebhook";
 import { runStartupTasks } from "./startup";
 import videoStudioRouter from "../routers/videoStudioRouter";
 import { videoUploadRouter } from "../routers/videoUploadRouter";
+import { registerTelegramConnectRoutes } from "../services/telegramConnectRoute";
+import { startDailyDropCron } from "../services/telegramDailyDropEngine";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -41,6 +43,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   // Run startup tasks (schema bootstrap, etc)
   await runStartupTasks();
+  startDailyDropCron();
   
   const app = express();
   const server = createServer(app);
@@ -83,6 +86,9 @@ async function startServer() {
       createContext,
     })
   );
+  // Telegram connect page + status API
+  registerTelegramConnectRoutes(app as any);
+
   // Attribution tracking redirect — /r/:trackingCode
   // Records click event in attribution_events and redirects to destination URL
   app.get("/r/:trackingCode", async (req, res) => {
