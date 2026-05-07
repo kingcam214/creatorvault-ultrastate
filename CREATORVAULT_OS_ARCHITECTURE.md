@@ -50,21 +50,28 @@ The intelligence within the Power Layer is organized into distinct systems:
 
 The KingCam Clone Factory is not merely a content generation tool. It is the **Face of the OS**. It transforms the founder into an omnipresent digital entity capable of infinite scale, and it is the single most dangerous capability in the entire stack.
 
-The Clone Factory powers the platform's internal and external communications, acting as a perpetual media engine for: onboarding and tutorials, marketing and promo trailers, motivational content and narration, investor demos and vertical launches, recruitment, education, and autonomous sales sequences. The key insight is that none of these require a human to be present. The OS generates, renders, and distributes on its own.
+The Clone Factory is not a talking head avatar. It is a **full-body, full-motion perpetual media engine**. It powers the platform's internal and external communications: onboarding and tutorials, marketing and promo trailers, motivational content and narration, investor demos and vertical launches, recruitment, education, and autonomous sales sequences. 
 
-### The Programmatic Orchestration Pipeline
+The key insight is that none of these require a human to be present. The OS generates, renders, and distributes on its own.
+
+### The Misconception: Remotion vs. AI Generators
+
+- **Remotion is NOT an AI video generator.** It does not synthesize pixels from scratch. Remotion is a **programmatic video compositor**. It takes React components, CSS, text, audio files, and video clips, and renders them into an MP4. [4]
+- **Pollo AI (Pollodance / Wan 2.2 / Kling 3.0)** is the actual **AI video generator**. It takes a static image of KingCam and a driving video (a reference motion), and synthesizes a new video where KingCam performs that exact full-body motion. [5]
+
+### The Programmatic Orchestration Pipeline (Full-Body Motion)
 
 The Factory operates on a multi-modal pipeline orchestrated by the `kingcamMediaFactory.ts` service. It leverages the most advanced AI APIs available in 2026 to synthesize ultra-realistic, cinematic video content autonomously. The pipeline is a five-stage sequence:
 
 **Stage 1 — Script Generation (OpenAI/Claude):** The OS generates context-aware scripts tailored to the specific OS function. A VIP upsell script is written differently than an onboarding tutorial. The LLM has full access to the creator's real-time platform data, so every script is grounded in actual metrics and offers.
 
-**Stage 2 — Voice Synthesis (ElevenLabs):** The script is passed to the ElevenLabs API using the proprietary KingCam voice clone (`KINGCAM_ELEVEN_VOICE_ID`). [1] ElevenLabs' Professional Voice Clone technology generates hyper-realistic, emotionally nuanced audio that is indistinguishable from the founder's real voice. The audio forms the backbone of the entire video. ElevenLabs also exposes a Lipsync API that can be used to drive avatar mouth movements from the generated audio, creating a direct bridge to the next stage.
+**Stage 2 — Voice Synthesis (ElevenLabs):** The script is passed to the ElevenLabs API using the proprietary KingCam voice clone (`KINGCAM_ELEVEN_VOICE_ID`). [1] ElevenLabs' Professional Voice Clone technology generates hyper-realistic, emotionally nuanced audio that is indistinguishable from the founder's real voice. The audio forms the backbone of the entire video. 
 
-**Stage 3 — Digital Twin Synthesis (HeyGen v3 API):** The core avatar performance is generated using HeyGen's Digital Twin API. [4] The workflow is direct: the system queries `GET /v3/avatars/looks?avatar_type=digital_twin` to retrieve the KingCam Digital Twin `avatar_id`, then submits a `POST /v3/videos` request with the `avatar_id`, the ElevenLabs-generated script, and the cloned `voice_id`. HeyGen's Avatar 5 model drives the Digital Twin with perfect lip-sync and lifelike micro-expressions at 1080p. The system uses a webhook callback (`POST /v3/webhooks/endpoints` subscribed to `avatar_video.success`) to receive the completed video URL asynchronously, eliminating polling overhead.
+**Stage 3 — Full-Body Motion Synthesis (Pollo AI):** The core avatar performance is generated using Pollo AI's full-body motion endpoints. The workflow uses `pollodance-2.0` (for industrial-grade motion control and style transfer) or `wan-2.2-animate` (for advanced mimic motion and character replacement). The OS submits a static image of KingCam and a "driving video" (a reference motion of someone walking, gesturing, or dancing). The Pollo AI model synthesizes a new video of the KingCam clone performing the exact movements from the driving video. [5]
 
-**Stage 4 — Cinematic B-Roll (Runway Gen-4 / Act-One):** For dynamic cutaways, environmental establishing shots, or character animations, the OS queries Runway's API. [5] Runway exposes a full model suite via SDK (`npm install @runwayml/sdk`). The Clone Factory uses `gen4.5` for text-to-video and image-to-video cinematic segments, and `act_two` for character performance animation. The `gwm1_avatars` real-time model is reserved for interactive live sessions. This layer elevates the final output from a talking-head video to a cinematic production.
+**Stage 4 — Cinematic B-Roll (Pollo AI / Kling 3.0 / Runway Gen-4 Turbo):** For dynamic cutaways, environmental establishing shots, or character animations, the OS queries Pollo AI's extensive model catalog. The Clone Factory uses `kling-3.0` for hyper-realistic cinematic sequences and complex motion modeling, or `runway-gen-4-turbo` for high-speed, advanced video effects. This layer elevates the final output from a simple clone video to a cinematic production. [5]
 
-**Stage 5 — Programmatic Assembly (Remotion):** The raw assets—HeyGen avatar video, Runway B-roll segments, ElevenLabs audio, dynamic text overlays, branded graphics, and animated captions—are fed into **Remotion**. [6] Remotion acts as the server-side React video compositor. Because Remotion compositions are pure React components parameterized by `inputProps`, the OS can pass any combination of assets and metadata to produce a unique, branded video for every use case. The `@remotion/lambda` package renders these compositions on AWS Lambda for scalable, parallel production. The final output is a broadcast-quality MP4, ready for distribution.
+**Stage 5 — Programmatic Assembly (Remotion):** The raw assets—the full-body clone video, cinematic B-roll segments, ElevenLabs audio, dynamic text overlays, branded graphics, and animated captions—are fed into **Remotion**. [4] Remotion acts as the server-side React video compositor. Because Remotion compositions are pure React components parameterized by `inputProps`, the OS can pass any combination of assets and metadata to produce a unique, branded video for every use case. The `@remotion/lambda` package renders these compositions on AWS Lambda for scalable, parallel production. The final output is a broadcast-quality MP4, ready for distribution.
 
 The following table maps the complete model stack to their roles in the pipeline:
 
@@ -72,8 +79,8 @@ The following table maps the complete model stack to their roles in the pipeline
 | :--- | :--- | :--- | :--- |
 | Script | OpenAI GPT-4o / Claude | Context-aware script writing | Text script |
 | Voice | ElevenLabs Professional Clone | Hyper-realistic voice synthesis | `.mp3` audio |
-| Avatar | HeyGen v3 Digital Twin | Lip-synced talking head | `.mp4` avatar video |
-| B-Roll | Runway Gen-4.5 / Act-Two | Cinematic environment & character animation | `.mp4` segments |
+| Full-Body Motion | Pollo AI (Pollodance 2.0 / Wan 2.2) | Full-body mimic motion transfer | `.mp4` clone video |
+| B-Roll | Pollo AI (Kling 3.0 / Runway Gen-4 Turbo) | Cinematic environment & character animation | `.mp4` segments |
 | Assembly | Remotion + AWS Lambda | Programmatic React video composition | Final `.mp4` |
 
 > "The Vault Never Sleeps" becomes real infrastructure instead of a slogan. The Clone Factory ensures that the OS is always communicating, always selling, and always onboarding—even when the human founder is offline.
@@ -98,7 +105,7 @@ A robust CRON system schedules content drops 3x daily (morning, afternoon, night
 
 ### Economic Protection (FEPL + Omega Failsafe)
 
-The FEPL (Founder Earnings Preservation Layer) ensures the founder never earns less than 15% of total revenue, automatically adjusting platform margin downward rather than creator share. The Omega Failsafe Engine validates every revenue event before processing, blocking negative revenue, auto-correcting invalid data, and quarantining suspicious transactions. [7]
+The FEPL (Founder Earnings Preservation Layer) ensures the founder never earns less than 15% of total revenue, automatically adjusting platform margin downward rather than creator share. The Omega Failsafe Engine validates every revenue event before processing, blocking negative revenue, auto-correcting invalid data, and quarantining suspicious transactions. [6]
 
 ---
 
@@ -128,7 +135,7 @@ Most apps feel shallow because they rely on the user to do the work. CreatorVaul
 
 **Every creator becomes amplified.** The OS acts as a 24/7 production team, sales force, and marketing agency. The Clone Factory means the founder's voice and face are always present, always selling, always building trust—without the founder being physically present.
 
-**The Clone Factory is the face of the OS.** This is the critical insight. By tying Remotion's programmatic video assembly to HeyGen's Digital Twin synthesis, Runway's cinematic generation, and ElevenLabs' voice cloning, the Clone Factory produces output that is indistinguishable from a professional production studio—at infinite scale, at near-zero marginal cost.
+**The Clone Factory is the face of the OS.** This is the critical insight. By separating synthesis (Pollo AI) from assembly (Remotion), the Clone Factory produces output that is indistinguishable from a professional production studio—at infinite scale, at near-zero marginal cost. You only need to generate the expensive AI full-body motion once. Remotion can then take that one video clip and programmatically render 1,000 different versions of it by changing the text overlays, the background music, or the language (via ElevenLabs dubbing) — all using code.
 
 ---
 
@@ -138,7 +145,7 @@ The system is built. The Ferrari is in the garage with gas in the tank. [1] The 
 
 1.  **Stripe Live Mode:** The `sk_live` key is in `.env`. The Stripe webhook must be verified and receiving events to process real payments.
 2.  **WhatsApp Reconnection:** The permanent Meta System User token must be restored to unlock automated outreach to prospects.
-3.  **Clone Factory Activation:** The HeyGen Digital Twin must be created and the `avatar_id` registered in the system. The Runway API key must be added to `.env`. The Remotion Lambda deployment must be configured.
+3.  **Clone Factory Activation:** The Pollo AI Mimic Motion endpoints (`pollodance-2.0` or `wan-2.2-animate`) must be fully wired in `kingcamAI.ts` to allow programmatic submission of the KingCam source image and driving motion videos. The Remotion Lambda deployment must be configured.
 4.  **IGNITE Execution:** The Money Mission War Room at `/king/money-mission` must be activated. The 4-piece trailer must be dropped. The Telegram broadcast must be sent. The 30 prospects must be DM'd.
 
 The architecture is complete. The OS is live. The only remaining action is to turn the key.
@@ -150,7 +157,6 @@ The architecture is complete. The OS is live. The only remaining action is to tu
 [1] `CREATORVAULT_ULTIMATE_TRUTH.md` — Live system state, revenue engines, and founder origin
 [2] `CREATORVAULT_UNIFIED_UX_ARCHITECTURE.md` — Visual-first design system
 [3] `DUAL_MODE_ARCHITECTURE.md` — VaultX vs. General Creator mode system
-[4] HeyGen API v3 Documentation — Digital Twin, Video Generation, Webhook Events: `https://developers.heygen.com`
-[5] Runway API Documentation — Gen-4.5, Act-Two, gwm1_avatars: `https://docs.dev.runwayml.com`
-[6] Remotion Server-Side Rendering Documentation — renderMedia, Lambda, AWS: `https://www.remotion.dev/docs/ssr`
-[7] `OMEGA_MERGE_INTEGRATION.md` — FEPL and Omega Failsafe Engine documentation
+[4] Remotion Server-Side Rendering Documentation — renderMedia, Lambda, AWS: `https://www.remotion.dev/docs/ssr`
+[5] Pollo AI API Documentation — Explore Models, Pollodance, Wan, Kling: `https://pollo.ai/api-platform/explore`
+[6] `OMEGA_MERGE_INTEGRATION.md` — FEPL and Omega Failsafe Engine documentation
