@@ -456,6 +456,7 @@ import MarielkaProfile from "./pages/greatest-show/MarielkaProfile";
 import SubscribeSuccess from "./pages/greatest-show/SubscribeSuccess";
 import CloneCommand from "./pages/king/CloneCommand";
 import CloneStudio from "./pages/king/CloneStudio";
+import CloneTrainingLab from "./pages/king/CloneTrainingLab";
 import MediaVault from "./pages/king/MediaVault";
 import ChallengeStoryEngine from "./pages/king/ChallengeStoryEngine";
 import ViralOptimizerV2 from "./pages/tools/ViralOptimizerV2";
@@ -789,6 +790,7 @@ function Router() {
       <Route path="/greatest-show/subscribe-success" component={SubscribeSuccess} />
       <Route path="/king/clone-command" component={CloneCommand} />
       <Route path="/king/clone-studio" component={CloneStudio} />
+      <Route path="/king/clone-training-lab" component={CloneTrainingLab} />
       <Route path="/king/media-vault" component={MediaVault} />
       <Route path="/king/challenge-story" component={ChallengeStoryEngine} />
       <Route path="/tools/viral-optimizer-v2" component={ViralOptimizerV2} />
