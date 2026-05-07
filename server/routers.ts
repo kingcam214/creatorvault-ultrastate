@@ -172,6 +172,7 @@ import { stripeCheckoutRouter } from "./routers/stripeCheckout";
 import { studioSlotsRouter } from "./routers/studioSlotsRouter";
 import { subscriptionsRouter } from "./routers/subscriptions";
 import { telegramBotRouter } from "./routers/telegramBot";
+import { telegramFunnelRouter } from "./routers/telegramFunnelRouter.js";
 import { telegramHubRouter } from "./routers/telegramHubRouter";
 import { telegramRouter } from "./routers/telegram";
 import { telegramWebhookRouter } from "./routers/telegramWebhookRouter";
@@ -890,6 +891,7 @@ export const appRouter = router({
   telegram: telegramRouter,
   telegramBot: telegramBotRouter,
   telegramHub: telegramHubRouter,
+  telegramFunnel: telegramFunnelRouter,
   telegramWebhook: telegramWebhookRouter,
   thumbnailGenerator: thumbnailGeneratorRouter,
   universityV2: universityV2Router,

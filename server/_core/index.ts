@@ -159,6 +159,148 @@ async function startServer() {
     console.log(`Server running on http://localhost:${port}/`);
     
     // Initialize simulated bots (no owner dependencies)
+
+    // ── Telegram Funnel Automation Runner ────────────────────────────────────
+    // Process due funnel steps, drip sequences, and re-engagement triggers
+    // Runs every 60 seconds
+    setInterval(async () => {
+      try {
+        const mysql2 = await import("mysql2/promise");
+        const dbUrl = process.env.DATABASE_URL || "mysql://creatorvault:KingCam214CreatorVault@127.0.0.1:3306/creatorvault";
+        const m = dbUrl.match(/mysql:\/\/([^:]+):([^@]+)@([^:/]+):(\d+)\/([^?]+)/);
+        if (!m) return;
+        const [, user, password, host, port, database] = m;
+        const conn = await mysql2.default.createConnection({ host, port: parseInt(port), user, password, database });
+        
+        // Count pending jobs
+        const [pending] = await conn.execute(
+          "SELECT COUNT(*) as cnt FROM telegram_automation_jobs WHERE status = 'pending' AND scheduled_at <= NOW()"
+        ) as any;
+        const pendingCount = (pending as any[])[0]?.cnt || 0;
+        
+        if (pendingCount > 0) {
+          console.log(`[TelegramFunnel] Processing ${pendingCount} due automation jobs`);
+          // Delegate to telegramFunnelRouter.funnel.processAllDue logic inline
+          const [jobs] = await conn.execute(
+            `SELECT aj.*, ts.telegram_id, tfs.message_text, tfs.media_url, tfs.media_type, 
+                    tfs.inline_buttons, tfs.step_number, tfs.delay_minutes as next_delay,
+                    tfe.id as enrollment_id, tfe.funnel_id as enroll_funnel_id
+             FROM telegram_automation_jobs aj
+             JOIN telegram_subscribers ts ON ts.id = aj.subscriber_id
+             JOIN telegram_funnel_steps tfs ON tfs.id = aj.funnel_step_id
+             JOIN telegram_funnel_enrollments tfe ON tfe.funnel_id = aj.funnel_id AND tfe.subscriber_id = aj.subscriber_id
+             WHERE aj.status = 'pending' AND aj.scheduled_at <= NOW()
+             LIMIT 50`
+          ) as any;
+          
+          const botToken = process.env.TELEGRAM_MONETIZATION_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "";
+          
+          for (const job of (jobs as any[])) {
+            try {
+              await conn.execute("UPDATE telegram_automation_jobs SET status = 'running' WHERE id = ?", [job.id]);
+              const buttons = job.inline_buttons ? (typeof job.inline_buttons === 'string' ? JSON.parse(job.inline_buttons) : (Array.isArray(job.inline_buttons) ? job.inline_buttons : [])) : [];
+              const body: any = { chat_id: job.telegram_id, parse_mode: "HTML" };
+              
+              if (job.media_url && job.media_type === "video") {
+                body.video = job.media_url;
+                body.caption = job.message_text;
+                if (buttons.length) body.reply_markup = { inline_keyboard: [buttons] };
+                const r = await fetch(`https://api.telegram.org/bot\${botToken}/sendVideo`, {
+                  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+                });
+                const d = await r.json() as any;
+                if (!d.ok) throw new Error(d.description);
+              } else if (job.message_text) {
+                body.text = job.message_text;
+                if (buttons.length) body.reply_markup = { inline_keyboard: [buttons] };
+                const r = await fetch(`https://api.telegram.org/bot\${botToken}/sendMessage`, {
+                  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+                });
+                const d = await r.json() as any;
+                if (!d.ok) throw new Error(d.description);
+              }
+              
+              await conn.execute("UPDATE telegram_automation_jobs SET status = 'done', executed_at = NOW() WHERE id = ?", [job.id]);
+              
+              // Advance to next step
+              const [nextSteps] = await conn.execute(
+                "SELECT * FROM telegram_funnel_steps WHERE funnel_id = ? AND step_number > ? ORDER BY step_number ASC LIMIT 1",
+                [job.funnel_id, job.step_number]
+              ) as any;
+              const nextStep = (nextSteps as any[])[0];
+              
+              if (nextStep) {
+                const nextAt = new Date(Date.now() + (nextStep.delay_minutes || 0) * 60000);
+                await conn.execute(
+                  "UPDATE telegram_funnel_enrollments SET current_step = ?, next_step_at = ? WHERE id = ?",
+                  [nextStep.step_number, nextAt, job.enrollment_id]
+                );
+                await conn.execute(
+                  "INSERT INTO telegram_automation_jobs (job_type, funnel_id, funnel_step_id, subscriber_id, scheduled_at) VALUES ('drip_step', ?, ?, ?, ?)",
+                  [job.funnel_id, nextStep.id, job.subscriber_id, nextAt]
+                );
+              } else {
+                await conn.execute(
+                  "UPDATE telegram_funnel_enrollments SET status = 'completed', completed_at = NOW() WHERE id = ?",
+                  [job.enrollment_id]
+                );
+              }
+            } catch (jobErr: any) {
+              await conn.execute(
+                "UPDATE telegram_automation_jobs SET status = 'failed', error_message = ? WHERE id = ?",
+                [jobErr.message, job.id]
+              );
+            }
+          }
+        }
+        
+        // Re-engagement: find subscribers inactive > 7 days who haven't been messaged in 3 days
+        const [inactive] = await conn.execute(
+          `SELECT ts.telegram_id FROM telegram_subscribers ts
+           WHERE ts.lifecycle_stage IN ('engaged', 'converted')
+             AND ts.last_active_at < DATE_SUB(NOW(), INTERVAL 7 DAY)
+             AND ts.opted_out = 0
+             AND NOT EXISTS (
+               SELECT 1 FROM telegram_message_events tme 
+               WHERE tme.telegram_id = ts.telegram_id 
+                 AND tme.direction = 'outbound'
+                 AND tme.created_at > DATE_SUB(NOW(), INTERVAL 3 DAY)
+             )
+           LIMIT 10`
+        ) as any;
+        
+        const FRONTEND = process.env.VITE_FRONTEND_FORGE_API_URL?.replace("/api", "") || "https://creatorvault.live";
+        for (const sub of (inactive as any[])) {
+          try {
+            const reengageMsg = {
+              chat_id: sub.telegram_id,
+              text: `⚡ <b>New drops just landed in VaultX</b>\n\nYou\'ve been missed. Fresh exclusive content is waiting for you.\n\n👇 Tap to see what\'s new`,
+              parse_mode: "HTML",
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: "🎬 See New Drops", url: `\${FRONTEND}/vaultx` },
+                  { text: "🔓 Unlock Now", url: `\${FRONTEND}/vaultx` }
+                ]]
+              }
+            };
+            await fetch(`https://api.telegram.org/bot\${botToken}/sendMessage`, {
+              method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(reengageMsg)
+            });
+            // Log outbound message
+            await conn.execute(
+              "INSERT INTO telegram_message_events (telegram_id, direction, message_type, message_text) VALUES (?, 'outbound', 'reengagement', 'Re-engagement message sent')",
+              [sub.telegram_id]
+            );
+          } catch { /* non-blocking */ }
+        }
+        
+        await conn.end();
+      } catch (cronErr: any) {
+        console.error("[TelegramFunnel] Cron error:", cronErr.message);
+      }
+    }, 60000); // Every 60 seconds
+    // ── End Telegram Funnel Automation Runner ─────────────────────────────────
+
     // DISABLED 2026-04-20: fake traffic generator was creating 97% fake bot_events // await initializeSimulatedBots();
     
     // Start autonomous conversation generator

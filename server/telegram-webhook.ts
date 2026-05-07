@@ -34,7 +34,7 @@ async function sendTelegramMessage(
         body: JSON.stringify({
           chat_id: chatId,
           text,
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
         }),
       });
 
@@ -196,6 +196,160 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       text: text.substring(0, 50),
     });
 
+
+    // ── VaultX Funnel Command Handler ─────────────────────────────────────────
+    // Handle commands before routing to Adult Sales Bot
+    if (text && text.startsWith("/")) {
+      const [cmd, ...args] = text.trim().split(/\s+/);
+      const command = cmd.toLowerCase();
+      const FRONTEND = process.env.VITE_FRONTEND_FORGE_API_URL?.replace("/api", "") || "https://creatorvault.live";
+      
+      // Upsert subscriber record
+      try {
+        const mysql2 = await import("mysql2/promise");
+        const dbUrl = process.env.DATABASE_URL || "mysql://creatorvault:KingCam214CreatorVault@127.0.0.1:3306/creatorvault";
+        const m = dbUrl.match(/mysql:\/\/([^:]+):([^@]+)@([^:/]+):(\d+)\/([^?]+)/);
+        if (m) {
+          const [, user, password, host, port, database] = m;
+          const conn = await mysql2.default.createConnection({ host, port: parseInt(port), user, password, database });
+          await conn.execute(
+            `INSERT INTO telegram_subscribers (telegram_id, username, first_name, last_name, last_active_at)
+             VALUES (?, ?, ?, ?, NOW())
+             ON DUPLICATE KEY UPDATE username = COALESCE(VALUES(username), username),
+               first_name = COALESCE(VALUES(first_name), first_name), last_active_at = NOW()`,
+            [userId || 0, username, message.from?.first_name || null, message.from?.last_name || null]
+          );
+          await conn.end();
+        }
+      } catch { /* non-blocking */ }
+
+      // Helper to send inline keyboard message
+      async function sendInlineMsg(text: string, buttons: Array<Array<{text: string; url?: string; callback_data?: string}>>) {
+        const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+        await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text,
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: buttons }
+          })
+        });
+      }
+
+      if (command === "/start") {
+        const trackingCode = `tgstart${Date.now().toString(36)}`;
+        await sendInlineMsg(
+          `🔥 <b>Welcome to VaultX</b>\n\nThe premium content platform built for creators who demand more.\n\n💎 <b>What you get:</b>\n• Exclusive PPV drops\n• VIP creator content\n• Direct unlock access\n\nTap below to explore 👇`,
+          [
+            [{ text: "🎬 Browse Content", url: `${FRONTEND}/vaultx` }],
+            [{ text: "💎 Go VIP", url: `${FRONTEND}/r/${trackingCode}-vip` }, { text: "🔓 Unlock Drop", url: `${FRONTEND}/vaultx` }]
+          ]
+        );
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      if (command === "/unlock") {
+        const contentId = args[0] || "";
+        const unlockUrl = contentId ? `${FRONTEND}/vaultx?unlock=${contentId}` : `${FRONTEND}/vaultx`;
+        await sendInlineMsg(
+          `🔓 <b>Unlock Premium Content</b>\n\nYou\'re one step away from full access.\n\nClick below to unlock 👇`,
+          [
+            [{ text: "🔓 Unlock Now", url: unlockUrl }],
+            [{ text: "👀 Preview First", url: `${FRONTEND}/vaultx` }]
+          ]
+        );
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      if (command === "/vip") {
+        await sendInlineMsg(
+          `💎 <b>VaultX VIP Access</b>\n\nJoin the inner circle. Get:\n• Early drops before public\n• Exclusive creator content\n• Direct creator contact\n• Priority unlock access\n\nLimited spots available 👇`,
+          [
+            [{ text: "💎 Join VIP Now", url: `${FRONTEND}/vaultx` }],
+            [{ text: "📋 See What\'s Included", url: `${FRONTEND}/vaultx` }]
+          ]
+        );
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      if (command === "/newdrop") {
+        await sendInlineMsg(
+          `⚡ <b>New Drop Available</b>\n\nFresh exclusive content just dropped.\n\nBe first to unlock it 👇`,
+          [
+            [{ text: "🎬 See The Drop", url: `${FRONTEND}/vaultx` }],
+            [{ text: "🔓 Unlock Instantly", url: `${FRONTEND}/vaultx` }]
+          ]
+        );
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      if (command === "/balance") {
+        await sendInlineMsg(
+          `💰 <b>Your VaultX Account</b>\n\nCheck your balance, purchases, and creator earnings in your dashboard.`,
+          [
+            [{ text: "📊 Open Dashboard", url: `${FRONTEND}/vaultx` }]
+          ]
+        );
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      if (command === "/buy") {
+        const contentId = args[0] || "";
+        const buyUrl = contentId ? `${FRONTEND}/vaultx?buy=${contentId}` : `${FRONTEND}/vaultx`;
+        await sendInlineMsg(
+          `🛒 <b>Purchase Content</b>\n\nReady to unlock? Tap below to complete your purchase securely.`,
+          [
+            [{ text: "💳 Buy Now", url: buyUrl }]
+          ]
+        );
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      if (command === "/menu") {
+        await sendInlineMsg(
+          `📋 <b>VaultX Menu</b>\n\nWhat would you like to do?`,
+          [
+            [{ text: "🎬 Browse Content", url: `${FRONTEND}/vaultx` }, { text: "🔓 Unlock Drop", url: `${FRONTEND}/vaultx` }],
+            [{ text: "💎 Go VIP", url: `${FRONTEND}/vaultx` }, { text: "💰 My Balance", url: `${FRONTEND}/vaultx` }],
+            [{ text: "⚡ Latest Drop", url: `${FRONTEND}/vaultx` }]
+          ]
+        );
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      if (command === "/subscribe") {
+        await sendInlineMsg(
+          `🔔 <b>Subscribe to Updates</b>\n\nNever miss a drop. Subscribe to get notified the moment new content goes live.`,
+          [
+            [{ text: "🔔 Subscribe Now", url: `${FRONTEND}/vaultx` }]
+          ]
+        );
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      if (command === "/tips") {
+        await sendInlineMsg(
+          `💸 <b>Send a Tip</b>\n\nShow your favorite creator some love. Tips go directly to them.`,
+          [
+            [{ text: "💸 Send Tip", url: `${FRONTEND}/vaultx` }]
+          ]
+        );
+        res.status(200).json({ ok: true });
+        return;
+      }
+    }
+    // ── End VaultX Command Handler ────────────────────────────────────────────
+
     // Route message through Adult Sales Bot
     try {
       const botResponse = await handleInboundMessage(
@@ -231,7 +385,37 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
 
       // Send response back to Telegram
       if (chatId && !botResponse.shouldDisengage) {
-        const sent = await sendTelegramMessage(botToken, chatId, botResponse.message);
+        // If bot returned a purchaseUrl in metadata, send with inline button
+        const purchaseUrl = (botResponse.metadata as any)?.purchaseUrl;
+        let sent: boolean;
+        if (purchaseUrl) {
+          const inlineUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+          try {
+            const inlineResp = await fetch(inlineUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: botResponse.message,
+                parse_mode: "HTML",
+                reply_markup: {
+                  inline_keyboard: [
+                    [{ text: "🔓 Unlock Now", url: purchaseUrl }],
+                    [{ text: "🎬 Preview First", url: "https://creatorvault.live/vaultx" }]
+                  ]
+                }
+              }),
+            });
+            const inlineData = await inlineResp.json() as { ok: boolean; description?: string };
+            sent = inlineData.ok;
+            if (!sent) console.error("[Telegram] Inline button send failed:", inlineData.description);
+          } catch (e: any) {
+            console.error("[Telegram] Inline button send error:", e.message);
+            sent = false;
+          }
+        } else {
+          sent = await sendTelegramMessage(botToken, chatId, botResponse.message);
+        }
         
         if (!sent) {
           console.error("[Telegram] Failed to send bot response after retries");
