@@ -54,14 +54,19 @@ export async function generateKingCamDemo(
     sceneCount: 4,
   });
 
-  // Step 2: Skip TTS (not available in Manus built-in services)
-  // Video will have text overlays instead of audio narration
-  console.log("📝 Skipping TTS - using text overlays...");
-  const audioResult = {
-    audioUrl: "",
-    duration: 0,
-    text: script.fullText,
-  };
+  // Step 2: Generate voice using ElevenLabs KingCam clone
+  console.log("🎙️ Generating KingCam voice via ElevenLabs...");
+  let audioResult = { audioUrl: "", duration: 0, text: script.fullText };
+  try {
+    const ttsResult = await generateSpeech(script.fullText, {
+      ...KINGCAM_VOICE_PROFILE,
+      language: sector === "dominican" ? "es-DO" : "en",
+    });
+    audioResult = { audioUrl: ttsResult.audioUrl, duration: ttsResult.duration, text: ttsResult.text };
+    console.log("🎙️ Voice generated:", ttsResult.audioUrl, "provider:", ttsResult.provider);
+  } catch (ttsErr) {
+    console.warn("[DemoEngine] ElevenLabs TTS failed, continuing without audio:", ttsErr);
+  }
 
   // Step 3: Generate video scenes
   console.log("🎬 Generating video scenes...");

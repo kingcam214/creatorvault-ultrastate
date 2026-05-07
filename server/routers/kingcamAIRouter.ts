@@ -52,6 +52,7 @@ import {
   type VideoModel,
 } from "../services/kingcamAI";
 import { getDb } from "../db";
+import { runKingCamFactory, runFastDrop, runBoostDrop, runFullProduction, type FactoryMode, type ContentVertical } from "../services/kingcamMediaFactory";
 import { storagePut } from "../storage";
 
 // ─── SHARED SCHEMAS ───────────────────────────────────────────────────────────
@@ -356,10 +357,80 @@ const modelsRouter = router({
   }),
 });
 
+
+// ─── FACTORY ROUTER ───────────────────────────────────────────────────────────
+const factoryRouter = router({
+  /** Run the full KingCam Media Factory pipeline */
+  run: protectedProcedure
+    .input(z.object({
+      topic: z.string().min(1),
+      mode: z.enum(["FAST", "BOOST", "FULL"]).default("BOOST"),
+      vertical: z.enum(["clone_lab", "dominican", "adult", "general", "telegram_drop"]).default("clone_lab"),
+      suitColor: z.string().optional(),
+      aspectRatio: z.enum(["16:9", "9:16", "1:1"]).default("16:9"),
+      videoModel: videoModelSchema,
+      referenceImageUrl: z.string().url().optional(),
+      targetDuration: z.number().int().min(15).max(300).default(60),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await runKingCamFactory({
+        topic: input.topic,
+        mode: input.mode as FactoryMode,
+        vertical: input.vertical as ContentVertical,
+        userId: ctx.user.id,
+        suitColor: input.suitColor,
+        aspectRatio: input.aspectRatio as "16:9" | "9:16" | "1:1",
+        videoModel: input.videoModel as any,
+        referenceImageUrl: input.referenceImageUrl,
+        targetDuration: input.targetDuration,
+      });
+      return result;
+    }),
+  /** Quick FAST drop — image + script only */
+  fastDrop: protectedProcedure
+    .input(z.object({
+      topic: z.string().min(1),
+      vertical: z.enum(["clone_lab", "dominican", "adult", "general", "telegram_drop"]).default("telegram_drop"),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      return runFastDrop({ topic: input.topic, userId: ctx.user.id, vertical: input.vertical as ContentVertical });
+    }),
+  /** BOOST drop — image + 5s video + voice */
+  boostDrop: protectedProcedure
+    .input(z.object({
+      topic: z.string().min(1),
+      vertical: z.enum(["clone_lab", "dominican", "adult", "general", "telegram_drop"]).default("clone_lab"),
+      suitColor: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      return runBoostDrop({ topic: input.topic, userId: ctx.user.id, vertical: input.vertical as ContentVertical, suitColor: input.suitColor });
+    }),
+  /** FULL production — complete pipeline */
+  fullProduction: protectedProcedure
+    .input(z.object({
+      topic: z.string().min(1),
+      vertical: z.enum(["clone_lab", "dominican", "adult", "general", "telegram_drop"]).default("clone_lab"),
+      suitColor: z.string().optional(),
+      referenceImageUrl: z.string().url().optional(),
+      targetDuration: z.number().int().min(15).max(300).default(60),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      return runFullProduction({
+        topic: input.topic,
+        userId: ctx.user.id,
+        vertical: input.vertical as ContentVertical,
+        suitColor: input.suitColor,
+        referenceImageUrl: input.referenceImageUrl,
+        targetDuration: input.targetDuration,
+      });
+    }),
+});
+
 // ─── MAIN ROUTER ──────────────────────────────────────────────────────────────
 export const kingcamAIRouter = router({
   image: imageRouter,
   video: videoRouter,
   training: trainingRouter,
   models: modelsRouter,
+  factory: factoryRouter,
 });

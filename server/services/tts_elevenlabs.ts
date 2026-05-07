@@ -11,7 +11,7 @@
  * ============================================================================
  */
 
-import { ENV } from "./env";
+import { ENV } from "./env.js";
 
 const ELEVENLABS_BASE = "https://api.elevenlabs.io/v1";
 const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY;
@@ -112,8 +112,8 @@ export async function generateSpeech(
 
       // Sync voice_clones table
       try {
-        const mysql = await import("mysql2/promise");
-        const db = await mysql.default.createConnection(process.env.DATABASE_URL || "mysql://root:@localhost:3306/creatorvault");
+        const { getDb } = await import("../db.js");
+        const db = getDb();
         await db.execute(
           `INSERT INTO voice_clones (id, creator_id, voice_name, sample_audio_url, voice_characteristics, is_active, usage_count)
            VALUES (?, 1, 'KingCam', ?, ?, 1, 1)
