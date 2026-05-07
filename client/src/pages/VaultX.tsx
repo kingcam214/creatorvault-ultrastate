@@ -430,8 +430,12 @@ function ForYouFeed() {
         <button
           onClick={async () => {
             try {
-              await buyPPV.mutateAsync({ contentId: item.id });
-              toast.success("PPV unlocked!");
+              const result = await buyPPV.mutateAsync({ contentId: item.id });
+              if (result.purchaseId) {
+                window.location.href = `/telegram-connect?purchaseId=${result.purchaseId}`;
+              } else {
+                toast.success("PPV unlocked!");
+              }
             } catch (e: any) { toast.error(e.message); }
           }}
           className="flex flex-col items-center gap-1"
@@ -597,8 +601,12 @@ function ContentFeedTab({ userId }: { userId: number }) {
                         <button
                           onClick={async () => {
                             try {
-                              await buyPPV.mutateAsync({ contentId: item.id });
-                              toast.success("PPV purchase initiated");
+                              const result = await buyPPV.mutateAsync({ contentId: item.id });
+                              if (result.purchaseId) {
+                                window.location.href = `/telegram-connect?purchaseId=${result.purchaseId}`;
+                              } else {
+                                toast.success("PPV purchase initiated");
+                              }
                             } catch (e: any) { toast.error(e.message); }
                           }}
                           className="mt-1 bg-amber-500 text-black font-bold px-2 py-0.5 rounded-lg text-xs"

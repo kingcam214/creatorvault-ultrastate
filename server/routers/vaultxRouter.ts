@@ -861,6 +861,8 @@ export const vaultxRouter = router({
     .input(z.object({
       contentId: z.number(),
       paymentIntentId: z.string().optional(),
+      buyerTelegramId: z.number().optional(),
+      trackingCode: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const content = await rawQuery("SELECT * FROM vaultx_content WHERE id = ? AND is_ppv = 1 LIMIT 1", [input.contentId]);
@@ -887,9 +889,20 @@ export const vaultxRouter = router({
         try {
           const { recordCampaignEvent } = await import("../services/telegramCampaign");
           const { sendVipUpsell } = await import("../services/telegramVipUpsell");
-          const trackingCode = (input as any).trackingCode as string | undefined;
-          const buyerTelegramId = (input as any).buyerTelegramId as number | undefined;
+          const trackingCode = input.trackingCode;
           const revenueCents = Math.round(parseFloat(content[0].ppv_price) * 100);
+          // Auto-lookup buyer telegram_user_id from users table
+          let buyerTelegramId: number | undefined = input.buyerTelegramId;
+          if (!buyerTelegramId) {
+            const tgRows = await rawQuery(
+              "SELECT telegram_user_id FROM users WHERE id = ? AND telegram_user_id IS NOT NULL LIMIT 1",
+              [ctx.user.id]
+            );
+            if (tgRows.length && tgRows[0].telegram_user_id) {
+              buyerTelegramId = parseInt(String(tgRows[0].telegram_user_id), 10) || undefined;
+              console.log("[VaultX purchasePpv] Auto-resolved buyerTelegramId for user_id=" + ctx.user.id);
+            }
+          }
           // 1. Attribution tracking
           if (trackingCode) {
             await recordCampaignEvent(trackingCode, "purchase", {
@@ -900,6 +913,12 @@ export const vaultxRouter = router({
             await rawExec(
               "UPDATE vaultx_ppv_purchases SET attribution_tracking_code = ?, buyer_telegram_id = ? WHERE id = ?",
               [trackingCode, buyerTelegramId || null, purchaseId]
+            );
+          } else if (buyerTelegramId) {
+            // Even without tracking code, set buyer_telegram_id on the purchase
+            await rawExec(
+              "UPDATE vaultx_ppv_purchases SET buyer_telegram_id = ? WHERE id = ? AND buyer_telegram_id IS NULL",
+              [buyerTelegramId, purchaseId]
             );
           }
           // 2. VIP upsell — requires real buyer Telegram ID
@@ -914,7 +933,14 @@ export const vaultxRouter = router({
             });
             console.log("[VaultX purchasePpv] VIP upsell result:", JSON.stringify(upsellResult));
           } else {
-            console.log("[VaultX purchasePpv] No buyerTelegramId — VIP upsell skipped. Pass buyerTelegramId in purchasePpv input to trigger.");
+            // No telegram_id found — generate connect token for /telegram-connect page
+            const { randomBytes } = await import("crypto");
+            const connectToken = randomBytes(16).toString("hex");
+            await rawExec(
+              "UPDATE vaultx_ppv_purchases SET telegram_connect_token = ?, telegram_link_status = 'pending' WHERE id = ?",
+              [connectToken, purchaseId]
+            );
+            console.log("[VaultX purchasePpv] No buyerTelegramId — connect token generated for purchase_id=" + purchaseId);
           }
         } catch (e: any) {
           console.error("[VaultX purchasePpv] post-purchase hook error:", e.message);

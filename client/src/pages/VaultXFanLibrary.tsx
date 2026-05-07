@@ -346,8 +346,13 @@ export default function VaultXFanLibrary() {
       if (data.alreadyPurchased) {
         toast({ title: "Already purchased", description: "You already own this content." });
       } else {
-        toast({ title: "Unlocked!", description: "Content is now available." });
-        feedQ.refetch();
+        // If purchase returned a purchaseId and no telegram link yet, redirect to connect page
+        if (data.purchaseId) {
+          navigate(`/telegram-connect?purchaseId=${data.purchaseId}`);
+        } else {
+          toast({ title: "Unlocked!", description: "Content is now available." });
+          feedQ.refetch();
+        }
       }
     },
     onError: (e) => { setUnlocking(null); toast({ title: "Unlock failed", description: e.message, variant: "destructive" }); },
