@@ -1627,22 +1627,62 @@ export const vaultxRouter = router({
     .input(z.object({
       title: z.string().min(1).max(255),
       description: z.string().max(2000).optional(),
+      // Primary (uncensored) file URL — the full content
       fileUrl: z.string().url(),
+      // Optional censored/teaser URL for locked preview
+      censoredUrl: z.string().url().optional(),
       thumbnailUrl: z.string().url().optional(),
+      censoredThumbnailUrl: z.string().url().optional(),
       mimeType: z.string().optional(),
       fileSizeBytes: z.number().optional(),
       unlockType: z.enum(["free", "subscription", "ppv"]).default("subscription"),
+      // priceCents is stored as decimal dollars in vaultx_content (ppv_price)
       priceCents: z.number().min(0).default(0),
+      accessTier: z.enum(["basic", "premium", "vip", "ppv"]).default("basic"),
       tags: z.array(z.string()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const contentType = input.mimeType?.startsWith("video") ? "video" : input.mimeType?.startsWith("image") ? "image" : input.mimeType?.startsWith("audio") ? "audio" : "video";
-      await rawExec(
-        `INSERT INTO content (user_id, title, description, file_url, file_key, mime_type, file_size, content_type, status, price_cents, is_locked, thumbnail_url, unlock_type, tags, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, NOW())`,
-        [ctx.user.id, input.title, input.description || null, input.fileUrl, input.fileUrl, input.mimeType || "video/mp4", input.fileSizeBytes || 0, contentType, input.priceCents, input.unlockType !== "free" ? 1 : 0, input.thumbnailUrl || null, input.unlockType, input.tags?.length ? JSON.stringify(input.tags) : null]
+      // Resolve creator_id from vaultx_creators
+      const creatorRows = await rawQuery(
+        "SELECT id FROM vaultx_creators WHERE user_id = ? LIMIT 1",
+        [ctx.user.id]
       );
-      const rows = await rawQuery("SELECT id FROM content WHERE user_id = ? ORDER BY id DESC LIMIT 1", [ctx.user.id]);
-      await rawExec("UPDATE vaultx_creator_profiles SET total_posts = total_posts + 1 WHERE creator_id = ?", [ctx.user.id]);
+      if (!creatorRows.length) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Creator profile not found. Set up your VaultX creator profile first." });
+      const creatorId = creatorRows[0].id;
+
+      const contentType = input.mimeType?.startsWith("video") ? "video" : input.mimeType?.startsWith("image") ? "photo" : input.mimeType?.startsWith("audio") ? "audio" : "video";
+      const isPpv = input.unlockType === "ppv" ? 1 : 0;
+      const isSubscriptionOnly = input.unlockType === "subscription" ? 1 : 0;
+      const ppvPrice = isPpv ? (input.priceCents / 100).toFixed(2) : "0.00";
+      const accessTier = input.unlockType === "ppv" ? "ppv" : input.accessTier;
+
+      await rawExec(
+        `INSERT INTO vaultx_content
+         (creator_id, title, description, content_type, uncensored_url, censored_url,
+          thumbnail_url, censored_thumbnail_url, is_ppv, ppv_price, is_subscription_only,
+          access_tier, tags, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())`,
+        [
+          creatorId,
+          input.title,
+          input.description || null,
+          contentType,
+          input.fileUrl,
+          input.censoredUrl || null,
+          input.thumbnailUrl || null,
+          input.censoredThumbnailUrl || null,
+          isPpv,
+          ppvPrice,
+          isSubscriptionOnly,
+          accessTier,
+          input.tags?.length ? JSON.stringify(input.tags) : null,
+        ]
+      );
+      const rows = await rawQuery(
+        "SELECT id FROM vaultx_content WHERE creator_id = ? ORDER BY id DESC LIMIT 1",
+        [creatorId]
+      );
+      // Note: vaultx_creators has no total_posts column — post count tracked via vaultx_content COUNT
       return { contentId: rows[0]?.id, success: true };
     }),
 

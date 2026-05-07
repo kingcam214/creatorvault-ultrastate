@@ -251,6 +251,7 @@ import { cloneEmpireRouter } from "./routers/cloneEmpireRouter";
 import { kingcamAIRouter } from "./routers/kingcamAIRouter";
 import { agentTelemetryRouter } from "./routers/agentTelemetryRouter";
 import { challengeAutomationRouter } from "./routers/challengeAutomationRouter";
+import { polloRouter } from "./routers/polloRouter";
 // import { contentProtectionRouter } from "./routers/contentProtection"; // service stubs not implemented
 // import { safetyFeaturesRouter } from "./routers/safetyFeatures"; // service stubs not implemented
 // import { recruiterCommissionsRouter } from "./routers/recruiterCommissions"; // service stubs not implemented
@@ -990,6 +991,7 @@ export const appRouter = router({
   revenueReporting: revenueReportingRouter,
   teaserEngine: teaserEngineRouter,
   aiChatter: aiChatterRouter,
+  pollo: polloRouter,
 });
 
 export type AppRouter = typeof appRouter;

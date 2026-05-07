@@ -13,7 +13,6 @@ import { existsSync } from "fs";
 import path from "path";
 import os from "os";
 import { randomUUID } from "crypto";
-import { storagePut } from "../storage";
 
 // ─── Helper: mime type from filename ─────────────────────────────────────────
 function getMimeType(filename: string): string {
@@ -28,7 +27,10 @@ function getMimeType(filename: string): string {
   return map[ext] ?? "application/octet-stream";
 }
 
-// ─── Helper: assemble chunks + push to CDN ───────────────────────────────────
+// ─── Helper: assemble chunks + write to durable local disk ─────────────────────
+// storagePut (Manus CDN proxy) is unavailable from VPS — write directly to
+// /root/uploads/content-vault/{uuid}/{filename} and return a public HTTPS URL.
+const DURABLE_UPLOADS_DIR = "/root/uploads/content-vault";
 async function assembleAndUpload(sessionDir: string, meta: any): Promise<{ url: string; filename: string }> {
   const chunks: Buffer[] = [];
   for (let i = 0; i < meta.totalChunks; i++) {
@@ -37,10 +39,12 @@ async function assembleAndUpload(sessionDir: string, meta: any): Promise<{ url: 
   }
   const combined = Buffer.concat(chunks);
   const finalFilename = meta.filename || `upload-${meta.uploadId}.mp4`;
-  const uuid = randomUUID();
-  const storageKey = `vaultx/content-vault/${uuid}/${finalFilename}`;
-  const mimeType = getMimeType(finalFilename);
-  const { url } = await storagePut(storageKey, combined, mimeType);
+  const fileUuid = randomUUID();
+  const destDir = path.join(DURABLE_UPLOADS_DIR, fileUuid);
+  await mkdir(destDir, { recursive: true });
+  const destPath = path.join(destDir, finalFilename);
+  await writeFile(destPath, combined);
+  const url = `https://creatorvault.live/uploads/content-vault/${fileUuid}/${finalFilename}`;
   // Cleanup temp chunks
   for (let i = 0; i < meta.totalChunks; i++) {
     await unlink(path.join(sessionDir, `chunk-${i.toString().padStart(5, "0")}`)).catch(() => {});
@@ -49,7 +53,6 @@ async function assembleAndUpload(sessionDir: string, meta: any): Promise<{ url: 
   await rmdir(sessionDir).catch(() => {});
   return { url, filename: finalFilename };
 }
-
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 export const videoUploadRouter = Router();
 

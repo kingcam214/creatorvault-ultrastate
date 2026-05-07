@@ -24,15 +24,25 @@ async function getDbConnection() {
   });
 }
 
-interface PolloGenerationResponse {
-  taskId: string;
-  status: string;
-  videoUrl?: string;
+/**
+ * Normalise Pollo status strings to a consistent set:
+ *   waiting | processing | succeed | failed
+ * Pollo returns "succeed" (not "succeeded"), "processing", "waiting", "failed".
+ */
+function normalisePolloStatus(raw: string | undefined | null): string {
+  if (!raw) return "waiting";
+  const s = raw.toLowerCase();
+  if (s === "succeed" || s === "succeeded" || s === "success") return "succeed";
+  if (s === "failed" || s === "fail" || s === "error") return "failed";
+  if (s === "processing" || s === "running") return "processing";
+  return "waiting";
 }
 
 export const polloRouter = router({
   /**
-   * Generate video from image using Pollo.ai
+   * Generate video from image using Pollo.ai (pollo-v1-6 model).
+   * imageUrl is required — Pollo v1-6 is an image-to-video model.
+   * length is numeric seconds (5 or 10); the API expects an integer.
    */
   generateVideo: ownerOnlyProcedure
     .input(
@@ -47,7 +57,10 @@ export const polloRouter = router({
     .mutation(async ({ input, ctx }) => {
       const conn = await getDbConnection();
       try {
-        // Call Pollo.ai API
+        // Parse length to integer seconds (API requires numeric)
+        const durationSec = input.length === "10s" ? 10 : 5;
+
+        // Call Pollo.ai API — uses x-api-key header (NOT Authorization: Bearer)
         const response = await fetch(
           `${POLLO_BASE_URL}/generation/pollo/pollo-v1-6`,
           {
@@ -57,11 +70,13 @@ export const polloRouter = router({
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              image: input.imageUrl,
-              prompt: input.prompt || "",
-              resolution: input.resolution,
-              length: input.length,
-              mode: input.mode,
+              input: {
+                image: input.imageUrl,
+                prompt: input.prompt || "",
+                resolution: input.resolution,
+                duration: durationSec,
+                mode: input.mode,
+              },
             }),
           }
         );
@@ -71,7 +86,19 @@ export const polloRouter = router({
           throw new Error(`Pollo.ai API error: ${response.status} - ${errorText}`);
         }
 
-        const data: PolloGenerationResponse = await response.json();
+        const resp = await response.json();
+
+        // Response shape: { code: "SUCCESS", data: { taskId, status } }
+        if (resp?.code !== "SUCCESS") {
+          throw new Error(`Pollo.ai returned error: ${JSON.stringify(resp)}`);
+        }
+
+        const taskId = resp?.data?.taskId;
+        if (!taskId) {
+          throw new Error("Pollo.ai did not return a taskId");
+        }
+
+        const initialStatus = normalisePolloStatus(resp?.data?.status);
 
         // Insert into database
         const [insertResult] = await conn.execute(
@@ -80,16 +107,15 @@ export const polloRouter = router({
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             ctx.user.id,
-            data.taskId,
+            taskId,
             input.imageUrl,
             input.prompt || null,
             input.resolution,
             input.length,
             input.mode,
-            data.status || "waiting",
+            initialStatus,
           ]
         );
-
         const generationId = (insertResult as any).insertId;
 
         // Get the inserted record
@@ -101,7 +127,7 @@ export const polloRouter = router({
 
         return {
           success: true,
-          taskId: data.taskId,
+          taskId,
           generation,
         };
       } catch (error: any) {
@@ -113,7 +139,10 @@ export const polloRouter = router({
     }),
 
   /**
-   * Get task status from Pollo.ai and update database
+   * Poll Pollo.ai for task status and update the DB row.
+   * Status endpoint: GET /api/platform/generation/{taskId}/status
+   * Response: { code: "SUCCESS", data: { taskId, generations: [{ status, url }] } }
+   * Pollo status values: "waiting" | "processing" | "succeed" | "failed"
    */
   getTaskStatus: ownerOnlyProcedure
     .input(
@@ -124,9 +153,9 @@ export const polloRouter = router({
     .query(async ({ input, ctx }) => {
       const conn = await getDbConnection();
       try {
-        // Poll Pollo.ai status
+        // Poll Pollo.ai status — uses x-api-key header
         const response = await fetch(
-          `${POLLO_BASE_URL}/generation/pollo/pollo-v1-6/${input.taskId}`,
+          `${POLLO_BASE_URL}/generation/${input.taskId}/status`,
           {
             method: "GET",
             headers: {
@@ -140,14 +169,21 @@ export const polloRouter = router({
           throw new Error(`Pollo.ai status check error: ${response.status} - ${errorText}`);
         }
 
-        const data: PolloGenerationResponse = await response.json();
+        const resp = await response.json();
+
+        // Response shape: { code: "SUCCESS", data: { taskId, generations: [{ status, url }] } }
+        const gen = resp?.data?.generations?.[0];
+        const rawStatus = gen?.status ?? resp?.data?.status ?? null;
+        const genStatus = normalisePolloStatus(rawStatus);
+        // URL is in gen.url (empty string when not ready, full URL when succeed)
+        const genUrl = (gen?.url && gen.url.length > 0) ? gen.url : null;
 
         // Update database with current status
         await conn.execute(
           `UPDATE pollo_generations 
           SET status = ?, videoUrl = ?, updatedAt = CURRENT_TIMESTAMP
           WHERE taskId = ? AND userId = ?`,
-          [data.status, data.videoUrl || null, input.taskId, ctx.user.id]
+          [genStatus, genUrl, input.taskId, ctx.user.id]
         );
 
         // Get updated record
@@ -160,6 +196,8 @@ export const polloRouter = router({
 
         return {
           success: true,
+          status: genStatus,
+          videoUrl: genUrl,
           generation,
         };
       } catch (error: any) {
@@ -283,7 +321,6 @@ export const polloRouter = router({
         if (!generation) {
           throw new Error("Generation not found");
         }
-
         if (!generation.videoUrl) {
           throw new Error("Video URL not available yet");
         }

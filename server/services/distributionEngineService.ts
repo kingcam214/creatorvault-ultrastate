@@ -280,9 +280,13 @@ async function exportForPlatform(
 
   // Resolve source path
   let sourcePath = sourceUrl;
-  if (sourceUrl.startsWith("http")) {
+  if (sourceUrl.startsWith("https://creatorvault.live/uploads/")) {
+    // Resolve local file path directly — avoids HTTP/1.1 vs HTTP/2 mismatch on loopback
+    const relativePath = sourceUrl.replace("https://creatorvault.live", "");
+    sourcePath = path.join(UPLOAD_DIR, "..", relativePath);
+  } else if (sourceUrl.startsWith("http")) {
     const tmpInput = path.join(UPLOAD_DIR, `dist_input_${Date.now()}.mp4`);
-    execSync(`curl -sL "${sourceUrl}" -o "${tmpInput}"`, { timeout: 120000 });
+    execSync(`curl --http1.1 -sL "${sourceUrl}" -o "${tmpInput}"`, { timeout: 120000 });
     sourcePath = tmpInput;
   } else if (sourceUrl.startsWith("/uploads/")) {
     sourcePath = path.join(UPLOAD_DIR, "..", sourceUrl);
@@ -346,6 +350,10 @@ async function exportForPlatform(
 
   const outputUrl = `${BASE_URL}/uploads/${outputFilename}`;
   const processingTimeMs = Date.now() - startTime;
+  // Clean up temp input file if it was downloaded from an external URL
+  if (sourceUrl.startsWith("http") && !sourceUrl.startsWith("https://creatorvault.live")) {
+    try { fs.unlinkSync(sourcePath); } catch { /* ignore */ }
+  }
 
   return { platformId, outputUrl, fileSizeBytes: stat.size, durationSec, processingTimeMs };
 }
