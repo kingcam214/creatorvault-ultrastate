@@ -174,6 +174,8 @@ import { subscriptionsRouter } from "./routers/subscriptions";
 import { telegramBotRouter } from "./routers/telegramBot";
 import { telegramFunnelRouter } from "./routers/telegramFunnelRouter.js";
 import { telegramHubRouter } from "./routers/telegramHubRouter";
+import { telegramMoneyLoopRouter } from "./routers/telegramMoneyLoopRouter";
+import { telegramCampaignRouter } from "./routers/telegramCampaignRouter";
 import { telegramRouter } from "./routers/telegram";
 import { telegramWebhookRouter } from "./routers/telegramWebhookRouter";
 import { templateRecommendationsRouter } from "./routers/templateRecommendations";
@@ -892,6 +894,8 @@ export const appRouter = router({
   telegramBot: telegramBotRouter,
   telegramHub: telegramHubRouter,
   telegramFunnel: telegramFunnelRouter,
+  telegramMoneyLoop: telegramMoneyLoopRouter,
+  telegramCampaign: telegramCampaignRouter,
   telegramWebhook: telegramWebhookRouter,
   thumbnailGenerator: thumbnailGeneratorRouter,
   universityV2: universityV2Router,

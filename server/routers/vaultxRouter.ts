@@ -880,7 +880,34 @@ export const vaultxRouter = router({
         "UPDATE vaultx_content SET purchase_count = purchase_count + 1, revenue_generated = revenue_generated + ? WHERE id = ?",
         [content[0].ppv_price, input.contentId]
       );
-      return { purchaseId: (result as any).insertId, success: true };
+      const purchaseId = (result as any).insertId;
+
+      // ── Post-purchase: attribution + VIP upsell (non-blocking) ──────────────
+      setImmediate(async () => {
+        try {
+          const { recordCampaignEvent, triggerVipUpsell } = await import("../services/telegramCampaign");
+          const trackingCode = (input as any).trackingCode as string | undefined;
+          const buyerTelegramId = (input as any).buyerTelegramId as number | undefined;
+          if (trackingCode) {
+            await recordCampaignEvent(trackingCode, "purchase", {
+              userId: ctx.user.id,
+              revenueCents: Math.round(parseFloat(content[0].ppv_price) * 100),
+              buyerTelegramId,
+            });
+            await rawExec(
+              "UPDATE vaultx_ppv_purchases SET attribution_tracking_code = ?, buyer_telegram_id = ? WHERE id = ?",
+              [trackingCode, buyerTelegramId || null, purchaseId]
+            );
+          }
+          if (buyerTelegramId) {
+            await triggerVipUpsell({ buyerTelegramId, campaignTrackingCode: trackingCode, purchaseId });
+          }
+        } catch (e: any) {
+          console.error("[VaultX purchasePpv] post-purchase hook error:", e.message);
+        }
+      });
+
+      return { purchaseId, success: true };
     }),
 
   // ═══════════════════════════════════════════════════════════════════════════

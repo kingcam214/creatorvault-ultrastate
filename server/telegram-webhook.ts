@@ -155,6 +155,56 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
+    // ── callback_query handler (inline button taps) ─────────────────────────
+    if (update.callback_query) {
+      const cq = update.callback_query;
+      const cqUserId = cq.from?.id;
+      const cqUsername = cq.from?.username || cq.from?.first_name || "unknown";
+      // Upsert subscriber
+      try {
+        const { upsertSubscriber } = await import("./services/telegramMoneyLoop");
+        await upsertSubscriber({
+          telegramId: cqUserId,
+          username: cqUsername,
+          firstName: cq.from?.first_name,
+          lastName: cq.from?.last_name,
+        });
+      } catch { /* non-blocking */ }
+      // Ack the callback query
+      try {
+        await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ callback_query_id: cq.id }),
+        });
+      } catch { /* ignore */ }
+      console.log("[Telegram Webhook] callback_query from", cqUserId, cqUsername);
+      return res.status(200).json({ ok: true });
+    }
+
+    // ── chat_join_request handler (VIP join requests) ─────────────────────────
+    if (update.chat_join_request) {
+      const jr = update.chat_join_request;
+      const jrUserId = jr.from?.id;
+      const jrChatId = String(jr.chat?.id);
+      const jrUsername = jr.from?.username;
+      const jrFirstName = jr.from?.first_name;
+      console.log("[Telegram Webhook] chat_join_request from", jrUserId, "for chat", jrChatId);
+      try {
+        const { handleVipJoinRequest } = await import("./services/telegramMoneyLoop");
+        const result = await handleVipJoinRequest({
+          telegramId: jrUserId,
+          chatId: jrChatId,
+          username: jrUsername,
+          firstName: jrFirstName,
+        });
+        console.log("[Telegram Webhook] join_request result:", result);
+      } catch (e: any) {
+        console.error("[Telegram Webhook] join_request error:", e.message);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
     // Extract message data
     const message = update.message || update.edited_message || update.channel_post;
     
