@@ -237,4 +237,119 @@ export const telegramCampaignRouter = router({
         await db.end();
       }
     }),
+// ─── SCHEDULE DROP ──────────────────────────────────────────────────────────
+  "scheduleDrop": protectedProcedure
+    .input(
+      z.object({
+        contentId: z.number().int().positive().optional(),
+        channelEntityId: z.number().int().optional(),
+        mode: z.enum(["FAST", "BOOST", "FULL"]).default("BOOST"),
+        scheduledAt: z.string().datetime(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { scheduleDailyDrop } = await import("../services/telegramDailyDropEngine");
+      const result = await scheduleDailyDrop({
+        creatorId: ctx.user.id,
+        contentId: input.contentId,
+        channelEntityId: input.channelEntityId,
+        mode: input.mode,
+        scheduledAt: new Date(input.scheduledAt),
+      });
+      return result;
+    }),
+
+  // ─── LIST DROPS ─────────────────────────────────────────────────────────────
+  "listDrops": protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().int().default(20),
+        status: z.enum(["scheduled", "sent", "failed", "cancelled"]).optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      try {
+        const statusFilter = input.status ? `AND status = '${input.status}'` : "";
+        const [dropRows] = await db.execute(
+          `SELECT d.id, d.mode, d.status, d.scheduled_at, d.sent_at,
+                  d.tg_message_id, d.tracking_code, d.click_count, d.revenue_cents,
+                  vc.title as content_title, vc.ppv_price as content_price
+           FROM telegram_daily_drops d
+           LEFT JOIN vaultx_content vc ON vc.id = d.content_id
+           WHERE d.creator_id = ? ${statusFilter}
+           ORDER BY d.scheduled_at DESC
+           LIMIT ${input.limit}`,
+          [ctx.user.id]
+        );
+        return { drops: rows(dropRows) };
+      } finally {
+        await db.end();
+      }
+    }),
+
+  // ─── TRIGGER REACTIVATION ────────────────────────────────────────────────────
+  "triggerReactivation": protectedProcedure
+    .input(
+      z.object({
+        subscriberId: z.number().int().positive().optional(),
+        runAll: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { runReactivationTick, scheduleReactivationJob } = await import("../services/telegramBuyerReactivation");
+      if (input.runAll) {
+        const result = await runReactivationTick();
+        return result;
+      }
+      if (input.subscriberId) {
+        const db = await getDb();
+        try {
+          const [subRows] = await db.execute(
+            "SELECT id, telegram_id FROM telegram_subscribers WHERE id = ? LIMIT 1",
+            [input.subscriberId]
+          );
+          const sub = rows(subRows)[0] as any;
+          if (!sub) throw new Error("Subscriber not found");
+          const result = await scheduleReactivationJob({
+            subscriberId: sub.id,
+            telegramUserId: sub.telegram_id,
+            reason: "inactive_buyer",
+          });
+          return result;
+        } finally {
+          await db.end();
+        }
+      }
+      throw new Error("Must provide subscriberId or runAll=true");
+    }),
+
+  // ─── LIST REACTIVATION JOBS ──────────────────────────────────────────────────
+  "listReactivationJobs": protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().int().default(20),
+        status: z.enum(["pending", "sent", "completed", "failed"]).optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      try {
+        const statusFilter = input.status ? `AND rj.status = '${input.status}'` : "";
+        const [jobRows] = await db.execute(
+          `SELECT rj.id, rj.subscriber_id, rj.telegram_user_id, rj.reason,
+                  rj.status, rj.retry_count, rj.scheduled_at, rj.sent_at,
+                  ts.first_name, ts.segment, ts.purchase_count, ts.total_spent_cents
+           FROM telegram_reactivation_jobs rj
+           LEFT JOIN telegram_subscribers ts ON ts.id = rj.subscriber_id
+           WHERE 1=1 ${statusFilter}
+           ORDER BY rj.created_at DESC
+           LIMIT ${input.limit}`
+        );
+        return { jobs: rows(jobRows) };
+      } finally {
+        await db.end();
+      }
+    }),
+
 });

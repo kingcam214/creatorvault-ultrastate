@@ -20,6 +20,7 @@ import videoStudioRouter from "../routers/videoStudioRouter";
 import { videoUploadRouter } from "../routers/videoUploadRouter";
 import { registerTelegramConnectRoutes } from "../services/telegramConnectRoute";
 import { startDailyDropCron } from "../services/telegramDailyDropEngine";
+import { startReactivationCron } from "../services/telegramBuyerReactivation";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -44,6 +45,7 @@ async function startServer() {
   // Run startup tasks (schema bootstrap, etc)
   await runStartupTasks();
   startDailyDropCron();
+  startReactivationCron();
   
   const app = express();
   const server = createServer(app);
