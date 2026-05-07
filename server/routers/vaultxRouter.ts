@@ -885,13 +885,16 @@ export const vaultxRouter = router({
       // ── Post-purchase: attribution + VIP upsell (non-blocking) ──────────────
       setImmediate(async () => {
         try {
-          const { recordCampaignEvent, triggerVipUpsell } = await import("../services/telegramCampaign");
+          const { recordCampaignEvent } = await import("../services/telegramCampaign");
+          const { sendVipUpsell } = await import("../services/telegramVipUpsell");
           const trackingCode = (input as any).trackingCode as string | undefined;
           const buyerTelegramId = (input as any).buyerTelegramId as number | undefined;
+          const revenueCents = Math.round(parseFloat(content[0].ppv_price) * 100);
+          // 1. Attribution tracking
           if (trackingCode) {
             await recordCampaignEvent(trackingCode, "purchase", {
               userId: ctx.user.id,
-              revenueCents: Math.round(parseFloat(content[0].ppv_price) * 100),
+              revenueCents,
               buyerTelegramId,
             });
             await rawExec(
@@ -899,8 +902,19 @@ export const vaultxRouter = router({
               [trackingCode, buyerTelegramId || null, purchaseId]
             );
           }
+          // 2. VIP upsell — requires real buyer Telegram ID
           if (buyerTelegramId) {
-            await triggerVipUpsell({ buyerTelegramId, campaignTrackingCode: trackingCode, purchaseId });
+            const upsellResult = await sendVipUpsell({
+              purchaseId,
+              buyerTelegramId,
+              amountCents: revenueCents,
+              contentTitle: content[0].title || "exclusive content",
+              campaignId: undefined,
+              trackingCode,
+            });
+            console.log("[VaultX purchasePpv] VIP upsell result:", JSON.stringify(upsellResult));
+          } else {
+            console.log("[VaultX purchasePpv] No buyerTelegramId — VIP upsell skipped. Pass buyerTelegramId in purchasePpv input to trigger.");
           }
         } catch (e: any) {
           console.error("[VaultX purchasePpv] post-purchase hook error:", e.message);
