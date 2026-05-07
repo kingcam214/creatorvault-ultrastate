@@ -110,16 +110,19 @@ async function startServer() {
       const crypto = await import("crypto");
       const ipHash = crypto.createHash("sha256").update(ipRaw + (process.env.SESSION_SECRET || "vaultx")).digest("hex").slice(0, 64);
       const userAgent = (req.headers["user-agent"] || "").slice(0, 500);
-      conn.query(
-        "INSERT INTO attribution_events (tracking_code, distribution_job_id, creator_id, content_id, channel_identity_id, platform, event_type, session_id, ip_hash, user_agent) VALUES (?, ?, ?, ?, ?, ?, 'click', ?, ?, ?)",
-        [trackingCode, job.id, job.creator_id, job.content_id || null, job.channel_identity_id, job.platform, sessionId, ipHash, userAgent]
-      ).then(() => {
-        conn.query("UPDATE distribution_jobs SET click_count = click_count + 1 WHERE id = ?", [job.id]).catch(() => {});
-        attrPool.end();
-      }).catch((e: any) => {
-        console.warn("[attribution] click insert failed:", e.message);
-        attrPool.end();
-      });
+      (async () => {
+        try {
+          await conn.query(
+            "INSERT INTO attribution_events (tracking_code, distribution_job_id, creator_id, content_id, channel_identity_id, platform, event_type, session_id, ip_hash, user_agent) VALUES (?, ?, ?, ?, ?, ?, 'click', ?, ?, ?)",
+            [trackingCode, job.id, job.creator_id, job.content_id || null, job.channel_identity_id, job.platform, sessionId, ipHash, userAgent]
+          );
+          await conn.query("UPDATE distribution_jobs SET click_count = click_count + 1 WHERE id = ?", [job.id]);
+        } catch (e: any) {
+          console.warn("[attribution] click record failed:", e.message);
+        } finally {
+          attrPool.end();
+        }
+      })();
       return res.redirect(302, destUrl);
     } catch (err: any) {
       console.warn("[attribution] redirect error:", err.message);
