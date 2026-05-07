@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import { db } from "../db";
 import path from "path";
 import { existsSync, mkdirSync } from "fs";
 import { createServer } from "http";
@@ -82,6 +83,50 @@ async function startServer() {
       createContext,
     })
   );
+  // Attribution tracking redirect — /r/:trackingCode
+  // Records click event in attribution_events and redirects to destination URL
+  app.get("/r/:trackingCode", async (req, res) => {
+    const { trackingCode } = req.params;
+    const fallback = "https://creatorvault.live/vaultx";
+    try {
+      // Use mysql2 createPool directly — drizzle.$client is not accessible at runtime
+      const mysql2 = await import("mysql2");
+      const attrPool = mysql2.createPool(process.env.DATABASE_URL as string);
+      const conn = attrPool.promise();
+      const [jobRows] = await conn.query(
+        "SELECT destination_url, id, creator_id, content_id, channel_identity_id, platform FROM distribution_jobs WHERE tracking_code = ? LIMIT 1",
+        [trackingCode]
+      ) as any;
+      const jobs = jobRows as any[];
+      if (!jobs.length) {
+        attrPool.end();
+        return res.redirect(302, fallback);
+      }
+      const job = jobs[0];
+      const destUrl = job.destination_url || fallback;
+      // Record click event asynchronously (don't block redirect)
+      const sessionId = (req.headers["x-session-id"] as string) || null;
+      const ipRaw = req.ip || req.socket.remoteAddress || "";
+      const crypto = await import("crypto");
+      const ipHash = crypto.createHash("sha256").update(ipRaw + (process.env.SESSION_SECRET || "vaultx")).digest("hex").slice(0, 64);
+      const userAgent = (req.headers["user-agent"] || "").slice(0, 500);
+      conn.query(
+        "INSERT INTO attribution_events (tracking_code, distribution_job_id, creator_id, content_id, channel_identity_id, platform, event_type, session_id, ip_hash, user_agent) VALUES (?, ?, ?, ?, ?, ?, 'click', ?, ?, ?)",
+        [trackingCode, job.id, job.creator_id, job.content_id || null, job.channel_identity_id, job.platform, sessionId, ipHash, userAgent]
+      ).then(() => {
+        conn.query("UPDATE distribution_jobs SET click_count = click_count + 1 WHERE id = ?", [job.id]).catch(() => {});
+        attrPool.end();
+      }).catch((e: any) => {
+        console.warn("[attribution] click insert failed:", e.message);
+        attrPool.end();
+      });
+      return res.redirect(302, destUrl);
+    } catch (err: any) {
+      console.warn("[attribution] redirect error:", err.message);
+      return res.redirect(302, fallback);
+    }
+  });
+
   // Durable uploads directory — persists across frontend redeployments
   const durableUploadsDir = path.resolve(process.cwd(), "..", "uploads");
   if (!existsSync(durableUploadsDir)) {
