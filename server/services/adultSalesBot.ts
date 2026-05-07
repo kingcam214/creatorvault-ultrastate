@@ -377,47 +377,47 @@ async function handlePayment(context: ConversationContext, message: string): Pro
   const isAgreeing = agreementKeywords.some(kw => lowerMessage.includes(kw));
 
   if (isAgreeing) {
-    // Fetch creator payment methods from database
-    const [creator] = await db
-      .select({
-        cashappHandle: users.cashappHandle,
-        zelleHandle: users.zelleHandle,
-        applepayHandle: users.applepayHandle,
-      })
-      .from(users)
-      .where(eq(users.id, context.creatorId))
-      .limit(1);
-
-    // Build payment instructions based on available methods
-    let paymentMethods = [];
-    if (creator?.cashappHandle) {
-      paymentMethods.push(`💵 CashApp: ${creator.cashappHandle}`);
-    }
-    if (creator?.zelleHandle) {
-      paymentMethods.push(`💸 Zelle: ${creator.zelleHandle}`);
-    }
-    if (creator?.applepayHandle) {
-      paymentMethods.push(`🍎 Apple Pay: ${creator.applepayHandle}`);
-    }
-
-    // Fallback if no payment methods configured
-    if (paymentMethods.length === 0) {
-      paymentMethods.push("💳 Payment methods are being set up. Please check back shortly!");
-    }
-
+    // Route buyer into VaultX PPV purchase system with attribution tracking
     const price = (context.metadata as any).price || 25;
-    const paymentInstructions = `Great! Here's how to pay:
-
-${paymentMethods.join('\n')}
-
-Send $${price} and include your username in the note. I'll deliver your content within 10 minutes of payment confirmation!`;
-
+    const contentId = (context.metadata as any).contentId || null;
+    
+    // Generate a unique tracking code for this buyer interaction
+    const trackingCode = `tg${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    const FRONTEND = process.env.FRONTEND_URL || "https://creatorvault.live";
+    
+    // Save tracking code to distribution_jobs for attribution
+    try {
+      const mysql2 = await import("mysql2/promise");
+      const pool = mysql2.default.createPool({
+        host: process.env.DB_HOST || "localhost",
+        user: process.env.DB_USER || "creatorvault",
+        password: process.env.DB_PASSWORD || "KingCam214CreatorVault",
+        database: process.env.DB_NAME || "creatorvault",
+        connectionLimit: 1,
+      });
+      const destUrl = `${FRONTEND}/vaultx${contentId ? "?buy=" + contentId : ""}`;
+      await pool.execute(
+        `INSERT IGNORE INTO distribution_jobs (creator_id, channel_identity_id, platform, asset_url, asset_type, caption, tracking_code, destination_url, status, content_safety_level, brand_lane)
+         VALUES (1, 1, "telegram", "https://creatorvault.live/uploads/ppv_1778107488797/teaser.mp4", "teaser", "Telegram bot buyer conversion", ?, ?, "posted", "explicit", "vaultx_adult")`,
+        [trackingCode, destUrl]
+      );
+      await pool.end();
+    } catch (e: any) {
+      console.error("[adultSalesBot] Failed to save tracking code:", e.message);
+    }
+    
+    // Build the tracked purchase URL
+    const purchaseUrl = `${FRONTEND}/r/${trackingCode}`;
+    
+    const paymentMessage = `🔓 <b>Ready to unlock?</b>\n\nTap below to complete your secure purchase. Instant access after payment.\n\n💳 One-time payment — no subscription required.`;
+    
     return {
-      message: paymentInstructions,
+      message: paymentMessage,
       nextState: "delivery",
       buyerTag: context.buyerTag,
       shouldDisengage: false,
       shouldBlacklist: false,
+      metadata: { purchaseUrl, trackingCode },
     };
   }
 
@@ -605,14 +605,15 @@ async function getConversationContext(
     };
   }
 
-  const latestEvent = recentEvents[0];
+  const conversationEvent = recentEvents.find(e => e.eventType === "adult_sales_conversation");
+  const latestEvent = conversationEvent || recentEvents[0];
   const eventData = latestEvent.eventData as any;
 
   return {
     userId,
     creatorId,
     channel: channel as any,
-    state: (eventData.nextState as ConversationState) || "greeting",
+    state: (eventData.state as ConversationState) || (eventData.nextState as ConversationState) || "greeting",
     buyerTag: (eventData.buyerTag as BuyerTag) || "browsing",
     messageCount: recentEvents.length,
     lastMessageAt: latestEvent.createdAt,
