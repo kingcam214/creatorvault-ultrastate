@@ -182,7 +182,7 @@ async function processDrop(drop: any, pool: mysql2.Pool): Promise<void> {
 
     if (contentId) {
       const [contentRows] = await conn.query(
-        "SELECT title, price FROM vaultx_content WHERE id=? LIMIT 1",
+        "SELECT title, ppv_price AS price FROM vaultx_content WHERE id=? LIMIT 1",
         [contentId]
       ) as any;
       if (contentRows.length) {
@@ -231,11 +231,12 @@ async function processDrop(drop: any, pool: mysql2.Pool): Promise<void> {
     // Create distribution_jobs row
     const [djInsert] = await conn.query(
       `INSERT INTO distribution_jobs 
-       (creator_id, platform, asset_url, asset_type, content_safety_level, brand_lane,
+       (creator_id, channel_identity_id, platform, asset_url, asset_type, content_safety_level, brand_lane,
         tracking_code, destination_url, status, platform_post_id)
-       VALUES (?, 'telegram', ?, 'text', 'adult', 'vaultx', ?, ?, 'posted', ?)`,
+       VALUES (?, ?, 'telegram', ?, 'text', 'sensitive', 'vaultx_adult', ?, ?, 'posted', ?)`,
       [
         drop.creator_id,
+        drop.channel_entity_id || 1,
         trackingUrl,
         trackingCode,
         `${BASE_URL}/vaultx`,
@@ -247,13 +248,13 @@ async function processDrop(drop: any, pool: mysql2.Pool): Promise<void> {
     // Create telegram_campaigns row
     const [campaignInsert] = await conn.query(
       `INSERT INTO telegram_campaigns 
-       (creator_id, content_id, channel_entity_id, mode, status, tracking_code, 
-        ai_hook, ai_cta, price_cents, clicks, conversions, revenue_cents)
+       (creator_id, content_id, channel_entity_id, campaign_mode, status, tracking_code, 
+        ai_hook, ai_cta, price_cents, click_count, conversion_count, revenue_cents)
        VALUES (?, ?, ?, ?, 'sent', ?, ?, ?, ?, 0, 0, 0)`,
       [
         drop.creator_id,
         contentId || null,
-        drop.channel_entity_id || null,
+        drop.channel_entity_id || 1,
         drop.mode,
         trackingCode,
         copy.hook || messageText.slice(0, 200),
@@ -286,7 +287,7 @@ async function processDrop(drop: any, pool: mysql2.Pool): Promise<void> {
 
 async function getChannelChatId(channelEntityId: number, conn: mysql2.PoolConnection): Promise<string> {
   const [rows] = await conn.query(
-    "SELECT chat_id FROM telegram_channel_entities WHERE id=? LIMIT 1",
+    "SELECT telegram_chat_id AS chat_id FROM telegram_channel_entities WHERE id=? LIMIT 1",
     [channelEntityId]
   ) as any;
   return rows.length ? String(rows[0].chat_id) : DEFAULT_CHANNEL_CHAT_ID;
