@@ -18,7 +18,7 @@ import { runAutomatedDirector } from "../services/automatedDirectorService";
 import { runTeaseEngine } from "../services/teaseEngineService";
 import { distributionEngineExport } from "../services/distributionEngineService";
 import { enhanceSceneByScene } from "../services/sceneEnhancementService";
-import { buildPpvBundle, createTipUnlockContent, suggestContentPrice } from "../services/monetizationBundleService";
+import { buildPpvBundle, createTipUnlockContent, suggestContentPrice, getPpvProgress } from "../services/monetizationBundleService";
 import { generateRecutSuggestions, generateAbThumbnails, analyzeHookStrength } from "../services/analyticsEditingService";
 
 const OWNER_IDS = [6, 33];
@@ -2046,6 +2046,7 @@ export const vaultxRouter = router({
       desireScore: z.number().min(1).max(10).default(7),
       teaserDurationSec: z.number().optional(),
       previewDurationSec: z.number().optional(),
+      clientBundleId: z.string().optional(), // client-generated ID for progress tracking sync
     }))
     .mutation(async ({ ctx, input }) => {
       const result = await buildPpvBundle({
@@ -2055,10 +2056,41 @@ export const vaultxRouter = router({
         desireScore: input.desireScore,
         teaserDurationSec: input.teaserDurationSec,
         previewDurationSec: input.previewDurationSec,
+        clientBundleId: input.clientBundleId,
       });
       return result;
     }),
 
+  // ─── PROCEDURE 52b: ppvBundleProgress ────────────────────────────────────
+  ppvBundleProgress: protectedProcedure
+    .input(z.object({
+      bundleId: z.string(),
+    }))
+    .query(async ({ input }) => {
+      const progress = getPpvProgress(input.bundleId);
+      if (!progress) {
+        return {
+          found: false,
+          bundleId: input.bundleId,
+          overallStatus: "pending" as const,
+          currentStageIndex: 0,
+          stages: [],
+          startedAt: null,
+          completedAt: null,
+          error: null,
+        };
+      }
+      return {
+        found: true,
+        bundleId: progress.bundleId,
+        overallStatus: progress.overallStatus,
+        currentStageIndex: progress.currentStageIndex,
+        stages: progress.stages,
+        startedAt: progress.startedAt,
+        completedAt: progress.completedAt ?? null,
+        error: progress.error ?? null,
+      };
+    }),
   // ─── PROCEDURE 53: createTipUnlock ───────────────────────────────────────
   createTipUnlock: protectedProcedure
     .input(z.object({

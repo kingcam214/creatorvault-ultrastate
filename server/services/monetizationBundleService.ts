@@ -23,6 +23,105 @@ const BASE_URL = process.env.BASE_URL || "https://creatorvault.live";
 const openai = new OpenAI();
 
 // ============================================================================
+// PPV BUNDLE PROGRESS STORE
+// In-memory store for real-time stage tracking. Keyed by bundleId.
+// ============================================================================
+export interface PPVStage {
+  id: string;
+  label: string;
+  status: "pending" | "active" | "complete" | "failed";
+  startedAt?: number;
+  completedAt?: number;
+  error?: string;
+}
+export interface PPVProgress {
+  bundleId: string;
+  creatorId: number;
+  overallStatus: "pending" | "processing" | "complete" | "failed";
+  currentStageIndex: number;
+  stages: PPVStage[];
+  startedAt: number;
+  completedAt?: number;
+  error?: string;
+}
+const PPV_STAGE_DEFS = [
+  { id: "analyzing",         label: "Analyzing source video" },
+  { id: "teaser",            label: "Generating teaser clip" },
+  { id: "censored_preview",  label: "Generating censored preview" },
+  { id: "full_video",        label: "Processing full video" },
+  { id: "thumbnail",         label: "Extracting thumbnail" },
+  { id: "ai_hooks",          label: "Generating AI hooks & pricing" },
+  { id: "saving",            label: "Saving to Content Vault" },
+];
+// Global store — survives within a single server process
+export const ppvProgressStore = new Map<string, PPVProgress>();
+
+export function getPpvProgress(bundleId: string): PPVProgress | null {
+  return ppvProgressStore.get(bundleId) ?? null;
+}
+
+function initProgress(bundleId: string, creatorId: number): PPVProgress {
+  const progress: PPVProgress = {
+    bundleId,
+    creatorId,
+    overallStatus: "processing",
+    currentStageIndex: 0,
+    stages: PPV_STAGE_DEFS.map(s => ({ id: s.id, label: s.label, status: "pending" })),
+    startedAt: Date.now(),
+  };
+  ppvProgressStore.set(bundleId, progress);
+  return progress;
+}
+
+function advanceStage(progress: PPVProgress, stageId: string): void {
+  const idx = progress.stages.findIndex(s => s.id === stageId);
+  if (idx === -1) return;
+  // Mark previous stages complete
+  for (let i = 0; i < idx; i++) {
+    if (progress.stages[i].status === "pending") {
+      progress.stages[i].status = "complete";
+      progress.stages[i].completedAt = Date.now();
+    }
+  }
+  progress.stages[idx].status = "active";
+  progress.stages[idx].startedAt = Date.now();
+  progress.currentStageIndex = idx;
+}
+
+function completeStage(progress: PPVProgress, stageId: string): void {
+  const stage = progress.stages.find(s => s.id === stageId);
+  if (stage) {
+    stage.status = "complete";
+    stage.completedAt = Date.now();
+  }
+}
+
+function failStage(progress: PPVProgress, stageId: string, error: string): void {
+  const stage = progress.stages.find(s => s.id === stageId);
+  if (stage) {
+    stage.status = "failed";
+    stage.error = error;
+    stage.completedAt = Date.now();
+  }
+  progress.overallStatus = "failed";
+  progress.error = error;
+  progress.completedAt = Date.now();
+}
+
+function completeProgress(progress: PPVProgress): void {
+  progress.stages.forEach(s => {
+    if (s.status !== "failed") s.status = "complete";
+    if (!s.completedAt) s.completedAt = Date.now();
+  });
+  progress.overallStatus = "complete";
+  progress.completedAt = Date.now();
+  // Auto-clean after 10 minutes
+  setTimeout(() => ppvProgressStore.delete(progress.bundleId), 10 * 60 * 1000);
+}
+
+
+
+// ============================================================================
 // AI PRICING ENGINE
 // Analyzes content and suggests optimal PPV/subscription price
 // ============================================================================
@@ -124,15 +223,20 @@ export async function buildPpvBundle(params: {
   desireScore: number;
   teaserDurationSec?: number;
   previewDurationSec?: number;
+  clientBundleId?: string; // if provided, use this as bundleId for progress tracking sync
 }): Promise<{
   fullVideoUrl: string;
   teaserUrl: string;
   censoredPreviewUrl: string;
   thumbnailUrl: string;
   suggestedPriceCents: number;
+  suggestedPriceDollars: number;
+  desireScore: number;
   aiGeneratedHooks: string[];
   aiGeneratedCta: string;
   bundleId: string;
+  enginesUsed: string[];
+  replicateEnhancePredictionId: string | null;
 }> {
   const {
     sourceUrl,
@@ -150,9 +254,12 @@ export async function buildPpvBundle(params: {
     sourcePath = tmpInput;
   }
 
-  const bundleId = `ppv_${Date.now()}`;
+  const bundleId = params.clientBundleId || `ppv_${Date.now()}`;
   const tmpDir = path.join(UPLOAD_DIR, bundleId);
   fs.mkdirSync(tmpDir, { recursive: true });
+  // Initialize real-time progress tracking
+  const progress = initProgress(bundleId, params.creatorId);
+  advanceStage(progress, "analyzing");
 
   // Get source duration
   const durationRaw = execSync(
@@ -162,6 +269,8 @@ export async function buildPpvBundle(params: {
   const totalDuration = parseFloat(durationRaw) || 60;
 
   // ── 1. TEASER — first N seconds with desire grade + watermark ──
+  completeStage(progress, "analyzing");
+  advanceStage(progress, "teaser");
   const teaserPath = path.join(tmpDir, "teaser.mp4");
   const actualTeaserDuration = Math.min(teaserDurationSec, totalDuration * 0.4);
 
@@ -183,7 +292,9 @@ export async function buildPpvBundle(params: {
     proc.on("close", (code) => code === 0 ? resolve() : reject(new Error("Teaser failed")));
   });
 
+  completeStage(progress, "teaser");
   // ── 2. CENSORED PREVIEW — strategic blur on explicit regions ──
+  advanceStage(progress, "censored_preview");
   const censoredPath = path.join(tmpDir, "censored_preview.mp4");
   const previewStart = Math.max(0, totalDuration * 0.3);
   const actualPreviewDuration = Math.min(previewDurationSec, totalDuration * 0.3);
@@ -210,7 +321,9 @@ export async function buildPpvBundle(params: {
     proc.on("close", (code) => code === 0 ? resolve() : reject(new Error("Censored preview failed")));
   });
 
+  completeStage(progress, "censored_preview");
   // ── 3. THUMBNAIL — extract best frame and enhance ──
+  advanceStage(progress, "thumbnail");
   const thumbnailPath = path.join(tmpDir, "thumbnail.jpg");
   const thumbTimestamp = totalDuration * 0.25;
 
@@ -219,7 +332,9 @@ export async function buildPpvBundle(params: {
     { timeout: 15000 }
   );
 
+  completeStage(progress, "thumbnail");
   // ── 4. AI-GENERATED HOOKS AND CTA ──
+  advanceStage(progress, "ai_hooks");
   let aiHooks: string[] = [];
   let aiCta = "";
 
@@ -259,6 +374,8 @@ CTA should create urgency and exclusivity. Keep each hook under 80 characters.`,
     platformTarget: "onlyfans",
   });
 
+  completeStage(progress, "ai_hooks");
+  advanceStage(progress, "full_video");
   // Copy full video with watermark to bundle dir
   const fullVideoPath = path.join(tmpDir, "full_video.mp4");
   await new Promise<void>((resolve, reject) => {
@@ -278,6 +395,8 @@ CTA should create urgency and exclusivity. Keep each hook under 80 characters.`,
     proc.on("close", (code) => code === 0 ? resolve() : reject(new Error("Full video processing failed")));
   });
 
+  completeStage(progress, "full_video");
+  advanceStage(progress, "saving");
   // ── 6. OPTIONAL REPLICATE REAL-ESRGAN ENHANCEMENT PASS ──
   // If REPLICATE_API_TOKEN is set, submit the thumbnail for AI upscale.
   // This is async (fire-and-forget) — we log the predictionId but don't block.
@@ -294,11 +413,11 @@ CTA should create urgency and exclusivity. Keep each hook under 80 characters.`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          version: "3e56ce4b57863bd03048b42bc09bdd4db20d427cca5fde9d8ae4dc60e1bb4775",
+          version: "42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b",
           input: {
-            video_path: `${BASE_URL}/uploads/${bundleId}/full_video.mp4`,
-            resolution: "FHD",
-            model: "RealESRGAN_x4plus",
+            image: `${BASE_URL}/uploads/${bundleId}/thumbnail.jpg`,
+            scale: 2,
+            face_enhance: false,
           },
         }),
       });
@@ -317,12 +436,16 @@ CTA should create urgency and exclusivity. Keep each hook under 80 characters.`,
   enginesUsed.push("OpenAI GPT-4.1-mini (hooks + CTA)");
   enginesUsed.push("VaultX AI Pricing Engine (price suggestion)");
 
+  completeStage(progress, "saving");
+  completeProgress(progress);
   return {
     fullVideoUrl: `${BASE_URL}/uploads/${bundleId}/full_video.mp4`,
     teaserUrl: `${BASE_URL}/uploads/${bundleId}/teaser.mp4`,
     censoredPreviewUrl: `${BASE_URL}/uploads/${bundleId}/censored_preview.mp4`,
     thumbnailUrl: `${BASE_URL}/uploads/${bundleId}/thumbnail.jpg`,
     suggestedPriceCents: pricing.suggestedPriceCents,
+    suggestedPriceDollars: (pricing.suggestedPriceCents / 100).toFixed(2),
+    desireScore,
     aiGeneratedHooks: aiHooks,
     aiGeneratedCta: aiCta,
     bundleId,

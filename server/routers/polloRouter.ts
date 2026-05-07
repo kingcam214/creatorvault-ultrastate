@@ -74,7 +74,7 @@ export const polloRouter = router({
                 image: input.imageUrl,
                 prompt: input.prompt || "",
                 resolution: input.resolution,
-                duration: durationSec,
+                length: durationSec,
                 mode: input.mode,
               },
             }),

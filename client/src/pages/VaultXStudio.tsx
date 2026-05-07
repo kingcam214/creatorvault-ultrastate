@@ -3489,6 +3489,149 @@ function SceneEnhancementMode({ onOutput }: { onOutput: (url: string, label: str
 // ============================================================================
 // MONETIZATION BUNDLE MODE
 // ============================================================================
+
+// ─── PPV BUNDLE PROGRESS PANEL ───────────────────────────────────────────────
+// World-class 7-stage progress tracker for PPV bundle generation.
+// Polls trpc.vaultx.ppvBundleProgress every 1.5s while bundleId is set.
+const PPV_STAGE_ICONS: Record<string, string> = {
+  analyzing:        "🔍",
+  teaser:           "✂️",
+  censored_preview: "🔒",
+  full_video:       "🎬",
+  thumbnail:        "🖼️",
+  ai_hooks:         "🤖",
+  saving:           "💾",
+};
+const PPV_STAGE_LABELS: Record<string, string> = {
+  analyzing:        "Analyzing source video",
+  teaser:           "Generating teaser clip",
+  censored_preview: "Generating censored preview",
+  full_video:       "Processing full video",
+  thumbnail:        "Extracting thumbnail",
+  ai_hooks:         "Generating AI hooks & pricing",
+  saving:           "Saving to Content Vault",
+};
+
+function PPVProgressPanel({ bundleId, accent = "#A855F7" }: { bundleId: string; accent?: string }) {
+  const progressQuery = trpc.vaultx.ppvBundleProgress.useQuery(
+    { bundleId },
+    { refetchInterval: 1500, enabled: !!bundleId }
+  );
+  const data = progressQuery.data;
+  const stages = data?.stages ?? [];
+  const overallStatus = data?.overallStatus ?? "processing";
+  const currentIdx = data?.currentStageIndex ?? 0;
+  const elapsed = data?.startedAt ? Math.round((Date.now() - data.startedAt) / 1000) : 0;
+  const completedCount = stages.filter((s: any) => s.status === "complete").length;
+  const totalCount = stages.length || 7;
+  const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  return (
+    <div className="w-full flex flex-col gap-3 p-4 rounded-2xl" style={{
+      background: "rgba(0,0,0,0.4)",
+      border: `1px solid ${accent}30`,
+      backdropFilter: "blur(12px)",
+    }}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: overallStatus === "failed" ? "#EF4444" : overallStatus === "complete" ? "#22C55E" : accent }} />
+          <p className="text-xs font-black text-white uppercase tracking-widest">
+            {overallStatus === "complete" ? "Bundle Complete" : overallStatus === "failed" ? "Bundle Failed" : "Building PPV Bundle"}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] font-bold" style={{ color: accent }}>{pct}%</p>
+          {overallStatus === "processing" && (
+            <p className="text-[10px] text-gray-500">{elapsed}s</p>
+          )}
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+        <div
+          className="h-full rounded-full transition-all duration-700"
+          style={{
+            width: `${pct}%`,
+            background: overallStatus === "failed"
+              ? "linear-gradient(90deg, #EF4444, #DC2626)"
+              : overallStatus === "complete"
+              ? "linear-gradient(90deg, #22C55E, #16A34A)"
+              : `linear-gradient(90deg, ${accent}, #7C3AED)`,
+          }}
+        />
+      </div>
+
+      {/* Stage list */}
+      <div className="flex flex-col gap-1.5">
+        {(stages.length > 0 ? stages : Object.keys(PPV_STAGE_LABELS).map(id => ({ id, label: PPV_STAGE_LABELS[id], status: "pending" }))).map((stage: any, idx: number) => {
+          const isActive = stage.status === "active";
+          const isComplete = stage.status === "complete";
+          const isFailed = stage.status === "failed";
+          const isPending = stage.status === "pending";
+          return (
+            <div key={stage.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl transition-all duration-300"
+              style={{
+                background: isActive ? `${accent}12` : "transparent",
+                border: isActive ? `1px solid ${accent}30` : "1px solid transparent",
+              }}>
+              {/* Status icon */}
+              <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
+                {isComplete && <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "rgba(34,197,94,0.2)" }}><span className="text-[8px]">✓</span></div>}
+                {isActive && <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: accent }} />}
+                {isFailed && <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "rgba(239,68,68,0.2)" }}><span className="text-[8px] text-red-400">✕</span></div>}
+                {isPending && <div className="w-3 h-3 rounded-full" style={{ background: "rgba(255,255,255,0.1)" }} />}
+              </div>
+              {/* Label */}
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold truncate" style={{
+                  color: isComplete ? "#22C55E" : isActive ? "white" : isFailed ? "#EF4444" : "#4B5563"
+                }}>
+                  {PPV_STAGE_ICONS[stage.id] || "⚙️"} {stage.label || PPV_STAGE_LABELS[stage.id] || stage.id}
+                </p>
+                {isFailed && stage.error && (
+                  <p className="text-[9px] text-red-400 truncate mt-0.5">{stage.error}</p>
+                )}
+              </div>
+              {/* Duration */}
+              {isComplete && stage.startedAt && stage.completedAt && (
+                <p className="text-[9px] text-gray-600 flex-shrink-0">
+                  {((stage.completedAt - stage.startedAt) / 1000).toFixed(1)}s
+                </p>
+              )}
+              {isActive && (
+                <div className="flex gap-0.5 flex-shrink-0">
+                  {[0,1,2].map(i => (
+                    <div key={i} className="w-1 h-1 rounded-full" style={{
+                      background: accent,
+                      animation: `bounce 0.8s ease-in-out ${i * 0.15}s infinite`,
+                    }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Error state */}
+      {overallStatus === "failed" && data?.error && (
+        <div className="p-2 rounded-xl" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+          <p className="text-[10px] text-red-400">{data.error}</p>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); opacity: 0.4; }
+          50% { transform: translateY(-3px); opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 function MonetizationBundleMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
   const accent = "#10B981";
   const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
@@ -3499,10 +3642,17 @@ function MonetizationBundleMode({ onOutput }: { onOutput: (url: string, label: s
   const [priceInput, setPriceInput] = useState({ durationSec: 60, desireScore: 7, contentType: "clip" as const, platformTarget: "onlyfans" as const });
   const [result, setResult] = useState<any>(null);
   const [priceResult, setPriceResult] = useState<any>(null);
+  const [ppvBundleId, setPpvBundleId] = useState<string | null>(null);
 
   const ppvMutation = trpc.vaultx.buildPpvBundle.useMutation({
-    onSuccess: (data) => { setResult(data); if (data.teaserUrl) onOutput(data.teaserUrl, "PPV Bundle"); toast.success("PPV Bundle created"); },
-    onError: (e) => toast.error(e.message),
+    onSuccess: (data) => {
+      setResult(data);
+      setPpvBundleId(null);
+      if (data.teaserUrl) onOutput(data.teaserUrl, "PPV Bundle");
+      const engines = data.enginesUsed?.length ? data.enginesUsed.map((e: string) => e.split(" (")[0]).join(" + ") : "FFmpeg";
+      toast.success(`PPV Bundle ready — ${engines}`);
+    },
+    onError: (e) => { setPpvBundleId(null); toast.error(e.message); },
   });
   const tipMutation = trpc.vaultx.createTipUnlock.useMutation({
     onSuccess: (data) => { setResult(data); if (data.lockedPreviewUrl) onOutput(data.lockedPreviewUrl, "Tip Unlock"); toast.success("Tip unlock content created"); },
@@ -3544,7 +3694,14 @@ function MonetizationBundleMode({ onOutput }: { onOutput: (url: string, label: s
                 <input type="range" min={1} max={10} value={desireScore} onChange={e => setDesireScore(+e.target.value)} className="w-full" />
                 <p className="text-[10px] text-gray-500 mt-1">Higher score = shorter teaser, higher suggested price</p>
               </div>
-              <button onClick={() => videoFile && ppvMutation.mutate({ sourceUrl: videoFile.url, desireScore })}
+              <button onClick={() => {
+                if (!videoFile) return;
+                // Generate a predictable bundleId so we can poll progress immediately
+                const bid = `ppv_${Date.now()}`;
+                setPpvBundleId(bid);
+                setResult(null);
+                ppvMutation.mutate({ sourceUrl: videoFile.url, desireScore, clientBundleId: bid });
+              }}
                 disabled={!videoFile || ppvMutation.isPending}
                 className="w-full py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2"
                 style={{ background: videoFile ? "linear-gradient(135deg, #A855F7, #7C3AED)" : "rgba(255,255,255,0.05)", color: videoFile ? "white" : "#4B5563" }}>
@@ -3625,7 +3782,9 @@ function MonetizationBundleMode({ onOutput }: { onOutput: (url: string, label: s
       right={
         <div className="flex flex-col gap-4">
           <EngineBadge engine="Monetization Bundle Builder" status={(ppvMutation.isPending || tipMutation.isPending) ? "processing" : result ? "complete" : "ready"} />
-          {(ppvMutation.isPending || tipMutation.isPending) && <ProcessingBar label="Building monetization assets..." accent={accent} />}
+          {ppvMutation.isPending && ppvBundleId && <PPVProgressPanel bundleId={ppvBundleId} accent="#A855F7" />}
+          {ppvMutation.isPending && !ppvBundleId && <ProcessingBar label="Building PPV Bundle..." accent="#A855F7" />}
+          {tipMutation.isPending && <ProcessingBar label="Creating tip unlock..." accent={accent} />}
           {result && activeTab === "ppv" && (
             <div className="flex flex-col gap-3">
               <div className="p-3 rounded-xl" style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)" }}>
@@ -3635,6 +3794,15 @@ function MonetizationBundleMode({ onOutput }: { onOutput: (url: string, label: s
                   <div><span className="text-gray-500">Desire Score</span><p className="font-bold text-white">{result.desireScore}/10</p></div>
                 </div>
               </div>
+              {result.enginesUsed?.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {result.enginesUsed.map((e: string, i: number) => (
+                    <span key={i} className="px-2 py-0.5 rounded-full text-[9px] font-bold" style={{ background: "rgba(168,85,247,0.12)", color: "#C084FC", border: "1px solid rgba(168,85,247,0.2)" }}>
+                      {e.split(" (")[0]}
+                    </span>
+                  ))}
+                </div>
+              )}
               {result.teaserUrl && <VideoPlayer src={result.teaserUrl} label="Teaser (Public)" accent="#A855F7" />}
               {result.censoredPreviewUrl && <VideoPlayer src={result.censoredPreviewUrl} label="Censored Preview (Paywall)" accent="#6B7280" />}
               {result.hooks?.length > 0 && (
