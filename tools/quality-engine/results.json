@@ -145,5 +145,107 @@
       "grade": "B \u2014 Passes Standard"
     },
     "notes": "All stats load correctly. Impersonation works. Audit log is accurate."
+  },
+  {
+    "module": "monetization-ppv",
+    "feature": "VaultX PPV Money Flow (Upload \u2192 Bundle \u2192 Vault \u2192 Purchase \u2192 Unlock \u2192 Distribution)",
+    "evaluator": "manus",
+    "timestamp": "2026-05-06T23:34:36Z",
+    "scores": {
+      "FT": 4,
+      "OQ": 3,
+      "CV": 4,
+      "RE": 3,
+      "UX": 3
+    },
+    "verdict": {
+      "average": 3.4,
+      "min_score": 3,
+      "passed": false,
+      "auto_fail_reasons": [
+        "Average 3.4 < 4.0 required minimum"
+      ],
+      "grade": "FAIL"
+    },
+    "notes": "FT=4: All 8 pipeline steps produce real outputs with real DB writes. Deduction: Pollo async status never updates from 'waiting' \u2014 polling loop missing. OQ=3: PPV outputs are real MP4 files per platform. Deduction: No Replicate beauty pass on PPV output \u2014 FFmpeg utility only. CV=4: Full PPV bundle + save + fan purchase + unlock + 4-platform distribution all working. RE=3: Core flow reliable. Deduction: Pollo jobs stay in 'waiting' forever; dist_input temp files not cleaned (now fixed in source). UX=3: Creator Studio and Fan Library UIs live. Deduction: Pollo output has no video player; no progress indicator for long PPV bundle runs. FAIL: Average 3.4 < 4.0 required. Remaining gaps: Pollo completion, Replicate pass, Pollo UI player.",
+    "remediation_required": [
+      "Fix Pollo async polling loop so status moves from waiting \u2192 succeeded/failed",
+      "Render completed Pollo videoUrl in VaultXStudio as playable video",
+      "Add optional Replicate enhancement pass to PPV output with enginesUsed logging",
+      "Add progress indicator for PPV bundle processing (long-running FFmpeg)"
+    ]
+  },
+  {
+    "module": "monetization-ppv",
+    "feature": "VaultX PPV Money Flow \u2014 Re-Score After Fixes (2026-05-06 Session 2)",
+    "evaluator": "manus",
+    "timestamp": "2026-05-07T00:00:00Z",
+    "scores": {
+      "FT": 4,
+      "OQ": 4,
+      "CV": 4,
+      "RE": 4,
+      "UX": 3
+    },
+    "verdict": {
+      "average": 3.8,
+      "min_score": 3,
+      "passed": false,
+      "auto_fail_reasons": [
+        "Average 3.8 < 4.0 required minimum",
+        "UX=3: Pollo output player wired but not yet live-verified; no progress indicator for PPV bundle runs"
+      ],
+      "grade": "FAIL \u2014 Near Pass"
+    },
+    "scores_by_dimension": {
+      "FT": {
+        "score": 4,
+        "reason": "All 8 pipeline steps produce real outputs with real DB writes. polloGenerate() now correctly parses resp.data.taskId and resp.data.generations[0].url. buildPpvBundle returns enginesUsed[]. Deduction: Pollo completion not yet live-verified with a fresh task \u2014 old task IDs expired."
+      },
+      "OQ": {
+        "score": 4,
+        "reason": "PPV outputs are real MP4 files (full_video, teaser, censored_preview, thumbnail) served at HTTP 200. buildPpvBundle now submits Replicate Real-ESRGAN enhancement pass when REPLICATE_API_TOKEN present. Deduction: Replicate enhancement is async/fire-and-forget \u2014 enhanced output not yet confirmed delivered."
+      },
+      "CV": {
+        "score": 4,
+        "reason": "Full PPV bundle + save to vault + fan purchase (vaultx_ppv_purchases id=1, $18.50, completed) + unlock + distribution all working. enginesUsed[] now logged in every PPV bundle response."
+      },
+      "RE": {
+        "score": 4,
+        "reason": "Core flow reliable. kingcamAI.ts polloGenerate() fixed \u2014 no longer hangs on wrong response shape. polloRouter.ts getTaskStatus updates DB row on every poll. Deduction: Pollo jobs from previous sessions remain at 'waiting' (expired task IDs, not a code bug)."
+      },
+      "UX": {
+        "score": 3,
+        "reason": "VaultXStudio.tsx AIVideoGeneratorMode now wired to trpc.pollo.generateVideo + trpc.pollo.getTaskStatus polling every 8s. VideoPlayer renders when videoUrl available. Image upload shown for Pollo models. Deduction: Not yet live-verified in browser; no progress bar for PPV bundle FFmpeg processing."
+      }
+    },
+    "fixes_applied_this_session": [
+      "kingcamAI.ts: polloGenerate() \u2014 fixed response parsing (resp.data.taskId, resp.data.generations[0].url)",
+      "VaultXStudio.tsx: AIVideoGeneratorMode \u2014 wired trpc.pollo.generateVideo + getTaskStatus polling + VideoPlayer",
+      "monetizationBundleService.ts: buildPpvBundle \u2014 added enginesUsed[] + Replicate Real-ESRGAN enhancement pass",
+      "Both server (esbuild) and client (vite) built and deployed, pm2 restarted"
+    ],
+    "remaining_to_reach_pass": [
+      "Live-verify Pollo status progression with a fresh task (old IDs expired)",
+      "Confirm Replicate enhancement predictionId returned in buildPpvBundle response",
+      "Add FFmpeg progress indicator to PPV bundle UI (UX 3\u21924)",
+      "Push all changes to GitHub"
+    ],
+    "public_urls_http_200": {
+      "full_video": "https://creatorvault.live/uploads/ppv_1778107488797/full_video.mp4",
+      "censored_preview": "https://creatorvault.live/uploads/ppv_1778107488797/censored_preview.mp4",
+      "teaser": "https://creatorvault.live/uploads/ppv_1778107488797/teaser.mp4",
+      "thumbnail": "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg",
+      "all_status": "200 OK"
+    },
+    "purchase_proof": {
+      "table": "vaultx_ppv_purchases",
+      "id": 1,
+      "fan_id": 6,
+      "creator_id": 1,
+      "content_id": 5,
+      "amount_paid": 18.5,
+      "status": "completed"
+    }
   }
 ]

@@ -237,7 +237,6 @@ async function polloGenerate(
   input: Record<string, unknown>
 ): Promise<string> {
   if (!POLLO_KEY) throw new Error("POLLO_API_KEY not configured");
-
   const startRes = await fetch(`${POLLO_BASE}/generation/${modelPath}`, {
     method: "POST",
     headers: {
@@ -246,35 +245,45 @@ async function polloGenerate(
     },
     body: JSON.stringify({ input }),
   });
-
   if (!startRes.ok) {
     const err = await startRes.text();
     throw new Error(`Pollo generate failed (${startRes.status}): ${err}`);
   }
-
-  const { taskId } = (await startRes.json()) as { taskId: string };
-
+  // Pollo response: { code: "SUCCESS", data: { taskId, status } }
+  const startJson = (await startRes.json()) as {
+    code: string;
+    data?: { taskId?: string; status?: string };
+    taskId?: string;
+  };
+  const taskId = startJson?.data?.taskId ?? startJson?.taskId;
+  if (!taskId) {
+    throw new Error(`Pollo generate returned no taskId: ${JSON.stringify(startJson)}`);
+  }
   // Poll until done
+  // Status response: { code: "SUCCESS", data: { taskId, generations: [{ status, url, failMsg }] } }
   for (let i = 0; i < 180; i++) {
     await sleep(5000);
-    const poll = await fetch(`${POLLO_BASE}/task/${taskId}`, {
+    const pollRes = await fetch(`${POLLO_BASE}/generation/${taskId}/status`, {
       headers: { "x-api-key": POLLO_KEY },
     });
-    const task = (await poll.json()) as {
-      status: string;
-      output?: { url?: string } | { url?: string }[];
-      url?: string;
+    const pollJson = (await pollRes.json()) as {
+      code: string;
+      data?: {
+        taskId?: string;
+        generations?: Array<{ status: string; url?: string; failMsg?: string }>;
+      };
     };
-
-    if (task.status === "succeed") {
-      if (typeof task.url === "string") return task.url;
-      if (Array.isArray(task.output) && task.output[0]?.url) return task.output[0].url!;
-      if (!Array.isArray(task.output) && task.output?.url) return task.output.url!;
+    const gen = pollJson?.data?.generations?.[0];
+    const status = gen?.status ?? "";
+    if (status === "succeed") {
+      const url = gen?.url;
+      if (url && url.length > 0) return url;
       throw new Error("Pollo returned no output URL");
     }
-    if (task.status === "failed") {
-      throw new Error(`Pollo task failed: ${JSON.stringify(task)}`);
+    if (status === "failed") {
+      throw new Error(`Pollo task failed: ${gen?.failMsg ?? JSON.stringify(pollJson)}`);
     }
+    // status is "waiting" or "processing" — keep polling
   }
   throw new Error("Pollo task timed out (15 min)");
 }

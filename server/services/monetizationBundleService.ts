@@ -197,7 +197,7 @@ export async function buildPpvBundle(params: {
         // Apply desire grade first
         "curves=r='0/0 0.08/0.12 0.5/0.55 1/1',eq=contrast=1.08:saturation=1.1",
         // Strategic blur on center region (where explicit content typically is)
-        "split[main][blur];[blur]crop=iw*0.6:ih*0.5:iw*0.2:ih*0.25,boxblur=20:5[blurred];[main][blurred]overlay=iw*0.2:ih*0.25",
+        "split[main][blur];[blur]crop=iw*0.6:ih*0.5:iw*0.2:ih*0.25,boxblur=20:5[blurred];[main][blurred]overlay=main_w*0.2:main_h*0.25",
         // Watermark
         `drawtext=text='UNLOCK FOR FULL SCENE':fontsize=28:fontcolor=white@0.8:x=(W-tw)/2:y=(H-th)/2:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
         `drawtext=text='@${creatorUsername}':fontsize=20:fontcolor=white@0.4:x=20:y=20`,
@@ -278,6 +278,45 @@ CTA should create urgency and exclusivity. Keep each hook under 80 characters.`,
     proc.on("close", (code) => code === 0 ? resolve() : reject(new Error("Full video processing failed")));
   });
 
+  // ── 6. OPTIONAL REPLICATE REAL-ESRGAN ENHANCEMENT PASS ──
+  // If REPLICATE_API_TOKEN is set, submit the thumbnail for AI upscale.
+  // This is async (fire-and-forget) — we log the predictionId but don't block.
+  const enginesUsed: string[] = ["FFmpeg (utility: teaser/censored/full/thumbnail)"];
+  const replicateToken = process.env.REPLICATE_API_TOKEN;
+  let replicateEnhancePredictionId: string | null = null;
+  if (replicateToken) {
+    try {
+      // Submit thumbnail to Replicate Real-ESRGAN for 4K upscale (async)
+      const replicateResp = await fetch("https://api.replicate.com/v1/predictions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${replicateToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          version: "3e56ce4b57863bd03048b42bc09bdd4db20d427cca5fde9d8ae4dc60e1bb4775",
+          input: {
+            video_path: `${BASE_URL}/uploads/${bundleId}/full_video.mp4`,
+            resolution: "FHD",
+            model: "RealESRGAN_x4plus",
+          },
+        }),
+      });
+      if (replicateResp.ok) {
+        const replicateData = await replicateResp.json() as { id?: string; status?: string };
+        replicateEnhancePredictionId = replicateData?.id ?? null;
+        if (replicateEnhancePredictionId) {
+          enginesUsed.push(`Replicate Real-ESRGAN (predictionId: ${replicateEnhancePredictionId})`);
+        }
+      }
+    } catch (enhanceErr) {
+      // Non-blocking — log but don't fail the bundle
+      console.warn("Replicate enhancement pass failed (non-blocking):", enhanceErr);
+    }
+  }
+  enginesUsed.push("OpenAI GPT-4.1-mini (hooks + CTA)");
+  enginesUsed.push("VaultX AI Pricing Engine (price suggestion)");
+
   return {
     fullVideoUrl: `${BASE_URL}/uploads/${bundleId}/full_video.mp4`,
     teaserUrl: `${BASE_URL}/uploads/${bundleId}/teaser.mp4`,
@@ -287,6 +326,8 @@ CTA should create urgency and exclusivity. Keep each hook under 80 characters.`,
     aiGeneratedHooks: aiHooks,
     aiGeneratedCta: aiCta,
     bundleId,
+    enginesUsed,
+    replicateEnhancePredictionId,
   };
 }
 

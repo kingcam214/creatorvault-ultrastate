@@ -1870,14 +1870,43 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
   const animateMut     = trpc.videoEnhance.animateImage.useMutation();
   const imgToVideoMut  = trpc.videoEnhance.imageToVideo.useMutation();
   const generateAltMut = trpc.videoEnhance.generateVideoAlt.useMutation();
-  // Pollo/Kling via kingcamAI router — all 9 models
-  const polloVideoMut  = trpc.kingcamAI.video.generate.useMutation({
+  // Pollo AI async generation via pollo router — image-to-video with polling
+  const polloGenerateMut = trpc.pollo.generateVideo.useMutation({
     onSuccess: (data) => {
-      if (data.url) { setOutputUrl(data.url); onOutput(data.url, `${activeModel} video`); toast.success(`${activeModel} video ready!`); }
-      setIsGenerating(false);
+      if (data.taskId) {
+        setPolloTaskId(data.taskId);
+        setStatusMsg("Pollo AI generating video — polling for completion...");
+      }
     },
-    onError: (e) => { toast.error(`${activeModel}: ${e.message}`); setIsGenerating(false); },
+    onError: (e) => { toast.error(`Pollo: ${e.message}`); setIsGenerating(false); },
   });
+  // Poll Pollo task status every 8s while a task is in progress
+  const polloStatusQuery = trpc.pollo.getTaskStatus.useQuery(
+    { taskId: polloTaskId! },
+    { enabled: !!polloTaskId && isGenerating, refetchInterval: 8000 }
+  );
+  useEffect(() => {
+    if (!polloStatusQuery.data) return;
+    const d = polloStatusQuery.data;
+    const status = (d.status ?? (d.generation as any)?.status ?? "") as string;
+    const videoUrl = (d.videoUrl ?? (d.generation as any)?.videoUrl ?? null) as string | null;
+    if (status === "succeed" && videoUrl) {
+      setOutputUrl(videoUrl);
+      setIsGenerating(false);
+      setPolloTaskId(null);
+      setStatusMsg("");
+      onOutput(videoUrl, `Pollo AI — ${MODELS.find(m => m.id === activeModel)?.label ?? activeModel}`);
+      toast.success("Pollo AI video ready!");
+    } else if (status === "failed") {
+      setIsGenerating(false);
+      setPolloTaskId(null);
+      toast.error("Pollo generation failed. Try again.");
+    } else if (status === "processing") {
+      setStatusMsg("Pollo AI processing video...");
+    } else {
+      setStatusMsg("Pollo AI in queue — generating...");
+    }
+  }, [polloStatusQuery.data]);
   const enhancePromptMut = trpc.videoEnhance.enhancePromptForAdult.useMutation({
     onSuccess: (data) => {
       setPrompt(data.enhancedPrompt);
@@ -1886,6 +1915,7 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
     onError: (e) => toast.error(`Prompt enhance: ${e.message}`),
   });
 
+  // Replicate job polling (for minimax, svd, zeroscope)
   const getJobQuery = trpc.videoEnhance.getJob.useQuery(
     { predictionId: predictionId! },
     { enabled: !!predictionId && isGenerating, refetchInterval: 8000 }
@@ -1907,6 +1937,24 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
   }, [getJobQuery.data]);
 
   const generate = async () => {
+    if (modelProvider === "pollo") {
+      // Pollo models require an image (image-to-video)
+      if (!imageFile) return toast.error("Upload a source image for Pollo AI generation.");
+      setIsGenerating(true); setOutputUrl(null); setPolloTaskId(null);
+      try {
+        const modelLabel = POLLO_MODELS.find(m => m.id === activeModel)?.label ?? activeModel;
+        setStatusMsg(`Starting Pollo AI — ${modelLabel}...`);
+        await polloGenerateMut.mutateAsync({
+          imageUrl: imageFile.url,
+          prompt: prompt || undefined,
+          resolution: "720p",
+          length: "5s",
+          mode: "basic",
+        });
+      } catch (e: any) { setIsGenerating(false); toast.error(e.message); }
+      return;
+    }
+    // Replicate models
     if (!prompt && activeModel !== "svd") return toast.error("Enter a prompt.");
     if ((activeModel as string) === "svd" && !imageFile) return toast.error("Upload an image for SVD.");
     setIsGenerating(true); setOutputUrl(null);
@@ -1926,7 +1974,6 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
     } catch (e: any) { setIsGenerating(false); toast.error(e.message); }
   };
 
-  // ── FULL AI MODEL REGISTRY ── All available video generation models ──────────
   const POLLO_MODELS = [
     { id: "kling-3.0",        label: "Kling 3.0",          badge: "BEST",       desc: "Full-body motion, filmic quality, highest fidelity",   color: "#EF4444", provider: "pollo" as const },
     { id: "kling-2.6",        label: "Kling 2.6",          badge: "Reliable",   desc: "Standard motion, consistent quality",                  color: "#F97316", provider: "pollo" as const },
@@ -1995,16 +2042,16 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
           </div>
         </div>
       )}
-      {(activeModel === "minimax" || activeModel === "svd") && (
+      {(modelProvider === "pollo" || activeModel === "minimax" || activeModel === "svd") && (
         <div>
-          <p className="text-xs font-bold text-white mb-2">{activeModel === "svd" ? "Source Image (required)" : "First Frame Image (optional)"}</p>
+          <p className="text-xs font-bold text-white mb-2">{modelProvider === "pollo" ? "Source Image (required — Pollo AI)" : activeModel === "svd" ? "Source Image (required)" : "First Frame Image (optional)"}</p>
           {imageFile ? (
             <div className="relative rounded-2xl overflow-hidden">
               <img src={imageFile.url} alt="source" className="w-full rounded-2xl" style={{ maxHeight: 160, objectFit: "cover" }} />
               <button onClick={() => setImageFile(null)} className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.7)" }}>✕</button>
             </div>
           ) : (
-            <ImageDropZone onFile={(url, file) => setImageFile({ url, file })} accent="#EF4444" label={activeModel === "svd" ? "Drop image to animate" : "Drop first frame (optional)"} />
+            <ImageDropZone onFile={(url, file) => setImageFile({ url, file })} accent="#EF4444" label={modelProvider === "pollo" ? "Drop image to animate with Pollo AI" : activeModel === "svd" ? "Drop image to animate" : "Drop first frame (optional)"} />
           )}
         </div>
       )}
@@ -2015,7 +2062,7 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
           <div className="flex justify-between mt-1"><span className="text-[10px]" style={{ color: "#6B7280" }}>Subtle</span><span className="text-[10px]" style={{ color: "#6B7280" }}>Extreme</span></div>
         </div>
       )}
-      <button onClick={generate} disabled={isGenerating || (!prompt && activeModel !== "svd") || (activeModel === "svd" && !imageFile)} className="w-full py-4 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2" style={{ background: isGenerating ? "rgba(239,68,68,0.3)" : "linear-gradient(135deg, #EF4444, #DC2626)", cursor: isGenerating ? "not-allowed" : "pointer", boxShadow: isGenerating ? "none" : "0 0 24px rgba(239,68,68,0.3)" }}>
+      <button onClick={generate} disabled={isGenerating || (modelProvider === "pollo" && !imageFile) || (modelProvider === "replicate" && !prompt && activeModel !== "svd") || (activeModel === "svd" && !imageFile)} className="w-full py-4 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2" style={{ background: isGenerating ? "rgba(239,68,68,0.3)" : "linear-gradient(135deg, #EF4444, #DC2626)", cursor: isGenerating ? "not-allowed" : "pointer", boxShadow: isGenerating ? "none" : "0 0 24px rgba(239,68,68,0.3)" }}>
         {isGenerating ? <><Loader2 size={18} className="animate-spin" /> {statusMsg || "Generating..."}</> : <><Film size={18} /> Generate Video</>}
       </button>
       {isGenerating && <ProcessingBar label={statusMsg || "AI generating video (2–5 min)..."} accent="#EF4444" />}
