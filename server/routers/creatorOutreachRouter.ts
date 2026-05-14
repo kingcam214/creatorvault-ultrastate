@@ -12,37 +12,137 @@ import crypto from "crypto";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+function extractRows(result: any): any[] {
+  if (!result) return [];
+  if (Array.isArray(result) && result.length >= 1 && Array.isArray(result[0])) return result[0] as any[];
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result.rows)) return result.rows;
+  return [];
+}
+
 // ── Magic Link Generator ──────────────────────────────────────────────────────
 function generateMagicLink(creatorHandle: string, platform: string): string {
-  const token = crypto
-    .createHmac("sha256", process.env.JWT_SECRET || "vaultx-secret")
-    .update(`${creatorHandle}:${platform}:${Date.now()}`)
-    .digest("hex")
-    .slice(0, 32);
-  const base = process.env.VITE_APP_URL || "https://creatorvault.app";
+  const token = crypto.randomUUID().replace(/-/g, "");
+  const base = process.env.VITE_APP_URL || "https://creatorvault.live";
   return `${base}/onboard?token=${token}&ref=${encodeURIComponent(creatorHandle)}&platform=${platform}&utm_source=outreach&utm_campaign=vaultx_ignite`;
+}
+
+async function ensureOutreachLeadsTable(): Promise<void> {
+  await db.db.execute(sql`
+    CREATE TABLE IF NOT EXISTS outreach_leads (
+      id VARCHAR(36) PRIMARY KEY,
+      handle VARCHAR(255) NOT NULL,
+      platform VARCHAR(50) NOT NULL,
+      display_name VARCHAR(255) NULL,
+      bio TEXT NULL,
+      recent_post TEXT NULL,
+      followers INT NOT NULL DEFAULT 0,
+      engagement_rate DECIMAL(6,2) NOT NULL DEFAULT 0.00,
+      score INT NOT NULL DEFAULT 0,
+      monetization_angle TEXT NULL,
+      monetization_leak TEXT NULL,
+      estimated_revenue_opportunity_cents INT NOT NULL DEFAULT 0,
+      outreach_urgency VARCHAR(32) NOT NULL DEFAULT 'standard',
+      next_money_cta TEXT NULL,
+      message TEXT NOT NULL,
+      magic_link TEXT NOT NULL,
+      onboarding_packet JSON NULL,
+      presentation_packet JSON NULL,
+      telegram_followup_payload JSON NULL,
+      attribution_code VARCHAR(128) NOT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'queued',
+      last_error TEXT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uniq_outreach_handle_platform (handle, platform),
+      KEY idx_outreach_status_created (status, created_at),
+      KEY idx_outreach_score (score),
+      KEY idx_outreach_attribution_code (attribution_code)
+    )
+  `);
+
+  await db.db.execute(sql`ALTER TABLE outreach_leads ADD COLUMN IF NOT EXISTS next_money_cta TEXT NULL`);
+}
+
+function normalizePlatform(platforms?: string[]): string {
+  return (platforms?.[0] || "reddit").toLowerCase();
+}
+
+function identifyMonetizationLeak(creator: any): string {
+  const followers = Number(creator.followers || creator.karma_score || 0);
+  const engagement = Number(creator.engagement_rate || 0);
+  if (followers >= 50000 && engagement >= 4) return "High-intent audience without a tracked paid activation funnel";
+  if (followers >= 10000) return "Audience attention exists but the first-money CTA is not packaged into a direct offer";
+  if (engagement >= 4) return "Engaged niche attention is not being converted into a repeatable buyer follow-up path";
+  return "Creator discovery signal exists, but monetization assets and follow-up sequence are not yet systemized";
+}
+
+function estimateRevenueOpportunityCents(creator: any): number {
+  const followers = Math.max(0, Number(creator.followers || creator.karma_score || 0));
+  const engagement = Math.max(0, Number(creator.engagement_rate || 0));
+  const engagedAudience = Math.round(followers * Math.min(engagement, 10) / 100);
+  const estimatedBuyers = Math.max(1, Math.round(engagedAudience * 0.015));
+  return Math.min(2500000, estimatedBuyers * 4900);
+}
+
+function buildMonetizationAngle(creator: any): string {
+  const platform = normalizePlatform(creator.platforms);
+  const topic = creator.recent_post ? ` around “${String(creator.recent_post).slice(0, 120)}”` : " around their strongest current content signal";
+  return `Turn @${creator.handle}'s ${platform} attention${topic} into a tracked $49 first-money offer, onboarding packet, Telegram follow-up, and paid presentation CTA.`;
+}
+
+function classifyOutreachUrgency(score = 0, revenueCents = 0): string {
+  if (score >= 80 || revenueCents >= 1000000) return "immediate";
+  if (score >= 60 || revenueCents >= 250000) return "high";
+  return "standard";
+}
+
+function buildClosingLoopPayloads(creator: any, magicLink: string, message: string) {
+  const platform = normalizePlatform(creator.platforms);
+  const revenueCents = estimateRevenueOpportunityCents(creator);
+  const attributionCode = `cv_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
+  const monetizationLeak = identifyMonetizationLeak(creator);
+  const monetizationAngle = buildMonetizationAngle(creator);
+  const nextMoneyCta = `Open the activation link, complete the five-step creator onboarding path, and launch the first paid $49 buyer CTA for @${creator.handle}.`;
+  const onboardingPacket = {
+    creatorTarget: creator.handle,
+    platform,
+    activationLink: magicLink,
+    requiredSteps: ["profile-proof", "paid-offer", "content-upload", "telegram-drop", "buyer-followup"],
+    firstMoneyAction: nextMoneyCta,
+  };
+  const presentationPacket = {
+    creatorTarget: creator.handle,
+    monetizationAngle,
+    trailerBrief: `Cinematic proof-of-value trailer for @${creator.handle}: expose the revenue leak, show the first paid offer, and end with the activation CTA.`,
+    creatorGrowthRoadmap: ["Package the first paid offer", "Push Telegram proof drop", "Track clicks and replies", "Escalate VIP prospects"],
+  };
+  const telegramFollowupPayload = {
+    creatorTarget: creator.handle,
+    platform,
+    attributionCode,
+    message: `${message}\n\nVIP activation: ${magicLink}`,
+    escalationPath: "owner_vip_review_if_reply_or_click",
+    nextMoneyCta,
+  };
+  return {
+    monetizationAngle,
+    monetizationLeak,
+    estimatedRevenueOpportunityCents: revenueCents,
+    outreachUrgency: classifyOutreachUrgency(Number(creator.score || 0), revenueCents),
+    nextMoneyCta,
+    attributionCode,
+    onboardingPacket,
+    presentationPacket,
+    telegramFollowupPayload,
+  };
 }
 
 // ── Twitter/X Profile Scraper (live via Twitter API v2) ───────────────────────
 async function scrapeTwitterProfiles(niche: string, count: number = 20): Promise<any[]> {
   const bearerToken = process.env.TWITTER_BEARER_TOKEN;
   if (!bearerToken) {
-    // Fallback: use GPT to generate realistic creator profiles for the niche
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        role: "user",
-        content: `Generate ${count} realistic Twitter/X creator profiles in the ${niche} niche. 
-        For each creator provide: handle, display_name, bio (120 chars), follower_count (5k-500k), 
-        engagement_rate (1-8%), recent_post_topic, platform_presence (twitter/reddit/instagram).
-        Return as JSON array with fields: handle, display_name, bio, followers, engagement_rate, recent_post, platforms.
-        Focus on body-positive, adult content, fitness, wellness creators who would benefit from VaultX.`,
-      }],
-      response_format: { type: "json_object" },
-      max_tokens: 2000,
-    });
-    const data = JSON.parse(completion.choices[0].message.content || "{}");
-    return data.creators || [];
+    throw new Error("TWITTER_BEARER_TOKEN not configured; creator acquisition must use a real live source such as reddit or a configured Twitter API key.");
   }
 
   // Live Twitter API v2 search
@@ -65,8 +165,7 @@ async function scrapeTwitterProfiles(niche: string, count: number = 20): Promise
       twitter_id: u.id,
     }));
   } catch (e) {
-    console.error("Twitter API error:", e);
-    return [];
+    throw new Error(`Twitter API live creator discovery failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
@@ -230,9 +329,22 @@ export const creatorOutreachRouter = router({
         }
       }
 
-      // Score and sort
+      // Score, enrich, and sort real discovered creators only
       const scored = profiles
-        .map(p => ({ ...p, score: scoreCreator(p) }))
+        .filter(p => p?.handle)
+        .map(p => {
+          const base = { ...p, platforms: p.platforms?.length ? p.platforms : [input.platform === "twitter" ? "twitter" : "reddit"] };
+          const score = scoreCreator(base);
+          const revenueCents = estimateRevenueOpportunityCents(base);
+          return {
+            ...base,
+            score,
+            monetizationLeak: identifyMonetizationLeak(base),
+            monetizationAngle: buildMonetizationAngle(base),
+            estimatedRevenueOpportunityCents: revenueCents,
+            outreachUrgency: classifyOutreachUrgency(score, revenueCents),
+          };
+        })
         .sort((a, b) => b.score - a.score)
         .slice(0, input.count);
 
@@ -240,6 +352,8 @@ export const creatorOutreachRouter = router({
         creators: scored,
         total: scored.length,
         highIntent: scored.filter(c => c.score >= 70).length,
+        source: input.platform,
+        productionBacked: true,
         timestamp: new Date().toISOString(),
       };
     }),
@@ -260,47 +374,94 @@ export const creatorOutreachRouter = router({
       dailyLimit: z.number().default(50),
     }))
     .mutation(async ({ input }) => {
+      await ensureOutreachLeadsTable();
       const results = [];
       const toContact = input.creators.slice(0, input.dailyLimit);
 
       for (const creator of toContact) {
-        const magicLink = generateMagicLink(creator.handle, creator.platforms?.[0] || "twitter");
+        const platform = normalizePlatform(creator.platforms);
+        const magicLink = generateMagicLink(creator.handle, platform);
         const message = await generateOutreachMessage(creator, magicLink);
+        const payloads = buildClosingLoopPayloads(creator, magicLink, message);
+        const leadId = crypto.randomUUID();
 
-        // Store in DB as outreach_leads
-        try {
-          await db.db.execute(sql`
-            INSERT INTO outreach_leads (
-              handle, platform, display_name, followers, engagement_rate,
-              score, message, magic_link, status, created_at
-            ) VALUES (
-              ${creator.handle},
-              ${creator.platforms?.[0] || "twitter"},
-              ${creator.display_name || creator.handle},
-              ${creator.followers || 0},
-              ${creator.engagement_rate || 0},
-              ${creator.score || 0},
-              ${message},
-              ${magicLink},
-              'queued',
-              NOW()
-            )
-            ON DUPLICATE KEY UPDATE
-              message = VALUES(message),
-              magic_link = VALUES(magic_link),
-              updated_at = NOW()
-          `);
-        } catch (dbErr) {
-          // Table may not exist yet — continue without failing
-          console.warn("outreach_leads table not ready:", dbErr);
-        }
+        await db.db.execute(sql`
+          INSERT INTO outreach_leads (
+            id, handle, platform, display_name, bio, recent_post, followers, engagement_rate,
+            score, monetization_angle, monetization_leak, estimated_revenue_opportunity_cents,
+            outreach_urgency, next_money_cta, message, magic_link, onboarding_packet, presentation_packet,
+            telegram_followup_payload, attribution_code, status, created_at, updated_at
+          ) VALUES (
+            ${leadId},
+            ${creator.handle},
+            ${platform},
+            ${creator.display_name || creator.handle},
+            ${creator.bio || null},
+            ${creator.recent_post || null},
+            ${creator.followers || 0},
+            ${creator.engagement_rate || 0},
+            ${creator.score || 0},
+            ${payloads.monetizationAngle},
+            ${payloads.monetizationLeak},
+            ${payloads.estimatedRevenueOpportunityCents},
+            ${payloads.outreachUrgency},
+            ${payloads.nextMoneyCta},
+            ${message},
+            ${magicLink},
+            ${JSON.stringify(payloads.onboardingPacket)},
+            ${JSON.stringify(payloads.presentationPacket)},
+            ${JSON.stringify(payloads.telegramFollowupPayload)},
+            ${payloads.attributionCode},
+            'queued',
+            NOW(),
+            NOW()
+          )
+          ON DUPLICATE KEY UPDATE
+            display_name = VALUES(display_name),
+            bio = VALUES(bio),
+            recent_post = VALUES(recent_post),
+            followers = VALUES(followers),
+            engagement_rate = VALUES(engagement_rate),
+            score = VALUES(score),
+            monetization_angle = VALUES(monetization_angle),
+            monetization_leak = VALUES(monetization_leak),
+            estimated_revenue_opportunity_cents = VALUES(estimated_revenue_opportunity_cents),
+            outreach_urgency = VALUES(outreach_urgency),
+            next_money_cta = VALUES(next_money_cta),
+            message = VALUES(message),
+            magic_link = VALUES(magic_link),
+            onboarding_packet = VALUES(onboarding_packet),
+            presentation_packet = VALUES(presentation_packet),
+            telegram_followup_payload = VALUES(telegram_followup_payload),
+            attribution_code = VALUES(attribution_code),
+            status = 'queued',
+            last_error = NULL,
+            updated_at = NOW()
+        `);
+
+        const rowResult = await db.db.execute(sql`
+          SELECT id FROM outreach_leads WHERE handle = ${creator.handle} AND platform = ${platform} LIMIT 1
+        `);
+        const persistedId = extractRows(rowResult)[0]?.id || leadId;
 
         results.push({
+          id: persistedId,
           handle: creator.handle,
-          platform: creator.platforms?.[0] || "twitter",
+          platform,
+          score: creator.score || 0,
+          monetizationAngle: payloads.monetizationAngle,
+          monetizationLeak: payloads.monetizationLeak,
+          estimatedRevenueOpportunityCents: payloads.estimatedRevenueOpportunityCents,
+          outreachUrgency: payloads.outreachUrgency,
           message,
           magicLink,
+          onboardingPacket: payloads.onboardingPacket,
+          presentationPacket: payloads.presentationPacket,
+          telegramFollowupPayload: payloads.telegramFollowupPayload,
+          attributionCode: payloads.attributionCode,
+          nextMoneyCta: payloads.nextMoneyCta,
           status: "queued",
+          persisted: true,
         });
       }
 
@@ -308,6 +469,7 @@ export const creatorOutreachRouter = router({
         queued: results.length,
         messages: results,
         dailyTarget: input.dailyLimit,
+        productionBacked: true,
         timestamp: new Date().toISOString(),
       };
     }),
@@ -370,6 +532,196 @@ export const creatorOutreachRouter = router({
       };
     }),
 
+  // Run the production-backed acquisition → outreach → distribution → telemetry closing loop
+  runCreatorClosingLoop: protectedProcedure
+    .input(z.object({
+      platform: z.enum(["reddit", "twitter"]).default("reddit"),
+      niche: z.string().default("creator economy"),
+      count: z.number().min(1).max(25).default(5),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await ensureOutreachLeadsTable();
+
+      const profiles = input.platform === "twitter"
+        ? await scrapeTwitterProfiles(input.niche, input.count)
+        : await scrapeRedditProfiles(input.niche.replace(/^r\//, ""), input.count);
+
+      const scored = profiles
+        .filter(p => p?.handle)
+        .map(p => {
+          const base = { ...p, platforms: p.platforms?.length ? p.platforms : [input.platform] };
+          const score = scoreCreator(base);
+          const revenueCents = estimateRevenueOpportunityCents(base);
+          return {
+            ...base,
+            score,
+            monetizationLeak: identifyMonetizationLeak(base),
+            monetizationAngle: buildMonetizationAngle(base),
+            estimatedRevenueOpportunityCents: revenueCents,
+            outreachUrgency: classifyOutreachUrgency(score, revenueCents),
+          };
+        })
+        .sort((a, b) => b.score - a.score);
+
+      const creator = scored[0];
+      if (!creator) {
+        throw new Error(`No live ${input.platform} creators were discovered for ${input.niche}; closing-loop proof cannot use synthetic leads.`);
+      }
+
+      const platform = normalizePlatform(creator.platforms);
+      const magicLink = generateMagicLink(creator.handle, platform);
+      const message = await generateOutreachMessage(creator, magicLink);
+      const payloads = buildClosingLoopPayloads(creator, magicLink, message);
+      const leadId = crypto.randomUUID();
+
+      await db.db.execute(sql`
+        INSERT INTO outreach_leads (
+          id, handle, platform, display_name, bio, recent_post, followers, engagement_rate,
+          score, monetization_angle, monetization_leak, estimated_revenue_opportunity_cents,
+          outreach_urgency, next_money_cta, message, magic_link, onboarding_packet, presentation_packet,
+          telegram_followup_payload, attribution_code, status, created_at, updated_at
+        ) VALUES (
+          ${leadId},
+          ${creator.handle},
+          ${platform},
+          ${creator.display_name || creator.handle},
+          ${creator.bio || null},
+          ${creator.recent_post || null},
+          ${creator.followers || 0},
+          ${creator.engagement_rate || 0},
+          ${creator.score || 0},
+          ${payloads.monetizationAngle},
+          ${payloads.monetizationLeak},
+          ${payloads.estimatedRevenueOpportunityCents},
+          ${payloads.outreachUrgency},
+          ${payloads.nextMoneyCta},
+          ${message},
+          ${magicLink},
+          ${JSON.stringify(payloads.onboardingPacket)},
+          ${JSON.stringify(payloads.presentationPacket)},
+          ${JSON.stringify(payloads.telegramFollowupPayload)},
+          ${payloads.attributionCode},
+          'queued',
+          NOW(),
+          NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+          display_name = VALUES(display_name),
+          bio = VALUES(bio),
+          recent_post = VALUES(recent_post),
+          followers = VALUES(followers),
+          engagement_rate = VALUES(engagement_rate),
+          score = VALUES(score),
+          monetization_angle = VALUES(monetization_angle),
+          monetization_leak = VALUES(monetization_leak),
+          estimated_revenue_opportunity_cents = VALUES(estimated_revenue_opportunity_cents),
+          outreach_urgency = VALUES(outreach_urgency),
+          next_money_cta = VALUES(next_money_cta),
+          message = VALUES(message),
+          magic_link = VALUES(magic_link),
+          onboarding_packet = VALUES(onboarding_packet),
+          presentation_packet = VALUES(presentation_packet),
+          telegram_followup_payload = VALUES(telegram_followup_payload),
+          attribution_code = VALUES(attribution_code),
+          status = 'queued',
+          last_error = NULL,
+          updated_at = NOW()
+      `);
+
+      const leadRows = extractRows(await db.db.execute(sql`
+        SELECT * FROM outreach_leads WHERE handle = ${creator.handle} AND platform = ${platform} LIMIT 1
+      `));
+      const lead = leadRows[0];
+      if (!lead?.id) throw new Error("outreach_leads insert did not return a persisted lead row");
+
+      const channelRows = extractRows(await db.db.execute(sql`
+        SELECT * FROM channel_identities
+        WHERE owner_id = ${ctx.user.id} OR owner_type IN ('vaultx_brand','creatorvault_brand')
+        ORDER BY owner_type ASC, created_at ASC
+        LIMIT 1
+      `));
+      const channel = channelRows[0];
+      if (!channel?.id) {
+        throw new Error("No existing distribution channel identity is available for the creator closing loop; create or seed a channel before claiming distribution scheduling success.");
+      }
+
+      const creatorRows = extractRows(await db.db.execute(sql`
+        SELECT id FROM vaultx_creators WHERE user_id = ${ctx.user.id} LIMIT 1
+      `));
+      const creatorId = creatorRows[0]?.id || ctx.user.id;
+      const trackingCode = payloads.attributionCode;
+      await db.db.execute(sql`
+        INSERT INTO distribution_jobs
+          (creator_id, channel_identity_id, connected_account_id, platform, content_id,
+           asset_url, asset_type, caption, destination_url, tracking_code, status, scheduled_at)
+        VALUES
+          (${creatorId}, ${channel.id}, NULL, ${platform}, NULL,
+           ${magicLink}, 'activation_link', ${message}, ${magicLink}, ${trackingCode}, 'draft', NULL)
+      `);
+
+      const distributionRows = extractRows(await db.db.execute(sql`
+        SELECT * FROM distribution_jobs WHERE tracking_code = ${trackingCode} ORDER BY created_at DESC LIMIT 1
+      `));
+      const distributionJob = distributionRows[0];
+      if (!distributionJob?.id) throw new Error("distribution_jobs insert did not return a persisted tracked job row");
+
+      const telemetryId = crypto.randomUUID();
+      const now = new Date();
+      await db.db.execute(sql`
+        INSERT INTO agent_telemetry_events
+          (id, agent_id, agent_name, agent_category, task_type, target, status,
+           started_at, finished_at, outcome, revenue_generated, error_message, metadata)
+        VALUES
+          (${telemetryId}, 'creator-outreach-closing-loop', 'Creator Outreach Closing Loop', 'sales',
+           'creator_acquisition_to_distribution', ${creator.handle}, 'success',
+           ${now}, ${now}, ${`Persisted outreach lead ${lead.id}, distribution job ${distributionJob.id}, and tracking code ${trackingCode}`},
+           ${payloads.estimatedRevenueOpportunityCents / 100}, NULL,
+           ${JSON.stringify({ leadId: lead.id, distributionJobId: distributionJob.id, trackingCode, platform, creatorHandle: creator.handle })})
+      `);
+
+      return {
+        productionBacked: true,
+        lead: {
+          id: lead.id,
+          handle: lead.handle,
+          platform: lead.platform,
+          score: Number(lead.score || creator.score || 0),
+          status: lead.status,
+          monetizationAngle: lead.monetization_angle,
+          monetizationLeak: lead.monetization_leak,
+          estimatedRevenueOpportunityCents: Number(lead.estimated_revenue_opportunity_cents || 0),
+          nextMoneyCta: lead.next_money_cta,
+        },
+        onboardingPacket: payloads.onboardingPacket,
+        presentationPacket: payloads.presentationPacket,
+        telegramFollowupPayload: payloads.telegramFollowupPayload,
+        distributionJob: {
+          id: distributionJob.id,
+          trackingCode,
+          trackingUrl: `https://creatorvault.live/r/${trackingCode}`,
+          status: distributionJob.status,
+          channelIdentityId: distributionJob.channel_identity_id,
+        },
+        telemetry: { id: telemetryId, status: "success" },
+        timestamp: new Date().toISOString(),
+      };
+    }),
+
+  getClosingLoopLeads: protectedProcedure
+    .input(z.object({ limit: z.number().min(1).max(100).default(25) }).default({ limit: 25 }))
+    .query(async ({ input }) => {
+      await ensureOutreachLeadsTable();
+      const rows = extractRows(await db.db.execute(sql`
+        SELECT id, handle, platform, display_name, followers, engagement_rate, score,
+               monetization_angle, monetization_leak, estimated_revenue_opportunity_cents,
+               outreach_urgency, next_money_cta, attribution_code, status, created_at, updated_at
+        FROM outreach_leads
+        ORDER BY updated_at DESC
+        LIMIT ${input.limit}
+      `));
+      return { leads: rows, productionBacked: true, timestamp: new Date().toISOString() };
+    }),
+
   // Get outreach stats for revenue reporting
   getOutreachStats: protectedProcedure
     .query(async () => {
@@ -386,9 +738,9 @@ export const creatorOutreachRouter = router({
           GROUP BY DATE(created_at)
           ORDER BY date DESC
         `);
-        return { stats: stats.rows || [], timestamp: new Date().toISOString() };
-      } catch {
-        return { stats: [], timestamp: new Date().toISOString(), note: "outreach_leads table pending migration" };
+        return { stats: extractRows(stats), timestamp: new Date().toISOString() };
+      } catch (error) {
+        throw new Error(`outreach_leads stats unavailable: ${error instanceof Error ? error.message : String(error)}`);
       }
     }),
 
@@ -399,15 +751,12 @@ export const creatorOutreachRouter = router({
       status: z.enum(["queued", "sent", "replied", "onboarded", "declined"]),
     }))
     .mutation(async ({ input }) => {
-      try {
-        await db.db.execute(sql`
-          UPDATE outreach_leads SET status = ${input.status}, updated_at = NOW()
-          WHERE handle = ${input.handle}
-        `);
-      } catch {
-        // Table pending migration
-      }
-      return { updated: true };
+      await ensureOutreachLeadsTable();
+      const result = await db.db.execute(sql`
+        UPDATE outreach_leads SET status = ${input.status}, updated_at = NOW()
+        WHERE handle = ${input.handle}
+      `);
+      return { updated: true, result };
     }),
 
   // Generate the full onboarding portal content for a Magic Link token
