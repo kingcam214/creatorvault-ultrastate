@@ -89,7 +89,7 @@ export async function sendFreeChannelDrop(input: DropInput): Promise<DropResult>
       [
         input.creatorId || 1,
         FREE_CHANNEL_ENTITY_ID,
-        input.teaserUrl || null,
+        input.teaserUrl || trackingUrl,
         input.caption,
         trackingCode,
         destUrl,
