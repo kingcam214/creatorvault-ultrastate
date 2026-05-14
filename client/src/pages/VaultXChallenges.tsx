@@ -1,13 +1,16 @@
 /**
- * VaultXChallenges.tsx — Revenue Challenge Engine
+ * VaultXChallenges.tsx — VaultX Revenue Loop Challenge Playbook
  * $5K Challenge (30 days) and $15K Challenge (90 days)
  * Multiple pathways: Subscriptions, PPV, Tips, Custom Requests, Live, Social Funnel, Collabs
- * Wired to: challengeAutomation.getActiveChallenge, challengeAutomation.getChallengeDashboard,
- *            challengeAutomation.logChallengeRevenue, challengeAutomation.runAgent
+ *
+ * Separation rule: this page is the VaultX revenue-loop playbook. It must not
+ * display empire_challenges progress as VaultX progress, and it must not call
+ * generic challengeAutomation revenue logging or generic pathway IDs as agents.
+ * The verified VaultX money-drop path remains owned by money-follow-up-agent
+ * and kingcam-clone-agent through fireVaultXMoneyDrop().
  */
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { useToast } from "../hooks/use-toast";
 import { useCreatorMode, CreatorModeSwitcher } from "@/contexts/CreatorModeContext";
 import {
   Trophy, Target, DollarSign, TrendingUp, Zap, Users, Star,
@@ -69,8 +72,10 @@ const PATHWAYS = [
       "DM your top 50 social followers personally",
       "Create a 'founding member' tier at $9.99 for first 50 subscribers",
     ],
-    aiAgent: "Recruiter Agent auto-DMs qualified leads",
-    dailyAction: "Post 1 teaser + DM 10 followers",
+    aiAgent: "Use VaultX funnel tools for audience capture; no generic challenge agent is assigned here.",
+    dailyAction: "Post 1 teaser + DM 10 followers with your VaultX link",
+    ctaLabel: "Open VaultX Dashboard",
+    ctaHref: "/vaultx",
     revenue5k: 510,
     revenue15k: 15000,
   },
@@ -88,8 +93,10 @@ const PATHWAYS = [
       "Create a 'bundle deal' — 3 PPV pieces for $50",
       "Tease the PPV 48 hours before release to build anticipation",
     ],
-    aiAgent: "Content Agent schedules and promotes PPV drops automatically",
+    aiAgent: "Use VaultX content/drop tools; only verified drop agents can trigger tracked Telegram drops.",
     dailyAction: "Tease upcoming PPV on all socials",
+    ctaLabel: "Open VaultX Dashboard",
+    ctaHref: "/vaultx",
     revenue5k: 1500,
     revenue15k: 5000,
   },
@@ -107,8 +114,10 @@ const PATHWAYS = [
       "Create 'tip menu' with specific rewards at each amount",
       "Run a 24-hour tip challenge with a special reward",
     ],
-    aiAgent: "Engagement Agent sends personalized thank-you messages",
+    aiAgent: "Use VaultX engagement flows; this pathway is not auto-credited to the empire challenge from this page.",
     dailyAction: "Post tip goal progress update",
+    ctaLabel: "Open VaultX Dashboard",
+    ctaHref: "/vaultx",
     revenue5k: 1500,
     revenue15k: 3000,
   },
@@ -126,8 +135,10 @@ const PATHWAYS = [
       "Deliver within 48 hours to build reputation",
       "Upsell subscribers to custom requests via DM",
     ],
-    aiAgent: "AI Chatter handles intake, pricing, and delivery coordination",
+    aiAgent: "Use VaultX/AI Chatter intake tools; no generic challenge revenue logging is performed here.",
     dailyAction: "Check custom request inbox + fulfill 1 request",
+    ctaLabel: "Open AI Chatter",
+    ctaHref: "/ai-chatter",
     revenue5k: 750,
     revenue15k: 4000,
   },
@@ -145,8 +156,10 @@ const PATHWAYS = [
       "Set live tip goals with visible progress",
       "Offer exclusive PPV content to live viewers only",
     ],
-    aiAgent: "VaultLive Pro handles stream setup and tip tracking",
+    aiAgent: "VaultLive handles stream setup and tip tracking through its own payment paths.",
     dailyAction: "Announce upcoming live stream",
+    ctaLabel: "Open VaultLive",
+    ctaHref: "/vaultlive",
     revenue5k: 400,
     revenue15k: 3000,
   },
@@ -164,8 +177,10 @@ const PATHWAYS = [
       "Post 5x/day on Twitter/X — adult-friendly platform",
       "Use the Social Hub Factory tab to generate optimized posts",
     ],
-    aiAgent: "Autopilot Agent distributes content across all platforms",
+    aiAgent: "Use Social Hub for distribution; this is a platform tool lane, not a VaultX drop agent.",
     dailyAction: "Post 3 teasers across platforms using Social Hub",
+    ctaLabel: "Open Social Hub",
+    ctaHref: "/social-hub",
     revenue5k: 300,
     revenue15k: 5000,
   },
@@ -183,8 +198,10 @@ const PATHWAYS = [
       "Create a joint PPV piece and split revenue 50/50",
       "Cross-post each other's VaultX links for 30 days",
     ],
-    aiAgent: "Outreach Agent identifies and contacts collab targets",
+    aiAgent: "Use Outreach tools for collabs; this pathway is separate from tracked Telegram drop agents.",
     dailyAction: "Message 2 potential collab partners",
+    ctaLabel: "Open Outreach",
+    ctaHref: "/outreach",
     revenue5k: 540,
     revenue15k: 3000,
   },
@@ -192,45 +209,27 @@ const PATHWAYS = [
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function VaultXChallenges() {
-  const { toast } = useToast();
   const { isAdult, accentColor, modeBadge } = useCreatorMode();
   const [activeChallenge, setActiveChallenge] = useState<"5k" | "15k">("5k");
   const [expandedPathway, setExpandedPathway] = useState<string | null>("subscriptions");
   const [joinLoading, setJoinLoading] = useState(false);
   const [joined, setJoined] = useState<string | null>(null);
 
-  const { data: dashboard } = trpc.challengeAutomation.getChallengeDashboard.useQuery();
   const { data: activeEmpireChallenge } = trpc.challengeAutomation.getActiveChallenge.useQuery();
-
-  const runAgent = trpc.challengeAutomation.runAgent.useMutation({
-    onSuccess: (data) => {
-      toast({ title: "Agent Activated", description: data?.outcome?.substring(0, 100) || "Agent running" });
-    },
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
-
-  const logRevenue = trpc.challengeAutomation.logChallengeRevenue.useMutation({
-    onSuccess: () => toast({ title: "Revenue logged!", description: "Progress updated" }),
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
 
   const challenge = CHALLENGES.find(c => c.id === activeChallenge)!;
   const ChallengeIcon = challenge.icon;
 
   const handleJoin = async (challengeId: string) => {
     setJoinLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
+    await new Promise(r => setTimeout(r, 500));
     setJoined(challengeId);
     setJoinLoading(false);
-    toast({ title: `${challengeId === "5k" ? "$5K" : "$15K"} Challenge Joined!`, description: "Your AI agents are now activated. Check your daily action plan." });
   };
 
-  // Calculate progress from dashboard data
-  const currentRevenue = activeEmpireChallenge?.current_revenue
-    ? Number(activeEmpireChallenge.current_revenue)
-    : (dashboard as any)?.totalRevenue || 0;
-  const targetRevenue = challenge.target;
-  const progressPct = Math.min((currentRevenue / targetRevenue) * 100, 100);
+  // VaultX challenge progress is intentionally not sourced from empire_challenges.
+  // The empire challenge ledger is shown only as a separate reference panel below.
+  const verifiedVaultXAgents = ["money-follow-up-agent", "kingcam-clone-agent"];
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -304,31 +303,35 @@ export default function VaultXChallenges() {
           })}
         </div>
 
-        {/* Progress tracker */}
-        {(joined === activeChallenge || (activeEmpireChallenge && currentRevenue > 0)) && (
-          <div className="p-6 rounded-3xl bg-white/5 border border-white/10 mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-white font-black text-lg">Your Progress</h3>
-                <p className="text-gray-500 text-sm">{challenge.days} days · ${challenge.dailyTarget}/day target</p>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-black text-white">${currentRevenue.toLocaleString()}</div>
-                <div className="text-gray-500 text-sm">of ${targetRevenue.toLocaleString()}</div>
-              </div>
+        {/* Separation notice */}
+        <div className="p-6 rounded-3xl bg-white/5 border border-white/10 mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h3 className="text-white font-black text-lg">VaultX Revenue Loop Challenge</h3>
+              <p className="text-gray-400 text-sm mt-1">
+                This page is the VaultX buyer-flow playbook: drops, VaultX links, social traffic, live events, and purchase conversion. It does not write manual revenue into the AI Agents + Platform Tools challenge ledger.
+              </p>
             </div>
-            <div className="w-full bg-white/10 rounded-full h-3 mb-2">
-              <div
-                className={`h-3 rounded-full bg-gradient-to-r ${challenge.gradient} transition-all duration-1000`}
-                style={{ width: `${progressPct}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>{progressPct.toFixed(1)}% complete</span>
-              <span>${(targetRevenue - currentRevenue).toLocaleString()} remaining</span>
+            <div className="p-4 rounded-2xl bg-black/30 border border-purple-500/20 min-w-[240px]">
+              <div className="text-purple-300 text-xs font-black uppercase tracking-wider mb-1">Separate empire challenge</div>
+              <div className="text-white font-bold text-sm">{activeEmpireChallenge?.title ?? "AI Agents + Platform Tools Challenge"}</div>
+              <div className="text-gray-500 text-xs mt-1">Progress lives in /king/money-mission and /king/challenge-story.</div>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Verified VaultX drop agents */}
+        <div className="p-6 rounded-3xl bg-purple-950/20 border border-purple-500/20 mb-8">
+          <h3 className="text-white font-black text-lg mb-2">Verified VaultX Drop Agents</h3>
+          <p className="text-gray-400 text-sm mb-4">Only these challengeAutomation agents are assigned to the tracked VaultX Telegram drop path.</p>
+          <div className="flex flex-wrap gap-2">
+            {verifiedVaultXAgents.map(slug => (
+              <span key={slug} className="px-3 py-1.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-200 text-xs font-bold">
+                {slug}
+              </span>
+            ))}
+          </div>
+        </div>
 
         {/* Stats bar */}
         <div className="grid grid-cols-3 gap-3 mb-8">
@@ -402,12 +405,12 @@ export default function VaultXChallenges() {
                         </div>
                       </div>
 
-                      {/* AI Agent + Daily Action */}
+                      {/* Tool lane + Daily Action */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="p-3 rounded-xl bg-black/30 border border-white/5">
                           <div className="flex items-center gap-2 mb-1">
                             <Sparkles className="w-3 h-3 text-purple-400" />
-                            <span className="text-purple-300 text-xs font-bold">AI Agent</span>
+                            <span className="text-purple-300 text-xs font-bold">Assigned Tool Lane</span>
                           </div>
                           <p className="text-gray-400 text-xs">{pathway.aiAgent}</p>
                         </div>
@@ -420,22 +423,13 @@ export default function VaultXChallenges() {
                         </div>
                       </div>
 
-                      {/* Activate agent button */}
-                      <button
-                        onClick={() => runAgent.mutate({ agentSlug: pathway.id, agentName: pathway.label, creditToChallenge: true })}
-                        disabled={runAgent.isPending}
-                        className={`w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-                          runAgent.isPending
-                            ? "bg-white/5 text-gray-500"
-                            : `bg-gradient-to-r ${challenge.gradient} text-white hover:opacity-90 shadow-lg`
-                        }`}
+                      {/* Open assigned tool without writing to the empire challenge ledger */}
+                      <a
+                        href={(pathway as any).ctaHref}
+                        className={`w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 bg-gradient-to-r ${challenge.gradient} text-white hover:opacity-90 shadow-lg`}
                       >
-                        {runAgent.isPending ? (
-                          <><Loader2 className="w-4 h-4 animate-spin" /> Activating Agent...</>
-                        ) : (
-                          <><Zap className="w-4 h-4" /> Activate {pathway.label} Agent</>
-                        )}
-                      </button>
+                        <ArrowRight className="w-4 h-4" /> {(pathway as any).ctaLabel}
+                      </a>
                     </div>
                   )}
                 </div>
@@ -476,13 +470,6 @@ export default function VaultXChallenges() {
           </div>
         </div>
 
-        {/* Log revenue */}
-        {joined === activeChallenge && (
-          <div className="p-6 rounded-3xl bg-white/5 border border-white/10 mb-8">
-            <h3 className="text-white font-bold text-lg mb-4">Log Revenue</h3>
-            <LogRevenueForm challengeId={activeChallenge} onLog={(amount, source) => logRevenue.mutate({ amount, source })} />
-          </div>
-        )}
 
         {/* CTA */}
         {joined !== activeChallenge ? (
@@ -490,7 +477,7 @@ export default function VaultXChallenges() {
             <ChallengeIcon className="w-12 h-12 text-white mx-auto mb-4" />
             <h3 className="text-white font-black text-2xl mb-2">Ready to Start the {challenge.title}?</h3>
             <p className="text-white/80 mb-6 max-w-lg mx-auto">
-              Your AI agents activate the moment you join. They handle outreach, scheduling, and optimization automatically. You just create.
+This starts your VaultX playbook view. It does not credit the separate AI Agents + Platform Tools challenge ledger.
             </p>
             <button
               onClick={() => handleJoin(activeChallenge)}
@@ -500,15 +487,15 @@ export default function VaultXChallenges() {
               {joinLoading ? (
                 <><Loader2 className="w-5 h-5 animate-spin" /> Activating...</>
               ) : (
-                <><Zap className="w-5 h-5" /> Start Challenge — Activate AI Agents</>
+                <><Zap className="w-5 h-5" /> Start VaultX Playbook</>
               )}
             </button>
           </div>
         ) : (
           <div className="p-6 rounded-3xl bg-green-900/20 border border-green-500/30 text-center">
             <CheckCircle2 className="w-10 h-10 text-green-400 mx-auto mb-3" />
-            <h3 className="text-white font-black text-xl mb-2">Challenge Active — AI Agents Running</h3>
-            <p className="text-gray-400 text-sm mb-4">Your agents are working. Check back daily to log revenue and see your progress.</p>
+            <h3 className="text-white font-black text-xl mb-2">VaultX Playbook Active</h3>
+            <p className="text-gray-400 text-sm mb-4">Use the assigned VaultX and platform tools below. Verified Telegram drops remain limited to the two listed VaultX drop agents.</p>
             <div className="flex flex-wrap gap-3 justify-center">
               <a href="/social-hub" className="px-5 py-2.5 rounded-xl bg-purple-600 text-white font-bold text-sm hover:bg-purple-500 transition-all flex items-center gap-2">
                 <Share2 className="w-4 h-4" /> Open Social Hub
@@ -520,60 +507,6 @@ export default function VaultXChallenges() {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-// ─── Log Revenue Form ─────────────────────────────────────────────────────────
-function LogRevenueForm({ challengeId, onLog }: { challengeId: string; onLog: (amount: number, source: string) => void }) {
-  const [amount, setAmount] = useState("");
-  const [source, setSource] = useState("subscriptions");
-
-  const SOURCES = [
-    { id: "subscriptions", label: "Subscriptions" },
-    { id: "ppv", label: "PPV Content" },
-    { id: "tips", label: "Tips" },
-    { id: "custom", label: "Custom Requests" },
-    { id: "live", label: "Live Stream" },
-    { id: "social", label: "Social Funnel" },
-    { id: "collabs", label: "Collabs" },
-  ];
-
-  const handleLog = () => {
-    const amt = parseFloat(amount);
-    if (isNaN(amt) || amt <= 0) return;
-    onLog(amt, source);
-    setAmount("");
-  };
-
-  return (
-    <div className="flex flex-wrap gap-3 items-end">
-      <div className="flex-1 min-w-32">
-        <label className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 block">Amount ($)</label>
-        <input
-          type="number"
-          value={amount}
-          onChange={e => setAmount(e.target.value)}
-          placeholder="0.00"
-          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-green-500/50"
-        />
-      </div>
-      <div className="flex-1 min-w-40">
-        <label className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 block">Source</label>
-        <select
-          value={source}
-          onChange={e => setSource(e.target.value)}
-          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-green-500/50"
-        >
-          {SOURCES.map(s => <option key={s.id} value={s.id} className="bg-gray-900">{s.label}</option>)}
-        </select>
-      </div>
-      <button
-        onClick={handleLog}
-        className="px-6 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-black text-sm hover:opacity-90 transition-all flex items-center gap-2"
-      >
-        <DollarSign className="w-4 h-4" /> Log Revenue
-      </button>
     </div>
   );
 }

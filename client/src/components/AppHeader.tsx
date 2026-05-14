@@ -235,7 +235,7 @@ export default function AppHeader() {
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href="/vaultx-challenges">
-                          <a className="w-full">$5K / $15K Challenge</a>
+                          <a className="w-full">VaultX Revenue Loop</a>
                         </Link>
                       </DropdownMenuItem>
                     </>
@@ -390,7 +390,7 @@ export default function AppHeader() {
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link href="/vaultx-challenges">
-                            <a className="w-full">$5K / $15K Challenge</a>
+                            <a className="w-full">VaultX Revenue Loop</a>
                           </Link>
                         </DropdownMenuItem>
                       </>

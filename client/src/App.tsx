@@ -545,7 +545,7 @@ function Router() {
       <Route path="/social-hub" component={SocialHub} />
       <Route path="/outreach" component={OutreachCommandCenter} />
       <Route path="/vaultx-challenges" component={VaultXChallenges} />
-      <Route path="/challenges" component={VaultXChallenges} />
+      <Route path="/challenges" component={ChallengeStoryEngine} />
       <Route path="/for-you" component={ForYouFeed} />
       <Route path="/ai-chatter" component={AIChatter} />
 
