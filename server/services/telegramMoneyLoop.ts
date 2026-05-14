@@ -85,7 +85,7 @@ export async function sendFreeChannelDrop(input: DropInput): Promise<DropResult>
       `INSERT INTO distribution_jobs
          (creator_id, channel_identity_id, platform, asset_url, asset_type,
           caption, tracking_code, destination_url, status, content_safety_level, brand_lane)
-       VALUES (?, ?, 'telegram', ?, 'final_video', ?, ?, ?, 'posted', 'explicit', 'vaultx_adult')`,
+       VALUES (?, ?, 'telegram', ?, 'text', ?, ?, ?, 'posted', 'explicit', 'vaultx_adult')`,
       [
         input.creatorId || 1,
         FREE_CHANNEL_ENTITY_ID,
