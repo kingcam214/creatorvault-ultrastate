@@ -28,7 +28,7 @@ function generateMagicLink(creatorHandle: string, platform: string): string {
 }
 
 async function ensureOutreachLeadsTable(): Promise<void> {
-  await db.db.execute(sql`
+  await db.execute(sql`
     CREATE TABLE IF NOT EXISTS outreach_leads (
       id VARCHAR(36) PRIMARY KEY,
       handle VARCHAR(255) NOT NULL,
@@ -61,7 +61,7 @@ async function ensureOutreachLeadsTable(): Promise<void> {
     )
   `);
 
-  await db.db.execute(sql`ALTER TABLE outreach_leads ADD COLUMN IF NOT EXISTS next_money_cta TEXT NULL`);
+  await db.execute(sql`ALTER TABLE outreach_leads ADD COLUMN IF NOT EXISTS next_money_cta TEXT NULL`);
 }
 
 function normalizePlatform(platforms?: string[]): string {
@@ -385,7 +385,7 @@ export const creatorOutreachRouter = router({
         const payloads = buildClosingLoopPayloads(creator, magicLink, message);
         const leadId = crypto.randomUUID();
 
-        await db.db.execute(sql`
+        await db.execute(sql`
           INSERT INTO outreach_leads (
             id, handle, platform, display_name, bio, recent_post, followers, engagement_rate,
             score, monetization_angle, monetization_leak, estimated_revenue_opportunity_cents,
@@ -439,7 +439,7 @@ export const creatorOutreachRouter = router({
             updated_at = NOW()
         `);
 
-        const rowResult = await db.db.execute(sql`
+        const rowResult = await db.execute(sql`
           SELECT id FROM outreach_leads WHERE handle = ${creator.handle} AND platform = ${platform} LIMIT 1
         `);
         const persistedId = extractRows(rowResult)[0]?.id || leadId;
@@ -574,7 +574,7 @@ export const creatorOutreachRouter = router({
       const payloads = buildClosingLoopPayloads(creator, magicLink, message);
       const leadId = crypto.randomUUID();
 
-      await db.db.execute(sql`
+      await db.execute(sql`
         INSERT INTO outreach_leads (
           id, handle, platform, display_name, bio, recent_post, followers, engagement_rate,
           score, monetization_angle, monetization_leak, estimated_revenue_opportunity_cents,
@@ -628,13 +628,13 @@ export const creatorOutreachRouter = router({
           updated_at = NOW()
       `);
 
-      const leadRows = extractRows(await db.db.execute(sql`
+      const leadRows = extractRows(await db.execute(sql`
         SELECT * FROM outreach_leads WHERE handle = ${creator.handle} AND platform = ${platform} LIMIT 1
       `));
       const lead = leadRows[0];
       if (!lead?.id) throw new Error("outreach_leads insert did not return a persisted lead row");
 
-      const channelRows = extractRows(await db.db.execute(sql`
+      const channelRows = extractRows(await db.execute(sql`
         SELECT * FROM channel_identities
         WHERE owner_id = ${ctx.user.id} OR owner_type IN ('vaultx_brand','creatorvault_brand')
         ORDER BY owner_type ASC, created_at ASC
@@ -645,12 +645,12 @@ export const creatorOutreachRouter = router({
         throw new Error("No existing distribution channel identity is available for the creator closing loop; create or seed a channel before claiming distribution scheduling success.");
       }
 
-      const creatorRows = extractRows(await db.db.execute(sql`
+      const creatorRows = extractRows(await db.execute(sql`
         SELECT id FROM vaultx_creators WHERE user_id = ${ctx.user.id} LIMIT 1
       `));
       const creatorId = creatorRows[0]?.id || ctx.user.id;
       const trackingCode = payloads.attributionCode;
-      await db.db.execute(sql`
+      await db.execute(sql`
         INSERT INTO distribution_jobs
           (creator_id, channel_identity_id, connected_account_id, platform, content_id,
            asset_url, asset_type, caption, destination_url, tracking_code, status, scheduled_at)
@@ -659,7 +659,7 @@ export const creatorOutreachRouter = router({
            ${magicLink}, 'activation_link', ${message}, ${magicLink}, ${trackingCode}, 'draft', NULL)
       `);
 
-      const distributionRows = extractRows(await db.db.execute(sql`
+      const distributionRows = extractRows(await db.execute(sql`
         SELECT * FROM distribution_jobs WHERE tracking_code = ${trackingCode} ORDER BY created_at DESC LIMIT 1
       `));
       const distributionJob = distributionRows[0];
@@ -667,7 +667,7 @@ export const creatorOutreachRouter = router({
 
       const telemetryId = crypto.randomUUID();
       const now = new Date();
-      await db.db.execute(sql`
+      await db.execute(sql`
         INSERT INTO agent_telemetry_events
           (id, agent_id, agent_name, agent_category, task_type, target, status,
            started_at, finished_at, outcome, revenue_generated, error_message, metadata)
@@ -711,7 +711,7 @@ export const creatorOutreachRouter = router({
     .input(z.object({ limit: z.number().min(1).max(100).default(25) }).default({ limit: 25 }))
     .query(async ({ input }) => {
       await ensureOutreachLeadsTable();
-      const rows = extractRows(await db.db.execute(sql`
+      const rows = extractRows(await db.execute(sql`
         SELECT id, handle, platform, display_name, followers, engagement_rate, score,
                monetization_angle, monetization_leak, estimated_revenue_opportunity_cents,
                outreach_urgency, next_money_cta, attribution_code, status, created_at, updated_at
@@ -726,7 +726,7 @@ export const creatorOutreachRouter = router({
   getOutreachStats: protectedProcedure
     .query(async () => {
       try {
-        const stats = await db.db.execute(sql`
+        const stats = await db.execute(sql`
           SELECT 
             COUNT(*) as total_contacted,
             SUM(CASE WHEN status = 'replied' THEN 1 ELSE 0 END) as total_replied,
@@ -752,7 +752,7 @@ export const creatorOutreachRouter = router({
     }))
     .mutation(async ({ input }) => {
       await ensureOutreachLeadsTable();
-      const result = await db.db.execute(sql`
+      const result = await db.execute(sql`
         UPDATE outreach_leads SET status = ${input.status}, updated_at = NOW()
         WHERE handle = ${input.handle}
       `);
