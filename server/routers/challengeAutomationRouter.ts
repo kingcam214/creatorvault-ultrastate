@@ -136,6 +136,7 @@ async function ensureAgentReportsSchema() {
     )
   `);
   await db.db.execute(sql`ALTER TABLE empire_agent_reports MODIFY content LONGTEXT NOT NULL`);
+  await db.db.execute(sql`ALTER TABLE empire_agent_reports MODIFY agent_id INT NULL`);
   await db.db.execute(sql`ALTER TABLE empire_agent_reports MODIFY agent_slug VARCHAR(128) NOT NULL`);
   await db.db.execute(sql`ALTER TABLE empire_agent_reports MODIFY agent_name VARCHAR(256) NOT NULL`);
   await db.db.execute(sql`ALTER TABLE empire_agent_reports MODIFY report_type VARCHAR(100) NOT NULL`);
@@ -144,9 +145,14 @@ async function ensureAgentReportsSchema() {
 async function saveAgentReport(agentSlug: string, agentName: string, reportType: string, content: string, revenueImpact = 0) {
   try {
     await ensureAgentReportsSchema();
+    const agentRows = extractRows(
+      await db.db.execute(sql`SELECT id FROM empire_agents WHERE slug = ${agentSlug} LIMIT 1`),
+      `empire agent lookup for ${agentSlug}`
+    );
+    const realAgentId = agentRows[0]?.id ? Number(agentRows[0].id) : null;
     await db.db.execute(sql`
-      INSERT INTO empire_agent_reports (agent_slug, agent_name, report_type, content, revenue_impact, created_at)
-      VALUES (${agentSlug}, ${agentName}, ${reportType}, ${content}, ${revenueImpact}, NOW())
+      INSERT INTO empire_agent_reports (agent_id, agent_slug, agent_name, report_type, content, revenue_impact, created_at)
+      VALUES (${realAgentId}, ${agentSlug}, ${agentName}, ${reportType}, ${content}, ${revenueImpact}, NOW())
     `);
   } catch (reportError) {
     throw new Error(`Agent report persistence failed for ${agentSlug}: ${reportError instanceof Error ? reportError.message : String(reportError)}`);
@@ -207,7 +213,7 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
 
       // ── 4. Empire Map Agent ───────────────────────────────────────────────────
       case "empire-map-agent": {
-        const entities = await db.db.execute(sql`SELECT name, type, status FROM empire_entities ORDER BY id ASC`);
+        const entities = await db.db.execute(sql`SELECT name, type, description FROM empire_entities ORDER BY id ASC`);
         const entityList = extractRows(entities).map((e: any) => `${e.name} (${e.type})`).join(", ");
         const output = await gptRun(
           "You are the Empire Map Agent. You maintain LLC/asset maps, ownership structures, and entity documentation for KingCam's empire.",
