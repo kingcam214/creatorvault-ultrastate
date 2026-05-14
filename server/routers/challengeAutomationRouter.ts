@@ -121,35 +121,35 @@ async function getEmpireStats() {
   };
 }
 
+async function ensureAgentReportsSchema() {
+  await db.db.execute(sql`
+    CREATE TABLE IF NOT EXISTS empire_agent_reports (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      agent_slug VARCHAR(128) NOT NULL,
+      agent_name VARCHAR(256) NOT NULL,
+      report_type VARCHAR(100) NOT NULL,
+      content LONGTEXT NOT NULL,
+      revenue_impact DECIMAL(10,2) DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_slug (agent_slug),
+      INDEX idx_created (created_at)
+    )
+  `);
+  await db.db.execute(sql`ALTER TABLE empire_agent_reports MODIFY content LONGTEXT NOT NULL`);
+  await db.db.execute(sql`ALTER TABLE empire_agent_reports MODIFY agent_slug VARCHAR(128) NOT NULL`);
+  await db.db.execute(sql`ALTER TABLE empire_agent_reports MODIFY agent_name VARCHAR(256) NOT NULL`);
+  await db.db.execute(sql`ALTER TABLE empire_agent_reports MODIFY report_type VARCHAR(100) NOT NULL`);
+}
+
 async function saveAgentReport(agentSlug: string, agentName: string, reportType: string, content: string, revenueImpact = 0) {
   try {
+    await ensureAgentReportsSchema();
     await db.db.execute(sql`
       INSERT INTO empire_agent_reports (agent_slug, agent_name, report_type, content, revenue_impact, created_at)
       VALUES (${agentSlug}, ${agentName}, ${reportType}, ${content}, ${revenueImpact}, NOW())
     `);
-  } catch {
-    // Table may not exist yet — create it
-    try {
-      await db.db.execute(sql`
-        CREATE TABLE IF NOT EXISTS empire_agent_reports (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          agent_slug VARCHAR(128) NOT NULL,
-          agent_name VARCHAR(256) NOT NULL,
-          report_type VARCHAR(100) NOT NULL,
-          content TEXT NOT NULL,
-          revenue_impact DECIMAL(10,2) DEFAULT 0,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          INDEX idx_slug (agent_slug),
-          INDEX idx_created (created_at)
-        )
-      `);
-      await db.db.execute(sql`
-        INSERT INTO empire_agent_reports (agent_slug, agent_name, report_type, content, revenue_impact, created_at)
-        VALUES (${agentSlug}, ${agentName}, ${reportType}, ${content}, ${revenueImpact}, NOW())
-      `);
-    } catch (createError) {
-      throw new Error(`Agent report persistence failed for ${agentSlug}: ${createError instanceof Error ? createError.message : String(createError)}`);
-    }
+  } catch (reportError) {
+    throw new Error(`Agent report persistence failed for ${agentSlug}: ${reportError instanceof Error ? reportError.message : String(reportError)}`);
   }
 }
 

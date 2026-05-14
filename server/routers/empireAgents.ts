@@ -21,13 +21,17 @@ async function ensureAgentReportsTable() {
       agent_slug VARCHAR(128) NOT NULL,
       agent_name VARCHAR(256) NOT NULL,
       report_type VARCHAR(100) NOT NULL,
-      content TEXT NOT NULL,
+      content LONGTEXT NOT NULL,
       revenue_impact DECIMAL(10,2) DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_slug (agent_slug),
       INDEX idx_created (created_at)
     )
   `);
+  await db.db.execute(sql`ALTER TABLE empire_agent_reports MODIFY content LONGTEXT NOT NULL`);
+  await db.db.execute(sql`ALTER TABLE empire_agent_reports MODIFY agent_slug VARCHAR(128) NOT NULL`);
+  await db.db.execute(sql`ALTER TABLE empire_agent_reports MODIFY agent_name VARCHAR(256) NOT NULL`);
+  await db.db.execute(sql`ALTER TABLE empire_agent_reports MODIFY report_type VARCHAR(100) NOT NULL`);
 }
 
 async function insertAgentReport(agent: any, reportType: string, content: string, revenueImpact = 0) {
