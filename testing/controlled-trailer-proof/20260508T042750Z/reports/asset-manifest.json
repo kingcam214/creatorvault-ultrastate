@@ -1,0 +1,199 @@
+{
+  "run_id": "20260508T042750Z",
+  "project_root": "/root/creatorvault",
+  "policy": "Only verified live CreatorVault assets are used; no generated placeholder media or fake uploads are allowed.",
+  "assets": [
+    {
+      "path": "assets/logo-white.png",
+      "bytes": 292594,
+      "mtime_utc": "2026-02-13T23:22:01.977201+00:00",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "png",
+            "codec_type": "video",
+            "width": 1200,
+            "height": 1200
+          }
+        ],
+        "format": {
+          "size": "292594"
+        }
+      }
+    },
+    {
+      "path": "assets/logo-black.png",
+      "bytes": 97211,
+      "mtime_utc": "2026-02-13T23:22:01.976202+00:00",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "mjpeg",
+            "codec_type": "video",
+            "width": 1200,
+            "height": 1200,
+            "duration": "0.040000"
+          }
+        ],
+        "format": {
+          "duration": "0.040000",
+          "size": "97211"
+        }
+      }
+    },
+    {
+      "path": "client/public/videos/hero-cam.mp4",
+      "bytes": 10708544,
+      "mtime_utc": "2026-04-19T05:27:33.478406+00:00",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1080,
+            "height": 1920,
+            "duration": "5.041667"
+          },
+          {
+            "index": 1,
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "sample_rate": "44100",
+            "channels": 2,
+            "duration": "4.921995"
+          }
+        ],
+        "format": {
+          "duration": "5.041667",
+          "size": "10708544"
+        }
+      }
+    },
+    {
+      "path": "client/public/videos/kingcam-hero-cam.mp4",
+      "bytes": 10708544,
+      "mtime_utc": "2026-04-24T02:53:14.361479+00:00",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1080,
+            "height": 1920,
+            "duration": "5.041667"
+          },
+          {
+            "index": 1,
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "sample_rate": "44100",
+            "channels": 2,
+            "duration": "4.921995"
+          }
+        ],
+        "format": {
+          "duration": "5.041667",
+          "size": "10708544"
+        }
+      }
+    },
+    {
+      "path": "client/public/videos/kingcam-clone-2.mp4",
+      "bytes": 1666411,
+      "mtime_utc": "2026-04-24T02:53:14.343479+00:00",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "sample_rate": "44100",
+            "channels": 2,
+            "duration": "14.997075"
+          },
+          {
+            "index": 1,
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 576,
+            "height": 576,
+            "duration": "15.066992"
+          }
+        ],
+        "format": {
+          "duration": "15.066992",
+          "size": "1666411"
+        }
+      }
+    },
+    {
+      "path": "client/public/images/reel/reel-creator-promo.png",
+      "bytes": 1729534,
+      "mtime_utc": "2026-04-24T03:09:23.822549+00:00",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "png",
+            "codec_type": "video",
+            "width": 864,
+            "height": 1536
+          }
+        ],
+        "format": {
+          "size": "1729534"
+        }
+      }
+    },
+    {
+      "path": "client/public/images/reel/reel-product-drop.png",
+      "bytes": 1958092,
+      "mtime_utc": "2026-04-24T03:09:23.856549+00:00",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "png",
+            "codec_type": "video",
+            "width": 864,
+            "height": 1536
+          }
+        ],
+        "format": {
+          "size": "1958092"
+        }
+      }
+    },
+    {
+      "path": "client/public/images/clone-ambassador.webp",
+      "bytes": 65260,
+      "mtime_utc": "2026-04-19T05:31:59.688982+00:00",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "webp",
+            "codec_type": "video",
+            "width": 768,
+            "height": 1344
+          }
+        ],
+        "format": {
+          "size": "65260"
+        }
+      }
+    }
+  ]
+}

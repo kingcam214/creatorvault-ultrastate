@@ -1,0 +1,27 @@
+{
+  "run_id": "20260508T043042Z",
+  "truth_sources": {
+    "brand_name": "CreatorVault",
+    "official_route": "https://creatorvault.live/",
+    "launch_trailer_studio_route": "https://creatorvault.live/launch-trailer-studio",
+    "tagline": "The Dopest App in the World",
+    "positioning": "Creator economy OS for creators",
+    "audience": "adult content creators, influencers, and digital entrepreneurs",
+    "feature_language": [
+      "AI video studio",
+      "viral optimizer",
+      "flyer generator",
+      "live streaming",
+      "PPV tools",
+      "social media automation",
+      "full business suite"
+    ],
+    "business_claims_from_existing_deck_data": [
+      "10+ AI tools in one platform",
+      "82% cost savings vs competitors",
+      "built for OnlyFans, Fansly, TikTok, Instagram creators"
+    ],
+    "founder_reference": "KingCam / Cameron White"
+  },
+  "source_integrity_statement": "This controlled trailer is assembled from existing CreatorVault source files and copied public media paths on the production VPS, without database writes or payment changes."
+}

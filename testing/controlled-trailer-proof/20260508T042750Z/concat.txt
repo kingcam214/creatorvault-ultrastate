@@ -1,0 +1,6 @@
+file '/root/creatorvault/testing/controlled-trailer-proof/20260508T042750Z/segments/scene_01.mp4'
+file '/root/creatorvault/testing/controlled-trailer-proof/20260508T042750Z/segments/scene_02.mp4'
+file '/root/creatorvault/testing/controlled-trailer-proof/20260508T042750Z/segments/scene_03.mp4'
+file '/root/creatorvault/testing/controlled-trailer-proof/20260508T042750Z/segments/scene_04.mp4'
+file '/root/creatorvault/testing/controlled-trailer-proof/20260508T042750Z/segments/scene_05.mp4'
+file '/root/creatorvault/testing/controlled-trailer-proof/20260508T042750Z/segments/scene_06.mp4'

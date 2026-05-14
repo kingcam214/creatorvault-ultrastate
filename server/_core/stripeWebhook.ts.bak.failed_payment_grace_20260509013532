@@ -1,0 +1,726 @@
+/**
+ * Stripe webhook handler for CreatorVault live cash-loop events.
+ *
+ * Production invariants enforced here:
+ * - Stripe signature must verify before any side effect.
+ * - Subscription accounting is idempotent by Stripe payment reference.
+ * - Recurring invoice payments create creator transactions and balance credits.
+ * - Stripe subscription lifecycle events synchronize local subscription status.
+ * - Checkout metadata must resolve to a real tier/creator/fan relationship.
+ */
+
+import type { Request, Response } from "express";
+import Stripe from "stripe";
+import { verifyWebhookSignature } from "../services/stripeVaultLive";
+import * as dbVaultLive from "../db-vaultlive";
+import { creditChallengePayment, creditChallengePaymentCents } from "../challengePaymentHook";
+
+type AccountingInput = {
+  subscriptionId: number;
+  fanId: number;
+  creatorId: number;
+  amountInCents: number;
+  stripePaymentRef: string;
+};
+
+/**
+ * Stripe webhook endpoint handler.
+ *
+ * IMPORTANT: This endpoint must use raw body (not JSON parsed).
+ * Configure in Express: app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), handler)
+ */
+export async function handleStripeWebhook(req: Request, res: Response) {
+  const { ENV } = await import("./env");
+  if (!ENV.stripeSecretKey || !ENV.stripeWebhookSecret) {
+    console.log("[Stripe Webhook] Stripe not configured, skipping");
+    return res.json({ received: true, skipped: true });
+  }
+
+  const signature = req.headers["stripe-signature"];
+
+  if (!signature || typeof signature !== "string") {
+    console.error("[Stripe Webhook] Missing signature");
+    return res.status(400).send("Missing signature");
+  }
+
+  let event: Stripe.Event;
+
+  try {
+    event = verifyWebhookSignature(req.body, signature);
+  } catch (err) {
+    console.error("[Stripe Webhook] Signature verification failed:", err);
+    return res.status(400).send(`Webhook Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+  }
+
+  console.log(`[Stripe Webhook] Received event: ${event.type}`);
+
+  try {
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      if (session.amount_total && session.amount_total > 0) {
+        const desc = session.metadata?.tierId
+          ? `Stripe subscription checkout — tier ${session.metadata.tierId}`
+          : `Stripe checkout — ${session.metadata?.type || "payment"}`;
+        await creditChallengePaymentCents(session.amount_total, "stripe_checkout", desc);
+      }
+
+      if (session.metadata?.flow === "vaultx_subscription") {
+        await handleVaultXSubscriptionCheckout(session);
+      } else if (session.metadata?.tierId) {
+        await handleSubscriptionCheckout(session);
+      } else {
+        await handleCheckoutCompleted(session);
+      }
+    } else if (event.type === "invoice.paid") {
+      const invoice = event.data.object as Stripe.Invoice;
+      if (invoice.amount_paid > 0) {
+        await creditChallengePaymentCents(invoice.amount_paid, "stripe_subscription_renewal", `Stripe subscription renewal — ${invoice.customer_email || invoice.customer}`);
+        const handledVaultXInvoice = await handleVaultXSubscriptionInvoicePaid(invoice);
+        if (!handledVaultXInvoice) {
+          await handleSubscriptionInvoicePaid(invoice);
+        }
+      }
+    } else if (event.type === "invoice.payment_failed") {
+      await handleSubscriptionInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+    } else if (event.type === "customer.subscription.updated") {
+      await syncStripeSubscriptionStatus(event.data.object as Stripe.Subscription);
+    } else if (event.type === "customer.subscription.deleted") {
+      await syncStripeSubscriptionStatus(event.data.object as Stripe.Subscription, true);
+    } else if (event.type === "payment_intent.succeeded") {
+      const pi = event.data.object as Stripe.PaymentIntent;
+      if (pi.amount > 0 && !pi.metadata?.challengeCredited) {
+        await creditChallengePaymentCents(pi.amount, "stripe_payment_intent", `Stripe payment — ${pi.description || pi.id}`);
+      }
+    } else if (event.type === "charge.succeeded") {
+      const charge = event.data.object as Stripe.Charge;
+      if (charge.amount > 0 && !charge.payment_intent) {
+        await creditChallengePaymentCents(charge.amount, "stripe_charge", `Stripe charge — ${charge.description || charge.id}`);
+      }
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.error("[Stripe Webhook] Error processing event:", err);
+    res.status(500).send(`Webhook Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+  }
+}
+
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  const metadata = session.metadata;
+
+  if (!metadata) {
+    console.error("[Stripe Webhook] No metadata in session");
+    return;
+  }
+
+  const { type, streamId, creatorId, creatorAmount, platformAmount, message } = metadata;
+
+  if (!type || !streamId || !creatorId || !creatorAmount || !platformAmount) {
+    console.error("[Stripe Webhook] Missing required metadata");
+    return;
+  }
+
+  const streamIdNum = parseInt(streamId, 10);
+  const creatorIdNum = parseInt(creatorId, 10);
+  const creatorAmountNum = parseInt(creatorAmount, 10);
+  const platformAmountNum = parseInt(platformAmount, 10);
+  const totalAmount = creatorAmountNum + platformAmountNum;
+
+  console.log(`[Stripe Webhook] Processing ${type} for stream ${streamIdNum}, creator ${creatorIdNum}, amount ${totalAmount}`);
+
+  if (type === "vaultlive_tip") {
+    await dbVaultLive.recordTip(streamIdNum, creatorIdNum, totalAmount, message || undefined);
+    console.log(`[Stripe Webhook] Tip recorded: $${(totalAmount / 100).toFixed(2)} (Creator: $${(creatorAmountNum / 100).toFixed(2)}, Platform: $${(platformAmountNum / 100).toFixed(2)})`);
+  } else if (type === "vaultlive_donation") {
+    await dbVaultLive.recordDonation(streamIdNum, creatorIdNum, totalAmount, "stripe", message || undefined);
+    console.log(`[Stripe Webhook] Donation recorded: $${(totalAmount / 100).toFixed(2)} (Creator: $${(creatorAmountNum / 100).toFixed(2)}, Platform: $${(platformAmountNum / 100).toFixed(2)})`);
+  }
+
+  console.log("[Stripe Webhook] Payment completed successfully");
+}
+
+async function handleSubscriptionCheckout(session: Stripe.Checkout.Session) {
+  const { tierId, creatorId, fanId } = session.metadata!;
+
+  if (!tierId || !creatorId || !fanId) {
+    console.error("[Stripe Webhook] Missing subscription metadata");
+    return;
+  }
+
+  const { db } = await import("../db");
+  const { subscriptionTiers, subscriptions } = await import("../../drizzle/schema");
+  const { eq, desc } = await import("drizzle-orm");
+
+  const fanIdNum = parseInt(fanId, 10);
+  const creatorIdNum = parseInt(creatorId, 10);
+  const tierIdNum = parseInt(tierId, 10);
+  const stripeSubscriptionId = session.subscription as string;
+
+  if (!fanIdNum || !creatorIdNum || !tierIdNum || !stripeSubscriptionId) {
+    console.error("[Stripe Webhook] Invalid subscription metadata", { tierId, creatorId, fanId, hasStripeSubscriptionId: Boolean(stripeSubscriptionId) });
+    return;
+  }
+
+  const [tier] = await db
+    .select()
+    .from(subscriptionTiers)
+    .where(eq(subscriptionTiers.id, tierIdNum))
+    .limit(1);
+
+  if (!tier || tier.creatorId !== creatorIdNum) {
+    throw new Error(`Subscription metadata mismatch for tier ${tierIdNum}`);
+  }
+
+  const [existingSubscription] = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId))
+    .orderBy(desc(subscriptions.id))
+    .limit(1);
+
+  let subscriptionId = existingSubscription?.id;
+
+  if (!subscriptionId) {
+    const subResult = await db.insert(subscriptions).values({
+      fanId: fanIdNum,
+      creatorId: creatorIdNum,
+      tierId: tierIdNum,
+      stripeSubscriptionId,
+      status: "active",
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+
+    subscriptionId = Number((subResult as any)?.[0]?.insertId ?? (subResult as any)?.insertId);
+
+    if (!Number.isFinite(subscriptionId) || subscriptionId <= 0) {
+      const [insertedSubscription] = await db
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId))
+        .orderBy(desc(subscriptions.id))
+        .limit(1);
+      subscriptionId = insertedSubscription?.id;
+    }
+  }
+
+  if (!Number.isFinite(subscriptionId) || !subscriptionId) {
+    throw new Error("Unable to resolve subscription ID after Stripe checkout subscription insert");
+  }
+
+  const amountInCents = session.amount_total || 0;
+  const stripePaymentRef = (session.payment_intent as string) || (session.invoice as string) || session.id;
+
+  const transactionCreated = await reconcileSubscriptionPayment({
+    subscriptionId,
+    fanId: fanIdNum,
+    creatorId: creatorIdNum,
+    amountInCents,
+    stripePaymentRef,
+  });
+
+  console.log("[Stripe Webhook] Subscription checkout reconciled", {
+    subscriptionId,
+    creatorId: creatorIdNum,
+    transactionCreated,
+    amount: `$${(amountInCents / 100).toFixed(2)}`,
+  });
+}
+
+async function handleVaultXSubscriptionCheckout(session: Stripe.Checkout.Session) {
+  const metadata = session.metadata || {};
+  const vaultxCreatorId = parseInt(metadata.vaultxCreatorId || "", 10);
+  const fanId = parseInt(metadata.fanId || "", 10);
+  const tier = metadata.tier;
+  const expectedAmountCents = parseInt(metadata.amountCents || "", 10);
+  const stripeSubscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+
+  if (!vaultxCreatorId || !fanId || !["basic", "premium", "vip"].includes(tier || "") || !stripeSubscriptionId) {
+    throw new Error(`Invalid VaultX subscription checkout metadata for session ${session.id}`);
+  }
+
+  const amountPaidCents = session.amount_total || expectedAmountCents || 0;
+  if (!amountPaidCents || amountPaidCents <= 0) {
+    throw new Error(`VaultX subscription checkout ${session.id} has no positive amount`);
+  }
+  if (expectedAmountCents && amountPaidCents !== expectedAmountCents) {
+    throw new Error(`VaultX subscription amount mismatch for session ${session.id}`);
+  }
+
+  const creatorRows = await vaultxRawQuery(
+    "SELECT id, user_id, subscription_price_basic, subscription_price_premium, subscription_price_vip FROM vaultx_creators WHERE id = ? AND is_active = 1 LIMIT 1",
+    [vaultxCreatorId]
+  );
+  if (!creatorRows.length) {
+    throw new Error(`VaultX creator ${vaultxCreatorId} not found or inactive for checkout ${session.id}`);
+  }
+
+  const priceColumn = tier === "vip" ? "subscription_price_vip" : tier === "premium" ? "subscription_price_premium" : "subscription_price_basic";
+  const configuredAmountCents = Math.round(parseFloat(String(creatorRows[0][priceColumn] ?? "0")) * 100);
+  if (configuredAmountCents > 0 && configuredAmountCents !== amountPaidCents) {
+    throw new Error(`VaultX configured price mismatch for creator ${vaultxCreatorId} tier ${tier}`);
+  }
+
+  const existingRows = await vaultxRawQuery(
+    "SELECT id, status FROM vaultx_subscriptions WHERE stripe_subscription_id = ? ORDER BY id DESC LIMIT 1",
+    [stripeSubscriptionId]
+  );
+
+  const amountPaid = amountPaidCents / 100;
+  const creatorEarnings = Math.floor(amountPaidCents * 0.85) / 100;
+  let subscriptionId = existingRows[0]?.id;
+  let inserted = false;
+
+  if (subscriptionId) {
+    await vaultxRawExec(
+      `UPDATE vaultx_subscriptions
+       SET fan_id = ?, creator_id = ?, tier = ?, price_paid = ?, status = 'active', current_period_start = NOW(), current_period_end = DATE_ADD(NOW(), INTERVAL 1 MONTH)
+       WHERE id = ?`,
+      [fanId, vaultxCreatorId, tier, amountPaid, subscriptionId]
+    );
+  } else {
+    const activeRows = await vaultxRawQuery(
+      "SELECT id FROM vaultx_subscriptions WHERE fan_id = ? AND creator_id = ? AND status = 'active' LIMIT 1",
+      [fanId, vaultxCreatorId]
+    );
+    if (activeRows.length) {
+      throw new Error(`VaultX fan ${fanId} already has an active subscription for creator ${vaultxCreatorId}`);
+    }
+    const result = await vaultxRawExec(
+      `INSERT INTO vaultx_subscriptions
+       (fan_id, creator_id, tier, price_paid, stripe_subscription_id, status, current_period_start, current_period_end)
+       VALUES (?, ?, ?, ?, ?, 'active', NOW(), DATE_ADD(NOW(), INTERVAL 1 MONTH))`,
+      [fanId, vaultxCreatorId, tier, amountPaid, stripeSubscriptionId]
+    );
+    subscriptionId = Number((result as any)?.insertId);
+    inserted = true;
+    await vaultxRawExec(
+      "UPDATE vaultx_creators SET total_subscribers = total_subscribers + 1, total_revenue = total_revenue + ? WHERE id = ?",
+      [creatorEarnings, vaultxCreatorId]
+    );
+  }
+
+  console.log("[Stripe Webhook] VaultX subscription checkout fulfilled", {
+    subscriptionId,
+    vaultxCreatorId,
+    fanId,
+    tier,
+    stripeSubscriptionId,
+    inserted,
+    amount: `$${amountPaid.toFixed(2)}`,
+  });
+}
+
+async function handleVaultXSubscriptionInvoicePaid(invoice: Stripe.Invoice): Promise<boolean> {
+  const invoiceWithSubscription = invoice as Stripe.Invoice & {
+    subscription?: string | { id?: string } | null;
+  };
+  const stripeSubscriptionId = typeof invoiceWithSubscription.subscription === "string"
+    ? invoiceWithSubscription.subscription
+    : invoiceWithSubscription.subscription?.id;
+
+  if (!stripeSubscriptionId) return false;
+
+  const subRows = await vaultxRawQuery(
+    "SELECT id, creator_id, fan_id, tier, price_paid FROM vaultx_subscriptions WHERE stripe_subscription_id = ? ORDER BY id DESC LIMIT 1",
+    [stripeSubscriptionId]
+  );
+  if (!subRows.length) return false;
+
+  const amountPaidCents = invoice.amount_paid || 0;
+  if (amountPaidCents <= 0) return true;
+
+  const amountPaid = amountPaidCents / 100;
+  const creatorEarningsCents = Math.floor(amountPaidCents * 0.85);
+  const creatorEarnings = creatorEarningsCents / 100;
+  const stripePaymentRef = typeof (invoice as any).payment_intent === "string"
+    ? (invoice as any).payment_intent
+    : (invoice as any).payment_intent?.id || invoice.id;
+
+  await ensureVaultXSubscriptionTransactionTable();
+
+  const transactionResult = await vaultxRawExec(
+    `INSERT IGNORE INTO vaultx_subscription_transactions
+     (vaultx_subscription_id, fan_id, creator_id, tier, amount_paid_cents, creator_earnings_cents, stripe_invoice_id, stripe_payment_ref, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed')`,
+    [subRows[0].id, subRows[0].fan_id, subRows[0].creator_id, subRows[0].tier, amountPaidCents, creatorEarningsCents, invoice.id, stripePaymentRef]
+  );
+  const transactionCreated = Number((transactionResult as any)?.affectedRows ?? (transactionResult as any)?.rowCount ?? 0) > 0;
+
+  await vaultxRawExec(
+    `UPDATE vaultx_subscriptions
+     SET status = 'active', price_paid = ?, current_period_start = NOW(), current_period_end = DATE_ADD(NOW(), INTERVAL 1 MONTH)
+     WHERE id = ?`,
+    [amountPaid, subRows[0].id]
+  );
+
+  if (transactionCreated) {
+    await vaultxRawExec(
+      "UPDATE vaultx_creators SET total_revenue = total_revenue + ? WHERE id = ?",
+      [creatorEarnings, subRows[0].creator_id]
+    );
+  }
+
+  console.log("[Stripe Webhook] VaultX subscription invoice synchronized", {
+    subscriptionId: subRows[0].id,
+    vaultxCreatorId: subRows[0].creator_id,
+    invoiceId: invoice.id,
+    transactionCreated,
+    amount: `$${amountPaid.toFixed(2)}`,
+  });
+
+  return true;
+}
+
+async function handleSubscriptionInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  const invoiceWithSubscription = invoice as Stripe.Invoice & {
+    subscription?: string | { id?: string } | null;
+    payment_intent?: string | { id?: string } | null;
+    next_payment_attempt?: number | null;
+    attempt_count?: number | null;
+    amount_due?: number | null;
+    amount_remaining?: number | null;
+    status?: string | null;
+  };
+  const stripeSubscriptionId = typeof invoiceWithSubscription.subscription === "string"
+    ? invoiceWithSubscription.subscription
+    : invoiceWithSubscription.subscription?.id;
+
+  if (!stripeSubscriptionId) {
+    console.warn("[Stripe Webhook] invoice.payment_failed without subscription ID", { invoiceId: invoice.id });
+    return;
+  }
+
+  const nextPaymentAttemptSeconds = invoiceWithSubscription.next_payment_attempt || null;
+  const localStatus = nextPaymentAttemptSeconds ? "past_due" : "unpaid";
+  const amountDueCents = invoiceWithSubscription.amount_due ?? invoice.amount_due ?? 0;
+  const amountRemainingCents = invoiceWithSubscription.amount_remaining ?? invoice.amount_remaining ?? amountDueCents;
+  const stripePaymentRef = (typeof invoiceWithSubscription.payment_intent === "string"
+    ? invoiceWithSubscription.payment_intent
+    : invoiceWithSubscription.payment_intent?.id) || invoice.id;
+  const failureReason = typeof (invoice as any).last_finalization_error?.message === "string"
+    ? (invoice as any).last_finalization_error.message
+    : typeof (invoice as any).last_payment_error?.message === "string"
+      ? (invoice as any).last_payment_error.message
+      : null;
+
+  const { db } = await import("../db");
+  const { subscriptions } = await import("../../drizzle/schema");
+  const { eq, desc } = await import("drizzle-orm");
+
+  const [subscription] = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId))
+    .orderBy(desc(subscriptions.id))
+    .limit(1);
+
+  if (subscription) {
+    await db
+      .update(subscriptions)
+      .set({
+        status: localStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(subscriptions.id, subscription.id));
+  }
+
+  const vaultxRows = await vaultxRawQuery(
+    "SELECT id, fan_id, creator_id, tier FROM vaultx_subscriptions WHERE stripe_subscription_id = ? ORDER BY id DESC LIMIT 1",
+    [stripeSubscriptionId]
+  );
+
+  if (vaultxRows.length) {
+    await vaultxRawExec(
+      "UPDATE vaultx_subscriptions SET status = ? WHERE id = ?",
+      [localStatus, vaultxRows[0].id]
+    );
+  }
+
+  await ensureSubscriptionPaymentFailureTable();
+  await vaultxRawExec(
+    `INSERT IGNORE INTO subscription_payment_failures
+     (stripe_invoice_id, stripe_subscription_id, stripe_payment_ref, subscription_id, vaultx_subscription_id, fan_id, creator_id, tier, status, amount_due_cents, amount_remaining_cents, attempt_count, next_payment_attempt_at, failure_reason)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      invoice.id,
+      stripeSubscriptionId,
+      stripePaymentRef,
+      subscription?.id || null,
+      vaultxRows[0]?.id || null,
+      subscription?.fanId || vaultxRows[0]?.fan_id || null,
+      subscription?.creatorId || vaultxRows[0]?.creator_id || null,
+      vaultxRows[0]?.tier || null,
+      localStatus,
+      amountDueCents,
+      amountRemainingCents,
+      invoiceWithSubscription.attempt_count || 0,
+      nextPaymentAttemptSeconds ? new Date(nextPaymentAttemptSeconds * 1000) : null,
+      failureReason,
+    ]
+  );
+
+  console.log("[Stripe Webhook] Subscription payment failure reconciled without creator revenue credit", {
+    invoiceId: invoice.id,
+    stripeSubscriptionId,
+    subscriptionId: subscription?.id || null,
+    vaultxSubscriptionId: vaultxRows[0]?.id || null,
+    status: localStatus,
+    attemptCount: invoiceWithSubscription.attempt_count || 0,
+    hasNextPaymentAttempt: Boolean(nextPaymentAttemptSeconds),
+  });
+}
+
+async function handleSubscriptionInvoicePaid(invoice: Stripe.Invoice) {
+  const invoiceWithSubscription = invoice as Stripe.Invoice & {
+    subscription?: string | { id?: string } | null;
+    payment_intent?: string | { id?: string } | null;
+  };
+  const stripeSubscriptionId = typeof invoiceWithSubscription.subscription === "string"
+    ? invoiceWithSubscription.subscription
+    : invoiceWithSubscription.subscription?.id;
+
+  if (!stripeSubscriptionId) {
+    console.warn("[Stripe Webhook] invoice.paid without subscription ID", { invoiceId: invoice.id });
+    return;
+  }
+
+  const { db } = await import("../db");
+  const { subscriptions } = await import("../../drizzle/schema");
+  const { eq, desc } = await import("drizzle-orm");
+
+  const [subscription] = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId))
+    .orderBy(desc(subscriptions.id))
+    .limit(1);
+
+  if (!subscription) {
+    console.warn("[Stripe Webhook] Orphan renewal invoice has no local subscription", { invoiceId: invoice.id, stripeSubscriptionId });
+    return;
+  }
+
+  const amountInCents = invoice.amount_paid || 0;
+  const stripePaymentRef = (typeof invoiceWithSubscription.payment_intent === "string"
+    ? invoiceWithSubscription.payment_intent
+    : invoiceWithSubscription.payment_intent?.id) || invoice.id;
+
+  const transactionCreated = await reconcileSubscriptionPayment({
+    subscriptionId: subscription.id,
+    fanId: subscription.fanId,
+    creatorId: subscription.creatorId,
+    amountInCents,
+    stripePaymentRef,
+  });
+
+  console.log("[Stripe Webhook] Subscription renewal reconciled", {
+    subscriptionId: subscription.id,
+    creatorId: subscription.creatorId,
+    transactionCreated,
+    invoiceId: invoice.id,
+    amount: `$${(amountInCents / 100).toFixed(2)}`,
+  });
+}
+
+async function reconcileSubscriptionPayment(input: AccountingInput): Promise<boolean> {
+  if (!input.amountInCents || input.amountInCents <= 0) {
+    throw new Error("Cannot reconcile a subscription payment without a positive amount");
+  }
+
+  if (!input.stripePaymentRef) {
+    throw new Error("Cannot reconcile a subscription payment without a Stripe payment reference");
+  }
+
+  const { db } = await import("../db");
+  const { transactions, creatorBalances } = await import("../../drizzle/schema");
+  const { eq } = await import("drizzle-orm");
+
+  const [existingTransaction] = await db
+    .select()
+    .from(transactions)
+    .where(eq(transactions.stripePaymentIntentId, input.stripePaymentRef))
+    .limit(1);
+
+  if (existingTransaction) {
+    return false;
+  }
+
+  const creatorShare = Math.floor(input.amountInCents * 0.85);
+  const platformShare = input.amountInCents - creatorShare;
+
+  await db.insert(transactions).values({
+    subscriptionId: input.subscriptionId,
+    fanId: input.fanId,
+    creatorId: input.creatorId,
+    amountInCents: input.amountInCents,
+    creatorShareInCents: creatorShare,
+    platformShareInCents: platformShare,
+    stripePaymentIntentId: input.stripePaymentRef,
+    status: "completed",
+  });
+
+  const [existingBalance] = await db
+    .select()
+    .from(creatorBalances)
+    .where(eq(creatorBalances.creatorId, input.creatorId));
+
+  if (existingBalance) {
+    await db
+      .update(creatorBalances)
+      .set({
+        availableBalanceInCents: existingBalance.availableBalanceInCents + creatorShare,
+        lifetimeEarningsInCents: existingBalance.lifetimeEarningsInCents + creatorShare,
+        updatedAt: new Date(),
+      })
+      .where(eq(creatorBalances.creatorId, input.creatorId));
+  } else {
+    await db.insert(creatorBalances).values({
+      creatorId: input.creatorId,
+      availableBalanceInCents: creatorShare,
+      pendingBalanceInCents: 0,
+      lifetimeEarningsInCents: creatorShare,
+    });
+  }
+
+  return true;
+}
+
+async function ensureSubscriptionPaymentFailureTable() {
+  await vaultxRawExec(
+    `CREATE TABLE IF NOT EXISTS subscription_payment_failures (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      stripe_invoice_id VARCHAR(255) NOT NULL,
+      stripe_subscription_id VARCHAR(255) NOT NULL,
+      stripe_payment_ref VARCHAR(255) NOT NULL,
+      subscription_id INT NULL,
+      vaultx_subscription_id INT NULL,
+      fan_id INT NULL,
+      creator_id INT NULL,
+      tier VARCHAR(32) NULL,
+      status VARCHAR(32) NOT NULL,
+      amount_due_cents INT NOT NULL DEFAULT 0,
+      amount_remaining_cents INT NOT NULL DEFAULT 0,
+      attempt_count INT NOT NULL DEFAULT 0,
+      next_payment_attempt_at TIMESTAMP NULL,
+      failure_reason TEXT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uniq_subscription_payment_failure_invoice (stripe_invoice_id),
+      UNIQUE KEY uniq_subscription_payment_failure_payment_ref (stripe_payment_ref),
+      KEY idx_subscription_payment_failures_subscription (stripe_subscription_id),
+      KEY idx_subscription_payment_failures_creator (creator_id),
+      KEY idx_subscription_payment_failures_status (status)
+    )`
+  );
+}
+
+async function ensureVaultXSubscriptionTransactionTable() {
+  await vaultxRawExec(
+    `CREATE TABLE IF NOT EXISTS vaultx_subscription_transactions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      vaultx_subscription_id INT NOT NULL,
+      fan_id INT NOT NULL,
+      creator_id INT NOT NULL,
+      tier VARCHAR(32) NOT NULL,
+      amount_paid_cents INT NOT NULL,
+      creator_earnings_cents INT NOT NULL,
+      stripe_invoice_id VARCHAR(255) NOT NULL,
+      stripe_payment_ref VARCHAR(255) NOT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'completed',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uniq_vaultx_subscription_invoice (stripe_invoice_id),
+      UNIQUE KEY uniq_vaultx_subscription_payment_ref (stripe_payment_ref),
+      KEY idx_vaultx_subscription_transactions_subscription (vaultx_subscription_id),
+      KEY idx_vaultx_subscription_transactions_creator (creator_id)
+    )`
+  );
+}
+
+async function vaultxRawQuery(query: string, params: any[] = []): Promise<any[]> {
+  const { db } = await import("../db");
+  const { sql } = await import("drizzle-orm");
+  const pool = (db as any).$client || (db as any).client;
+  if (pool && typeof pool.promise === "function") {
+    const [rows] = await pool.promise().query(query, params);
+    return rows as any[];
+  }
+  if (pool && typeof pool.execute === "function") {
+    const [rows] = await pool.execute(query, params);
+    return rows as any[];
+  }
+  const rendered = query.replace(/\?/g, () => {
+    const value = params.shift();
+    if (value === null || value === undefined) return "NULL";
+    if (typeof value === "number") return String(value);
+    return `'${String(value).replace(/'/g, "''")}'`;
+  });
+  const result = await (db as any).execute(sql.raw(rendered));
+  return (result as any).rows || result;
+}
+
+async function vaultxRawExec(query: string, params: any[] = []): Promise<any> {
+  const { db } = await import("../db");
+  const { sql } = await import("drizzle-orm");
+  const pool = (db as any).$client || (db as any).client;
+  if (pool && typeof pool.promise === "function") {
+    const [result] = await pool.promise().query(query, params);
+    return result;
+  }
+  if (pool && typeof pool.execute === "function") {
+    const [result] = await pool.execute(query, params);
+    return result;
+  }
+  const mutableParams = [...params];
+  const rendered = query.replace(/\?/g, () => {
+    const value = mutableParams.shift();
+    if (value === null || value === undefined) return "NULL";
+    if (typeof value === "number") return String(value);
+    return `'${String(value).replace(/'/g, "''")}'`;
+  });
+  return (db as any).execute(sql.raw(rendered));
+}
+
+async function syncStripeSubscriptionStatus(stripeSubscription: Stripe.Subscription, forceCanceled = false) {
+  const stripeSubscriptionId = stripeSubscription.id;
+  if (!stripeSubscriptionId) return;
+
+  const { db } = await import("../db");
+  const { subscriptions } = await import("../../drizzle/schema");
+  const { eq } = await import("drizzle-orm");
+
+  const mappedStatus = forceCanceled || stripeSubscription.status === "canceled"
+    ? "canceled"
+    : stripeSubscription.status === "active" || stripeSubscription.status === "trialing"
+      ? "active"
+      : stripeSubscription.status === "past_due"
+        ? "past_due"
+        : "unpaid";
+
+  const periodStartSeconds = (stripeSubscription as any).current_period_start || (stripeSubscription.items?.data?.[0] as any)?.current_period_start;
+  const periodEndSeconds = (stripeSubscription as any).current_period_end || (stripeSubscription.items?.data?.[0] as any)?.current_period_end;
+  const canceledAtSeconds = (stripeSubscription as any).canceled_at;
+
+  await db
+    .update(subscriptions)
+    .set({
+      status: mappedStatus,
+      currentPeriodStart: periodStartSeconds ? new Date(periodStartSeconds * 1000) : undefined,
+      currentPeriodEnd: periodEndSeconds ? new Date(periodEndSeconds * 1000) : undefined,
+      canceledAt: mappedStatus === "canceled" ? new Date((canceledAtSeconds || Math.floor(Date.now() / 1000)) * 1000) : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId));
+
+  const vaultxStatus = mappedStatus === "canceled" ? "cancelled" : mappedStatus;
+  await vaultxRawExec(
+    "UPDATE vaultx_subscriptions SET status = ?, current_period_end = COALESCE(current_period_end, DATE_ADD(NOW(), INTERVAL 1 MONTH)) WHERE stripe_subscription_id = ?",
+    [vaultxStatus, stripeSubscriptionId]
+  );
+
+  console.log("[Stripe Webhook] Stripe subscription status synchronized", {
+    stripeSubscriptionId,
+    status: mappedStatus,
+  });
+}
+

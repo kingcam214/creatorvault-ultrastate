@@ -1,0 +1,55 @@
+{
+  "check": "router",
+  "status": "warn",
+  "ok": true,
+  "generatedAt": "2026-05-08T02:35:00.659Z",
+  "routersFile": "/root/creatorvault/server/routers.ts",
+  "importCount": 243,
+  "presentCount": 243,
+  "missingCount": 0,
+  "extensionMismatchCount": 1,
+  "duplicateImportCount": 0,
+  "missing": [],
+  "extensionMismatches": [
+    {
+      "rel": "./routers/telegramFunnelRouter.js",
+      "resolved": "/root/creatorvault/server/routers/telegramFunnelRouter.ts",
+      "importedExtension": ".js",
+      "diskExtension": ".ts",
+      "resolvedBy": "extension-mismatch"
+    }
+  ],
+  "duplicateImports": [],
+  "specificChecks": {
+    "telegramFunnelRouter": {
+      "rel": "./routers/telegramFunnelRouter.js",
+      "index": 11285,
+      "statement": "import { telegramFunnelRouter } from \"./routers/telegramFunnelRouter.js\";",
+      "exists": true,
+      "resolved": "/root/creatorvault/server/routers/telegramFunnelRouter.ts",
+      "candidates": [
+        "/root/creatorvault/server/routers/telegramFunnelRouter.js",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.js.ts",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.js.tsx",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.js.js",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.js.jsx",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.js.mjs",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.js.cjs",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.js/index.ts",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.js/index.js",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.ts",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.tsx",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.js",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.jsx",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.mjs",
+        "/root/creatorvault/server/routers/telegramFunnelRouter.cjs"
+      ],
+      "resolvedBy": "extension-mismatch"
+    }
+  },
+  "warnings": [
+    "1 import extension mismatch(es)"
+  ],
+  "startedAt": "2026-05-08T02:35:00.639Z",
+  "finishedAt": "2026-05-08T02:35:00.659Z"
+}

@@ -1,0 +1,90 @@
+{
+  "run_id": "20260508T043042Z",
+  "scene_count": 6,
+  "scenes": [
+    {
+      "index": 1,
+      "start": 0,
+      "duration": 5,
+      "source": "client/public/videos/hero-cam.mp4",
+      "source_type": "video",
+      "headline": "CreatorVault",
+      "subheadline": "The Dopest App in the World",
+      "source_truth": "Verified vertical hero clip from live CreatorVault public assets.",
+      "resolved_path": "/root/creatorvault/client/public/videos/hero-cam.mp4",
+      "segment_path": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/segments/scene_01.mp4",
+      "logo_overlay": "assets/logo-white.png",
+      "audio_bed": "client/public/videos/hero-cam.mp4"
+    },
+    {
+      "index": 2,
+      "start": 5,
+      "duration": 5,
+      "source": "client/public/videos/kingcam-hero-cam.mp4",
+      "source_type": "video",
+      "headline": "One Creator OS",
+      "subheadline": "10+ AI tools. One business command center.",
+      "source_truth": "Verified KingCam hero clip from live CreatorVault public assets.",
+      "resolved_path": "/root/creatorvault/client/public/videos/kingcam-hero-cam.mp4",
+      "segment_path": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/segments/scene_02.mp4",
+      "logo_overlay": "assets/logo-white.png",
+      "audio_bed": "client/public/videos/hero-cam.mp4"
+    },
+    {
+      "index": 3,
+      "start": 10,
+      "duration": 5,
+      "source": "client/public/videos/kingcam-clone-2.mp4",
+      "source_type": "video",
+      "headline": "KingCam Clone Factory",
+      "subheadline": "Train once. Show up everywhere.",
+      "source_truth": "Verified KingCam clone video from live CreatorVault public assets.",
+      "resolved_path": "/root/creatorvault/client/public/videos/kingcam-clone-2.mp4",
+      "segment_path": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/segments/scene_03.mp4",
+      "logo_overlay": "assets/logo-white.png",
+      "audio_bed": "client/public/videos/hero-cam.mp4"
+    },
+    {
+      "index": 4,
+      "start": 15,
+      "duration": 5,
+      "source": "client/public/images/reel/reel-creator-promo.png",
+      "source_type": "image",
+      "headline": "AI Video Studio",
+      "subheadline": "Viral optimizer. Flyer generator. Creator promos.",
+      "source_truth": "Verified CreatorVault reel visual from live public image assets.",
+      "resolved_path": "/root/creatorvault/client/public/images/reel/reel-creator-promo.png",
+      "segment_path": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/segments/scene_04.mp4",
+      "logo_overlay": "assets/logo-white.png",
+      "audio_bed": "client/public/videos/hero-cam.mp4"
+    },
+    {
+      "index": 5,
+      "start": 20,
+      "duration": 5,
+      "source": "client/public/images/reel/reel-product-drop.png",
+      "source_type": "image",
+      "headline": "Monetize Every Move",
+      "subheadline": "PPV tools. Live streaming. Social automation.",
+      "source_truth": "Verified CreatorVault product-drop reel visual from live public image assets.",
+      "resolved_path": "/root/creatorvault/client/public/images/reel/reel-product-drop.png",
+      "segment_path": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/segments/scene_05.mp4",
+      "logo_overlay": "assets/logo-white.png",
+      "audio_bed": "client/public/videos/hero-cam.mp4"
+    },
+    {
+      "index": 6,
+      "start": 25,
+      "duration": 5,
+      "source": "client/public/images/clone-ambassador.webp",
+      "source_type": "image",
+      "headline": "Built For Real Creators",
+      "subheadline": "OnlyFans. Fansly. TikTok. Instagram.",
+      "source_truth": "Verified clone ambassador image from live CreatorVault public image assets.",
+      "resolved_path": "/root/creatorvault/client/public/images/clone-ambassador.webp",
+      "segment_path": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/segments/scene_06.mp4",
+      "logo_overlay": "assets/logo-white.png",
+      "audio_bed": "client/public/videos/hero-cam.mp4"
+    }
+  ]
+}

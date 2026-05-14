@@ -1,0 +1,752 @@
+{
+  "name": "CreatorVault Reality Bot",
+  "version": "1.0.0",
+  "generatedAt": "2026-05-08T02:35:09.464Z",
+  "mode": "read-only",
+  "safety": {
+    "restartedPm2": false,
+    "ranBuild": false,
+    "migratedDatabase": false,
+    "touchedStripe": false,
+    "touchedPayments": false,
+    "editedRouters": false,
+    "modifiedEnvVars": false
+  },
+  "checks": {
+    "system": {
+      "check": "system",
+      "status": "pass",
+      "ok": true,
+      "generatedAt": "2026-05-08T02:35:00.180Z",
+      "hostname": "ubuntu-s-2vcpu-2gb-90gb-intel-atl1-01",
+      "uptime": "02:35:00 up 21 days, 11:03,  2 users,  load average: 1.42, 0.71, 0.27",
+      "kernel": "Linux ubuntu-s-2vcpu-2gb-90gb-intel-atl1-01 6.8.0-110-generic #110-Ubuntu SMP PREEMPT_DYNAMIC Thu Mar 19 15:09:20 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux",
+      "node": "v20.20.0",
+      "platform": "linux",
+      "arch": "x64",
+      "loadAverage": [
+        1.42,
+        0.71,
+        0.27
+      ],
+      "cpus": 2,
+      "memory": {
+        "totalBytes": 2063224832,
+        "freeBytes": 1337417728,
+        "freePercent": 64.82,
+        "freeOutput": "total        used        free      shared  buff/cache   available\nMem:           1.9Gi       692Mi       629Mi       3.9Mi       841Mi       1.2Gi\nSwap:          4.0Gi       903Mi       3.1Gi"
+      },
+      "cpu": "Architecture:                            x86_64\nCPU(s):                                  2\nOn-line CPU(s) list:                     0,1\nModel name:                              DO-Premium-Intel\nBIOS Model name:                         pc-i440fx-6.1  CPU @ 2.0GHz\nThread(s) per core:                      1\nCore(s) per socket:                      2\nSocket(s):                               1\nNUMA node0 CPU(s):                       0,1",
+      "disk": [
+        {
+          "filesystem": "/dev/vda1",
+          "size": "87G",
+          "used": "41G",
+          "available": "46G",
+          "usePercent": "48%",
+          "mountedOn": "/",
+          "usePercentNumber": 48
+        },
+        {
+          "filesystem": "/dev/vda1",
+          "size": "87G",
+          "used": "41G",
+          "available": "46G",
+          "usePercent": "48%",
+          "mountedOn": "/",
+          "usePercentNumber": 48
+        }
+      ],
+      "mounts": [
+        "sysfs on /sys type sysfs (rw,nosuid,nodev,noexec,relatime)",
+        "proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)",
+        "udev on /dev type devtmpfs (rw,nosuid,relatime,size=987800k,nr_inodes=246950,mode=755,inode64)",
+        "devpts on /dev/pts type devpts (rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000)",
+        "tmpfs on /run type tmpfs (rw,nosuid,nodev,noexec,relatime,size=201488k,mode=755,inode64)",
+        "/dev/vda1 on / type ext4 (rw,relatime,discard,errors=remount-ro,commit=30)",
+        "securityfs on /sys/kernel/security type securityfs (rw,nosuid,nodev,noexec,relatime)",
+        "tmpfs on /dev/shm type tmpfs (rw,nosuid,nodev,inode64)",
+        "tmpfs on /run/lock type tmpfs (rw,nosuid,nodev,noexec,relatime,size=5120k,inode64)",
+        "cgroup2 on /sys/fs/cgroup type cgroup2 (rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot)",
+        "pstore on /sys/fs/pstore type pstore (rw,nosuid,nodev,noexec,relatime)",
+        "bpf on /sys/fs/bpf type bpf (rw,nosuid,nodev,noexec,relatime,mode=700)",
+        "systemd-1 on /proc/sys/fs/binfmt_misc type autofs (rw,relatime,fd=32,pgrp=1,timeout=0,minproto=5,maxproto=5,direct,pipe_ino=972)",
+        "hugetlbfs on /dev/hugepages type hugetlbfs (rw,nosuid,nodev,relatime,pagesize=2M)",
+        "mqueue on /dev/mqueue type mqueue (rw,nosuid,nodev,noexec,relatime)",
+        "debugfs on /sys/kernel/debug type debugfs (rw,nosuid,nodev,noexec,relatime)",
+        "tracefs on /sys/kernel/tracing type tracefs (rw,nosuid,nodev,noexec,relatime)",
+        "fusectl on /sys/fs/fuse/connections type fusectl (rw,nosuid,nodev,noexec,relatime)",
+        "configfs on /sys/kernel/config type configfs (rw,nosuid,nodev,noexec,relatime)",
+        "/var/lib/snapd/snaps/bare_5.snap on /snap/bare/5 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "/var/lib/snapd/snaps/core22_2339.snap on /snap/core22/2339 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "/var/lib/snapd/snaps/core22_2411.snap on /snap/core22/2411 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "/var/lib/snapd/snaps/core24_1587.snap on /snap/core24/1587 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "/var/lib/snapd/snaps/core24_1499.snap on /snap/core24/1499 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "/var/lib/snapd/snaps/cups_1170.snap on /snap/cups/1170 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "/var/lib/snapd/snaps/gnome-46-2404_153.snap on /snap/gnome-46-2404/153 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "/var/lib/snapd/snaps/gtk-common-themes_1535.snap on /snap/gtk-common-themes/1535 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "/var/lib/snapd/snaps/cups_1183.snap on /snap/cups/1183 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "/var/lib/snapd/snaps/mesa-2404_1165.snap on /snap/mesa-2404/1165 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "/var/lib/snapd/snaps/snapd_26382.snap on /snap/snapd/26382 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "/dev/vda16 on /boot type ext4 (rw,relatime)",
+        "/dev/vda15 on /boot/efi type vfat (rw,relatime,fmask=0077,dmask=0077,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro)",
+        "binfmt_misc on /proc/sys/fs/binfmt_misc type binfmt_misc (rw,nosuid,nodev,noexec,relatime)",
+        "tmpfs on /run/snapd/ns type tmpfs (rw,nosuid,nodev,noexec,relatime,size=201488k,mode=755,inode64)",
+        "nsfs on /run/snapd/ns/cups.mnt type nsfs (rw)",
+        "overlay on /var/lib/docker/rootfs/overlayfs/19ce7779a833fde35dec718b624a7f8a97614963ef9f0d59d20916935bb036aa type overlay (rw,relatime,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/27/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/26/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/25/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/24/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/23/fs,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/28/fs,workdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/28/work,nouserxattr)",
+        "nsfs on /run/docker/netns/a0801e3cf2c6 type nsfs (rw)",
+        "tmpfs on /run/user/0 type tmpfs (rw,nosuid,nodev,relatime,size=201484k,nr_inodes=50371,mode=700,inode64)",
+        "/var/lib/snapd/snaps/chromium_3411.snap on /snap/chromium/3411 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "tracefs on /sys/kernel/debug/tracing type tracefs (rw,nosuid,nodev,noexec,relatime)",
+        "/var/lib/snapd/snaps/snapd_26865.snap on /snap/snapd/26865 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "/var/lib/snapd/snaps/chromium_3423.snap on /snap/chromium/3423 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)",
+        "nsfs on /run/snapd/ns/chromium.mnt type nsfs (rw)"
+      ],
+      "warnings": [],
+      "commands": {
+        "memory": {
+          "ok": true,
+          "cmd": "free",
+          "args": [
+            "-h"
+          ],
+          "startedAt": "2026-05-08T02:35:00.169Z",
+          "finishedAt": "2026-05-08T02:35:00.179Z",
+          "stdout": "total        used        free      shared  buff/cache   available\nMem:           1.9Gi       692Mi       629Mi       3.9Mi       841Mi       1.2Gi\nSwap:          4.0Gi       903Mi       3.1Gi",
+          "stderr": "",
+          "code": 0
+        },
+        "cpu": {
+          "ok": true,
+          "cmd": "sh",
+          "args": [
+            "-lc",
+            "lscpu | egrep 'Model name|CPU\\(s\\)|Thread|Core|Socket|Architecture'"
+          ],
+          "startedAt": "2026-05-08T02:35:00.170Z",
+          "finishedAt": "2026-05-08T02:35:00.180Z",
+          "stdout": "Architecture:                            x86_64\nCPU(s):                                  2\nOn-line CPU(s) list:                     0,1\nModel name:                              DO-Premium-Intel\nBIOS Model name:                         pc-i440fx-6.1  CPU @ 2.0GHz\nThread(s) per core:                      1\nCore(s) per socket:                      2\nSocket(s):                               1\nNUMA node0 CPU(s):                       0,1",
+          "stderr": "",
+          "code": 0
+        },
+        "disk": {
+          "ok": true,
+          "cmd": "df",
+          "args": [
+            "-h",
+            "/",
+            "/root"
+          ],
+          "startedAt": "2026-05-08T02:35:00.172Z",
+          "finishedAt": "2026-05-08T02:35:00.179Z",
+          "stdout": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/vda1        87G   41G   46G  48% /\n/dev/vda1        87G   41G   46G  48% /",
+          "stderr": "",
+          "code": 0
+        },
+        "mounts": {
+          "ok": true,
+          "cmd": "mount",
+          "args": [],
+          "startedAt": "2026-05-08T02:35:00.174Z",
+          "finishedAt": "2026-05-08T02:35:00.179Z",
+          "stdout": "sysfs on /sys type sysfs (rw,nosuid,nodev,noexec,relatime)\nproc on /proc type proc (rw,nosuid,nodev,noexec,relatime)\nudev on /dev type devtmpfs (rw,nosuid,relatime,size=987800k,nr_inodes=246950,mode=755,inode64)\ndevpts on /dev/pts type devpts (rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000)\ntmpfs on /run type tmpfs (rw,nosuid,nodev,noexec,relatime,size=201488k,mode=755,inode64)\n/dev/vda1 on / type ext4 (rw,relatime,discard,errors=remount-ro,commit=30)\nsecurityfs on /sys/kernel/security type securityfs (rw,nosuid,nodev,noexec,relatime)\ntmpfs on /dev/shm type tmpfs (rw,nosuid,nodev,inode64)\ntmpfs on /run/lock type tmpfs (rw,nosuid,nodev,noexec,relatime,size=5120k,inode64)\ncgroup2 on /sys/fs/cgroup type cgroup2 (rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot)\npstore on /sys/fs/pstore type pstore (rw,nosuid,nodev,noexec,relatime)\nbpf on /sys/fs/bpf type bpf (rw,nosuid,nodev,noexec,relatime,mode=700)\nsystemd-1 on /proc/sys/fs/binfmt_misc type autofs (rw,relatime,fd=32,pgrp=1,timeout=0,minproto=5,maxproto=5,direct,pipe_ino=972)\nhugetlbfs on /dev/hugepages type hugetlbfs (rw,nosuid,nodev,relatime,pagesize=2M)\nmqueue on /dev/mqueue type mqueue (rw,nosuid,nodev,noexec,relatime)\ndebugfs on /sys/kernel/debug type debugfs (rw,nosuid,nodev,noexec,relatime)\ntracefs on /sys/kernel/tracing type tracefs (rw,nosuid,nodev,noexec,relatime)\nfusectl on /sys/fs/fuse/connections type fusectl (rw,nosuid,nodev,noexec,relatime)\nconfigfs on /sys/kernel/config type configfs (rw,nosuid,nodev,noexec,relatime)\n/var/lib/snapd/snaps/bare_5.snap on /snap/bare/5 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\n/var/lib/snapd/snaps/core22_2339.snap on /snap/core22/2339 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\n/var/lib/snapd/snaps/core22_2411.snap on /snap/core22/2411 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\n/var/lib/snapd/snaps/core24_1587.snap on /snap/core24/1587 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\n/var/lib/snapd/snaps/core24_1499.snap on /snap/core24/1499 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\n/var/lib/snapd/snaps/cups_1170.snap on /snap/cups/1170 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\n/var/lib/snapd/snaps/gnome-46-2404_153.snap on /snap/gnome-46-2404/153 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\n/var/lib/snapd/snaps/gtk-common-themes_1535.snap on /snap/gtk-common-themes/1535 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\n/var/lib/snapd/snaps/cups_1183.snap on /snap/cups/1183 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\n/var/lib/snapd/snaps/mesa-2404_1165.snap on /snap/mesa-2404/1165 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\n/var/lib/snapd/snaps/snapd_26382.snap on /snap/snapd/26382 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\n/dev/vda16 on /boot type ext4 (rw,relatime)\n/dev/vda15 on /boot/efi type vfat (rw,relatime,fmask=0077,dmask=0077,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro)\nbinfmt_misc on /proc/sys/fs/binfmt_misc type binfmt_misc (rw,nosuid,nodev,noexec,relatime)\ntmpfs on /run/snapd/ns type tmpfs (rw,nosuid,nodev,noexec,relatime,size=201488k,mode=755,inode64)\nnsfs on /run/snapd/ns/cups.mnt type nsfs (rw)\noverlay on /var/lib/docker/rootfs/overlayfs/19ce7779a833fde35dec718b624a7f8a97614963ef9f0d59d20916935bb036aa type overlay (rw,relatime,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/27/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/26/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/25/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/24/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/23/fs,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/28/fs,workdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/28/work,nouserxattr)\nnsfs on /run/docker/netns/a0801e3cf2c6 type nsfs (rw)\ntmpfs on /run/user/0 type tmpfs (rw,nosuid,nodev,relatime,size=201484k,nr_inodes=50371,mode=700,inode64)\n/var/lib/snapd/snaps/chromium_3411.snap on /snap/chromium/3411 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\ntracefs on /sys/kernel/debug/tracing type tracefs (rw,nosuid,nodev,noexec,relatime)\n/var/lib/snapd/snaps/snapd_26865.snap on /snap/snapd/26865 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\n/var/lib/snapd/snaps/chromium_3423.snap on /snap/chromium/3423 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)\nnsfs on /run/snapd/ns/chromium.mnt type nsfs (rw)",
+          "stderr": "",
+          "code": 0
+        }
+      },
+      "startedAt": "2026-05-08T02:35:00.160Z",
+      "finishedAt": "2026-05-08T02:35:00.181Z"
+    },
+    "pm2": {
+      "check": "pm2",
+      "status": "pass",
+      "ok": true,
+      "generatedAt": "2026-05-08T02:35:00.435Z",
+      "pm2Version": "6.0.14",
+      "processCount": 2,
+      "processes": [
+        {
+          "id": 0,
+          "name": "pm2-logrotate",
+          "status": "online",
+          "restarts": 0,
+          "uptimeMs": 1499213819,
+          "pid": 552230,
+          "memoryBytes": 18345984,
+          "cpuPercent": 0.2,
+          "execMode": "fork_mode",
+          "nodeEnv": null,
+          "watching": false
+        },
+        {
+          "id": 6,
+          "name": "creatorvault",
+          "status": "online",
+          "restarts": 12,
+          "uptimeMs": 13918612,
+          "pid": 1515207,
+          "memoryBytes": 122437632,
+          "cpuPercent": 0.2,
+          "execMode": "fork_mode",
+          "nodeEnv": null,
+          "watching": false
+        }
+      ],
+      "warnings": [],
+      "commands": {
+        "version": {
+          "ok": true,
+          "cmd": "pm2",
+          "args": [
+            "--version"
+          ],
+          "startedAt": "2026-05-08T02:35:00.181Z",
+          "finishedAt": "2026-05-08T02:35:00.327Z",
+          "stdout": "6.0.14",
+          "stderr": "",
+          "code": 0
+        },
+        "list": {
+          "ok": true,
+          "cmd": "pm2",
+          "args": [
+            "jlist"
+          ],
+          "startedAt": "2026-05-08T02:35:00.327Z",
+          "finishedAt": "2026-05-08T02:35:00.435Z",
+          "stdout": "[parsed]",
+          "stderr": "",
+          "code": 0
+        }
+      },
+      "startedAt": "2026-05-08T02:35:00.181Z",
+      "finishedAt": "2026-05-08T02:35:00.435Z"
+    },
+    "nginx": {
+      "check": "nginx",
+      "status": "pass",
+      "ok": true,
+      "generatedAt": "2026-05-08T02:35:00.598Z",
+      "active": "active",
+      "reverseProxy": {
+        "local": {
+          "code": "200",
+          "time": "0.001834",
+          "remote": "127.0.0.1",
+          "ssl": "0"
+        },
+        "domainHttp": {
+          "code": "301",
+          "time": "0.034892",
+          "remote": "104.21.34.10",
+          "ssl": "0"
+        },
+        "domainHttps": {
+          "code": "200",
+          "time": "0.041048",
+          "remote": "172.67.194.175",
+          "ssl": "20"
+        }
+      },
+      "warnings": [],
+      "commands": {
+        "active": {
+          "ok": true,
+          "cmd": "systemctl",
+          "args": [
+            "is-active",
+            "nginx"
+          ],
+          "startedAt": "2026-05-08T02:35:00.436Z",
+          "finishedAt": "2026-05-08T02:35:00.442Z",
+          "stdout": "active",
+          "stderr": "",
+          "code": 0
+        },
+        "status": {
+          "ok": true,
+          "cmd": "systemctl",
+          "args": [
+            "status",
+            "nginx",
+            "--no-pager"
+          ],
+          "startedAt": "2026-05-08T02:35:00.442Z",
+          "finishedAt": "2026-05-08T02:35:00.494Z",
+          "stdout": "● nginx.service - A high performance web server and a reverse proxy server\n     Loaded: loaded (/usr/lib/systemd/system/nginx.service; enabled; preset: enabled)\n     Active: active (running) since Tue 2026-05-05 16:34:16 UTC; 2 days ago\n       Docs: man:nginx(8)\n    Process: 1370018 ExecStartPre=/usr/sbin/nginx -t -q -g daemon on; master_process on; (code=exited, status=0/SUCCESS)\n    Process: 1370021 ExecStart=/usr/sbin/nginx -g daemon on; master_process on; (code=exited, status=0/SUCCESS)\n   Main PID: 1370022 (nginx)\n      Tasks: 3 (limit: 2315)\n     Memory: 6.6M (peak: 87.1M swap: 4.1M swap peak: 6.7M)\n        CPU: 13.193s\n     CGroup: /system.slice/nginx.service\n             ├─1370022 \"nginx: master process /usr/sbin/nginx -g daemon on; master_process on;\"\n             ├─1370023 \"nginx: worker process\"\n             └─1370024 \"nginx: worker process\"\n\nMay 05 16:34:16 ubuntu-s-2vcpu-2gb-90gb-intel-atl1-01 systemd[1]: Starting nginx.service - A high performance web server and a reverse proxy server...\nMay 05 16:34:16 ubuntu-s-2vcpu-2gb-90gb-intel-atl1-01 systemd[1]: Started nginx.service - A high performance web server and a reverse proxy server.",
+          "stderr": "",
+          "code": 0
+        },
+        "local": {
+          "ok": true,
+          "cmd": "curl",
+          "args": [
+            "-k",
+            "-sS",
+            "-o",
+            "/dev/null",
+            "-w",
+            "code=%{http_code} time=%{time_total} remote=%{remote_ip} ssl=%{ssl_verify_result}",
+            "http://127.0.0.1/"
+          ],
+          "startedAt": "2026-05-08T02:35:00.494Z",
+          "finishedAt": "2026-05-08T02:35:00.509Z",
+          "stdout": "code=200 time=0.001834 remote=127.0.0.1 ssl=0",
+          "stderr": "",
+          "code": 0
+        },
+        "domainHttp": {
+          "ok": true,
+          "cmd": "curl",
+          "args": [
+            "-k",
+            "-sS",
+            "-o",
+            "/dev/null",
+            "-w",
+            "code=%{http_code} time=%{time_total} remote=%{remote_ip} ssl=%{ssl_verify_result}",
+            "http://creatorvault.live/"
+          ],
+          "startedAt": "2026-05-08T02:35:00.509Z",
+          "finishedAt": "2026-05-08T02:35:00.550Z",
+          "stdout": "code=301 time=0.034892 remote=104.21.34.10 ssl=0",
+          "stderr": "",
+          "code": 0
+        },
+        "domainHttps": {
+          "ok": true,
+          "cmd": "curl",
+          "args": [
+            "-k",
+            "-sS",
+            "-o",
+            "/dev/null",
+            "-w",
+            "code=%{http_code} time=%{time_total} remote=%{remote_ip} ssl=%{ssl_verify_result}",
+            "https://creatorvault.live/"
+          ],
+          "startedAt": "2026-05-08T02:35:00.550Z",
+          "finishedAt": "2026-05-08T02:35:00.598Z",
+          "stdout": "code=200 time=0.041048 remote=172.67.194.175 ssl=20",
+          "stderr": "",
+          "code": 0
+        }
+      },
+      "startedAt": "2026-05-08T02:35:00.435Z",
+      "finishedAt": "2026-05-08T02:35:00.598Z"
+    },
+    "git": {
+      "check": "git",
+      "status": "warn",
+      "ok": false,
+      "generatedAt": "2026-05-08T02:35:00.639Z",
+      "branch": "main",
+      "statusShort": "## main...origin/main\n?? testing/",
+      "dirtyFileCount": 1,
+      "dirtyFiles": [
+        "?? testing/"
+      ],
+      "ahead": 0,
+      "behind": 0,
+      "lastCommit": {
+        "hash": "6b70597bb03ea2f8ac02bc14dccfd8d4f2f5cccd",
+        "authorName": "Cameron White",
+        "authorEmail": "c_white_24@hotmail.com",
+        "authoredAt": "2026-05-07T22:46:05+00:00",
+        "subject": "feat(clone-lab): 3D Clone Training Lab — 7 tables, 8 services, GPU-aware training, evaluation arena, Three.js/R3F UI"
+      },
+      "remote": "origin\tgit@github.com:kingcam214/creatorvault-ultrastate.git (fetch)\norigin\tgit@github.com:kingcam214/creatorvault-ultrastate.git (push)",
+      "warnings": [
+        "Git working tree has 1 changed/untracked file(s)"
+      ],
+      "commands": {
+        "branch": {
+          "ok": true,
+          "cmd": "git",
+          "args": [
+            "branch",
+            "--show-current"
+          ],
+          "startedAt": "2026-05-08T02:35:00.598Z",
+          "finishedAt": "2026-05-08T02:35:00.604Z",
+          "stdout": "main",
+          "stderr": "",
+          "code": 0
+        },
+        "statusShort": {
+          "ok": true,
+          "cmd": "git",
+          "args": [
+            "status",
+            "--short",
+            "--branch"
+          ],
+          "startedAt": "2026-05-08T02:35:00.604Z",
+          "finishedAt": "2026-05-08T02:35:00.623Z",
+          "stdout": "## main...origin/main\n?? testing/",
+          "stderr": "",
+          "code": 0
+        },
+        "porcelain": {
+          "ok": true,
+          "cmd": "git",
+          "args": [
+            "status",
+            "--porcelain=v1"
+          ],
+          "startedAt": "2026-05-08T02:35:00.623Z",
+          "finishedAt": "2026-05-08T02:35:00.628Z",
+          "stdout": "?? testing/",
+          "stderr": "",
+          "code": 0
+        },
+        "lastCommit": {
+          "ok": true,
+          "cmd": "git",
+          "args": [
+            "log",
+            "-1",
+            "--pretty=format:%H%n%an%n%ae%n%aI%n%s"
+          ],
+          "startedAt": "2026-05-08T02:35:00.628Z",
+          "finishedAt": "2026-05-08T02:35:00.631Z",
+          "stdout": "6b70597bb03ea2f8ac02bc14dccfd8d4f2f5cccd\nCameron White\nc_white_24@hotmail.com\n2026-05-07T22:46:05+00:00\nfeat(clone-lab): 3D Clone Training Lab — 7 tables, 8 services, GPU-aware training, evaluation arena, Three.js/R3F UI",
+          "stderr": "",
+          "code": 0
+        },
+        "aheadBehind": {
+          "ok": true,
+          "cmd": "sh",
+          "args": [
+            "-lc",
+            "git rev-list --left-right --count HEAD...@{upstream} 2>/dev/null || true"
+          ],
+          "startedAt": "2026-05-08T02:35:00.631Z",
+          "finishedAt": "2026-05-08T02:35:00.637Z",
+          "stdout": "0\t0",
+          "stderr": "",
+          "code": 0
+        },
+        "remote": {
+          "ok": true,
+          "cmd": "git",
+          "args": [
+            "remote",
+            "-v"
+          ],
+          "startedAt": "2026-05-08T02:35:00.637Z",
+          "finishedAt": "2026-05-08T02:35:00.638Z",
+          "stdout": "origin\tgit@github.com:kingcam214/creatorvault-ultrastate.git (fetch)\norigin\tgit@github.com:kingcam214/creatorvault-ultrastate.git (push)",
+          "stderr": "",
+          "code": 0
+        }
+      },
+      "startedAt": "2026-05-08T02:35:00.598Z",
+      "finishedAt": "2026-05-08T02:35:00.639Z"
+    },
+    "router": {
+      "check": "router",
+      "status": "warn",
+      "ok": true,
+      "generatedAt": "2026-05-08T02:35:00.659Z",
+      "routersFile": "/root/creatorvault/server/routers.ts",
+      "importCount": 243,
+      "presentCount": 243,
+      "missingCount": 0,
+      "extensionMismatchCount": 1,
+      "duplicateImportCount": 0,
+      "missing": [],
+      "extensionMismatches": [
+        {
+          "rel": "./routers/telegramFunnelRouter.js",
+          "resolved": "/root/creatorvault/server/routers/telegramFunnelRouter.ts",
+          "importedExtension": ".js",
+          "diskExtension": ".ts",
+          "resolvedBy": "extension-mismatch"
+        }
+      ],
+      "duplicateImports": [],
+      "specificChecks": {
+        "telegramFunnelRouter": {
+          "rel": "./routers/telegramFunnelRouter.js",
+          "index": 11285,
+          "statement": "import { telegramFunnelRouter } from \"./routers/telegramFunnelRouter.js\";",
+          "exists": true,
+          "resolved": "/root/creatorvault/server/routers/telegramFunnelRouter.ts",
+          "candidates": [
+            "/root/creatorvault/server/routers/telegramFunnelRouter.js",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.js.ts",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.js.tsx",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.js.js",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.js.jsx",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.js.mjs",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.js.cjs",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.js/index.ts",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.js/index.js",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.ts",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.tsx",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.js",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.jsx",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.mjs",
+            "/root/creatorvault/server/routers/telegramFunnelRouter.cjs"
+          ],
+          "resolvedBy": "extension-mismatch"
+        }
+      },
+      "warnings": [
+        "1 import extension mismatch(es)"
+      ],
+      "startedAt": "2026-05-08T02:35:00.639Z",
+      "finishedAt": "2026-05-08T02:35:00.659Z"
+    },
+    "database": {
+      "check": "database",
+      "status": "pass",
+      "ok": true,
+      "generatedAt": "2026-05-08T02:35:00.762Z",
+      "dotenv": {
+        "loaded": true,
+        "path": ".env"
+      },
+      "connection": {
+        "hasDatabaseUrl": true,
+        "redactedDatabaseUrl": "mysql://creatorvault:[REDACTED]@localhost:3306/creatorvault",
+        "databaseName": "creatorvault"
+      },
+      "version": {
+        "version": "8.0.45-0ubuntu0.24.04.1",
+        "database_name": "creatorvault",
+        "db_hostname": "ubuntu-s-2vcpu-2gb-90gb-intel-atl1-01",
+        "read_only": 0
+      },
+      "schema": {
+        "tableCount": 873,
+        "sampleTables": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "readOnlyProof": "Executed SELECT-only metadata queries against information_schema and server variables.",
+      "warnings": [],
+      "startedAt": "2026-05-08T02:35:00.659Z",
+      "finishedAt": "2026-05-08T02:35:00.762Z"
+    },
+    "http": {
+      "check": "http",
+      "status": "pass",
+      "ok": true,
+      "generatedAt": "2026-05-08T02:35:00.994Z",
+      "baseUrl": "https://creatorvault.live",
+      "homepageStatus": "200",
+      "routes": [
+        {
+          "url": "https://creatorvault.live/",
+          "ok": true,
+          "code": "200",
+          "final": "https://creatorvault.live/",
+          "time": "0.023893",
+          "type": "text/html;",
+          "charset": "UTF-8",
+          "size": "1769"
+        },
+        {
+          "url": "https://creatorvault.live/login",
+          "ok": true,
+          "code": "200",
+          "final": "https://creatorvault.live/login",
+          "time": "0.027593",
+          "type": "text/html;",
+          "charset": "UTF-8",
+          "size": "1769"
+        },
+        {
+          "url": "https://creatorvault.live/king/clone-command",
+          "ok": true,
+          "code": "200",
+          "final": "https://creatorvault.live/king/clone-command",
+          "time": "0.026981",
+          "type": "text/html;",
+          "charset": "UTF-8",
+          "size": "1769"
+        },
+        {
+          "url": "https://creatorvault.live/king/reality",
+          "ok": true,
+          "code": "200",
+          "final": "https://creatorvault.live/king/reality",
+          "time": "0.039607",
+          "type": "text/html;",
+          "charset": "UTF-8",
+          "size": "1769"
+        },
+        {
+          "url": "https://creatorvault.live/vaultx",
+          "ok": true,
+          "code": "200",
+          "final": "https://creatorvault.live/vaultx",
+          "time": "0.035720",
+          "type": "text/html;",
+          "charset": "UTF-8",
+          "size": "1769"
+        },
+        {
+          "url": "https://creatorvault.live/api/health",
+          "ok": true,
+          "code": "200",
+          "final": "https://creatorvault.live/api/health",
+          "time": "0.035027",
+          "type": "text/html;",
+          "charset": "UTF-8",
+          "size": "1769"
+        }
+      ],
+      "warnings": [],
+      "startedAt": "2026-05-08T02:35:00.762Z",
+      "finishedAt": "2026-05-08T02:35:00.995Z"
+    },
+    "browser": {
+      "check": "browser",
+      "status": "pass",
+      "ok": true,
+      "generatedAt": "2026-05-08T02:35:08.787Z",
+      "url": "https://creatorvault.live/",
+      "httpStatus": 200,
+      "title": "CreatorVault ULTRASTATE",
+      "visibleBranding": true,
+      "whiteScreenDetected": false,
+      "jsLoaded": true,
+      "screenshotPath": "/root/creatorvault/testing/reality-bot/screenshots/homepage-2026-05-08T02-35-00-995Z.png",
+      "screenshotSizeBytes": 1097497,
+      "bodyExcerpt": "Log In\n✦ INVITE-ONLY · EARLY ACCESS 2026\nYour Creator Empire OS\n\nAI Video Lab. Hollywood production pipeline. In-club content studio. Social autopilot. Marketplace. All in one platform.\n\nKeep 85% of every dollar you earn. No middlemen. No ceiling.\n\nJOIN THE WAITLIST\nLog In → Enter\nAlready have an invite? Log in\n18+ creator? Learn about VaultX\n301\nROUTES\n979\nTRPC PROCEDURES\n408+\nDATABASE TABLES\nLIVE\nSTRIPE\nSCROLL\n\nPROOF OF WORK\n\nREAL AI. GENERATED ON THIS PLATFORM.\n\nEvery clip below was created inside CreatorVault with Pollo AI, OpenArt AI, Kling, Runway, and Replicate. Hover to play. No stock footage. No actors. Pure AI.\n\nKINGCAM · REPLICATE\nAI GENERATED\nBrand Story\nPOLLO AI\nAI GENERATED\nMusic Video\nKINGCAM · FLUX LORA\nAI GENERATED\nClone Drop\nKLING AI\nAI GENERATED\nProduct Drop\nOPENART AI\nAI GENERATED\nAI Portrait\nKINGCAM · POLLO AI\nAI GENERATED\nHeroCam\nRUNWAY ML\nAI GENERATED\nCinematic Trailer\nOPENART AI\nAI GENERATED\nCreator Promo\nREPLICATE\nAI GENERATED\nApparel Drop\nKLING AI\nAI GENERATED",
+      "warnings": [],
+      "startedAt": "2026-05-08T02:35:00.995Z",
+      "finishedAt": "2026-05-08T02:35:09.444Z"
+    },
+    "build_artifacts": {
+      "check": "build_artifacts",
+      "status": "pass",
+      "ok": true,
+      "generatedAt": "2026-05-08T02:35:09.464Z",
+      "summaries": {
+        "dist": {
+          "path": "/root/creatorvault/dist",
+          "exists": true,
+          "sizeBytes": 4096,
+          "modifiedAt": "2026-05-07T17:26:08.331Z",
+          "isDirectory": true,
+          "isFile": false
+        },
+        "distPublic": {
+          "path": "/root/creatorvault/dist/public",
+          "exists": true,
+          "sizeBytes": 4096,
+          "modifiedAt": "2026-05-07T22:44:53.269Z",
+          "isDirectory": true,
+          "isFile": false
+        },
+        "assets": {
+          "path": "/root/creatorvault/dist/public/assets",
+          "exists": true,
+          "sizeBytes": 20480,
+          "modifiedAt": "2026-05-07T22:44:53.295Z",
+          "isDirectory": true,
+          "isFile": false
+        },
+        "publicDir": {
+          "path": "/root/creatorvault/public",
+          "exists": true,
+          "sizeBytes": 20480,
+          "modifiedAt": "2026-05-01T01:10:34.185Z",
+          "isDirectory": true,
+          "isFile": false
+        },
+        "serverBundle": {
+          "path": "/root/creatorvault/dist/index.js",
+          "exists": true,
+          "sizeBytes": 2011000,
+          "modifiedAt": "2026-05-07T22:42:55.605Z",
+          "isDirectory": false,
+          "isFile": true
+        }
+      },
+      "assetFileCount": 419,
+      "jsBundleCount": 358,
+      "cssBundleCount": 2,
+      "sampleJsBundles": [
+        "dist/public/assets/_baseUniq-BSRO3QhV.js",
+        "dist/public/assets/abap-BdImnpbu.js",
+        "dist/public/assets/actionscript-3-CoDkCxhg.js",
+        "dist/public/assets/ada-bCR0ucgS.js",
+        "dist/public/assets/andromeeda-C4gqWexZ.js",
+        "dist/public/assets/angular-html-CU67Zn6k.js",
+        "dist/public/assets/angular-ts-BwZT4LLn.js",
+        "dist/public/assets/apache-Pmp26Uib.js",
+        "dist/public/assets/apex-D8_7TLub.js",
+        "dist/public/assets/apl-dKokRX4l.js",
+        "dist/public/assets/applescript-Co6uUVPk.js",
+        "dist/public/assets/ara-BRHolxvo.js",
+        "dist/public/assets/architectureDiagram-Q4EWVU46-BkCPu0RD.js",
+        "dist/public/assets/asciidoc-Ve4PFQV2.js",
+        "dist/public/assets/asm-D_Q5rh1f.js",
+        "dist/public/assets/astro-CbQHKStN.js",
+        "dist/public/assets/aurora-x-D-2ljcwZ.js",
+        "dist/public/assets/awk-DMzUqQB5.js",
+        "dist/public/assets/ayu-dark-DYE7WIF3.js",
+        "dist/public/assets/ayu-light-BA47KaF1.js",
+        "dist/public/assets/ayu-mirage-32ctXXKs.js",
+        "dist/public/assets/ballerina-BFfxhgS-.js",
+        "dist/public/assets/bat-BkioyH1T.js",
+        "dist/public/assets/beancount-k_qm7-4y.js",
+        "dist/public/assets/berry-uYugtg8r.js",
+        "dist/public/assets/bibtex-CHM0blh-.js",
+        "dist/public/assets/bicep-Bmn6On1c.js",
+        "dist/public/assets/bird2-DPOp833l.js",
+        "dist/public/assets/blade-D4QpJJKB.js",
+        "dist/public/assets/blockDiagram-DXYQGD6D-CXZbldpo.js",
+        "dist/public/assets/bsl-BO_Y6i37.js",
+        "dist/public/assets/c-BIGW1oBm.js",
+        "dist/public/assets/c3-eo99z4R2.js",
+        "dist/public/assets/c4Diagram-AHTNJAMY-aii99f5u.js",
+        "dist/public/assets/cadence-Bv_4Rxtq.js",
+        "dist/public/assets/cairo-KRGpt6FW.js",
+        "dist/public/assets/catppuccin-frappe-DFWUc33u.js",
+        "dist/public/assets/catppuccin-latte-C9dUb6Cb.js",
+        "dist/public/assets/catppuccin-macchiato-DQyhUUbL.js",
+        "dist/public/assets/catppuccin-mocha-D87Tk5Gz.js"
+      ],
+      "latestArtifacts": "2026-05-07T22:44:53.4932477330 4838537 dist/public/assets/index-dKAFBgXl.js\n2026-05-07T22:44:53.4042470860 626081 dist/public/assets/cpp-CofmeUqb.js\n2026-05-07T22:44:53.4042470860 532712 dist/public/assets/mermaid.core-CQfc4_Am.js\n2026-05-07T22:44:53.4032470790 622336 dist/public/assets/wasm-CG6Dc4jp.js\n2026-05-07T22:44:53.3932470070 779854 dist/public/assets/emacs-lisp-C9XAeP06.js\n2026-05-07T22:44:53.3792469050 492832 dist/public/assets/wardley-RL74JXVD-BLW0Jxfh.js\n2026-05-07T22:44:53.3792469050 3617 dist/public/assets/ssh-config-_ykCGR6B.js\n2026-05-07T22:44:53.3772468900 8484 dist/public/assets/_baseUniq-BSRO3QhV.js\n2026-05-07T22:44:53.3772468900 29290 dist/public/assets/layout-BBYZlMl6.js\n2026-05-07T22:44:53.3772468900 190188 dist/public/assets/code-block-IT6T5CEO-Cx-FInvL.js\n2026-05-07T22:44:53.3772468900 15935 dist/public/assets/diagram-G4DWMVQ6-BzPR8c4X.js\n2026-05-07T22:44:53.3742468690 9370 dist/public/assets/graph-CyqlDRzz.js\n2026-05-07T22:44:53.3742468690 81870 dist/public/assets/cose-bilkent-S5V4N54A-RUqC9WKn.js\n2026-05-07T22:44:53.3742468690 52331 dist/public/assets/ganttDiagram-T4ZO3ILL-D4yXpbGI.js\n2026-05-07T22:44:53.3742468690 22221 dist/public/assets/sankeyDiagram-XADWPNL6-D-LCUxBK.js\n2026-05-07T22:44:53.3732468610 149505 dist/public/assets/architectureDiagram-Q4EWVU46-BkCPu0RD.js\n2026-05-07T22:44:53.3672468180 8948 dist/public/assets/ts-tags-zn1MmPIZ.js\n2026-05-07T22:44:53.3672468180 594 dist/public/assets/min-C4BqivOA.js\n2026-05-07T22:44:53.3642467960 5685 dist/public/assets/jinja-4LBKfQ-Z.js\n2026-05-07T22:44:53.3642467960 41595 dist/public/assets/vennDiagram-DHZGUBPP-Dx8poXUi.js\n2026-05-07T22:44:53.3642467960 24484 dist/public/assets/vue-DN_0RTcg.js\n2026-05-07T22:44:53.3642467960 24287 dist/public/assets/angular-html-CU67Zn6k.js\n2026-05-07T22:44:53.3642467960 23618 dist/public/assets/mindmap-definition-QFDTVHPH-CFYdLetP.js\n2026-05-07T22:44:53.3642467960 183820 dist/public/assets/angular-ts-BwZT4LLn.js\n2026-05-07T22:44:53.3642467960 15511 dist/public/assets/nix-CwoSXNpI.js\n2026-05-07T22:44:53.3642467960 13759 dist/public/assets/vitesse-dark-D0r3Knsf.js\n2026-05-07T22:44:53.3642467960 13677 dist/public/assets/vitesse-black-Bkuqu6BP.js\n2026-05-07T22:44:53.3642467960 13616 dist/public/assets/vitesse-light-CVO1_9PV.js\n2026-05-07T22:44:53.3642467960 11160 dist/public/assets/dagre-KV5264BT-CUjUb99H.js\n2026-05-07T22:44:53.3632467890 9431 dist/public/assets/slack-ochin-DqwNpetd.js",
+      "readOnlyProof": "Verified existing build artifacts only. No build command was executed.",
+      "warnings": [],
+      "startedAt": "2026-05-08T02:35:09.444Z",
+      "finishedAt": "2026-05-08T02:35:09.464Z"
+    }
+  }
+}

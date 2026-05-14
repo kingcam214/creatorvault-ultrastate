@@ -1,0 +1,506 @@
+[
+  {
+    "pid": 552230,
+    "name": "pm2-logrotate",
+    "pm2_env": {
+      "pmx_module": true,
+      "cwd": "/root/.pm2/modules/pm2-logrotate/node_modules/pm2-logrotate",
+      "namespace": "default",
+      "kill_retry_time": 100,
+      "windowsHide": true,
+      "username": "root",
+      "treekill": true,
+      "automation": true,
+      "pmx": true,
+      "instance_var": "NODE_APP_INSTANCE",
+      "autorestart": true,
+      "autostart": true,
+      "vizion": true,
+      "merge_logs": true,
+      "max_memory_restart": 524288000,
+      "env": {
+        "pm2-logrotate": "{\"max_size\":\"50M\",\"retain\":\"7\",\"compress\":\"true\",\"dateFormat\":\"YYYY-MM-DD\",\"workerInterval\":\"3600\",\"rotateInterval\":\"0 0 * * *\",\"rotateModule\":true}",
+        "max_size": "50M",
+        "retain": "7",
+        "compress": "true",
+        "dateFormat": "YYYY-MM-DD",
+        "workerInterval": "3600",
+        "rotateInterval": "0 0 * * *",
+        "rotateModule": true,
+        "PWD": "/root/.pm2/modules/pm2-logrotate/node_modules/pm2-logrotate",
+        "PM2_JSON_PROCESSING": "true",
+        "PM2_INTERACTOR_PROCESSING": "true",
+        "PM2_USAGE": "CLI",
+        "PM2_HOME": "/root/.pm2",
+        "MEMORY_PRESSURE_WRITE": "c29tZSAyMDAwMDAgMjAwMDAwMAA=",
+        "MEMORY_PRESSURE_WATCH": "/sys/fs/cgroup/system.slice/pm2-root.service/memory.pressure",
+        "SYSTEMD_EXEC_PID": "552211",
+        "JOURNAL_STREAM": "8:2048111",
+        "INVOCATION_ID": "133a4bac9e6b44e193328ddfa2ed7240",
+        "SHELL": "/usr/bin/bash",
+        "HOME": "/root",
+        "LOGNAME": "root",
+        "USER": "root",
+        "PIDFILE": "/root/.pm2/pm2.pid",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin",
+        "LANG": "C.UTF-8",
+        "unique_id": "efbc1954-fe47-4c37-801d-a01837277fe3"
+      },
+      "name": "pm2-logrotate",
+      "node_args": [],
+      "pm_exec_path": "/root/.pm2/modules/pm2-logrotate/node_modules/pm2-logrotate/app.js",
+      "pm_cwd": "/root/.pm2/modules/pm2-logrotate/node_modules/pm2-logrotate",
+      "exec_interpreter": "node",
+      "exec_mode": "fork_mode",
+      "instances": 1,
+      "pm_out_log_path": "/root/.pm2/logs/pm2-logrotate-out.log",
+      "pm_err_log_path": "/root/.pm2/logs/pm2-logrotate-error.log",
+      "pm_pid_path": "/root/.pm2/pids/pm2-logrotate-0.pid",
+      "km_link": false,
+      "vizion_running": false,
+      "NODE_APP_INSTANCE": 0,
+      "pm2-logrotate": "{\"max_size\":\"50M\",\"retain\":\"7\",\"compress\":\"true\",\"dateFormat\":\"YYYY-MM-DD\",\"workerInterval\":\"3600\",\"rotateInterval\":\"0 0 * * *\",\"rotateModule\":true}",
+      "max_size": "50M",
+      "retain": "7",
+      "compress": "true",
+      "dateFormat": "YYYY-MM-DD",
+      "workerInterval": "3600",
+      "rotateInterval": "0 0 * * *",
+      "rotateModule": true,
+      "PWD": "/root/.pm2/modules/pm2-logrotate/node_modules/pm2-logrotate",
+      "PM2_JSON_PROCESSING": "true",
+      "PM2_INTERACTOR_PROCESSING": "true",
+      "PM2_USAGE": "CLI",
+      "PM2_HOME": "/root/.pm2",
+      "MEMORY_PRESSURE_WRITE": "c29tZSAyMDAwMDAgMjAwMDAwMAA=",
+      "MEMORY_PRESSURE_WATCH": "/sys/fs/cgroup/system.slice/pm2-root.service/memory.pressure",
+      "SYSTEMD_EXEC_PID": "552211",
+      "JOURNAL_STREAM": "8:2048111",
+      "INVOCATION_ID": "133a4bac9e6b44e193328ddfa2ed7240",
+      "SHELL": "/usr/bin/bash",
+      "HOME": "/root",
+      "LOGNAME": "root",
+      "USER": "root",
+      "PIDFILE": "/root/.pm2/pm2.pid",
+      "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin",
+      "LANG": "C.UTF-8",
+      "unique_id": "efbc1954-fe47-4c37-801d-a01837277fe3",
+      "status": "online",
+      "pm_uptime": 1776708486616,
+      "axm_actions": [
+        {
+          "action_name": "km:heapdump",
+          "action_type": "internal",
+          "arity": 2
+        },
+        {
+          "action_name": "km:cpu:profiling:start",
+          "action_type": "internal",
+          "arity": 2
+        },
+        {
+          "action_name": "km:cpu:profiling:stop",
+          "action_type": "internal",
+          "arity": 1
+        },
+        {
+          "action_name": "km:heap:sampling:start",
+          "action_type": "internal",
+          "arity": 2
+        },
+        {
+          "action_name": "km:heap:sampling:stop",
+          "action_type": "internal",
+          "arity": 1
+        },
+        {
+          "action_name": "list watched logs",
+          "opts": null,
+          "arity": 1
+        },
+        {
+          "action_name": "list all logs",
+          "opts": null,
+          "arity": 1
+        }
+      ],
+      "axm_monitor": {
+        "Used Heap Size": {
+          "value": "13.85",
+          "type": "internal/v8/heap/used",
+          "unit": "MiB",
+          "historic": true
+        },
+        "Heap Usage": {
+          "value": 71.38,
+          "type": "internal/v8/heap/usage",
+          "unit": "%",
+          "historic": true
+        },
+        "Heap Size": {
+          "value": "19.40",
+          "type": "internal/v8/heap/total",
+          "unit": "MiB",
+          "historic": true
+        },
+        "Files count": {
+          "alert": {},
+          "type": "Files count",
+          "historic": true,
+          "agg_type": "avg",
+          "value": 108
+        },
+        "Global logs size": {
+          "alert": {},
+          "type": "Global logs size",
+          "historic": true,
+          "agg_type": "avg",
+          "value": "2.82 MB"
+        },
+        "Event Loop Latency p95": {
+          "value": "1.42",
+          "type": "internal/libuv/latency/p95",
+          "unit": "ms",
+          "historic": true
+        },
+        "Event Loop Latency": {
+          "value": "0.46",
+          "type": "internal/libuv/latency/p50",
+          "unit": "ms",
+          "historic": true
+        },
+        "Active handles": {
+          "value": 4,
+          "type": "internal/libuv/handles",
+          "historic": true
+        },
+        "Active requests": {
+          "value": 0,
+          "type": "internal/libuv/requests",
+          "historic": true
+        }
+      },
+      "axm_options": {
+        "error": true,
+        "heapdump": true,
+        "feature.profiler.heapsnapshot": false,
+        "feature.profiler.heapsampling": true,
+        "feature.profiler.cpu_js": true,
+        "latency": true,
+        "catchExceptions": true,
+        "profiling": true,
+        "metrics": {
+          "http": true,
+          "runtime": true,
+          "eventLoop": true,
+          "network": false,
+          "v8": true
+        },
+        "standalone": false,
+        "module_conf": {
+          "rotateModule": true,
+          "rotateInterval": "0 0 * * *",
+          "workerInterval": 3600,
+          "dateFormat": "YYYY-MM-DD",
+          "compress": true,
+          "retain": 7,
+          "max_size": "50M"
+        },
+        "apm": {
+          "version": "6.1.0",
+          "type": "node"
+        },
+        "module_name": "pm2-logrotate",
+        "module_version": "3.0.0",
+        "max_size": "50M",
+        "retain": 7,
+        "compress": true,
+        "dateFormat": "YYYY-MM-DD",
+        "workerInterval": 3600,
+        "rotateInterval": "0 0 * * *",
+        "rotateModule": true,
+        "alert_enabled": true,
+        "widget": {
+          "block": {
+            "main_probes": [
+              "Global logs size",
+              "Files count"
+            ],
+            "actions": true,
+            "mem": true,
+            "cpu": true,
+            "issues": true
+          },
+          "el": {
+            "actions": false,
+            "probes": false
+          },
+          "theme": [
+            "#111111",
+            "#1B2228",
+            "#31C2F1",
+            "#807C7C"
+          ],
+          "logo": "https://raw.githubusercontent.com/pm2-hive/pm2-logrotate/master/pres/logo.png",
+          "type": "generic"
+        },
+        "isModule": true,
+        "description": "Module to rotate logs of every pm2 application",
+        "pmx_version": "1.6.8"
+      },
+      "axm_dynamic": {},
+      "created_at": 1776708486616,
+      "pm_id": 0,
+      "restart_time": 0,
+      "unstable_restarts": 0,
+      "version": "3.0.0",
+      "node_version": "20.20.0"
+    },
+    "pm_id": 0,
+    "monit": {
+      "memory": 14602240,
+      "cpu": 0.2
+    }
+  },
+  {
+    "pid": 1521599,
+    "name": "creatorvault",
+    "pm2_env": {
+      "0": "p",
+      "1": "r",
+      "2": "o",
+      "3": "d",
+      "4": "u",
+      "5": "c",
+      "6": "t",
+      "7": "i",
+      "8": "o",
+      "9": "n",
+      "exit_code": 0,
+      "prev_restart_delay": 0,
+      "node_version": "20.20.0",
+      "version": "1.0.0",
+      "unstable_restarts": 0,
+      "restart_time": 13,
+      "pm_id": 6,
+      "created_at": 1778209749893,
+      "axm_dynamic": {},
+      "axm_options": {
+        "error": true,
+        "heapdump": true,
+        "feature.profiler.heapsnapshot": false,
+        "feature.profiler.heapsampling": true,
+        "feature.profiler.cpu_js": true,
+        "latency": true,
+        "catchExceptions": true,
+        "profiling": true,
+        "metrics": {
+          "http": true,
+          "runtime": true,
+          "eventLoop": true,
+          "network": false,
+          "v8": true
+        },
+        "standalone": false,
+        "module_conf": {
+          "REPLICATE_API_TOKEN": "r8_QJrdbmMw7Ufeszd8V5hZhVBIJr2ScjP4JIaPc",
+          "env": {
+            "OPENAI_API_KEY": "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"
+          }
+        },
+        "apm": {
+          "version": "6.1.0",
+          "type": "node"
+        },
+        "module_name": "creatorvault",
+        "module_version": "6.0.14",
+        "env": {
+          "OPENAI_API_KEY": "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"
+        },
+        "REPLICATE_API_TOKEN": "r8_QJrdbmMw7Ufeszd8V5hZhVBIJr2ScjP4JIaPc"
+      },
+      "axm_monitor": {
+        "Used Heap Size": {
+          "value": "86.46",
+          "type": "internal/v8/heap/used",
+          "unit": "MiB",
+          "historic": true
+        },
+        "Heap Usage": {
+          "value": 94.62,
+          "type": "internal/v8/heap/usage",
+          "unit": "%",
+          "historic": true
+        },
+        "Heap Size": {
+          "value": "91.38",
+          "type": "internal/v8/heap/total",
+          "unit": "MiB",
+          "historic": true
+        },
+        "Event Loop Latency p95": {
+          "value": "1.43",
+          "type": "internal/libuv/latency/p95",
+          "unit": "ms",
+          "historic": true
+        },
+        "Event Loop Latency": {
+          "value": "0.55",
+          "type": "internal/libuv/latency/p50",
+          "unit": "ms",
+          "historic": true
+        },
+        "Active handles": {
+          "value": 5,
+          "type": "internal/libuv/handles",
+          "historic": true
+        },
+        "Active requests": {
+          "value": 0,
+          "type": "internal/libuv/requests",
+          "historic": true
+        },
+        "HTTP": {
+          "value": 0.01,
+          "type": "internal/http/builtin/reqs",
+          "unit": "req/min",
+          "historic": true
+        },
+        "HTTP P95 Latency": {
+          "value": 11.149999999999977,
+          "type": "internal/http/builtin/latency/p95",
+          "unit": "ms",
+          "historic": true
+        },
+        "HTTP Mean Latency": {
+          "value": 1,
+          "type": "internal/http/builtin/latency/p50",
+          "unit": "ms",
+          "historic": true
+        }
+      },
+      "axm_actions": [
+        {
+          "action_name": "km:heapdump",
+          "action_type": "internal",
+          "arity": 2
+        },
+        {
+          "action_name": "km:cpu:profiling:start",
+          "action_type": "internal",
+          "arity": 2
+        },
+        {
+          "action_name": "km:cpu:profiling:stop",
+          "action_type": "internal",
+          "arity": 1
+        },
+        {
+          "action_name": "km:heap:sampling:start",
+          "action_type": "internal",
+          "arity": 2
+        },
+        {
+          "action_name": "km:heap:sampling:stop",
+          "action_type": "internal",
+          "arity": 1
+        }
+      ],
+      "pm_uptime": 1778209750024,
+      "status": "online",
+      "unique_id": "19b1e00d-ea91-4374-855d-95835bb8a0ba",
+      "creatorvault": "{\"env\":{\"OPENAI_API_KEY\":\"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\"},\"REPLICATE_API_TOKEN\":\"r8_QJrdbmMw7Ufeszd8V5hZhVBIJr2ScjP4JIaPc\"}",
+      "REPLICATE_API_TOKEN": "r8_QJrdbmMw7Ufeszd8V5hZhVBIJr2ScjP4JIaPc",
+      "PM2_HOME": "/root/.pm2",
+      "PM2_USAGE": "CLI",
+      "OLDPWD": "/root",
+      "_": "/usr/bin/pm2",
+      "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/0/bus",
+      "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+      "XDG_DATA_DIRS": "/usr/local/share:/usr/share:/var/lib/snapd/desktop",
+      "SSH_CLIENT": "3.239.200.139 43852 22",
+      "XDG_RUNTIME_DIR": "/run/user/0",
+      "XDG_SESSION_ID": "13309",
+      "SHLVL": "1",
+      "USER": "root",
+      "XDG_SESSION_CLASS": "user",
+      "SSH_CONNECTION": "3.239.200.139 43852 134.199.202.69 22",
+      "LANG": "C.UTF-8",
+      "HOME": "/root",
+      "XDG_SESSION_TYPE": "tty",
+      "LOGNAME": "root",
+      "PWD": "/root/creatorvault",
+      "SHELL": "/bin/bash",
+      "NODE_APP_INSTANCE": 0,
+      "vizion_running": false,
+      "km_link": false,
+      "pm_pid_path": "/root/.pm2/pids/creatorvault-6.pid",
+      "pm_err_log_path": "/root/.pm2/logs/creatorvault-error.log",
+      "pm_out_log_path": "/root/.pm2/logs/creatorvault-out.log",
+      "instances": 1,
+      "exec_mode": "fork_mode",
+      "exec_interpreter": "node",
+      "pm_cwd": "/root/creatorvault",
+      "pm_exec_path": "/root/creatorvault/dist/index.js",
+      "node_args": [],
+      "name": "creatorvault",
+      "filter_env": [],
+      "namespace": "default",
+      "env": {
+        "0": "p",
+        "1": "r",
+        "2": "o",
+        "3": "d",
+        "4": "u",
+        "5": "c",
+        "6": "t",
+        "7": "i",
+        "8": "o",
+        "9": "n",
+        "unique_id": "19b1e00d-ea91-4374-855d-95835bb8a0ba",
+        "creatorvault": "{\"env\":{\"OPENAI_API_KEY\":\"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\"},\"REPLICATE_API_TOKEN\":\"r8_QJrdbmMw7Ufeszd8V5hZhVBIJr2ScjP4JIaPc\"}",
+        "env": {
+          "OPENAI_API_KEY": "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"
+        },
+        "REPLICATE_API_TOKEN": "r8_QJrdbmMw7Ufeszd8V5hZhVBIJr2ScjP4JIaPc",
+        "PM2_HOME": "/root/.pm2",
+        "PM2_USAGE": "CLI",
+        "OLDPWD": "/root",
+        "_": "/usr/bin/pm2",
+        "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/0/bus",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+        "XDG_DATA_DIRS": "/usr/local/share:/usr/share:/var/lib/snapd/desktop",
+        "SSH_CLIENT": "3.239.200.139 43852 22",
+        "XDG_RUNTIME_DIR": "/run/user/0",
+        "XDG_SESSION_ID": "13309",
+        "SHLVL": "1",
+        "USER": "root",
+        "XDG_SESSION_CLASS": "user",
+        "SSH_CONNECTION": "3.239.200.139 43852 134.199.202.69 22",
+        "LANG": "C.UTF-8",
+        "HOME": "/root",
+        "XDG_SESSION_TYPE": "tty",
+        "LOGNAME": "root",
+        "PWD": "/root/creatorvault",
+        "SHELL": "/bin/bash"
+      },
+      "merge_logs": true,
+      "vizion": true,
+      "autostart": true,
+      "autorestart": true,
+      "watch": false,
+      "instance_var": "NODE_APP_INSTANCE",
+      "pmx": true,
+      "automation": true,
+      "treekill": true,
+      "username": "root",
+      "windowsHide": true,
+      "kill_retry_time": 100
+    },
+    "pm_id": 6,
+    "monit": {
+      "memory": 172085248,
+      "cpu": 0.2
+    }
+  }
+]

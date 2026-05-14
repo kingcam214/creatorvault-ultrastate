@@ -1,0 +1,156 @@
+{
+  "validated_at_utc": "2026-05-08T04:34:38Z",
+  "proof_dir": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z",
+  "final_mp4": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/creatorvault-controlled-grounded-trailer.mp4",
+  "thumbnail": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/creatorvault-controlled-grounded-trailer-thumb.jpg",
+  "contact_sheet": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/creatorvault-controlled-grounded-trailer-contact-sheet.jpg",
+  "overall_pass": true,
+  "checks": [
+    {
+      "name": "proof directory exists",
+      "passed": true,
+      "detail": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z"
+    },
+    {
+      "name": "final MP4 exists",
+      "passed": true,
+      "detail": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/creatorvault-controlled-grounded-trailer.mp4"
+    },
+    {
+      "name": "final MP4 non-empty",
+      "passed": true,
+      "detail": "7998980 bytes"
+    },
+    {
+      "name": "MP4 ffprobe readable",
+      "passed": true,
+      "detail": "{\n    \"streams\": [\n        {\n            \"index\": 0,\n            \"codec_name\": \"h264\",\n            \"codec_long_name\": \"H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10\",\n            \"profile\": \"High\",\n            \"codec_type\": \"video\",\n            \"codec_tag_string\": \"avc1\",\n            \"codec_tag\": \"0x31637661\",\n            \"width\": 1080,\n            \"height\": 1920,\n            \"coded_width\": 1080,\n            \"coded_height\": 1920,\n            \"closed_captions\": 0,\n            \"film_grain\": 0,\n       "
+    },
+    {
+      "name": "vertical 1080x1920 video",
+      "passed": true,
+      "detail": "1080x1920"
+    },
+    {
+      "name": "H.264 video codec",
+      "passed": true,
+      "detail": "h264"
+    },
+    {
+      "name": "AAC audio stream present",
+      "passed": true,
+      "detail": "aac"
+    },
+    {
+      "name": "runtime approximately 30 seconds",
+      "passed": true,
+      "detail": "30.023s"
+    },
+    {
+      "name": "contact sheet generated from actual MP4 frames",
+      "passed": true,
+      "detail": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/creatorvault-controlled-grounded-trailer-contact-sheet.jpg (44166 bytes)"
+    },
+    {
+      "name": "asset-manifest.json exists",
+      "passed": true,
+      "detail": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/reports/asset-manifest.json"
+    },
+    {
+      "name": "asset-manifest.json valid JSON",
+      "passed": true,
+      "detail": "parsed"
+    },
+    {
+      "name": "source-manifest.json exists",
+      "passed": true,
+      "detail": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/reports/source-manifest.json"
+    },
+    {
+      "name": "source-manifest.json valid JSON",
+      "passed": true,
+      "detail": "parsed"
+    },
+    {
+      "name": "scene-manifest.json exists",
+      "passed": true,
+      "detail": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/reports/scene-manifest.json"
+    },
+    {
+      "name": "scene-manifest.json valid JSON",
+      "passed": true,
+      "detail": "parsed"
+    },
+    {
+      "name": "timeline.json exists",
+      "passed": true,
+      "detail": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/reports/timeline.json"
+    },
+    {
+      "name": "timeline.json valid JSON",
+      "passed": true,
+      "detail": "parsed"
+    },
+    {
+      "name": "render-summary.json exists",
+      "passed": true,
+      "detail": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/reports/render-summary.json"
+    },
+    {
+      "name": "render-summary.json valid JSON",
+      "passed": true,
+      "detail": "parsed"
+    },
+    {
+      "name": "no disallowed-content tokens in manifests",
+      "passed": true,
+      "detail": "none"
+    },
+    {
+      "name": "approved CreatorVault/KingCam terminology present",
+      "passed": true,
+      "detail": "{\"CreatorVault\": true, \"KingCam\": true, \"creatorvault.live\": true}"
+    },
+    {
+      "name": "six deterministic scenes present",
+      "passed": true,
+      "detail": "6"
+    },
+    {
+      "name": "each scene has manifest content",
+      "passed": true,
+      "detail": "missing=[]"
+    },
+    {
+      "name": "scene durations sum near 30 seconds",
+      "passed": true,
+      "detail": "durations=[5.0, 5.0, 5.0, 5.0, 5.0, 5.0], sum=30.0"
+    },
+    {
+      "name": "referenced real local assets resolve",
+      "passed": true,
+      "detail": "resolved=20, missing=[]"
+    },
+    {
+      "name": "logo/brand asset referenced in manifests",
+      "passed": true,
+      "detail": "/root/creatorvault/client/public/images/clone-ambassador.webp; /root/creatorvault/client/public/images/reel/reel-creator-promo.png; /root/creatorvault/client/public/images/reel/reel-product-drop.png; /root/creatorvault/client/public/videos/hero-cam.mp4; /root/creatorvault/client/public/videos/kingcam-clone-2.mp4; /root/creatorvault/client/public/videos/kingcam-hero-cam.mp4; /root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/segments/scene_01.mp4; /root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/segments/scene_02.mp4; /root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/segments/scene_03.mp4; /root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/segments/scene_04.mp4"
+    },
+    {
+      "name": "thumbnail exists",
+      "passed": true,
+      "detail": "/root/creatorvault/testing/controlled-trailer-proof/20260508T043042Z/creatorvault-controlled-grounded-trailer-thumb.jpg"
+    },
+    {
+      "name": "live homepage HTTP 200 after render test",
+      "passed": true,
+      "detail": "200 0.032801"
+    },
+    {
+      "name": "PM2 app remains online after render test",
+      "passed": true,
+      "detail": "at least one PM2 process online"
+    }
+  ],
+  "final_mp4_sha256": "e8246e39fa330b16a4febf0a08c3e5228291e664000e3d95f45e8b3a0255d31c"
+}
