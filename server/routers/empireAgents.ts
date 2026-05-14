@@ -112,9 +112,9 @@ export const empireAgents = router({
 
   stopAgent: protectedProcedure.input(z.object({ agentId: z.number(), reason: z.string().optional() })).mutation(async ({ input }) => {
     const agent = await getAgentById(input.agentId);
-    await db.db.execute(sql`UPDATE empire_agents SET status = 'paused' WHERE id = ${input.agentId}`);
-    await insertAgentReport(agent, "agent_paused", `Agent paused by owner${input.reason ? `: ${input.reason}` : "."}`);
-    return { stopped: true, agentId: input.agentId, agentSlug: agent.slug, agentName: agent.name, status: "paused" };
+    await db.db.execute(sql`UPDATE empire_agents SET status = 'inactive', paused_until = NULL WHERE id = ${input.agentId}`);
+    await insertAgentReport(agent, "agent_stopped", `Agent stopped by owner${input.reason ? `: ${input.reason}` : "."}`);
+    return { stopped: true, agentId: input.agentId, agentSlug: agent.slug, agentName: agent.name, status: "inactive" };
   }),
 
   getActiveChallenge: protectedProcedure.query(async () => {
