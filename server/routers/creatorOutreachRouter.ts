@@ -61,7 +61,14 @@ async function ensureOutreachLeadsTable(): Promise<void> {
     )
   `);
 
-  await db.execute(sql`ALTER TABLE outreach_leads ADD COLUMN IF NOT EXISTS next_money_cta TEXT NULL`);
+  try {
+    await db.execute(sql`ALTER TABLE outreach_leads ADD COLUMN next_money_cta TEXT NULL`);
+  } catch (error: any) {
+    const code = error?.code || error?.cause?.code || error?.errno || error?.cause?.errno;
+    const message = String(error?.message || error?.cause?.message || "").toLowerCase();
+    const duplicateColumn = code === "ER_DUP_FIELDNAME" || code === 1060 || message.includes("duplicate column");
+    if (!duplicateColumn) throw error;
+  }
 }
 
 function normalizePlatform(platforms?: string[]): string {
