@@ -81,9 +81,10 @@ export const onboardingV2Router = router({
       .where(and(eq(db.schema.content.userId, ctx.user.id), eq(db.schema.content.contentType, "creator_onboarding_v2_step")))
       .orderBy(desc(db.schema.content.createdAt)).limit(50);
     const completedStepIds = Array.from(new Set(artifacts.map((item: any) => String(item.metadata?.stepId || "")).filter(Boolean)));
-    const progress = Math.round((completedStepIds.length / V2_STEPS.length) * 100);
-    const nextMilestone = V2_STEPS.find((step) => !completedStepIds.includes(step)) ?? "activation-complete";
-    return { progress, level: progress >= 100 ? "activated" : progress >= 60 ? "monetizing" : progress > 0 ? "launching" : "ready", nextMilestone, completedStepIds, artifactCount: artifacts.length, userId: ctx.user.id };
+    const canonicalCompletedStepIds = V2_STEPS.filter((step) => completedStepIds.includes(step));
+    const progress = Math.min(100, Math.round((canonicalCompletedStepIds.length / V2_STEPS.length) * 100));
+    const nextMilestone = V2_STEPS.find((step) => !canonicalCompletedStepIds.includes(step)) ?? "activation-complete";
+    return { progress, level: progress >= 100 ? "activated" : progress >= 60 ? "monetizing" : progress > 0 ? "launching" : "ready", nextMilestone, completedStepIds, canonicalCompletedStepIds, artifactCount: artifacts.length, userId: ctx.user.id };
   }),
 
   completeV2Step: protectedProcedure.input(z.object({ stepId: z.string().min(1), result: z.string().optional() })).mutation(async ({ ctx, input }) => {
