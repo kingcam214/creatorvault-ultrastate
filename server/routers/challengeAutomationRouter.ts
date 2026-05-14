@@ -4,6 +4,7 @@
  * NO fake revenue. NO demo data. Every agent does exactly what it was built to do.
  */
 import { z } from "zod";
+import { randomUUID } from "crypto";
 import { router, protectedProcedure } from "../_core/trpc";
 import OpenAI from "openai";
 import Stripe from "stripe";
@@ -15,11 +16,11 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // @ts-ignore
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" });
 // drizzle-orm mysql2: db.execute(sql`...`) returns [rows, fields] tuple
-function extractRows(result: any): any[] {
-  if (!result) return [];
+function extractRows(result: any, label = "database query"): any[] {
+  if (!result) throw new Error(`${label} returned no database response`);
   if (Array.isArray(result) && result.length >= 1 && Array.isArray(result[0])) return result[0] as any[];
   if (Array.isArray(result)) return result;
-  return [];
+  throw new Error(`${label} returned an unsupported database response shape`);
 }
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
@@ -49,7 +50,7 @@ async function sendTelegram(
       await db.db.execute(sql`
         INSERT INTO telegram_message_events (telegram_id, direction, message_type, message_text, tracking_code)
         VALUES (${String(chatId)}, 'outbound', ${messageType}, ${text.slice(0, 1000)}, ${trackingCode})
-      `).catch(() => {});
+      `);
     }
     return ok;
   } catch { return false; }
@@ -101,23 +102,23 @@ async function gptRun(systemPrompt: string, userPrompt: string, maxTokens = 500)
     ],
     max_tokens: maxTokens,
   });
-  return c.choices[0].message.content ?? "Task completed.";
+  const content = c.choices[0].message.content?.trim();
+  if (!content) throw new Error("OpenAI returned an empty agent execution result");
+  return content;
 }
 
 // ── Real DB helpers ────────────────────────────────────────────────────────────
 async function getEmpireStats() {
-  try {
-    const [users] = await db.db.execute(sql`SELECT COUNT(*) as cnt FROM users`) as any[];
-    const [agents] = await db.db.execute(sql`SELECT COUNT(*) as cnt FROM empire_agents WHERE status = 'active'`) as any[];
-    const [subs] = await db.db.execute(sql`SELECT COUNT(*) as cnt FROM subscriptions`) as any[];
-    const [challenge] = await db.db.execute(sql`SELECT * FROM empire_challenges WHERE status = 'active' LIMIT 1`) as any[];
-    return {
-      userCount: Number((users as any[])[0]?.cnt ?? 144),
-      agentCount: Number((agents as any[])[0]?.cnt ?? 46),
-      subCount: Number((subs as any[])[0]?.cnt ?? 6),
-      challenge: (challenge as any[])[0] ?? null,
-    };
-  } catch { return { userCount: 144, agentCount: 46, subCount: 6, challenge: null }; }
+  const users = extractRows(await db.db.execute(sql`SELECT COUNT(*) as cnt FROM users`));
+  const agents = extractRows(await db.db.execute(sql`SELECT COUNT(*) as cnt FROM empire_agents WHERE status = 'active'`));
+  const subs = extractRows(await db.db.execute(sql`SELECT COUNT(*) as cnt FROM subscriptions`));
+  const challenge = extractRows(await db.db.execute(sql`SELECT * FROM empire_challenges WHERE status = 'active' LIMIT 1`));
+  return {
+    userCount: Number(users[0]?.cnt ?? 0),
+    agentCount: Number(agents[0]?.cnt ?? 0),
+    subCount: Number(subs[0]?.cnt ?? 0),
+    challenge: challenge[0] ?? null,
+  };
 }
 
 async function saveAgentReport(agentSlug: string, agentName: string, reportType: string, content: string, revenueImpact = 0) {
@@ -146,7 +147,9 @@ async function saveAgentReport(agentSlug: string, agentName: string, reportType:
         INSERT INTO empire_agent_reports (agent_slug, agent_name, report_type, content, revenue_impact, created_at)
         VALUES (${agentSlug}, ${agentName}, ${reportType}, ${content}, ${revenueImpact}, NOW())
       `);
-    } catch { /* ignore */ }
+    } catch (createError) {
+      throw new Error(`Agent report persistence failed for ${agentSlug}: ${createError instanceof Error ? createError.message : String(createError)}`);
+    }
   }
 }
 
@@ -169,7 +172,7 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
         await db.db.execute(sql`
           INSERT INTO autoposter_jobs (id, user_id, caption, content_type, platforms, scheduled_for, timezone, status, created_at, updated_at)
           VALUES (UUID(), 1, ${output.slice(0, 500)}, 'text', '["tiktok","instagram"]', DATE_ADD(NOW(), INTERVAL 2 HOUR), 'America/Chicago', 'scheduled', NOW(), NOW())
-        `).catch(() => {});
+        `);
         await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🎬 <b>Creator Growth Agent</b>\n\n${output.slice(0, 800)}`);
         return { outcome: output, revenue: 0, status: "success", action: "content_strategy_generated + post_scheduled + telegram_sent" };
       }
@@ -184,8 +187,8 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
         // Save to recruitment_leads
         await db.db.execute(sql`
           INSERT INTO recruitment_leads (handle, display_name, platform_primary, niche, package_mode, offer_status, notes, scraped_at)
-          VALUES ('dr_lead_${Date.now()}', 'DR Ventures Prospect', 'telegram', 'real_estate', 'client_audit', 'pending', ${output.slice(0, 500)}, NOW())
-        `).catch(() => {});
+          VALUES (${`dr_lead_${randomUUID()}`}, 'DR Ventures Prospect', 'telegram', 'real_estate', 'client_audit', 'pending', ${output.slice(0, 500)}, NOW())
+        `);
         await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🏝️ <b>DR Deal & Recruiting Agent</b>\n\n${output.slice(0, 800)}`);
         return { outcome: output, revenue: 0, status: "success", action: "dr_lead_saved + telegram_sent" };
       }
@@ -204,11 +207,11 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
 
       // ── 4. Empire Map Agent ───────────────────────────────────────────────────
       case "empire-map-agent": {
-        const entities = await db.db.execute(sql`SELECT name, type, status FROM empire_entities ORDER BY id ASC`).catch(() => [[]]) as any[];
-        const entityList = ((entities as any[])[0] ?? []).map((e: any) => `${e.name} (${e.type})`).join(", ");
+        const entities = await db.db.execute(sql`SELECT name, type, status FROM empire_entities ORDER BY id ASC`);
+        const entityList = extractRows(entities).map((e: any) => `${e.name} (${e.type})`).join(", ");
         const output = await gptRun(
           "You are the Empire Map Agent. You maintain LLC/asset maps, ownership structures, and entity documentation for KingCam's empire.",
-          `Current empire entities: ${entityList || "KingCam Holdings, CreatorVault Labs, KingCam Media, DR Ventures"}. Generate an empire health report: list all entities, their current status, any compliance flags, and 3 recommendations to optimize the entity structure for tax efficiency and asset protection.`,
+          `Current empire entity rows from the database: ${entityList || "No empire_entities rows exist yet; flag this as an operational data gap instead of inventing entities."}. Generate an empire health report from the available records only: list known entities, their current status, any compliance flags, and 3 recommendations to improve the entity structure and data completeness.`,
           500
         );
         await saveAgentReport(agentSlug, "Empire Map Agent", "empire_health", output);
@@ -248,8 +251,8 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
         // Save recruit leads
         await db.db.execute(sql`
           INSERT INTO recruitment_leads (handle, display_name, platform_primary, niche, package_mode, offer_status, notes, scraped_at)
-          VALUES ('auto_recruit_${Date.now()}', 'Auto-Recruited Prospect', 'tiktok', 'creator', 'team_recruit', 'pending', ${output.slice(0, 500)}, NOW())
-        `).catch(() => {});
+          VALUES (${`auto_recruit_${randomUUID()}`}, 'Auto-Recruited Prospect', 'tiktok', 'creator', 'team_recruit', 'pending', ${output.slice(0, 500)}, NOW())
+        `);
         // Send via recruiter bot
         await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🤝 <b>Auto-Recruiter Agent</b>\n\n${output.slice(0, 800)}`);
         return { outcome: output, revenue: 0, status: "success", action: "recruit_scripts_generated + lead_saved + telegram_sent" };
@@ -274,8 +277,8 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
           SELECT s.id, u.email, s.status, s.amount FROM subscriptions s
           LEFT JOIN users u ON s.user_id = u.id
           WHERE s.status IN ('past_due', 'incomplete', 'canceled') LIMIT 10
-        `).catch(() => [[]]) as any[];
-        const subList = ((failedSubs as any[])[0] ?? []).map((s: any) => `${s.email} ($${(s.amount || 0) / 100})`).join(", ");
+        `);
+        const subList = extractRows(failedSubs).map((s: any) => `${s.email} ($${(s.amount || 0) / 100})`).join(", ");
         const output = await gptRun(
           "You are the Money Follow-Up Agent. You recover missed payments, handle failed subscriptions, and execute ethical upsell sequences.",
           `${subList ? `Failed/at-risk subscriptions: ${subList}.` : "No failed subscriptions found — all current."} Generate: 1) A 3-message recovery sequence for a failed payment, 2) An upsell sequence for a basic subscriber to upgrade to premium, 3) A win-back sequence for a canceled subscriber. Make them feel valued, not pressured.`,
@@ -331,7 +334,7 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
         await db.db.execute(sql`
           INSERT INTO content_repurposing_jobs (id, user_id, source_content, target_formats, status, output_data, created_at, updated_at)
           VALUES (UUID(), 1, 'KingCam creator empire content', '["youtube","tiktok","instagram","email","twitter"]', 'completed', ${JSON.stringify({ output })}, NOW(), NOW())
-        `).catch(() => {});
+        `);
         return { outcome: output, revenue: 0, status: "success", action: "content_repurposed + job_created" };
       }
 
@@ -346,7 +349,7 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
         await db.db.execute(sql`
           INSERT INTO brand_deals (user_id, brand_id, deal_value, pitch_subject, pitch_body, status, ai_notes, created_at, updated_at)
           VALUES (1, 1, 5000, 'Brand Partnership Opportunity — KingCam x [Brand]', ${output.slice(0, 1000)}, 'pitch_sent', ${output.slice(0, 500)}, NOW(), NOW())
-        `).catch(() => {});
+        `);
         return { outcome: output, revenue: 0, status: "success", action: "brand_deal_pitch_generated + saved_to_db" };
       }
 
@@ -363,7 +366,7 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
           await db.db.execute(sql`
             INSERT INTO autoposter_jobs (id, user_id, caption, content_type, platforms, scheduled_for, timezone, status, created_at, updated_at)
             VALUES (UUID(), 1, ${captions.slice(0, 500)}, 'text', ${JSON.stringify(p)}, DATE_ADD(NOW(), INTERVAL 1 HOUR), 'America/Chicago', 'scheduled', NOW(), NOW())
-          `).catch(() => {});
+          `);
         }
         return { outcome: captions, revenue: 0, status: "success", action: "3_posts_scheduled_in_db" };
       }
@@ -420,7 +423,7 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
         try {
           const charges = await stripe.charges.list({ limit: 100 });
           stripeRevenue = charges.data.filter(c => c.status === "succeeded").reduce((s, c) => s + c.amount, 0) / 100;
-        } catch { stripeRevenue = 9.99; }
+        } catch (stripeError) { throw new Error(`Stripe revenue pull failed: ${stripeError instanceof Error ? stripeError.message : String(stripeError)}`); }
         const target = 230000;
         const progress = ((stripeRevenue / target) * 100).toFixed(4);
         const output = await gptRun(
@@ -445,8 +448,8 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
 
       // ── 21. Emma Network Recruiter Agent ──────────────────────────────────────
       case "emma-network-recruiter-agent": {
-        const emmaLeads = await db.db.execute(sql`SELECT COUNT(*) as cnt FROM emma_leads`).catch(() => [[{ cnt: 12 }]]) as any[];
-        const leadCount = Number(((emmaLeads as any[])[0] ?? [{ cnt: 12 }])[0]?.cnt ?? 12);
+        const emmaLeads = extractRows(await db.db.execute(sql`SELECT COUNT(*) as cnt FROM emma_leads`));
+        const leadCount = Number(emmaLeads[0]?.cnt ?? 0);
         const output = await gptRun(
           "You are the Emma Network Recruiter Agent. You recruit new members via DM campaigns, referral programs, and targeted outreach.",
           `Emma Network currently has ${leadCount} leads in pipeline. Generate: 1) 3 DM scripts for recruiting fitness-focused women (Instagram, TikTok, Telegram), 2) Referral incentive program structure (what to offer existing members for referrals), 3) Top 5 hashtags/communities to target for recruitment, 4) Onboarding welcome message for new Emma Network members.`,
@@ -478,7 +481,7 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
         await db.db.execute(sql`
           INSERT INTO video_lab_jobs (id, user_id, type, status, input, created_at, updated_at)
           VALUES (UUID(), 1, 'clip_strategy', 'completed', ${JSON.stringify({ topic: "Creator Empire AI", output })}, NOW(), NOW())
-        `).catch(() => {});
+        `);
         return { outcome: output, revenue: 0, status: "success", action: "video_strategy_generated + job_created" };
       }
 
@@ -504,14 +507,14 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
         await db.db.execute(sql`
           INSERT INTO motion_flyer_jobs (id, user_id, event_name, style, status, output_data, created_at, updated_at)
           VALUES (UUID(), 1, 'DR Ventures Retreat', 'luxury', 'completed', ${JSON.stringify({ brief: output })}, NOW(), NOW())
-        `).catch(() => {});
+        `);
         return { outcome: output, revenue: 0, status: "success", action: "motion_flyer_brief_generated + job_created" };
       }
 
       // ── 26. Podcast Studio Agent ──────────────────────────────────────────────
       case "podcast-studio-agent": {
-        const podcastCount = await db.db.execute(sql`SELECT COUNT(*) as cnt FROM podcasts 2>/dev/null`).catch(() => [[{ cnt: 0 }]]) as any[];
-        const cnt = Number(((podcastCount as any[])[0] ?? [{ cnt: 0 }])[0]?.cnt ?? 0);
+        const podcastCount = extractRows(await db.db.execute(sql`SELECT COUNT(*) as cnt FROM podcasts`));
+        const cnt = Number(podcastCount[0]?.cnt ?? 0);
         const output = await gptRun(
           "You are the Podcast Studio Agent. You handle full podcast production — outlines, show notes, clips, and distribution.",
           `${cnt > 0 ? `${cnt} podcasts in system.` : "Setting up podcast production pipeline."} Generate a complete episode package for 'The Creator Empire Podcast' Episode: 'AI Agents That Make Money While You Sleep': 1) Episode outline (intro, 3 main points, outro), 2) Show notes (300 words), 3) 5 clip titles for social, 4) Guest question bank (10 questions), 5) Distribution checklist.`,
@@ -561,7 +564,7 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
           const available = balance.available.find(b => b.currency === "usd")?.amount ?? 0;
           revenueReport = `REAL STRIPE DATA:\n- Total Charges: $${totalRevenue.toFixed(2)}\n- Active Subscriptions: ${activeSubs.length}\n- MRR: $${mrr.toFixed(2)}/month\n- Available Balance: $${(available / 100).toFixed(2)}\n- Recent Charges: ${succeeded.slice(0, 5).map(c => `$${(c.amount / 100).toFixed(2)} (${c.description || "payment"})`).join(", ")}`;
         } catch (e: any) {
-          revenueReport = `Stripe connection active. Error pulling full data: ${e.message}`;
+          throw new Error(`Stripe Revenue Agent failed to pull live Stripe data: ${e.message}`);
         }
         const analysis = await gptRun(
           "You are the Stripe Revenue Agent. Analyze real payment data and provide actionable insights.",
@@ -614,7 +617,7 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
         try {
           const charges = await stripe.charges.list({ limit: 100 });
           stripeTotal = charges.data.filter(c => c.status === "succeeded").reduce((sum, c) => sum + c.amount, 0) / 100;
-        } catch { stripeTotal = 9.99; }
+        } catch (stripeError) { throw new Error(`Owner Cockpit Stripe revenue pull failed: ${stripeError instanceof Error ? stripeError.message : String(stripeError)}`); }
         const output = await gptRun(
           "You are the Owner Cockpit Agent. You aggregate all empire metrics and deliver the daily owner briefing.",
           `Empire metrics: ${s.userCount} users, ${s.agentCount} active agents, ${s.subCount} subscriptions, $${stripeTotal.toFixed(2)} Stripe revenue. Challenge: ${s.challenge ? `$${s.challenge.current_revenue}/$${s.challenge.target_revenue}` : "active"}. Generate the daily owner briefing: 1) Empire health score (1-10 with reasoning), 2) Top 3 wins today, 3) Top 3 action items, 4) Revenue forecast for next 7 days.`,
@@ -649,8 +652,8 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
         const recentRuns = await db.db.execute(sql`
           SELECT agent_name, status, revenue_generated, outcome FROM agent_telemetry_events
           ORDER BY created_at DESC LIMIT 10
-        `).catch(() => [[]]) as any[];
-        const runSummary = ((recentRuns as any[])[0] ?? []).map((r: any) => `${r.agent_name}: ${r.status} ($${r.revenue_generated ?? 0})`).join(", ");
+        `);
+        const runSummary = extractRows(recentRuns).map((r: any) => `${r.agent_name}: ${r.status} ($${r.revenue_generated ?? 0})`).join(", ");
         const output = await gptRun(
           "You are the Empire Brain Agent — the central intelligence of KingCam's empire. You learn from all agent activity, make strategic decisions, and coordinate cross-agent workflows.",
           `Recent agent activity: ${runSummary || "No recent runs"}. Empire: ${stats.userCount} users, ${stats.agentCount} agents, ${stats.subCount} subs. Generate: 1) Strategic empire assessment, 2) Top 3 cross-agent workflow opportunities (which agents should work together), 3) Empire growth strategy for next 30 days, 4) One bold move to make this week.`,
@@ -663,8 +666,8 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
 
       // ── 34. Affiliate Marketing Agent ─────────────────────────────────────────
       case "affiliate-marketing-agent": {
-        const affiliates = await db.db.execute(sql`SELECT COUNT(*) as cnt FROM cv_recruiters`).catch(() => [[{ cnt: 0 }]]) as any[];
-        const affiliateCount = Number(((affiliates as any[])[0] ?? [{ cnt: 0 }])[0]?.cnt ?? 0);
+        const affiliates = extractRows(await db.db.execute(sql`SELECT COUNT(*) as cnt FROM cv_recruiters`));
+        const affiliateCount = Number(affiliates[0]?.cnt ?? 0);
         const output = await gptRun(
           "You are the Affiliate Marketing Agent. You manage affiliate programs, recruit affiliates, track commissions, and optimize affiliate revenue.",
           `Current affiliates: ${affiliateCount}. Generate: 1) Affiliate recruitment email for creators with 10K+ followers, 2) Commission structure recommendation (tiered: 10%/15%/20% based on sales volume), 3) Top 5 affiliate marketing channels for CreatorVault, 4) Monthly affiliate performance report template, 5) Affiliate onboarding checklist.`,
@@ -734,9 +737,9 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
       case "performance-intelligence-agent": {
         // Pull real agent execution stats
         const perfData = await db.db.execute(sql`
-          SELECT agent_name, COUNT(*) as runs, SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as successes
+          SELECT agent_name, COUNT(*) as runs, SUM(CASE WHEN status IN ('completed','success') THEN 1 ELSE 0 END) as successes
           FROM agent_execution_runs GROUP BY agent_name ORDER BY runs DESC LIMIT 10
-        `).catch(() => [[]]) as any[];
+        `);
         const perfSummary = ((perfData as any[])[0] ?? []).slice(0, 5).map((r: any) => `${r.agent_name}: ${r.runs} runs, ${r.successes} successes`).join("; ");
         const output = await gptRun(
           "You are the Performance Intelligence Agent. You track all platform analytics and generate weekly intelligence reports.",
@@ -760,8 +763,8 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
 
       // ── 42. VaultLive Stream Manager Agent ────────────────────────────────────
       case "vaultlive-stream-manager-agent": {
-        const streams = await db.db.execute(sql`SELECT COUNT(*) as cnt FROM live_streams WHERE status = 'live'`).catch(() => [[{ cnt: 0 }]]) as any[];
-        const liveCount = Number(((streams as any[])[0] ?? [{ cnt: 0 }])[0]?.cnt ?? 0);
+        const streams = extractRows(await db.db.execute(sql`SELECT COUNT(*) as cnt FROM live_streams WHERE status = 'live'`));
+        const liveCount = Number(streams[0]?.cnt ?? 0);
         const output = await gptRun(
           "You are the VaultLive Stream Manager Agent. You manage live stream setup, multi-streaming, tips processing, and post-stream analytics.",
           `${liveCount > 0 ? `${liveCount} streams currently live.` : "No active streams."} Generate: 1) Pre-stream checklist for a monetized VaultLive stream, 2) Multi-streaming setup guide (Restream/OBS config for TikTok Live, YouTube Live, Instagram Live simultaneously), 3) Tip campaign strategy during stream, 4) Post-stream analytics template, 5) Highlight clip criteria (what moments to clip).`,
@@ -773,8 +776,8 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
 
       // ── 43. VaultLive Revenue Agent ────────────────────────────────────────────
       case "vaultlive-revenue-agent": {
-        const tips = await db.db.execute(sql`SELECT SUM(amount) as total FROM telegram_tips WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)`).catch(() => [[{ total: 0 }]]) as any[];
-        const tipTotal = parseFloat(((tips as any[])[0] ?? [{ total: 0 }])[0]?.total ?? 0);
+        const tips = extractRows(await db.db.execute(sql`SELECT SUM(amount) as total FROM telegram_tips WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)`));
+        const tipTotal = parseFloat(tips[0]?.total ?? 0);
         const output = await gptRun(
           "You are the VaultLive Revenue Agent. You optimize VaultLive revenue through tip campaigns, subscription upsells, and 85% rev-share tracking.",
           `Last 30 days tip revenue: $${tipTotal.toFixed(2)}. Generate: 1) Tip campaign strategy (how to 3x tip revenue in 30 days), 2) Subscription upsell sequence for free viewers, 3) 85% rev-share payout calculation template, 4) Revenue milestone celebration strategy (engage audience when hitting goals), 5) Top 5 monetization features to enable on VaultLive.`,
@@ -786,8 +789,8 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
 
       // ── 44. VaultMarket Product Agent ─────────────────────────────────────────
       case "vaultmarket-product-agent": {
-        const products = await db.db.execute(sql`SELECT COUNT(*) as cnt FROM products WHERE status = 'active'`).catch(() => [[{ cnt: 0 }]]) as any[];
-        const productCount = Number(((products as any[])[0] ?? [{ cnt: 0 }])[0]?.cnt ?? 0);
+        const products = extractRows(await db.db.execute(sql`SELECT COUNT(*) as cnt FROM products WHERE status = 'active'`));
+        const productCount = Number(products[0]?.cnt ?? 0);
         const output = await gptRun(
           "You are the VaultMarket Product Agent. You manage digital product listings, descriptions, pricing, and sales optimization.",
           `VaultMarket has ${productCount} active products. Generate: 1) Top 5 digital products that would sell best on VaultMarket (with price points), 2) Product listing template (title, description, pricing, thumbnail brief), 3) Launch promotion strategy for a new product, 4) Upsell/cross-sell matrix for existing products, 5) Seasonal promotion calendar.`,
@@ -799,11 +802,11 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
 
       // ── 45. VaultMarket Commission Agent ──────────────────────────────────────
       case "vaultmarket-commission-agent": {
-        const commissions = await db.db.execute(sql`
+        const commissions = extractRows(await db.db.execute(sql`
           SELECT SUM(platform_fee_cents) as platform_total, SUM(creator_payout_cents) as creator_total, COUNT(*) as tx_count
           FROM marketplace_transactions WHERE status = 'completed' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        `).catch(() => [[{ platform_total: 0, creator_total: 0, tx_count: 0 }]]) as any[];
-        const commData = ((commissions as any[])[0] ?? [{ platform_total: 0, creator_total: 0, tx_count: 0 }])[0] ?? {};
+        `));
+        const commData = commissions[0] ?? { platform_total: 0, creator_total: 0, tx_count: 0 };
         const platformTotal = parseFloat(commData.platform_total ?? 0) / 100;
         const creatorTotal = parseFloat(commData.creator_total ?? 0) / 100;
         const output = await gptRun(
@@ -817,8 +820,8 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
 
       // ── 46. VaultU Curriculum Agent ────────────────────────────────────────────
       case "vaultu-curriculum-agent": {
-        const courseCount = await db.db.execute(sql`SELECT COUNT(*) as cnt FROM vaultu_courses`).catch(() => [[{ cnt: 0 }]]) as any[];
-        const cnt = Number(((courseCount as any[])[0] ?? [{ cnt: 0 }])[0]?.cnt ?? 0);
+        const courseCount = extractRows(await db.db.execute(sql`SELECT COUNT(*) as cnt FROM vaultu_courses`));
+        const cnt = Number(courseCount[0]?.cnt ?? 0);
         const output = await gptRun(
           "You are the VaultU Curriculum Agent. You build and maintain the VaultU course catalog and track student outcomes.",
           `VaultU has ${cnt} courses. Generate: 1) Curriculum gap analysis (what courses are missing that creators need most), 2) Top 5 course ideas with market demand assessment, 3) Course quality rubric (what makes a 5-star VaultU course), 4) Student completion rate optimization strategies, 5) Course launch checklist.`,
@@ -866,7 +869,7 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
         // Pull agent definition from DB
         const agentRows = await db.db.execute(sql`
           SELECT name, description, tasks, inputs, outputs FROM empire_agents WHERE slug = ${agentSlug} LIMIT 1
-        `).catch(() => [[]]) as any[];
+        `);
         const agent = extractRows(agentRows)[0];
         if (!agent) {
           return { outcome: `Agent ${agentSlug} not found in database.`, revenue: 0, status: "failed", action: "agent_not_found" };
@@ -888,8 +891,8 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
 }
 
 // ── Log telemetry event ────────────────────────────────────────────────────────
-async function logTelemetry(agentSlug: string, agentName: string, category: string, taskType: string, status: string, outcome: string, revenue: number) {
-  const eventId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+async function logTelemetry(agentSlug: string, agentName: string, category: string, taskType: string, status: string, outcome: string, revenue: number): Promise<string> {
+  const eventId = randomUUID();
   const now = new Date();
   try {
     await db.db.execute(sql`
@@ -898,7 +901,10 @@ async function logTelemetry(agentSlug: string, agentName: string, category: stri
       VALUES
         (${eventId}, ${agentSlug}, ${agentName}, ${category}, ${taskType}, ${status}, ${now}, ${now}, ${outcome.slice(0, 1000)}, ${revenue})
     `);
-  } catch { /* ignore telemetry failures */ }
+  } catch (telemetryError) {
+    throw new Error(`Agent telemetry persistence failed for ${agentSlug}: ${telemetryError instanceof Error ? telemetryError.message : String(telemetryError)}`);
+  }
+  return eventId;
 }
 
 // ── Agent metadata map ─────────────────────────────────────────────────────────
@@ -958,29 +964,23 @@ const AGENT_META: Record<string, { name: string; category: string; taskType: str
 export const challengeAutomationRouter = router({
 
   getActiveChallenge: protectedProcedure.query(async () => {
-    try {
-      const result = await db.db.execute(sql`SELECT * FROM empire_challenges WHERE status = 'active' ORDER BY week_number ASC LIMIT 1`);
-      const rows = extractRows(result);
-      return rows[0] ?? null;
-    } catch (e) { return null; }
+    const result = await db.db.execute(sql`SELECT * FROM empire_challenges WHERE status = 'active' ORDER BY week_number ASC LIMIT 1`);
+    const rows = extractRows(result);
+    return rows[0] ?? null;
   }),
 
   getAllChallenges: protectedProcedure.query(async () => {
-    try {
-      const result = await db.db.execute(sql`SELECT * FROM empire_challenges ORDER BY week_number ASC`);
-      return extractRows(result);
-    } catch { return []; }
+    const result = await db.db.execute(sql`SELECT * FROM empire_challenges ORDER BY week_number ASC`);
+    return extractRows(result);
   }),
 
   getChallengeTransactions: protectedProcedure
     .input(z.object({ challengeId: z.number().optional() }))
     .query(async ({ input }) => {
-      try {
-        const result = input.challengeId
-          ? await db.db.execute(sql`SELECT * FROM empire_challenge_transactions WHERE challenge_id = ${input.challengeId} ORDER BY recorded_at DESC LIMIT 50`)
-          : await db.db.execute(sql`SELECT * FROM empire_challenge_transactions ORDER BY recorded_at DESC LIMIT 50`);
-        return extractRows(result);
-      } catch { return []; }
+      const result = input.challengeId
+        ? await db.db.execute(sql`SELECT * FROM empire_challenge_transactions WHERE challenge_id = ${input.challengeId} ORDER BY recorded_at DESC LIMIT 50`)
+        : await db.db.execute(sql`SELECT * FROM empire_challenge_transactions ORDER BY recorded_at DESC LIMIT 50`);
+      return extractRows(result);
     }),
 
   logChallengeRevenue: protectedProcedure
@@ -1001,7 +1001,7 @@ export const challengeAutomationRouter = router({
     .mutation(async ({ input }) => {
       const { outcome, revenue, status, action } = await executeAgent(input.agentSlug);
       const meta = AGENT_META[input.agentSlug] ?? { name: input.agentName, category: "infra", taskType: "agent_run" };
-      await logTelemetry(input.agentSlug, meta.name, meta.category, meta.taskType, status, outcome, revenue);
+      const eventId = await logTelemetry(input.agentSlug, meta.name, meta.category, meta.taskType, status, outcome, revenue);
 
       if (input.creditToChallenge && revenue > 0) {
         try {
@@ -1011,10 +1011,12 @@ export const challengeAutomationRouter = router({
             await db.db.execute(sql`INSERT INTO empire_challenge_transactions (challenge_id, amount, source, description) VALUES (${crows[0].id}, ${revenue}, ${input.agentSlug}, ${outcome.slice(0, 200)})`);
             await db.db.execute(sql`UPDATE empire_challenges SET current_revenue = current_revenue + ${revenue}, status = CASE WHEN current_revenue + ${revenue} >= target_revenue THEN 'met' ELSE status END, timestamp_met = CASE WHEN current_revenue + ${revenue} >= target_revenue AND timestamp_met IS NULL THEN NOW() ELSE timestamp_met END WHERE id = ${crows[0].id}`);
           }
-        } catch { /* ignore */ }
+        } catch (challengeCreditError) {
+          throw new Error(`Challenge revenue credit failed for ${input.agentSlug}: ${challengeCreditError instanceof Error ? challengeCreditError.message : String(challengeCreditError)}`);
+        }
       }
 
-      return { agentSlug: input.agentSlug, status, outcome, revenue, action, eventId: `${Date.now()}` };
+      return { agentSlug: input.agentSlug, status, outcome, revenue, action, eventId };
     }),
 
   // Run ALL agents — full real execution cycle
@@ -1028,8 +1030,8 @@ export const challengeAutomationRouter = router({
       for (const slug of allSlugs) {
         const { outcome, revenue, status, action } = await executeAgent(slug);
         const meta = AGENT_META[slug];
-        await logTelemetry(slug, meta.name, meta.category, meta.taskType, status, outcome, revenue);
-        results.push({ agentSlug: slug, status, revenue, outcome, action });
+        const eventId = await logTelemetry(slug, meta.name, meta.category, meta.taskType, status, outcome, revenue);
+        results.push({ agentSlug: slug, status, revenue, outcome, action, eventId } as any);
         totalRevenue += revenue;
       }
 
@@ -1041,7 +1043,9 @@ export const challengeAutomationRouter = router({
             await db.db.execute(sql`INSERT INTO empire_challenge_transactions (challenge_id, amount, source, description) VALUES (${crows[0].id}, ${totalRevenue}, 'agent_swarm', 'Full real execution cycle — ${allSlugs.length} agents ran')`);
             await db.db.execute(sql`UPDATE empire_challenges SET current_revenue = current_revenue + ${totalRevenue}, status = CASE WHEN current_revenue + ${totalRevenue} >= target_revenue THEN 'met' ELSE status END, timestamp_met = CASE WHEN current_revenue + ${totalRevenue} >= target_revenue AND timestamp_met IS NULL THEN NOW() ELSE timestamp_met END WHERE id = ${crows[0].id}`);
           }
-        } catch { /* ignore */ }
+        } catch (challengeCreditError) {
+          throw new Error(`Full-cycle challenge revenue credit failed: ${challengeCreditError instanceof Error ? challengeCreditError.message : String(challengeCreditError)}`);
+        }
       }
 
       return {
@@ -1070,7 +1074,7 @@ export const challengeAutomationRouter = router({
       const agentStats = (agentStatsRows as any[])[0] ?? { total_runs: 0, successes: 0, total_revenue: 0 };
 
       // Get recent agent reports
-      const reportsResult = await db.db.execute(sql`SELECT agent_name, report_type, content, revenue_impact, created_at FROM empire_agent_reports ORDER BY created_at DESC LIMIT 10`).catch(() => [[]]);
+      const reportsResult = await db.db.execute(sql`SELECT agent_name, report_type, content, revenue_impact, created_at FROM empire_agent_reports ORDER BY created_at DESC LIMIT 10`);
       const recentReports = extractRows(reportsResult);
 
       return {
@@ -1085,7 +1089,7 @@ export const challengeAutomationRouter = router({
         },
       };
     } catch (e) {
-      return { challenges: [], activeChallenge: null, recentTransactions: [], recentReports: [], agentStats: { totalRuns: 0, successes: 0, totalRevenue: 0 } };
+      throw new Error(`Challenge dashboard query failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   }),
 
@@ -1093,12 +1097,10 @@ export const challengeAutomationRouter = router({
   getAgentReports: protectedProcedure
     .input(z.object({ agentSlug: z.string().optional(), limit: z.number().default(20) }))
     .query(async ({ input }) => {
-      try {
-        const result = input.agentSlug
-          ? await db.db.execute(sql`SELECT * FROM empire_agent_reports WHERE agent_slug = ${input.agentSlug} ORDER BY created_at DESC LIMIT ${input.limit}`)
-          : await db.db.execute(sql`SELECT * FROM empire_agent_reports ORDER BY created_at DESC LIMIT ${input.limit}`);
-        return extractRows(result);
-      } catch { return []; }
+      const result = input.agentSlug
+        ? await db.db.execute(sql`SELECT * FROM empire_agent_reports WHERE agent_slug = ${input.agentSlug} ORDER BY created_at DESC LIMIT ${input.limit}`)
+        : await db.db.execute(sql`SELECT * FROM empire_agent_reports ORDER BY created_at DESC LIMIT ${input.limit}`);
+      return extractRows(result);
     }),
 
   // Generate challenge story post content

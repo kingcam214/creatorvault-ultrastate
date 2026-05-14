@@ -26,14 +26,16 @@ export function AgentRoster() {
   const [runningAll, setRunningAll] = useState(false);
   const [lastRunResult, setLastRunResult] = useState<Record<string, { outcome: string; status: string; action: string }>>({});
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+  const [cycleError, setCycleError] = useState<string | null>(null);
 
   const agentsQuery = trpc.empireAgents.getEmpireAgents.useQuery();
-  const reportsQuery = trpc.challengeAutomation.getAgentReports.useQuery({ limit: 50 });
+  const reportsQuery = trpc.empireAgents.getAgentReports.useQuery({ limit: 50 });
   const runAgentMut = trpc.challengeAutomation.runAgent.useMutation();
   const runAllMut = trpc.challengeAutomation.runFullCycle.useMutation();
 
   const agents = (agentsQuery.data ?? []) as any[];
-  const reports = (reportsQuery.data ?? []) as any[];
+  const reports = ((reportsQuery.data as any)?.reports ?? []) as any[];
+  const dataSourceError = agentsQuery.error?.message || reportsQuery.error?.message || null;
 
   const reportMap: Record<string, any> = {};
   for (const r of reports) {
@@ -57,6 +59,7 @@ export function AgentRoster() {
     if (runningAgent) return;
     setRunningAgent(agent.slug);
     try {
+      setCycleError(null);
       const result = await runAgentMut.mutateAsync({
         agentSlug: agent.slug,
         agentName: agent.name,
@@ -81,6 +84,7 @@ export function AgentRoster() {
     if (runningAll) return;
     setRunningAll(true);
     try {
+      setCycleError(null);
       const result = await runAllMut.mutateAsync({ creditToChallenge: true });
       const newResults: Record<string, { outcome: string; status: string; action: string }> = {};
       for (const r of result.results) {
@@ -88,7 +92,7 @@ export function AgentRoster() {
       }
       setLastRunResult(newResults);
     } catch (e: any) {
-      console.error('Run all failed:', e);
+      setCycleError(e?.message ?? 'Full agent cycle failed before verified DB-backed completion.');
     } finally {
       setRunningAll(false);
       agentsQuery.refetch();
@@ -103,8 +107,8 @@ export function AgentRoster() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Bot size={28} color={T.gold} />
           <div>
-            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: '-0.5px' }}>Agent Roster</h1>
-            <p style={{ margin: 0, fontSize: 12, color: T.muted }}>All {agents.length} empire agents — real execution, real results</p>
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: '-0.5px' }}>AI Agents + Platform Tools Challenge Roster</h1>
+            <p style={{ margin: 0, fontSize: 12, color: T.muted }}>DB-backed agent inventory, saved reports, and live challenge execution. No synthetic telemetry.</p>
           </div>
         </div>
         <button
@@ -142,7 +146,7 @@ export function AgentRoster() {
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: 6 }}>
-          {['all', 'active', 'inactive'].map(f => (
+          {['all', 'active', 'inactive', 'paused', 'failed'].map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
               background: filter === f ? T.gold : T.surface, color: filter === f ? '#0a0a0a' : T.muted,
               border: `1px solid ${filter === f ? T.gold : T.border}`, borderRadius: 6, padding: '6px 14px',
@@ -166,6 +170,22 @@ export function AgentRoster() {
       {agentsQuery.isPending && (
         <div style={{ color: T.muted, fontSize: 13, padding: 40, textAlign: 'center' }}>
           <div style={{ marginBottom: 8 }}>⟳ Loading agents...</div>
+        </div>
+      )}
+
+
+
+      {dataSourceError && (
+        <div style={{ background: T.errorDim, border: `1px solid ${T.error}66`, borderRadius: 12, padding: 14, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: T.error, marginBottom: 4 }}>Live DB-backed roster failed to load</div>
+          <div style={{ fontSize: 12, color: T.text, whiteSpace: 'pre-wrap' }}>{dataSourceError}</div>
+        </div>
+      )}
+
+      {cycleError && (
+        <div style={{ background: T.errorDim, border: `1px solid ${T.error}66`, borderRadius: 12, padding: 14, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: T.error, marginBottom: 4 }}>Full-cycle execution failed before verified completion</div>
+          <div style={{ fontSize: 12, color: T.text, whiteSpace: 'pre-wrap' }}>{cycleError}</div>
         </div>
       )}
 
@@ -291,7 +311,7 @@ export function AgentRoster() {
 
         {filtered.length === 0 && !agentsQuery.isPending && (
           <div style={{ color: T.muted, fontSize: 13, gridColumn: '1/-1', padding: 40, textAlign: 'center' }}>
-            No agents found for the selected filters.
+            No DB-backed agents matched the selected filters. Clear the filters or repair the production agent seed data.
           </div>
         )}
       </div>

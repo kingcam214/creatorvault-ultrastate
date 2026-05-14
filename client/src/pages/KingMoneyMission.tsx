@@ -9,15 +9,17 @@ function ProgressBar({ value, max, color = T.gold }: { value: number; max: numbe
 export function KingMoneyMission() {
   const [running, setRunning] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
+  const [cycleError, setCycleError] = useState<string | null>(null);
   const dashQ = trpc.challengeAutomation.getChallengeDashboard.useQuery(undefined, { refetchInterval: 30000 });
   const runCycle = trpc.challengeAutomation.runFullCycle.useMutation({
-    onSuccess: (d) => { setLastResult(d); setRunning(false); dashQ.refetch(); },
-    onError: () => setRunning(false),
+    onSuccess: (d) => { setLastResult(d); setCycleError(null); setRunning(false); dashQ.refetch(); },
+    onError: (e: any) => { setCycleError(e?.message ?? 'Agent cycle failed before verified DB-backed completion.'); setRunning(false); },
   });
   const dash = dashQ.data;
   const active = dash?.activeChallenge as any;
   const txns = dash?.recentTransactions ?? [];
   const stats = dash?.agentStats ?? { totalRuns: 0, successes: 0, totalRevenue: 0 };
+  const dashboardError = dashQ.error?.message ?? null;
   const challenges = dash?.challenges ?? [];
   const cur = parseFloat(active?.current_revenue ?? '0');
   const tgt = parseFloat(active?.target_revenue ?? '5000');
@@ -32,13 +34,25 @@ export function KingMoneyMission() {
         </div>
         <div style={{ marginLeft: 'auto' }}>
           <button
-            onClick={() => { setRunning(true); runCycle.mutate({ creditToChallenge: true }); }}
+            onClick={() => { setCycleError(null); setRunning(true); runCycle.mutate({ creditToChallenge: true }); }}
             disabled={running}
             style={{ background: running ? '#1a1a1a' : T.gold, color: running ? T.muted : '#0a0a0a', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 700, fontSize: 13, cursor: running ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Zap size={15} />{running ? 'Running Agents...' : 'Run Full Agent Cycle'}
           </button>
         </div>
       </div>
+      {dashboardError && (
+        <div style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.error }}>Live challenge dashboard failed to load</div>
+          <div style={{ fontSize: 12, color: T.text, marginTop: 4, whiteSpace: 'pre-wrap' }}>{dashboardError}</div>
+        </div>
+      )}
+      {cycleError && (
+        <div style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.error }}>Full-cycle execution failed before verified completion</div>
+          <div style={{ fontSize: 12, color: T.text, marginTop: 4, whiteSpace: 'pre-wrap' }}>{cycleError}</div>
+        </div>
+      )}
       {active && (
         <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 24, marginBottom: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
@@ -78,7 +92,7 @@ export function KingMoneyMission() {
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>All Challenges</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>AI Challenge Weeks</div>
           {challenges.map((c: any, i: number) => {
             const cv = parseFloat(c.current_revenue ?? '0');
             const tv = parseFloat(c.target_revenue ?? '5000');
@@ -97,7 +111,7 @@ export function KingMoneyMission() {
         </div>
         <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Recent Revenue Transactions</div>
-          {txns.length === 0 && <div style={{ color: T.muted, fontSize: 13 }}>No transactions yet. Run an agent cycle to generate revenue.</div>}
+          {txns.length === 0 && <div style={{ color: T.muted, fontSize: 13 }}>No verified challenge transactions are present in the live database for this ledger.</div>}
           {txns.slice(0, 15).map((tx: any, i: number) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${T.border}`, paddingBottom: 8, marginBottom: 8 }}>
               <div>

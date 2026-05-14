@@ -6,13 +6,9 @@ const T = { bg: '#0a0a0a', surface: '#111', border: '#1e1e1e', gold: '#c9a84c', 
 export default function AgentApprovalInbox() {
   const [filter, setFilter] = useState('pending');
 
-  // Use the challengeAutomation router to get recent transactions as "approvals"
   const txnsQuery = trpc.challengeAutomation.getChallengeTransactions.useQuery({});
-  const logRevMut = trpc.challengeAutomation.logChallengeRevenue.useMutation({
-    onSuccess: () => txnsQuery.refetch(),
-  });
 
-  // Use agentTelemetry for recent events
+  // Use agentTelemetry for real execution events.
   const eventsQuery = trpc.agentTelemetry.getRecentEvents.useQuery({ pageSize: 30 });
   const events = ((eventsQuery.data as any)?.data ?? []) as any[];
   const txns = (txnsQuery.data ?? []) as any[];
@@ -22,6 +18,7 @@ export default function AgentApprovalInbox() {
   const failed = events.filter((e: any) => e.status === 'failed');
 
   const displayed = filter === 'pending' ? pending : filter === 'completed' ? completed : filter === 'failed' ? failed : events;
+  const dataSourceError = eventsQuery.error?.message || txnsQuery.error?.message || null;
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, color: T.text, padding: '24px 20px' }}>
@@ -29,7 +26,7 @@ export default function AgentApprovalInbox() {
         <Inbox size={26} color={T.gold} />
         <div>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Agent Approval Inbox</h1>
-          <p style={{ margin: 0, fontSize: 12, color: T.muted }}>Review and approve agent actions, revenue credits, and task completions</p>
+          <p style={{ margin: 0, fontSize: 12, color: T.muted }}>Live DB-backed agent events, verified task outcomes, and challenge transaction visibility</p>
         </div>
       </div>
 
@@ -55,16 +52,17 @@ export default function AgentApprovalInbox() {
         ))}
       </div>
 
-      {/* Quick approve revenue */}
+      {dataSourceError && (
+        <div style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.error }}>Live approval inbox failed to load</div>
+          <div style={{ fontSize: 12, color: T.text, marginTop: 4, whiteSpace: 'pre-wrap' }}>{dataSourceError}</div>
+        </div>
+      )}
+
       <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: T.gold, marginBottom: 10 }}>Manual Revenue Approval</div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          {[97, 197, 297, 497, 997].map(amt => (
-            <button key={amt} onClick={() => logRevMut.mutate({ amount: amt, source: 'manual_approval', description: `Manual revenue approval — $${amt}` })} style={{ background: '#1a1a1a', border: `1px solid ${T.border}`, borderRadius: 6, padding: '6px 14px', color: T.success, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
-              +${amt}
-            </button>
-          ))}
-          <span style={{ fontSize: 11, color: T.muted }}>Click to credit revenue to active challenge</span>
+        <div style={{ fontSize: 12, fontWeight: 700, color: T.gold, marginBottom: 10 }}>Verified Challenge Ledger</div>
+        <div style={{ fontSize: 12, color: T.muted }}>
+          This inbox does not create fixed-amount revenue credits. It displays live agent telemetry and the {txns.length} verified challenge transaction{txns.length === 1 ? '' : 's'} already recorded by backend workflows.
         </div>
       </div>
 
@@ -91,7 +89,7 @@ export default function AgentApprovalInbox() {
         ))}
         {displayed.length === 0 && !eventsQuery.isPending && (
           <div style={{ color: T.muted, fontSize: 13, padding: 20, textAlign: 'center' }}>
-            No {filter === 'all' ? '' : filter} events found. Run an agent cycle from King Money Mission to generate events.
+            No {filter === 'all' ? '' : filter} DB-backed agent events are currently recorded for this filter.
           </div>
         )}
       </div>
