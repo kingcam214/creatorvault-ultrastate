@@ -142,8 +142,8 @@ export async function sendFreeChannelDrop(input: DropInput): Promise<DropResult>
     await db.execute(
       `INSERT INTO telegram_message_events
          (telegram_id, direction, message_type, message_text, tracking_code)
-       VALUES (?, 'outbound', 'channel_drop', ?, ?)`,
-      [FREE_CHAT_ID, input.caption, trackingCode]
+       VALUES (?, 'outbound', ?, ?, ?)`,
+      [FREE_CHAT_ID, input.teaserUrl ? "video" : "text", input.caption, trackingCode]
     );
 
     return {
