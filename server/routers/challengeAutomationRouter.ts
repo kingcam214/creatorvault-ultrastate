@@ -9,6 +9,7 @@ import OpenAI from "openai";
 import Stripe from "stripe";
 import * as db from "../db";
 import { sql } from "drizzle-orm";
+import { sendFreeChannelDrop } from "../services/telegramMoneyLoop";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // @ts-ignore
@@ -28,7 +29,14 @@ const MONETIZATION_BOT_TOKEN = process.env.TELEGRAM_MONETIZATION_BOT_TOKEN || ""
 const OWNER_CHAT_ID = process.env.TELEGRAM_OWNER_CHAT_ID || process.env.TELEGRAM_KINGCAM_CHAT_ID || "";
 
 // ── Real Telegram message sender ──────────────────────────────────────────────
-async function sendTelegram(token: string, chatId: string, text: string): Promise<boolean> {
+async function sendTelegram(
+  token: string,
+  chatId: string,
+  text: string,
+  messageType = "agent_owner_alert",
+  trackingCode: string | null = null
+): Promise<boolean> {
+  if (!token || !chatId) return false;
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
@@ -36,8 +44,51 @@ async function sendTelegram(token: string, chatId: string, text: string): Promis
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
     });
     const data = await res.json() as any;
-    return data.ok === true;
+    const ok = data.ok === true;
+    if (ok) {
+      await db.db.execute(sql`
+        INSERT INTO telegram_message_events (telegram_id, direction, message_type, message_text, tracking_code)
+        VALUES (${String(chatId)}, 'outbound', ${messageType}, ${text.slice(0, 1000)}, ${trackingCode})
+      `).catch(() => {});
+    }
+    return ok;
   } catch { return false; }
+}
+
+function escapeTelegramHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+async function fireVaultXMoneyDrop(params: {
+  agentSlug: string;
+  title: string;
+  output: string;
+  price: number;
+}): Promise<string> {
+  const teaser = escapeTelegramHtml(params.output.replace(/\s+/g, " ").slice(0, 520));
+  const caption = (
+    `<b>${escapeTelegramHtml(params.title)}</b>\n\n` +
+    `${teaser}\n\n` +
+    `<b>Tonight's VaultX unlock is live.</b> Tap below to open the paid CreatorVault/VaultX offer and push the $5K challenge forward.`
+  ).slice(0, 1000);
+
+  const drop = await sendFreeChannelDrop({
+    caption,
+    price: params.price,
+    creatorId: 1,
+  });
+
+  await saveAgentReport(
+    params.agentSlug,
+    params.title,
+    "telegram_money_drop",
+    `Tracked VaultX Telegram drop fired. ok=${drop.ok}; trackingCode=${drop.trackingCode}; trackingUrl=${drop.trackingUrl}; messageId=${drop.messageId ?? "none"}; error=${drop.error ?? "none"}`,
+  );
+
+  return `vaultx_drop_${drop.ok ? "sent" : "failed"}:${drop.trackingUrl}`;
 }
 
 // ── Real GPT call with system context ─────────────────────────────────────────
@@ -231,8 +282,14 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
           600
         );
         await saveAgentReport(agentSlug, "Money Follow-Up Agent", "recovery_sequences", output);
-        await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💰 <b>Money Follow-Up Agent</b>\n\n${output.slice(0, 800)}`);
-        return { outcome: output, revenue: 0, status: "success", action: "recovery_sequences_generated + telegram_sent" };
+        const ownerSent = await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💰 <b>Money Follow-Up Agent</b>\n\n${escapeTelegramHtml(output.slice(0, 800))}`, "money_follow_up_owner_alert");
+        const dropAction = await fireVaultXMoneyDrop({
+          agentSlug,
+          title: "Money Follow-Up Agent",
+          output,
+          price: 29,
+        });
+        return { outcome: `${output}\n\nOwner Telegram sent: ${ownerSent}. ${dropAction}`, revenue: 0, status: "success", action: `recovery_sequences_generated + owner_telegram_${ownerSent ? "sent" : "failed"} + ${dropAction}` };
       }
 
       // ── 10. KingCam Clone Agent ───────────────────────────────────────────────
@@ -243,7 +300,13 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
           600
         );
         await saveAgentReport(agentSlug, "KingCam Clone Agent", "demo_script", output);
-        return { outcome: output, revenue: 0, status: "success", action: "demo_script_generated" };
+        const dropAction = await fireVaultXMoneyDrop({
+          agentSlug,
+          title: "KingCam Clone Agent",
+          output,
+          price: 49,
+        });
+        return { outcome: `${output}\n\n${dropAction}`, revenue: 0, status: "success", action: `demo_script_generated + ${dropAction}` };
       }
 
       // ── 11. Hollywood Show Agent ──────────────────────────────────────────────
