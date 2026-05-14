@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { randomUUID } from "crypto";
 import { router, protectedProcedure } from "../_core/trpc";
 import * as db from "../db";
 import { eq, desc, gte, and, sql } from "drizzle-orm";
@@ -180,7 +181,7 @@ export const agentTelemetryRouter = router({
       metadata: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ input }) => {
-      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const id = randomUUID();
       const now = new Date();
       await db.db.execute(sql`
         INSERT INTO agent_telemetry_events

@@ -16,7 +16,7 @@ const C = {
 
 const platforms = ["tiktok", "instagram", "youtube", "x"] as const;
 
-export function PresentationEmpire() {
+export function PresentationEmpireCockpit() {
   const [handle, setHandle] = useState("");
   const [platform, setPlatform] = useState<(typeof platforms)[number]>("instagram");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "scraping" | "auditing" | "rendering" | "packaging" | "complete" | "failed">("all");
@@ -124,5 +124,5 @@ const th: React.CSSProperties = { textAlign: "left", color: C.sub, borderBottom:
 const td: React.CSSProperties = { borderBottom: `1px solid ${C.border}`, padding: "12px 10px", color: C.text, fontSize: 14 };
 const activity: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1.2fr auto", gap: 10, padding: "12px 0", borderBottom: `1px solid ${C.border}`, color: C.sub };
 
-export default PresentationEmpire;
+export default PresentationEmpireCockpit;
 

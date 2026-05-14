@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { randomUUID } from "crypto";
 import { router, protectedProcedure } from "../_core/trpc";
 import OpenAI from "openai";
 import * as db from "../db";
@@ -74,7 +75,7 @@ export const aiEmpireRouter = router({
     };
     const completion = await openai.chat.completions.create({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompts[input.engine] ?? `Run the ${input.engine} engine and report results.` }], max_tokens: 400 });
     const result = completion.choices[0].message.content ?? "Engine triggered.";
-    const eventId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const eventId = randomUUID();
     const now = new Date();
     try {
       await db.db.execute(sql`INSERT INTO agent_telemetry_events (id, agent_id, agent_name, agent_category, task_type, status, started_at, finished_at, outcome, revenue_generated) VALUES (${eventId}, ${input.engine}, ${ENGINE_CONFIGS[input.engine]?.name ?? input.engine}, 'analytics', 'engine_trigger', 'success', ${now}, ${now}, ${result}, 0)`);
@@ -88,7 +89,7 @@ export const aiEmpireRouter = router({
     const challengeId = challengeRows[0].id;
     await db.db.execute(sql`INSERT INTO empire_challenge_transactions (challenge_id, amount, source, description) VALUES (${challengeId}, ${input.amount}, ${input.engine}, ${input.description ?? `${ENGINE_CONFIGS[input.engine]?.name} revenue`})`);
     await db.db.execute(sql`UPDATE empire_challenges SET current_revenue = current_revenue + ${input.amount}, status = CASE WHEN current_revenue + ${input.amount} >= target_revenue THEN 'met' ELSE status END, timestamp_met = CASE WHEN current_revenue + ${input.amount} >= target_revenue AND timestamp_met IS NULL THEN NOW() ELSE timestamp_met END WHERE id = ${challengeId}`);
-    const eventId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const eventId = randomUUID();
     const now = new Date();
     await db.db.execute(sql`INSERT INTO agent_telemetry_events (id, agent_id, agent_name, agent_category, task_type, status, started_at, finished_at, outcome, revenue_generated) VALUES (${eventId}, ${input.engine}, ${ENGINE_CONFIGS[input.engine]?.name ?? input.engine}, 'sales', 'revenue_logged', 'success', ${now}, ${now}, ${input.description ?? `$${input.amount} logged from ${input.engine}`}, ${input.amount})`);
     return { success: true, amount: input.amount, engine: input.engine };
