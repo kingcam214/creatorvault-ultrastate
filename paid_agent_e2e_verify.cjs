@@ -72,18 +72,17 @@ async function countRecent(conn, table, dateCol) {
       result.proof[`${table}Counts`] = await countRecent(conn, table, col);
     }
 
-    if (await tableExists(conn, 'telegram_drops')) {
-      const [drops] = await conn.query('SELECT id, tracking_code, product_name, price, status, created_at FROM telegram_drops ORDER BY created_at DESC LIMIT 15');
-      result.proof.recentTelegramDrops = safeRows(drops, 15);
+    async function sampleTable(table, dateCol, keyName) {
+      if (!(await tableExists(conn, table))) return;
+      const [cols] = await conn.query('SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? ORDER BY ordinal_position', [table]);
+      result.proof[`${keyName}Columns`] = cols.map((r) => r.COLUMN_NAME || r.column_name);
+      const orderCol = result.proof[`${keyName}Columns`].includes(dateCol) ? dateCol : result.proof[`${keyName}Columns`][0];
+      const [rows] = await conn.query(`SELECT * FROM ${table} ORDER BY ${orderCol} DESC LIMIT 15`);
+      result.proof[keyName] = safeRows(rows, 15);
     }
-    if (await tableExists(conn, 'distribution_jobs')) {
-      const [jobs] = await conn.query('SELECT id, channel, status, target_url, created_at, updated_at FROM distribution_jobs ORDER BY created_at DESC LIMIT 15');
-      result.proof.recentDistributionJobs = safeRows(jobs, 15);
-    }
-    if (await tableExists(conn, 'telegram_message_events')) {
-      const [events] = await conn.query('SELECT id, event_type, tracking_code, created_at FROM telegram_message_events ORDER BY created_at DESC LIMIT 20');
-      result.proof.recentTelegramEvents = safeRows(events, 20);
-    }
+    await sampleTable('telegram_drops', 'created_at', 'recentTelegramDrops');
+    await sampleTable('distribution_jobs', 'created_at', 'recentDistributionJobs');
+    await sampleTable('telegram_message_events', 'created_at', 'recentTelegramEvents');
 
     const [recentErrors] = await conn.query(`SELECT id, agent_slug, agent_name, report_type, created_at, LEFT(content, 1000) AS content_preview
       FROM empire_agent_reports
