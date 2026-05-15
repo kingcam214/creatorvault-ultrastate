@@ -11,6 +11,7 @@ import Stripe from "stripe";
 import * as db from "../db";
 import { sql } from "drizzle-orm";
 import { sendFreeChannelDrop } from "../services/telegramMoneyLoop";
+import { getRecentChallengeExecutions, runChallengeEndToEnd } from "../services/challengeEndToEndExecutor";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // @ts-ignore
@@ -1116,6 +1117,23 @@ export const challengeAutomationRouter = router({
     .mutation(async ({ input }) => runChallengeAutomationCycle(input.mode)),
 
   startAutonomousLoop: protectedProcedure.mutation(async () => startChallengeAutomationCron()),
+
+  runChallengeEndToEnd: protectedProcedure
+    .input(z.object({
+      taskSlug: z.string().min(2),
+      taskName: z.string().optional(),
+      priceCents: z.number().int().min(0).optional(),
+      mode: z.enum(["dry_run", "create_checkout", "send_telegram"]).default("dry_run"),
+      audience: z.string().optional(),
+      offerUrl: z.string().url().optional(),
+      creatorId: z.number().int().positive().optional(),
+      requireConfirmation: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => runChallengeEndToEnd(input)),
+
+  getRecentChallengeExecutions: protectedProcedure
+    .input(z.object({ limit: z.number().int().min(1).max(100).default(20) }))
+    .query(async ({ input }) => getRecentChallengeExecutions(input.limit)),
 
   getActiveChallenge: protectedProcedure.query(async () => {
     const result = await db.db.execute(sql`SELECT * FROM empire_challenges WHERE status = 'active' ORDER BY week_number ASC LIMIT 1`);
