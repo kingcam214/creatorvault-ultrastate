@@ -280,9 +280,9 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
       case "money-follow-up-agent": {
         // Pull real failed/pending subscriptions from DB
         const failedSubs = await db.db.execute(sql`
-          SELECT s.id, u.email, s.status, s.amount FROM subscriptions s
-          LEFT JOIN users u ON s.user_id = u.id
-          WHERE s.status IN ('past_due', 'incomplete', 'canceled') LIMIT 10
+          SELECT s.id, CONCAT('fan#', s.fan_id) AS email, s.status, COALESCE(st.price_in_cents, 0) AS amount FROM subscriptions s
+          LEFT JOIN subscription_tiers st ON s.tier_id = st.id
+          WHERE s.status IN ('past_due', 'unpaid', 'canceled') LIMIT 10
         `);
         const subList = extractRows(failedSubs).map((s: any) => `${s.email} ($${(s.amount || 0) / 100})`).join(", ");
         const output = await gptRun(
@@ -795,7 +795,7 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
 
       // ── 44. VaultMarket Product Agent ─────────────────────────────────────────
       case "vaultmarket-product-agent": {
-        const products = extractRows(await db.db.execute(sql`SELECT COUNT(*) as cnt FROM products WHERE status = 'active'`));
+        const products = extractRows(await db.db.execute(sql`SELECT COUNT(*) as cnt FROM marketplace_products WHERE status = 'active'`));
         const productCount = Number(products[0]?.cnt ?? 0);
         const output = await gptRun(
           "You are the VaultMarket Product Agent. You manage digital product listings, descriptions, pricing, and sales optimization.",
@@ -809,8 +809,8 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
       // ── 45. VaultMarket Commission Agent ──────────────────────────────────────
       case "vaultmarket-commission-agent": {
         const commissions = extractRows(await db.db.execute(sql`
-          SELECT SUM(platform_fee_cents) as platform_total, SUM(creator_payout_cents) as creator_total, COUNT(*) as tx_count
-          FROM marketplace_transactions WHERE status = 'completed' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          SELECT COALESCE(SUM(platform_amount), 0) as platform_total, COALESCE(SUM(creator_amount), 0) as creator_total, COUNT(*) as tx_count
+          FROM marketplace_product_orders WHERE status IN ('paid','fulfilled') AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         `));
         const commData = commissions[0] ?? { platform_total: 0, creator_total: 0, tx_count: 0 };
         const platformTotal = parseFloat(commData.platform_total ?? 0) / 100;
@@ -1013,7 +1013,7 @@ export async function runChallengeAutomationCycle(mode: "priority" | "full" = "p
     await ensureAgentReportsSchema();
     await db.db.execute(sql`
       INSERT INTO empire_agent_reports (agent_slug, agent_name, report_type, content, revenue_impact, created_at)
-      VALUES ('vaultx-autonomous-agent-swarm', 'VaultX Autonomous Agent Swarm', 'autonomous_cycle_started', ${`Started ${mode} autonomous challenge cycle with ${slugs.length} revenue-focused agents.`}, 0, NOW())
+      VALUES ('ai-agent-only-challenge-swarm', 'AI Agent Only Challenge Swarm', 'autonomous_cycle_started', ${`Started ${mode} autonomous challenge cycle with ${slugs.length} revenue-focused agents.`}, 0, NOW())
     `);
 
     for (const slug of slugs) {
