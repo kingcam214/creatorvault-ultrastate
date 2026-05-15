@@ -22,6 +22,7 @@ import { registerTelegramConnectRoutes } from "../services/telegramConnectRoute"
 import { startDailyDropCron } from "../services/telegramDailyDropEngine";
 import { startReactivationCron } from "../services/telegramBuyerReactivation";
 import { startVaultXAcquisitionCron } from "../services/vaultxAutonomousAcquisitionOperator";
+import { startChallengeAutomationCron } from "../routers/challengeAutomationRouter";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -49,6 +50,9 @@ async function startServer() {
   startReactivationCron();
   if (process.env.VAULTX_ACQUISITION_AUTORUN !== "false") {
     startVaultXAcquisitionCron().catch(error => console.error("[VaultX Acquisition] failed to start autonomous operator", error));
+  }
+  if (process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN !== "false") {
+    startChallengeAutomationCron().catch(error => console.error("[VaultX Challenge Agents] failed to start autonomous challenge-agent loop", error));
   }
   
   const app = express();

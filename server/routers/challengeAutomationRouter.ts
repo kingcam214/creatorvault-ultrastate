@@ -966,8 +966,149 @@ const AGENT_META: Record<string, { name: string; category: string; taskType: str
   "vaultguardian-ip-agent": { name: "VaultGuardian IP Protection Agent", category: "infra", taskType: "ip_protection" },
 };
 
+const REVENUE_PRIORITY_AGENT_SLUGS = [
+  "auto-recruiter-agent",
+  "money-follow-up-agent",
+  "brand-deal-agent",
+  "affiliate-marketing-agent",
+  "monetization-strategy-agent",
+  "stripe-revenue-agent",
+  "telegram-bot-manager-agent",
+  "engagement-agent",
+  "social-autoposter-agent",
+  "viral-optimizer-agent",
+  "vaultlive-revenue-agent",
+  "vaultmarket-product-agent",
+  "vaultmarket-commission-agent",
+  "owner-cockpit-agent",
+  "empire-brain-agent",
+].filter(slug => Boolean(AGENT_META[slug]));
+
+let challengeAutomationInterval: NodeJS.Timeout | null = null;
+let challengeAutomationRunning = false;
+let lastAutonomousCycle: any = null;
+
+async function creditAgentRevenueToActiveChallenge(amount: number, source: string, description: string) {
+  if (!amount || amount <= 0) return null;
+  const cr = await db.db.execute(sql`SELECT id FROM empire_challenges WHERE status = 'active' LIMIT 1`);
+  const crows = extractRows(cr);
+  if (!crows[0]) return null;
+  await db.db.execute(sql`INSERT INTO empire_challenge_transactions (challenge_id, amount, source, description) VALUES (${crows[0].id}, ${amount}, ${source}, ${description.slice(0, 240)})`);
+  await db.db.execute(sql`UPDATE empire_challenges SET current_revenue = current_revenue + ${amount}, status = CASE WHEN current_revenue + ${amount} >= target_revenue THEN 'met' ELSE status END, timestamp_met = CASE WHEN current_revenue + ${amount} >= target_revenue AND timestamp_met IS NULL THEN NOW() ELSE timestamp_met END WHERE id = ${crows[0].id}`);
+  return crows[0].id;
+}
+
+export async function runChallengeAutomationCycle(mode: "priority" | "full" = "priority") {
+  if (challengeAutomationRunning) {
+    return { skipped: true, reason: "challenge_automation_cycle_already_running", lastAutonomousCycle };
+  }
+
+  challengeAutomationRunning = true;
+  const startedAt = new Date();
+  const slugs = mode === "full" ? Object.keys(AGENT_META) : REVENUE_PRIORITY_AGENT_SLUGS;
+  const results: Array<{ agentSlug: string; status: string; revenue: number; action: string; outcome: string; eventId?: string }> = [];
+  let totalRevenue = 0;
+
+  try {
+    await ensureAgentReportsSchema();
+    await db.db.execute(sql`
+      INSERT INTO empire_agent_reports (agent_slug, agent_name, report_type, content, revenue_impact, created_at)
+      VALUES ('vaultx-autonomous-agent-swarm', 'VaultX Autonomous Agent Swarm', 'autonomous_cycle_started', ${`Started ${mode} autonomous challenge cycle with ${slugs.length} revenue-focused agents.`}, 0, NOW())
+    `);
+
+    for (const slug of slugs) {
+      const meta = AGENT_META[slug];
+      try {
+        const { outcome, revenue, status, action } = await executeAgent(slug);
+        const eventId = await logTelemetry(slug, meta.name, meta.category, meta.taskType, status, outcome, revenue);
+        results.push({ agentSlug: slug, status, revenue, action, outcome: outcome.slice(0, 600), eventId });
+        totalRevenue += Number(revenue || 0);
+      } catch (agentError: any) {
+        const outcome = `Autonomous cycle failure: ${agentError?.message || String(agentError)}`;
+        const eventId = await logTelemetry(slug, meta.name, meta.category, meta.taskType, "failed", outcome, 0);
+        results.push({ agentSlug: slug, status: "failed", revenue: 0, action: "autonomous_cycle_error", outcome, eventId });
+      }
+    }
+
+    const challengeId = await creditAgentRevenueToActiveChallenge(
+      totalRevenue,
+      mode === "full" ? "agent_swarm_full_autonomous_cycle" : "agent_swarm_priority_autonomous_cycle",
+      `${mode} autonomous agent cycle completed; ${results.filter(r => r.status === "success").length}/${results.length} agents succeeded`,
+    );
+
+    const summary = {
+      skipped: false,
+      mode,
+      startedAt: startedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      agentsRan: results.length,
+      successCount: results.filter(r => r.status === "success").length,
+      failedCount: results.filter(r => r.status === "failed").length,
+      totalRevenue,
+      challengeId,
+      results,
+    };
+
+    lastAutonomousCycle = summary;
+    await db.db.execute(sql`
+      INSERT INTO empire_agent_reports (agent_slug, agent_name, report_type, content, revenue_impact, created_at)
+      VALUES ('vaultx-autonomous-agent-swarm', 'VaultX Autonomous Agent Swarm', ${`autonomous_${mode}_cycle_completed`}, ${JSON.stringify(summary).slice(0, 12000)}, ${totalRevenue}, NOW())
+    `);
+    return summary;
+  } finally {
+    challengeAutomationRunning = false;
+  }
+}
+
+export function getChallengeAutomationStatus() {
+  return {
+    enabled: process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN !== "false",
+    running: challengeAutomationRunning,
+    intervalActive: Boolean(challengeAutomationInterval),
+    priorityAgentCount: REVENUE_PRIORITY_AGENT_SLUGS.length,
+    lastAutonomousCycle,
+  };
+}
+
+export async function startChallengeAutomationCron() {
+  if (process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN === "false") {
+    console.log("[VaultX Challenge Agents] autonomous challenge-agent loop disabled by VAULTX_CHALLENGE_AGENTS_AUTORUN=false");
+    return getChallengeAutomationStatus();
+  }
+  if (challengeAutomationInterval) return getChallengeAutomationStatus();
+
+  const everyMinutes = Math.max(5, Number(process.env.VAULTX_CHALLENGE_AGENTS_INTERVAL_MINUTES || 30));
+  const runOnBoot = process.env.VAULTX_CHALLENGE_AGENTS_RUN_ON_BOOT !== "false";
+  const fullCycleEvery = Math.max(1, Number(process.env.VAULTX_CHALLENGE_FULL_CYCLE_EVERY || 8));
+  let tickCount = 0;
+
+  const tick = async () => {
+    tickCount += 1;
+    const mode = tickCount % fullCycleEvery === 0 ? "full" : "priority";
+    try {
+      const result = await runChallengeAutomationCycle(mode as "priority" | "full");
+      console.log(`[VaultX Challenge Agents] ${mode} cycle complete`, { agentsRan: (result as any).agentsRan, totalRevenue: (result as any).totalRevenue, skipped: (result as any).skipped });
+    } catch (error) {
+      console.error("[VaultX Challenge Agents] autonomous cycle failed", error);
+    }
+  };
+
+  challengeAutomationInterval = setInterval(tick, everyMinutes * 60 * 1000);
+  if (runOnBoot) void tick();
+  console.log(`[VaultX Challenge Agents] autonomous loop enabled: priority agents=${REVENUE_PRIORITY_AGENT_SLUGS.length}, interval=${everyMinutes}m, fullEvery=${fullCycleEvery} ticks`);
+  return getChallengeAutomationStatus();
+}
+
 // ── ROUTER ─────────────────────────────────────────────────────────────────────
 export const challengeAutomationRouter = router({
+
+  getAutonomousStatus: protectedProcedure.query(async () => getChallengeAutomationStatus()),
+
+  runAutonomousCycle: protectedProcedure
+    .input(z.object({ mode: z.enum(["priority", "full"]).default("priority") }))
+    .mutation(async ({ input }) => runChallengeAutomationCycle(input.mode)),
+
+  startAutonomousLoop: protectedProcedure.mutation(async () => startChallengeAutomationCron()),
 
   getActiveChallenge: protectedProcedure.query(async () => {
     const result = await db.db.execute(sql`SELECT * FROM empire_challenges WHERE status = 'active' ORDER BY week_number ASC LIMIT 1`);
