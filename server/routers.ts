@@ -203,6 +203,7 @@ import { vaultremixRouter } from "./routers/vaultremix";
 import { vaultspaceRouter } from "./routers/vaultspace";
 import { vaultuRouter } from "./routers/vaultu";
 import { vaultxRouter } from "./routers/vaultxRouter";
+import { vaultxAcquisitionOperatorRouter } from "./routers/vaultxAcquisitionOperatorRouter";
 import { verticalWizardRouter } from "./routers/verticalWizard";
 import { videoEditorRouter } from "./routers/videoEditorRouter";
 import { videoLabProRouter } from "./routers/videoLabProRouter";
@@ -921,6 +922,7 @@ export const appRouter = router({
   vaultspace: vaultspaceRouter,
   vaultu: vaultuRouter,
   vaultx: vaultxRouter,
+  vaultxAcquisition: vaultxAcquisitionOperatorRouter,
   verticalWizard: verticalWizardRouter,
   videoEditor: videoEditorRouter,
   creatorVideoEditor: creatorVideoEditorRouter,

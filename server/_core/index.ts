@@ -21,6 +21,7 @@ import { videoUploadRouter } from "../routers/videoUploadRouter";
 import { registerTelegramConnectRoutes } from "../services/telegramConnectRoute";
 import { startDailyDropCron } from "../services/telegramDailyDropEngine";
 import { startReactivationCron } from "../services/telegramBuyerReactivation";
+import { startVaultXAcquisitionCron } from "../services/vaultxAutonomousAcquisitionOperator";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -46,6 +47,9 @@ async function startServer() {
   await runStartupTasks();
   startDailyDropCron();
   startReactivationCron();
+  if (process.env.VAULTX_ACQUISITION_AUTORUN !== "false") {
+    startVaultXAcquisitionCron().catch(error => console.error("[VaultX Acquisition] failed to start autonomous operator", error));
+  }
   
   const app = express();
   const server = createServer(app);
