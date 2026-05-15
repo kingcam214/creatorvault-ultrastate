@@ -111,14 +111,19 @@ function buildClosingLoopPayloads(creator: any, magicLink: string, message: stri
   const monetizationLeak = identifyMonetizationLeak(creator);
   const monetizationAngle = buildMonetizationAngle(creator);
   const nextMoneyCta = `Open the activation link, complete the five-step creator onboarding path, and launch the first paid $49 buyer CTA for @${creator.handle}.`;
+  const paidOffer = `$49 first-money activation audit for @${creator.handle}`;
   const onboardingPacket = {
+    creatorHandle: creator.handle,
     creatorTarget: creator.handle,
     platform,
+    magicLink,
     activationLink: magicLink,
     requiredSteps: ["profile-proof", "paid-offer", "content-upload", "telegram-drop", "buyer-followup"],
     firstMoneyAction: nextMoneyCta,
   };
   const presentationPacket = {
+    deckTitle: `CreatorVault first-money activation plan for @${creator.handle}`,
+    paidOffer,
     creatorTarget: creator.handle,
     monetizationAngle,
     trailerBrief: `Cinematic proof-of-value trailer for @${creator.handle}: expose the revenue leak, show the first paid offer, and end with the activation CTA.`,
@@ -128,7 +133,9 @@ function buildClosingLoopPayloads(creator: any, magicLink: string, message: stri
     creatorTarget: creator.handle,
     platform,
     attributionCode,
+    followupMessage: `${message}\n\nVIP activation: ${magicLink}`,
     message: `${message}\n\nVIP activation: ${magicLink}`,
+    escalationTrigger: "reply_or_tracking_click",
     escalationPath: "owner_vip_review_if_reply_or_click",
     nextMoneyCta,
   };
@@ -215,6 +222,37 @@ async function scrapeRedditProfiles(subreddit: string, count: number = 20): Prom
     console.error("Reddit API error:", e);
     return [];
   }
+}
+
+async function scrapeProductionCreatorProfiles(count: number = 20): Promise<any[]> {
+  const rows = extractRows(await db.execute(sql`
+    SELECT id, stage_name, sub_group, bio, follower_count, engagement_rate, subscription_price, monthly_revenue, status
+    FROM greatest_show_creators
+    WHERE status = 'active'
+    ORDER BY COALESCE(follower_count, 0) DESC, id DESC
+    LIMIT ${count}
+  `));
+
+  return rows.map((row: any) => {
+    const handle = String(row.stage_name || `creator_${row.id}`)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 80) || `creator_${row.id}`;
+    return {
+      handle,
+      display_name: row.stage_name,
+      bio: row.bio,
+      followers: Number(row.follower_count || 0),
+      engagement_rate: Number(row.engagement_rate || 0),
+      recent_post: `${row.sub_group || "creator"} membership offer at $${Number(row.subscription_price || 0).toFixed(2)}`,
+      platforms: ["creatorvault"],
+      source_table: "greatest_show_creators",
+      source_id: row.id,
+      subscription_price: Number(row.subscription_price || 0),
+      monthly_revenue: Number(row.monthly_revenue || 0),
+    };
+  });
 }
 
 // ── Engagement Scorer ─────────────────────────────────────────────────────────
@@ -542,7 +580,7 @@ export const creatorOutreachRouter = router({
   // Run the production-backed acquisition → outreach → distribution → telemetry closing loop
   runCreatorClosingLoop: protectedProcedure
     .input(z.object({
-      platform: z.enum(["reddit", "twitter"]).default("reddit"),
+      platform: z.enum(["reddit", "twitter", "production_table"]).default("production_table"),
       niche: z.string().default("creator economy"),
       count: z.number().min(1).max(25).default(5),
     }))
@@ -551,7 +589,9 @@ export const creatorOutreachRouter = router({
 
       const profiles = input.platform === "twitter"
         ? await scrapeTwitterProfiles(input.niche, input.count)
-        : await scrapeRedditProfiles(input.niche.replace(/^r\//, ""), input.count);
+        : input.platform === "production_table"
+          ? await scrapeProductionCreatorProfiles(input.count)
+          : await scrapeRedditProfiles(input.niche.replace(/^r\//, ""), input.count);
 
       const scored = profiles
         .filter(p => p?.handle)
@@ -572,7 +612,7 @@ export const creatorOutreachRouter = router({
 
       const creator = scored[0];
       if (!creator) {
-        throw new Error(`No live ${input.platform} creators were discovered for ${input.niche}; closing-loop proof cannot use synthetic leads.`);
+        throw new Error(`No production-backed ${input.platform} creators were discovered for ${input.niche}; closing-loop proof cannot use synthetic leads.`);
       }
 
       const platform = normalizePlatform(creator.platforms);
@@ -683,7 +723,7 @@ export const creatorOutreachRouter = router({
            'creator_acquisition_to_distribution', ${creator.handle}, 'success',
            ${now}, ${now}, ${`Persisted outreach lead ${lead.id}, distribution job ${distributionJob.id}, and tracking code ${trackingCode}`},
            ${payloads.estimatedRevenueOpportunityCents / 100}, NULL,
-           ${JSON.stringify({ leadId: lead.id, distributionJobId: distributionJob.id, trackingCode, platform, creatorHandle: creator.handle })})
+           ${JSON.stringify({ leadId: lead.id, distributionJobId: distributionJob.id, trackingCode, platform, creatorHandle: creator.handle, sourceTable: creator.source_table || null, sourceId: creator.source_id || null })})
       `);
 
       return {
@@ -698,6 +738,8 @@ export const creatorOutreachRouter = router({
           monetizationLeak: lead.monetization_leak,
           estimatedRevenueOpportunityCents: Number(lead.estimated_revenue_opportunity_cents || 0),
           nextMoneyCta: lead.next_money_cta,
+          sourceTable: creator.source_table || null,
+          sourceId: creator.source_id || null,
         },
         onboardingPacket: payloads.onboardingPacket,
         presentationPacket: payloads.presentationPacket,
