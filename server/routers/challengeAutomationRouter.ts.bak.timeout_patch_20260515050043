@@ -94,24 +94,17 @@ async function fireVaultXMoneyDrop(params: {
 
 // ── Real GPT call with system context ─────────────────────────────────────────
 async function gptRun(systemPrompt: string, userPrompt: string, maxTokens = 500): Promise<string> {
-  const timeoutMs = Math.max(5000, Number(process.env.AGENT_OPENAI_TIMEOUT_MS || 25000));
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const c = await openai.chat.completions.create({
-      model: process.env.AGENT_OPENAI_MODEL || "gpt-4.1-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      max_tokens: maxTokens,
-    }, { signal: controller.signal, timeout: timeoutMs } as any);
-    const content = c.choices[0].message.content?.trim();
-    if (!content) throw new Error("OpenAI returned an empty agent execution result");
-    return content;
-  } finally {
-    clearTimeout(timer);
-  }
+  const c = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    max_tokens: maxTokens,
+  });
+  const content = c.choices[0].message.content?.trim();
+  if (!content) throw new Error("OpenAI returned an empty agent execution result");
+  return content;
 }
 
 // ── Real DB helpers ────────────────────────────────────────────────────────────
