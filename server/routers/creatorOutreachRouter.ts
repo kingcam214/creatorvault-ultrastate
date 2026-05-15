@@ -697,13 +697,14 @@ export const creatorOutreachRouter = router({
       `));
       const creatorId = creatorRows[0]?.id || ctx.user.id;
       const trackingCode = payloads.attributionCode;
+      const distributionPlatform = "telegram";
       await db.execute(sql`
         INSERT INTO distribution_jobs
           (creator_id, channel_identity_id, connected_account_id, platform, content_id,
            asset_url, asset_type, caption, destination_url, tracking_code, status, scheduled_at)
         VALUES
-          (${creatorId}, ${channel.id}, NULL, ${platform}, NULL,
-           ${magicLink}, 'activation_link', ${message}, ${magicLink}, ${trackingCode}, 'draft', NULL)
+          (${creatorId}, ${channel.id}, NULL, ${distributionPlatform}, NULL,
+           ${magicLink}, 'text', ${message}, ${magicLink}, ${trackingCode}, 'draft', NULL)
       `);
 
       const distributionRows = extractRows(await db.execute(sql`
@@ -723,7 +724,7 @@ export const creatorOutreachRouter = router({
            'creator_acquisition_to_distribution', ${creator.handle}, 'success',
            ${now}, ${now}, ${`Persisted outreach lead ${lead.id}, distribution job ${distributionJob.id}, and tracking code ${trackingCode}`},
            ${payloads.estimatedRevenueOpportunityCents / 100}, NULL,
-           ${JSON.stringify({ leadId: lead.id, distributionJobId: distributionJob.id, trackingCode, platform, creatorHandle: creator.handle, sourceTable: creator.source_table || null, sourceId: creator.source_id || null })})
+           ${JSON.stringify({ leadId: lead.id, distributionJobId: distributionJob.id, trackingCode, sourcePlatform: platform, distributionPlatform, creatorHandle: creator.handle, sourceTable: creator.source_table || null, sourceId: creator.source_id || null })})
       `);
 
       return {
@@ -750,6 +751,7 @@ export const creatorOutreachRouter = router({
           trackingUrl: `https://creatorvault.live/r/${trackingCode}`,
           status: distributionJob.status,
           channelIdentityId: distributionJob.channel_identity_id,
+          platform: distributionJob.platform,
         },
         telemetry: { id: telemetryId, status: "success" },
         timestamp: new Date().toISOString(),
