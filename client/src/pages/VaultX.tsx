@@ -2138,73 +2138,73 @@ function VaultXPublicLanding() {
     {
       layer: "01",
       icon: Video,
-      eyebrow: "Professional Editor",
-      title: "CapCut-style editor for adult creators",
-      body: "A creator-native editing workspace for timeline cuts, safe teasers, PPV previews, keyframes, waveform sync, subtitle timelines, vertical exports, thumbnails, and premium content packaging, designed around a Remotion/WebCodecs editing vision with server-side FFmpeg rendering instead of creator chaos across CapCut, Premiere, drives, and folders.",
-      proof: "Cut, package, distribute, and monetize from the same vault."
+      eyebrow: "Editing Command Center",
+      title: "CapCut-style speed with business control",
+      body: "VaultX gives creators a browser-native editing workspace for timeline cuts, captions, thumbnails, vertical exports, campaign packaging, and asset organization without scattering work across separate apps, drives, and spreadsheets.",
+      proof: "Edit the content and prepare the business package in the same place."
     },
     {
       layer: "02",
-      icon: Sparkles,
-      eyebrow: "AI Cinematic Engine",
-      title: "Turn raw clips into desire-grade drops",
-      body: "AI relighting, cinematic prompt direction, shot enhancement, scene extension, camera-motion synthesis, and continuity-aware prompt logic transform ordinary footage into premium promotional material through a queue-driven AI pipeline.",
-      proof: "Built for aesthetics, continuity, and repeatable output."
+      icon: Layers,
+      eyebrow: "Asset Orchestration",
+      title: "Raw media becomes an organized launch system",
+      body: "Upload raw clips, images, scripts, captions, brand notes, and offer details into one operating layer so every asset has a clear next step: edit, package, schedule, distribute, or analyze.",
+      proof: "No more losing money inside folders, phones, and half-finished drafts."
     },
     {
       layer: "03",
       icon: Shield,
-      eyebrow: "Adult Creator Advantage",
-      title: "SFW teaser and premium-content branching",
-      body: "Generate platform-safe previews, blurred or masked variants, teaser cuts, PPV previews, mass clip extractions, and paid unlock sequences from one master asset while keeping sensitive content protected behind the right rails.",
-      proof: "Safe public tease. Private paid unlock. One workflow."
+      eyebrow: "Public-Safe Packaging",
+      title: "Professional previews without showing too much",
+      body: "VaultX is designed to help creators build polished public-facing teasers, previews, captions, and promotional packages while keeping private or premium material protected behind the right access flow.",
+      proof: "Attention-grabbing on the surface. Protected where it counts."
     },
     {
       layer: "04",
       icon: TrendingUp,
-      eyebrow: "Attention Engineering",
-      title: "Retention intelligence for every clip",
-      body: "Hook scoring, pacing cues, transcript intelligence, dead-zone detection, visual variance checks, and engagement-to-revenue signals help creators stop guessing and start shipping tighter clips.",
-      proof: "Every edit is tied to watch time, desire, and conversion."
+      eyebrow: "Retention Intelligence",
+      title: "Know what keeps viewers watching",
+      body: "Hook notes, pacing signals, caption strategy, offer placement, and performance feedback help creators tighten the edit before they publish instead of guessing after the drop goes cold.",
+      proof: "Creative decisions become measurable business decisions."
     },
     {
       layer: "05",
       icon: Send,
-      eyebrow: "Distribution Dominance",
-      title: "Upload once, deploy everywhere",
-      body: "VaultX packages vertical reels, stories, smart-cropped exports, captions, hashtags, platform-native teasers, Telegram drops, fan messages, and VIP calls-to-action without rebuilding the campaign manually.",
-      proof: "One master asset becomes a full drop system."
+      eyebrow: "Distribution Router",
+      title: "One finished package feeds every channel",
+      body: "VaultX packages vertical clips, captions, story versions, fan-message copy, Telegram drops, and campaign CTAs from one master workflow so creators can launch without rebuilding the same post five times.",
+      proof: "Upload once, then route the campaign everywhere it needs to go."
     },
     {
       layer: "06",
       icon: DollarSign,
-      eyebrow: "Monetization Intelligence",
-      title: "Every creative decision connects to revenue",
-      body: "Pricing recommendations, teaser-to-paywall sequencing, PPV strategy, fan segments, churn recovery, VIP upsells, and analytics connect editing decisions to income so VaultX becomes revenue infrastructure, not a cost center.",
-      proof: "The editor is not a cost center. It is the profit engine."
+      eyebrow: "Revenue Operations",
+      title: "Tie every drop back to the money path",
+      body: "Pricing notes, offer sequencing, VIP follow-up, checkout recovery, subscriber movement, and analytics connect the creative workflow to revenue operations so the editor becomes part of the business engine.",
+      proof: "The edit is not the finish line. It is the start of the revenue loop."
     },
   ];
 
   const workflow = [
-    { step: "Ingest", detail: "Upload vault assets, raw clips, camera-roll moments, and existing premium drops." },
-    { step: "Transform", detail: "Create safe teasers, cinematic variants, captions, thumbnails, and paid unlocks." },
-    { step: "Score", detail: "Use attention and monetization signals to identify hooks, dead zones, and pricing windows." },
-    { step: "Launch", detail: "Deploy to VaultX, Telegram, fan messages, landing pages, and platform-native exports." },
-    { step: "Follow Up", detail: "Automate reminders, VIP routes, cart recovery, and next-drop messaging from real fan behavior." },
+    { step: "Ingest", detail: "Bring raw clips, campaign notes, captions, offers, and brand assets into one creator-business workspace." },
+    { step: "Edit", detail: "Trim, caption, format, thumbnail, and organize content into ready-to-use vertical packages." },
+    { step: "Package", detail: "Turn one finished asset into preview cuts, fan-message copy, product cards, and premium offer flows." },
+    { step: "Distribute", detail: "Route each package to the right destination: profile, fan message, Telegram, campaign page, or social export." },
+    { step: "Optimize", detail: "Track what gets attention, what converts, and where the next follow-up should happen." },
   ];
 
   const automationCards = [
-    { title: "Video-first command center", body: "Vertical reels, PPV teasers, fan-feed previews, stories, trailers, and cinematic promo assets live in one revenue workspace.", accent: "#ef4444" },
-    { title: "Safe public visuals", body: "The public-facing layer can stay suggestive, premium, and platform-safe while paid content stays protected behind the vault.", accent: "#ec4899" },
-    { title: "Fan monetization loops", body: "Subscriptions, PPV, tips, VIP routing, Telegram drops, checkout recovery, and creator analytics connect the whole buyer journey.", accent: "#f59e0b" },
-    { title: "Creator-native AI", body: "Prompts, captions, scripts, offers, and messages are built around creator revenue, not generic social-media copy.", accent: "#9333ea" },
+    { title: "Presenter-led product demo", body: "The hero now feels like a confident founder walkthrough instead of an abstract graphic, making VaultX easier to understand in the first five seconds.", accent: "#ef4444" },
+    { title: "Business-safe public page", body: "The public experience stays polished, professional, and platform-safe while clearly speaking to premium creator operations.", accent: "#ec4899" },
+    { title: "Creator revenue workflow", body: "Editing, packaging, fan campaigns, follow-up, and analytics are presented as one connected money system.", accent: "#f59e0b" },
+    { title: "Built to replace tool chaos", body: "VaultX positions itself against scattered editing apps, folders, captions docs, campaign notes, and manual fan follow-up.", accent: "#9333ea" },
   ];
 
   const proofStats = [
-    { value: "6", label: "Revenue layers" },
-    { value: "85%", label: "Creator-first share" },
-    { value: "1", label: "Video OS" },
-    { value: "24/7", label: "Automation loop" },
+    { value: "01", label: "Editor workspace" },
+    { value: "06", label: "Workflow layers" },
+    { value: "24/7", label: "Campaign engine" },
+    { value: "$", label: "Revenue focus" },
   ];
 
   const visualTiles = [
@@ -2215,19 +2215,19 @@ function VaultXPublicLanding() {
   ];
 
   const trailerChapters = [
-    { time: "00:00", label: "The OS", detail: "VaultX opens as a cinematic product walkthrough, not a static sales page." },
-    { time: "00:04", label: "Ingest", detail: "Raw creator assets, scripts, captions, and vault media enter one operating system." },
-    { time: "00:07", label: "AI Factory", detail: "Script agents, caption agents, shot planning, safe variants, and model orchestration line up the trailer pipeline." },
-    { time: "00:13", label: "Safe tease", detail: "Public previews, blurred cuts, PPV trailers, and private unlocks branch from one master asset." },
-    { time: "00:19", label: "Distribution", detail: "Vertical exports, Telegram drops, fan messages, story cuts, and platform packages deploy as a campaign." },
-    { time: "00:25", label: "Revenue", detail: "Pricing, VIP upsells, recovery loops, and analytics turn content operations into money infrastructure." },
+    { time: "00:00", label: "Meet the workflow", detail: "A confident presenter introduces VaultX as the operating layer between raw content and revenue." },
+    { time: "00:08", label: "Upload and organize", detail: "Assets, notes, captions, and campaign ideas move into a single product workspace." },
+    { time: "00:18", label: "Edit and package", detail: "The editor turns raw media into vertical cuts, captions, thumbnails, previews, and campaign-ready packages." },
+    { time: "00:32", label: "Route the drop", detail: "VaultX prepares the right version for profile posts, fan messages, Telegram drops, and social exports." },
+    { time: "00:46", label: "Automate follow-up", detail: "Campaign logic keeps the conversation moving with VIP routing, reminders, and next-step offers." },
+    { time: "00:58", label: "Read the money", detail: "Analytics connect attention, conversion, subscriber movement, and revenue back to the next creative decision." },
   ];
 
   const factoryBeats = [
-    { label: "Script agents", value: "Hook, offer, scene, and voiceover generation for premium creators." },
-    { label: "Caption agents", value: "Platform-native captions, tease copy, hashtags, and unlock CTAs." },
-    { label: "Trailer maker", value: "Cinematic shot plans, timeline beats, safe versions, and final render rails." },
-    { label: "Clone operator", value: "The eventual roaming content operator sits on top of this video factory, not beside it." },
+    { label: "Executive walkthrough", value: "A professional presenter frames the product like a serious business system, not a vague visual concept." },
+    { label: "Editing workflow", value: "Creators see where raw assets become clips, captions, thumbnails, packages, and exports." },
+    { label: "Campaign orchestration", value: "The page explains how finished content moves into fan messaging, Telegram drops, social cuts, and follow-up." },
+    { label: "Revenue command", value: "Analytics, pricing notes, VIP paths, and performance reads make VaultX feel like an operator for the business." },
   ];
 
   return (
@@ -2249,38 +2249,38 @@ function VaultXPublicLanding() {
           </div>
           <div>
             <div className="text-white font-black text-xl tracking-tight">VaultX</div>
-            <div className="text-[10px] uppercase tracking-[0.28em] font-bold" style={{ color: "#fca5a5" }}>Adult Creator OS · 18+</div>
+            <div className="text-[10px] uppercase tracking-[0.28em] font-bold" style={{ color: "#fca5a5" }}>Creator Business OS</div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <a href="/login" className="hidden sm:inline-flex text-sm font-bold px-5 py-2.5 rounded-xl transition-all hover:bg-white/10" style={{ color: "#d1d5db" }}>Sign In</a>
-          <a href="/login" className="text-sm font-black px-6 py-3 rounded-xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 40px rgba(236,72,153,.32)" }}>Build My Vault</a>
+          <a href="/vault-x/editor" className="text-sm font-black px-6 py-3 rounded-xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 40px rgba(236,72,153,.32)" }}>Open Editor</a>
         </div>
       </nav>
 
       <main className="relative z-10">
         <section className="max-w-7xl mx-auto px-6 md:px-10 pt-8 md:pt-12 pb-20">
-          <div className="grid lg:grid-cols-[.82fr_1.18fr] gap-10 items-center">
+          <div className="grid lg:grid-cols-[.86fr_1.14fr] gap-10 items-center">
             <div>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-7" style={{ background: "rgba(239,68,68,.12)", border: "1px solid rgba(239,68,68,.28)" }}>
                 <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#ef4444" }} />
-                <span className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: "#fca5a5" }}>CapCut-style editor · adult creator OS · 18+</span>
+                <span className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: "#fca5a5" }}>Presenter-led walkthrough · creator business OS</span>
               </div>
-              <h1 className="font-black leading-[.88] tracking-[-.055em] mb-7" style={{ fontSize: "clamp(3.35rem, 7.6vw, 7.5rem)" }}>
-                The CapCut for adult creator revenue.
+              <h1 className="font-black leading-[.88] tracking-[-.055em] mb-7" style={{ fontSize: "clamp(3.2rem, 7vw, 7rem)" }}>
+                Your creator business, explained in one confident workflow.
               </h1>
               <p className="text-lg md:text-xl max-w-2xl leading-8 mb-8" style={{ color: "#c7c7d1" }}>
-                VaultX gives adult creators a browser-native editing workflow for clipping, enhancing, censoring, teasing, packaging PPV drops, exporting vertical assets, and launching revenue campaigns without bouncing between CapCut, folders, drives, and separate fan-platform tools.
+                VaultX now opens with a professional product walkthrough: a polished presenter breaks down how creators move from raw media to edited clips, packaged campaigns, distribution, fan follow-up, and revenue analytics without juggling disconnected tools.
               </p>
               <div className="flex flex-wrap gap-4 mb-10">
                 <a href="/vault-x/editor" className="inline-flex items-center gap-2 text-base font-black px-8 py-4 rounded-2xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 50px rgba(239,68,68,.35)" }}>
                   <Play className="w-5 h-5" /> Open VaultX Editor
                 </a>
-                <a href="/vault-x/studio" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "white", border: "1px solid rgba(255,255,255,.16)" }}>
-                  Launch Studio <ArrowUpRight className="w-5 h-5" />
+                <a href="#vaultx-walkthrough" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "white", border: "1px solid rgba(255,255,255,.16)" }}>
+                  See the breakdown <ArrowUpRight className="w-5 h-5" />
                 </a>
-                <a href="#vaultx-trailer" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "#fecaca", border: "1px solid rgba(252,165,165,.22)" }}>
-                  Watch walkthrough
+                <a href="/login" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "#fecaca", border: "1px solid rgba(252,165,165,.22)" }}>
+                  Build My Vault
                 </a>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl">
@@ -2293,33 +2293,38 @@ function VaultXPublicLanding() {
               </div>
             </div>
 
-            <div id="vaultx-trailer" className="vaultx-glass rounded-[2.25rem] overflow-hidden" style={{ background: "rgba(0,0,0,.52)", border: "1px solid rgba(255,255,255,.12)" }}>
-              <div className="relative aspect-video overflow-hidden" style={{ background: "#050508" }}>
-                <video
-                  className="absolute inset-0 w-full h-full object-cover"
-                  src="/videos/vaultx-cinematic-trailer.mp4"
-                  poster="/videos/vaultx-cinematic-trailer-poster.png"
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  controls
-                  preload="metadata"
-                />
-                <div className="absolute left-4 top-4 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[.16em]" style={{ background: "rgba(0,0,0,.58)", color: "#fecaca", border: "1px solid rgba(252,165,165,.35)", backdropFilter: "blur(12px)" }}>Actual VaultX trailer asset</div>
-                <div className="absolute right-4 top-4 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[.16em]" style={{ background: "rgba(0,0,0,.58)", color: "#fff", border: "1px solid rgba(255,255,255,.18)", backdropFilter: "blur(12px)" }}>28-second walkthrough</div>
+            <div id="vaultx-walkthrough" className="vaultx-glass rounded-[2.25rem] overflow-hidden" style={{ background: "rgba(0,0,0,.52)", border: "1px solid rgba(255,255,255,.12)" }}>
+              <div className="relative aspect-[16/10] md:aspect-video overflow-hidden" style={{ background: "#050508" }}>
+                <picture>
+                  <source media="(max-width: 720px)" srcSet="/images/vaultx/vaultx-business-presenter-mobile.png" />
+                  <img
+                    src="/images/vaultx/vaultx-business-presenter-hero.png"
+                    alt="Professional VaultX presenter showing the creator business editing and revenue dashboard"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="eager"
+                  />
+                </picture>
+                <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(0,0,0,.1), rgba(0,0,0,.08) 45%, rgba(0,0,0,.3)), linear-gradient(0deg, rgba(0,0,0,.55), transparent 45%)" }} />
+                <div className="absolute left-4 top-4 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[.16em]" style={{ background: "rgba(0,0,0,.58)", color: "#fecaca", border: "1px solid rgba(252,165,165,.35)", backdropFilter: "blur(12px)" }}>Business walkthrough</div>
+                <div className="absolute right-4 top-4 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[.16em]" style={{ background: "rgba(0,0,0,.58)", color: "#fff", border: "1px solid rgba(255,255,255,.18)", backdropFilter: "blur(12px)" }}>Public-safe demo</div>
+                <div className="absolute left-5 right-5 bottom-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                  <div>
+                    <div className="text-xs font-black uppercase tracking-[.2em] mb-2" style={{ color: "#fca5a5" }}>Hosted product breakdown</div>
+                    <h2 className="text-2xl md:text-4xl font-black tracking-[-.04em] leading-none max-w-xl">A confident presenter walks creators through the whole money workflow.</h2>
+                  </div>
+                  <a href="/vault-x/editor" className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-black whitespace-nowrap" style={{ background: "white", color: "#08080b" }}>Open Editor <ChevronRight className="w-4 h-4" /></a>
+                </div>
               </div>
               <div className="p-5 md:p-6">
                 <div className="flex items-center justify-between gap-4 mb-4">
                   <div>
-                    <div className="text-xs font-black uppercase tracking-[.2em] mb-1" style={{ color: "#fca5a5" }}>Video factory preview</div>
-                    <h2 className="text-2xl md:text-3xl font-black tracking-[-.03em]">The trailer explains the OS in motion.</h2>
+                    <div className="text-xs font-black uppercase tracking-[.2em] mb-1" style={{ color: "#fca5a5" }}>60-second business demo</div>
+                    <h2 className="text-2xl md:text-3xl font-black tracking-[-.03em]">The breakdown is clear, polished, and revenue-focused.</h2>
                   </div>
-                  <a href="/login" className="hidden sm:inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-black" style={{ background: "white", color: "#08080b" }}>Build My Vault <ChevronRight className="w-4 h-4" /></a>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">
                   {trailerChapters.map((chapter) => (
-                    <a key={chapter.time} href="#vaultx-trailer" className="rounded-2xl p-4 transition-all hover:bg-white/10" style={{ background: "rgba(255,255,255,.045)", border: "1px solid rgba(255,255,255,.08)" }}>
+                    <a key={chapter.time} href="#vaultx-walkthrough" className="rounded-2xl p-4 transition-all hover:bg-white/10" style={{ background: "rgba(255,255,255,.045)", border: "1px solid rgba(255,255,255,.08)" }}>
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-[11px] font-black px-2.5 py-1 rounded-full" style={{ color: "#0a0a0a", background: "#fca5a5" }}>{chapter.time}</span>
                         <span className="text-sm font-black">{chapter.label}</span>
@@ -2337,9 +2342,9 @@ function VaultXPublicLanding() {
           <div className="vaultx-glass rounded-[2rem] p-6 md:p-8" style={{ background: "linear-gradient(135deg, rgba(239,68,68,.12), rgba(147,51,234,.1))" }}>
             <div className="grid lg:grid-cols-[.7fr_1.3fr] gap-8 items-start">
               <div>
-                <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#fca5a5" }}>Real video factory, not a prompt toy</div>
-                <h2 className="text-3xl md:text-5xl font-black tracking-[-.04em] leading-none mb-4">VaultX is built around production, release, and growth.</h2>
-                <p className="text-sm md:text-base leading-7" style={{ color: "#b8b8c3" }}>The landing page now leads with the product film because the platform vision is an automated video factory: script writing agents, caption agents, trailer generation, model orchestration, safe variants, distribution, and creator revenue loops compounding together.</p>
+                <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#fca5a5" }}>A real business walkthrough, not a vague graphic</div>
+                <h2 className="text-3xl md:text-5xl font-black tracking-[-.04em] leading-none mb-4">VaultX is now framed like a serious creator-operations product.</h2>
+                <p className="text-sm md:text-base leading-7" style={{ color: "#b8b8c3" }}>The page leads with a professional presenter and a concrete product breakdown because the promise is not just prettier content. The promise is organized editing, packaging, distribution, follow-up, and revenue visibility in one workflow.</p>
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
                 {factoryBeats.map((beat) => (
@@ -2367,9 +2372,9 @@ function VaultXPublicLanding() {
 
         <section id="vaultx-architecture" className="max-w-7xl mx-auto px-6 md:px-10 py-24">
           <div className="max-w-3xl mb-12">
-            <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#fca5a5" }}>Six-layer creator engine</div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-5">Not another link-in-bio. A full-stack operating system.</h2>
-            <p className="text-lg leading-8" style={{ color: "#b8b8c3" }}>VaultX combines editing, AI transformation, SFW/NSFW branching, retention intelligence, distribution, and monetization into one automation loop. The landing page stays safe and premium; the product is built for the real workflows adult creators fight through every day.</p>
+            <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#fca5a5" }}>Six-layer business engine</div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-5">Not another link-in-bio. A full-stack creator business system.</h2>
+            <p className="text-lg leading-8" style={{ color: "#b8b8c3" }}>VaultX combines editing, asset organization, public-safe packaging, retention intelligence, distribution, and revenue operations into one workflow. The public page stays polished and professional while the product speaks directly to the operational reality of premium creators.</p>
           </div>
           <div className="grid lg:grid-cols-3 gap-5">
             {architectureLayers.map(({ layer, icon: Icon, eyebrow, title, body, proof }) => (
@@ -2390,10 +2395,10 @@ function VaultXPublicLanding() {
         <section className="max-w-7xl mx-auto px-6 md:px-10 pb-24">
           <div className="grid lg:grid-cols-[.9fr_1.1fr] gap-10 items-start vaultx-glass rounded-[2.5rem] p-6 md:p-10">
             <div>
-              <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#fca5a5" }}>Automated money route</div>
-              <h2 className="text-4xl md:text-5xl font-black tracking-[-.04em] leading-none mb-5">From camera roll to revenue loop.</h2>
-              <p className="text-base leading-8 mb-7" style={{ color: "#b8b8c3" }}>The goal is not just a sexier page. The goal is a product narrative that makes creators instantly understand the cheat code: upload the asset once, let VaultX package it, publish the safe preview, unlock the premium version, and keep following up until the fan either buys, upgrades, or returns later.</p>
-              <a href="/login" className="inline-flex items-center gap-2 text-sm font-black px-6 py-3 rounded-2xl" style={{ background: "#fff", color: "#08080b" }}>Claim the creator workflow <ArrowUpRight className="w-4 h-4" /></a>
+              <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#fca5a5" }}>Orchestrated money route</div>
+              <h2 className="text-4xl md:text-5xl font-black tracking-[-.04em] leading-none mb-5">From raw asset to revenue decision.</h2>
+              <p className="text-base leading-8 mb-7" style={{ color: "#b8b8c3" }}>The goal is a product narrative that makes creators instantly understand the business advantage: upload the asset once, edit the right version, package the campaign, route the drop, follow up with fans, and read which creative decisions are actually driving money.</p>
+              <a href="/vault-x/editor" className="inline-flex items-center gap-2 text-sm font-black px-6 py-3 rounded-2xl" style={{ background: "#fff", color: "#08080b" }}>Open the creator workflow <ArrowUpRight className="w-4 h-4" /></a>
             </div>
             <div className="space-y-4">
               {workflow.map((item, index) => (
@@ -2411,11 +2416,11 @@ function VaultXPublicLanding() {
 
         <section className="px-6 md:px-10 pb-24">
           <div className="max-w-5xl mx-auto text-center rounded-[2.5rem] p-8 md:p-14" style={{ background: "linear-gradient(135deg, rgba(220,38,38,.22), rgba(236,72,153,.18), rgba(147,51,234,.18))", border: "1px solid rgba(255,255,255,.12)" }}>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-7" style={{ background: "rgba(0,0,0,.25)", border: "1px solid rgba(255,255,255,.12)" }}><Lock className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.16em]">Safe, premium, adult-aware</span></div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">Make the public page seductive. Keep the business automated.</h2>
-            <p className="text-lg leading-8 max-w-3xl mx-auto mb-9" style={{ color: "#f5d0d0" }}>VaultX can look immersive, alive, and premium without showing explicit nudity on the landing page. The selling point is stronger: creators see the whole machine they wish existed for their space, then step into an OS built around their content, privacy, distribution, and money.</p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-7" style={{ background: "rgba(0,0,0,.25)", border: "1px solid rgba(255,255,255,.12)" }}><Lock className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.16em]">Business-safe, premium, creator-aware</span></div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">Make VaultX feel like the confident operator behind the creator business.</h2>
+            <p className="text-lg leading-8 max-w-3xl mx-auto mb-9" style={{ color: "#f5d0d0" }}>The upgraded page keeps the public presentation polished and safe while making the product more concrete: a premium presenter, a clear workflow, and a direct path into the editor where creators can start organizing, packaging, distributing, and measuring their content business.</p>
             <div className="flex flex-wrap justify-center gap-4">
-              <a href="/login" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-black" style={{ background: "white", color: "#09090b" }}><Crown className="w-5 h-5" /> Enter VaultX</a>
+              <a href="/vault-x/editor" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-black" style={{ background: "white", color: "#09090b" }}><Crown className="w-5 h-5" /> Open VaultX Editor</a>
               <a href="/" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-bold" style={{ color: "white", border: "1px solid rgba(255,255,255,.2)" }}>Back to CreatorVault</a>
             </div>
           </div>
