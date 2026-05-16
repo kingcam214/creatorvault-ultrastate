@@ -121,10 +121,10 @@ importers:
         version: 8.1.6
       '@stripe/react-stripe-js':
         specifier: ^6.3.0
-        version: 6.3.0(@stripe/stripe-js@8.6.1)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+        version: 6.3.0(@stripe/stripe-js@8.11.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@stripe/stripe-js':
-        specifier: ^8.6.0
-        version: 8.6.1
+        specifier: ^8.11.0
+        version: 8.11.0
       '@tanstack/react-query':
         specifier: ^5.90.2
         version: 5.90.18(react@19.2.3)
@@ -251,6 +251,9 @@ importers:
       react-dom:
         specifier: ^19.2.1
         version: 19.2.3(react@19.2.3)
+      react-dropzone:
+        specifier: ^15.0.0
+        version: 15.0.0(react@19.2.3)
       react-hook-form:
         specifier: ^7.64.0
         version: 7.71.1(react@19.2.3)
@@ -318,6 +321,9 @@ importers:
       '@builder.io/vite-plugin-jsx-loc':
         specifier: ^0.1.1
         version: 0.1.1(vite@7.3.1(@types/node@24.10.9)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.1)(tsx@4.21.0))
+      '@playwright/test':
+        specifier: ^1.59.1
+        version: 1.60.0
       '@tailwindcss/typography':
         specifier: ^0.5.15
         version: 0.5.19(tailwindcss@4.1.18)
@@ -1875,6 +1881,11 @@ packages:
     resolution: {integrity: sha512-MVC8EAQp7MvEcm30KWENFjgR+Mkmf+D189XJTkFIlwohU5hcBbn1ZkKq7KVTi2Hme3PMGF390DaL52beVrIihQ==}
     engines: {node: '>= 16'}
 
+  '@playwright/test@1.60.0':
+    resolution: {integrity: sha512-O71yZIbAh/PxDMNGns37GHBIfrVkEVyn+AXyIa5dOTfb4/xNvRWV+Vv/NMbNCtODB/pO7vLlF2OTmMVLhmr7Ag==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   '@radix-ui/number@1.1.1':
     resolution: {integrity: sha512-MkKCwxlXTgz6CFoJx3pCwn07GKp36+aZyu/u2Ln2VrA5DcdyCZkASEDBTd8x5whTQQL5CiYf4prXKLcgQdv29g==}
 
@@ -3289,8 +3300,8 @@ packages:
       react: '>=16.8.0 <20.0.0'
       react-dom: '>=16.8.0 <20.0.0'
 
-  '@stripe/stripe-js@8.6.1':
-    resolution: {integrity: sha512-UJ05U2062XDgydbUcETH1AoRQLNhigQ2KmDn1BG8sC3xfzu6JKg95Qt6YozdzFpxl1Npii/02m2LEWFt1RYjVA==}
+  '@stripe/stripe-js@8.11.0':
+    resolution: {integrity: sha512-3fVF4z3efsgwgyj64nFK+6F4/vMw0mUXD2TBbOfftJtKVNx4JNv3CSfe1fY4DCtCk0JFp8/YPNcRkzgV0HJ8cg==}
     engines: {node: '>=12.16'}
 
   '@tailwindcss/node@4.1.18':
@@ -3675,6 +3686,7 @@ packages:
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
+    deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
   '@use-gesture/core@10.3.1':
     resolution: {integrity: sha512-WcINiDt8WjqBdUXye25anHiNxPc0VOrlT8F6LLkU6cycrOGUDyY/yyFmsg3k8i5OLvv25llc0QC45GhR/C8llw==}
@@ -3868,6 +3880,10 @@ packages:
 
   asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
+
+  attr-accept@2.2.5:
+    resolution: {integrity: sha512-0bDNnY/u6pPwHDMoF0FieU354oBi0a8rD9FcsLwzcGWbc8KS8KPIi7y+s13OlVY+gMWc/9xEMUgNE6Qm8ZllYQ==}
+    engines: {node: '>=4'}
 
   autoprefixer@10.4.23:
     resolution: {integrity: sha512-YYTXSFulfwytnjAPlw8QHncHJmlvFKtczb8InXaAx9Q0LbfDnfEYDE55omerIJKihhmU61Ft+cAOSzQVaBUmeA==}
@@ -4833,6 +4849,10 @@ packages:
     resolution: {integrity: sha512-H+K6sW6TiIX6VGend0KQwthe+kaceeH/luE8dIZyOP35ik7ahYojDuqlTV1bOrtEwl01sy2HFNGQfi5IDJvotg==}
     engines: {node: '>=16'}
 
+  file-selector@2.1.2:
+    resolution: {integrity: sha512-QgXo+mXTe8ljeqUFaX3QVHc5osSItJ/Km+xpocx0aSqWGMSCf6qYs/VnzZgS864Pjn5iceMRFigeAV7AfTlaig==}
+    engines: {node: '>= 12'}
+
   file-type@3.9.0:
     resolution: {integrity: sha512-RLoqTXE8/vPmMuTI88DAzhMYC99I8BWv7zYP4A1puo5HIjEJ5EX48ighy4ZyKMG9EDXxBgW6e++cn7d1xuFghA==}
     engines: {node: '>=0.10.0'}
@@ -4905,6 +4925,11 @@ packages:
 
   fs-monkey@1.0.3:
     resolution: {integrity: sha512-cybjIfiiE+pTWicSCLFHSrXZ6EilF30oh91FDP9S2B051prEa7QWfrVTQm10/dDpswBDXZugPa1Ogu8Yh+HV0Q==}
+
+  fsevents@2.3.2:
+    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
 
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
@@ -5984,6 +6009,16 @@ packages:
   pkg-types@1.3.1:
     resolution: {integrity: sha512-/Jm5M4RvtBFVkKWRu2BLUTNP8/M2a+UwuAX+ae4770q1qVGtfjG+WTCupoZixokjmHiry8uI+dlY8KXYV5HVVQ==}
 
+  playwright-core@1.60.0:
+    resolution: {integrity: sha512-9bW6zvX/m0lEbgTKJ6YppOKx8H3VOPBMOCFh2irXFOT4BbHgrx5hPjwJYLT40Lu+4qtD36qKc/Hn56StUW57IA==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.60.0:
+    resolution: {integrity: sha512-hheHdokM8cdqCb0lcE3s+zT4t4W+vvjpGxsZlDnikarzx8tSzMebh3UiFtgqwFwnTnjYQcsyMF8ei2mCO/tpeA==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   pnpm@10.28.0:
     resolution: {integrity: sha512-Bd9x0UIfITmeBT/eVnzqNNRG+gLHZXFEG/wceVbpjjYwiJgtlARl/TRIDU2QoGaLwSNi+KqIAApk6D0LDke+SA==}
     engines: {node: '>=18.12'}
@@ -6126,6 +6161,12 @@ packages:
     resolution: {integrity: sha512-yELu4WmLPw5Mr/lmeEpox5rw3RETacE++JgHqQzd2dg+YbJuat3jH4ingc+WPZhxaoFzdv9y33G+F7Nl5O0GBg==}
     peerDependencies:
       react: ^19.2.3
+
+  react-dropzone@15.0.0:
+    resolution: {integrity: sha512-lGjYV/EoqEjEWPnmiSvH4v5IoIAwQM2W4Z1C0Q/Pw2xD0eVzKPS359BQTUMum+1fa0kH2nrKjuavmTPOGhpLPg==}
+    engines: {node: '>= 10.13'}
+    peerDependencies:
+      react: '>= 16.8 || 18.0.0'
 
   react-hook-form@7.71.1:
     resolution: {integrity: sha512-9SUJKCGKo8HUSsCO+y0CtqkqI5nNuaDqTxyqPsZPqIwudpj4rCrAz/jZV+jn57bx5gtZKOh3neQu94DXMc+w5w==}
@@ -6935,6 +6976,7 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   vary@1.1.2:
@@ -9243,6 +9285,10 @@ snapshots:
 
   '@noble/hashes@1.3.2': {}
 
+  '@playwright/test@1.60.0':
+    dependencies:
+      playwright: 1.60.0
+
   '@radix-ui/number@1.1.1': {}
 
   '@radix-ui/primitive@1.1.3': {}
@@ -11007,14 +11053,14 @@ snapshots:
 
   '@standard-schema/utils@0.3.0': {}
 
-  '@stripe/react-stripe-js@6.3.0(@stripe/stripe-js@8.6.1)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+  '@stripe/react-stripe-js@6.3.0(@stripe/stripe-js@8.11.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:
-      '@stripe/stripe-js': 8.6.1
+      '@stripe/stripe-js': 8.11.0
       prop-types: 15.8.1
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
 
-  '@stripe/stripe-js@8.6.1': {}
+  '@stripe/stripe-js@8.11.0': {}
 
   '@tailwindcss/node@4.1.18':
     dependencies:
@@ -11672,6 +11718,8 @@ snapshots:
   async@0.2.10: {}
 
   asynckit@0.4.0: {}
+
+  attr-accept@2.2.5: {}
 
   autoprefixer@10.4.23(postcss@8.5.6):
     dependencies:
@@ -12785,6 +12833,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  file-selector@2.1.2:
+    dependencies:
+      tslib: 2.8.1
+
   file-type@3.9.0: {}
 
   finalhandler@1.3.2:
@@ -12853,6 +12905,9 @@ snapshots:
   fresh@0.5.2: {}
 
   fs-monkey@1.0.3: {}
+
+  fsevents@2.3.2:
+    optional: true
 
   fsevents@2.3.3:
     optional: true
@@ -14205,6 +14260,14 @@ snapshots:
       mlly: 1.8.0
       pathe: 2.0.3
 
+  playwright-core@1.60.0: {}
+
+  playwright@1.60.0:
+    dependencies:
+      playwright-core: 1.60.0
+    optionalDependencies:
+      fsevents: 2.3.2
+
   pnpm@10.28.0: {}
 
   points-on-curve@0.2.0: {}
@@ -14335,6 +14398,13 @@ snapshots:
     dependencies:
       react: 19.2.3
       scheduler: 0.27.0
+
+  react-dropzone@15.0.0(react@19.2.3):
+    dependencies:
+      attr-accept: 2.2.5
+      file-selector: 2.1.2
+      prop-types: 15.8.1
+      react: 19.2.3
 
   react-hook-form@7.71.1(react@19.2.3):
     dependencies:
