@@ -1,0 +1,11 @@
+# VaultX Video-First Correction Brief
+
+The prior landing-page pass improved the copy and product architecture narrative, but it did not fully satisfy the actual VaultX direction. **Video-first does not mean merely cinematic styling, dark visuals, or language about video.** For VaultX, video-first means a visitor lands on the page and immediately experiences a real cinematic trailer or guided walkthrough that shows what VaultX is, what it does, why it is different, and how its automation stack turns creator media into packaged revenue systems.
+
+VaultX should feel like a creator operating system backed by a real AI video factory. The landing page must therefore prioritize a hero trailer/walkthrough module over static copy. The product story should be delivered as motion, sequence, chapters, feature beats, operating-system dashboards, content factory outputs, and creator monetization flows. Copy should support the trailer, not replace it.
+
+The corrected implementation target is to make the public VaultX route communicate, above the fold, that VaultX is a premium adult-creator and short/long-form creator OS with a cinematic trailer, walkthrough chapters, visible feature rails, and a clear video-production factory narrative. If an actual final rendered trailer asset is not already present in the repository, the page should still include a real video-first framework: a production-ready trailer player surface, chapter timeline, script/shot list, fallback poster, CTA, and asset path support so a produced MP4/WebM can be dropped into the platform without redesigning the page.
+
+The next priority after correcting and deploying the landing page is to audit and upgrade the trailer maker itself toward a world-class, end-to-end AI trailer production system. That means treating it as a production pipeline rather than a prompt toy: concept, script, shot plan, asset ingestion, model orchestration, cinematic sequencing, captions, audio, safe variants, platform exports, approval gates, and delivery artifacts.
+
+Only after the landing page and trailer maker are handled should the clone roaming and autonomous content-operator layer be assessed, because that layer must be built on top of reliable video factory and trailer-production capabilities rather than disconnected automation.

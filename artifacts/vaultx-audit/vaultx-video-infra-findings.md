@@ -1,0 +1,9 @@
+# VaultX Video Infrastructure Findings
+
+The corrected VaultX landing-page requirement is feasible inside the current repository. The public `VaultX.tsx` route already has a premium static landing page, but its hero uses a simulated play surface rather than a real trailer or walkthrough. Existing public video assets are present under `client/public/videos/`, including `kingcam-hero-cam.mp4`, `kingcam-clone-1.mp4`, and `kingcam-clone-2.mp4`; however, there is no dedicated VaultX trailer asset currently in the public media directory.
+
+The repository has working local video tooling. `ffmpeg` is installed, and Python has `PIL` and `numpy`, which makes it possible to generate an actual safe, cinematic, feature-walkthrough MP4 deterministically and commit it as a durable public asset. This is the right corrective move for the current task because the page must not merely look cinematic; it must lead with a real playable trailer/walkthrough.
+
+The existing `LaunchTrailerStudio.tsx` is currently a canvas-first trailer project creator with media selection, creative direction, script fields, format selection, project creation, and recent project display. It does not yet appear to be a complete world-class trailer maker with visible render orchestration, shot planning, timeline preview, platform exports, approval gates, audio/caption layers, or final download status. That audit belongs after the current landing-page correction is completed.
+
+The implementation target for the landing correction is to add a real `vaultx-cinematic-trailer.mp4` and `vaultx-cinematic-trailer-poster.png` to `client/public/videos/`, then replace the static hero visual with an autoplaying, muted, looped, controls-enabled video player, chapter rail, trailer script beats, and direct links to the trailer studio and login/entry flows.

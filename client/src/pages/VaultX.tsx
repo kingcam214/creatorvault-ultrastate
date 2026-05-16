@@ -2214,6 +2214,22 @@ function VaultXPublicLanding() {
     { label: "Revenue Read", tone: "#9333ea", copy: "Hook, price, and conversion signal" },
   ];
 
+  const trailerChapters = [
+    { time: "00:00", label: "The OS", detail: "VaultX opens as a cinematic product walkthrough, not a static sales page." },
+    { time: "00:04", label: "Ingest", detail: "Raw creator assets, scripts, captions, and vault media enter one operating system." },
+    { time: "00:07", label: "AI Factory", detail: "Script agents, caption agents, shot planning, safe variants, and model orchestration line up the trailer pipeline." },
+    { time: "00:13", label: "Safe tease", detail: "Public previews, blurred cuts, PPV trailers, and private unlocks branch from one master asset." },
+    { time: "00:19", label: "Distribution", detail: "Vertical exports, Telegram drops, fan messages, story cuts, and platform packages deploy as a campaign." },
+    { time: "00:25", label: "Revenue", detail: "Pricing, VIP upsells, recovery loops, and analytics turn content operations into money infrastructure." },
+  ];
+
+  const factoryBeats = [
+    { label: "Script agents", value: "Hook, offer, scene, and voiceover generation for premium creators." },
+    { label: "Caption agents", value: "Platform-native captions, tease copy, hashtags, and unlock CTAs." },
+    { label: "Trailer maker", value: "Cinematic shot plans, timeline beats, safe versions, and final render rails." },
+    { label: "Clone operator", value: "The eventual roaming content operator sits on top of this video factory, not beside it." },
+  ];
+
   return (
     <div className="min-h-screen overflow-hidden relative text-white" style={{ background: "#030305" }}>
       <style>{`
@@ -2243,59 +2259,90 @@ function VaultXPublicLanding() {
       </nav>
 
       <main className="relative z-10">
-        <section className="max-w-7xl mx-auto px-6 md:px-10 pt-10 md:pt-16 pb-20 grid lg:grid-cols-[1.05fr_.95fr] gap-12 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-7" style={{ background: "rgba(239,68,68,.12)", border: "1px solid rgba(239,68,68,.28)" }}>
-              <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#ef4444" }} />
-              <span className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: "#fca5a5" }}>Video-first monetization engine for adult and premium creators</span>
-            </div>
-            <h1 className="font-black leading-[.86] tracking-[-.055em] mb-7" style={{ fontSize: "clamp(3.8rem, 9vw, 8.7rem)" }}>
-              The OS adult creators wish already existed.
-            </h1>
-            <p className="text-lg md:text-xl max-w-2xl leading-8 mb-8" style={{ color: "#c7c7d1" }}>
-              VaultX is being built as the command center for short-form and long-form adult creators: a safe public tease layer, a private paid unlock layer, a cinematic AI video engine, and automated revenue workflows that make the whole business feel alive.
-            </p>
-            <div className="flex flex-wrap gap-4 mb-10">
-              <a href="/login" className="inline-flex items-center gap-2 text-base font-black px-8 py-4 rounded-2xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 50px rgba(239,68,68,.35)" }}>
-                <Play className="w-5 h-5" /> Start the VaultX build
-              </a>
-              <a href="#vaultx-architecture" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "white", border: "1px solid rgba(255,255,255,.16)" }}>
-                See the engine <ChevronRight className="w-5 h-5" />
-              </a>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl">
-              {proofStats.map((stat) => (
-                <div key={stat.label} className="vaultx-glass rounded-2xl p-4">
-                  <div className="text-2xl md:text-3xl font-black">{stat.value}</div>
-                  <div className="text-xs font-semibold mt-1" style={{ color: "#8b8b98" }}>{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative min-h-[620px] hidden md:block">
-            <div className="absolute inset-0 rounded-[3rem] vaultx-glass overflow-hidden" style={{ transform: "rotate(-2deg)" }}>
-              <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, rgba(239,68,68,.18), rgba(236,72,153,.08) 42%, rgba(3,3,5,.92) 100%)" }} />
-              <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/10" />
-              <div className="absolute left-8 right-8 top-8 h-[72%] rounded-[2rem] overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.025))", border: "1px solid rgba(255,255,255,.12)" }}>
-                <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 50% 25%, rgba(252,165,165,.26), transparent 34%), linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.72))" }} />
-                <div className="absolute inset-x-0 top-0 h-1/3" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,.13), transparent)", animation: "vaultx-scan 5s infinite" }} />
-                <div className="absolute left-5 top-5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[.16em]" style={{ background: "rgba(0,0,0,.42)", color: "#fecaca", border: "1px solid rgba(252,165,165,.35)" }}>safe preview mode</div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.24)", backdropFilter: "blur(10px)" }}>
-                    <Play className="w-9 h-9 ml-1" />
+        <section className="max-w-7xl mx-auto px-6 md:px-10 pt-8 md:pt-12 pb-20">
+          <div className="grid lg:grid-cols-[.82fr_1.18fr] gap-10 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-7" style={{ background: "rgba(239,68,68,.12)", border: "1px solid rgba(239,68,68,.28)" }}>
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#ef4444" }} />
+                <span className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: "#fca5a5" }}>Cinematic trailer first · adult creator OS · 18+</span>
+              </div>
+              <h1 className="font-black leading-[.88] tracking-[-.055em] mb-7" style={{ fontSize: "clamp(3.35rem, 7.6vw, 7.5rem)" }}>
+                Watch VaultX before you read VaultX.
+              </h1>
+              <p className="text-lg md:text-xl max-w-2xl leading-8 mb-8" style={{ color: "#c7c7d1" }}>
+                VaultX is not just positioned as video-first. The first product moment is a real cinematic walkthrough: the creator OS, the AI video factory, the trailer maker, safe public previews, premium unlocks, distribution, and revenue automation shown as motion before the page asks creators to believe the copy.
+              </p>
+              <div className="flex flex-wrap gap-4 mb-10">
+                <a href="#vaultx-trailer" className="inline-flex items-center gap-2 text-base font-black px-8 py-4 rounded-2xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 50px rgba(239,68,68,.35)" }}>
+                  <Play className="w-5 h-5" /> Play the walkthrough
+                </a>
+                <a href="/launch-trailer-studio" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "white", border: "1px solid rgba(255,255,255,.16)" }}>
+                  Open trailer maker <ArrowUpRight className="w-5 h-5" />
+                </a>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl">
+                {proofStats.map((stat) => (
+                  <div key={stat.label} className="vaultx-glass rounded-2xl p-4">
+                    <div className="text-2xl md:text-3xl font-black">{stat.value}</div>
+                    <div className="text-xs font-semibold mt-1" style={{ color: "#8b8b98" }}>{stat.label}</div>
                   </div>
+                ))}
+              </div>
+            </div>
+
+            <div id="vaultx-trailer" className="vaultx-glass rounded-[2.25rem] overflow-hidden" style={{ background: "rgba(0,0,0,.52)", border: "1px solid rgba(255,255,255,.12)" }}>
+              <div className="relative aspect-video overflow-hidden" style={{ background: "#050508" }}>
+                <video
+                  className="absolute inset-0 w-full h-full object-cover"
+                  src="/videos/vaultx-cinematic-trailer.mp4"
+                  poster="/videos/vaultx-cinematic-trailer-poster.png"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  controls
+                  preload="metadata"
+                />
+                <div className="absolute left-4 top-4 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[.16em]" style={{ background: "rgba(0,0,0,.58)", color: "#fecaca", border: "1px solid rgba(252,165,165,.35)", backdropFilter: "blur(12px)" }}>Actual VaultX trailer asset</div>
+                <div className="absolute right-4 top-4 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[.16em]" style={{ background: "rgba(0,0,0,.58)", color: "#fff", border: "1px solid rgba(255,255,255,.18)", backdropFilter: "blur(12px)" }}>28-second walkthrough</div>
+              </div>
+              <div className="p-5 md:p-6">
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div>
+                    <div className="text-xs font-black uppercase tracking-[.2em] mb-1" style={{ color: "#fca5a5" }}>Video factory preview</div>
+                    <h2 className="text-2xl md:text-3xl font-black tracking-[-.03em]">The trailer explains the OS in motion.</h2>
+                  </div>
+                  <a href="/login" className="hidden sm:inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-black" style={{ background: "white", color: "#08080b" }}>Build My Vault <ChevronRight className="w-4 h-4" /></a>
                 </div>
-                <div className="absolute left-5 right-5 bottom-5">
-                  <div className="text-xs font-black uppercase tracking-[.18em] mb-2" style={{ color: "#fca5a5" }}>VaultX video drop</div>
-                  <div className="text-3xl font-black leading-tight">Teaser, paywall, fan follow-up, all generated from one master clip.</div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {trailerChapters.map((chapter) => (
+                    <a key={chapter.time} href="#vaultx-trailer" className="rounded-2xl p-4 transition-all hover:bg-white/10" style={{ background: "rgba(255,255,255,.045)", border: "1px solid rgba(255,255,255,.08)" }}>
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-[11px] font-black px-2.5 py-1 rounded-full" style={{ color: "#0a0a0a", background: "#fca5a5" }}>{chapter.time}</span>
+                        <span className="text-sm font-black">{chapter.label}</span>
+                      </div>
+                      <p className="text-xs leading-5" style={{ color: "#a8a8b3" }}>{chapter.detail}</p>
+                    </a>
+                  ))}
                 </div>
               </div>
-              <div className="absolute left-8 right-8 bottom-8 grid grid-cols-2 gap-3">
-                {visualTiles.map((tile, index) => (
-                  <div key={tile.label} className="rounded-2xl p-4" style={{ background: "rgba(0,0,0,.34)", border: `1px solid ${tile.tone}45`, animation: `vaultx-float ${4 + index * .4}s ease-in-out infinite` }}>
-                    <div className="text-[10px] font-black uppercase tracking-[.16em]" style={{ color: tile.tone }}>{tile.label}</div>
-                    <div className="text-xs mt-2 leading-5" style={{ color: "#d6d6de" }}>{tile.copy}</div>
+            </div>
+          </div>
+        </section>
+
+        <section className="max-w-7xl mx-auto px-6 md:px-10 pb-16">
+          <div className="vaultx-glass rounded-[2rem] p-6 md:p-8" style={{ background: "linear-gradient(135deg, rgba(239,68,68,.12), rgba(147,51,234,.1))" }}>
+            <div className="grid lg:grid-cols-[.7fr_1.3fr] gap-8 items-start">
+              <div>
+                <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#fca5a5" }}>Real video factory, not a prompt toy</div>
+                <h2 className="text-3xl md:text-5xl font-black tracking-[-.04em] leading-none mb-4">VaultX is built around production, release, and growth.</h2>
+                <p className="text-sm md:text-base leading-7" style={{ color: "#b8b8c3" }}>The landing page now leads with the product film because the platform vision is an automated video factory: script writing agents, caption agents, trailer generation, model orchestration, safe variants, distribution, and creator revenue loops compounding together.</p>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {factoryBeats.map((beat) => (
+                  <div key={beat.label} className="rounded-3xl p-5" style={{ background: "rgba(0,0,0,.32)", border: "1px solid rgba(255,255,255,.08)" }}>
+                    <div className="text-sm font-black mb-2" style={{ color: "#fff" }}>{beat.label}</div>
+                    <p className="text-sm leading-6" style={{ color: "#aaaab6" }}>{beat.value}</p>
                   </div>
                 ))}
               </div>
