@@ -1,0 +1,325 @@
+--- App VaultX route/import lines ---
+329:import VaultX from "./pages/VaultX";
+369:// import VaultX from "./pages/VaultX";
+432:import VaultXChallenges from "./pages/VaultXChallenges";
+434:import VaultXFanLibrary from "./pages/VaultXFanLibrary";
+447:import VaultXOnboarding from "./pages/VaultXOnboarding";
+448:import VaultXStudio from "./pages/VaultXStudio";
+449:import VaultXDistribution from "@/pages/VaultXDistribution";
+450:import VaultXEditor from "./pages/VaultXEditor";
+451:import VaultXAnalytics from "./pages/VaultXAnalytics";
+495:      <Route path={"/operator"} component={OperatorDashboard} />
+547:      <Route path="/vaultx-challenges" component={VaultXChallenges} />
+613:      <Route path={"/vault-x"} component={VaultX} />
+621:      <Route path={"/launch-trailer-studio"} component={LaunchTrailerStudio} />
+774:      <Route path="/vaultx/onboarding" component={VaultXOnboarding} />
+775:      <Route path="/vaultx/studio" component={VaultXStudio} />
+776:      <Route path="/vaultx/distribution" component={VaultXDistribution} />
+777:      <Route path="/vault-x/studio" component={VaultXStudio} />
+778:      <Route path="/vault-x/editor" component={VaultXEditor} />
+779:      <Route path="/vault-x/analytics" component={VaultXAnalytics} />
+780:      <Route path="/vault-x/fan-library" component={VaultXFanLibrary} />
+781:      <Route path="/vaultx/video-editor/:projectId">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+782:      <Route path="/vaultx/video-editor">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+784:      <Route path="/vaultx">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
+785:      <Route path="/vaultx-video-editor">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
+797:      <Route path="/videoeditor/vaultx">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+798:      <Route path="/videoeditor/vaultx-projects">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+
+--- Client exact public/editor link refs ---
+client/src/App.tsx:495:      <Route path={"/operator"} component={OperatorDashboard} />
+client/src/App.tsx:547:      <Route path="/vaultx-challenges" component={VaultXChallenges} />
+client/src/App.tsx:613:      <Route path={"/vault-x"} component={VaultX} />
+client/src/App.tsx:621:      <Route path={"/launch-trailer-studio"} component={LaunchTrailerStudio} />
+client/src/App.tsx:774:      <Route path="/vaultx/onboarding" component={VaultXOnboarding} />
+client/src/App.tsx:775:      <Route path="/vaultx/studio" component={VaultXStudio} />
+client/src/App.tsx:776:      <Route path="/vaultx/distribution" component={VaultXDistribution} />
+client/src/App.tsx:777:      <Route path="/vault-x/studio" component={VaultXStudio} />
+client/src/App.tsx:778:      <Route path="/vault-x/editor" component={VaultXEditor} />
+client/src/App.tsx:779:      <Route path="/vault-x/analytics" component={VaultXAnalytics} />
+client/src/App.tsx:780:      <Route path="/vault-x/fan-library" component={VaultXFanLibrary} />
+client/src/App.tsx:781:      <Route path="/vaultx/video-editor/:projectId">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+client/src/App.tsx:782:      <Route path="/vaultx/video-editor">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+client/src/App.tsx:784:      <Route path="/vaultx">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
+client/src/App.tsx:785:      <Route path="/vaultx-video-editor">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
+client/src/App.tsx:797:      <Route path="/videoeditor/vaultx">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+client/src/App.tsx:798:      <Route path="/videoeditor/vaultx-projects">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+client/src/App.tsx.bak_preimports:420:      <Route path={"/operator"} component={OperatorDashboard} />
+client/src/App.tsx.bak_preimports:532:      <Route path={"/vault-x"} component={VaultX} />
+client/src/App.tsx.bak_preimports:539:      <Route path={"/launch-trailer-studio"} component={LaunchTrailerStudio} />
+client/src/App.tsx.bak_preorphans:421:      <Route path={"/operator"} component={OperatorDashboard} />
+client/src/App.tsx.bak_preorphans:533:      <Route path={"/vault-x"} component={VaultX} />
+client/src/App.tsx.bak_preorphans:540:      <Route path={"/launch-trailer-studio"} component={LaunchTrailerStudio} />
+client/src/App.tsx.bak_prerestore:248:      {/* <Route path={"/operator"} component={OperatorDashboard} /> */}
+client/src/App.tsx.bak_prerestore:360:      {/* <Route path={"/vault-x"} component={VaultX} /> */}
+client/src/App.tsx.bak_prerestore:367:      <Route path={"/launch-trailer-studio"} component={LaunchTrailerStudio} />
+client/src/components/AppHeader.tsx:194:                      <Link href="/vault-x/studio">
+client/src/components/AppHeader.tsx:237:                        <Link href="/vaultx-challenges">
+client/src/components/AppHeader.tsx:364:                        <Link href="/vault-x/studio">
+client/src/components/AppHeader.tsx:392:                          <Link href="/vaultx-challenges">
+client/src/components/DashboardLayout.tsx:105:    { label: "VaultX Studio", path: "/vaultx/studio", icon: Video },
+client/src/components/DashboardLayout.tsx:141:    path.startsWith("/vaultx/studio") || path.startsWith("/vaultx-studio") ||
+client/src/pages/Home.tsx:310:            <Link href="/vault-x"><span style={{ fontSize: 12, color: "rgba(201,168,76,0.6)", cursor: "pointer", textDecoration: "underline", textDecorationColor: "rgba(201,168,76,0.28)" }}>18+ creator? Learn about VaultX</span></Link>
+client/src/pages/OwnerCockpit.tsx:518:                { path: "/vaultx",             label: "VaultX",                category: "VaultX"  },
+client/src/pages/OwnerCockpit.tsx:519:                { path: "/vault-x/editor",label: "VaultX Editor",   category: "VaultX"  },
+client/src/pages/SocialHub.tsx:1049:            href="/vaultx"
+client/src/pages/VaultRemix.tsx:497:      const res = await fetch(`/api/trpc/vaultx.suggestPrice?input=${params}`, {
+client/src/pages/VaultX.tsx:1154:            <a href="/vaultx-onboarding" className="inline-block bg-[#0a0a0a] from-red-500 to-orange-500 text-white font-bold py-3 px-6 rounded-xl text-sm uppercase tracking-wider hover:opacity-90 transition-opacity">
+client/src/pages/VaultX.tsx:1827:  const vaultxProfileUrl = `https://creatorvault.live/vault-x/creator/${userId}`;
+client/src/pages/VaultX.tsx:2279:                <a href="/launch-trailer-studio" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "white", border: "1px solid rgba(255,255,255,.16)" }}>
+client/src/pages/VaultX.tsx:2297:                  src="/videos/vaultx-cinematic-trailer.mp4"
+client/src/pages/VaultX.tsx:2298:                  poster="/videos/vaultx-cinematic-trailer-poster.png"
+client/src/pages/VaultXChallenges.tsx:78:    ctaHref: "/vaultx",
+client/src/pages/VaultXChallenges.tsx:99:    ctaHref: "/vaultx",
+client/src/pages/VaultXChallenges.tsx:120:    ctaHref: "/vaultx",
+client/src/pages/VaultXChallenges.tsx:503:              <a href="/vaultx" className="px-5 py-2.5 rounded-xl bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition-all flex items-center gap-2">
+client/src/pages/VaultXDistribution.tsx:3: * Route: /vaultx/distribution
+client/src/pages/VaultXDistribution.tsx:549:    destinationUrl: "https://creatorvault.live/vaultx",
+client/src/pages/VaultXDistribution.tsx:722:            placeholder="https://creatorvault.live/vaultx"
+client/src/pages/VaultXEditor.tsx:1108:      const resp = await fetch("/api/upload/vaultx", { method: "POST", body: formData });
+client/src/pages/VaultXOnboarding.tsx:41:    else navigate("/vault-x/studio");
+client/src/pages/VaultXStudio.tsx:4218:          <a href="/vault-x/editor" className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:bg-white/10" style={{ color: "#6B7280" }}>Editor</a>
+client/src/pages/VaultXStudio.tsx:4219:          <a href="/vault-x/analytics" className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:bg-white/10" style={{ color: "#6B7280" }}>Analytics</a>
+
+--- Redirect/navigation refs ---
+client/src/App.tsx:781:      <Route path="/vaultx/video-editor/:projectId">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+client/src/App.tsx:782:      <Route path="/vaultx/video-editor">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+client/src/App.tsx:784:      <Route path="/vaultx">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
+client/src/App.tsx:785:      <Route path="/vaultx-video-editor">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
+client/src/App.tsx:797:      <Route path="/videoeditor/vaultx">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+client/src/App.tsx:798:      <Route path="/videoeditor/vaultx-projects">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+client/src/pages/CreatorOnboarding.tsx:193:                  onClick={() => setLocation("/vaultlive")}
+client/src/pages/GuiaCreador.tsx:44:            <Button onClick={() => setLocation("/vaultlive")}>
+client/src/pages/GuiaCreador.tsx:88:            <Button onClick={() => setLocation("/vaultlive")} size="lg">
+client/src/pages/InfluencerDashboard.tsx:49:            onClick={() => setLocation("/vault-live")}
+client/src/pages/InfluencerDashboard.tsx:196:                  onClick={() => setLocation("/vault-live")}
+client/src/pages/InfluencerOnboarding.tsx:43:        setLocation("/vault-live");
+client/src/pages/KingCamClone.tsx:155:          <button onClick={() => navigate("/king/clone-studio")} className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-yellow-500/30 rounded-xl p-4 flex items-center gap-3 transition-all">
+client/src/pages/KingCamCommandCenter.tsx:910:                  onClick={() => setLocation("/king/vault-remix")}
+client/src/pages/PayoutSetup.tsx:22:      setLocation("/vaultlive");
+client/src/pages/VaultMarket.tsx:56:                    onClick={() => setLocation(`/vaultmarket/product/${p.id}`)}
+client/src/pages/VaultXOnboarding.tsx:41:    else navigate("/vault-x/studio");
+server/services/telegramConnectRoute.ts:55:        return res.redirect(302, "https://creatorvault.live/vaultx");
+server/services/telegramConnectRoute.ts:345:            window.location.href = 'https://creatorvault.live/vaultx';
+
+--- Static server SPA fallback refs ---
+server/_core/index.ts:119:    const fallback = "https://creatorvault.live/vaultx";
+server/_core/index.ts:132:        return res.redirect(302, fallback);
+server/_core/index.ts:135:      const destUrl = job.destination_url || fallback;
+server/_core/index.ts:158:      return res.redirect(302, fallback);
+server/_core/index.ts:167:  app.use("/uploads", express.static(durableUploadsDir, {
+server/_core/index.ts:173:  // development mode uses Vite, production mode uses static files
+server/_core/index.ts.bak_prelogin:74:  // development mode uses Vite, production mode uses static files
+server/_core/map.ts:311: * Endpoint: /maps/api/staticmap
+server/_core/sdk.ts:96:    fallback: string | null | undefined
+server/_core/sdk.ts:98:    if (fallback && fallback.length > 0) return fallback;
+server/_core/tts.ts:186: * Map voice profile to forge voice ID (fallback only)
+server/_core/vite.ts:33:      const clientTemplate = path.resolve(process.cwd(), "client", "index.html");
+server/_core/vite.ts:35:      // always reload the index.html file from disk incase it changes
+server/_core/vite.ts:58:  app.use(express.static(distPath));
+server/_core/vite.ts:60:  // fall through to index.html if the file doesn't exist
+server/_core/vite.ts:62:    res.sendFile(path.resolve(distPath, "index.html"));
+server/aiBot.test.ts:94:      const history = await getBotHistory(testUserId, 10);
+server/aiBot.test.ts:95:      expect(history.length).toBeGreaterThan(0);
+server/aiBot.test.ts:97:      const lastEvent = history[history.length - 1];
+server/aiBot.test.ts:195:      const history = await getBotHistory(testUserId, 10);
+server/aiBot.test.ts:196:      const testEvent = history.find((e) => e.eventType === "test_event");
+server/aiBot.test.ts:206:    it("should retrieve bot interaction history", async () => {
+server/aiBot.test.ts:211:        eventType: "history_test_1",
+server/aiBot.test.ts:218:        eventType: "history_test_2",
+server/aiBot.test.ts:222:      const history = await getBotHistory(testUserId, 10);
+server/aiBot.test.ts:224:      expect(history).toBeDefined();
+server/aiBot.test.ts:225:      expect(Array.isArray(history)).toBe(true);
+server/aiBot.test.ts:226:      expect(history.length).toBeGreaterThan(0);
+server/aiBot.test.ts:229:      history.forEach((event) => {
+server/aiBot.test.ts:235:      const history = await getBotHistory(testUserId, 2);
+server/aiBot.test.ts:237:      expect(history.length).toBeLessThanOrEqual(2);
+server/db/bootstrap.ts:81:    `CREATE TABLE IF NOT EXISTS optimization_history (
+server/media-os/contracts/operationalContracts.ts:131:  resumeMode: "resume_partial" | "retry_stage" | "replay_from_manifest" | "fallback_provider" | "dead_letter_review" | "rollback_safe_noop";
+server/media-os/contracts/operationalContracts.ts:174:  fallbackProviderIds: string[];
+server/media-os/contracts/operationalContracts.ts:187:  fallbackReadyCount: number;
+server/media-os/jobs/mediaJobReplay.ts:11:        ? "fallback_provider"
+server/media-os/observability/mediaObservability.ts:36:      { name: "provider_fallbacks_ready", value: input.providers.fallbackReadyCount, unit: "providers", severity: "info" },
+server/media-os/observability/mediaObservability.ts:51:      { panelId: "providers", title: "Provider Reliability", status: `${input.providers.healthyCount}_healthy`, summary: `${input.providers.fallbackReadyCount} providers have fallback paths.` },
+server/media-os/operational/operationalMediaOS.ts:15:function asString(value: unknown, fallback = ""): string {
+server/media-os/operational/operationalMediaOS.ts:16:  return typeof value === "string" && value.trim().length > 0 ? value : fallback;
+server/media-os/operational/operationalMediaOS.ts:102:    createOperationalMediaOSEvent({ sequence: 2, name: OPERATIONAL_MEDIA_OS_EVENT_NAMES.PROVIDER_HEALTH_EVALUATED, jobId: null, jobState: null, contract: "ProviderReliabilityManifest", producer: "providerReliabilityManager", severity: providers.unavailableCount > 0 ? "blocking" : "info", timestamp: generatedAt, notes: `${providers.healthyCount} healthy providers and ${providers.fallbackReadyCount} fallback paths evaluated.` }),
+server/media-os/operational/operationalMediaOS.ts:135:      providerFallbacksReady: providers.fallbackReadyCount >= 3,
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:27:function asNumber(value: unknown, fallback = 0): number {
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:29:  return Number.isFinite(parsed) ? parsed : fallback;
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:32:function asString(value: unknown, fallback = ""): string {
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:33:  return typeof value === "string" && value.trim().length > 0 ? value : fallback;
+server/media-os/providers/providerReliabilityManager.ts:29:      ...(input.fallbackProviderIds.length === 0 && input.health !== "healthy" ? [operationalWarning("providerReliabilityManager", `${input.providerId} has no configured fallback`, "warning")] : []),
+server/media-os/providers/providerReliabilityManager.ts:46:      fallbackProviderIds: ["creatorvault-forge-tts-fallback"],
+server/media-os/providers/providerReliabilityManager.ts:60:      fallbackProviderIds: ["manual-non-clone-scene-path"],
+server/media-os/providers/providerReliabilityManager.ts:74:      fallbackProviderIds: ["ffmpeg-safe-render-path"],
+server/media-os/providers/providerReliabilityManager.ts:88:      fallbackProviderIds: [],
+server/media-os/providers/providerReliabilityManager.ts:102:      fallbackProviderIds: ["creatorvault-project-library"],
+server/media-os/providers/providerReliabilityManager.ts:115:    fallbackReadyCount: providers.filter((item) => item.fallbackProviderIds.length > 0).length,
+server/media-os/recovery/mediaRecoveryPlanner.ts:22:  const fallbackCoverage = input.providers.providers.filter((provider) => provider.fallbackProviderIds.length > 0).length;
+server/media-os/recovery/mediaRecoveryPlanner.ts:34:      ...(fallbackCoverage === 0 ? [operationalWarning("mediaRecoveryPlanner", "No provider fallback coverage available for recovery", "warning")] : []),
+server/routers/adultSalesBot.ts:39:   * Get conversation history for a user
+server/routers/aiBot.ts:144:   * Get user's bot interaction history
+server/routers/aiBot.ts:153:      const history = await getBotHistory(ctx.user.id, input.limit);
+server/routers/aiBot.ts:154:      return history;
+server/routers/aiChatterRouter.ts:173:   * 2. Loads recent conversation history from vaultx_ai_chatter_messages
+server/routers/aiChatterRouter.ts:205:      // 2. Load recent conversation history (last 10 exchanges)
+server/routers/aiChatterRouter.ts:206:      const historyRows = await rawQuery(
+server/routers/aiChatterRouter.ts:213:      const history = historyRows.reverse(); // oldest first
+server/routers/aiChatterRouter.ts:216:      const messageCount = history.filter((m) => m.role === "assistant").length;
+server/routers/aiChatterRouter.ts:249:        ...history.slice(-10).map((h) => ({
+server/routers/aiEmpireRouter.ts:54:      const historyResult = await db.db.execute(sql`SELECT DATE(recorded_at) as date, SUM(amount) as totalRevenue, SUM(CASE WHEN source != 'recruitment_weapon' THEN amount ELSE 0 END) as aiRevenue, SUM(CASE WHEN source = 'recruitment_weapon' THEN amount ELSE 0 END) as humanRevenue FROM empire_challenge_transactions GROUP BY DATE(recorded_at) ORDER BY date DESC LIMIT 30`);
+server/routers/aiEmpireRouter.ts:55:      const dailyHistoryRaw = Array.isArray(historyResult) ? historyResult : (historyResult as any)[0] ?? [];
+server/routers/cloneCommandRouter.ts:10: *   3. getGenerationHistory— Paginated history of all generations
+server/routers/commandHub.ts:134:   * Get command history
+server/routers/commandHubV2Router.ts:39:    return { history: [], userId: ctx.user.id };
+server/routers/conversionEngineRouter.ts:527:      const history = Array.isArray(existing.onboardingStageHistory) ? existing.onboardingStageHistory : [];
+server/routers/conversionEngineRouter.ts:528:      const nextHistory = [...history, { stage: input.onboardingStage, conversionStage: input.conversionStage, at: new Date().toISOString(), responseSignal: input.lastResponseSignal || null }];
+server/routers/creatorTools.ts:159:   * Get ad generation history
+server/routers/creatorTools.ts:194:   * Get thumbnail generation history
+server/routers/creatorVideoEditorRouter.ts:3: * Real DB queries for asset persistence and render history.
+server/routers/emmaContentRouter.ts:44:    const history = await db.db.select()
+server/routers/emmaContentRouter.ts:49:    return history;
+server/routers/emmaOsRouter.ts:10:    history: z.array(z.object({ role: z.string(), content: z.string() })).optional(),
+server/routers/emmaOsRouter.ts:17:      ...(input.history || []).slice(-10),
+server/routers/kingWorld3DRouter.ts:16:// Remotion engine disabled - using fallback
+server/routers/kingWorld3DRouter.ts:29:// These mirror the static frontend data so the backend can serve them with
+server/routers/kingWorld3DRouter.ts:305:      // Merge static + DB episodes (DB takes precedence by id)
+server/routers/kingWorld3DRouter.ts:307:      const staticEps = STATIC_EPISODES.map((ep: any) => {
+server/routers/kingWorld3DRouter.ts:317:      // Add any DB episodes not in static list
+server/routers/kingWorld3DRouter.ts:319:        const exists = staticEps.find(e => e.id === String(dbRow.id));
+server/routers/kingWorld3DRouter.ts:321:          staticEps.push({
+server/routers/kingWorld3DRouter.ts:344:        ? staticEps
+server/routers/kingWorld3DRouter.ts:345:        : staticEps.filter((ep: any) => ep.filter === input.filter || ep.tags.includes(input.filter));
+server/routers/kingcamAIRouter.ts:333:          name: "Forge (fallback)",
+server/routers/kingcamAIRouter.ts:335:          description: "Internal image generation fallback",
+server/routers/kingcamPerks.ts:14:  getPerkHistory: protectedProcedure.query(async ({ ctx }) => ({ history: [], userId: ctx.user.id })),
+server/routers/liveDemo.ts:258:      // Return mock data as fallback
+server/routers/mediaAssets.ts:21:  // fallback for other adapters
+server/routers/mediaAssets.ts:28:function asNumber(value: unknown, fallback = 0): number {
+server/routers/mediaAssets.ts:30:  return Number.isFinite(n) ? n : fallback;
+server/routers/platformPosting.ts:208:   * Get post history
+server/routers/polloRouter.ts:212:   * Get generation history with pagination
+server/routers/polloRouter.ts:254:        console.error("Get generation history error:", error);
+server/routers/polloRouter.ts:255:        throw new Error(`Failed to get history: ${error.message}`);
+server/routers/presentationEmpireRouter.ts:27:// Remotion engine disabled - using fallback
+server/routers/realGPT.ts:6:  chat: protectedProcedure.input(z.object({ message: z.string(), history: z.array(z.object({ role: z.string(), content: z.string() })).optional(), mode: z.string().optional() })).mutation(async ({ ctx, input }) => {
+server/routers/realGPT.ts:8:    const messages: any[] = [{ role: "system", content: `You are RealGPT — an unfiltered, direct AI assistant for creators. Give real talk, real strategies, real results. No corporate speak. User: ${ctx.user.username || ctx.user.id}` }, ...(input.history || []).slice(-10), { role: "user", content: input.message }];
+server/routers/smartCaptions.ts:120:      // No segments — burn full transcript as static caption
+server/routers/socialMediaAutoPoster.ts:55:    const history = await db.db.select().from(db.schema.content)
+server/routers/socialMediaAutoPoster.ts:58:    return { history };
+server/routers/telegramHubRouter.ts:227:  // ── Get message history ───────────────────────────────────────────────────
+server/routers/vaultxRouter.ts:636:            // Load recent conversation history (last 6 messages)
+server/routers/vaultxRouter.ts:637:            const history = await rawQuery(
+server/routers/vaultxRouter.ts:644:            const conversationHistory = history.reverse().map((m: any) => ({
+server/routers/vaultxRouter.ts:650:            const msgCount = history.length;
+server/routers/vaultxRouter.ts:1820:        `INSERT INTO platform_export_history (creator_id, source_content_id, source_asset_id, platform, output_url, resolution, format, file_size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+server/routers/vaultxRouter.ts:1830:        `SELECT * FROM platform_export_history WHERE creator_id = ? ${input.platform ? "AND platform = ?" : ""} ORDER BY exported_at DESC LIMIT ?`,
+server/routers/vaultxRouter.ts:2075:        "INSERT INTO vaultx_export_history (creator_id, content_id, export_type, output_url, file_size_bytes, processing_time_seconds, created_at) VALUES (?, ?, 'desire_teaser', ?, 0, ?, NOW())",
+server/routers/videoEnhanceRouter.ts:481:        enginesUsed.push({ engine: "OpenAI Whisper-1", purpose: "Audio transcription", status: "succeeded", fallbackUsed: false });
+server/routers/videoEnhanceRouter.ts:484:        enginesUsed.push({ engine: "OpenAI Whisper-1", purpose: "Audio transcription", status: "failed", fallbackUsed: true });
+server/routers/videoEnhanceRouter.ts:490:        enginesUsed.push({ engine: "OpenAI GPT-4o-mini", purpose: "Hook/caption generation", status: "succeeded", fallbackUsed: false });
+server/routers/videoEnhanceRouter.ts:493:        enginesUsed.push({ engine: "OpenAI GPT-4o-mini", purpose: "Hook/caption generation", status: "failed", fallbackUsed: true });
+server/routers/videoEnhanceRouter.ts:507:          enginesUsed.push({ engine: "Replicate Real-ESRGAN", purpose: `Video upscale to ${input.targetResolution}`, status: "succeeded", providerJobId: pred.id, fallbackUsed: false });
+server/routers/videoEnhanceRouter.ts:510:          enginesUsed.push({ engine: "Replicate Real-ESRGAN", purpose: "Video upscale", status: "failed", fallbackUsed: true });
+server/routers/videoEnhanceRouter.ts:523:        enginesUsed.push({ engine: "FFmpeg", purpose: "Final encode/compress (utility only)", status: "succeeded", fallbackUsed: false });
+server/routers/videoEnhanceRouter.ts:526:        enginesUsed.push({ engine: "FFmpeg", purpose: "Final encode", status: "failed", fallbackUsed: false });
+server/routers/videoEnhanceRouter.ts:561:        enginesUsed.push({ engine: "OpenAI Whisper-1", purpose: "Audio transcription", status: "succeeded", fallbackUsed: false });
+server/routers/videoEnhanceRouter.ts:564:        enginesUsed.push({ engine: "OpenAI Whisper-1", purpose: "Audio transcription", status: "failed", fallbackUsed: true });
+server/routers/videoEnhanceRouter.ts:572:        enginesUsed.push({ engine: "OpenAI GPT-4o-mini", purpose: "Best-moment detection + copy generation", status: "succeeded", fallbackUsed: false });
+server/routers/videoEnhanceRouter.ts:575:        enginesUsed.push({ engine: "OpenAI GPT-4o-mini", purpose: "Best-moment detection", status: "failed", fallbackUsed: true });
+server/routers/videoEnhanceRouter.ts:610:        enginesUsed.push({ engine: "FFmpeg", purpose: "Teaser cut + full encode + thumbnails (utility only)", status: "succeeded", fallbackUsed: false });
+server/routers/videoEnhanceRouter.ts:613:        enginesUsed.push({ engine: "FFmpeg", purpose: "Teaser/thumbnail processing", status: "failed", fallbackUsed: false });
+server/routers/videoEnhanceRouter.ts:651:        enginesUsed.push({ engine: "OpenAI Whisper-1", purpose: "Audio transcription", status: "succeeded", fallbackUsed: false });
+server/routers/videoEnhanceRouter.ts:654:        enginesUsed.push({ engine: "OpenAI Whisper-1", purpose: "Audio transcription", status: "failed", fallbackUsed: true });
+server/routers/videoEnhanceRouter.ts:660:        enginesUsed.push({ engine: "OpenAI GPT-4o-mini", purpose: `${input.clipCount} best-moment detection`, status: "succeeded", fallbackUsed: false });
+server/routers/videoEnhanceRouter.ts:663:        enginesUsed.push({ engine: "OpenAI GPT-4o-mini", purpose: "Moment detection", status: "failed", fallbackUsed: true });
+server/routers/videoEnhanceRouter.ts:712:        enginesUsed.push({ engine: "FFmpeg", purpose: `${clips.length} clip cuts (utility only)`, status: clips.length > 0 ? "succeeded" : "failed", fallbackUsed: false });
+server/routers/videoEnhanceRouter.ts:715:        enginesUsed.push({ engine: "FFmpeg", purpose: "Clip cutting", status: "failed", fallbackUsed: false });
+server/routers/videoEnhanceRouter.ts:1456:      // Add conversation history
+server/routers/videoStudioRouter.ts:6: * Served via express.static("/uploads") mounted in server/index.ts
+server/routers/videoUploadRouter.ts:117:// ─── /finalize — manual finalize (fallback) ───────────────────────────────────
+server/routers/viralOptimizer.ts:33:   * Get user's viral analysis history
+server/routers/whatsappContentRouter.ts:333:        // SDXL fallback
+server/routers/whatsappContentRouter.ts:466:  // ─── Get generation history ───────────────────────────────────────────────
+server/services/aiBot.ts:425: * Get user's bot interaction history
+server/services/automatedDirectorService.ts:92:  // Heuristic fallback: divide into thirds (intro=medium, middle=high, outro=medium)
+server/services/cloneAssetQualityScorer.ts:66:    // Try imagemagick identify as fallback
+server/services/cloneCaptionGenerator.ts:82:    console.error("[CaptionGenerator] Vision API failed, using fallback:", e);
+server/services/cloneCaptionGenerator.ts:107:      // Set fallback caption
+server/services/commandHub.ts:409:  // For now, return bot events as command history
+server/services/commandHub.ts:410:  // In production, would have dedicated command_history table
+server/services/commandHub.ts:423:  const history = await getCommandHistory(userId, 1000);
+server/services/commandHub.ts:426:    totalCommands: history.length,
+server/services/commandHub.ts:428:    successCount: history.filter(e => e.outcome === "success").length,
+server/services/commandHub.ts:430:    errorCount: history.filter(e => e.outcome === "error").length,
+server/services/commandHub.ts:436:  history.forEach(event => {
+server/services/contentOrchestrator.ts:230:    // Step 6: Store optimization history
+server/services/economic/omegaFailsafe.ts:33:  private static failsafeLog: FailsafeEvent[] = [];
+server/services/economic/omegaFailsafe.ts:38:  static async validateRevenueEvent(event: {
+server/services/economic/omegaFailsafe.ts:116:  static validateCommissionSplit(split: {
+server/services/economic/omegaFailsafe.ts:168:  static validatePPPMultiplier(
+server/services/economic/omegaFailsafe.ts:208:  private static logFailsafeEvent(event: FailsafeEvent): void {
+server/services/economic/omegaFailsafe.ts:218:  static getFailsafeLog(): FailsafeEvent[] {
+server/services/economic/omegaFailsafe.ts:225:  static getFailsafeStats(): {
+server/services/economic/omegaFailsafe.ts:242:  static clearFailsafeLog(): void {
+server/services/economic/zeroBillingProtection.ts:21:  private static blockedAttempts: BillingAttempt[] = [];
+server/services/economic/zeroBillingProtection.ts:27:  static shouldBlockCharge(userId: string, amount: number, reason: string): boolean {
+server/services/economic/zeroBillingProtection.ts:68:  static validatePayoutDirection(transaction: {
+server/services/economic/zeroBillingProtection.ts:100:  private static logBlockedAttempt(attempt: BillingAttempt): void {
+server/services/economic/zeroBillingProtection.ts:110:  static getBlockedAttempts(): BillingAttempt[] {
+server/services/economic/zeroBillingProtection.ts:117:  static getBlockedStats(): {
+server/services/economic/zeroBillingProtection.ts:132:  static clearBlockedAttempts(): void {
+server/services/king/killSwitch.ts:32:  private static state: KillSwitchState = {
+server/services/king/killSwitch.ts:42:  static activate(params: {
+server/services/king/killSwitch.ts:78:  static deactivate(kingUserId: string): { success: boolean; message: string } {
+server/services/king/killSwitch.ts:110:  static isComponentBlocked(component: SystemComponent, userId: string): boolean {
+server/services/king/killSwitch.ts:126:  static isActive(): boolean {
+server/services/king/killSwitch.ts:133:  static getState(): KillSwitchState {
+server/services/king/killSwitch.ts:141:  private static isKing(userId: string): boolean {
+server/services/king/killSwitch.ts:151:  static addAllowedUser(kingUserId: string, userIdToAllow: string): boolean {
+server/services/king/kingOverride.ts:26:  private static overrideLog: KingOverrideRecord[] = [];
+server/services/king/kingOverride.ts:27:  private static kingCommissionPercentage = 2; // King gets 2% of all revenue
+server/services/king/kingOverride.ts:32:  static applyKingCommission(params: {
+server/services/king/kingOverride.ts:56:  static overrideCommissionSplit(params: {
+server/services/king/kingOverride.ts:104:  static adjustPayout(params: {
+server/services/king/kingOverride.ts:143:  static getOverrideLog(): KingOverrideRecord[] {
+server/services/king/kingOverride.ts:150:  static getOverrideStats(): {
+server/services/king/kingOverride.ts:168:  static getKingCommissionPercentage(): number {
+server/services/king/kingOverride.ts:175:  static setKingCommissionPercentage(
+server/services/king/kingOverride.ts:215:  private static isKing(userId: string): boolean {
+server/services/king/kingOverride.ts:223:  private static logOverride(record: KingOverrideRecord): void {
+server/services/kingcamAI.ts:13: *     - Internal Forge API                  → General image fallback
+server/services/kingcamAI.ts:310: * Generate an image using KingCam's fluxdevcam (primary) or forge (fallback).
+server/services/kingcamMediaFactory.ts:13: *   Motion:  Pollo.ai Kling 3.0 (primary) / Seedance 2.0 (fallback)
+server/services/platformPosting.ts:576: * Get post history for a user
+server/services/sceneEnhancementService.ts:134:    return imageUrl; // fallback — return original if no token
+server/services/sceneEnhancementService.ts:173:  } catch { /* fallback */ }
+server/services/services/aiBot.ts:425: * Get user's bot interaction history
+server/services/services/automatedDirectorService.ts:92:  // Heuristic fallback: divide into thirds (intro=medium, middle=high, outro=medium)
+server/services/services/commandHub.ts:409:  // For now, return bot events as command history
+server/services/services/commandHub.ts:410:  // In production, would have dedicated command_history table
+server/services/services/commandHub.ts:423:  const history = await getCommandHistory(userId, 1000);
+server/services/services/commandHub.ts:426:    totalCommands: history.length,
+server/services/services/commandHub.ts:428:    successCount: history.filter(e => e.outcome === "success").length,
+server/services/services/commandHub.ts:430:    errorCount: history.filter(e => e.outcome === "error").length,
+server/services/services/commandHub.ts:436:  history.forEach(event => {
+server/services/services/contentOrchestrator.ts:230:    // Step 6: Store optimization history
+server/services/services/economic/omegaFailsafe.ts:33:  private static failsafeLog: FailsafeEvent[] = [];
+server/services/services/economic/omegaFailsafe.ts:38:  static async validateRevenueEvent(event: {
+server/services/services/economic/omegaFailsafe.ts:116:  static validateCommissionSplit(split: {
+server/services/services/economic/omegaFailsafe.ts:168:  static validatePPPMultiplier(
+server/services/services/economic/omegaFailsafe.ts:208:  private static logFailsafeEvent(event: FailsafeEvent): void {
+server/services/services/economic/omegaFailsafe.ts:218:  static getFailsafeLog(): FailsafeEvent[] {
+server/services/services/economic/omegaFailsafe.ts:225:  static getFailsafeStats(): {
+server/services/services/economic/omegaFailsafe.ts:242:  static clearFailsafeLog(): void {
+server/services/services/economic/zeroBillingProtection.ts:21:  private static blockedAttempts: BillingAttempt[] = [];
+server/services/services/economic/zeroBillingProtection.ts:27:  static shouldBlockCharge(userId: string, amount: number, reason: string): boolean {
+server/services/services/economic/zeroBillingProtection.ts:68:  static validatePayoutDirection(transaction: {
+server/services/services/economic/zeroBillingProtection.ts:100:  private static logBlockedAttempt(attempt: BillingAttempt): void {
+server/services/services/economic/zeroBillingProtection.ts:110:  static getBlockedAttempts(): BillingAttempt[] {
+server/services/services/economic/zeroBillingProtection.ts:117:  static getBlockedStats(): {
+server/services/services/economic/zeroBillingProtection.ts:132:  static clearBlockedAttempts(): void {
+server/services/services/king/killSwitch.ts:32:  private static state: KillSwitchState = {
+server/services/services/king/killSwitch.ts:42:  static activate(params: {
+server/services/services/king/killSwitch.ts:78:  static deactivate(kingUserId: string): { success: boolean; message: string } {

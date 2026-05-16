@@ -781,7 +781,7 @@ function Router() {
       <Route path="/vaultx/video-editor/:projectId">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
       <Route path="/vaultx/video-editor">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
       {/* Redirect aliases for OwnerCockpit and legacy links */}
-      <Route path="/vaultx">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
+      <Route path="/vaultx" component={VaultX} />
       <Route path="/vaultx-video-editor">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
       <Route path="/video-os" component={VideoOS} />
       <Route path="/waitlist" component={Waitlist} />

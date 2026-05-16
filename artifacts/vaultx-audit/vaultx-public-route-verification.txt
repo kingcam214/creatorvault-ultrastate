@@ -1,0 +1,45 @@
+--- git branch and latest commit ---
+main-deployfix
+[33m58bab78[m Add safe clone roaming command center
+--- App.tsx VaultX route lines ---
+329:import VaultX from "./pages/VaultX";
+369:// import VaultX from "./pages/VaultX";
+432:import VaultXChallenges from "./pages/VaultXChallenges";
+434:import VaultXFanLibrary from "./pages/VaultXFanLibrary";
+447:import VaultXOnboarding from "./pages/VaultXOnboarding";
+448:import VaultXStudio from "./pages/VaultXStudio";
+449:import VaultXDistribution from "@/pages/VaultXDistribution";
+450:import VaultXEditor from "./pages/VaultXEditor";
+451:import VaultXAnalytics from "./pages/VaultXAnalytics";
+547:      <Route path="/vaultx-challenges" component={VaultXChallenges} />
+613:      <Route path={"/vault-x"} component={VaultX} />
+774:      <Route path="/vaultx/onboarding" component={VaultXOnboarding} />
+775:      <Route path="/vaultx/studio" component={VaultXStudio} />
+776:      <Route path="/vaultx/distribution" component={VaultXDistribution} />
+777:      <Route path="/vault-x/studio" component={VaultXStudio} />
+778:      <Route path="/vault-x/editor" component={VaultXEditor} />
+779:      <Route path="/vault-x/analytics" component={VaultXAnalytics} />
+780:      <Route path="/vault-x/fan-library" component={VaultXFanLibrary} />
+784:      <Route path="/vaultx" component={VaultX} />
+--- source public landing signatures ---
+1059:      {/* Hero — cinematic, full-bleed */}
+2151:      body: "AI relighting, cinematic prompt direction, shot enhancement, scene extension, camera-motion synthesis, and continuity-aware prompt logic transform ordinary footage into premium promotional material through a queue-driven AI pipeline.",
+2190:    { step: "Transform", detail: "Create safe teasers, cinematic variants, captions, thumbnails, and paid unlocks." },
+2197:    { title: "Video-first command center", body: "Vertical reels, PPV teasers, fan-feed previews, stories, trailers, and cinematic promo assets live in one revenue workspace.", accent: "#ef4444" },
+2218:    { time: "00:00", label: "The OS", detail: "VaultX opens as a cinematic product walkthrough, not a static sales page." },
+2273:                VaultX is not just positioned as video-first. The first product moment is a real cinematic walkthrough: the creator OS, the AI video factory, the trailer maker, safe public previews, premium unlocks, distribution, and revenue automation shown as motion before the page asks creators to believe the copy.
+2277:                  <Play className="w-5 h-5" /> Play the walkthrough
+2297:                  src="/videos/vaultx-cinematic-trailer.mp4"
+2298:                  poster="/videos/vaultx-cinematic-trailer-poster.png"
+2307:                <div className="absolute right-4 top-4 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[.16em]" style={{ background: "rgba(0,0,0,.58)", color: "#fff", border: "1px solid rgba(255,255,255,.18)", backdropFilter: "blur(12px)" }}>28-second walkthrough</div>
+--- built bundle signatures ---
+Build the launch trailer like a studio
+Clone Roaming Command Center
+cinematic product walkthrough
+--- media assets ---
+client/public/videos/vaultx-cinematic-trailer-poster.png
+client/public/videos/vaultx-cinematic-trailer.mp4
+dist/public/videos/vaultx-cinematic-trailer-poster.png
+dist/public/videos/vaultx-cinematic-trailer.mp4
+--- verification status ---
+Client build completed successfully; quality governor returned ok=true.
