@@ -17,7 +17,7 @@ export default function ContentDashboard() {
             <h1 className="text-3xl font-bold text-yellow-400">Content Dashboard</h1>
             <p className="text-gray-400 mt-1">Manage all your published content</p>
           </div>
-          <Link href="/creator/video-studio">
+          <Link href="/vault-x/editor">
             <button className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-4 py-2 rounded-lg transition-colors">
               <Plus className="w-4 h-4" /> Upload Content
             </button>
@@ -54,7 +54,7 @@ export default function ContentDashboard() {
           <div className="text-center py-16 text-gray-500">
             <Video className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p>No content yet. Upload your first video to get started.</p>
-            <Link href="/creator/video-studio"><button className="mt-4 bg-yellow-500 text-black font-bold px-6 py-2 rounded-lg">Go to Studio</button></Link>
+            <Link href="/vault-x/editor"><button className="mt-4 bg-yellow-500 text-black font-bold px-6 py-2 rounded-lg">Open VaultX Editor</button></Link>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">

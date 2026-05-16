@@ -20,7 +20,7 @@ export default function CommandHubV2() {
     { label: "King Dashboard", href: "/king", icon: "👑" },
     { label: "Empire Agents", href: "/king/empire", icon: "🤖" },
     { label: "Telegram Hub", href: "/king/telegram-hub", icon: "📱" },
-    { label: "VaultX Studio", href: "/creator/video-studio", icon: "🎬" },
+    { label: "VaultX Editor", href: "/vault-x/editor", icon: "🎬" },
     { label: "Analytics", href: "/analytics", icon: "📊" },
     { label: "Marketplace", href: "/marketplace", icon: "🛒" },
   ];

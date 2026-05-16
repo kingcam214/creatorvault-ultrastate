@@ -8,7 +8,8 @@ export default function CreatorHome() {
   const { data: stats } = (trpc.vaultAnalytics as any).getOverview?.useQuery(undefined, { retry: false });
 
   const tools = [
-    { label: "VaultX Studio", href: "/creator/video-studio", icon: "🎬", desc: "Edit & monetize videos" },
+    { label: "VaultX Editor", href: "/vault-x/editor", icon: "🎬", desc: "CapCut-style editor for creators" },
+    { label: "VaultX Studio", href: "/vault-x/studio", icon: "⚡", desc: "AI production suite" },
     { label: "Script Writer", href: "/king/script-writer", icon: "✍️", desc: "AI-powered scripts" },
     { label: "Telegram Hub", href: "/king/telegram-hub", icon: "📱", desc: "Broadcast to fans" },
     { label: "Empire Agents", href: "/king/empire", icon: "🤖", desc: "49 AI agents working" },
@@ -36,7 +37,7 @@ export default function CreatorHome() {
               <h1 className="text-2xl font-bold">Welcome back, {user?.name || "Creator"}</h1>
             </div>
           </div>
-          <p className="text-gray-400 max-w-xl">Your empire command center. Every tool you need to create, monetize, and grow — all in one place.</p>
+          <p className="text-gray-400 max-w-xl">Your empire command center. Open VaultX Editor for CapCut-style clipping, safe previews, PPV packaging, platform exports, and revenue-ready drops — all in one place.</p>
         </div>
       </div>
 
@@ -75,13 +76,13 @@ export default function CreatorHome() {
 
         {/* Quick Actions */}
         <div className="mt-8 grid md:grid-cols-2 gap-4">
-          <Link href="/creator/video-studio">
-            <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30 rounded-xl p-5 cursor-pointer hover:border-yellow-500/60 transition-all flex items-center justify-between">
+          <Link href="/vault-x/editor">
+            <div className="bg-gradient-to-r from-purple-500/25 via-pink-500/15 to-yellow-500/10 border border-purple-500/40 rounded-xl p-5 cursor-pointer hover:border-pink-500/70 transition-all flex items-center justify-between">
               <div>
-                <p className="font-bold text-yellow-400">🎬 Start Creating</p>
-                <p className="text-gray-400 text-sm mt-1">Open VaultX Video Studio</p>
+                <p className="font-bold text-purple-300">🎬 Open VaultX Editor</p>
+                <p className="text-gray-400 text-sm mt-1">CapCut-style editing, teaser cuts, PPV packs, and exports</p>
               </div>
-              <ArrowRight className="w-5 h-5 text-yellow-400" />
+              <ArrowRight className="w-5 h-5 text-purple-300" />
             </div>
           </Link>
           <Link href="/king/challenge-story">

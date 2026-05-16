@@ -1285,6 +1285,7 @@ export default function VaultXEditor() {
             </div>
             <span className="text-sm font-black" style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>VaultX</span>
             <span className="text-sm font-black text-white">AI Editor</span>
+            <span className="hidden xl:inline-flex px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.14em]" style={{ background: "rgba(236,72,153,0.12)", color: "#f0abfc", border: "1px solid rgba(236,72,153,0.24)" }}>CapCut-style workflow for adult creators</span>
           </div>
           <div className="w-px h-4" style={{ background: "rgba(255,255,255,0.1)" }} />
           <button onClick={() => setShowProjectList(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -1325,6 +1326,9 @@ export default function VaultXEditor() {
               <span className="text-[9px] font-black" style={{ color: "#8B5CF6" }}>AI RUNNING</span>
             </div>
           )}
+          <a href="/vault-x/studio" className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black" style={{ background: "rgba(236,72,153,0.12)", color: "#f0abfc", border: "1px solid rgba(236,72,153,0.24)" }}>
+            <Sparkles size={10} />Studio
+          </a>
           <button onClick={() => setShowProjectList(true)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)" }}>
             <Save size={10} />Projects
           </button>

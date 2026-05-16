@@ -63,7 +63,7 @@ export default function ChicaCockpit() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[
             { label: "Telegram Hub", href: "/king/telegram-hub", icon: "📱" },
-            { label: "VaultX Studio", href: "/creator/video-studio", icon: "🎬" },
+            { label: "VaultX Editor", href: "/vault-x/editor", icon: "🎬" },
             { label: "Script Writer", href: "/king/script-writer", icon: "✍️" },
             { label: "Analytics", href: "/creator/analytics", icon: "📊" },
             { label: "Empire Challenge", href: "/king/challenge-story", icon: "💰" },

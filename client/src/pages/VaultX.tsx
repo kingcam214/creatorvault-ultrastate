@@ -2139,9 +2139,9 @@ function VaultXPublicLanding() {
       layer: "01",
       icon: Video,
       eyebrow: "Professional Editor",
-      title: "Browser-native video studio",
-      body: "A creator-native editing workspace for timeline cuts, keyframes, waveform sync, subtitle timelines, vertical exports, thumbnails, and premium content packaging, designed around a Remotion/WebCodecs editing vision with server-side FFmpeg rendering instead of creator chaos across CapCut, Premiere, drives, and folders.",
-      proof: "Edit, package, and monetize from the same vault."
+      title: "CapCut-style editor for adult creators",
+      body: "A creator-native editing workspace for timeline cuts, safe teasers, PPV previews, keyframes, waveform sync, subtitle timelines, vertical exports, thumbnails, and premium content packaging, designed around a Remotion/WebCodecs editing vision with server-side FFmpeg rendering instead of creator chaos across CapCut, Premiere, drives, and folders.",
+      proof: "Cut, package, distribute, and monetize from the same vault."
     },
     {
       layer: "02",
@@ -2264,20 +2264,23 @@ function VaultXPublicLanding() {
             <div>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-7" style={{ background: "rgba(239,68,68,.12)", border: "1px solid rgba(239,68,68,.28)" }}>
                 <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#ef4444" }} />
-                <span className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: "#fca5a5" }}>Cinematic trailer first · adult creator OS · 18+</span>
+                <span className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: "#fca5a5" }}>CapCut-style editor · adult creator OS · 18+</span>
               </div>
               <h1 className="font-black leading-[.88] tracking-[-.055em] mb-7" style={{ fontSize: "clamp(3.35rem, 7.6vw, 7.5rem)" }}>
-                Watch VaultX before you read VaultX.
+                The CapCut for adult creator revenue.
               </h1>
               <p className="text-lg md:text-xl max-w-2xl leading-8 mb-8" style={{ color: "#c7c7d1" }}>
-                VaultX is not just positioned as video-first. The first product moment is a real cinematic walkthrough: the creator OS, the AI video factory, the trailer maker, safe public previews, premium unlocks, distribution, and revenue automation shown as motion before the page asks creators to believe the copy.
+                VaultX gives adult creators a browser-native editing workflow for clipping, enhancing, censoring, teasing, packaging PPV drops, exporting vertical assets, and launching revenue campaigns without bouncing between CapCut, folders, drives, and separate fan-platform tools.
               </p>
               <div className="flex flex-wrap gap-4 mb-10">
-                <a href="#vaultx-trailer" className="inline-flex items-center gap-2 text-base font-black px-8 py-4 rounded-2xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 50px rgba(239,68,68,.35)" }}>
-                  <Play className="w-5 h-5" /> Play the walkthrough
+                <a href="/vault-x/editor" className="inline-flex items-center gap-2 text-base font-black px-8 py-4 rounded-2xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 50px rgba(239,68,68,.35)" }}>
+                  <Play className="w-5 h-5" /> Open VaultX Editor
                 </a>
-                <a href="/launch-trailer-studio" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "white", border: "1px solid rgba(255,255,255,.16)" }}>
-                  Open trailer maker <ArrowUpRight className="w-5 h-5" />
+                <a href="/vault-x/studio" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "white", border: "1px solid rgba(255,255,255,.16)" }}>
+                  Launch Studio <ArrowUpRight className="w-5 h-5" />
+                </a>
+                <a href="#vaultx-trailer" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "#fecaca", border: "1px solid rgba(252,165,165,.22)" }}>
+                  Watch walkthrough
                 </a>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl">

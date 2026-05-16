@@ -163,6 +163,18 @@ export default function AppHeader() {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1 flex-1">
+            <Button variant="ghost" size="sm" asChild className="text-purple-300 hover:text-white hover:bg-purple-500/10">
+              <Link href="/vault-x">
+                <Zap className="h-4 w-4 mr-2" />
+                VaultX
+              </Link>
+            </Button>
+            <Button size="sm" asChild className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 shadow-lg shadow-purple-900/20">
+              <Link href="/vault-x/editor">
+                VaultX Editor
+              </Link>
+            </Button>
+
             {/* Creator Tools Dropdown */}
             {user && (
               <DropdownMenu>
@@ -190,14 +202,24 @@ export default function AppHeader() {
                     </Link>
                   </DropdownMenuItem>
                   {isAdult && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/vault-x/studio">
-                        <a className="w-full flex items-center gap-2">
-                          <Zap className="h-4 w-4" style={{ color: accentColor }} />
-                          VaultX Studio
-                        </a>
-                      </Link>
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/vault-x/editor">
+                          <a className="w-full flex items-center gap-2">
+                            <Zap className="h-4 w-4" style={{ color: accentColor }} />
+                            VaultX Editor — CapCut for Creators
+                          </a>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/vault-x/studio">
+                          <a className="w-full flex items-center gap-2">
+                            <Zap className="h-4 w-4" style={{ color: accentColor }} />
+                            VaultX Studio
+                          </a>
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
                   <DropdownMenuItem asChild>
                     <Link href="/podcast-studio">
@@ -332,6 +354,23 @@ export default function AppHeader() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72 bg-slate-900 border-white/10 max-h-[85vh] overflow-y-auto">
+                <DropdownMenuLabel className="text-purple-300">VaultX</DropdownMenuLabel>
+                <DropdownMenuItem asChild>
+                  <Link href="/vault-x/editor">
+                    <a className="w-full font-bold" style={{ color: "#f0abfc" }}>VaultX Editor — CapCut for Creators</a>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/vault-x/studio">
+                    <a className="w-full">VaultX Studio</a>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/vault-x">
+                    <a className="w-full">VaultX Home</a>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-white/10" />
                 {user && (
                   <>
                     {/* Mode indicator at top of mobile menu */}
@@ -360,11 +399,18 @@ export default function AppHeader() {
                       </Link>
                     </DropdownMenuItem>
                     {isAdult && (
-                      <DropdownMenuItem asChild>
-                        <Link href="/vault-x/studio">
-                          <a className="w-full" style={{ color: accentColor }}>VaultX Studio</a>
-                        </Link>
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/vault-x/editor">
+                            <a className="w-full font-bold" style={{ color: accentColor }}>VaultX Editor — CapCut for Creators</a>
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/vault-x/studio">
+                            <a className="w-full" style={{ color: accentColor }}>VaultX Studio</a>
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
                     )}
                     <DropdownMenuItem asChild>
                       <Link href="/podcast-studio">
