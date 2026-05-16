@@ -3654,7 +3654,174 @@ Generate body-focused captions and return ONLY valid JSON:
         };
       }
 
+      if (input.projectId) {
+        await rawExec(
+          "UPDATE vaultx_editor_projects SET body_captions = ?, updated_at = NOW() WHERE id = ? AND creator_id = ?",
+          [JSON.stringify(captions), input.projectId, ctx.user.id]
+        ).catch(() => null);
+      }
+
       return { projectId: input.projectId, captions, strongestAssets, captionStyle: input.captionStyle };
+    }),
+
+
+  // ─── PROCEDURE: createBodyCinemaCollection ─────────────────────────────────
+  // Body Cinema Collection: packages reveal shot, body-focus clips, captions, pricing, and platform plan into one sellable asset collection.
+  createBodyCinemaCollection: protectedProcedure
+    .input(z.object({
+      projectId: z.number(),
+      collectionName: z.string().min(1).max(180).default("Body Cinema Collection"),
+      sourceAssetUrl: z.string().url().optional(),
+      enhancedImageUrl: z.string().url().optional(),
+      selectedRegions: z.array(z.enum(["bust", "abdomen", "glutes", "legs", "full"])).min(1).max(5).default(["full"]),
+      cinematicStyle: z.enum(["luxury", "noir", "sunset", "penthouse", "editorial", "vip_tease"]).default("luxury"),
+      platforms: z.array(z.enum(["vaultx", "onlyfans", "fansly", "telegram", "instagram_reel", "twitter"])).min(1).max(6).default(["vaultx", "onlyfans", "telegram"]),
+      ppvPriceCents: z.number().min(300).max(100000).default(1999),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const projects = await rawQuery(
+        "SELECT * FROM vaultx_editor_projects WHERE id = ? AND creator_id = ? LIMIT 1",
+        [input.projectId, ctx.user.id]
+      );
+      if (!projects.length) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
+      const project = projects[0];
+
+      const collectionId = randomUUID();
+      const creatorRows = await rawQuery(
+        "SELECT display_name FROM vaultx_creator_profiles WHERE user_id = ? LIMIT 1",
+        [ctx.user.id]
+      ).catch(() => []);
+      const creatorName = creatorRows[0]?.display_name || ctx.user.name || "VaultX Creator";
+      const bodyMap = project.body_map ? JSON.parse(project.body_map) : {};
+      const focusClips = project.focus_clips ? JSON.parse(project.focus_clips) : {};
+      const captionsPayload = project.body_captions ? JSON.parse(project.body_captions) : null;
+      const sourceUrl = input.sourceAssetUrl || input.enhancedImageUrl || project.output_url || project.source_url || project.thumbnail_url;
+      if (!sourceUrl) throw new TRPCError({ code: "BAD_REQUEST", message: "A source asset or processed project output is required before creating a Body Cinema Collection." });
+
+      const styleMap: Record<string, { label: string; palette: string[]; direction: string; hook: string }> = {
+        luxury: { label: "Luxury Gold", palette: ["#C9A84C", "#F7E7B4", "#050505"], direction: "warm gold light, premium VIP pacing, polished cinematic reveal", hook: "Premium body-cinema drop" },
+        noir: { label: "Noir Contrast", palette: ["#0A0A0A", "#FFFFFF", "#00D9FF"], direction: "high-contrast shadows, slow mystery reveal, glossy editorial framing", hook: "Noir after-dark cut" },
+        sunset: { label: "Sunset Heat", palette: ["#FF7A45", "#FFD166", "#180A05"], direction: "golden-hour warmth, slow sensual pans, beach-club energy", hook: "Sunset body story" },
+        penthouse: { label: "Penthouse VIP", palette: ["#00D9FF", "#C9A84C", "#101018"], direction: "city-night penthouse mood, status-driven captions, clean premium transitions", hook: "Penthouse-only preview" },
+        editorial: { label: "Editorial Cover", palette: ["#F5F5F5", "#111111", "#C9A84C"], direction: "magazine-cover composition, refined movement, high-fashion confidence", hook: "Cover-shoot collection" },
+        vip_tease: { label: "VIP Tease", palette: ["#FF3D8A", "#00D9FF", "#050505"], direction: "desire-first pacing, progressive reveals, strong subscriber CTA", hook: "VIP unlock sequence" },
+      };
+      const style = styleMap[input.cinematicStyle];
+      const strongestAssets = Array.isArray(bodyMap.strongest_assets) && bodyMap.strongest_assets.length ? bodyMap.strongest_assets : input.selectedRegions;
+      const regions = input.selectedRegions.map((region, index) => ({
+        region,
+        rank: strongestAssets.indexOf(region) >= 0 ? strongestAssets.indexOf(region) + 1 : index + 1,
+        clipUrl: focusClips[region] || null,
+        enhancement: bodyMap.region_scores?.[region] || null,
+        sceneLabel: region === "full" ? "Full Body Reveal" : `${region.charAt(0).toUpperCase()}${region.slice(1)} Focus`,
+      }));
+      const productionPlan = {
+        collectionId,
+        creatorName,
+        style,
+        sourceUrl,
+        heroAsset: project.reveal_shot_url || sourceUrl,
+        selectedRegions: regions,
+        captions: captionsPayload,
+        monetization: {
+          ppvPriceCents: input.ppvPriceCents,
+          suggestedBundleName: input.collectionName,
+          cta: "Unlock the complete Body Cinema Collection on VaultX.",
+          accessTier: input.ppvPriceCents > 0 ? "ppv" : "premium",
+        },
+        platformExports: input.platforms.map((platform) => ({
+          platform,
+          preset: platform === "instagram_reel" ? "9:16 censored teaser" : platform === "telegram" ? "720p private-channel teaser" : "1080p subscriber master",
+          status: "ready_to_queue",
+        })),
+        remotionComposition: {
+          totalDuration: Math.max(22, 8 + regions.length * 5 + 5),
+          brandColors: { primary: style.palette[0], accent: style.palette[1], bg: style.palette[2] },
+          scenes: [
+            { start: 0, end: 5, type: "hero", url: project.reveal_shot_url || sourceUrl, label: style.hook },
+            ...regions.map((item, index) => ({ start: 5 + index * 5, end: 10 + index * 5, type: "body_focus", region: item.region, url: item.clipUrl || sourceUrl, label: item.sceneLabel })),
+            { start: 10 + regions.length * 5, end: 15 + regions.length * 5, type: "cta", text: "UNLOCK THE FULL BODY CINEMA COLLECTION", color: style.palette[0] },
+          ],
+        },
+      };
+
+      await rawExec(
+        `INSERT INTO vaultx_body_cinema_collections
+         (id, project_id, creator_id, collection_name, cinematic_style, source_asset_url, hero_asset_url, selected_regions, production_plan, platform_exports, ppv_price_cents, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', NOW(), NOW())`,
+        [
+          collectionId,
+          input.projectId,
+          ctx.user.id,
+          input.collectionName,
+          input.cinematicStyle,
+          sourceUrl,
+          productionPlan.heroAsset,
+          JSON.stringify(input.selectedRegions),
+          JSON.stringify(productionPlan),
+          JSON.stringify(productionPlan.platformExports),
+          input.ppvPriceCents,
+        ]
+      );
+
+      const existingCollections = project.body_cinema_collections ? JSON.parse(project.body_cinema_collections) : [];
+      const nextCollections = Array.isArray(existingCollections) ? existingCollections : [];
+      nextCollections.unshift({ id: collectionId, name: input.collectionName, style: input.cinematicStyle, priceCents: input.ppvPriceCents, createdAt: new Date().toISOString() });
+      await rawExec(
+        "UPDATE vaultx_editor_projects SET body_cinema_collections = ?, body_cinema_last_collection_id = ?, remotion_composition_data = ?, updated_at = NOW() WHERE id = ? AND creator_id = ?",
+        [JSON.stringify(nextCollections.slice(0, 20)), collectionId, JSON.stringify(productionPlan.remotionComposition), input.projectId, ctx.user.id]
+      );
+
+      return { success: true, collection: { id: collectionId, projectId: input.projectId, collectionName: input.collectionName, status: "ready", ppvPriceCents: input.ppvPriceCents }, productionPlan };
+    }),
+
+  // ─── PROCEDURE: getBodyCinemaCollections ───────────────────────────────────
+  getBodyCinemaCollections: protectedProcedure
+    .input(z.object({ projectId: z.number().optional(), limit: z.number().min(1).max(50).default(20) }))
+    .query(async ({ ctx, input }) => {
+      const rows = await rawQuery(
+        `SELECT * FROM vaultx_body_cinema_collections
+         WHERE creator_id = ? ${input.projectId ? "AND project_id = ?" : ""}
+         ORDER BY created_at DESC LIMIT ?`,
+        input.projectId ? [ctx.user.id, input.projectId, input.limit] : [ctx.user.id, input.limit]
+      );
+      return { collections: rows.map((row: any) => ({
+        ...row,
+        selected_regions: row.selected_regions ? JSON.parse(row.selected_regions) : [],
+        production_plan: row.production_plan ? JSON.parse(row.production_plan) : null,
+        platform_exports: row.platform_exports ? JSON.parse(row.platform_exports) : [],
+      })) };
+    }),
+
+  // ─── PROCEDURE: publishBodyCinemaCollection ────────────────────────────────
+  publishBodyCinemaCollection: protectedProcedure
+    .input(z.object({
+      collectionId: z.string().uuid(),
+      title: z.string().min(1).max(255).optional(),
+      description: z.string().max(2000).optional(),
+      accessTier: z.enum(["premium", "vip", "ppv"]).default("ppv"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const rows = await rawQuery(
+        "SELECT * FROM vaultx_body_cinema_collections WHERE id = ? AND creator_id = ? LIMIT 1",
+        [input.collectionId, ctx.user.id]
+      );
+      if (!rows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Body Cinema Collection not found" });
+      const collection = rows[0];
+      const plan = collection.production_plan ? JSON.parse(collection.production_plan) : {};
+      const contentUrl = plan.heroAsset || collection.hero_asset_url || collection.source_asset_url;
+      if (!contentUrl) throw new TRPCError({ code: "BAD_REQUEST", message: "Collection has no publishable asset URL" });
+      const creatorId = await getCreatorId(ctx.user.id);
+      const result = await rawExec(
+        `INSERT INTO vaultx_content (creator_id, title, description, content_url, thumbnail_url, content_type, access_tier, ppv_price, tags, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 'video', ?, ?, ?, 'active', NOW(), NOW())`,
+        [creatorId || ctx.user.id, input.title || collection.collection_name, input.description || "Body Cinema Collection produced in VaultX Editor.", contentUrl, contentUrl, input.accessTier, collection.ppv_price_cents ? collection.ppv_price_cents / 100 : null, JSON.stringify(["body-cinema", collection.cinematic_style])]
+      );
+      await rawExec(
+        "UPDATE vaultx_body_cinema_collections SET status = 'published', published_content_id = ?, updated_at = NOW() WHERE id = ? AND creator_id = ?",
+        [(result as any).insertId || 0, input.collectionId, ctx.user.id]
+      );
+      return { success: true, collectionId: input.collectionId, contentId: (result as any).insertId || 0, contentUrl };
     }),
 
 });

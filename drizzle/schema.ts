@@ -36,6 +36,32 @@ export const users = mysqlTable("users", {
 }));
 
 /**
+ * VaultX Body Cinema Collection persistence
+ */
+export const vaultxBodyCinemaCollections = mysqlTable("vaultx_body_cinema_collections", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  projectId: int("project_id").notNull(),
+  creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  collectionName: varchar("collection_name", { length: 180 }).notNull(),
+  cinematicStyle: varchar("cinematic_style", { length: 50 }).default("luxury").notNull(),
+  sourceAssetUrl: text("source_asset_url"),
+  heroAssetUrl: text("hero_asset_url"),
+  selectedRegions: json("selected_regions").$type<string[]>(),
+  productionPlan: json("production_plan").$type<Record<string, unknown>>(),
+  platformExports: json("platform_exports").$type<Record<string, unknown>[]>(),
+  ppvPriceCents: int("ppv_price_cents").default(1999).notNull(),
+  status: mysqlEnum("status", ["draft", "ready", "queued", "published", "archived"]).default("ready").notNull(),
+  publishedContentId: int("published_content_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  creatorIdIdx: index("idx_body_cinema_creator_id").on(table.creatorId),
+  projectIdIdx: index("idx_body_cinema_project_id").on(table.projectId),
+  statusIdx: index("idx_body_cinema_status").on(table.status),
+  createdAtIdx: index("idx_body_cinema_created_at").on(table.createdAt),
+}));
+
+/**
  * Emma network tracking for detailed creator recruitment
  */
 export const emmaNetwork = mysqlTable("emma_network", {

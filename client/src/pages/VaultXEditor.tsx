@@ -1049,6 +1049,9 @@ export default function VaultXEditor() {
   const generateBodyFocusClipMut = trpc.vaultx.generateBodyFocusClip.useMutation();
   const assembleHighlightReelMut = trpc.vaultx.assembleHighlightReel.useMutation();
   const generateBodyCaptionsMut = trpc.vaultx.generateBodyCaptions.useMutation();
+  const createBodyCinemaCollectionMut = trpc.vaultx.createBodyCinemaCollection.useMutation();
+  const publishBodyCinemaCollectionMut = trpc.vaultx.publishBodyCinemaCollection.useMutation();
+  const utils = trpc.useUtils();
 
   // ── State ──
   const [activeTab, setActiveTab] = useState<"enhance" | "body" | "ppv" | "censor" | "scene" | "motion" | "color" | "text" | "audio" | "format" | "timeline" | "publish" | "calendar">("enhance");
@@ -1072,6 +1075,11 @@ export default function VaultXEditor() {
   const [contentCalendar, setContentCalendar] = useState<any[]>([]);
   const [revealShotUrl, setRevealShotUrl] = useState<string | null>(null);
   const [focusClips, setFocusClips] = useState<Record<string, string>>({});
+  const [bodyCinemaName, setBodyCinemaName] = useState("VIP Body Cinema Collection");
+  const [bodyCinemaStyle, setBodyCinemaStyle] = useState<"luxury" | "noir" | "sunset" | "penthouse" | "editorial" | "vip_tease">("luxury");
+  const [bodyCinemaRegions, setBodyCinemaRegions] = useState<Array<"bust" | "abdomen" | "glutes" | "legs" | "full">>(["full"]);
+  const [bodyCinemaPlatforms, setBodyCinemaPlatforms] = useState<Array<"vaultx" | "onlyfans" | "fansly" | "telegram" | "instagram_reel" | "twitter">>(["vaultx", "onlyfans", "telegram"]);
+  const [bodyCinemaPlan, setBodyCinemaPlan] = useState<any>(null);
   const [showProjectList, setShowProjectList] = useState(false);
   const [project, setProject] = useState<EditorProject>({ title: "New VaultX Project", projectType: "video", aspectRatio: "9:16", durationSeconds: 60 });
   const [clips, setClips] = useState<TimelineClip[]>([]);
@@ -1088,6 +1096,10 @@ export default function VaultXEditor() {
   const [ppvPrice, setPpvPrice] = useState(15);
   const [publishTitle, setPublishTitle] = useState("");
   const [exportPresets, setExportPresets] = useState<string[]>(["onlyfans"]);
+  const bodyCinemaCollectionsQ = trpc.vaultx.getBodyCinemaCollections.useQuery(
+    { projectId: projectId ?? undefined, limit: 12 },
+    { enabled: !!projectId }
+  );
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1196,6 +1208,48 @@ export default function VaultXEditor() {
     } catch (e: any) { toast.error("Caption generation failed: " + e.message); }
   }, [captionStyle, ensureProject, generateBodyCaptionsMut]);
 
+  const toggleBodyCinemaRegion = useCallback((region: "bust" | "abdomen" | "glutes" | "legs" | "full") => {
+    setBodyCinemaRegions(prev => prev.includes(region) ? (prev.length === 1 ? prev : prev.filter(r => r !== region)) : [...prev, region]);
+  }, []);
+
+  const toggleBodyCinemaPlatform = useCallback((platform: "vaultx" | "onlyfans" | "fansly" | "telegram" | "instagram_reel" | "twitter") => {
+    setBodyCinemaPlatforms(prev => prev.includes(platform) ? (prev.length === 1 ? prev : prev.filter(p => p !== platform)) : [...prev, platform]);
+  }, []);
+
+  const handleCreateBodyCinemaCollection = useCallback(async () => {
+    if (!sourceUrl && !variations[selectedVariation]?.url) { toast.error("Upload or enhance content first"); return; }
+    const pid = await ensureProject();
+    try {
+      const enhancedUrl = variations[selectedVariation]?.url || sourceUrl;
+      const result = await createBodyCinemaCollectionMut.mutateAsync({
+        projectId: pid,
+        collectionName: bodyCinemaName || "VIP Body Cinema Collection",
+        sourceAssetUrl: sourceUrl || enhancedUrl,
+        enhancedImageUrl: enhancedUrl,
+        selectedRegions: bodyCinemaRegions,
+        cinematicStyle: bodyCinemaStyle,
+        platforms: bodyCinemaPlatforms,
+        ppvPriceCents: Math.round(ppvPrice * 100),
+      });
+      setBodyCinemaPlan(result.productionPlan);
+      await utils.vaultx.getBodyCinemaCollections.invalidate();
+      toast.success("Body Cinema Collection packaged for sale");
+    } catch (e: any) { toast.error("Body Cinema packaging failed: " + e.message); }
+  }, [sourceUrl, variations, selectedVariation, ensureProject, createBodyCinemaCollectionMut, bodyCinemaName, bodyCinemaRegions, bodyCinemaStyle, bodyCinemaPlatforms, ppvPrice, utils]);
+
+  const handlePublishBodyCinemaCollection = useCallback(async (collectionId: string, collectionName: string) => {
+    try {
+      const result = await publishBodyCinemaCollectionMut.mutateAsync({
+        collectionId,
+        title: collectionName,
+        description: "Body Cinema Collection produced in VaultX Editor with reveal, focus clips, platform exports, and PPV monetization.",
+        accessTier: "ppv",
+      });
+      await utils.vaultx.getBodyCinemaCollections.invalidate();
+      toast.success(`Body Cinema published — Content ID: ${result.contentId}`);
+    } catch (e: any) { toast.error("Body Cinema publish failed: " + e.message); }
+  }, [publishBodyCinemaCollectionMut, utils]);
+
   const handlePublish = useCallback(async () => {
     if (!sourceUrl) { toast.error("Upload content first"); return; }
     const pid = await ensureProject();
@@ -1216,7 +1270,8 @@ export default function VaultXEditor() {
   const isAnyProcessing = analyzeContentMut.isPending || enhancePhotoMut.isPending || enhanceVideoMut.isPending ||
     generateVariationsMut.isPending || detectBodyRegionsMut.isPending || enhanceBodyRegionMut.isPending ||
     generateRevealShotMut.isPending || generateBodyFocusClipMut.isPending || assembleHighlightReelMut.isPending ||
-    generateBodyCaptionsMut.isPending || publishToVaultXMut.isPending || generateContentCalendarMut.isPending;
+    generateBodyCaptionsMut.isPending || createBodyCinemaCollectionMut.isPending || publishBodyCinemaCollectionMut.isPending ||
+    publishToVaultXMut.isPending || generateContentCalendarMut.isPending;
 
   return (
     <div className="flex flex-col" style={{ height: "100vh", background: "#000000", color: "#FFFFFF", fontFamily: "'Inter', sans-serif", overflow: "hidden" }}>
@@ -1550,6 +1605,89 @@ export default function VaultXEditor() {
                     style={{ background: revealShotUrl ? "linear-gradient(135deg, rgba(236,72,153,0.2), rgba(139,92,246,0.2))" : "rgba(255,255,255,0.04)", color: revealShotUrl ? "#EC4899" : "#374151", border: `1px solid ${revealShotUrl ? "rgba(236,72,153,0.3)" : "rgba(255,255,255,0.06)"}` }}>
                     {assembleHighlightReelMut.isPending ? <><Loader2 size={10} className="animate-spin" />ASSEMBLING...</> : <><Crown size={10} />ASSEMBLE HIGHLIGHT REEL</>}
                   </button>
+                </div>
+
+
+
+                {/* Body Cinema Collection */}
+                <div className="flex flex-col gap-3 p-3 rounded-2xl" style={{ background: "linear-gradient(135deg, rgba(201,168,76,0.08), rgba(236,72,153,0.06))", border: "1px solid rgba(201,168,76,0.18)" }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[9px] font-black tracking-widest" style={{ color: "#C9A84C" }}>BODY CINEMA COLLECTION</p>
+                      <p className="text-[8px] mt-1" style={{ color: "#6B7280" }}>Package the reveal, focus clips, captions, PPV price, and export plan into one sellable VaultX drop.</p>
+                    </div>
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-xl" style={{ background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.25)" }}>
+                      <Clapperboard size={10} style={{ color: "#C9A84C" }} />
+                      <span className="text-[8px] font-black" style={{ color: "#C9A84C" }}>REVENUE READY</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2 flex flex-col gap-1.5">
+                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>COLLECTION NAME</span>
+                      <input value={bodyCinemaName} onChange={e => setBodyCinemaName(e.target.value)} className="px-3 py-2 rounded-xl text-xs font-bold outline-none" style={{ background: "rgba(0,0,0,0.45)", color: "#FFFFFF", border: "1px solid rgba(255,255,255,0.08)" }} />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>PPV PRICE</span>
+                      <input type="number" min={3} max={1000} value={ppvPrice} onChange={e => setPpvPrice(Number(e.target.value || 0))} className="px-3 py-2 rounded-xl text-xs font-bold outline-none" style={{ background: "rgba(0,0,0,0.45)", color: "#FFFFFF", border: "1px solid rgba(255,255,255,0.08)" }} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>CINEMA STYLE</span>
+                      <div className="grid grid-cols-3 gap-1">
+                        {([
+                          ["luxury", "LUX"], ["noir", "NOIR"], ["sunset", "HEAT"], ["penthouse", "VIP"], ["editorial", "COVER"], ["vip_tease", "TEASE"],
+                        ] as const).map(([style, label]) => (
+                          <button key={style} onClick={() => setBodyCinemaStyle(style)} className="py-1.5 rounded-xl text-[8px] font-black" style={{ background: bodyCinemaStyle === style ? "rgba(201,168,76,0.2)" : "rgba(255,255,255,0.035)", color: bodyCinemaStyle === style ? "#C9A84C" : "#4B5563", border: `1px solid ${bodyCinemaStyle === style ? "rgba(201,168,76,0.35)" : "rgba(255,255,255,0.06)"}` }}>{label}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>REGIONS</span>
+                      <div className="grid grid-cols-5 gap-1">
+                        {(["bust", "abdomen", "glutes", "legs", "full"] as const).map(region => (
+                          <button key={region} onClick={() => toggleBodyCinemaRegion(region)} className="py-1.5 rounded-xl text-[8px] font-black" style={{ background: bodyCinemaRegions.includes(region) ? "rgba(236,72,153,0.18)" : "rgba(255,255,255,0.035)", color: bodyCinemaRegions.includes(region) ? "#EC4899" : "#4B5563", border: `1px solid ${bodyCinemaRegions.includes(region) ? "rgba(236,72,153,0.32)" : "rgba(255,255,255,0.06)"}` }}>{region.slice(0, 3).toUpperCase()}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>EXPORT DESTINATIONS</span>
+                    <div className="grid grid-cols-6 gap-1">
+                      {(["vaultx", "onlyfans", "fansly", "telegram", "instagram_reel", "twitter"] as const).map(platform => (
+                        <button key={platform} onClick={() => toggleBodyCinemaPlatform(platform)} className="py-1.5 rounded-xl text-[8px] font-black" style={{ background: bodyCinemaPlatforms.includes(platform) ? "rgba(16,185,129,0.16)" : "rgba(255,255,255,0.035)", color: bodyCinemaPlatforms.includes(platform) ? "#10B981" : "#4B5563", border: `1px solid ${bodyCinemaPlatforms.includes(platform) ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.06)"}` }}>{platform.replace("instagram_reel", "ig").toUpperCase()}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button onClick={handleCreateBodyCinemaCollection} disabled={!sourceUrl || isAnyProcessing}
+                    className="w-full py-2 rounded-xl text-[9px] font-black flex items-center justify-center gap-2"
+                    style={{ background: (!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.04)" : "linear-gradient(135deg, rgba(201,168,76,0.32), rgba(236,72,153,0.24))", color: (!sourceUrl || isAnyProcessing) ? "#374151" : "#F7E7B4", border: `1px solid ${(!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.06)" : "rgba(201,168,76,0.35)"}` }}>
+                    {createBodyCinemaCollectionMut.isPending ? <><Loader2 size={10} className="animate-spin" />PACKAGING...</> : <><Crown size={10} />CREATE BODY CINEMA COLLECTION</>}
+                  </button>
+
+                  {bodyCinemaPlan && (
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(201,168,76,0.15)" }}><p className="text-[7px] font-black" style={{ color: "#6B7280" }}>DURATION</p><p className="text-xs font-black" style={{ color: "#C9A84C" }}>{bodyCinemaPlan.remotionComposition?.totalDuration || 0}s</p></div>
+                      <div className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(201,168,76,0.15)" }}><p className="text-[7px] font-black" style={{ color: "#6B7280" }}>SCENES</p><p className="text-xs font-black" style={{ color: "#C9A84C" }}>{bodyCinemaPlan.remotionComposition?.scenes?.length || 0}</p></div>
+                      <div className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(201,168,76,0.15)" }}><p className="text-[7px] font-black" style={{ color: "#6B7280" }}>EXPORTS</p><p className="text-xs font-black" style={{ color: "#C9A84C" }}>{bodyCinemaPlan.platformExports?.length || 0}</p></div>
+                    </div>
+                  )}
+
+                  {(bodyCinemaCollectionsQ.data?.collections?.length ?? 0) > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>RECENT COLLECTIONS</span>
+                      {bodyCinemaCollectionsQ.data?.collections?.slice(0, 3).map((collection: any) => (
+                        <div key={collection.id} className="flex items-center justify-between gap-2 p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                          <div className="min-w-0"><p className="text-[9px] font-black truncate" style={{ color: "#FFFFFF" }}>{collection.collection_name}</p><p className="text-[8px]" style={{ color: "#6B7280" }}>{collection.cinematic_style} · ${Number(collection.ppv_price_cents || 0) / 100} · {collection.status}</p></div>
+                          <button onClick={() => handlePublishBodyCinemaCollection(collection.id, collection.collection_name)} disabled={collection.status === "published" || isAnyProcessing} className="px-3 py-1 rounded-lg text-[8px] font-black" style={{ background: collection.status === "published" ? "rgba(16,185,129,0.12)" : "rgba(16,185,129,0.18)", color: collection.status === "published" ? "#10B981" : "#FFFFFF", border: "1px solid rgba(16,185,129,0.28)" }}>{collection.status === "published" ? "LIVE" : "PUBLISH"}</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Body captions */}

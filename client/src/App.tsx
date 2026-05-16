@@ -794,8 +794,8 @@ function Router() {
       <Route path="/king/media-vault" component={MediaVault} />
       <Route path="/king/challenge-story" component={ChallengeStoryEngine} />
       <Route path="/tools/viral-optimizer-v2" component={ViralOptimizerV2} />
-      <Route path="/videoeditor/vaultx">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
-      <Route path="/videoeditor/vaultx-projects">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+      <Route path="/videoeditor/vaultx">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
+      <Route path="/videoeditor/vaultx-projects">{() => { window.location.replace("/vaultx/studio"); return null; }}</Route>
       <Route component={NotFound} />
       </Switch>
       </div>
