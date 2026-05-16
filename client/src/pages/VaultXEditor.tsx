@@ -40,6 +40,32 @@ const C = {
 };
 
 
+const WORKFLOW_STEPS = [
+  { step: "01", label: "Ingest", detail: "Upload, analyze quality, and lock the project brief.", icon: Upload, color: C.accent },
+  { step: "02", label: "Enhance", detail: "Polish visuals, captions, audio, color, and pacing.", icon: Sparkles, color: C.pink },
+  { step: "03", label: "Package", detail: "Create master, teaser, PPV, social, and archive outputs.", icon: Layers, color: C.gold },
+  { step: "04", label: "Launch", detail: "Publish, schedule, and distribute with revenue copy.", icon: Send, color: C.green },
+];
+
+const PRODUCTION_PRESETS = [
+  { id: "premium_ppv", label: "Premium PPV Drop", desc: "Master export, paid preview, VIP caption pack, and upsell message.", color: C.gold },
+  { id: "safe_funnel", label: "SFW Funnel Sprint", desc: "Platform-safe teaser, CTA overlay, captions, and social-ready cutdowns.", color: C.green },
+  { id: "viral_teaser", label: "Viral Teaser Factory", desc: "Hook-first short edits, captions, punch zooms, and watch-time pacing.", color: C.pink },
+  { id: "retention", label: "Subscriber Retention Pack", desc: "Archive master, loyalty copy, calendar placement, and renewal assets.", color: C.accent },
+];
+
+const WORLD_CLASS_OUTPUTS = [
+  { id: "master", label: "Studio Master", desc: "High-quality source export with color, audio, and caption polish.", icon: FileVideo, color: C.accent },
+  { id: "sfw_teaser", label: "SFW Teaser", desc: "Safe promotional preview for discovery channels and top-of-funnel marketing.", icon: Shield, color: C.green },
+  { id: "ppv_drop", label: "PPV Drop", desc: "Paid content package with pricing, title, pitch, and premium cover framing.", icon: Crown, color: C.gold },
+  { id: "social_cut", label: "Social Cutdowns", desc: "9:16, 1:1, and 16:9 edits for Reels, TikTok, X, and Telegram.", icon: Share2, color: C.pink },
+  { id: "caption_pack", label: "Caption Pack", desc: "Teaser copy, subscriber copy, PPV pitch, and mass-message templates.", icon: Hash, color: "#3B82F6" },
+  { id: "thumbnail", label: "Thumbnail + Cover", desc: "Click-ready covers, launch art, and platform-safe preview frames.", icon: Camera, color: "#A855F7" },
+  { id: "calendar", label: "Launch Calendar", desc: "Two-week campaign timing with distribution and monetization notes.", icon: Calendar, color: "#F97316" },
+  { id: "archive", label: "Vault Archive", desc: "Organized backups with metadata, tags, and reuse notes for future drops.", icon: HardDrive, color: "#64748B" },
+];
+
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -1091,11 +1117,16 @@ export default function VaultXEditor() {
   const [currentSource, setCurrentSource] = useState("");
   const [enhancementIntensity, setEnhancementIntensity] = useState<"subtle" | "natural" | "enhanced" | "cinematic">("enhanced");
   const [backgroundStyle, setBackgroundStyle] = useState<"keep" | "penthouse" | "yacht" | "rose_bed" | "dark_studio" | "miami_villa" | "private_jet">("keep");
-  const [captionStyle, setCaptionStyle] = useState<"teaser" | "explicit" | "romantic" | "dominant" | "playful">("teaser");
+  const [captionStyle, setCaptionStyle] = useState<"teaser" | "direct" | "romantic" | "luxury" | "playful">("teaser");
   const [publishTier, setPublishTier] = useState<"free" | "basic" | "premium" | "vip" | "ppv">("premium");
   const [ppvPrice, setPpvPrice] = useState(15);
   const [publishTitle, setPublishTitle] = useState("");
   const [exportPresets, setExportPresets] = useState<string[]>(["onlyfans"]);
+  const [productionPreset, setProductionPreset] = useState("premium_ppv");
+  const [selectedOutputPackages, setSelectedOutputPackages] = useState<string[]>(["master", "sfw_teaser", "ppv_drop", "caption_pack"]);
+  const [complianceMode, setComplianceMode] = useState<"platform_safe" | "subscriber" | "vip" | "archive">("platform_safe");
+  const [watermarkIdentity, setWatermarkIdentity] = useState("@YourHandle");
+  const [targetFormat, setTargetFormat] = useState<"9:16" | "16:9" | "1:1" | "4:5">("9:16");
   const bodyCinemaCollectionsQ = trpc.vaultx.getBodyCinemaCollections.useQuery(
     { projectId: projectId ?? undefined, limit: 12 },
     { enabled: !!projectId }
@@ -1285,7 +1316,7 @@ export default function VaultXEditor() {
             </div>
             <span className="text-sm font-black" style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>VaultX</span>
             <span className="text-sm font-black text-white">AI Editor</span>
-            <span className="hidden xl:inline-flex px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.14em]" style={{ background: "rgba(236,72,153,0.12)", color: "#f0abfc", border: "1px solid rgba(236,72,153,0.24)" }}>CapCut-style workflow for adult creators</span>
+            <span className="hidden xl:inline-flex px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.14em]" style={{ background: "rgba(236,72,153,0.12)", color: "#f0abfc", border: "1px solid rgba(236,72,153,0.24)" }}>CapCut-style creator-business workflow</span>
           </div>
           <div className="w-px h-4" style={{ background: "rgba(255,255,255,0.1)" }} />
           <button onClick={() => setShowProjectList(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -1335,6 +1366,19 @@ export default function VaultXEditor() {
         </div>
       </div>
 
+      {/* ── WORLD-CLASS COMMAND STRIP ── */}
+      <div className="hidden lg:grid grid-cols-4 gap-2 px-4 py-2 flex-shrink-0" style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.10), rgba(236,72,153,0.08), rgba(16,185,129,0.07))", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        {PRODUCTION_PRESETS.map(preset => (
+          <button key={preset.id} onClick={() => setProductionPreset(preset.id)} className="text-left p-3 rounded-2xl transition-all" style={{ background: productionPreset === preset.id ? `${preset.color}18` : "rgba(0,0,0,0.28)", border: `1px solid ${productionPreset === preset.id ? preset.color + "55" : "rgba(255,255,255,0.06)"}` }}>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="text-[10px] font-black tracking-wide" style={{ color: productionPreset === preset.id ? preset.color : "#9CA3AF" }}>{preset.label}</span>
+              {productionPreset === preset.id && <CheckCircle size={12} style={{ color: preset.color }} />}
+            </div>
+            <p className="text-[9px] leading-snug" style={{ color: "#6B7280" }}>{preset.desc}</p>
+          </button>
+        ))}
+      </div>
+
       {/* ── MAIN ── */}
       <div className="flex flex-1 overflow-hidden">
 
@@ -1363,6 +1407,38 @@ export default function VaultXEditor() {
             )}
           </div>
           <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }} />
+
+          {/* Creator business brief */}
+          <div className="flex flex-col gap-2 p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="flex items-center justify-between">
+              <p className="text-[9px] font-black tracking-widest" style={{ color: C.gold }}>CREATOR BRIEF</p>
+              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md" style={{ background: C.greenDim, color: C.green }}>READY OS</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              {(["9:16", "16:9", "1:1", "4:5"] as const).map(fmt => (
+                <button key={fmt} onClick={() => setTargetFormat(fmt)} className="py-1.5 rounded-lg text-[8px] font-black" style={{ background: targetFormat === fmt ? C.accentDim : "rgba(255,255,255,0.04)", color: targetFormat === fmt ? C.accent : C.mutedLo, border: `1px solid ${targetFormat === fmt ? "rgba(139,92,246,0.35)" : "rgba(255,255,255,0.06)"}` }}>{fmt}</button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              {(["platform_safe", "subscriber", "vip", "archive"] as const).map(mode => (
+                <button key={mode} onClick={() => setComplianceMode(mode)} className="py-1.5 px-1 rounded-lg text-[7px] font-black" style={{ background: complianceMode === mode ? C.greenDim : "rgba(255,255,255,0.04)", color: complianceMode === mode ? C.green : C.mutedLo, border: `1px solid ${complianceMode === mode ? "rgba(16,185,129,0.35)" : "rgba(255,255,255,0.06)"}` }}>{mode.replace("_", " ").toUpperCase()}</button>
+              ))}
+            </div>
+            <input value={watermarkIdentity} onChange={e => setWatermarkIdentity(e.target.value)} className="px-2 py-1.5 rounded-lg text-[9px] font-bold" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.08)", color: C.text, outline: "none" }} placeholder="@Creator watermark" />
+            <div className="flex flex-col gap-1">
+              {[
+                { label: "Source", ok: !!sourceUrl },
+                { label: "Analyze", ok: !!analysis },
+                { label: "Output Pack", ok: selectedOutputPackages.length >= 3 },
+                { label: "Platform", ok: exportPresets.length > 0 },
+              ].map(item => (
+                <div key={item.label} className="flex items-center justify-between text-[8px]">
+                  <span style={{ color: C.muted }}>{item.label}</span>
+                  <span className="font-black" style={{ color: item.ok ? C.green : C.mutedLo }}>{item.ok ? "LOCKED" : "PENDING"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Analysis summary */}
           {analysis && (
@@ -1455,7 +1531,7 @@ export default function VaultXEditor() {
                         <p className="text-xs font-black tracking-widest" style={{ color: "#6B7280" }}>CAPTIONS & COPY</p>
                         <div className="flex items-center gap-2">
                           <div className="flex gap-1">
-                            {(["teaser", "explicit", "romantic", "dominant", "playful"] as const).map(s => (
+                            {(["teaser", "direct", "romantic", "luxury", "playful"] as const).map(s => (
                               <button key={s} onClick={() => setCaptionStyle(s)}
                                 className="px-2 py-1 rounded-lg text-[8px] font-black"
                                 style={{ background: captionStyle === s ? "rgba(201,168,76,0.2)" : "rgba(255,255,255,0.04)", color: captionStyle === s ? "#C9A84C" : "#4B5563", border: `1px solid ${captionStyle === s ? "rgba(201,168,76,0.3)" : "rgba(255,255,255,0.06)"}` }}>
@@ -1494,18 +1570,45 @@ export default function VaultXEditor() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full gap-4">
-                    <div className="w-16 h-16 rounded-3xl flex items-center justify-center" style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)" }}>
-                      <Sparkles size={28} style={{ color: "#8B5CF6" }} />
+                  <div className="min-h-full grid xl:grid-cols-[1.05fr_0.95fr] gap-4 items-stretch">
+                    <div className="flex flex-col justify-between gap-5 p-6 rounded-3xl" style={{ background: "radial-gradient(circle at 20% 0%, rgba(139,92,246,0.25), transparent 34%), radial-gradient(circle at 90% 20%, rgba(236,72,153,0.16), transparent 30%), rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <div className="space-y-3">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full" style={{ background: C.goldDim, color: C.gold, border: "1px solid rgba(245,158,11,0.28)" }}>
+                          <Zap size={12} /><span className="text-[10px] font-black tracking-[0.18em]">WORLD-CLASS EXPORT OS</span>
+                        </div>
+                        <div>
+                          <h1 className="text-3xl xl:text-5xl font-black leading-[0.92] tracking-tight text-white">Turn one raw asset into a full creator revenue package.</h1>
+                          <p className="mt-3 max-w-xl text-sm leading-relaxed" style={{ color: C.muted }}>Upload once, then package a polished master, safe teaser, PPV drop, caption pack, social cutdowns, thumbnail, launch calendar, and archive output from the same command center.</p>
+                        </div>
+                      </div>
+                      <div className="grid md:grid-cols-4 gap-2">
+                        {WORKFLOW_STEPS.map(step => {
+                          const Icon = step.icon as any;
+                          return (
+                            <div key={step.step} className="p-3 rounded-2xl" style={{ background: "rgba(0,0,0,0.34)", border: `1px solid ${step.color}33` }}>
+                              <div className="flex items-center justify-between mb-2"><span className="text-[9px] font-black" style={{ color: step.color }}>{step.step}</span><Icon size={13} style={{ color: step.color }} /></div>
+                              <p className="text-[11px] font-black text-white">{step.label}</p>
+                              <p className="text-[9px] leading-snug mt-1" style={{ color: C.muted }}>{step.detail}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-sm font-black text-white">Upload Content to Begin</p>
-                      <p className="text-xs mt-1" style={{ color: "#4B5563" }}>Drop a photo or video — GPT-4o analyzes automatically</p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 mt-2">
-                      {["SDXL Beauty", "Real-ESRGAN 4x", "Flux Cinematic", "Kling 3.0 Video", "ElevenLabs Audio", "DALL-E 3 BG"].map(m => (
-                        <div key={m} className="px-2 py-1.5 rounded-xl text-center text-[8px] font-bold" style={{ background: "rgba(255,255,255,0.03)", color: "#374151", border: "1px solid rgba(255,255,255,0.05)" }}>{m}</div>
-                      ))}
+                    <div className="flex flex-col gap-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        {WORLD_CLASS_OUTPUTS.map(output => {
+                          const Icon = output.icon as any;
+                          const selected = selectedOutputPackages.includes(output.id);
+                          return (
+                            <button key={output.id} onClick={() => setSelectedOutputPackages(prev => selected ? prev.filter(id => id !== output.id) : [...prev, output.id])} className="text-left p-3 rounded-2xl transition-all" style={{ background: selected ? `${output.color}17` : "rgba(255,255,255,0.025)", border: `1px solid ${selected ? output.color + "4D" : "rgba(255,255,255,0.06)"}` }}>
+                              <div className="flex items-center justify-between mb-1"><Icon size={13} style={{ color: selected ? output.color : C.mutedLo }} />{selected && <Check size={12} style={{ color: output.color }} />}</div>
+                              <p className="text-[10px] font-black" style={{ color: selected ? output.color : C.text }}>{output.label}</p>
+                              <p className="text-[8px] leading-snug mt-1" style={{ color: C.muted }}>{output.desc}</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button onClick={() => fileInputRef.current?.click()} className="w-full py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2" style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)", color: "#fff" }}><Upload size={15} />UPLOAD AND BUILD OUTPUT PACKAGE</button>
                     </div>
                   </div>
                 )}
@@ -1825,7 +1928,31 @@ export default function VaultXEditor() {
           {/* PUBLISH TAB */}
           {activeTab === "publish" && (
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-              <p className="text-xs font-black tracking-widest" style={{ color: "#10B981" }}>PUBLISH TO VAULTX</p>
+              <div className="flex items-start justify-between gap-4 p-4 rounded-3xl" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.10), rgba(139,92,246,0.10))", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div>
+                  <p className="text-xs font-black tracking-widest" style={{ color: "#10B981" }}>OUTPUT COMMAND CENTER</p>
+                  <h2 className="text-2xl font-black mt-1 text-white">Package every deliverable before launch.</h2>
+                  <p className="text-xs mt-1 max-w-2xl" style={{ color: C.muted }}>Select the exact revenue package VaultX should prepare: master file, safe preview, PPV drop, social cutdowns, copy pack, thumbnail, calendar, and archive metadata.</p>
+                </div>
+                <div className="hidden md:flex flex-col items-end gap-1 text-[9px] font-black" style={{ color: C.muted }}>
+                  <span>FORMAT: <b style={{ color: C.accent }}>{targetFormat}</b></span>
+                  <span>MODE: <b style={{ color: C.green }}>{complianceMode.replace("_", " ").toUpperCase()}</b></span>
+                  <span>WATERMARK: <b style={{ color: C.gold }}>{watermarkIdentity}</b></span>
+                </div>
+              </div>
+              <div className="grid md:grid-cols-4 gap-2">
+                {WORLD_CLASS_OUTPUTS.map(output => {
+                  const Icon = output.icon as any;
+                  const selected = selectedOutputPackages.includes(output.id);
+                  return (
+                    <button key={output.id} onClick={() => setSelectedOutputPackages(prev => selected ? prev.filter(id => id !== output.id) : [...prev, output.id])} className="p-3 rounded-2xl text-left" style={{ background: selected ? `${output.color}16` : "rgba(255,255,255,0.025)", border: `1px solid ${selected ? output.color + "55" : "rgba(255,255,255,0.06)"}` }}>
+                      <div className="flex items-center justify-between mb-2"><Icon size={14} style={{ color: selected ? output.color : C.mutedLo }} />{selected && <CheckCircle size={13} style={{ color: output.color }} />}</div>
+                      <p className="text-[10px] font-black" style={{ color: selected ? output.color : C.text }}>{output.label}</p>
+                      <p className="text-[8px] leading-snug mt-1" style={{ color: C.muted }}>{output.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
               {variations.length > 0 && (
                 <div className="flex gap-3 overflow-x-auto pb-2">
                   {variations.map((v, i) => (
@@ -1866,7 +1993,7 @@ export default function VaultXEditor() {
                 <button onClick={handlePublish} disabled={!sourceUrl || publishToVaultXMut.isPending}
                   className="py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2"
                   style={{ background: (!sourceUrl || publishToVaultXMut.isPending) ? "rgba(255,255,255,0.04)" : "linear-gradient(135deg, #10B981, #059669)", color: (!sourceUrl || publishToVaultXMut.isPending) ? "#374151" : "#fff" }}>
-                  {publishToVaultXMut.isPending ? <><Loader2 size={14} className="animate-spin" />PUBLISHING...</> : <><Send size={14} />PUBLISH TO VAULTX</>}
+                  {publishToVaultXMut.isPending ? <><Loader2 size={14} className="animate-spin" />PUBLISHING...</> : <><Send size={14} />PUBLISH REVENUE PACKAGE</>}
                 </button>
               </div>
               <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -1888,7 +2015,7 @@ export default function VaultXEditor() {
                   disabled={exportPresets.length === 0 || exportForPlatformsMut.isPending}
                   className="py-2.5 rounded-xl text-[10px] font-black flex items-center justify-center gap-2"
                   style={{ background: "rgba(139,92,246,0.2)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.3)" }}>
-                  {exportForPlatformsMut.isPending ? <><Loader2 size={11} className="animate-spin" />EXPORTING...</> : <><Download size={11} />EXPORT {exportPresets.length} PLATFORMS</>}
+                  {exportForPlatformsMut.isPending ? <><Loader2 size={11} className="animate-spin" />EXPORTING...</> : <><Download size={11} />BUILD {selectedOutputPackages.length} OUTPUTS · EXPORT {exportPresets.length} PLATFORMS</>}
                 </button>
               </div>
             </div>
