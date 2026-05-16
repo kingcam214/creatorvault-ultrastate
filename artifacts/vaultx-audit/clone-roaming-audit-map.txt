@@ -1,0 +1,357 @@
+=== Clone / autonomous operator source map ===
+client/src/App.tsx:491:      <Route path={"/__release"} component={ReleaseInfo} />
+client/src/App.tsx:495:      <Route path={"/operator"} component={OperatorDashboard} />
+client/src/App.tsx:573:      <Route path="/king/telegram-hub" component={TelegramMoneyHub} />
+client/src/App.tsx:583:      <Route path="/agents" component={AgentRoster} />
+client/src/App.tsx:629:      <Route path={"/telegram-setup"} component={TelegramSetup} />
+client/src/App.tsx:664:      <Route path={"/agent-tracker"} component={AgentTracker} />
+client/src/App.tsx:665:      <Route path={"/emma-ai-agents"} component={EmmaAIAgentDashboard} />
+client/src/App.tsx:669:      <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} />
+client/src/App.tsx:695:      <Route path={"/kingcam-clone"} component={KingCamClone} />
+client/src/App.tsx:733:      <Route path="/agents/approvals" component={AgentApprovalInbox} />
+client/src/App.tsx:734:      <Route path="/agents/command-tower" component={AgentCommandTower} />
+client/src/App.tsx:739:      <Route path="/clone-empire-home" component={CloneEmpire} />
+client/src/App.tsx:740:      <Route path="/clone/render-studio" component={CloneRenderStudio} />
+client/src/App.tsx:755:      <Route path="/agents/motion-flyer-agent" component={MotionFlyerAgent} />
+client/src/App.tsx:757:      <Route path="/agents/music-library-agent" component={MusicLibraryAgent} />
+client/src/App.tsx:763:      {/* social-autoposter-agent, factory, posting-hub merged into /social-hub */}
+client/src/App.tsx:791:      <Route path="/king/clone-command" component={CloneCommand} />
+client/src/App.tsx:792:      <Route path="/king/clone-studio" component={CloneStudio} />
+client/src/App.tsx:793:      <Route path="/king/clone-training-lab" component={CloneTrainingLab} />
+client/src/App.tsx.bak_preimports:420:      <Route path={"/operator"} component={OperatorDashboard} />
+client/src/App.tsx.bak_preimports:471:      <Route path={"/content-scheduler"} component={ContentScheduler} />
+client/src/App.tsx.bak_preimports:473:      <Route path={"/unified-publisher"} component={UnifiedContentPublisher} />
+client/src/App.tsx.bak_preimports:492:      <Route path="/king/telegram-hub" component={TelegramMoneyHub} />
+client/src/App.tsx.bak_preimports:502:      <Route path="/agents" component={AgentRoster} />
+client/src/App.tsx.bak_preimports:547:      <Route path={"/telegram-setup"} component={TelegramSetup} />
+client/src/App.tsx.bak_preimports:582:      <Route path={"/agent-tracker"} component={AgentTracker} />
+client/src/App.tsx.bak_preimports:583:      <Route path={"/emma-ai-agents"} component={EmmaAIAgentDashboard} />
+client/src/App.tsx.bak_preimports:587:      <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} />
+client/src/App.tsx.bak_preimports:613:      <Route path={"/kingcam-clone"} component={KingCamClone} />
+client/src/App.tsx.bak_preorphans:421:      <Route path={"/operator"} component={OperatorDashboard} />
+client/src/App.tsx.bak_preorphans:472:      <Route path={"/content-scheduler"} component={ContentScheduler} />
+client/src/App.tsx.bak_preorphans:474:      <Route path={"/unified-publisher"} component={UnifiedContentPublisher} />
+client/src/App.tsx.bak_preorphans:493:      <Route path="/king/telegram-hub" component={TelegramMoneyHub} />
+client/src/App.tsx.bak_preorphans:503:      <Route path="/agents" component={AgentRoster} />
+client/src/App.tsx.bak_preorphans:548:      <Route path={"/telegram-setup"} component={TelegramSetup} />
+client/src/App.tsx.bak_preorphans:583:      <Route path={"/agent-tracker"} component={AgentTracker} />
+client/src/App.tsx.bak_preorphans:584:      <Route path={"/emma-ai-agents"} component={EmmaAIAgentDashboard} />
+client/src/App.tsx.bak_preorphans:588:      <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} />
+client/src/App.tsx.bak_preorphans:614:      <Route path={"/kingcam-clone"} component={KingCamClone} />
+client/src/App.tsx.bak_prerestore:248:      {/* <Route path={"/operator"} component={OperatorDashboard} /> */}
+client/src/App.tsx.bak_prerestore:299:      {/* <Route path={"/content-scheduler"} component={ContentScheduler} /> */}
+client/src/App.tsx.bak_prerestore:301:      {/* <Route path={"/unified-publisher"} component={UnifiedContentPublisher} /> */}
+client/src/App.tsx.bak_prerestore:320:      {/* <Route path="/king/telegram-hub" component={TelegramMoneyHub} /> */}
+client/src/App.tsx.bak_prerestore:330:      {/* <Route path="/agents" component={AgentRoster} /> */}
+client/src/App.tsx.bak_prerestore:375:      <Route path={"/telegram-setup"} component={TelegramSetup} />
+client/src/App.tsx.bak_prerestore:410:      {/* <Route path={"/agent-tracker"} component={AgentTracker} /> */}
+client/src/App.tsx.bak_prerestore:411:      {/* <Route path={"/emma-ai-agents"} component={EmmaAIAgentDashboard} /> */}
+client/src/App.tsx.bak_prerestore:415:      {/* <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} /> */}
+client/src/App.tsx.bak_prerestore:441:      {/* <Route path={"/kingcam-clone"} component={KingCamClone} /> */}
+client/src/components/DashboardLayout.tsx:102:    { label: "AI Agents", path: "/emma-ai-agents", icon: Bot },
+client/src/components/DashboardLayout.tsx:115:    { label: "Agent Tracker", path: "/agent-tracker", icon: Bot },
+client/src/components/DashboardLayout.tsx:133:    path.startsWith("/king/telegram")
+client/src/components/DashboardLayout.tsx:138:    path.startsWith("/emma-ai-agents") ||
+client/src/components/DashboardLayout.tsx:153:    path.startsWith("/agent-tracker") ||
+client/src/components/ui/avatar.tsx:2:import * as AvatarPrimitive from "@radix-ui/react-avatar";
+client/src/components/ui/avatar.tsx:12:      data-slot="avatar"
+client/src/components/ui/avatar.tsx:28:      data-slot="avatar-image"
+client/src/components/ui/avatar.tsx:41:      data-slot="avatar-fallback"
+client/src/pages/AIBot.tsx:14:type Role = "creator" | "recruiter" | "field_operator" | "ambassador";
+client/src/pages/AIBot.tsx:60:    field_operator: "Access location-based playbooks, tourism monetization, and street-level tactics",
+client/src/pages/AIBot.tsx:67:    field_operator: "bg-orange-500",
+client/src/pages/AIBot.tsx:100:              {(["creator", "recruiter", "field_operator", "ambassador"] as Role[]).map((r) => (
+client/src/pages/AIChatter.tsx:43:    scheduleHours: [] as number[],
+client/src/pages/AIChatter.tsx:56:        scheduleHours: config.scheduleHours,
+client/src/pages/AIChatter.tsx:69:      scheduleHours: f.scheduleHours.includes(hour)
+client/src/pages/AIChatter.tsx:70:        ? f.scheduleHours.filter((h) => h !== hour)
+client/src/pages/AIChatter.tsx:71:        : [...f.scheduleHours, hour].sort((a, b) => a - b),
+client/src/pages/AIChatter.tsx:238:                    form.scheduleHours.includes(h)
+client/src/pages/AIEmpireDashboard.tsx:7:  agent_swarm: '#06b6d4',
+client/src/pages/AIEmpireDashboard.tsx:16:  agent_swarm: '🤖',
+client/src/pages/AIEmpireDashboard.tsx:274:                  <option value="agent_swarm">Agent Swarm</option>
+client/src/pages/ActivationWarRoomCommandCenter.tsx:114:  approval_status?: string;
+client/src/pages/ActivationWarRoomCommandCenter.tsx:180:  operator_status?: string | null;
+client/src/pages/ActivationWarRoomCommandCenter.tsx:181:  operator_note?: string | null;
+client/src/pages/ActivationWarRoomCommandCenter.tsx:199:  time_since_telegram_ready_hours?: number | null;
+client/src/pages/ActivationWarRoomCommandCenter.tsx:368:  operatorNote,
+client/src/pages/ActivationWarRoomCommandCenter.tsx:375:  operatorNote: string;
+client/src/pages/ActivationWarRoomCommandCenter.tsx:437:            <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-700">{operatorNote}</p>
+client/src/pages/ActivationWarRoomCommandCenter.tsx:439:          <Button disabled={isUpdating || !operatorNote.trim()} onClick={() => onAction(row)}>
+client/src/pages/ActivationWarRoomCommandCenter.tsx:484:          <div><p className="text-xs uppercase text-slate-500">Telegram ready</p><p className="font-semibold text-slate-900">{hoursLabel(row.time_since_telegram_ready_hours)}</p></div>
+client/src/pages/ActivationWarRoomCommandCenter.tsx:517:              {row.display_name || "No display name"} · {titleize(row.niche)} · approval {titleize(row.approval_status)} · status {titleize(row.sprint_status)}
+client/src/pages/ActivationWarRoomCommandCenter.tsx:607:  const [operatorNote, setOperatorNote] = useState("Operator reviewed next money action in Activation War Room. No automated outreach sent.");
+client/src/pages/ActivationWarRoomCommandCenter.tsx:654:      toast.success("Blocker resolution recorded with operator note");
+client/src/pages/ActivationWarRoomCommandCenter.tsx:702:    reviewIntervention.mutate({ interventionId: row.id, status, operatorNote });
+client/src/pages/ActivationWarRoomCommandCenter.tsx:706:    recordTop5Action.mutate({ sprintId: row.id, status, operatorNote });
+client/src/pages/ActivationWarRoomCommandCenter.tsx:717:  const recoveryStatusFor = (row: FirstDollarRecoveryRow): RecoveryOperatorStatus => recoveryStatusById[row.id] || (row.operator_status as RecoveryOperatorStatus) || "reviewing";
+client/src/pages/ActivationWarRoomCommandCenter.tsx:730:      operatorStatus: recoveryStatusFor(row),
+client/src/pages/ActivationWarRoomCommandCenter.tsx:734:      operatorNote: recoveryOperatorNote,
+client/src/pages/ActivationWarRoomCommandCenter.tsx:804:          <TruthFlag label="No projections included" ok={noProjections} detail="The page shows actual ledger state and operator priorities, not forecasted revenue." />
+client/src/pages/ActivationWarRoomCommandCenter.tsx:805:          <TruthFlag label="No automated outreach sent" ok={noOutreach} detail="Interventions are operator-review rows; review actions update status without sending messages." />
+client/src/pages/ActivationWarRoomCommandCenter.tsx:839:              <TruthFlag label="No automated outreach" ok={top5Rows.every((row) => !boolFlag(row.automated_outreach_sent))} detail="Buttons record operator review only and do not send messages." />
+client/src/pages/ActivationWarRoomCommandCenter.tsx:843:                <CardTitle>Top 5 operator note</CardTitle>
+client/src/pages/ActivationWarRoomCommandCenter.tsx:847:                <Textarea value={operatorNote} onChange={(event) => setOperatorNote(event.target.value)} className="min-h-[90px]" />
+client/src/pages/ActivationWarRoomCommandCenter.tsx:878:                <Textarea value={operatorNote} onChange={(event) => setOperatorNote(event.target.value)} className="min-h-[90px]" />
+client/src/pages/ActivationWarRoomCommandCenter.tsx:891:                <CardDescription>Resolution is an operator record only; resolve blockers after confirming source-table evidence.</CardDescription>
+client/src/pages/ActivationWarRoomCommandCenter.tsx:923:              <TruthFlag label="No automated outreach" ok={recoveryTruthFlags.automatedOutreachSent === false && recoveryTruthFlags.outboundSendEnabled === false && recoveryQueue.every((row) => !boolFlag(row.automated_outreach_sent))} detail="Actions record operator notes and status only; there are no auto-send or outbound execution controls in this tab." />
+client/src/pages/ActivationWarRoomCommandCenter.tsx:927:                <CardTitle>Recovery operator note</CardTitle>
+client/src/pages/ActivationWarRoomCommandCenter.tsx:945:                    operatorNote={recoveryOperatorNote}
+client/src/pages/AgentApprovalInbox.tsx:11:  // Use agentTelemetry for real execution events.
+client/src/pages/AgentApprovalInbox.tsx:12:  const eventsQuery = trpc.agentTelemetry.getRecentEvents.useQuery({ pageSize: 30 });
+client/src/pages/AgentApprovalInbox.tsx:29:          <p style={{ margin: 0, fontSize: 12, color: T.muted }}>Live DB-backed agent events, verified task outcomes, and challenge transaction visibility</p>
+client/src/pages/AgentApprovalInbox.tsx:57:          <div style={{ fontSize: 13, fontWeight: 800, color: T.error }}>Live approval inbox failed to load</div>
+client/src/pages/AgentApprovalInbox.tsx:65:          This inbox does not create fixed-amount revenue credits. It displays live agent telemetry and the {txns.length} verified challenge transaction{txns.length === 1 ? '' : 's'} already recorded by backend workflows.
+client/src/pages/AgentApprovalInbox.tsx:77:                <span style={{ fontSize: 13, fontWeight: 700 }}>{event.agent_name ?? event.agent_id}</span>
+client/src/pages/AgentApprovalInbox.tsx:92:            No {filter === 'all' ? '' : filter} DB-backed agent events are currently recorded for this filter.
+client/src/pages/AgentCommandTower.tsx:34:  const summaryQuery = trpc.agentTelemetry.getSummaryStats.useQuery({ timeRange });
+client/src/pages/AgentCommandTower.tsx:35:  const recentQuery = trpc.agentTelemetry.getRecentEvents.useQuery({
+client/src/pages/AgentCommandTower.tsx:41:  const leaderboardQuery = trpc.agentTelemetry.getAgentLeaderboard.useQuery({ timeRange, limit: 15 });
+client/src/pages/AgentCommandTower.tsx:57:            <p style={{ margin: 0, color: '#8a8a8a', fontSize: 12 }}>Real-time telemetry for the 49-agent empire</p>
+client/src/pages/AgentCommandTower.tsx:125:                  <span style={{ color: '#c9a84c', fontWeight: 700 }}>{event.agent_name}</span>
+client/src/pages/AgentCommandTower.tsx:146:            {(leaderboardQuery.data ?? []).map((agent: any, idx: number) => (
+client/src/pages/AgentCommandTower.tsx:147:              <div key={agent.agent_id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: 6, padding: 10 }}>
+client/src/pages/AgentCommandTower.tsx:150:                    <div style={{ color: '#f5f0e8', fontWeight: 700 }}>{idx + 1}. {agent.agent_name}</div>
+client/src/pages/AgentCommandTower.tsx:151:                    <div style={{ color: '#8a8a8a', fontSize: 12 }}>{agent.tasks} tasks • {agent.successes} success</div>
+client/src/pages/AgentCommandTower.tsx:153:                  <div style={{ color: '#22c55e', fontWeight: 700 }}>${Number(agent.revenue ?? 0).toFixed(2)}</div>
+client/src/pages/AgentCommandTower.tsx:174:                <strong>{event.agent_name}</strong>
+client/src/pages/AgentRoster.tsx:31:  const agentsQuery = trpc.empireAgents.getEmpireAgents.useQuery();
+client/src/pages/AgentRoster.tsx:36:  const agents = (agentsQuery.data ?? []) as any[];
+client/src/pages/AgentRoster.tsx:38:  const dataSourceError = agentsQuery.error?.message || reportsQuery.error?.message || null;
+client/src/pages/AgentRoster.tsx:42:    if (!reportMap[r.agent_slug]) reportMap[r.agent_slug] = r;
+client/src/pages/AgentRoster.tsx:45:  const entities = ['all', ...Array.from(new Set(agents.map((a: any) => a.entity_name).filter(Boolean))) as string[]];
+client/src/pages/AgentRoster.tsx:47:  const filtered = agents.filter((a: any) => {
+client/src/pages/AgentRoster.tsx:53:  const totalRevenue = agents.reduce((s: number, a: any) => s + parseFloat(a.total_revenue_generated ?? '0'), 0);
+client/src/pages/AgentRoster.tsx:54:  const activeCount = agents.filter((a: any) => a.status === 'active').length;
+client/src/pages/AgentRoster.tsx:55:  const forSaleCount = agents.filter((a: any) => a.is_for_sale).length;
+client/src/pages/AgentRoster.tsx:58:  const handleRunAgent = async (agent: any) => {
+client/src/pages/AgentRoster.tsx:60:    setRunningAgent(agent.slug);
+client/src/pages/AgentRoster.tsx:64:        agentSlug: agent.slug,
+client/src/pages/AgentRoster.tsx:65:        agentName: agent.name,
+client/src/pages/AgentRoster.tsx:70:        [agent.slug]: { outcome: result.outcome, status: result.status, action: result.action },
+client/src/pages/AgentRoster.tsx:72:      setExpandedAgent(agent.slug);
+client/src/pages/AgentRoster.tsx:76:        [agent.slug]: { outcome: `Error: ${e.message}`, status: 'failed', action: 'error' },
+client/src/pages/AgentRoster.tsx:91:        newResults[r.agentSlug] = { outcome: r.outcome, status: r.status, action: r.action };
+client/src/pages/AgentRoster.tsx:95:      setCycleError(e?.message ?? 'Full agent cycle failed before verified DB-backed completion.');
+client/src/pages/AgentRoster.tsx:98:      agentsQuery.refetch();
+client/src/pages/AgentRoster.tsx:111:            <p style={{ margin: 0, fontSize: 12, color: T.muted }}>DB-backed agent inventory, saved reports, and live challenge execution. No synthetic telemetry.</p>
+client/src/pages/AgentRoster.tsx:126:            : <><Zap size={14} /> Run All {agents.length} Agents</>}
+client/src/pages/AgentRoster.tsx:133:          { label: 'Total Agents', value: agents.length, icon: <Users size={14} color={T.gold} />, color: T.gold },
+client/src/pages/AgentRoster.tsx:167:        <span style={{ marginLeft: 'auto', fontSize: 12, color: T.muted }}>{filtered.length} agents</span>
+client/src/pages/AgentRoster.tsx:170:      {agentsQuery.isPending && (
+client/src/pages/AgentRoster.tsx:172:          <div style={{ marginBottom: 8 }}>⟳ Loading agents...</div>
+client/src/pages/AgentRoster.tsx:194:        {filtered.map((agent: any, i: number) => {
+client/src/pages/AgentRoster.tsx:195:          const isRunning = runningAgent === agent.slug;
+client/src/pages/AgentRoster.tsx:196:          const runResult = lastRunResult[agent.slug];
+client/src/pages/AgentRoster.tsx:197:          const latestReport = reportMap[agent.slug];
+client/src/pages/AgentRoster.tsx:198:          const isExpanded = expandedAgent === agent.slug;
+client/src/pages/AgentRoster.tsx:199:          const roleColor = ROLE_COLORS[agent.swarm_role] ?? T.muted;
+client/src/pages/AgentRoster.tsx:211:                  <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.3, marginBottom: 4 }}>{agent.name}</div>
+client/src/pages/AgentRoster.tsx:213:                    {agent.swarm_role && (
+client/src/pages/AgentRoster.tsx:215:                        {agent.swarm_role}
+client/src/pages/AgentRoster.tsx:218:                    {agent.entity_name && (
+client/src/pages/AgentRoster.tsx:220:                        {agent.entity_name}
+client/src/pages/AgentRoster.tsx:223:                    {agent.is_for_sale && (
+client/src/pages/AgentRoster.tsx:225:                        FOR SALE ${((agent.base_price_cents ?? 0) / 100).toLocaleString()}
+client/src/pages/AgentRoster.tsx:231:                  {agent.status === 'active' ? <CheckCircle size={14} color={T.success} /> : <XCircle size={14} color={T.error} />}
+client/src/pages/AgentRoster.tsx:237:              {agent.description && (
+client/src/pages/AgentRoster.tsx:239:                  {agent.description}
+client/src/pages/AgentRoster.tsx:245:                <span style={{ color: T.muted }}>Win Rate: <span style={{ color: T.success, fontWeight: 600 }}>{agent.win_rate ?? 0}%</span></span>
+client/src/pages/AgentRoster.tsx:246:                <span style={{ color: T.muted }}>Revenue: <span style={{ color: T.gold, fontWeight: 600 }}>${parseFloat(agent.total_revenue_generated ?? '0').toFixed(0)}</span></span>
+client/src/pages/AgentRoster.tsx:247:                {agent.consecutive_failures > 0 && <span style={{ color: T.error, fontWeight: 600 }}>⚠ {agent.consecutive_failures} fails</span>}
+client/src/pages/AgentRoster.tsx:267:                    <button onClick={() => setExpandedAgent(isExpanded ? null : agent.slug)} style={{
+client/src/pages/AgentRoster.tsx:290:                onClick={() => handleRunAgent(agent)}
+client/src/pages/AgentRoster.tsx:291:                disabled={isRunning || !!runningAgent || runningAll || agent.status !== 'active'}
+client/src/pages/AgentRoster.tsx:294:                  background: isRunning ? T.muted2 : agent.status !== 'active' ? T.surface2 : `${T.gold}22`,
+client/src/pages/AgentRoster.tsx:295:                  color: isRunning ? T.muted : agent.status !== 'active' ? T.muted2 : T.gold,
+client/src/pages/AgentRoster.tsx:296:                  border: `1px solid ${isRunning ? T.muted2 : agent.status !== 'active' ? T.border : T.gold + '44'}`,
+client/src/pages/AgentRoster.tsx:298:                  cursor: (isRunning || agent.status !== 'active') ? 'not-allowed' : 'pointer',
+client/src/pages/AgentRoster.tsx:304:                  : agent.status !== 'active'
+client/src/pages/AgentRoster.tsx:312:        {filtered.length === 0 && !agentsQuery.isPending && (
+client/src/pages/AgentRoster.tsx:314:            No DB-backed agents matched the selected filters. Clear the filters or repair the production agent seed data.
+client/src/pages/AgentRoster.tsx:324:            <div style={{ fontSize: 13, fontWeight: 700, color: T.gold }}>Running All {agents.length} Agents...</div>
+client/src/pages/ApparelLab.tsx:7: * campaign — before they touch a single control. Controls are minimal,
+client/src/pages/ApparelLab.tsx:347:  | "model_shoot" | "drop_campaign" | "batch_factory" | "brand_dna" | "my_vault";
+client/src/pages/ApparelLab.tsx:355:  { id: "drop_campaign", label: "Drop Campaign", sub: "Kit",      icon: Flame },
+client/src/pages/ApparelLab.tsx:1495:  const [campaignName, setCampaignName] = useState("");
+client/src/pages/ApparelLab.tsx:1500:    campaignId: string; campaignName: string; totalGenerated: number;
+client/src/pages/ApparelLab.tsx:1520:        <p className="text-sm mt-2" style={{ color: T.muted }}>One concept. Complete drop: designs, social kit, campaign assets.</p>
+client/src/pages/ApparelLab.tsx:1531:                  <p className="text-xs tracking-widest uppercase" style={{ color: T.gold }}>{result.campaignName}</p>
+client/src/pages/ApparelLab.tsx:1560:              emptyDesc="One concept generates a full drop: designs, social kit, and campaign assets"
+client/src/pages/ApparelLab.tsx:1571:            <FlatInput value={campaignName} onChange={setCampaignName} placeholder="e.g. Empire Drop Vol.1" />
+client/src/pages/ApparelLab.tsx:1620:              campaignName: campaignName || "New Drop",
+client/src/pages/ApparelLab.tsx:2025:                      border: `1px solid ${p.status === "published" ? "#059669" : p.status === "in_progress" ? T.gold : T.border}`,
+client/src/pages/ApparelLab.tsx:2026:                      color: p.status === "published" ? "#059669" : p.status === "in_progress" ? T.gold : T.dim,
+client/src/pages/ApparelLab.tsx:2154:        {tab === "drop_campaign" && <DropCampaign />}
+client/src/pages/BotMonetizationDashboard.tsx:240:                            {tx.payment_method === 'telegram_stars' && '⭐ Stars'}
+client/src/pages/BotMonetizationDashboard.tsx:490:                          {sub.platform === 'telegram' ? '📱 Telegram' : '💬 WhatsApp'}
+client/src/pages/BotMonetizationDashboard.tsx:609:                    {method.payment_method === 'telegram_stars' && '⭐ Telegram Stars'}
+client/src/pages/ChicaCockpit.tsx:65:            { label: "Telegram Hub", href: "/king/telegram-hub", icon: "📱" },
+client/src/pages/ChicaFunnelManager.tsx:12:  telegram: "#229ED9",
+client/src/pages/ChicaFunnelManager.tsx:19:  telegram: "✈️",
+client/src/pages/ChicaFunnelManager.tsx:114:              {["tinder", "whatsapp", "telegram", "vaultx"].map(p => (
+client/src/pages/ChicaFunnelManager.tsx:268:          {rendered.telegram.length > 0 && (
+client/src/pages/ChicaFunnelManager.tsx:270:              <div style={{ color: PLATFORM_COLORS.telegram, fontWeight: 700, marginBottom: "8px", fontSize: "14px" }}>
+client/src/pages/ChicaFunnelManager.tsx:274:              {rendered.telegram.filter((s: any) => s.step_type !== 'delay').map((step: any, i: number) => (
+client/src/pages/ChicaFunnelManager.tsx:277:                    background: PLATFORM_COLORS.telegram + "33", color: PLATFORM_COLORS.telegram,
+client/src/pages/ChicasEmpire.tsx:11:    { title: "Empire Agents", href: "/king/empire", icon: "🤖", desc: "49 AI agents managing the empire" },
+client/src/pages/ChicasEmpire.tsx:12:    { title: "Telegram Hub", href: "/king/telegram-hub", icon: "📱", desc: "Broadcast to all chicas" },
+client/src/pages/CloneEmpire.tsx:3: * CLONE EMPIRE — /king/clone-empire
+client/src/pages/CloneEmpire.tsx:4: * The most powerful AI clone creation, training, and monetization vertical.
+client/src/pages/CloneEmpire.tsx:21:type Tab = "studio" | "train" | "gallery" | "schedule" | "stats";
+client/src/pages/CloneEmpire.tsx:62:    scheduled: { color: "#3B82F6", bg: "rgba(59,130,246,0.15)", icon: <Calendar size={12} /> },
+client/src/pages/CloneEmpire.tsx:63:    published: { color: "#10B981", bg: "rgba(16,185,129,0.15)", icon: <Globe size={12} /> },
+client/src/pages/CloneEmpire.tsx:164:  const generateTalkingHead = trpc.cloneEmpire.generateTalkingHeadWithScript.useMutation();
+client/src/pages/CloneEmpire.tsx:165:  const generateFullBody = trpc.cloneEmpire.generateFullBodyVideo.useMutation();
+client/src/pages/CloneEmpire.tsx:166:  const generateImage = trpc.cloneEmpire.generateCloneImage.useMutation();
+client/src/pages/CloneEmpire.tsx:167:  const trainClone = trpc.cloneEmpire.trainClone.useMutation();
+client/src/pages/CloneEmpire.tsx:170:  const { data: statsData, refetch: refetchStats } = trpc.cloneEmpire.getCloneStats.useQuery(undefined, { retry: false });
+client/src/pages/CloneEmpire.tsx:171:  const { data: trainingJobs, refetch: refetchJobs } = trpc.cloneEmpire.listTrainingJobs.useQuery(undefined, { retry: false });
+client/src/pages/CloneEmpire.tsx:174:  const { data: cloneVideos, refetch: refetchVideos } = trpc.cloneEmpire.listCloneContent.useQuery({ limit: 50, offset: 0, contentType: "all" }, { retry: false });
+client/src/pages/CloneEmpire.tsx:177:  // Also get existing clone videos from the main clone lab
+client/src/pages/CloneEmpire.tsx:179:  const { data: existingVideos } = trpc.cloneLab.listCloneVideos.useQuery({ limit: 50, offset: 0 }, { retry: false });
+client/src/pages/CloneEmpire.tsx:279:    ...(cloneVideos?.items || []).filter((v: any) => v.video_url),
+client/src/pages/CloneEmpire.tsx:337:            { id: "schedule", label: "Schedule", icon: <Calendar size={15} /> },
+client/src/pages/CloneEmpire.tsx:519:                    <img src={lastImageResult.imageUrl} alt="Generated clone" style={{ width: "100%", borderRadius: 12, objectFit: "cover" }} />
+client/src/pages/CloneEmpire.tsx:607:                    No training jobs yet. Start your first training run to upgrade your clone model.
+client/src/pages/CloneEmpire.tsx:647:                <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No clone videos yet</div>
+client/src/pages/CloneEmpire.tsx:648:                <div style={{ fontSize: 13 }}>Go to Studio and generate your first clone video</div>
+client/src/pages/CloneEmpire.tsx:661:        {activeTab === "schedule" && (
+client/src/pages/CloneEmpire.tsx:666:              Schedule your clone videos for auto-posting to Instagram, TikTok, YouTube, and Twitter. Connect your social accounts to enable scheduling.
+client/src/pages/CloneRenderStudio.tsx:6:  { id: "talking-head", label: "Talking Head", desc: "AI clone speaks your script", icon: Mic },
+client/src/pages/CloneRenderStudio.tsx:19:  const { data: history } = trpc.cloneEmpire?.listCloneVideos?.useQuery?.(undefined, { retry: false }) || { data: [] };
+client/src/pages/CloneRenderStudio.tsx:21:  const generateTalkingHead = trpc.cloneEmpire?.generateTalkingHeadWithScript?.useMutation?.({
+client/src/pages/CloneRenderStudio.tsx:26:  const generateFullBody = trpc.cloneEmpire?.generateFullBodyVideo?.useMutation?.({
+client/src/pages/CloneRenderStudio.tsx:31:  const generateImage = trpc.cloneEmpire?.generateCloneImage?.useMutation?.({
+client/src/pages/CloneRenderStudio.tsx:56:            <p className="text-gray-400">Generate AI clone videos with your voice and likeness</p>
+client/src/pages/CloneRenderStudio.tsx:84:                placeholder={mode === "image-to-video" ? "Describe the animation (e.g., 'person turns head and smiles')..." : "Enter what your clone will say..."}
+client/src/pages/CloneRenderStudio.tsx:127:                  <span className="font-medium">AI is generating your clone video...</span>
+client/src/pages/CloneRenderStudio.tsx:182:                <p className="text-gray-600 text-sm">No renders yet. Create your first clone video above.</p>
+client/src/pages/CommandHub.tsx:50:  const [telegramBotId, setTelegramBotId] = useState("");
+client/src/pages/CommandHub.tsx:51:  const [telegramMessage, setTelegramMessage] = useState("");
+client/src/pages/CommandHub.tsx:52:  const [telegramTargets, setTelegramTargets] = useState("100");
+client/src/pages/CommandHub.tsx:54:  // WhatsApp campaign
+client/src/pages/CommandHub.tsx:101:  const telegramBroadcastMutation = trpc.commandHub.sendTelegramBroadcast.useMutation({
+client/src/pages/CommandHub.tsx:113:      toast.success(`WhatsApp campaign sent to ${data.output.targetCount} users!`);
+client/src/pages/CommandHub.tsx:140:    { id: "telegram", label: "Telegram Broadcast", icon: Send, color: "bg-cyan-500" },
+client/src/pages/CommandHub.tsx:443:            {activeCommand === "telegram" && (
+client/src/pages/CommandHub.tsx:452:                      value={telegramBotId}
+client/src/pages/CommandHub.tsx:461:                      value={telegramMessage}
+client/src/pages/CommandHub.tsx:471:                      value={telegramTargets}
+client/src/pages/CommandHub.tsx:478:                      telegramBroadcastMutation.mutate({
+client/src/pages/CommandHub.tsx:479:                        botId: telegramBotId,
+client/src/pages/CommandHub.tsx:480:                        message: telegramMessage,
+client/src/pages/CommandHub.tsx:481:                        targetCount: parseInt(telegramTargets),
+client/src/pages/CommandHub.tsx:484:                    disabled={!telegramBotId || !telegramMessage || telegramBroadcastMutation.isPending}
+client/src/pages/CommandHub.tsx:487:                    {telegramBroadcastMutation.isPending ? (
+client/src/pages/CommandHub.tsx:518:                      placeholder="Your campaign message"
+client/src/pages/CommandHubV2.tsx:11:    { id: "empire-launch", label: "Launch Empire Sequence", icon: "🚀", desc: "Activate all 49 AI agents", status: "ready" },
+client/src/pages/CommandHubV2.tsx:22:    { label: "Telegram Hub", href: "/king/telegram-hub", icon: "📱" },
+client/src/pages/ComponentShowcase.tsx:9:import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+client/src/pages/ContentDashboard.tsx:18:            <p className="text-gray-400 mt-1">Manage all your published content</p>
+client/src/pages/ContentScheduler.tsx:41:  const { data: scheduledPosts, isLoading: loadingScheduled } =
+client/src/pages/ContentScheduler.tsx:42:    trpc.scheduler.getScheduledPosts.useQuery({ status: "scheduled" });
+client/src/pages/ContentScheduler.tsx:44:  const { data: optimalTimes } = trpc.scheduler.getOptimalPostingTimes.useQuery(
+client/src/pages/ContentScheduler.tsx:49:  const scheduleMutation = trpc.scheduler.schedulePost.useMutation({
+client/src/pages/ContentScheduler.tsx:52:        title: "Post scheduled!",
+client/src/pages/ContentScheduler.tsx:53:        description: "Your content has been scheduled for publishing",
+client/src/pages/ContentScheduler.tsx:58:      utils.scheduler.getScheduledPosts.invalidate();
+client/src/pages/ContentScheduler.tsx:69:  const cancelMutation = trpc.scheduler.cancelScheduledPost.useMutation({
+client/src/pages/ContentScheduler.tsx:72:      utils.scheduler.getScheduledPosts.invalidate();
+client/src/pages/ContentScheduler.tsx:95:    const scheduledFor = new Date(selectedDate);
+
+=== Relevant routes/pages ===
+client/src/pages/AgentApprovalInbox.tsx
+client/src/pages/AgentCommandTower.tsx
+client/src/pages/AgentRoster.tsx
+client/src/pages/AgentTracker.tsx
+client/src/pages/CloneEmpire.tsx
+client/src/pages/CloneRenderStudio.tsx
+client/src/pages/ContentScheduler.tsx
+client/src/pages/EmmaAIAgentDashboard.tsx
+client/src/pages/KingCamClone.tsx
+client/src/pages/MarkCubanAgent.tsx
+client/src/pages/MotionFlyerAgent.tsx
+client/src/pages/MusicLibraryAgent.tsx
+client/src/pages/OperatorDashboard.tsx
+client/src/pages/ReleaseInfo.tsx
+client/src/pages/SocialAutoposterAgent.tsx
+client/src/pages/TelegramMoneyHub.tsx
+client/src/pages/TelegramSetup.tsx
+client/src/pages/king/CloneCommand.tsx
+client/src/pages/king/CloneStudio.tsx
+client/src/pages/king/CloneTrainingLab.tsx
+server/media-os/jobs/mediaJobScheduler.ts
+server/routers/agentExecutorRouter.ts
+server/routers/agentOrchestratorRouter.ts
+server/routers/agentTelemetryRouter.ts
+server/routers/agentTracker.ts
+server/routers/aiAudienceClone.ts
+server/routers/aiCloneArmy.ts
+server/routers/campaignRouter.ts
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929
+server/routers/cloneCommandRouter.ts
+server/routers/cloneEmpireRouter.ts
+server/routers/cloneLabRouter.ts
+server/routers/cloneSuccessSystem.ts
+server/routers/cloneToursRouter.ts
+server/routers/cloneTrainingLabRouter.ts
+server/routers/empireAgents.ts
+server/routers/kingcamCloneRouter.ts
+server/routers/liveSessionScheduler.ts
+server/routers/markCubanAgent.ts
+server/routers/mercedesAcquisitionAgent.ts
+server/routers/operatorRouter.ts
+server/routers/realEstateEmpireAgent.ts
+server/routers/scheduler.ts
+server/routers/telegram.ts
+server/routers/telegramBot.ts
+server/routers/telegramCampaignRouter.ts
+server/routers/telegramFunnelRouter.ts
+server/routers/telegramHubRouter.ts
+server/routers/telegramMoneyLoopRouter.ts
+server/routers/telegramWebhookRouter.ts
+server/routers/vaultxAcquisitionOperatorRouter.ts
+server/routers/videoLabAgentRouter.ts
+server/services/cloneAssetQualityScorer.ts
+server/services/cloneCaptionGenerator.ts
+server/services/cloneDatasetBuilder.ts
+server/services/cloneFrameExtractor.ts
+server/services/cloneModelRegistry.ts
+server/services/cloneTrainingLab.ts
+server/services/cloneTrainingRunner.ts
+server/services/contentScheduler.ts
+server/services/services/contentScheduler.ts
+server/services/services/telegramAI.ts
+server/services/telegramAI.ts
+server/services/telegramBuyerReactivation.ts
+server/services/telegramCampaign.ts
+server/services/telegramConnectRoute.ts
+server/services/telegramDailyDropEngine.ts
+server/services/telegramMoneyLoop.ts
+server/services/telegramOutboundFirewall.ts
+server/services/telegramStartHandler.ts
+server/services/telegramVipUpsell.ts
+server/services/vaultxAutonomousAcquisitionOperator.ts
+server/telegram-webhook.test.ts
+server/telegram-webhook.ts
+server/telegram.test.ts
+server/telegram.ts
+
+=== Package scripts ===
+dev=NODE_ENV=development tsx watch server/_core/index.ts
+build=NODE_OPTIONS="--max-old-space-size=4096" vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+start=NODE_ENV=production node dist/index.js
+check=tsc --noEmit
+format=prettier --write .
+test=vitest run
+db:push=drizzle-kit generate && drizzle-kit migrate
+visual-proof=node scripts/visual-proof.js
+route-owner=node scripts/route-owner.js
+scope-guard=node scripts/scope-guard.js
+telegram:dry-run-proof=node scripts/telegram-dry-run-proof.mjs
+quality-governor=node scripts/quality-governor.mjs
+brand-law:verify=node scripts/quality-governor.mjs
+messaging-dna:verify=node scripts/quality-governor.mjs
+build:client=NODE_OPTIONS="--max-old-space-size=4096" vite build
+build:server=esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
