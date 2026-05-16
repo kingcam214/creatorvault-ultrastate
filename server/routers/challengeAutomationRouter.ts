@@ -11,6 +11,7 @@ import Stripe from "stripe";
 import * as db from "../db";
 import { sql } from "drizzle-orm";
 import { sendFreeChannelDrop } from "../services/telegramMoneyLoop";
+import { qualityGate, withCreatorVaultMessagingDna } from "../services/qualityGate";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // @ts-ignore
@@ -39,10 +40,20 @@ async function sendTelegram(
 ): Promise<boolean> {
   if (!token || !chatId) return false;
   try {
+    const approvedText = qualityGate.check(text, {
+      surface: "telegram-dm",
+      context: "ai-agent-challenge",
+      recipientKey: chatId,
+      hasActionElement: /https?:\/\/|tap|open|reply|review|approve|launch|unlock|check|run/i.test(text),
+      allowTransactionalUtility: messageType.includes("owner") || messageType.includes("alert"),
+      requireCreatorVaultPositioning: false,
+      requireMessagingDna: true,
+      requireChallengeMomentum: true,
+    });
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+      body: JSON.stringify({ chat_id: chatId, text: approvedText, parse_mode: "HTML" }),
     });
     const data = await res.json() as any;
     const ok = data.ok === true;
@@ -1271,15 +1282,18 @@ export const challengeAutomationRouter = router({
       const remaining = goal - current;
 
       const prompts: Record<string, string> = {
-        daily_update: `Write a compelling Telegram post for a creator's $${goal.toLocaleString()} challenge. Current progress: $${current.toLocaleString()} (${pct}%). Remaining: $${remaining.toLocaleString()}. Make it hype, motivational, and real. Include emojis. 3-5 sentences max.`,
-        milestone: `Write a celebration post for hitting a milestone in a $${goal.toLocaleString()} challenge. Current: $${current.toLocaleString()}. Make it feel like a victory lap. Hype, real, energetic. Include emojis.`,
-        countdown: `Write a short video script (30 seconds) for a countdown trailer showing progress toward a $${goal.toLocaleString()} challenge. Current: $${current.toLocaleString()} (${pct}%). Include a hook, progress reveal, and call to action. Format as: [HOOK] text [PROGRESS] text [CTA] text`,
-        torment_thread: `Write a 5-tweet viral thread about the grind of building toward $${goal.toLocaleString()} in revenue. Current: $${current.toLocaleString()}. Make it raw, real, and engaging. Number each tweet 1/ through 5/. Include emojis.`,
-        victory: `Write a victory celebration post AND a 30-second video script for hitting the $${goal.toLocaleString()} challenge goal. Make it epic, emotional, and inspiring. Format: POST: [text] SCRIPT: [text]`,
-        recap: `Write a weekly recap post for a creator's empire. Revenue this week toward $${goal.toLocaleString()} goal: $${current.toLocaleString()}. Cover: what was built, what worked, what's next. Include emojis. 5-7 sentences.`,
+        daily_update: `Write a finished Telegram post for the CreatorVault AI Agent Challenge. Current progress: $${current.toLocaleString()} (${pct}%). Remaining: $${remaining.toLocaleString()}. Show one concrete money leak or automation bottleneck that the agents are closing today, then give one clear next action. Maximum 4 sentences.`,
+        milestone: `Write a finished Telegram post for a CreatorVault challenge milestone. Current: $${current.toLocaleString()}. Explain what this milestone proves about the agent system, the revenue path, or the VaultX moat. Maximum 4 sentences with one CTA.`,
+        countdown: `Write a 30-second script for a CreatorVault challenge countdown. It must include: hook, progress reveal, agent or VaultX mechanism, and CTA. Do not use bracket labels in the final output.`,
+        torment_thread: `Write a 5-part social thread about building toward $${goal.toLocaleString()} with CreatorVault. Each part must reveal a real bottleneck, agent action, tracked click, follow-up route, or VaultX revenue move. No generic grind motivation.`,
+        victory: `Write a victory post and 30-second script for hitting the $${goal.toLocaleString()} CreatorVault challenge goal. Focus on the proof, the system built, the money route, and what unlocks next. Label sections exactly POST: and SCRIPT:.`,
+        recap: `Write a weekly CreatorVault challenge recap. Revenue toward the $${goal.toLocaleString()} goal: $${current.toLocaleString()}. Cover what was built, what moved money, which agent or VaultX route mattered, and the next revenue action. Maximum 4 Telegram-ready sentences.`,
       };
 
-      const systemPrompt = `You are KingCam's AI content writer. You write fire, authentic, high-energy content for a creator empire. Always write in first person as the creator. Never be generic or corporate.`;
+      const systemPrompt = withCreatorVaultMessagingDna(
+        `You are KingCam's CreatorVault challenge copy architect. Write only finished public-facing copy. Every line must feel proprietary, useful, and momentum-building, not hype filler.`,
+        postType === "countdown" || postType === "victory" ? "vaultx-challenge" : "ai-agent-challenge"
+      );
       const userPrompt = prompts[postType] || prompts.daily_update;
 
       const output = await gptRun(systemPrompt, userPrompt, 600);
@@ -1299,6 +1313,15 @@ export const challengeAutomationRouter = router({
       const defaultTags = ['KingCam', 'CreatorVault', 'EmpireChallenge', 'CreatorEconomy', 'Grind'];
       const hashtags = hashtagMatches.length > 0 ? hashtagMatches.map((h: string) => h.replace('#', '')) : defaultTags;
 
-      return { text: postText, videoScript, hashtags, postType };
+      const approvedText = qualityGate.check(postText, {
+        surface: postType === "daily_update" || postType === "milestone" || postType === "recap" ? "agent-challenge" : "vaultx-challenge",
+        context: postType === "daily_update" || postType === "milestone" || postType === "recap" ? "ai-agent-challenge" : "vaultx-challenge",
+        hasActionElement: /tap|open|reply|unlock|join|watch|run|review|build|push|launch|next/i.test(postText),
+        requireCreatorVaultPositioning: true,
+        requireMessagingDna: true,
+        requireChallengeMomentum: true,
+      });
+
+      return { text: approvedText, videoScript, hashtags, postType };
     }),
 });

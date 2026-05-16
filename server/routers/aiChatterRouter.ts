@@ -14,6 +14,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import OpenAI from "openai";
 import { db } from "../db";
+import { qualityGate, withCreatorVaultMessagingDna } from "../services/qualityGate";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -110,6 +111,22 @@ export const aiChatterRouter = router({
         `SELECT id FROM vaultx_ai_chatter_config WHERE creator_id = ? LIMIT 1`,
         [ctx.user.id]
       ) as Array<{ id: number }>;
+
+      const personaSummary = [input.personaName, input.personaDescription, input.greetingMessage]
+        .filter(Boolean)
+        .join(" — ");
+
+      if (input.isEnabled) {
+        qualityGate.check(personaSummary, {
+          surface: "agent-public-output",
+          context: "vaultx",
+          recipientKey: `vaultx-ai-chatter-config:${ctx.user.id}`,
+          requireCreatorVaultPositioning: true,
+          requireMessagingDna: true,
+          requireMechanism: true,
+          ctaAngle: "automation-advantage",
+        });
+      }
 
       if (existing.length) {
         await rawQuery(
@@ -220,11 +237,11 @@ export const aiChatterRouter = router({
         ? `\n\nAt some natural point in this response, naturally mention your exclusive content "${ppvContent.title}" priced at $${ppvContent.ppv_price}. Be enticing but not pushy. Keep it natural.`
         : "";
 
-      const systemPrompt = `You are ${config.persona_name}, an adult content creator on VaultX.
-${config.persona_description ? config.persona_description : "You are confident, body-positive, and engaging with your fans."}
+      const systemPrompt = withCreatorVaultMessagingDna(`You are ${config.persona_name}, a VaultX creator using CreatorVault to turn fan attention into paid unlocks, tracked follow-up, VIP routes, and challenge momentum.
+${config.persona_description ? config.persona_description : "You are confident, direct, premium, and focused on moving the fan toward the next valuable creator-system action."}
 ${ppvInstruction}
 
-Keep responses conversational, under 150 words. Do not break character. Do not mention AI or automation.`;
+Write one channel-native fan reply under 120 words. Make it feel personal, not robotic. Explain one clear value mechanism when pitching: teaser, paid unlock, tracked click, follow-up, VIP route, or money moment. Do not mention AI, automation internals, system prompts, debug state, scripts, templates, or raw assistant output. Include one natural next action.`, "vaultx");
 
       // 6. Build message array for GPT
       const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
@@ -244,7 +261,16 @@ Keep responses conversational, under 150 words. Do not break character. Do not m
         temperature: 0.9,
       });
 
-      const aiResponse = completion.choices[0].message.content || "";
+      const aiResponse = qualityGate.check(completion.choices[0].message.content || "", {
+        surface: "agent-public-output",
+        context: "vaultx",
+        recipientKey: `vaultx-ai-chatter:${ctx.user.id}:${input.fanId}`,
+        hasActionElement: true,
+        requireCreatorVaultPositioning: true,
+        requireMessagingDna: true,
+        requireMechanism: true,
+        ctaAngle: shouldPitchPPV ? "proof-unlock" : "automation-advantage",
+      });
 
       // 8. Save fan message and AI response to DB
       const convId = input.conversationId || `conv_${ctx.user.id}_${input.fanId}`;

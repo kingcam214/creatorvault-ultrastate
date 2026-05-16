@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { sql } from "drizzle-orm";
 import { db } from "../db";
+import { qualityGate } from "./qualityGate";
 
 export type LeadBand = "hot" | "warm" | "cool" | "cold";
 export type OutreachStage = "first_touch" | "follow_up_1" | "follow_up_2" | "follow_up_3" | "final_cta" | "handoff";
@@ -57,7 +58,7 @@ export interface VaultXOperatorConfig {
 }
 
 const DEFAULT_CONFIG: VaultXOperatorConfig = {
-  enabled: true,
+  enabled: process.env.VAULTX_ACQUISITION_ENABLED === "true",
   tickIntervalMs: 15 * 60 * 1000,
   maxFirstTouchesPerTick: 25,
   maxFollowUpsPerTick: 40,
@@ -117,6 +118,24 @@ function bandFor(score: number, config: VaultXOperatorConfig): LeadBand {
   if (score >= config.warmThreshold) return "warm";
   if (score >= config.coolThreshold) return "cool";
   return "cold";
+}
+
+function getVaultXAcquisitionLiveApproval() {
+  const enabled = process.env.VAULTX_ACQUISITION_LIVE_SENDS_ENABLED === "true";
+  const outboundApproved = process.env.CREATORVAULT_OUTBOUND_APPROVED === "premium-reviewed";
+  const proofId = process.env.CREATORVAULT_OUTBOUND_PROOF_ID?.trim();
+  const reviewer = process.env.CREATORVAULT_OUTBOUND_REVIEWER?.trim();
+  const approved = Boolean(enabled && outboundApproved && proofId && reviewer);
+  return {
+    approved,
+    mode: approved ? "live-approved" : "dry-run-only",
+    enabled,
+    outboundApproved,
+    hasProofId: Boolean(proofId),
+    hasReviewer: Boolean(reviewer),
+    proofId: proofId || null,
+    reviewer: reviewer || null,
+  };
 }
 
 async function rawQuery<T = any>(query: string, params: any[] = []): Promise<T[]> {
@@ -393,7 +412,16 @@ function generateMessage(lead: any, stage: OutreachStage) {
 
 async function queueAction(lead: any, stage: OutreachStage, dueAt: Date, runId?: string) {
   const channel = chooseChannel(lead);
-  const message = generateMessage(lead, stage);
+  const message = qualityGate.check(generateMessage(lead, stage), {
+    surface: channel === "telegram" || channel === "telegram_username_outbox" ? "telegram-dm" : "agent-public-output",
+    context: "vaultx",
+    recipientKey: `${lead.platform}:${lead.handle}:${stage}`,
+    hasActionElement: true,
+    requireCreatorVaultPositioning: true,
+    requireMessagingDna: true,
+    requireMechanism: true,
+    ctaAngle: stage === "first_touch" ? "automation-advantage" : "asset-conversion",
+  });
   await rawExec(`INSERT INTO vaultx_outreach_actions (uuid, lead_id, run_id, stage, channel, message, cta_url, status, due_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?)`, [randomUUID(), lead.id, runId || null, stage, channel, message, lead.cta_url || null, dueAt]);
   await logTelemetry({ runId, leadId: lead.id, eventType: "outreach_queued", status: "success", score: lead.score, priorityBand: lead.priority_band, channel, outcome: stage, metadata: { dueAt } });
@@ -424,32 +452,61 @@ async function queueDueFollowUps(runId: string, limit: number, config: VaultXOpe
 }
 
 async function sendTelegram(chatId: string, text: string, token: string) {
+  const approvedText = qualityGate.check(text, {
+    surface: "telegram-dm",
+    context: "vaultx",
+    recipientKey: chatId,
+    hasActionElement: true,
+    requireCreatorVaultPositioning: true,
+    requireMessagingDna: true,
+    requireMechanism: true,
+    ctaAngle: "automation-advantage",
+  });
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: false }),
+    body: JSON.stringify({ chat_id: chatId, text: approvedText, disable_web_page_preview: false }),
   });
   const json = await response.json() as any;
   if (!response.ok || !json.ok) throw new Error(json?.description || `Telegram HTTP ${response.status}`);
   return json.result?.message_id ? String(json.result.message_id) : null;
 }
 
-async function dispatchAction(action: any, config: VaultXOperatorConfig, runId: string) {
+async function dispatchAction(action: any, config: VaultXOperatorConfig, runId: string, mode: "auto" | "manual" | "test") {
   const [lead] = await rawQuery<any>("SELECT * FROM vaultx_creator_leads WHERE id=? LIMIT 1", [action.lead_id]);
   if (!lead) throw new Error(`Lead ${action.lead_id} not found`);
   let externalId: string | null = null;
-  const proof: Record<string, unknown> = { channel: action.channel, attemptedAt: new Date().toISOString() };
+  const liveApproval = getVaultXAcquisitionLiveApproval();
+  const approvedMessage = qualityGate.check(action.message, {
+    surface: action.channel === "telegram" || action.channel === "telegram_username_outbox" ? "telegram-dm" : "agent-public-output",
+    context: "vaultx",
+    recipientKey: `${lead.platform}:${lead.handle}:${action.stage}:dispatch`,
+    hasActionElement: true,
+    requireCreatorVaultPositioning: true,
+    requireMessagingDna: true,
+    requireMechanism: true,
+    ctaAngle: action.stage === "first_touch" ? "automation-advantage" : "asset-conversion",
+  });
+  const proof: Record<string, unknown> = { channel: action.channel, attemptedAt: new Date().toISOString(), liveApproval: { mode: liveApproval.mode, enabled: liveApproval.enabled, outboundApproved: liveApproval.outboundApproved, hasProofId: liveApproval.hasProofId, hasReviewer: liveApproval.hasReviewer, proofId: liveApproval.proofId, reviewer: liveApproval.reviewer }, dryRunOnly: mode === "test" || !liveApproval.approved };
+
+  if (mode === "test" || !liveApproval.approved) {
+    proof.reason = mode === "test" ? "test_mode_forces_dry_run" : "live_send_approval_state_missing";
+    proof.messagePreview = approvedMessage;
+    await rawExec("UPDATE vaultx_outreach_actions SET status='skipped', proof=?, attempt_count=attempt_count+1 WHERE id=?", [serialize(proof), action.id]);
+    await logTelemetry({ runId, leadId: lead.id, eventType: "outreach_dry_run", status: "success", score: lead.score, priorityBand: lead.priority_band, channel: action.channel, outcome: action.stage, metadata: proof });
+    return { actionId: action.id, leadId: lead.id, channel: action.channel, externalId: null, proof, dryRun: true };
+  }
 
   if (action.channel === "telegram" && lead.telegram_chat_id && config.telegramBotToken) {
-    externalId = await sendTelegram(lead.telegram_chat_id, action.message, config.telegramBotToken);
+    externalId = await sendTelegram(lead.telegram_chat_id, approvedMessage, config.telegramBotToken);
     proof.telegramMessageId = externalId;
   } else if (action.channel === "webhook" && lead.webhook_url && config.allowHttpWebhooks) {
-    const response = await fetch(lead.webhook_url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ lead, action, source: "vaultx_autonomous_acquisition" }) });
+    const response = await fetch(lead.webhook_url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ lead, action: { ...action, message: approvedMessage }, source: "vaultx_autonomous_acquisition", liveApproval: { proofId: liveApproval.proofId, reviewer: liveApproval.reviewer } }) });
     proof.webhookStatus = response.status;
     if (!response.ok) throw new Error(`Webhook dispatch failed with HTTP ${response.status}`);
     externalId = response.headers.get("x-message-id") || `webhook_${Date.now()}`;
   } else if (config.telegramOpsChatId && config.telegramBotToken) {
-    externalId = await sendTelegram(config.telegramOpsChatId, `[VaultX acquisition outbox]\nLead: ${lead.platform}/@${lead.handle}\nChannel: ${action.channel}\nScore: ${lead.score}\n\n${action.message}`, config.telegramBotToken);
+    externalId = await sendTelegram(config.telegramOpsChatId, `[VaultX acquisition outbox]\nLead: ${lead.platform}/@${lead.handle}\nChannel: ${action.channel}\nScore: ${lead.score}\n\n${approvedMessage}`, config.telegramBotToken);
     proof.opsRelayMessageId = externalId;
   } else {
     proof.outboxOnly = true;
@@ -466,16 +523,17 @@ async function dispatchAction(action: any, config: VaultXOperatorConfig, runId: 
   return { actionId: action.id, leadId: lead.id, channel: action.channel, externalId, proof };
 }
 
-async function executeDueActions(runId: string, limit: number, config: VaultXOperatorConfig) {
+async function executeDueActions(runId: string, limit: number, config: VaultXOperatorConfig, mode: "auto" | "manual" | "test") {
   const actions = await rawQuery<any>(`SELECT * FROM vaultx_outreach_actions
     WHERE status='queued' AND due_at <= CURRENT_TIMESTAMP AND attempt_count < max_attempts
     ORDER BY due_at ASC, id ASC LIMIT ?`, [limit]);
-  let sent = 0, failed = 0, handoff = 0;
+  let sent = 0, failed = 0, handoff = 0, dryRun = 0;
   const proofs: any[] = [];
   for (const action of actions) {
     try {
-      const proof = await dispatchAction(action, config, runId);
-      sent += 1;
+      const proof = await dispatchAction(action, config, runId, mode);
+      if (proof.dryRun) dryRun += 1;
+      else sent += 1;
       proofs.push(proof);
     } catch (error: any) {
       failed += 1;
@@ -489,7 +547,7 @@ async function executeDueActions(runId: string, limit: number, config: VaultXOpe
       }
     }
   }
-  return { sent, failed, handoff, proofs };
+  return { sent, failed, handoff, dryRun, proofs };
 }
 
 export async function markVaultXLeadReply(input: { leadId?: number; platform?: string; handle?: string; replyStatus: "positive" | "neutral" | "negative" | "blocked"; intentScore?: number; notes?: string; runId?: string }) {
@@ -622,12 +680,15 @@ export async function runVaultXAcquisitionTick(options: { mode?: "auto" | "manua
     sourced += await importRecruiterProfiles(runId, sourceLimit);
     queued += await queueFirstTouches(runId, options.outreachLimit || config.maxFirstTouchesPerTick);
     queued += await queueDueFollowUps(runId, options.followUpLimit || config.maxFollowUpsPerTick, config);
-    const execution = await executeDueActions(runId, (options.outreachLimit || config.maxFirstTouchesPerTick) + (options.followUpLimit || config.maxFollowUpsPerTick), config);
+          const execution = await executeDueActions(runId, (options.outreachLimit || config.maxFirstTouchesPerTick) + (options.followUpLimit || config.maxFollowUpsPerTick), config, mode);
+
     sent = execution.sent; failed = execution.failed; handoff = execution.handoff;
     const escalatedRows = await rawQuery<{ cnt: number }>("SELECT COUNT(*) AS cnt FROM vaultx_creator_leads WHERE status IN ('hot_reply','handoff')");
-    const proof = { runId, sourced, queued, sent, failed, handoff, executedActions: execution.proofs, escalatedCount: Number(escalatedRows[0]?.cnt || 0) };
+          const proof = { runId, mode, liveApproval: getVaultXAcquisitionLiveApproval(), sourced, queued, sent, dryRun: execution.dryRun, failed, handoff, executedActions: execution.proofs, escalatedCount: Number(escalatedRows[0]?.cnt || 0) };
+
     await rawExec("UPDATE vaultx_operator_runs SET status='completed', finished_at=CURRENT_TIMESTAMP, sourced_count=?, queued_count=?, sent_count=?, failed_count=?, handoff_count=?, escalated_count=?, proof=? WHERE run_id=?", [sourced, queued, sent, failed, handoff, Number(escalatedRows[0]?.cnt || 0), serialize(proof), runId]);
-    await logTelemetry({ runId, eventType: "operator_tick_completed", status: failed ? "warning" : "success", outcome: `sourced=${sourced}, queued=${queued}, sent=${sent}, failed=${failed}`, metadata: proof });
+          await logTelemetry({ runId, eventType: "operator_tick_completed", status: failed ? "warning" : "success", outcome: `sourced=${sourced}, queued=${queued}, sent=${sent}, dryRun=${execution.dryRun}, failed=${failed}`, metadata: proof });
+
     return proof;
   } catch (error: any) {
     try { await rawExec("UPDATE vaultx_operator_runs SET status='failed', finished_at=CURRENT_TIMESTAMP, error_message=? WHERE run_id=?", [error?.message || String(error), runId]); } catch { /* ignore */ }

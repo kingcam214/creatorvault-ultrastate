@@ -40,6 +40,7 @@ if (!firstProductionImport?.includes("../services/telegramOutboundFirewall")) {
 const firewall = read("server/services/telegramOutboundFirewall.ts");
 const qualityGate = read("server/services/qualityGate.ts");
 const brandLaw = read("BRAND_DNA_QUALITY_LAW.md");
+const messagingLaw = read("MESSAGING_DNA_LAW.md");
 const creatorBible = read("CREATORVAULT_BIBLE.md");
 for (const token of [
   "TELEGRAM_LIVE_SENDS_ENABLED",
@@ -89,6 +90,16 @@ for (const token of [
   "DEDUPE_WINDOW_MS",
   "isQuietHoursDallas",
   "CREATORVAULT_POSITIONING_PATTERN",
+  "MESSAGING_DNA_LAW.md",
+  "messagingDnaPrompt(context",
+  "withCreatorVaultMessagingDna",
+  "REPEATED_VAULTX_CTA_PATTERN",
+  "RAW_PROMPT_LEAK_PATTERN",
+  "PUBLIC_TEST_PATTERN",
+  "VALUE_MECHANISM_PATTERN",
+  "VAULTX_MECHANISM_PATTERN",
+  "CHALLENGE_MOMENTUM_PATTERN",
+  "MAX_WHATSAPP_PUBLIC_LENGTH = 420",
 ]) {
   if (!qualityGate.includes(token)) fail(`qualityGate.ts is missing Brand DNA enforcement token: ${token}`);
 }
@@ -102,6 +113,20 @@ for (const token of [
   "Dior",
 ]) {
   if (!brandLaw.includes(token)) fail(`BRAND_DNA_QUALITY_LAW.md is missing required brand-law token: ${token}`);
+}
+
+for (const token of [
+  "VaultX",
+  "Telegram",
+  "WhatsApp",
+  "AI Agent Challenge",
+  "VaultX Challenge",
+  "money mechanism",
+  "tracked click",
+  "VIP route",
+  "No generic filler",
+]) {
+  if (!messagingLaw.includes(token)) fail(`MESSAGING_DNA_LAW.md is missing required messaging-law token: ${token}`);
 }
 
 if (!creatorBible.includes("BRAND DNA QUALITY LAW") || !creatorBible.includes("BRAND_DNA_QUALITY_LAW.md")) {
@@ -143,6 +168,27 @@ if (visualGateFiles.length < 2) {
   fail("Expected at least two visual posting/generation surfaces to enforce qualityGate.checkVisual or tryCheckVisual.");
 }
 
+const messagingCriticalFiles = [
+  "server/services/creatorTools.ts",
+  "server/services/telegramMoneyLoop.ts",
+  "server/routers/telegramFunnelRouter.ts",
+  "server/routers/challengeAutomationRouter.ts",
+  "server/services/checkoutBot.ts",
+];
+for (const file of messagingCriticalFiles) {
+  const source = read(file);
+  if (!source.includes("qualityGate.check")) fail(`${file} must validate public/channel copy through qualityGate.check.`);
+  if (!source.includes("withCreatorVaultMessagingDna") && !source.includes("requireMessagingDna")) fail(`${file} must inject or require CreatorVault Messaging DNA.`);
+}
+
+const creatorTools = read("server/services/creatorTools.ts");
+for (const banned of ["Include emojis and formatting", "using Telegram markdown", "viral content expert", "WhatsApp marketing expert"] ) {
+  if (creatorTools.includes(banned)) fail(`creatorTools.ts still contains generic/pre-law prompt language: ${banned}`);
+}
+for (const token of ["generateTelegramBroadcast", "generateWhatsAppCampaign", "withCreatorVaultMessagingDna", "qualityGate.check", "telegram-broadcast", "whatsapp"]) {
+  if (!creatorTools.includes(token)) fail(`creatorTools.ts is missing Messaging DNA generator enforcement token: ${token}`);
+}
+
 const rawLiveEnableMatches = [];
 for (const file of [...walk("server"), ...walk("client/src")]) {
   const source = read(file);
@@ -153,7 +199,7 @@ if (rawLiveEnableMatches.length) {
 }
 
 const packageJson = JSON.parse(read("package.json"));
-for (const script of ["telegram:dry-run-proof", "quality-governor", "brand-law:verify"]) {
+for (const script of ["telegram:dry-run-proof", "quality-governor", "brand-law:verify", "messaging-dna:verify"]) {
   if (!packageJson.scripts?.[script]) fail(`package.json missing script: ${script}`);
 }
 
@@ -181,5 +227,7 @@ console.log(JSON.stringify({
     qualityGateEnforced: true,
     wrappedTelegramSendHelpers: sendHelperFiles.length - unwrappedSendHelpers.length,
     visualGateFiles: visualGateFiles.length,
+    messagingDnaLawLoaded: true,
+    messagingCriticalFiles: messagingCriticalFiles.length,
   },
 }, null, 2));

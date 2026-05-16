@@ -20,6 +20,7 @@ import { distributionEngineExport } from "../services/distributionEngineService"
 import { enhanceSceneByScene } from "../services/sceneEnhancementService";
 import { buildPpvBundle, createTipUnlockContent, suggestContentPrice, getPpvProgress } from "../services/monetizationBundleService";
 import { generateRecutSuggestions, generateAbThumbnails, analyzeHookStrength } from "../services/analyticsEditingService";
+import { qualityGate } from "../services/qualityGate";
 
 const OWNER_IDS = [6, 33];
 const PLATFORM_FEE = 0.15;
@@ -55,6 +56,30 @@ async function rawExec(query: string, params: any[] = []): Promise<any> {
 
 function isCreatorOrOwner(userId: number, creatorId?: number): boolean {
   return OWNER_IDS.includes(userId) || (creatorId !== undefined && userId === creatorId);
+}
+
+function validateVaultxWorkflowCopy(text: string, purpose: "metadata" | "mass-message" | "ai-chatter", recipientKey?: string | number): string {
+  return qualityGate.check(text, {
+    surface: "vaultx-drop",
+    context: "vaultx",
+    recipientKey,
+    hasActionElement: true,
+    requireMessagingDna: true,
+    requireMechanism: true,
+    requireCreatorVaultPositioning: purpose !== "ai-chatter",
+    ctaAngle: purpose === "ai-chatter" ? "automation-advantage" : purpose === "mass-message" ? "proof-unlock" : "asset-conversion",
+  });
+}
+
+function validateVaultxMetadata(title: string, description?: string | null): void {
+  const proofText = [title, description || ""].filter(Boolean).join(". ");
+  validateVaultxWorkflowCopy(proofText, "metadata");
+}
+
+function validateVaultxChatterConfig(input: { isEnabled: boolean; personaDescription?: string | null; greetingMessage?: string | null }): void {
+  if (!input.isEnabled) return;
+  const proofText = [input.personaDescription || "", input.greetingMessage || ""].filter(Boolean).join(" ");
+  validateVaultxWorkflowCopy(proofText, "ai-chatter");
 }
 
 async function getCreatorId(userId: number): Promise<number | null> {
@@ -205,6 +230,7 @@ export const vaultxRouter = router({
       if (!creatorId && !OWNER_IDS.includes(ctx.user.id)) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile required." });
       }
+      validateVaultxMetadata(input.title, input.description || null);
       const result = await rawExec(
         `INSERT INTO vaultx_content
          (creator_id, title, description, content_type,
@@ -276,6 +302,10 @@ export const vaultxRouter = router({
       const existing = await rawQuery("SELECT id FROM vaultx_content WHERE id = ? AND creator_id = ? LIMIT 1", [input.contentId, cid]);
       if (!existing.length && !OWNER_IDS.includes(ctx.user.id)) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Content not found or access denied." });
+      }
+      if (input.title !== undefined || input.description !== undefined) {
+        const currentRows = await rawQuery("SELECT title, description FROM vaultx_content WHERE id = ? LIMIT 1", [input.contentId]);
+        validateVaultxMetadata(input.title ?? currentRows[0]?.title ?? "", input.description ?? currentRows[0]?.description ?? null);
       }
       const sets: string[] = [];
       const vals: any[] = [];
@@ -375,13 +405,14 @@ export const vaultxRouter = router({
       const cid = creatorId || ctx.user.id;
       const scheduledFor = input.scheduledFor ? new Date(input.scheduledFor) : null;
       const status = scheduledFor ? "scheduled" : "sent";
+      const approvedMessageText = validateVaultxWorkflowCopy(input.messageText, "mass-message", `${cid}:${input.targetTier}`);
       const result = await rawExec(
         `INSERT INTO vaultx_mass_messages
          (creator_id, subject, message_text, media_url, media_type, is_locked, unlock_price,
           target_tier, scheduled_for, sent_at, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          cid, input.subject || null, input.messageText,
+          cid, input.subject || null, approvedMessageText,
           input.mediaUrl || null, input.mediaType || null,
           input.isLocked ? 1 : 0, input.unlockPrice,
           input.targetTier, scheduledFor,
@@ -401,12 +432,12 @@ export const vaultxRouter = router({
             `INSERT INTO vaultx_messages
              (sender_id, recipient_id, message_text, media_url, media_type, is_locked, unlock_price)
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [cid, sub.fan_id, input.messageText, input.mediaUrl || null, input.mediaType || null, input.isLocked ? 1 : 0, input.unlockPrice]
+            [cid, sub.fan_id, approvedMessageText, input.mediaUrl || null, input.mediaType || null, input.isLocked ? 1 : 0, input.unlockPrice]
           );
         }
         await rawExec("UPDATE vaultx_mass_messages SET sent_count = ? WHERE id = ?", [subs.length, massMessageId]);
       }
-      return { success: true, massMessageId, recipientCount: 0 };
+      return { success: true, massMessageId, recipientCount: scheduledFor ? 0 : ((await rawQuery("SELECT sent_count FROM vaultx_mass_messages WHERE id = ? LIMIT 1", [massMessageId]))[0]?.sent_count || 0) };
     }),
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -433,6 +464,7 @@ export const vaultxRouter = router({
       scheduleHours: z.object({ start: z.number(), end: z.number() }).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      validateVaultxChatterConfig(input);
       const creatorId = await getCreatorId(ctx.user.id);
       const cid = creatorId || ctx.user.id;
       const existing = await rawQuery("SELECT id FROM vaultx_ai_chatter_config WHERE creator_id = ? LIMIT 1", [cid]);

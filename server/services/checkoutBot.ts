@@ -24,6 +24,7 @@ import {
 } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { stripe } from "../_core/stripe";
+import { qualityGate } from "./qualityGate";
 
 export interface ProductCatalogItem {
   id: string;
@@ -131,17 +132,25 @@ export function formatCatalogForTelegram(catalog: ProductCatalogItem[]): string 
  * Format catalog for WhatsApp
  */
 export function formatCatalogForWhatsApp(catalog: ProductCatalogItem[]): string {
-  let message = "🛍️ *CreatorVault Marketplace*\n\n";
-  
-  catalog.forEach((item, index) => {
-    const emoji = item.type === "product" ? "📦" : item.type === "course" ? "📚" : "⚡";
-    message += `${emoji} *${item.title}*\n`;
-    message += `${item.description.substring(0, 80)}...\n`;
-    message += `💰 $${item.price}\n`;
-    message += `Reply "${index + 1}" to buy\n\n`;
+  const featured = catalog.slice(0, 3);
+  const lines = featured.map((item, index) => {
+    const shortDescription = item.description ? ` — ${item.description.replace(/\s+/g, " ").slice(0, 58)}` : "";
+    return `${index + 1}. ${item.title}${shortDescription} — $${item.price}`;
   });
+  const message = [
+    "CreatorVault checkout path is live: turn this chat attention into a tracked purchase route.",
+    ...lines,
+    "Reply with the number you want and I’ll open the checkout link.",
+  ].join("\n");
 
-  return message;
+  return qualityGate.check(message, {
+    surface: "whatsapp",
+    context: "whatsapp",
+    recipientKey: "catalog",
+    hasActionElement: true,
+    requireCreatorVaultPositioning: true,
+    requireMessagingDna: true,
+  });
 }
 
 /**

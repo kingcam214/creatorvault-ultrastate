@@ -11,6 +11,7 @@
 
 import mysql from "mysql2/promise";
 import crypto from "crypto";
+import { qualityGate } from "./qualityGate";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const DB_URL =
@@ -74,6 +75,14 @@ export interface DropResult {
 }
 
 export async function sendFreeChannelDrop(input: DropInput): Promise<DropResult> {
+  const approvedCaption = qualityGate.check(input.caption, {
+    surface: "vaultx-drop",
+    context: "vaultx",
+    recipientKey: FREE_CHAT_ID,
+    hasActionElement: true,
+    requireCreatorVaultPositioning: true,
+    requireMessagingDna: true,
+  });
   const db = await getDb();
   const trackingCode = genCode("tgdrop");
   const destUrl = `${FRONTEND}/vaultx`;
@@ -90,7 +99,7 @@ export async function sendFreeChannelDrop(input: DropInput): Promise<DropResult>
         input.creatorId || 1,
         FREE_CHANNEL_ENTITY_ID,
         input.teaserUrl || trackingUrl,
-        input.caption,
+        approvedCaption,
         trackingCode,
         destUrl,
       ]
@@ -109,14 +118,14 @@ export async function sendFreeChannelDrop(input: DropInput): Promise<DropResult>
       tgResult = await tgPost("sendVideo", {
         chat_id: FREE_CHAT_ID,
         video: input.teaserUrl,
-        caption: input.caption,
+        caption: approvedCaption,
         parse_mode: "HTML",
         reply_markup: { inline_keyboard: inlineKeyboard },
       });
     } else {
       tgResult = await tgPost("sendMessage", {
         chat_id: FREE_CHAT_ID,
-        text: input.caption,
+        text: approvedCaption,
         parse_mode: "HTML",
         reply_markup: { inline_keyboard: inlineKeyboard },
       });
@@ -134,7 +143,7 @@ export async function sendFreeChannelDrop(input: DropInput): Promise<DropResult>
         FREE_CHANNEL_ENTITY_ID,
         input.creatorId || 1,
         input.price,
-        input.caption,
+        approvedCaption,
       ]
     );
 
@@ -143,7 +152,7 @@ export async function sendFreeChannelDrop(input: DropInput): Promise<DropResult>
       `INSERT INTO telegram_message_events
          (telegram_id, direction, message_type, message_text, tracking_code)
        VALUES (?, 'outbound', ?, ?, ?)`,
-      [FREE_CHAT_ID, input.teaserUrl ? "video" : "text", input.caption, trackingCode]
+      [FREE_CHAT_ID, input.teaserUrl ? "video" : "text", approvedCaption, trackingCode]
     );
 
     return {
@@ -396,13 +405,19 @@ export async function sendVipUpsell(input: VipUpsellInput): Promise<VipUpsellRes
     const inviteLinkId = (ilResult as any).insertId as number;
 
     // 4c. Send DM to buyer
-    const dmText =
-      `🔥 <b>You just unlocked exclusive content.</b>\n\n` +
-      `Since you're clearly a fan, here's something special:\n\n` +
-      `💎 <b>VaultX VIP — 30% OFF</b>\n` +
-      `Unlimited access to everything. No per-video fees. Ever.\n\n` +
-      `Your private invite link (expires in 24h):\n${inviteUrl}\n\n` +
-      `Tap to join before it expires 👇`;
+    const dmText = qualityGate.check(
+      `You unlocked the front door to VaultX.\n\n` +
+        `VIP is the full money route: first access, full drops, follow-up, and the next private unlock window.\n\n` +
+        `Join with your private 24-hour invite: ${inviteUrl}`,
+      {
+        surface: "telegram-dm",
+        context: "vip-upsell",
+        recipientKey: input.buyerTelegramId,
+        hasActionElement: true,
+        requireCreatorVaultPositioning: true,
+        requireMessagingDna: true,
+      }
+    );
 
     const dmResp = await tgPost("sendMessage", {
       chat_id: input.buyerTelegramId,

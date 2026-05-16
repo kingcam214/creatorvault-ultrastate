@@ -25,6 +25,7 @@ import { router, protectedProcedure, publicProcedure } from "../_core/trpc.js";
 import { z } from "zod";
 import mysql from "mysql2/promise";
 import crypto from "crypto";
+import { qualityGate } from "../services/qualityGate";
 
 // ── DB helper ─────────────────────────────────────────────────────────────────
 async function getDb() {
@@ -60,7 +61,16 @@ async function tgSendMessage(
   inlineButtons?: Array<{ text: string; url?: string; callback_data?: string }>,
   parseMode = "HTML"
 ): Promise<{ ok: boolean; messageId?: number; error?: string }> {
-  const body: any = { chat_id: chatId, text, parse_mode: parseMode };
+  const isChannel = String(chatId).startsWith("-100");
+  const approvedText = qualityGate.check(text, {
+    surface: isChannel ? "telegram-broadcast" : "telegram-dm",
+    context: "vaultx",
+    recipientKey: chatId,
+    hasActionElement: Boolean(inlineButtons?.length),
+    requireCreatorVaultPositioning: true,
+    requireMessagingDna: true,
+  });
+  const body: any = { chat_id: chatId, text: approvedText, parse_mode: parseMode };
   if (inlineButtons && inlineButtons.length > 0) {
     body.reply_markup = {
       inline_keyboard: [inlineButtons.map(b => ({
@@ -90,7 +100,19 @@ async function tgSendVideo(
   caption?: string,
   inlineButtons?: Array<{ text: string; url?: string; callback_data?: string }>
 ): Promise<{ ok: boolean; messageId?: number; error?: string }> {
-  const body: any = { chat_id: chatId, video: videoUrl, caption, parse_mode: "HTML" };
+  const isChannel = String(chatId).startsWith("-100");
+  const approvedCaption = caption
+    ? qualityGate.check(caption, {
+        surface: isChannel ? "telegram-broadcast" : "telegram-dm",
+        context: "vaultx",
+        recipientKey: chatId,
+        hasActionElement: Boolean(inlineButtons?.length),
+        requireCreatorVaultPositioning: true,
+        requireMessagingDna: true,
+      })
+    : caption;
+  qualityGate.checkVisual(videoUrl, { publicPost: isChannel, prompt: approvedCaption || "VaultX CreatorVault video drop" });
+  const body: any = { chat_id: chatId, video: videoUrl, caption: approvedCaption, parse_mode: "HTML" };
   if (inlineButtons && inlineButtons.length > 0) {
     body.reply_markup = {
       inline_keyboard: [inlineButtons.map(b => ({
