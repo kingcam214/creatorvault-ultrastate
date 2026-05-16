@@ -2,6 +2,8 @@
 ## THE MASTER HANDOFF DOCUMENT FOR ALL AI AGENTS
 
 > **PRE-READ REQUIREMENT:** Before writing a single line of code, you MUST read this entire document. This is the authoritative source of truth for the CreatorVault platform. Context loss is the number one failure mode. Re-read this document at the start of every session.
+>
+> **BRAND DNA QUALITY LAW:** Before generating any public-facing content, read `BRAND_DNA_QUALITY_LAW.md`. This is the governing quality standard. Nothing public ships unless it reflects KingCam / CreatorVault world-class output law.
 
 ## SECTION 1 — PLATFORM IDENTITY
 

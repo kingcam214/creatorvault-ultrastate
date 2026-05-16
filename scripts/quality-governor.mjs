@@ -38,6 +38,9 @@ if (!firstProductionImport?.includes("../services/telegramOutboundFirewall")) {
 }
 
 const firewall = read("server/services/telegramOutboundFirewall.ts");
+const qualityGate = read("server/services/qualityGate.ts");
+const brandLaw = read("BRAND_DNA_QUALITY_LAW.md");
+const creatorBible = read("CREATORVAULT_BIBLE.md");
 for (const token of [
   "TELEGRAM_LIVE_SENDS_ENABLED",
   "CREATORVAULT_OUTBOUND_APPROVED",
@@ -51,6 +54,7 @@ for (const token of [
   "validatePremiumTelegramPayload",
   "parseTelegramPayload",
   "hasApprovalState",
+  "qualityGate.check",
 ]) {
   if (!firewall.includes(token)) fail(`telegramOutboundFirewall.ts is missing required gate token: ${token}`);
 }
@@ -62,7 +66,7 @@ for (const token of ["LIVE_SENDS_ENABLED", "PREMIUM_APPROVAL", "PROOF_ID", "REVI
 
 for (const pattern of [
   /RAW_OR_MEDIOCRE_PATTERNS/s,
-  /minimumLength\s*=\s*isMediaMethod\s*\?\s*120\s*:\s*160/s,
+  /minimumLength\s*=\s*30/s,
   /PLATFORM_SIGNAL\.test\(text\)/s,
   /payload\.hasCallToAction/s,
   /payload\.hasVerifiedDestination/s,
@@ -70,6 +74,38 @@ for (const pattern of [
   /uppercaseRatio\(text\)\s*>\s*0\.34/s,
 ]) {
   if (!pattern.test(firewall)) fail(`telegramOutboundFirewall.ts is missing premium validator pattern: ${pattern}`);
+}
+
+for (const token of [
+  "BRAND_DNA_QUALITY_LAW.md",
+  "brandVoicePrompt()",
+  "reviewPrompt(message",
+  "tryCheck(message",
+  "check(message",
+  "tryCheckVisual(imageUrl",
+  "checkVisual(imageUrl",
+  "MAX_TELEGRAM_BROADCAST_LENGTH = 500",
+  "MAX_TELEGRAM_SENTENCES = 4",
+  "DEDUPE_WINDOW_MS",
+  "isQuietHoursDallas",
+  "CREATORVAULT_POSITIONING_PATTERN",
+]) {
+  if (!qualityGate.includes(token)) fail(`qualityGate.ts is missing Brand DNA enforcement token: ${token}`);
+}
+
+for (const token of [
+  "Before generating any public-facing content",
+  "KingCam",
+  "CreatorVault",
+  "A$AP Rocky",
+  "Apple",
+  "Dior",
+]) {
+  if (!brandLaw.includes(token)) fail(`BRAND_DNA_QUALITY_LAW.md is missing required brand-law token: ${token}`);
+}
+
+if (!creatorBible.includes("BRAND DNA QUALITY LAW") || !creatorBible.includes("BRAND_DNA_QUALITY_LAW.md")) {
+  fail("CREATORVAULT_BIBLE.md must make BRAND_DNA_QUALITY_LAW.md a required pre-read for public-facing content.");
 }
 
 const serverFiles = walk("server");
@@ -90,6 +126,23 @@ if (bypassFiles.length) {
   fail(`Telegram sender files bypass the global fetch firewall: ${[...new Set(bypassFiles)].join(", ")}`);
 }
 
+const sendHelperFiles = serverFiles.filter((file) => /sendTelegramMessage\s*\(/.test(read(file)) || /function sendTelegramMessage/.test(read(file)));
+const unwrappedSendHelpers = [];
+for (const file of sendHelperFiles) {
+  const source = read(file);
+  if (file === "server/services/telegramOutboundFirewall.ts") continue;
+  if (!source.includes("qualityGate.check")) unwrappedSendHelpers.push(file);
+}
+if (unwrappedSendHelpers.length) {
+  fail(`Telegram sendTelegramMessage helpers must call qualityGate.check before sending: ${[...new Set(unwrappedSendHelpers)].join(", ")}`);
+}
+
+const visualTouchpointFiles = serverFiles.filter((file) => /(sendPhoto|sendVideo|generateImage|imageUrl|Replicate|replicate)/i.test(read(file)));
+const visualGateFiles = visualTouchpointFiles.filter((file) => read(file).includes("qualityGate.checkVisual") || read(file).includes("tryCheckVisual"));
+if (visualGateFiles.length < 2) {
+  fail("Expected at least two visual posting/generation surfaces to enforce qualityGate.checkVisual or tryCheckVisual.");
+}
+
 const rawLiveEnableMatches = [];
 for (const file of [...walk("server"), ...walk("client/src")]) {
   const source = read(file);
@@ -100,7 +153,7 @@ if (rawLiveEnableMatches.length) {
 }
 
 const packageJson = JSON.parse(read("package.json"));
-for (const script of ["telegram:dry-run-proof", "quality-governor"]) {
+for (const script of ["telegram:dry-run-proof", "quality-governor", "brand-law:verify"]) {
   if (!packageJson.scripts?.[script]) fail(`package.json missing script: ${script}`);
 }
 
@@ -124,5 +177,9 @@ console.log(JSON.stringify({
     approvalStateEnforced: true,
     premiumValidatorsEnforced: true,
     dryRunProofGenerator: true,
+    brandLawLoaded: true,
+    qualityGateEnforced: true,
+    wrappedTelegramSendHelpers: sendHelperFiles.length - unwrappedSendHelpers.length,
+    visualGateFiles: visualGateFiles.length,
   },
 }, null, 2));

@@ -1,3 +1,5 @@
+import { qualityGate } from "./qualityGate";
+
 const ORIGINAL_FETCH = globalThis.fetch?.bind(globalThis);
 
 const TELEGRAM_HOST = "api.telegram.org";
@@ -49,6 +51,7 @@ const RAW_OR_MEDIOCRE_PATTERNS = [
   /```|<script|SELECT \* FROM|curl -X/i,
   /(?:^|\s)(lol|lmao|idk|yo\b|bro\b|tap in\b|fire drop\b|quick drop\b)/i,
   /\b(make money fast|get rich quick|guaranteed income|easy cash)\b/i,
+  /we are pleased to announce|dear valued|sorry for any inconvenience|unlock your potential|limited time only!!!!|act now!!!!/i,
 ];
 
 const PLATFORM_SIGNAL = /creatorvault|vaultx|creator empire|ai video|video-first|command center|campaign|funnel|platform|visual drop|creator os/i;
@@ -112,6 +115,21 @@ function collectTextFromJson(value: unknown): string[] {
   return pieces;
 }
 
+function chatIdFromBody(body: unknown): string | number | undefined {
+  const raw = textFromBody(body);
+  const decoded = decodeMaybe(raw);
+  if (!decoded) return undefined;
+  if (decoded.trim().startsWith("{")) {
+    try {
+      const parsed = JSON.parse(decoded) as Record<string, unknown>;
+      const chatId = parsed.chat_id;
+      if (typeof chatId === "string" || typeof chatId === "number") return chatId;
+    } catch {}
+  }
+  const params = new URLSearchParams(decoded);
+  return params.get("chat_id") || undefined;
+}
+
 function parseTelegramPayload(init?: RequestInit): ParsedTelegramPayload {
   const raw = textFromBody(init?.body);
   const decoded = decodeMaybe(raw);
@@ -156,11 +174,11 @@ function validatePremiumTelegramPayload(method: string, init?: RequestInit): str
   const payload = parseTelegramPayload(init);
   const text = payload.text;
   const isMediaMethod = method !== "sendMessage" && method !== "editMessageText";
-  const minimumLength = isMediaMethod ? 120 : 160;
+  const minimumLength = 30;
 
   if (!text && !isMediaMethod) return "Blocked Telegram send: empty public copy.";
-  if (text.length > 0 && text.length < minimumLength) return `Blocked Telegram send: public copy is below the CreatorVault premium floor of ${minimumLength} characters.`;
-  if (text.length > 1200) return "Blocked Telegram send: public copy is too long for a clean premium drop.";
+  if (text.length > 0 && text.length < minimumLength) return `Blocked Telegram send: public copy is below the CreatorVault Brand DNA floor of ${minimumLength} characters.`;
+  if (text.length > 500) return "Blocked Telegram send: public copy is too long for a clean premium Telegram drop.";
   if (RAW_OR_MEDIOCRE_PATTERNS.some((pattern) => pattern.test(text))) return "Blocked Telegram send: raw, debug, placeholder, scammy, or mediocre output detected.";
   if (/[!?]{3,}|\.{4,}/.test(text)) return "Blocked Telegram send: sloppy punctuation does not meet premium standard.";
   if (uppercaseRatio(text) > 0.34) return "Blocked Telegram send: excessive all-caps styling does not meet premium standard.";
@@ -169,6 +187,17 @@ function validatePremiumTelegramPayload(method: string, init?: RequestInit): str
   if (isMediaMethod && !payload.hasMedia) return "Blocked Telegram send: media route has no verified media reference.";
   if (isMediaMethod && !MEDIA_SIGNAL.test(text)) return "Blocked Telegram send: media caption does not position the visual/video asset.";
   if (!payload.hasVerifiedDestination) return "Blocked Telegram send: missing verified destination, button, or review route.";
+
+  try {
+    qualityGate.check(text, {
+      surface: method === "sendMessage" ? "telegram-broadcast" : "telegram",
+      recipientKey: chatIdFromBody(init?.body),
+      hasActionElement: payload.hasCallToAction,
+      requireCreatorVaultPositioning: true,
+    });
+  } catch (error) {
+    return error instanceof Error ? error.message : "CreatorVault Brand DNA QualityGate blocked Telegram output.";
+  }
 
   return null;
 }

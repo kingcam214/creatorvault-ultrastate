@@ -10,6 +10,7 @@ import { db } from "./db";
 import { botEvents, telegramBots } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { handleInboundMessage } from "./services/adultSalesBot";
+import { qualityGate } from "./services/qualityGate";
 
 const router = express.Router();
 
@@ -24,6 +25,11 @@ async function sendTelegramMessage(
   retries = 2
 ): Promise<boolean> {
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  const approvedText = qualityGate.check(text, {
+    surface: "telegram-dm",
+    recipientKey: chatId,
+    requireCreatorVaultPositioning: true,
+  });
   
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -32,7 +38,7 @@ async function sendTelegramMessage(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text,
+          text: approvedText,
           parse_mode: "HTML",
         }),
       });
@@ -292,12 +298,18 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       // Helper to send inline keyboard message
       async function sendInlineMsg(text: string, buttons: Array<Array<{text: string; url?: string; callback_data?: string}>>) {
         const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+        const approvedText = qualityGate.check(text, {
+          surface: "telegram-dm",
+          recipientKey: chatId,
+          hasActionElement: buttons.length > 0,
+          requireCreatorVaultPositioning: true,
+        });
         await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             chat_id: chatId,
-            text,
+            text: approvedText,
             parse_mode: "HTML",
             reply_markup: { inline_keyboard: buttons }
           })

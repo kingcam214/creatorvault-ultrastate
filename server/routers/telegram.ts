@@ -12,6 +12,7 @@ import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { getCreatorBalance } from "../db-vaultlive";
 import { ENV } from "../_core/env";
+import { qualityGate } from "../services/qualityGate";
 
 const TELEGRAM_BOT_TOKEN = ENV.telegramBotToken;
 const FRONTEND_URL = process.env.VITE_FRONTEND_FORGE_API_URL?.replace('/api', '') || 'http://localhost:3000';
@@ -36,13 +37,18 @@ const TelegramWebhookSchema = z.object({
 
 async function sendTelegramMessage(chatId: number, text: string) {
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const approvedText = qualityGate.check(text, {
+    surface: "telegram-dm",
+    recipientKey: chatId,
+    requireCreatorVaultPositioning: true,
+  });
   
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       chat_id: chatId,
-      text,
+      text: approvedText,
       parse_mode: 'Markdown',
     }),
   });

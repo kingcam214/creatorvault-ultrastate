@@ -19,6 +19,7 @@
 
 import mysql2 from "mysql2/promise";
 import crypto from "crypto";
+import { qualityGate } from "./qualityGate";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -30,9 +31,15 @@ function getPool() {
 }
 
 async function sendTelegramMessage(chatId: number | string, text: string, replyMarkup?: any) {
+  const approvedText = qualityGate.check(text, {
+    surface: "telegram-dm",
+    recipientKey: chatId,
+    hasActionElement: Boolean(replyMarkup) || /https?:\/\//i.test(text),
+    requireCreatorVaultPositioning: true,
+  });
   const body: any = {
     chat_id: chatId,
-    text,
+    text: approvedText,
     parse_mode: "Markdown",
   };
   if (replyMarkup) body.reply_markup = replyMarkup;

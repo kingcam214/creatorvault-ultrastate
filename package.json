@@ -15,6 +15,7 @@
     "scope-guard": "node scripts/scope-guard.js",
     "telegram:dry-run-proof": "node scripts/telegram-dry-run-proof.mjs",
     "quality-governor": "node scripts/quality-governor.mjs",
+    "brand-law:verify": "node scripts/quality-governor.mjs",
     "build:client": "NODE_OPTIONS=\"--max-old-space-size=4096\" vite build",
     "build:server": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist"
   },

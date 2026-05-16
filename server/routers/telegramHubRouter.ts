@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc.js";
 import mysql from "mysql2/promise";
 import crypto from "crypto";
+import { qualityGate } from "../services/qualityGate";
 
 async function getDb() {
   const url = process.env.DATABASE_URL || "mysql://creatorvault:KingCam214CreatorVault@127.0.0.1:3306/creatorvault";
@@ -27,10 +28,15 @@ const BOTS = [
 
 async function sendTelegramMessage(token: string, chatId: string | number, text: string, parseMode = "HTML"): Promise<boolean> {
   try {
+    const approvedText = qualityGate.check(text, {
+      surface: "telegram-broadcast",
+      recipientKey: chatId,
+      requireCreatorVaultPositioning: true,
+    });
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: parseMode }),
+      body: JSON.stringify({ chat_id: chatId, text: approvedText, parse_mode: parseMode }),
     });
     const data = await res.json() as any;
     return data.ok === true;
@@ -39,10 +45,16 @@ async function sendTelegramMessage(token: string, chatId: string | number, text:
 
 async function sendTelegramVideo(token: string, chatId: string | number, videoUrl: string, caption?: string): Promise<boolean> {
   try {
+    const approvedVideoUrl = qualityGate.checkVisual(videoUrl, { publicPost: true });
+    const approvedCaption = caption ? qualityGate.check(caption, {
+      surface: "telegram-broadcast",
+      recipientKey: chatId,
+      requireCreatorVaultPositioning: true,
+    }) : undefined;
     const res = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, video: videoUrl, caption, parse_mode: "HTML" }),
+      body: JSON.stringify({ chat_id: chatId, video: approvedVideoUrl, caption: approvedCaption, parse_mode: "HTML" }),
     });
     const data = await res.json() as any;
     return data.ok === true;
