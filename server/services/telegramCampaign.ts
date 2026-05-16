@@ -19,7 +19,6 @@
  */
 
 import mysql from "mysql2/promise";
-import fetch from "node-fetch";
 import OpenAI from "openai";
 
 // ─── Config ──────────────────────────────────────────────────────────────────

@@ -486,8 +486,7 @@ export const distributionRouter = router({
           const trackingUrl = `https://creatorvault.live/r/${job.tracking_code}`;
           const caption = (job.caption || "🔥 New exclusive content available") + `\n\n🔗 ${trackingUrl}`;
 
-          // Send video
-          const { default: fetch } = await import("node-fetch");
+          // Send video through the global outbound firewall
           const resp = await fetch(
             `https://api.telegram.org/bot${botToken}/sendVideo`,
             {

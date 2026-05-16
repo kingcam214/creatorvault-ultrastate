@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "../services/telegramOutboundFirewall";
 import express from "express";
 import { db } from "../db";
 import path from "path";
@@ -46,13 +47,25 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   // Run startup tasks (schema bootstrap, etc)
   await runStartupTasks();
-  startDailyDropCron();
-  startReactivationCron();
-  if (process.env.VAULTX_ACQUISITION_AUTORUN !== "false") {
-    startVaultXAcquisitionCron().catch(error => console.error("[VaultX Acquisition] failed to start autonomous operator", error));
+  if (process.env.TELEGRAM_DAILY_DROP_AUTORUN === "true") {
+    startDailyDropCron();
+  } else {
+    console.log("[TelegramLockdown] daily drop cron disabled by default");
   }
-  if (process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN !== "false") {
+  if (process.env.TELEGRAM_REACTIVATION_AUTORUN === "true") {
+    startReactivationCron();
+  } else {
+    console.log("[TelegramLockdown] buyer reactivation cron disabled by default");
+  }
+  if (process.env.VAULTX_ACQUISITION_AUTORUN === "true") {
+    startVaultXAcquisitionCron().catch(error => console.error("[VaultX Acquisition] failed to start autonomous operator", error));
+  } else {
+    console.log("[TelegramLockdown] VaultX acquisition cron disabled by default");
+  }
+  if (process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN === "true") {
     startChallengeAutomationCron().catch(error => console.error("[VaultX Challenge Agents] failed to start autonomous challenge-agent loop", error));
+  } else {
+    console.log("[TelegramLockdown] challenge-agent loop disabled by default");
   }
   
   const app = express();

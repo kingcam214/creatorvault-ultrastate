@@ -10,7 +10,6 @@ import { db } from "./db";
 import { botEvents, telegramBots } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { handleInboundMessage } from "./services/adultSalesBot";
-import fetch from "node-fetch";
 
 const router = express.Router();
 
