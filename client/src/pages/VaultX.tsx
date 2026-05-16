@@ -2132,6 +2132,249 @@ export function RealmToggle() {
   );
 }
 
+
+function VaultXPublicLanding() {
+  const architectureLayers = [
+    {
+      layer: "01",
+      icon: Video,
+      eyebrow: "Professional Editor",
+      title: "Browser-native video studio",
+      body: "A creator-native editing workspace for timeline cuts, keyframes, waveform sync, subtitle timelines, vertical exports, thumbnails, and premium content packaging, designed around a Remotion/WebCodecs editing vision with server-side FFmpeg rendering instead of creator chaos across CapCut, Premiere, drives, and folders.",
+      proof: "Edit, package, and monetize from the same vault."
+    },
+    {
+      layer: "02",
+      icon: Sparkles,
+      eyebrow: "AI Cinematic Engine",
+      title: "Turn raw clips into desire-grade drops",
+      body: "AI relighting, cinematic prompt direction, shot enhancement, scene extension, camera-motion synthesis, and continuity-aware prompt logic transform ordinary footage into premium promotional material through a queue-driven AI pipeline.",
+      proof: "Built for aesthetics, continuity, and repeatable output."
+    },
+    {
+      layer: "03",
+      icon: Shield,
+      eyebrow: "Adult Creator Advantage",
+      title: "SFW teaser and premium-content branching",
+      body: "Generate platform-safe previews, blurred or masked variants, teaser cuts, PPV previews, mass clip extractions, and paid unlock sequences from one master asset while keeping sensitive content protected behind the right rails.",
+      proof: "Safe public tease. Private paid unlock. One workflow."
+    },
+    {
+      layer: "04",
+      icon: TrendingUp,
+      eyebrow: "Attention Engineering",
+      title: "Retention intelligence for every clip",
+      body: "Hook scoring, pacing cues, transcript intelligence, dead-zone detection, visual variance checks, and engagement-to-revenue signals help creators stop guessing and start shipping tighter clips.",
+      proof: "Every edit is tied to watch time, desire, and conversion."
+    },
+    {
+      layer: "05",
+      icon: Send,
+      eyebrow: "Distribution Dominance",
+      title: "Upload once, deploy everywhere",
+      body: "VaultX packages vertical reels, stories, smart-cropped exports, captions, hashtags, platform-native teasers, Telegram drops, fan messages, and VIP calls-to-action without rebuilding the campaign manually.",
+      proof: "One master asset becomes a full drop system."
+    },
+    {
+      layer: "06",
+      icon: DollarSign,
+      eyebrow: "Monetization Intelligence",
+      title: "Every creative decision connects to revenue",
+      body: "Pricing recommendations, teaser-to-paywall sequencing, PPV strategy, fan segments, churn recovery, VIP upsells, and analytics connect editing decisions to income so VaultX becomes revenue infrastructure, not a cost center.",
+      proof: "The editor is not a cost center. It is the profit engine."
+    },
+  ];
+
+  const workflow = [
+    { step: "Ingest", detail: "Upload vault assets, raw clips, camera-roll moments, and existing premium drops." },
+    { step: "Transform", detail: "Create safe teasers, cinematic variants, captions, thumbnails, and paid unlocks." },
+    { step: "Score", detail: "Use attention and monetization signals to identify hooks, dead zones, and pricing windows." },
+    { step: "Launch", detail: "Deploy to VaultX, Telegram, fan messages, landing pages, and platform-native exports." },
+    { step: "Follow Up", detail: "Automate reminders, VIP routes, cart recovery, and next-drop messaging from real fan behavior." },
+  ];
+
+  const automationCards = [
+    { title: "Video-first command center", body: "Vertical reels, PPV teasers, fan-feed previews, stories, trailers, and cinematic promo assets live in one revenue workspace.", accent: "#ef4444" },
+    { title: "Safe public visuals", body: "The public-facing layer can stay suggestive, premium, and platform-safe while paid content stays protected behind the vault.", accent: "#ec4899" },
+    { title: "Fan monetization loops", body: "Subscriptions, PPV, tips, VIP routing, Telegram drops, checkout recovery, and creator analytics connect the whole buyer journey.", accent: "#f59e0b" },
+    { title: "Creator-native AI", body: "Prompts, captions, scripts, offers, and messages are built around creator revenue, not generic social-media copy.", accent: "#9333ea" },
+  ];
+
+  const proofStats = [
+    { value: "6", label: "Revenue layers" },
+    { value: "85%", label: "Creator-first share" },
+    { value: "1", label: "Video OS" },
+    { value: "24/7", label: "Automation loop" },
+  ];
+
+  const visualTiles = [
+    { label: "Teaser Cut", tone: "#ef4444", copy: "Safe preview packaged for discovery" },
+    { label: "VIP Unlock", tone: "#f59e0b", copy: "Paid access routed to the right offer" },
+    { label: "Fan Drop", tone: "#ec4899", copy: "Message, CTA, and follow-up ready" },
+    { label: "Revenue Read", tone: "#9333ea", copy: "Hook, price, and conversion signal" },
+  ];
+
+  return (
+    <div className="min-h-screen overflow-hidden relative text-white" style={{ background: "#030305" }}>
+      <style>{`
+        @keyframes vaultx-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+        @keyframes vaultx-scan { 0%{transform:translateX(-120%);opacity:0} 25%{opacity:.8} 100%{transform:translateX(140%);opacity:0} }
+        @keyframes vaultx-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.22)} 50%{box-shadow:0 0 0 14px rgba(239,68,68,0)} }
+        .vaultx-glass{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);box-shadow:0 24px 80px rgba(0,0,0,.45);backdrop-filter:blur(18px)}
+        .vaultx-card{transition:transform .25s ease,border-color .25s ease,background .25s ease}.vaultx-card:hover{transform:translateY(-5px);border-color:rgba(239,68,68,.38);background:rgba(255,255,255,.065)}
+      `}</style>
+      <div className="absolute inset-0 z-0" style={{ background: "radial-gradient(circle at 18% 8%, rgba(239,68,68,.34), transparent 34%), radial-gradient(circle at 82% 18%, rgba(236,72,153,.24), transparent 30%), radial-gradient(circle at 50% 78%, rgba(147,51,234,.22), transparent 36%)" }} />
+      <div className="absolute inset-0 z-0 opacity-[.06]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px)", backgroundSize: "54px 54px" }} />
+
+      <nav className="relative z-10 flex items-center justify-between px-6 md:px-10 py-6 max-w-7xl mx-auto">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", animation: "vaultx-pulse 3s infinite" }}>
+            <Flame className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <div className="text-white font-black text-xl tracking-tight">VaultX</div>
+            <div className="text-[10px] uppercase tracking-[0.28em] font-bold" style={{ color: "#fca5a5" }}>Adult Creator OS · 18+</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <a href="/login" className="hidden sm:inline-flex text-sm font-bold px-5 py-2.5 rounded-xl transition-all hover:bg-white/10" style={{ color: "#d1d5db" }}>Sign In</a>
+          <a href="/login" className="text-sm font-black px-6 py-3 rounded-xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 40px rgba(236,72,153,.32)" }}>Build My Vault</a>
+        </div>
+      </nav>
+
+      <main className="relative z-10">
+        <section className="max-w-7xl mx-auto px-6 md:px-10 pt-10 md:pt-16 pb-20 grid lg:grid-cols-[1.05fr_.95fr] gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-7" style={{ background: "rgba(239,68,68,.12)", border: "1px solid rgba(239,68,68,.28)" }}>
+              <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#ef4444" }} />
+              <span className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: "#fca5a5" }}>Video-first monetization engine for adult and premium creators</span>
+            </div>
+            <h1 className="font-black leading-[.86] tracking-[-.055em] mb-7" style={{ fontSize: "clamp(3.8rem, 9vw, 8.7rem)" }}>
+              The OS adult creators wish already existed.
+            </h1>
+            <p className="text-lg md:text-xl max-w-2xl leading-8 mb-8" style={{ color: "#c7c7d1" }}>
+              VaultX is being built as the command center for short-form and long-form adult creators: a safe public tease layer, a private paid unlock layer, a cinematic AI video engine, and automated revenue workflows that make the whole business feel alive.
+            </p>
+            <div className="flex flex-wrap gap-4 mb-10">
+              <a href="/login" className="inline-flex items-center gap-2 text-base font-black px-8 py-4 rounded-2xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 50px rgba(239,68,68,.35)" }}>
+                <Play className="w-5 h-5" /> Start the VaultX build
+              </a>
+              <a href="#vaultx-architecture" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "white", border: "1px solid rgba(255,255,255,.16)" }}>
+                See the engine <ChevronRight className="w-5 h-5" />
+              </a>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl">
+              {proofStats.map((stat) => (
+                <div key={stat.label} className="vaultx-glass rounded-2xl p-4">
+                  <div className="text-2xl md:text-3xl font-black">{stat.value}</div>
+                  <div className="text-xs font-semibold mt-1" style={{ color: "#8b8b98" }}>{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative min-h-[620px] hidden md:block">
+            <div className="absolute inset-0 rounded-[3rem] vaultx-glass overflow-hidden" style={{ transform: "rotate(-2deg)" }}>
+              <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, rgba(239,68,68,.18), rgba(236,72,153,.08) 42%, rgba(3,3,5,.92) 100%)" }} />
+              <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/10" />
+              <div className="absolute left-8 right-8 top-8 h-[72%] rounded-[2rem] overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.025))", border: "1px solid rgba(255,255,255,.12)" }}>
+                <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 50% 25%, rgba(252,165,165,.26), transparent 34%), linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.72))" }} />
+                <div className="absolute inset-x-0 top-0 h-1/3" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,.13), transparent)", animation: "vaultx-scan 5s infinite" }} />
+                <div className="absolute left-5 top-5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[.16em]" style={{ background: "rgba(0,0,0,.42)", color: "#fecaca", border: "1px solid rgba(252,165,165,.35)" }}>safe preview mode</div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.24)", backdropFilter: "blur(10px)" }}>
+                    <Play className="w-9 h-9 ml-1" />
+                  </div>
+                </div>
+                <div className="absolute left-5 right-5 bottom-5">
+                  <div className="text-xs font-black uppercase tracking-[.18em] mb-2" style={{ color: "#fca5a5" }}>VaultX video drop</div>
+                  <div className="text-3xl font-black leading-tight">Teaser, paywall, fan follow-up, all generated from one master clip.</div>
+                </div>
+              </div>
+              <div className="absolute left-8 right-8 bottom-8 grid grid-cols-2 gap-3">
+                {visualTiles.map((tile, index) => (
+                  <div key={tile.label} className="rounded-2xl p-4" style={{ background: "rgba(0,0,0,.34)", border: `1px solid ${tile.tone}45`, animation: `vaultx-float ${4 + index * .4}s ease-in-out infinite` }}>
+                    <div className="text-[10px] font-black uppercase tracking-[.16em]" style={{ color: tile.tone }}>{tile.label}</div>
+                    <div className="text-xs mt-2 leading-5" style={{ color: "#d6d6de" }}>{tile.copy}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-y border-white/10 py-10 px-6 md:px-10" style={{ background: "rgba(255,255,255,.025)" }}>
+          <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-5">
+            {automationCards.map((card) => (
+              <div key={card.title} className="vaultx-card rounded-3xl p-6" style={{ border: "1px solid rgba(255,255,255,.09)", background: "rgba(255,255,255,.04)" }}>
+                <div className="w-10 h-10 rounded-2xl mb-5" style={{ background: `radial-gradient(circle, ${card.accent}55, ${card.accent}15)` }} />
+                <h3 className="text-xl font-black mb-3">{card.title}</h3>
+                <p className="text-sm leading-6" style={{ color: "#a8a8b3" }}>{card.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="vaultx-architecture" className="max-w-7xl mx-auto px-6 md:px-10 py-24">
+          <div className="max-w-3xl mb-12">
+            <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#fca5a5" }}>Six-layer creator engine</div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-5">Not another link-in-bio. A full-stack operating system.</h2>
+            <p className="text-lg leading-8" style={{ color: "#b8b8c3" }}>VaultX combines editing, AI transformation, SFW/NSFW branching, retention intelligence, distribution, and monetization into one automation loop. The landing page stays safe and premium; the product is built for the real workflows adult creators fight through every day.</p>
+          </div>
+          <div className="grid lg:grid-cols-3 gap-5">
+            {architectureLayers.map(({ layer, icon: Icon, eyebrow, title, body, proof }) => (
+              <div key={title} className="vaultx-card rounded-[2rem] p-6" style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.09)" }}>
+                <div className="flex items-center justify-between mb-8">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(239,68,68,.28), rgba(147,51,234,.2))" }}><Icon className="w-6 h-6" /></div>
+                  <div className="text-4xl font-black" style={{ color: "rgba(255,255,255,.1)" }}>{layer}</div>
+                </div>
+                <div className="text-[11px] font-black uppercase tracking-[.18em] mb-3" style={{ color: "#fca5a5" }}>{eyebrow}</div>
+                <h3 className="text-2xl font-black leading-tight mb-4">{title}</h3>
+                <p className="text-sm leading-7 mb-5" style={{ color: "#aaaab6" }}>{body}</p>
+                <div className="text-sm font-bold rounded-2xl p-4" style={{ color: "#fff", background: "rgba(0,0,0,.28)", border: "1px solid rgba(255,255,255,.07)" }}>{proof}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="max-w-7xl mx-auto px-6 md:px-10 pb-24">
+          <div className="grid lg:grid-cols-[.9fr_1.1fr] gap-10 items-start vaultx-glass rounded-[2.5rem] p-6 md:p-10">
+            <div>
+              <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#fca5a5" }}>Automated money route</div>
+              <h2 className="text-4xl md:text-5xl font-black tracking-[-.04em] leading-none mb-5">From camera roll to revenue loop.</h2>
+              <p className="text-base leading-8 mb-7" style={{ color: "#b8b8c3" }}>The goal is not just a sexier page. The goal is a product narrative that makes creators instantly understand the cheat code: upload the asset once, let VaultX package it, publish the safe preview, unlock the premium version, and keep following up until the fan either buys, upgrades, or returns later.</p>
+              <a href="/login" className="inline-flex items-center gap-2 text-sm font-black px-6 py-3 rounded-2xl" style={{ background: "#fff", color: "#08080b" }}>Claim the creator workflow <ArrowUpRight className="w-4 h-4" /></a>
+            </div>
+            <div className="space-y-4">
+              {workflow.map((item, index) => (
+                <div key={item.step} className="flex gap-4 rounded-3xl p-5" style={{ background: "rgba(0,0,0,.28)", border: "1px solid rgba(255,255,255,.08)" }}>
+                  <div className="w-10 h-10 rounded-2xl flex-shrink-0 flex items-center justify-center font-black" style={{ background: "rgba(239,68,68,.18)", color: "#fca5a5" }}>{index + 1}</div>
+                  <div>
+                    <h3 className="font-black text-lg mb-1">{item.step}</h3>
+                    <p className="text-sm leading-6" style={{ color: "#aaaab6" }}>{item.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-6 md:px-10 pb-24">
+          <div className="max-w-5xl mx-auto text-center rounded-[2.5rem] p-8 md:p-14" style={{ background: "linear-gradient(135deg, rgba(220,38,38,.22), rgba(236,72,153,.18), rgba(147,51,234,.18))", border: "1px solid rgba(255,255,255,.12)" }}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-7" style={{ background: "rgba(0,0,0,.25)", border: "1px solid rgba(255,255,255,.12)" }}><Lock className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.16em]">Safe, premium, adult-aware</span></div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">Make the public page seductive. Keep the business automated.</h2>
+            <p className="text-lg leading-8 max-w-3xl mx-auto mb-9" style={{ color: "#f5d0d0" }}>VaultX can look immersive, alive, and premium without showing explicit nudity on the landing page. The selling point is stronger: creators see the whole machine they wish existed for their space, then step into an OS built around their content, privacy, distribution, and money.</p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <a href="/login" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-black" style={{ background: "white", color: "#09090b" }}><Crown className="w-5 h-5" /> Enter VaultX</a>
+              <a href="/" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-bold" style={{ color: "white", border: "1px solid rgba(255,255,255,.2)" }}>Back to CreatorVault</a>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
 export default function VaultX() {
   const { user } = useAuth();
   const [verified, setVerified] = useState(false);
@@ -2145,93 +2388,7 @@ export default function VaultX() {
   const isVerified = verified || (realmData as any)?.adultVerified;
 
   if (!user) {
-    return (
-      <div className="min-h-screen overflow-hidden relative" style={{ background: "#000" }}>
-        {/* Full-bleed ambient background */}
-        <div className="absolute inset-0 z-0" style={{
-          background: "radial-gradient(ellipse 100% 80% at 50% 0%, rgba(220,38,38,0.18) 0%, rgba(147,51,234,0.10) 40%, transparent 70%)",
-        }} />
-        <div className="absolute inset-0 z-0" style={{
-          background: "radial-gradient(ellipse 60% 40% at 80% 60%, rgba(239,68,68,0.08) 0%, transparent 60%)",
-        }} />
-        {/* Animated grid overlay */}
-        <div className="absolute inset-0 z-0 opacity-[0.03]" style={{
-          backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
-        }} />
-        {/* Nav */}
-        <nav className="relative z-10 flex items-center justify-between px-8 py-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #DC2626, #9333EA)" }}>
-              <Flame className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-white font-black text-xl tracking-tight">VaultX</span>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(220,38,38,0.2)", color: "#EF4444", border: "1px solid rgba(220,38,38,0.3)" }}>18+</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <a href="/login" className="text-sm font-bold px-5 py-2.5 rounded-xl transition-all hover:text-white" style={{ color: "#9CA3AF" }}>Sign In</a>
-            <a href="/login" className="text-sm font-black px-6 py-2.5 rounded-xl transition-all" style={{ background: "linear-gradient(135deg, #DC2626, #9333EA)", color: "white" }}>Join Free</a>
-          </div>
-        </nav>
-        {/* Hero */}
-        <div className="relative z-10 flex flex-col items-center text-center px-6 pt-16 pb-20">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8" style={{ background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.25)" }}>
-            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#EF4444" }} />
-            <span className="text-xs font-bold" style={{ color: "#EF4444" }}>The Uncensored Creator Economy</span>
-          </div>
-          <h1 className="font-black text-white mb-6 leading-none" style={{ fontSize: "clamp(3rem, 8vw, 7rem)", letterSpacing: "-0.04em" }}>
-            Create.<br />
-            <span style={{ background: "linear-gradient(135deg, #DC2626, #EC4899, #9333EA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Own.
-            </span><br />
-            Earn.
-          </h1>
-          <p className="text-lg max-w-xl mb-10" style={{ color: "#9CA3AF", lineHeight: 1.6 }}>
-            The first platform where adult creators own their audience, set their prices, and keep <strong style={{ color: "white" }}>85% of every dollar</strong>. Powered by the most powerful creator OS ever built.
-          </p>
-          <div className="flex items-center gap-4 flex-wrap justify-center">
-            <a href="/login" className="flex items-center gap-2 text-base font-black px-8 py-4 rounded-2xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #DC2626, #9333EA)", color: "white", boxShadow: "0 0 40px rgba(220,38,38,0.4)" }}>
-              <Flame className="w-5 h-5" />
-              Start Creating Free
-            </a>
-            <a href="/login" className="text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "white", border: "1px solid rgba(255,255,255,0.15)" }}>
-              Explore Creators →
-            </a>
-          </div>
-          {/* Stats */}
-          <div className="flex items-center gap-8 mt-16 flex-wrap justify-center">
-            {[
-              { value: "85%", label: "Revenue to Creators" },
-              { value: "0", label: "Censorship" },
-              { value: "∞", label: "Earning Potential" },
-              { value: "1", label: "Platform to Rule Them All" },
-            ].map(stat => (
-              <div key={stat.label} className="text-center">
-                <div className="text-3xl font-black text-white mb-1">{stat.value}</div>
-                <div className="text-xs font-medium" style={{ color: "#6B7280" }}>{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* Feature strip */}
-        <div className="relative z-10 border-t border-b py-8 px-8" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[
-              { icon: "🎬", title: "AI Video Studio", desc: "Professional-grade AI tools built for adult creators" },
-              { icon: "💰", title: "PPV & Subscriptions", desc: "Set your prices, own your income, no middlemen" },
-              { icon: "🔥", title: "Uncensored", desc: "Zero censorship, zero deplatforming risk" },
-              { icon: "📊", title: "Creator Analytics", desc: "Real-time revenue, fan intelligence, growth data" },
-            ].map(f => (
-              <div key={f.title} className="flex flex-col gap-2">
-                <span className="text-2xl">{f.icon}</span>
-                <p className="text-sm font-black text-white">{f.title}</p>
-                <p className="text-xs" style={{ color: "#6B7280" }}>{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <VaultXPublicLanding />;
   }
 
   if (isLoading) {
