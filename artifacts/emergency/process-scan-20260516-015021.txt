@@ -1,0 +1,29 @@
+# Process scan for active posting risks
+Generated: 2026-05-16T01:50:21+00:00
+
+## Node processes
+
+## Listening ports
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 127.0.0.1:3306          0.0.0.0:*               LISTEN      -                   
+tcp        0      0 127.0.0.1:9330          0.0.0.0:*               LISTEN      973/sandbox-runtime 
+tcp        0      0 127.0.0.1:9222          0.0.0.0:*               LISTEN      792/chromium        
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      -                   
+tcp        0      0 0.0.0.0:5900            0.0.0.0:*               LISTEN      -                   
+tcp        0      0 127.0.0.1:8350          0.0.0.0:*               LISTEN      703/manus-mcp-cli   
+tcp        0      0 127.0.0.53:53           0.0.0.0:*               LISTEN      -                   
+tcp6       0      0 :::49983                :::*                    LISTEN      -                   
+tcp6       0      0 :::22                   :::*                    LISTEN      -                   
+tcp6       0      0 :::8333                 :::*                    LISTEN      -                   
+tcp6       0      0 :::8330                 :::*                    LISTEN      973/sandbox-runtime 
+tcp6       0      0 :::8340                 :::*                    LISTEN      1018/runtime-upgrad 
+tcp6       0      0 :::5901                 :::*                    LISTEN      -                   
+tcp6       0      0 :::5900                 :::*                    LISTEN      -                   
+tcp6       0      0 :::19780                :::*                    LISTEN      706/ws-server       
+udp        0      0 127.0.0.1:323           0.0.0.0:*                           -                   
+udp        0      0 127.0.0.53:53           0.0.0.0:*                           -                   
+udp6       0      0 ::1:323                 :::*                                -                   
+
+## Environment posting lock recommendation
+No PM2 or crontab daemon was available in this sandbox. Next step is code-level SEND LOCK and quality gate before any sender can run.

@@ -1,7 +1,7 @@
 /**
- * Home.tsx — CreatorVault Landing Page V5 (KingCam-First, Real Assets)
- * All 5 required sections. Real KingCam videos seeded into Proof of Work reel.
- * Hero uses looping KingCam video background.
+ * Home.tsx — CreatorVault Landing Page V6 (Video-First Platform OS)
+ * Premium public homepage: KingCam remains the operator, while the visual system shows the full CreatorVault universe.
+ * All homepage media references must resolve to verified local assets or approved API-generated replacements.
  */
 import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
@@ -41,10 +41,11 @@ function useCounter(target: number, duration = 2000, active = false) {
 }
 
 // Real video clip component — plays on hover
-function VideoReelClip({ label, badge, videoSrc, poster }: {
-  label: string; badge: string; videoSrc?: string; poster?: string;
+function VideoReelClip({ label, badge, category, videoSrc, poster }: {
+  label: string; badge: string; category: string; videoSrc?: string; poster?: string;
 }) {
   const [hovered, setHovered] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -70,8 +71,8 @@ function VideoReelClip({ label, badge, videoSrc, poster }: {
         cursor: "pointer",
       }}
     >
-      {/* Video or poster image background */}
-      {videoSrc ? (
+      {/* Verified motion first, image fallback second, premium gradient last. */}
+      {videoSrc && !videoFailed ? (
         <video
           ref={videoRef}
           src={videoSrc}
@@ -82,6 +83,7 @@ function VideoReelClip({ label, badge, videoSrc, poster }: {
           autoPlay
           preload="metadata"
           onCanPlay={() => { videoRef.current?.play().catch(() => {}); }}
+          onError={() => setVideoFailed(true)}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
         />
       ) : poster ? (
@@ -91,7 +93,7 @@ function VideoReelClip({ label, badge, videoSrc, poster }: {
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
         />
       ) : (
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.08) 0%, transparent 70%)", zIndex: 0 }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg, rgba(56,189,248,0.16) 0%, rgba(201,168,76,0.10) 42%, rgba(5,5,8,1) 100%)", zIndex: 0 }} />
       )}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)", zIndex: 1 }} />
       {/* Play button — only show when no video or not hovered */}
@@ -108,7 +110,7 @@ function VideoReelClip({ label, badge, videoSrc, poster }: {
       </div>
       {/* Label */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "20px 10px 10px", background: "linear-gradient(transparent, rgba(0,0,0,0.9))", zIndex: 3 }}>
-        <div style={{ fontSize: 9, fontWeight: 600, color: "#38bdf8", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 2 }}>AI GENERATED</div>
+        <div style={{ fontSize: 9, fontWeight: 600, color: "#38bdf8", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 2 }}>{category}</div>
         <div style={{ fontSize: 11, color: "#fff", fontWeight: 600 }}>{label}</div>
       </div>
     </div>
@@ -148,6 +150,8 @@ export default function Home() {
   const [creatorType, setCreatorType] = useState("");
 
   const reelRef = useScrollReveal();
+  const commandRef = useScrollReveal();
+  const universeRef = useScrollReveal();
   const arsenalRef = useScrollReveal();
   const cloneRef = useScrollReveal();
   const metricsRef = useScrollReveal();
@@ -180,19 +184,38 @@ export default function Home() {
     { value: "dancer", label: "Dancer / Performer" },
   ];
 
-  // Proof of Work reel — KingCam videos + 7 unique AI-generated cinematic clips
-  const reelClips = [
-    { label: "Brand Story", badge: "KINGCAM · REPLICATE", videoSrc: "/videos/kingcam-clone-1.mp4" },
-    { label: "Music Video", badge: "POLLO AI", videoSrc: "/videos/reel-music-video.mp4" },
-    { label: "Clone Drop", badge: "KINGCAM · FLUX LORA", videoSrc: "/videos/kingcam-clone-2.mp4" },
-    { label: "Product Drop", badge: "KLING AI", videoSrc: "/videos/reel-product-drop.mp4" },
-    { label: "AI Portrait", badge: "OPENART AI", videoSrc: "/videos/reel-ai-portrait.mp4" },
-    { label: "HeroCam", badge: "KINGCAM · POLLO AI", videoSrc: "/videos/kingcam-hero-cam.mp4" },
-    { label: "Cinematic Trailer", badge: "RUNWAY ML", videoSrc: "/videos/reel-cinematic-trailer.mp4" },
-    { label: "Creator Promo", badge: "OPENART AI", videoSrc: "/videos/reel-creator-promo.mp4" },
-    { label: "Apparel Drop", badge: "REPLICATE", videoSrc: "/videos/reel-apparel-drop.mp4" },
-    { label: "Empire Reel", badge: "KLING AI", videoSrc: "/videos/reel-brand-story.mp4" },
+  // Platform-wide proof reel — KingCam is the operator, not the only visual story.
+  // These slots are ready to be replaced by Polla AI renders while retaining verified fallbacks.
+  const commandCenterReels = [
+    { label: "AI Video Lab Trailer", badge: "POLLA AI · HERO", category: "VIDEO-FIRST", src: "/videos/reel-cinematic-trailer.mp4", videoSrc: "/videos/reel-cinematic-trailer.mp4", poster: "/images/reel/reel-cinematic-trailer.png" },
+    { label: "Music Campaign Visual", badge: "POLLA AI", category: "MUSIC", src: "/videos/reel-music-video.mp4", videoSrc: "/videos/reel-music-video.mp4", poster: "/images/reel/reel-music-video.png" },
+    { label: "Product Drop Render", badge: "KLING AI", category: "COMMERCE", src: "/videos/reel-product-drop.mp4", videoSrc: "/videos/reel-product-drop.mp4", poster: "/images/reel/reel-product-drop.png" },
+    { label: "Apparel Drop Simulation", badge: "REPLICATE", category: "APPAREL", src: "/videos/reel-apparel-drop.mp4", videoSrc: "/videos/reel-apparel-drop.mp4", poster: "/images/reel/reel-apparel-drop.png" },
+    { label: "Creator Promo System", badge: "OPENART AI", category: "PROMO", videoSrc: "/videos/reel-creator-promo.mp4", poster: "/images/reel/reel-creator-promo.png" },
+    { label: "AI Portrait Campaign", badge: "OPENART AI", category: "BRAND", videoSrc: "/videos/reel-ai-portrait.mp4", poster: "/images/reel/reel-ai-portrait.png" },
+    { label: "KingCam Operator Proof", badge: "KINGCAM · POLLO", category: "FOUNDER", videoSrc: "/videos/kingcam-hero-cam.mp4", poster: "/assets/kingcam-hero.jpg" },
+    { label: "Clone Ambassador", badge: "FLUX LORA", category: "CLONE LAB", videoSrc: "/videos/kingcam-clone-1.mp4", poster: "/assets/kingcam-hero.jpg" },
+    { label: "Empire Brand Story", badge: "KLING AI", category: "PLATFORM", videoSrc: "/videos/reel-brand-story.mp4", poster: "/images/reel/reel-cinematic-trailer.png" },
+    { label: "VaultX Premium Flow", badge: "CREATORVAULT", category: "MONETIZE", poster: "/images/reel/reel-product-drop.png" },
   ];
+
+  const commandCards = [
+    { title: "Prompt", body: "Type the concept: product drop, music promo, apparel campaign, VIP funnel, creator trailer.", color: "#38bdf8" },
+    { title: "Generate", body: "Polla AI, OpenArt, Kling, Runway, Replicate, ElevenLabs, Sync.so, Soundverse, and FFmpeg turn it into motion.", color: "#c9a84c" },
+    { title: "Package", body: "The system formats hooks, captions, reels, stories, shorts, thumbnails, offer pages, and premium assets.", color: "#4ade80" },
+    { title: "Monetize", body: "Subscriptions, tips, marketplace, VaultX, NFC cards, and funnels convert attention into owned revenue.", color: "#fb923c" },
+  ];
+
+  const platformUniverse = [
+    { title: "AI Video Lab", tag: "Prompt → MP4", videoSrc: "/videos/reel-cinematic-trailer.mp4", poster: "/images/reel/reel-cinematic-trailer.png", tone: "#38bdf8" },
+    { title: "Music Drops", tag: "Visualizers · promos", videoSrc: "/videos/reel-music-video.mp4", poster: "/images/reel/reel-music-video.png", tone: "#c9a84c" },
+    { title: "Commerce", tag: "Products · funnels", videoSrc: "/videos/reel-product-drop.mp4", poster: "/images/reel/reel-product-drop.png", tone: "#4ade80" },
+    { title: "Apparel", tag: "Mockups · lookbooks", videoSrc: "/videos/reel-apparel-drop.mp4", poster: "/images/reel/reel-apparel-drop.png", tone: "#fb923c" },
+    { title: "Creator Promo", tag: "Campaign machine", videoSrc: "/videos/reel-creator-promo.mp4", poster: "/images/reel/reel-creator-promo.png", tone: "#38bdf8" },
+    { title: "VaultX", tag: "Premium monetization", poster: "/images/reel/reel-product-drop.png", tone: "#c9a84c" },
+  ];
+
+  const distributionSteps = ["Vertical Reel", "Story Cut", "Shorts Export", "Caption Pack", "Landing Page", "Telegram Drop", "VIP Funnel", "Analytics Loop"];
 
   return (
     <div style={{ background: "#050508", color: "#fff", fontFamily: "Inter, sans-serif", minHeight: "100vh", overflowX: "hidden" }}>
@@ -203,6 +226,10 @@ export default function Home() {
         @keyframes pulse-gold { 0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,0.4)}50%{box-shadow:0 0 0 10px rgba(201,168,76,0)} }
         @keyframes reel-scroll { 0%{transform:translateX(0)}100%{transform:translateX(-50%)} }
         @keyframes shimmer { 0%,100%{opacity:1}50%{opacity:0.4} }
+        @keyframes command-flow { 0%{transform:translateX(-18%);opacity:.25}50%{opacity:1}100%{transform:translateX(118%);opacity:.25} }
+        @keyframes float-card { 0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)} }
+        @keyframes rail-scroll { 0%{transform:translateX(0)}100%{transform:translateX(-50%)} }
+        @keyframes glow-scan { 0%{left:-40%;opacity:0}20%{opacity:.7}100%{left:120%;opacity:0} }
         .reveal-up{opacity:0;transform:translateY(36px);transition:opacity 0.65s ease,transform 0.65s ease}
         .reveal-up.visible{opacity:1;transform:translateY(0)}
         .reveal-up.d1{transition-delay:0.1s}.reveal-up.d2{transition-delay:0.2s}.reveal-up.d3{transition-delay:0.3s}
@@ -313,14 +340,14 @@ export default function Home() {
           <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(22px,6vw,38px)", fontWeight: 800, color: "#fff", lineHeight: 1.15, marginBottom: 12, textTransform: "uppercase", letterSpacing: "-0.01em" }}>
             REAL AI. GENERATED ON THIS PLATFORM.
           </h2>
-          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.43)", maxWidth: 480, margin: "0 auto" }}>
-            Every clip below was created inside CreatorVault with Pollo AI, OpenArt AI, Kling, Runway, and Replicate. Hover to play. No stock footage. No actors. Pure AI.
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.43)", maxWidth: 560, margin: "0 auto" }}>
+            A platform-wide reel wall for AI Video Lab, music campaigns, product drops, apparel, creator promos, Clone Lab, and monetization flows. KingCam runs the system, but CreatorVault sells the whole creator empire.
           </p>
         </div>
         <div style={{ overflow: "hidden", padding: "4px 0" }}>
           <div className="reel-track" style={{ paddingLeft: 20 }}>
-            {[...reelClips, ...reelClips].map((clip, i) => (
-              <VideoReelClip key={i} label={clip.label} badge={clip.badge} videoSrc={clip.videoSrc} />
+            {[...commandCenterReels, ...commandCenterReels].map((clip, i) => (
+              <VideoReelClip key={i} label={clip.label} badge={clip.badge} category={clip.category} videoSrc={clip.videoSrc} poster={clip.poster} />
             ))}
           </div>
         </div>
@@ -330,6 +357,115 @@ export default function Home() {
               CREATE YOUR FIRST AI VIDEO →
             </button>
           </Link>
+        </div>
+      </div>
+
+      {/* ── LIVE GENERATION COMMAND CENTER ── */}
+      <div ref={commandRef.ref} style={{ position: "relative", zIndex: 1, padding: "78px 20px 72px", borderTop: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 20% 10%,rgba(56,189,248,0.12),transparent 34%),radial-gradient(circle at 80% 40%,rgba(201,168,76,0.10),transparent 34%)", pointerEvents: "none" }} />
+        <div style={{ position: "relative", maxWidth: 1060, margin: "0 auto" }}>
+          <div className={`reveal-up ${commandRef.visible ? "visible" : ""}`} style={{ maxWidth: 720, marginBottom: 34 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "#c9a84c", marginBottom: 10 }}>LIVE GENERATION COMMAND CENTER</p>
+            <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(28px,7vw,54px)", fontWeight: 800, color: "#fff", lineHeight: 1.05, marginBottom: 14 }}>
+              Not a landing page. <span style={{ color: "#38bdf8" }}>A content factory</span> you can feel.
+            </h2>
+            <p style={{ fontSize: 15, color: "rgba(255,255,255,0.58)", lineHeight: 1.75 }}>
+              CreatorVault makes visitors understand the power immediately: one command can become a cinematic video, a product drop, a music visual, an apparel campaign, a premium funnel, and a distribution package. The homepage shows the machine, not just the founder.
+            </p>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.2fr) minmax(280px,0.8fr)", gap: 18, alignItems: "stretch" }}>
+            <div className={`reveal-up d1 ${commandRef.visible ? "visible" : ""}`} style={{ position: "relative", minHeight: 390, borderRadius: 24, border: "1px solid rgba(255,255,255,0.10)", background: "linear-gradient(145deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))", overflow: "hidden", boxShadow: "0 30px 80px rgba(0,0,0,0.45)" }}>
+              <video autoPlay muted loop playsInline preload="metadata" poster="/images/reel/reel-cinematic-trailer.png" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.36 }}>
+                <source src="/videos/reel-cinematic-trailer.mp4" type="video/mp4" />
+              </video>
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(5,5,8,0.38),rgba(5,5,8,0.96)),radial-gradient(circle at 55% 38%,rgba(56,189,248,0.18),transparent 34%)" }} />
+              <div style={{ position: "absolute", top: 0, bottom: 0, width: "38%", background: "linear-gradient(90deg,transparent,rgba(56,189,248,0.18),transparent)", animation: "glow-scan 5.6s ease-in-out infinite" }} />
+              <div style={{ position: "relative", zIndex: 2, padding: 22, height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {["Polla AI", "OpenArt", "Kling", "Runway", "Replicate", "ElevenLabs", "Sync.so", "Soundverse"].map((tool, i) => (
+                    <span key={i} style={{ fontSize: 10, color: i === 0 ? "#050508" : "rgba(255,255,255,0.72)", background: i === 0 ? "#38bdf8" : "rgba(255,255,255,0.075)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "6px 10px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>{tool}</span>
+                  ))}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(125px,1fr))", gap: 10 }}>
+                  {commandCards.map((card, i) => (
+                    <div key={card.title} style={{ position: "relative", minHeight: 120, borderRadius: 16, border: `1px solid ${card.color}44`, background: "rgba(5,5,8,0.68)", padding: 14, animation: `float-card ${5 + i * 0.45}s ease-in-out infinite`, animationDelay: `${i * 0.18}s` }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: card.color, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8 }}>{String(i + 1).padStart(2, "0")} · {card.title}</div>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.62)", lineHeight: 1.55 }}>{card.body}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ height: 46, borderRadius: 14, border: "1px solid rgba(56,189,248,0.26)", background: "rgba(56,189,248,0.06)", overflow: "hidden", position: "relative" }}>
+                  <div style={{ position: "absolute", top: 0, bottom: 0, width: "36%", background: "linear-gradient(90deg,transparent,rgba(56,189,248,0.45),transparent)", animation: "command-flow 3.8s linear infinite" }} />
+                  <div style={{ position: "relative", zIndex: 2, height: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, color: "rgba(255,255,255,0.76)", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                    Idea → Motion Asset → Sales Funnel → Multi-Platform Distribution → Revenue
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={`reveal-up d2 ${commandRef.visible ? "visible" : ""}`} style={{ display: "grid", gap: 12 }}>
+              {[
+                { k: "10", v: "visual lanes live now", c: "#38bdf8" },
+                { k: "20+", v: "platform destinations", c: "#c9a84c" },
+                { k: "1", v: "video can become a full campaign", c: "#4ade80" },
+                { k: "24/7", v: "machine built to ship", c: "#fb923c" },
+              ].map((item, i) => (
+                <div key={item.v} style={{ borderRadius: 18, border: `1px solid ${item.c}36`, background: "rgba(255,255,255,0.035)", padding: "20px 18px" }}>
+                  <div style={{ fontFamily: "Playfair Display, serif", fontSize: 38, fontWeight: 800, color: item.c, lineHeight: 1 }}>{item.k}</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.52)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginTop: 6 }}>{item.v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── PLATFORM UNIVERSE ── */}
+      <div ref={universeRef.ref} style={{ position: "relative", zIndex: 1, padding: "78px 20px 70px", borderTop: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
+        <div style={{ maxWidth: 1060, margin: "0 auto" }}>
+          <div className={`reveal-up ${universeRef.visible ? "visible" : ""}`} style={{ textAlign: "center", marginBottom: 38 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "#38bdf8", marginBottom: 10 }}>THE PLATFORM UNIVERSE</p>
+            <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(28px,7vw,48px)", fontWeight: 800, color: "#fff", lineHeight: 1.08, marginBottom: 12 }}>Every option imaginable, built around video first.</h2>
+            <p style={{ fontSize: 15, color: "rgba(255,255,255,0.52)", lineHeight: 1.7, maxWidth: 700, margin: "0 auto" }}>
+              The page now opens doors instead of ending the conversation. Each lane shows a different world the infrastructure can power, while the moving distribution rail proves the same asset can become an entire campaign.
+            </p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 14, marginBottom: 34 }}>
+            {platformUniverse.map((card, i) => (
+              <div key={card.title} className={`reveal-up ${universeRef.visible ? "visible" : ""}`} style={{ position: "relative", minHeight: 260, borderRadius: 20, overflow: "hidden", border: `1px solid ${card.tone}36`, background: "rgba(255,255,255,0.035)", transitionDelay: `${i * 0.06}s` }}>
+                {card.videoSrc ? (
+                  <video autoPlay muted loop playsInline preload="metadata" poster={card.poster} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.78 }}>
+                    <source src={card.videoSrc} type="video/mp4" />
+                  </video>
+                ) : (
+                  <img src={card.poster} alt={card.title} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.62 }} />
+                )}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(5,5,8,0.18),rgba(5,5,8,0.92))" }} />
+                <div style={{ position: "absolute", top: 12, left: 12, background: "rgba(5,5,8,0.72)", border: `1px solid ${card.tone}55`, color: card.tone, borderRadius: 999, padding: "5px 10px", fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase" }}>{card.tag}</div>
+                <div style={{ position: "absolute", left: 14, right: 14, bottom: 14 }}>
+                  <div style={{ fontFamily: "Playfair Display, serif", fontSize: 22, color: "#fff", fontWeight: 800, lineHeight: 1.05 }}>{card.title}</div>
+                  <div style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.52)", lineHeight: 1.5 }}>A different visual world the platform can generate, package, and monetize.</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className={`reveal-up d2 ${universeRef.visible ? "visible" : ""}`} style={{ borderRadius: 20, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", overflow: "hidden", padding: "18px 0" }}>
+            <div style={{ padding: "0 18px 14px", display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.72)", letterSpacing: "0.14em", textTransform: "uppercase" }}>Distribution rail</div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.38)" }}>One source video becomes a full attention system.</div>
+            </div>
+            <div style={{ overflow: "hidden" }}>
+              <div style={{ display: "flex", gap: 10, width: "max-content", animation: "rail-scroll 30s linear infinite", paddingLeft: 18 }}>
+                {[...distributionSteps, ...distributionSteps].map((step, i) => (
+                  <div key={`${step}-${i}`} style={{ minWidth: 150, borderRadius: 14, border: "1px solid rgba(56,189,248,0.22)", background: "linear-gradient(145deg,rgba(56,189,248,0.10),rgba(255,255,255,0.035))", padding: "14px 16px" }}>
+                    <div style={{ fontSize: 9, color: "#38bdf8", fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase" }}>Output {String((i % distributionSteps.length) + 1).padStart(2, "0")}</div>
+                    <div style={{ fontSize: 14, color: "#fff", fontWeight: 700, marginTop: 5 }}>{step}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -344,7 +480,7 @@ export default function Home() {
             <ArsenalCard icon="👑" badge="REPLICATE · FLUX" badgeColor="#c9a84c" title="Clone Command" subtitle="Your AI twin, on autopilot." subtitleColor="#c9a84c" description="Train your custom LoRA. Generate on-brand images and videos of yourself in any scene — crimson suit to beach shoot — without a camera." cta="Open Clone Lab →" href="/clone-lab" />
           </div>
           <div className={`reveal-up d1 ${arsenalRef.visible ? "visible" : ""}`}>
-            <ArsenalCard icon="🎬" badge="EPISODE PIPELINE" badgeColor="#38bdf8" title="Hollywood Replacement" subtitle="5-scene episodes. FFmpeg stitch. Download ready." subtitleColor="#38bdf8" description="Write a concept. AI writes the script. Pollo renders each scene. FFmpeg stitches with music and transitions. You get a finished MP4 — not 5 raw clips." cta="Open Hollywood →" href="/hollywood-replacement" />
+            <ArsenalCard icon="🎬" badge="EPISODE PIPELINE" badgeColor="#38bdf8" title="Hollywood Replacement" subtitle="5-scene episodes. FFmpeg stitch. Download ready." subtitleColor="#38bdf8" description="Write a concept. AI writes the script. Polla renders each scene. FFmpeg stitches with music and transitions. You get a finished MP4 — not 5 raw clips." cta="Open Hollywood →" href="/hollywood-replacement" />
           </div>
           <div className={`reveal-up d2 ${arsenalRef.visible ? "visible" : ""}`}>
             <ArsenalCard icon="👗" badge="12 MODES" badgeColor="#4ade80" title="Apparel Lab" subtitle="Design. Simulate. Cost. Drop." subtitleColor="#4ade80" description="12 production modes: AI garment generation, fabric physics simulation, pattern studio, cost engine, tech pack PDF export, POD integration." cta="Open Apparel Lab →" href="/apparel-lab" />
@@ -355,13 +491,13 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── CLONE AMBASSADOR ── */}
+      {/* ── CLONE LAB AS ONE LANE ── */}
       <div ref={cloneRef.ref} style={{ position: "relative", zIndex: 1, padding: "72px 20px 64px", borderTop: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
         <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: 32, alignItems: "center" }}>
           {/* KingCam video panel — plays the clone drop video */}
           <div className={`reveal-up ${cloneRef.visible ? "visible" : ""}`} style={{ flex: "0 0 auto", width: "min(280px,90vw)" }}>
             <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(201,168,76,0.3)", background: "linear-gradient(160deg,#1a1a2e 0%,#0d0d14 100%)", aspectRatio: "3/4", position: "relative" }}>
-              {/* Real KingCam video as clone ambassador visual */}
+              {/* KingCam remains the operator proof point, not the whole homepage narrative. */}
               <video
                 autoPlay
                 muted
@@ -387,12 +523,12 @@ export default function Home() {
 
           {/* Copy */}
           <div className={`reveal-up d1 ${cloneRef.visible ? "visible" : ""}`} style={{ flex: "1 1 260px", minWidth: 0 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "#38bdf8", marginBottom: 14 }}>CLONE AMBASSADOR</p>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "#38bdf8", marginBottom: 14 }}>CLONE LAB · ONE POWER LANE</p>
             <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(24px,6vw,38px)", fontWeight: 800, lineHeight: 1.1, marginBottom: 16 }}>
-              Your Clone. <span style={{ color: "#38bdf8" }}>Your Voice.</span> <span style={{ color: "#c9a84c" }}>Your Empire.</span>
+              Your clone is one lane. <span style={{ color: "#38bdf8" }}>The platform</span> is the whole empire.
             </h2>
             <p style={{ fontSize: 14, color: "rgba(255,255,255,0.58)", lineHeight: 1.7, marginBottom: 24 }}>
-              Train your personal AI twin on CreatorVault. Your clone writes in your voice, renders in your style, and ships content while you sleep. No cameras. No crew. No excuses.
+              Clone Lab proves what the infrastructure can do with identity, voice, style, and motion, but it is only one part of the system. The bigger promise is that CreatorVault can turn any brand lane into video-first content, packaged campaigns, and monetization paths.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px", marginBottom: 28 }}>
               {["LoRA training on 20+ images","Voice cloning via ElevenLabs","On-demand image + video generation","Brand-locked prompts + style presets"].map((feat, i) => (
@@ -406,7 +542,7 @@ export default function Home() {
             </div>
             <Link href="/clone-lab">
               <button style={{ background: "#38bdf8", color: "#050508", border: "none", borderRadius: 8, padding: "13px 28px", fontSize: 13, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", cursor: "pointer" }}>
-                BUILD YOUR CLONE →
+                OPEN CLONE LAB →
               </button>
             </Link>
           </div>

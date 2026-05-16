@@ -1,5 +1,7 @@
 import mysql from "mysql2/promise";
 
+import { callTelegramApiWithGuard } from "./telegramOutboundGuard";
+
 const DB_URL = process.env.DATABASE_URL;
 const FRONTEND = (process.env.VITE_APP_URL || process.env.APP_URL || "https://creatorvault.live").replace(/\/$/, "");
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
@@ -111,23 +113,23 @@ async function findTelegramSubscriber(conn: mysql.Connection, fanId?: number | n
 
 async function sendTelegramRecoveryMessage(chatId: string, text: string, recovery: string) {
   if (!BOT_TOKEN) return { attempted: false, ok: false, reason: "telegram_bot_token_not_configured" };
-  const resp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const data = await callTelegramApiWithGuard({
+    botToken: BOT_TOKEN,
+    method: "sendMessage",
+    body: {
       chat_id: chatId,
       text,
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [[{ text: "Return to checkout", url: recovery }]],
       },
-    }),
-  });
-  const data = await resp.json() as { ok?: boolean; description?: string; result?: { message_id?: number } };
+    },
+    context: "abandonedCheckoutRecovery.sendTelegramRecoveryMessage",
+  }) as { ok?: boolean; description?: string; result?: { message_id?: number } };
   return {
     attempted: true,
     ok: Boolean(data.ok),
-    reason: data.ok ? "sent" : data.description || `telegram_http_${resp.status}`,
+    reason: data.ok ? "sent" : data.description || "telegram_guard_blocked_or_api_error",
     messageId: data.result?.message_id,
   };
 }

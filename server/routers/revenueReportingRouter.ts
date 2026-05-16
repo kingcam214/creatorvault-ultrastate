@@ -6,6 +6,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import { db } from "../db";
 import { eq, desc, gte, sql, and } from "drizzle-orm";
+import { callTelegramApiWithGuard } from "../services/telegramOutboundGuard";
 
 export const revenueReportingRouter = router({
 
@@ -216,8 +217,12 @@ export const revenueReportingRouter = router({
       // Telegram check
       if (process.env.TELEGRAM_BOT_TOKEN) {
         try {
-          const res = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/getMe`);
-          const data = await res.json();
+          const data = await callTelegramApiWithGuard({
+            botToken: process.env.TELEGRAM_BOT_TOKEN,
+            method: "getMe",
+            context: "revenueReportingRouter.telegramStatusCheck",
+            allowReadOnly: true,
+          }) as any;
           checks.telegramBot = data.ok;
           if (!data.ok) errors.telegramBot = data.description;
         } catch (e: any) {

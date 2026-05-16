@@ -21,9 +21,9 @@
 import mysql2 from "mysql2/promise";
 import crypto from "crypto";
 import OpenAI from "openai";
+import { callTelegramApiWithGuard } from "./telegramOutboundGuard";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
-const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 const DEFAULT_CHANNEL_CHAT_ID = "-1003749459281"; // CreatorVault_Free
 const BASE_URL = process.env.APP_URL || "https://creatorvault.live";
 
@@ -149,12 +149,12 @@ async function sendChannelDrop(
     };
   }
 
-  const res = await fetch(`${TG_API}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json() as any;
+  const data = await callTelegramApiWithGuard({
+    botToken: BOT_TOKEN,
+    method: "sendMessage",
+    body,
+    context: "telegramDailyDropEngine.sendChannelDrop",
+  }) as any;
 
   if (data.ok) {
     return { ok: true, messageId: data.result.message_id };

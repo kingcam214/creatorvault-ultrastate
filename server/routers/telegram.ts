@@ -12,6 +12,7 @@ import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { getCreatorBalance } from "../db-vaultlive";
 import { ENV } from "../_core/env";
+import { callTelegramApiWithGuard } from "../services/telegramOutboundGuard";
 
 const TELEGRAM_BOT_TOKEN = ENV.telegramBotToken;
 const FRONTEND_URL = process.env.VITE_FRONTEND_FORGE_API_URL?.replace('/api', '') || 'http://localhost:3000';
@@ -35,23 +36,16 @@ const TelegramWebhookSchema = z.object({
 });
 
 async function sendTelegramMessage(chatId: number, text: string) {
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  return callTelegramApiWithGuard({
+    botToken: TELEGRAM_BOT_TOKEN,
+    method: "sendMessage",
+    body: {
       chat_id: chatId,
       text,
-      parse_mode: 'Markdown',
-    }),
+      parse_mode: "Markdown",
+    },
+    context: "telegramRouter.commandReply",
   });
-
-  if (!response.ok) {
-    console.error('Failed to send Telegram message:', await response.text());
-  }
-  
-  return response.json();
 }
 
 export const telegramRouter = router({
@@ -136,23 +130,22 @@ export const telegramRouter = router({
     .input(z.object({ url: z.string().url() }))
     .mutation(async ({ input }) => {
       const webhookUrl = `${input.url}/api/trpc/telegram.webhook`;
-      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`;
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: webhookUrl }),
+      return callTelegramApiWithGuard({
+        botToken: TELEGRAM_BOT_TOKEN,
+        method: "setWebhook",
+        body: { url: webhookUrl },
+        context: "telegramRouter.setWebhook",
       });
-
-      const result = await response.json();
-      return result;
     }),
 
   // Get webhook info (for debugging)
   getWebhookInfo: protectedProcedure
     .query(async () => {
-      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo`;
-      const response = await fetch(url);
-      return response.json();
+      return callTelegramApiWithGuard({
+        botToken: TELEGRAM_BOT_TOKEN,
+        method: "getWebhookInfo",
+        context: "telegramRouter.getWebhookInfo",
+        allowReadOnly: true,
+      });
     }),
 });

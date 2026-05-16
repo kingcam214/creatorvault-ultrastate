@@ -20,9 +20,9 @@
 import mysql2 from "mysql2/promise";
 import crypto from "crypto";
 import OpenAI from "openai";
+import { callTelegramApiWithGuard } from "./telegramOutboundGuard";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
-const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 const BASE_URL = process.env.APP_URL || "https://creatorvault.live";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -91,10 +91,10 @@ async function sendReactivationDM(params: {
 }): Promise<{ ok: boolean; messageId?: number; error?: string }> {
   const text = `${params.copy.subject}\n\n${params.copy.body}\n\n${params.copy.trackingHook} — ${params.copy.cta}:\n${params.trackingUrl}`;
 
-  const res = await fetch(`${TG_API}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const data = await callTelegramApiWithGuard({
+    botToken: BOT_TOKEN,
+    method: "sendMessage",
+    body: {
       chat_id: String(params.telegramUserId),
       text,
       parse_mode: "Markdown",
@@ -104,10 +104,9 @@ async function sendReactivationDM(params: {
           { text: "Unlock Now", url: params.trackingUrl }
         ]]
       }
-    }),
-  });
-
-  const data = await res.json() as any;
+    },
+    context: "telegramBuyerReactivation.sendReactivationDM",
+  }) as any;
   if (data.ok) {
     return { ok: true, messageId: data.result.message_id };
   }

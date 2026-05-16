@@ -1,0 +1,527 @@
+# Root Cause Trace: Posting + Homepage Rollback
+Generated: 2026-05-16T01:51:52+00:00
+
+## Git status
+ [31mM[m pnpm-lock.yaml
+ [31mM[m server/_core/index.ts
+ [31mM[m server/_core/stripeWebhook.ts
+ [31mM[m server/services/challengeEndToEndExecutor.ts
+ [31mM[m server/services/telegramMoneyLoop.ts
+ [31mM[m server/services/vaultxAutonomousAcquisitionOperator.ts
+ [31mM[m server/telegram-webhook.ts
+[31m??[m artifacts/
+[31m??[m scripts/activate-princesa-live-system.cjs
+[31m??[m scripts/build-vaultx-hype-assets.py
+[31m??[m scripts/build-vaultx-premium-assets.py
+[31m??[m scripts/launch-vaultx-live-from-history.mjs
+[31m??[m scripts/repair-vaultx-telemetry-dryrun.mjs
+[31m??[m scripts/run-kingcam-dryrun.ts
+[31m??[m scripts/run-kingcam-live-telegram-local.ts
+[31m??[m scripts/run-vaultx-5k-challenge-promo.mjs
+[31m??[m scripts/run-vaultx-visual-drop-sequence.mjs
+[31m??[m server/services/liveMoneySprintTelemetry.ts
+
+## Recent commits touching homepage/app/video files
+[33m821bc35[m[33m ([m[1;36mHEAD -> [m[1;32mpr-3[m[33m, [m[1;31morigin/challenge-e2e-revenue-executor[m[33m)[m Add end-to-end challenge revenue executor
+[33mb2f8237[m auto-sync: challengeAutomationRouter.ts,challengeAutomationRouter.ts.bak.timeout_patch_20260515050043, [2026-05-15 05:01:31] (2 files)
+[33m51c9965[m auto-sync: challengeAutomationRouter.ts, [2026-05-15 04:46:31] (1 files)
+[33m80daaf5[m auto-sync: challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929, [2026-05-15 04:40:26] (1 files)
+[33me6c70c8[m Activate VaultX autonomous challenge agents
+[33mda49c7a[m Build VaultX autonomous acquisition operator
+[33mf3939de[m auto-sync: creatorOutreachRouter.ts, [2026-05-15 00:18:00] (1 files)
+[33ma2d78cd[m auto-sync: creatorOutreachRouter.ts, [2026-05-15 00:08:53] (1 files)
+[33m07a17d7[m auto-sync: creatorOutreachRouter.ts, [2026-05-14 23:59:47] (1 files)
+[33m85078bb[m auto-sync: creatorOutreachRouter.ts, [2026-05-14 23:56:44] (1 files)
+[33mce3985e[m auto-sync: creatorOutreachRouter.ts, [2026-05-14 23:50:39] (1 files)
+[33m0baa2c4[m auto-sync: onboardingV2Router.ts, [2026-05-14 23:09:16] (1 files)
+[33mb021765[m auto-sync: OnboardingV2.tsx, [2026-05-14 23:00:09] (1 files)
+[33mcdc95e2[m auto-sync: PresentationBuilder.tsx,PresentationEmpire.tsx,PresentationEmpireCockpit.tsx,agentTelemetryRouter.ts,aiEmpireRouter.ts, [2026-05-14 22:22:47] (10 files)
+[33m7e2be2c[m Fix Agent Roster stop status for production schema
+[33mfd3b9d2[m Fix AI challenge report schema compatibility
+[33m8cf2ca8[m Fix AI agent report persistence schema
+[33m05523d6[m Repair AI challenge agents without placeholders
+[33m45356be[m auto-sync: .creatorvault_activation_war_room_source_inventory.ts,.creatorvault_activation_war_room_verify.ts,.creatorvault_daily_revenue_20_feed.ts,.creatorvault_daily_revenue_engine_verify.ts,backups, [2026-05-14 19:09:58] (36 files)
+[33m2ab085f[m Separate VaultX challenge UI from empire challenge
+[33m4087295[m Fix Telegram drop message event type
+[33m5a408d2[m Fix Telegram money loop distribution asset type
+[33md6b73c1[m Fix Telegram drop asset type enum
+[33m66f3830[m Fix Telegram money-loop text drop asset URL
+[33mff7ca54[m Activate Telegram revenue drops from agents
+[33m6b70597[m feat(clone-lab): 3D Clone Training Lab — 7 tables, 8 services, GPU-aware training, evaluation arena, Three.js/R3F UI
+[33me772c31[m fix: NULL buyer_telegram_id — auto-lookup from users table + connect token fallback
+[33maa77a98[m feat(reactivation): buyer reactivation cron, 3x/day drop schedule, scheduleDrop + listDrops + triggerReactivation tRPC procedures
+[33me479cd4[m feat(kingcam): ElevenLabs TTS direct integration, Pollo media factory, ESM env fix
+[33mce85e45[m fix(telegram): daily drop engine — correct column names (ppv_price, telegram_chat_id, campaign_mode, channel_identity_id, click_count, conversion_count)
+[33m8664661[m feat(telegram): VIP upsell loop closed — /start deep link, buyer ladder, whale metrics, invite links, daily drop engine
+[33m70bab55[m feat(telegram): VIP upsell loop - invite link, DM, whale_metrics, segment ladder
+[33m369cc76[m feat(telegram): AI Drop Machine v1 — createAIDrop, sendDropToChannel, attribution, VIP upsell hook
+[33m771e24f[m feat(telegram): inline button PPV flow, funnel router, webhook improvements
+[33mddc3f80[m fix(adultSalesBot): state machine, LLM model, distribution_jobs schema
+[33mb4c2a69[m fix: attribution click_count async fix, distribution_jobs schema columns added
+[33m4ca4480[m feat: distribution hub foundation - 9 tables, distributionRouter, tracking redirect, attribution events, VaultXDistribution UI
+[33mf86d0cf[m fix: getForYouFeed — video_url->uncensored_url, like_count->purchase_count column fixes
+[33m6128263[m fix: Pollo+Replicate+PPV progress UX — duration->length, clientBundleId sync, Real-ESRGAN input fix, 7-stage progress panel
+[33ma5de0c8[m fix: include all router and service changes from this session
+
+## Candidate homepage route/page files
+client/src/App.tsx
+client/src/components/feedback/index.ts
+client/src/index.css
+client/src/pages/CreatorHome.tsx
+client/src/pages/EmmaHome.tsx
+client/src/pages/EmmaNetworkHome.tsx
+client/src/pages/Home.tsx
+client/src/pages/KingHome.tsx
+client/src/pages/greatest-show/index.tsx
+
+## Homepage/video keyword scan
+client/src/App.tsx:87:// import KingCamClone from "./pages/KingCamClone";
+client/src/App.tsx:249:import KingCamClone from "./pages/KingCamClone";
+client/src/App.tsx:405:import CloneEmpire from "./pages/CloneEmpire";
+client/src/App.tsx:406:import CloneRenderStudio from "./pages/CloneRenderStudio";
+client/src/App.tsx:457:import CloneCommand from "./pages/king/CloneCommand";
+client/src/App.tsx:458:import CloneStudio from "./pages/king/CloneStudio";
+client/src/App.tsx:459:import CloneTrainingLab from "./pages/king/CloneTrainingLab";
+client/src/App.tsx:695:      <Route path={"/kingcam-clone"} component={KingCamClone} />
+client/src/App.tsx:739:      <Route path="/clone-empire-home" component={CloneEmpire} />
+client/src/App.tsx:740:      <Route path="/clone/render-studio" component={CloneRenderStudio} />
+client/src/App.tsx:791:      <Route path="/king/clone-command" component={CloneCommand} />
+client/src/App.tsx:792:      <Route path="/king/clone-studio" component={CloneStudio} />
+client/src/App.tsx:793:      <Route path="/king/clone-training-lab" component={CloneTrainingLab} />
+client/src/App.tsx.bak_preimports:86:// import KingCamClone from "./pages/KingCamClone";
+client/src/App.tsx.bak_preimports:245:import KingCamClone from "./pages/KingCamClone";
+client/src/App.tsx.bak_preimports:613:      <Route path={"/kingcam-clone"} component={KingCamClone} />
+client/src/App.tsx.bak_preorphans:86:// import KingCamClone from "./pages/KingCamClone";
+client/src/App.tsx.bak_preorphans:245:import KingCamClone from "./pages/KingCamClone";
+client/src/App.tsx.bak_preorphans:614:      <Route path={"/kingcam-clone"} component={KingCamClone} />
+client/src/App.tsx.bak_prerestore:86:// import KingCamClone from "./pages/KingCamClone";
+client/src/App.tsx.bak_prerestore:441:      {/* <Route path={"/kingcam-clone"} component={KingCamClone} /> */}
+client/src/pages/CloneEmpire.tsx:3: * CLONE EMPIRE — /king/clone-empire
+client/src/pages/CloneEmpire.tsx:4: * The most powerful AI clone creation, training, and monetization vertical.
+client/src/pages/CloneEmpire.tsx:103:          {video.title || video.context || "Clone Video"}
+client/src/pages/CloneEmpire.tsx:122:export default function CloneEmpire() {
+client/src/pages/CloneEmpire.tsx:164:  const generateTalkingHead = trpc.cloneEmpire.generateTalkingHeadWithScript.useMutation();
+client/src/pages/CloneEmpire.tsx:165:  const generateFullBody = trpc.cloneEmpire.generateFullBodyVideo.useMutation();
+client/src/pages/CloneEmpire.tsx:166:  const generateImage = trpc.cloneEmpire.generateCloneImage.useMutation();
+client/src/pages/CloneEmpire.tsx:167:  const trainClone = trpc.cloneEmpire.trainClone.useMutation();
+client/src/pages/CloneEmpire.tsx:170:  const { data: statsData, refetch: refetchStats } = trpc.cloneEmpire.getCloneStats.useQuery(undefined, { retry: false });
+client/src/pages/CloneEmpire.tsx:171:  const { data: trainingJobs, refetch: refetchJobs } = trpc.cloneEmpire.listTrainingJobs.useQuery(undefined, { retry: false });
+client/src/pages/CloneEmpire.tsx:174:  const { data: cloneVideos, refetch: refetchVideos } = trpc.cloneEmpire.listCloneContent.useQuery({ limit: 50, offset: 0, contentType: "all" }, { retry: false });
+client/src/pages/CloneEmpire.tsx:177:  // Also get existing clone videos from the main clone lab
+client/src/pages/CloneEmpire.tsx:179:  const { data: existingVideos } = trpc.cloneLab.listCloneVideos.useQuery({ limit: 50, offset: 0 }, { retry: false });
+client/src/pages/CloneEmpire.tsx:182:    return <LoadingSpinner message="Loading Clone Empire..." />;
+client/src/pages/CloneEmpire.tsx:189:        description="Please sign in to access Clone Empire."
+client/src/pages/CloneEmpire.tsx:259:      const result = await trainClone.mutateAsync({
+client/src/pages/CloneEmpire.tsx:279:    ...(cloneVideos?.items || []).filter((v: any) => v.video_url),
+client/src/pages/CloneEmpire.tsx:294:                Clone Empire
+client/src/pages/CloneEmpire.tsx:360:                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Clone Video Studio</h2>
+client/src/pages/CloneEmpire.tsx:486:                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Clone Image Generator</h2>
+client/src/pages/CloneEmpire.tsx:514:                  {generatingImage ? <><RefreshCw size={14} className="animate-spin" /> Generating...</> : <><Sparkles size={14} /> Generate Clone Image</>}
+client/src/pages/CloneEmpire.tsx:519:                    <img src={lastImageResult.imageUrl} alt="Generated clone" style={{ width: "100%", borderRadius: 12, objectFit: "cover" }} />
+client/src/pages/CloneEmpire.tsx:538:                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Train Your Clone Model</h2>
+client/src/pages/CloneEmpire.tsx:607:                    No training jobs yet. Start your first training run to upgrade your clone model.
+client/src/pages/CloneEmpire.tsx:639:              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Clone Video Gallery</h2>
+client/src/pages/CloneEmpire.tsx:647:                <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No clone videos yet</div>
+client/src/pages/CloneEmpire.tsx:648:                <div style={{ fontSize: 13 }}>Go to Studio and generate your first clone video</div>
+client/src/pages/CloneEmpire.tsx:666:              Schedule your clone videos for auto-posting to Instagram, TikTok, YouTube, and Twitter. Connect your social accounts to enable scheduling.
+client/src/pages/CloneEmpire.tsx:685:              { label: "Total Clone Videos", value: statsData?.videos?.total_videos || 0, icon: <Video size={20} />, color: "#D4AF37", sub: "All time" },
+client/src/pages/CloneRenderStudio.tsx:6:  { id: "talking-head", label: "Talking Head", desc: "AI clone speaks your script", icon: Mic },
+client/src/pages/CloneRenderStudio.tsx:11:export default function CloneRenderStudio() {
+client/src/pages/CloneRenderStudio.tsx:19:  const { data: history } = trpc.cloneEmpire?.listCloneVideos?.useQuery?.(undefined, { retry: false }) || { data: [] };
+client/src/pages/CloneRenderStudio.tsx:21:  const generateTalkingHead = trpc.cloneEmpire?.generateTalkingHeadWithScript?.useMutation?.({
+client/src/pages/CloneRenderStudio.tsx:26:  const generateFullBody = trpc.cloneEmpire?.generateFullBodyVideo?.useMutation?.({
+client/src/pages/CloneRenderStudio.tsx:31:  const generateImage = trpc.cloneEmpire?.generateCloneImage?.useMutation?.({
+client/src/pages/CloneRenderStudio.tsx:55:            <h1 className="text-3xl font-bold">Clone Render Studio</h1>
+client/src/pages/CloneRenderStudio.tsx:56:            <p className="text-gray-400">Generate AI clone videos with your voice and likeness</p>
+client/src/pages/CloneRenderStudio.tsx:84:                placeholder={mode === "image-to-video" ? "Describe the animation (e.g., 'person turns head and smiles')..." : "Enter what your clone will say..."}
+client/src/pages/CloneRenderStudio.tsx:119:                <><Zap className="w-5 h-5" /> Render Clone Video</>
+client/src/pages/CloneRenderStudio.tsx:127:                  <span className="font-medium">AI is generating your clone video...</span>
+client/src/pages/CloneRenderStudio.tsx:174:                        <p className="text-sm font-medium truncate">{item.title || `Clone Video ${i + 1}`}</p>
+client/src/pages/CloneRenderStudio.tsx:182:                <p className="text-gray-600 text-sm">No renders yet. Create your first clone video above.</p>
+client/src/pages/CreatorHome.tsx:19:    { label: "KingCam Engine", href: "/king/engine", icon: "🎥", desc: "Clone video studio" },
+client/src/pages/Dashboard.tsx:170:    label: "KingCam AI Clone",
+client/src/pages/Dashboard.tsx:173:    description: "Chat with your AI clone",
+client/src/pages/Dashboard.tsx:174:    href: "/kingcam-clone",
+client/src/pages/DubbingAI.tsx:103:              { step: "3", title: "AI Dubs It", desc: "AI translates and clones the voice in the new language" },
+client/src/pages/Home.tsx:152:  const cloneRef = useScrollReveal();
+client/src/pages/Home.tsx:185:    { label: "Brand Story", badge: "KINGCAM · REPLICATE", videoSrc: "/videos/kingcam-clone-1.mp4" },
+client/src/pages/Home.tsx:187:    { label: "Clone Drop", badge: "KINGCAM · FLUX LORA", videoSrc: "/videos/kingcam-clone-2.mp4" },
+client/src/pages/Home.tsx:190:    { label: "HeroCam", badge: "KINGCAM · POLLO AI", videoSrc: "/videos/kingcam-hero-cam.mp4" },
+client/src/pages/Home.tsx:229:          <source src="/videos/kingcam-hero-cam.mp4" type="video/mp4" />
+client/src/pages/Home.tsx:344:            <ArsenalCard icon="👑" badge="REPLICATE · FLUX" badgeColor="#c9a84c" title="Clone Command" subtitle="Your AI twin, on autopilot." subtitleColor="#c9a84c" description="Train your custom LoRA. Generate on-brand images and videos of yourself in any scene — crimson suit to beach shoot — without a camera." cta="Open Clone Lab →" href="/clone-lab" />
+client/src/pages/Home.tsx:359:      <div ref={cloneRef.ref} style={{ position: "relative", zIndex: 1, padding: "72px 20px 64px", borderTop: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
+client/src/pages/Home.tsx:361:          {/* KingCam video panel — plays the clone drop video */}
+client/src/pages/Home.tsx:362:          <div className={`reveal-up ${cloneRef.visible ? "visible" : ""}`} style={{ flex: "0 0 auto", width: "min(280px,90vw)" }}>
+client/src/pages/Home.tsx:364:              {/* Real KingCam video as clone ambassador visual */}
+client/src/pages/Home.tsx:373:                <source src="/videos/kingcam-clone-1.mp4" type="video/mp4" />
+client/src/pages/Home.tsx:389:          <div className={`reveal-up d1 ${cloneRef.visible ? "visible" : ""}`} style={{ flex: "1 1 260px", minWidth: 0 }}>
+client/src/pages/Home.tsx:392:              Your Clone. <span style={{ color: "#38bdf8" }}>Your Voice.</span> <span style={{ color: "#c9a84c" }}>Your Empire.</span>
+client/src/pages/Home.tsx:395:              Train your personal AI twin on CreatorVault. Your clone writes in your voice, renders in your style, and ships content while you sleep. No cameras. No crew. No excuses.
+client/src/pages/Home.tsx:407:            <Link href="/clone-lab">
+client/src/pages/InfluencerOnboarding.tsx:131:              <CardTitle className="text-2xl text-white">Let's Get Started</CardTitle>
+client/src/pages/KingCamClone.tsx:9:export default function KingCamClone() {
+client/src/pages/KingCamClone.tsx:16:  const { data: clones, refetch } = trpc.kingcamClone?.getKingcamClones?.useQuery?.(undefined, { retry: false }) || { data: [], refetch: () => {} };
+client/src/pages/KingCamClone.tsx:17:  const createClone = trpc.kingcamClone?.createKingcamClone?.useMutation?.({ onSuccess: () => { refetch(); setShowCreate(false); setName(""); } }) || { mutate: () => {}, isPending: false };
+client/src/pages/KingCamClone.tsx:18:  const trainClone = trpc.kingcamClone?.trainKingcamClone?.useMutation?.() || { mutate: () => {}, isPending: false };
+client/src/pages/KingCamClone.tsx:31:              <h1 className="text-3xl font-bold text-yellow-400">KingCam Clone</h1>
+client/src/pages/KingCamClone.tsx:32:              <p className="text-gray-400">Deploy AI-powered creator clones across every platform</p>
+client/src/pages/KingCamClone.tsx:36:            <Plus className="w-4 h-4" /> Create Clone
+client/src/pages/KingCamClone.tsx:43:            { label: "Active Clones", value: (clones as any)?.clones?.length || 0, icon: Copy, color: "text-yellow-400" },
+client/src/pages/KingCamClone.tsx:46:            { label: "Revenue Multiplier", value: `${((clones as any)?.clones?.length || 0) + 1}x`, icon: TrendingUp, color: "text-green-400" },
+client/src/pages/KingCamClone.tsx:56:        {/* Create Clone Form */}
+client/src/pages/KingCamClone.tsx:59:            <h2 className="text-xl font-bold text-yellow-400 mb-5">Configure New Clone</h2>
+client/src/pages/KingCamClone.tsx:62:                <label className="text-sm text-gray-400 mb-1 block">Clone Name</label>
+client/src/pages/KingCamClone.tsx:81:              <button onClick={() => createClone.mutate?.({ name, style, platforms: selectedPlatforms })} disabled={!name || createClone.isPending} className="w-full bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-black font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+client/src/pages/KingCamClone.tsx:82:                {createClone.isPending ? "Creating..." : <><Zap className="w-4 h-4" /> Deploy Clone</>}
+client/src/pages/KingCamClone.tsx:88:        {/* Clone List */}
+client/src/pages/KingCamClone.tsx:89:        {clones && (clones as any)?.clones?.length > 0 ? (
+client/src/pages/KingCamClone.tsx:91:            <h2 className="text-lg font-semibold text-gray-300">Your Active Clones</h2>
+client/src/pages/KingCamClone.tsx:92:            {((clones as any)?.clones ?? []).map((clone: any) => (
+client/src/pages/KingCamClone.tsx:93:              <div key={clone.id} className="bg-white/5 border border-white/10 hover:border-yellow-500/20 rounded-2xl p-5 transition-all">
+client/src/pages/KingCamClone.tsx:97:                      {clone.name?.[0] || "K"}
+client/src/pages/KingCamClone.tsx:100:                      <p className="font-bold text-lg">{clone.name}</p>
+client/src/pages/KingCamClone.tsx:101:                      <p className="text-gray-400 text-sm">Style: {clone.style} · {clone.platforms?.join(", ")}</p>
+client/src/pages/KingCamClone.tsx:105:                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${clone.status === "active" ? "bg-green-500/20 text-green-400" : clone.status === "training" ? "bg-yellow-500/20 text-yellow-400" : "bg-gray-500/20 text-gray-400"}`}>
+client/src/pages/KingCamClone.tsx:106:                      {clone.status || "active"}
+client/src/pages/KingCamClone.tsx:108:                    <button onClick={() => trainClone.mutate?.({ cloneId: clone.id, content: "latest" })} className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-1">
+client/src/pages/KingCamClone.tsx:111:                    <button onClick={() => navigate(`/clone-empire-home`)} className="bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-1">
+client/src/pages/KingCamClone.tsx:124:            <h2 className="text-xl font-bold text-yellow-400 mb-2">No Clones Yet</h2>
+client/src/pages/KingCamClone.tsx:125:            <p className="text-gray-400 mb-6">Create your first AI clone to multiply your presence across every platform simultaneously.</p>
+client/src/pages/KingCamClone.tsx:140:              <Plus className="w-4 h-4" /> Create Your First Clone
+client/src/pages/KingCamClone.tsx:147:          <button onClick={() => navigate("/clone-empire-home")} className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-yellow-500/30 rounded-xl p-4 flex items-center gap-3 transition-all">
+client/src/pages/KingCamClone.tsx:150:              <p className="font-semibold">Clone Empire Home</p>
+client/src/pages/KingCamClone.tsx:155:          <button onClick={() => navigate("/king/clone-studio")} className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-yellow-500/30 rounded-xl p-4 flex items-center gap-3 transition-all">
+client/src/pages/KingCamClone.tsx:158:              <p className="font-semibold">Clone Studio</p>
+client/src/pages/KingCamClone.tsx:159:              <p className="text-gray-500 text-xs">Advanced clone settings</p>
+client/src/pages/KingCamCommandCenter.tsx:150:  const [empireContentUrl, setEmpireContentUrl] = useState("https://creatorvault.live");
+client/src/pages/KingCamCommandCenter.tsx:192:  const audienceClone = trpc.aiAudienceClone.predictAudienceDesires.useMutation({
+client/src/pages/KingCamCommandCenter.tsx:193:    onSuccess: (data) => setResult("audienceClone", { status: "done", output: data }),
+client/src/pages/KingCamCommandCenter.tsx:194:    onError: (e) => setResult("audienceClone", { status: "error", output: e }),
+client/src/pages/KingCamCommandCenter.tsx:197:  const cloneArmy = trpc.aiCloneArmy.createWritingClone.useMutation({
+client/src/pages/KingCamCommandCenter.tsx:198:    onSuccess: (data) => setResult("cloneArmy", { status: "done", output: data }),
+client/src/pages/KingCamCommandCenter.tsx:199:    onError: (e) => setResult("cloneArmy", { status: "error", output: e }),
+client/src/pages/KingCamCommandCenter.tsx:368:              description="Analyzes platform data and generates your KingCam script + clone video for the week."
+client/src/pages/KingCamCommandCenter.tsx:538:            subtitle="KingCam identity, lifestyle tracking, clone army, and platform domination"
+client/src/pages/KingCamCommandCenter.tsx:613:            {/* AI Clone Army */}
+client/src/pages/KingCamCommandCenter.tsx:615:              id="cloneArmy"
+client/src/pages/KingCamCommandCenter.tsx:617:              title="AI Clone Army"
+client/src/pages/KingCamCommandCenter.tsx:618:              description="Analyzes your writing samples and creates a KingCam writing style clone profile."
+client/src/pages/KingCamCommandCenter.tsx:621:              result={getResult("cloneArmy")}
+client/src/pages/KingCamCommandCenter.tsx:623:                setResult("cloneArmy", { status: "running" });
+client/src/pages/KingCamCommandCenter.tsx:624:                cloneArmy.mutate({
+client/src/pages/KingCamCommandCenter.tsx:639:            {/* AI Audience Clone */}
+client/src/pages/KingCamCommandCenter.tsx:641:              id="audienceClone"
+client/src/pages/KingCamCommandCenter.tsx:643:              title="AI Audience Clone"
+client/src/pages/KingCamCommandCenter.tsx:647:              result={getResult("audienceClone")}
+client/src/pages/KingCamCommandCenter.tsx:649:                setResult("audienceClone", { status: "running" });
+client/src/pages/KingCamCommandCenter.tsx:650:                audienceClone.mutate({
+client/src/pages/KingCamCommandCenter.tsx:966:            KingCam Command Center · 26 VIP Agents · Owner-only access · creatorvault.live
+client/src/pages/KingCamEngine.tsx:21:  { key: "full_body", label: "Full Body Clone", icon: Video, color: "#C9A84C", desc: "Full body avatar video" },
+client/src/pages/KingCamEngine.tsx:22:  { key: "clone_image", label: "Clone Image", icon: Image, color: "#9B59B6", desc: "AI photo with your likeness" },
+client/src/pages/KingCamEngine.tsx:51:  const generateTalkingHead = trpc.cloneEmpire.generateTalkingHeadWithScript.useMutation({
+client/src/pages/KingCamEngine.tsx:60:  const generateFullBody = trpc.cloneEmpire.generateFullBodyVideo.useMutation({
+client/src/pages/KingCamEngine.tsx:69:  const generateImage = trpc.cloneEmpire.generateCloneImage.useMutation({
+client/src/pages/KingCamEngine.tsx:70:    onSuccess: () => { toast({ title: "Image Generating", description: "Clone image will be ready shortly" }); refetchVideos(); },
+client/src/pages/KingCamEngine.tsx:74:  const { data: videosData, refetch: refetchVideos } = trpc.cloneEmpire.listCloneVideos.useQuery(undefined);
+client/src/pages/KingCamEngine.tsx:77:  const { data: pollingData } = (trpc.cloneEmpire as any).getCloneVideo.useQuery(
+client/src/pages/KingCamEngine.tsx:87:        toast({ title: "Video Ready!", description: "Your clone video is ready to view" });
+client/src/pages/KingCamEngine.tsx:93:    if (outputType === "clone_image") {
+client/src/pages/KingCamEngine.tsx:211:              {outputType === "clone_image" ? (
+client/src/pages/KingCamEngine.tsx:241:            <div style={{ fontSize: 18, fontWeight: 700 }}>Clone Video Gallery</div>
+client/src/pages/KingCamEngine.tsx:250:              <div>No videos yet. Create your first clone video.</div>
+client/src/pages/OwnerCockpit.tsx:202:    { label: "KingCam Clone Lab",    desc: "AI clone generation — Kling 2.6 model",                        href: "/kingcam-clone",                      color: C.purple, icon: Zap       },
+client/src/pages/OwnerCockpit.tsx:225:    { key: "cloneEmpire",     label: "Clone Empire",     category: "AI",       status: "Live" },
+client/src/pages/OwnerCockpit.tsx:517:                { path: "/kingcam-clone",      label: "KingCam Clone",         category: "AI"      },
+client/src/pages/SocialHub.tsx:445:            placeholder="https://cdn.creatorvault.live/..."
+client/src/pages/SocialHub.tsx:648:            placeholder="https://cdn.creatorvault.live/..."
+client/src/pages/VaultX.tsx:1827:  const vaultxProfileUrl = `https://creatorvault.live/vault-x/creator/${userId}`;
+client/src/pages/VaultXChallenges.tsx:10: * and kingcam-clone-agent through fireVaultXMoneyDrop().
+client/src/pages/VaultXChallenges.tsx:232:  const verifiedVaultXAgents = ["money-follow-up-agent", "kingcam-clone-agent"];
+client/src/pages/VaultXDistribution.tsx:13: * Tracking URLs: https://creatorvault.live/r/:trackingCode
+client/src/pages/VaultXDistribution.tsx:546:    assetUrl: "https://creatorvault.live/uploads/ppv_1778107488797/teaser.mp4",
+client/src/pages/VaultXDistribution.tsx:549:    destinationUrl: "https://creatorvault.live/vaultx",
+client/src/pages/VaultXDistribution.tsx:703:            placeholder="https://creatorvault.live/uploads/..."
+client/src/pages/VaultXDistribution.tsx:722:            placeholder="https://creatorvault.live/vaultx"
+client/src/pages/VaultXStudio.tsx:2202:          { id: "voice" as const,         label: "Voice Clone",   badge: "ElevenLabs",  color: "#EC4899" },
+client/src/pages/VaultXStudio.tsx:2330:  const [activeTab, setActiveTab] = useState<"enhance"|"style-transfer"|"character"|"portrait"|"photomaker"|"velvet"|"clone">("enhance");
+client/src/pages/VaultXStudio.tsx:2350:  // KingCam clone model — fluxdevcam
+client/src/pages/VaultXStudio.tsx:2351:  const [clonePrompt, setClonePrompt] = useState("");
+client/src/pages/VaultXStudio.tsx:2352:  const [cloneOutputUrl, setCloneOutputUrl] = useState<string | null>(null);
+client/src/pages/VaultXStudio.tsx:2353:  const cloneImageMut = trpc.kingcamAI.image.generate.useMutation({
+client/src/pages/VaultXStudio.tsx:2355:      if (data.url) { setCloneOutputUrl(data.url); onOutput(data.url, "KingCam Clone Model"); toast.success("KingCam clone image ready!"); }
+client/src/pages/VaultXStudio.tsx:2357:    onError: (e) => toast.error(`Clone model: ${e.message}`),
+client/src/pages/VaultXStudio.tsx:2411:    { id: "clone" as const,          label: "Clone Model",         badge: "fluxdevcam",          color: "#8B5CF6", desc: "KingCam trained model — generate any scene with your DNA" },
+client/src/pages/VaultXStudio.tsx:3005:              <input value={mediaUrl} onChange={e => setMediaUrl(e.target.value)} placeholder="https://creatorvault.live/uploads/..." className="w-full px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
+client/src/pages/VideoLabPro.tsx:213:            RTMP: rtmp://ingest.creatorvault.live/live
+client/src/pages/WhatsAppContentGenerator.tsx:5: * Tabs: Video · Clone · Image · Voice · Copy · Schedule
+client/src/pages/WhatsAppContentGenerator.tsx:6: * All Replicate models. Multilingual. Full-body clone video. TTS.
+client/src/pages/WhatsAppContentGenerator.tsx:19:type Tab = "video" | "clone" | "image" | "voice" | "copy" | "schedule";
+client/src/pages/WhatsAppContentGenerator.tsx:40:  { value: "flux_clone", label: "KingCam Clone (Flux)", desc: "Your trained clone model" },
+client/src/pages/WhatsAppContentGenerator.tsx:162:        {(type === "video" || type === "animate" || type === "clone_video") && output.predictionId && (
+client/src/pages/WhatsAppContentGenerator.tsx:308:// ─── Clone Tab ────────────────────────────────────────────────────────────────
+client/src/pages/WhatsAppContentGenerator.tsx:309:function CloneTab() {
+client/src/pages/WhatsAppContentGenerator.tsx:314:  const [useClone, setUseClone] = useState(true);
+client/src/pages/WhatsAppContentGenerator.tsx:320:  const generateMut = trpc.whatsappContent.generateCloneVideo.useMutation();
+client/src/pages/WhatsAppContentGenerator.tsx:344:        prompt, language, motionStyle, numPoses, useCloneModel: useClone,
+client/src/pages/WhatsAppContentGenerator.tsx:358:        <h3 className="text-white font-semibold flex items-center gap-2"><Sparkles className="w-4 h-4 text-[#25d366]" /> Clone Video</h3>
+client/src/pages/WhatsAppContentGenerator.tsx:365:            <p className="text-white text-sm font-medium">KingCam Clone Model</p>
+client/src/pages/WhatsAppContentGenerator.tsx:369:            onClick={() => setUseClone(!useClone)}
+client/src/pages/WhatsAppContentGenerator.tsx:370:            className={`relative w-10 h-5 rounded-full transition-colors ${useClone ? "bg-[#25d366]" : "bg-gray-700"}`}
+client/src/pages/WhatsAppContentGenerator.tsx:372:            <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${useClone ? "left-5" : "left-0.5"}`} />
+client/src/pages/WhatsAppContentGenerator.tsx:377:      {!useClone && (
+client/src/pages/WhatsAppContentGenerator.tsx:434:        {status === "generating" ? "Starting..." : status === "polling" ? "Generating..." : "Generate Clone Visual"}
+client/src/pages/WhatsAppContentGenerator.tsx:437:      <GenerationOutput status={status} output={output} error={error} type="clone_video" />
+client/src/pages/WhatsAppContentGenerator.tsx:446:  const [model, setModel] = useState<"flux_clone" | "photomaker" | "instant_id" | "sdxl">("flux_clone");
+client/src/pages/WhatsAppContentGenerator.tsx:887:    { id: "clone", label: "Clone", icon: Sparkles },
+client/src/pages/WhatsAppContentGenerator.tsx:936:          {activeTab === "clone" && <CloneTab />}
+client/src/pages/greatest-show/LirysMissedRevenue.tsx:323:            { day: "Day 6", action: "Update your TikTok bio link to creatorvault.live/chica/8004", icon: "🔗", color: "text-cyan-400" },
+client/src/pages/greatest-show/LirysProfile.tsx:370:                    <div className="text-xs text-white/50">creatorvault.live/chica/8004</div>
+client/src/pages/king/CloneCommand.tsx:3: * CLONE COMMAND CENTER — /king/clone-command
+client/src/pages/king/CloneCommand.tsx:4: * Three-panel cinematic interface for KingCam AI clone image generation.
+client/src/pages/king/CloneCommand.tsx:35:export default function CloneCommand() {
+client/src/pages/king/CloneCommand.tsx:62:  const generateMutation = trpc.cloneCommand.generateImage.useMutation();
+client/src/pages/king/CloneCommand.tsx:64:  const saveToVaultMutation = trpc.cloneCommand.saveToVault.useMutation();
+client/src/pages/king/CloneCommand.tsx:66:  const setHeroMutation = trpc.cloneCommand.setHeroImage.useMutation();
+client/src/pages/king/CloneCommand.tsx:69:  const historyQuery = trpc.cloneCommand.getGenerationHistory.useQuery(
+client/src/pages/king/CloneCommand.tsx:75:  const statusQuery = trpc.cloneCommand.getPredictionStatus.useQuery(
+client/src/pages/king/CloneCommand.tsx:609:                Generating Your Clone...
+client/src/pages/king/CloneStudio.tsx:33:export default function CloneStudio() {
+client/src/pages/king/CloneStudio.tsx:116:          title: "Clone Studio Source",
+client/src/pages/king/CloneStudio.tsx:166:          <h1 style={{ fontFamily: "Playfair Display, serif", fontSize: 28, margin: "0 0 14px", color: C.text }}>Clone Studio</h1>
+client/src/pages/king/CloneTrainingLab.tsx:4: * Three.js / React Three Fiber — holographic clone, particle systems,
+client/src/pages/king/CloneTrainingLab.tsx:52:function HolographicClone({ active }: { active: boolean }) {
+client/src/pages/king/CloneTrainingLab.tsx:270:      <HolographicClone active={section === "overview"} />
+client/src/pages/king/CloneTrainingLab.tsx:274:      {/* Data nodes floating around the clone */}
+client/src/pages/king/CloneTrainingLab.tsx:549:  const uploadsQ = trpc.cloneTrainingLab.getUploads.useQuery(undefined, { enabled: section === "upload" });
+client/src/pages/king/CloneTrainingLab.tsx:550:  const framesQ = trpc.cloneTrainingLab.getFrames.useQuery(
+client/src/pages/king/CloneTrainingLab.tsx:554:  const datasetsQ = trpc.cloneTrainingLab.getDatasets.useQuery(undefined, { enabled: section === "dataset" });
+client/src/pages/king/CloneTrainingLab.tsx:555:  const jobsQ = trpc.cloneTrainingLab.getTrainingJobs.useQuery(undefined, { enabled: section === "training" });
+client/src/pages/king/CloneTrainingLab.tsx:556:  const modelsQ = trpc.cloneTrainingLab.getModelVersions.useQuery(undefined, { enabled: section === "registry" || section === "evaluation" || section === "promote" });
+client/src/pages/king/CloneTrainingLab.tsx:559:  const registerUpload = trpc.cloneTrainingLab.registerUpload.useMutation();
+client/src/pages/king/CloneTrainingLab.tsx:560:  const processUpload = trpc.cloneTrainingLab.processUpload.useMutation();
+client/src/pages/king/CloneTrainingLab.tsx:561:  const scoreAll = trpc.cloneTrainingLab.scoreAllFrames.useMutation();
+client/src/pages/king/CloneTrainingLab.tsx:562:  const createDataset = trpc.cloneTrainingLab.createDataset.useMutation();
+client/src/pages/king/CloneTrainingLab.tsx:563:  const buildDataset = trpc.cloneTrainingLab.buildDataset.useMutation();
+client/src/pages/king/CloneTrainingLab.tsx:564:  const generateCaptions = trpc.cloneTrainingLab.generateCaptions.useMutation();
+client/src/pages/king/CloneTrainingLab.tsx:565:  const startTraining = trpc.cloneTrainingLab.startTraining.useMutation();
+client/src/pages/king/CloneTrainingLab.tsx:566:  const promoteModel = trpc.cloneTrainingLab.promoteToProduction.useMutation();
+client/src/pages/king/CloneTrainingLab.tsx:567:  const archiveModel = trpc.cloneTrainingLab.archiveModel.useMutation();
+client/src/pages/king/CloneTrainingLab.tsx:573:  const addEval = trpc.cloneTrainingLab.addEvaluation.useMutation();
+client/src/pages/king/CloneTrainingLab.tsx:574:  const evalsQ = trpc.cloneTrainingLab.getEvaluations.useQuery(
+client/src/pages/king/CloneTrainingLab.tsx:586:        const res = await fetch("/api/upload/clone-training", {
+client/src/pages/king/CloneTrainingLab.tsx:608:    utils.cloneTrainingLab.getUploads.invalidate();
+client/src/pages/king/CloneTrainingLab.tsx:916:          <p className="text-white/40 text-sm mt-1">All KingCam clone model versions</p>
+client/src/pages/king/CloneTrainingLab.tsx:1075:                    utils.cloneTrainingLab.getDashboardStats.invalidate();
+client/src/pages/king/CloneTrainingLab.tsx:1092:export default function CloneTrainingLab() {
+client/src/pages/king/CloneTrainingLab.tsx:1096:  const dashQ = trpc.cloneTrainingLab.getDashboardStats.useQuery(undefined, {
+client/src/pages/king/KingCamGallery.tsx:10:  const { data: videosData, isLoading } = trpc.cloneEmpire.listCloneVideos.useQuery(undefined);
+client/src/pages/king/KingCamGallery.tsx:36:            <div style={{fontSize:13,marginBottom:20}}>Generate your first clone video or image</div>
+server/_core/index.ts:107:      const fallback = "https://creatorvault.live/vaultx";
+server/_core/index.ts:318:        const FRONTEND = process.env.VITE_FRONTEND_FORGE_API_URL?.replace("/api", "") || "https://creatorvault.live";
+server/_core/tts.ts:6: * Primary: ElevenLabs API with KingCam professional voice clone
+server/_core/tts.ts:51: * Generate speech using ElevenLabs KingCam voice clone.
+server/_core/tts.ts:113:      // Sync voice_clones table
+server/_core/tts.ts:118:          `INSERT INTO voice_clones (id, creator_id, voice_name, sample_audio_url, voice_characteristics, is_active, usage_count)
+server/_core/tts.ts:139:        console.warn("[TTS] voice_clones sync failed:", dbErr);
+server/media-os/contracts/mediaContracts.ts:7:  | "CloneSequenceManifest"
+server/media-os/contracts/mediaContracts.ts:20:  | "clone_integration"
+
+## Video asset scan
+2026-05-15 12:43:24.6280850260 10708544 ./client/public/videos/kingcam-hero-cam.mp4
+2026-05-15 12:43:24.6080848830 1666411 ./client/public/videos/kingcam-clone-2.mp4
+2026-05-15 12:43:24.6040848550 11968969 ./client/public/videos/kingcam-clone-1.mp4
+
+## Telegram send function scan
+server/_core/index.ts:254:                const r = await fetch(`https://api.telegram.org/bot\${botToken}/sendVideo`, {
+server/_core/index.ts:262:                const r = await fetch(`https://api.telegram.org/bot\${botToken}/sendMessage`, {
+server/_core/index.ts:332:            await fetch(`https://api.telegram.org/bot\${botToken}/sendMessage`, {
+server/routers/challengeAutomationRouter.ts:34:async function sendTelegram(
+server/routers/challengeAutomationRouter.ts:43:    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+server/routers/challengeAutomationRouter.ts:190:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🎬 <b>Creator Growth Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:206:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🏝️ <b>DR Deal & Recruiting Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:218:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🎙️ <b>Podcast Money Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:271:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🤝 <b>Auto-Recruiter Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:283:        await sendTelegram(ENGAGEMENT_BOT_TOKEN, OWNER_CHAT_ID, `💬 <b>Engagement Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:302:        const ownerSent = await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💰 <b>Money Follow-Up Agent</b>\n\n${escapeTelegramHtml(output.slice(0, 800))}`, "money_follow_up_owner_alert");
+server/routers/challengeAutomationRouter.ts:407:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🏡 <b>Real Estate Empire Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:472:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `💪 <b>Emma Network Recruiter</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:589:        await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💳 <b>Stripe Revenue Agent</b>\n\n${revenueReport}\n\n${analysis.slice(0, 400)}`);
+server/routers/challengeAutomationRouter.ts:605:            const res = await fetch(`https://api.telegram.org/bot${bot.token}/getMe`);
+server/routers/challengeAutomationRouter.ts:623:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🤖 <b>Telegram Bot Manager</b>\n\n${statusReport}\n\n${analysis.slice(0, 400)}`);
+server/routers/challengeAutomationRouter.ts:641:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `👑 <b>Owner Cockpit Daily Briefing</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:677:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🧠 <b>Empire Brain Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:735:        await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `📊 <b>Monetization Strategy Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:33:async function sendTelegram(
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:42:    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:182:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🎬 <b>Creator Growth Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:198:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🏝️ <b>DR Deal & Recruiting Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:210:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🎙️ <b>Podcast Money Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:263:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🤝 <b>Auto-Recruiter Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:275:        await sendTelegram(ENGAGEMENT_BOT_TOKEN, OWNER_CHAT_ID, `💬 <b>Engagement Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:294:        const ownerSent = await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💰 <b>Money Follow-Up Agent</b>\n\n${escapeTelegramHtml(output.slice(0, 800))}`, "money_follow_up_owner_alert");
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:399:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🏡 <b>Real Estate Empire Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:464:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `💪 <b>Emma Network Recruiter</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:581:        await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💳 <b>Stripe Revenue Agent</b>\n\n${revenueReport}\n\n${analysis.slice(0, 400)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:597:            const res = await fetch(`https://api.telegram.org/bot${bot.token}/getMe`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:615:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🤖 <b>Telegram Bot Manager</b>\n\n${statusReport}\n\n${analysis.slice(0, 400)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:633:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `👑 <b>Owner Cockpit Daily Briefing</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:669:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🧠 <b>Empire Brain Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:727:        await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `📊 <b>Monetization Strategy Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:33:async function sendTelegram(
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:42:    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:182:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🎬 <b>Creator Growth Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:198:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🏝️ <b>DR Deal & Recruiting Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:210:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🎙️ <b>Podcast Money Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:263:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🤝 <b>Auto-Recruiter Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:275:        await sendTelegram(ENGAGEMENT_BOT_TOKEN, OWNER_CHAT_ID, `💬 <b>Engagement Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:294:        const ownerSent = await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💰 <b>Money Follow-Up Agent</b>\n\n${escapeTelegramHtml(output.slice(0, 800))}`, "money_follow_up_owner_alert");
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:399:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🏡 <b>Real Estate Empire Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:464:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `💪 <b>Emma Network Recruiter</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:581:        await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💳 <b>Stripe Revenue Agent</b>\n\n${revenueReport}\n\n${analysis.slice(0, 400)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:597:            const res = await fetch(`https://api.telegram.org/bot${bot.token}/getMe`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:615:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🤖 <b>Telegram Bot Manager</b>\n\n${statusReport}\n\n${analysis.slice(0, 400)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:633:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `👑 <b>Owner Cockpit Daily Briefing</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:669:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🧠 <b>Empire Brain Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:727:        await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `📊 <b>Monetization Strategy Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/commandHub.ts:80:  sendTelegramBroadcast: protectedProcedure
+server/routers/creatorOutreachRouter.ts:523:  sendTelegramOutreach: protectedProcedure
+server/routers/creatorOutreachRouter.ts:533:      const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+server/routers/distributionRouter.ts:492:            `https://api.telegram.org/bot${botToken}/sendVideo`,
+server/routers/kingcamScriptWriterRouter.ts:33:  telegram_post: { label: "Telegram Post", systemPrompt: `You are KingCam, a ${KINGCAM_STYLE}. Write 3 Telegram channel posts: 1) Value post (teach something), 2) Hype post (build excitement), 3) Revenue post (drive sales). Each 2-4 paragraphs. Include emojis strategically. End each with a clear CTA.`, maxTokens: 700 },
+server/routers/messageRouter.ts:215:  sendMessage: protectedProcedure
+server/routers/presentationEmpireRouter.ts:45:async function sendTelegram(msg: string) {
+server/routers/presentationEmpireRouter.ts:48:    await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+server/routers/presentationEmpireRouter.ts:351:          await sendTelegram(tgMsg);
+server/routers/presentationEmpireRouter.ts:469:        await sendTelegram(
+server/routers/presentationEmpireRouter.ts:716:          await sendTelegram(
+server/routers/revenueReportingRouter.ts:219:          const res = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/getMe`);
+server/routers/telegram.ts:37:async function sendTelegramMessage(chatId: number, text: string) {
+server/routers/telegram.ts:38:  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+server/routers/telegram.ts:73:        await sendTelegramMessage(
+server/routers/telegram.ts:88:        await sendTelegramMessage(
+server/routers/telegram.ts:98:        await sendTelegramMessage(
+server/routers/telegram.ts:108:        await sendTelegramMessage(
+server/routers/telegram.ts:120:        await sendTelegramMessage(
+server/routers/telegram.ts:139:      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`;
+server/routers/telegram.ts:154:      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo`;
+server/routers/telegramCampaignRouter.ts:8: *   telegramCampaign.sendDropToChannel  — post to CreatorVault_Free
+server/routers/telegramFunnelRouter.ts:74:    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+server/routers/telegramFunnelRouter.ts:104:    const res = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
+server/routers/telegramHubRouter.ts:28:async function sendTelegramMessage(token: string, chatId: string | number, text: string, parseMode = "HTML"): Promise<boolean> {
+server/routers/telegramHubRouter.ts:30:    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+server/routers/telegramHubRouter.ts:40:async function sendTelegramVideo(token: string, chatId: string | number, videoUrl: string, caption?: string): Promise<boolean> {
+server/routers/telegramHubRouter.ts:42:    const res = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
+server/routers/telegramHubRouter.ts:54:    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+server/routers/telegramHubRouter.ts:167:        const ok = await sendTelegramMessage(token, channel.channel_id, input.message, input.parseMode);
+server/routers/telegramHubRouter.ts:208:        const ok = await sendTelegramVideo(token, channel.channel_id, input.videoUrl, input.caption);
+server/routers/telegramHubRouter.ts:267:    const ok = await sendTelegramMessage(token, input.chatId, input.message);
+server/routers/vaultxRouter.ts:565:  // PROCEDURE 18 — sendMessage
+server/routers/vaultxRouter.ts:567:  sendMessage: protectedProcedure
+server/services/abandonedCheckoutRecovery.ts:112:async function sendTelegramRecoveryMessage(chatId: string, text: string, recovery: string) {
+server/services/abandonedCheckoutRecovery.ts:114:  const resp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+server/services/abandonedCheckoutRecovery.ts:152:      const tg = await sendTelegramRecoveryMessage(
+server/services/adultSalesBot.ts:401:         VALUES (1, 1, "telegram", "https://creatorvault.live/uploads/ppv_1778107488797/teaser.mp4", "teaser", "Telegram bot buyer conversion", ?, ?, "posted", "explicit", "vaultx_adult")`,
+server/services/services/telegramAI.ts:99:export async function sendTelegramOnboarding(params: {
+server/services/telegramAI.ts:99:export async function sendTelegramOnboarding(params: {
+server/services/telegramBuyerReactivation.ts:25:const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
+server/services/telegramBuyerReactivation.ts:94:  const res = await fetch(`${TG_API}/sendMessage`, {
+server/services/telegramCampaign.ts:351:    const tgUrl = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+server/services/telegramCampaign.ts:366:      console.error("[TelegramCampaign] sendMessage failed:", tgData.description);
+server/services/telegramCampaign.ts:575:        `https://api.telegram.org/bot${BOT_TOKEN}/createChatInviteLink`,
+server/services/telegramCampaign.ts:612:      `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+server/services/telegramDailyDropEngine.ts:26:const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
+server/services/telegramDailyDropEngine.ts:152:  const res = await fetch(`${TG_API}/sendMessage`, {
+server/services/telegramDailyDropEngine.ts:236:       VALUES (?, ?, 'telegram', ?, 'text', 'sensitive', 'vaultx_adult', ?, ?, 'posted', ?)`,
+server/services/telegramMoneyLoop.ts:45:  const resp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
+server/services/telegramMoneyLoop.ts:90:       VALUES (?, ?, 'telegram', ?, 'text', ?, ?, ?, 'posted', 'explicit', 'vaultx_adult')`,
+server/services/telegramMoneyLoop.ts:111:      tgResult = await tgPost("sendVideo", {
+server/services/telegramMoneyLoop.ts:119:      tgResult = await tgPost("sendMessage", {
+server/services/telegramMoneyLoop.ts:409:    const dmResp = await tgPost("sendMessage", {
+server/services/telegramStartHandler.ts:24:const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
+server/services/telegramStartHandler.ts:32:async function sendTelegramMessage(chatId: number | string, text: string, replyMarkup?: any) {
+server/services/telegramStartHandler.ts:40:  const res = await fetch(`${TG_API}/sendMessage`, {
+server/services/telegramStartHandler.ts:81:      await sendTelegramMessage(chatId,
+server/services/telegramStartHandler.ts:103:      await sendTelegramMessage(chatId, "❌ Purchase not found. Please contact support.");
+server/services/telegramStartHandler.ts:111:      await sendTelegramMessage(chatId, "❌ Invalid or expired link. Please return to the purchase confirmation page.");
+server/services/telegramStartHandler.ts:126:        await sendTelegramMessage(chatId,
+server/services/telegramStartHandler.ts:131:        await sendTelegramMessage(chatId, "✅ Already connected! Your invite link has expired. A new one is being generated...");
+server/services/telegramStartHandler.ts:218:      await sendTelegramMessage(chatId,
+server/services/telegramStartHandler.ts:252:    const dmResult = await sendTelegramMessage(
+server/services/telegramStartHandler.ts:282:      await sendTelegramMessage(chatId, "⚠️ Something went wrong processing your purchase link. Please try again or contact support.");
+server/services/telegramVipUpsell.ts:21:const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
+server/services/telegramVipUpsell.ts:158:      const dmRes = await tgApi("sendMessage", {
+server/services/telegramVipUpsell.ts:205:    const dmRes = await tgApi("sendMessage", {
+server/services/vaultxAutonomousAcquisitionOperator.ts:447:async function sendTelegram(chatId: string, text: string, token: string) {
+server/services/vaultxAutonomousAcquisitionOperator.ts:448:  const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+server/services/vaultxAutonomousAcquisitionOperator.ts:465:    externalId = await sendTelegram(lead.telegram_chat_id, action.message, config.telegramBotToken);
+server/services/vaultxAutonomousAcquisitionOperator.ts:473:    externalId = await sendTelegram(config.telegramOpsChatId, `[VaultX acquisition outbox]\nLead: ${lead.platform}/@${lead.handle}\nChannel: ${action.channel}\nScore: ${lead.score}\n\n${action.message}`, config.telegramBotToken);
+server/services/challengeEndToEndExecutor.ts:347:async function sendTelegramOffer(caption: string, checkoutUrl: string): Promise<number | null> {
+server/services/challengeEndToEndExecutor.ts:351:  const resp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+server/services/challengeEndToEndExecutor.ts:413:    status: mode === "send_telegram" ? "posted" : "ready",
+server/services/challengeEndToEndExecutor.ts:419:    telegramMessageId = await sendTelegramOffer(buildAggressiveTelegramCaption({ taskName, trackingCode, baseCaption: deliverable.telegramPost, checkoutUrl: trackedUnlockUrl, telegramState, revenueSprint }), trackedUnlockUrl);
+server/telegram-webhook.ts:22:async function sendTelegramMessage(
+server/telegram-webhook.ts:28:  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+server/telegram-webhook.ts:48:        console.error(`[Telegram] sendMessage failed (attempt ${attempt + 1}/${retries + 1}):`, data.description);
+server/telegram-webhook.ts:52:      console.error(`[Telegram] sendMessage error (attempt ${attempt + 1}/${retries + 1}):`, error);
+server/telegram-webhook.ts:150:        await fetch(`https://api.telegram.org/bot${botTokenVal}/answerPreCheckoutQuery`, {
+server/telegram-webhook.ts:176:        await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+server/telegram-webhook.ts:330:        const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+server/telegram-webhook.ts:512:          const inlineUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+server/telegram-webhook.ts:537:          sent = await sendTelegramMessage(botToken, chatId, botResponse.message);
+server/telegram.test.ts:12:      `https://api.telegram.org/bot${token}/getMe`
+scripts/run-kingcam-dryrun.ts:35:    "telegram: skipped sendMessage because mode=dry_run",
+scripts/run-vaultx-visual-drop-sequence.mjs:123:function sendPhoto({ photoPath, caption }) {
+scripts/run-vaultx-visual-drop-sequence.mjs:130:  const url = `https://api.telegram.org/bot${token}/sendPhoto`;
+scripts/run-vaultx-visual-drop-sequence.mjs:140:    throw new Error(`Telegram sendPhoto curl failed with status ${result.status}: ${(result.stderr || '').slice(0, 240)}`);
+scripts/run-vaultx-visual-drop-sequence.mjs:164:  const sent = sendPhoto({ photoPath, caption });
+scripts/run-vaultx-visual-drop-sequence.mjs:172:      source: liveSend ? 'vaultx_visual_telegram_sendPhoto' : 'vaultx_visual_dry_run',
+scripts/run-vaultx-5k-challenge-promo.mjs:179:function sendMessage(caption) {
+scripts/run-vaultx-5k-challenge-promo.mjs:187:    '-sS', '-X', 'POST', `https://api.telegram.org/bot${token}/sendMessage`,
+scripts/run-vaultx-5k-challenge-promo.mjs:196:  if (result.status !== 0) throw new Error(`Telegram sendMessage curl failed with status ${result.status}: ${(result.stderr || '').slice(0, 240)}`);
+scripts/run-vaultx-5k-challenge-promo.mjs:217:  const sent = sendMessage(caption);
+client/src/pages/CommandHub.tsx:101:  const telegramBroadcastMutation = trpc.commandHub.sendTelegramBroadcast.useMutation({
+client/src/pages/KingCamScriptWriter.tsx:17:  { key: "telegram_post", label: "Telegram Post", icon: Send, color: "#2980B9", desc: "Channel broadcast" },
+client/src/pages/Messages.tsx:262:  const sendMsg = trpc.message.sendMessage.useMutation();
+client/src/pages/VaultX.tsx:654:  const sendMsg = trpc.vaultx.sendMessage.useMutation({
+
+## Visual/card/flyer generation scan
+./CREATORVAULT_VISUAL_FIRST_AUDIT.md
+./artifacts/delivery/vaultx-live-visual-drop-assets-2026-05-15.zip
+./artifacts/delivery/vaultx-live-visual-drop-report-2026-05-15.md
+./artifacts/delivery/vaultx-premium-preview-visual-inspection-2026-05-15.md
+./artifacts/visual-drops/creatorvault-visual-drop-blueprint.json
+./artifacts/visual-drops/vaultx-visual-drop-proof-1778866650713.json
+./artifacts/visual-drops/vaultx-visual-drop-proof-1778866893485.json
+./artifacts/visual-drops/vaultx-visual-drop-proof-1778868057156.json
+./artifacts/visual-drops/visual-qa-notes.md
+./client/public/images/reel/reel-apparel-drop.png
+./client/public/images/reel/reel-product-drop.png
+./client/src/components/ui/card.tsx
+./client/src/components/ui/dropdown-menu.tsx
+./client/src/components/ui/hover-card.tsx
+./client/src/pages/AICardDesigner.tsx
+./client/src/pages/AnimatedFlyerStudio.tsx
+./client/src/pages/BusinessCardDesigner.tsx
+./client/src/pages/CardEditor.tsx
+./client/src/pages/FlyerComposer.tsx
+./client/src/pages/FlyerDesignStudio.tsx
+./client/src/pages/FlyerGenerator.tsx
+./client/src/pages/FlyerStudio.tsx
+./client/src/pages/MotionFlyerAgent.tsx
+./client/src/pages/NFCCards.tsx
+./client/src/pages/VaultDrop.tsx
+./scripts/run-vaultx-visual-drop-sequence.mjs
+./scripts/visual-proof.js
+./server/remotion/VisualDNAComposition.tsx
+./server/remotion/compositions/MotionFlyerComposition.tsx
+./server/routers/animatedFlyerRouter.ts
+./server/routers/businessCardsRouter.ts
+./server/routers/flyerAnalyticsRouter.ts
+./server/routers/flyerBatchExportRouter.ts
+./server/routers/flyerComposerRouter.ts
+./server/routers/flyerGeneratorEnhanced.ts
+./server/routers/flyerStudioV2Router.ts
+./server/routers/nfcCards.ts
+./server/routers/vaultDropRouter.ts
+./server/services/telegramDailyDropEngine.ts
+./test_create_drop_debug.ts

@@ -11,6 +11,7 @@
 
 import mysql from "mysql2/promise";
 import crypto from "crypto";
+import { assertTelegramPostingEnabled, callTelegramApiWithGuard } from "./telegramOutboundGuard";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const DB_URL =
@@ -23,11 +24,13 @@ const FRONTEND = (
   "https://creatorvault.live"
 );
 
-// Real channel entity IDs from telegram_channel_entities
-const FREE_CHANNEL_ENTITY_ID = 1;   // VaultX Free Discovery  (-1003749459281)
-const VIP_CHANNEL_ENTITY_ID  = 2;   // VaultX VIP             (-1003817770263)
-const FREE_CHAT_ID  = "-1003749459281";
-const VIP_CHAT_ID   = "-1003817770263";
+// Real channel entity IDs from telegram_channel_entities.
+// Chat IDs default to the BotFather/getChat-validated live CreatorVault channels,
+// while allowing production secret stores to override them without code edits.
+const FREE_CHANNEL_ENTITY_ID = Number(process.env.TELEGRAM_FREE_CHANNEL_ENTITY_ID || "1");   // CreatorVault_Free
+const VIP_CHANNEL_ENTITY_ID  = Number(process.env.TELEGRAM_VIP_CHANNEL_ENTITY_ID || "2");    // CreatorVault_VIP
+const FREE_CHAT_ID  = process.env.TELEGRAM_FREE_CHAT_ID || "-1003749459281";                  // CreatorVault_Free
+const VIP_CHAT_ID   = process.env.TELEGRAM_VIP_CHAT_ID || "-1003817770263";                   // CreatorVault_VIP
 
 // ─── DB helper ───────────────────────────────────────────────────────────────
 async function getDb() {
@@ -39,13 +42,13 @@ function rows(result: any): any[] {
 }
 
 // ─── Telegram API helpers ─────────────────────────────────────────────────────
-async function tgPost(method: string, body: Record<string, unknown>) {
-  const resp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+async function tgPost(method: string, body: Record<string, unknown>, context = "telegramMoneyLoop") {
+  return callTelegramApiWithGuard<{ ok: boolean; result?: any; description?: string }>({
+    botToken: BOT_TOKEN,
+    method,
+    body,
+    context: `${context}.${method}`,
   });
-  return resp.json() as Promise<{ ok: boolean; result?: any; description?: string }>;
 }
 
 // ─── Tracking code ────────────────────────────────────────────────────────────
@@ -74,6 +77,7 @@ export interface DropResult {
 }
 
 export async function sendFreeChannelDrop(input: DropInput): Promise<DropResult> {
+  assertTelegramPostingEnabled("telegramMoneyLoop.sendFreeChannelDrop");
   const db = await getDb();
   const trackingCode = genCode("tgdrop");
   const destUrl = `${FRONTEND}/vaultx`;
@@ -352,6 +356,7 @@ export interface VipUpsellResult {
 }
 
 export async function sendVipUpsell(input: VipUpsellInput): Promise<VipUpsellResult> {
+  assertTelegramPostingEnabled("telegramMoneyLoop.sendVipUpsell");
   const db = await getDb();
   try {
     // 4a. Generate single-use invite link via Telegram API
@@ -446,6 +451,7 @@ export interface JoinRequestInput {
 }
 
 export async function handleVipJoinRequest(input: JoinRequestInput): Promise<{ approved: boolean; reason: string }> {
+  assertTelegramPostingEnabled("telegramMoneyLoop.handleVipJoinRequest");
   const db = await getDb();
   try {
     // 5a. Resolve subscriber

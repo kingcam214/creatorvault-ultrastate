@@ -1,0 +1,13 @@
+# Homepage Motion Asset Restore
+Generated: 2026-05-16T01:56:19+00:00
+
+OK /assets/kingcam-hero.jpg 183009 bytes
+
+## Generated poster-to-motion clips
+OK /videos/reel-music-video.mp4 598932 bytes :: Music Video
+OK /videos/reel-product-drop.mp4 819679 bytes :: Product Drop
+OK /videos/reel-ai-portrait.mp4 739343 bytes :: AI Portrait
+OK /videos/reel-cinematic-trailer.mp4 553706 bytes :: Cinematic Trailer
+OK /videos/reel-creator-promo.mp4 609847 bytes :: Creator Promo
+OK /videos/reel-apparel-drop.mp4 689659 bytes :: Apparel Drop
+OK /videos/reel-brand-story.mp4 578702 bytes :: Empire Reel / Podcast Clip

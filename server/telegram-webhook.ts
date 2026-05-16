@@ -11,6 +11,8 @@ import { botEvents, telegramBots } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { handleInboundMessage } from "./services/adultSalesBot";
 import fetch from "node-fetch";
+import { appendMoneySprintTelemetry } from "./services/liveMoneySprintTelemetry";
+import { callTelegramApiWithGuard } from "./services/telegramOutboundGuard";
 
 const router = express.Router();
 
@@ -24,21 +26,18 @@ async function sendTelegramMessage(
   text: string,
   retries = 2
 ): Promise<boolean> {
-  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-  
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await callTelegramApiWithGuard({
+        botToken,
+        method: "sendMessage",
+        body: {
           chat_id: chatId,
           text,
           parse_mode: "HTML",
-        }),
-      });
-
-      const data = await response.json() as { ok: boolean; description?: string };
+        },
+        context: "telegramWebhook.sendTelegramMessage",
+      }) as { ok: boolean; description?: string };
       
       if (data.ok) {
         console.log(`[Telegram] Message sent successfully to chat ${chatId}`);
@@ -146,10 +145,12 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
     if (update.pre_checkout_query) {
       const botTokenVal = bot.botToken;
       try {
-        await fetch(`https://api.telegram.org/bot${botTokenVal}/answerPreCheckoutQuery`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pre_checkout_query_id: update.pre_checkout_query.id, ok: true }),
+        await callTelegramApiWithGuard({
+          botToken: botTokenVal,
+          method: "answerPreCheckoutQuery",
+          body: { pre_checkout_query_id: update.pre_checkout_query.id, ok: true },
+          context: "telegramWebhook.answerPreCheckoutQuery",
+          allowReadOnly: true,
         });
       } catch { /* ignore */ }
       return res.status(200).json({ ok: true });
@@ -172,12 +173,22 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       } catch { /* non-blocking */ }
       // Ack the callback query
       try {
-        await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ callback_query_id: cq.id }),
+        await callTelegramApiWithGuard({
+          botToken,
+          method: "answerCallbackQuery",
+          body: { callback_query_id: cq.id },
+          context: "telegramWebhook.answerCallbackQuery",
+          allowReadOnly: true,
         });
       } catch { /* ignore */ }
+      appendMoneySprintTelemetry({
+        type: "click",
+        source: "telegram_callback_query",
+        userId: cqUserId,
+        chatId: cq.message?.chat?.id,
+        messageId: cq.message?.message_id,
+        metadata: { username: cqUsername, data: cq.data || null },
+      });
       console.log("[Telegram Webhook] callback_query from", cqUserId, cqUsername);
       return res.status(200).json({ ok: true });
     }
@@ -212,6 +223,13 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       const cmChatId = String(cm.chat?.id);
       if ((newStatus === "member" || newStatus === "creator" || newStatus === "administrator") && cmUserId) {
         console.log("[Telegram Webhook] chat_member joined:", cmUserId, "chat:", cmChatId);
+        appendMoneySprintTelemetry({
+          type: "telegram_join",
+          source: "telegram_chat_member",
+          userId: cmUserId,
+          chatId: cmChatId,
+          metadata: { status: newStatus },
+        });
         try {
           const { handleVipJoin } = await import("./services/telegramStartHandler");
           await handleVipJoin(cmUserId, cmChatId, 2);
@@ -263,6 +281,17 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       text: text.substring(0, 50),
     });
 
+    if (text && !text.startsWith("/")) {
+      appendMoneySprintTelemetry({
+        type: "telegram_reply",
+        source: "telegram_message_webhook",
+        userId,
+        chatId,
+        messageId,
+        metadata: { username, textPreview: text.substring(0, 120) },
+      });
+    }
+
 
     // ── VaultX Funnel Command Handler ─────────────────────────────────────────
     // Handle commands before routing to Adult Sales Bot
@@ -270,6 +299,14 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       const [cmd, ...args] = text.trim().split(/\s+/);
       const command = cmd.toLowerCase();
       const FRONTEND = process.env.VITE_FRONTEND_FORGE_API_URL?.replace("/api", "") || "https://creatorvault.live";
+      appendMoneySprintTelemetry({
+        type: command === "/buy" || command === "/unlock" || command === "/vip" ? "telegram_purchase_intent" : "telegram_command",
+        source: "telegram_command_webhook",
+        userId,
+        chatId,
+        messageId,
+        metadata: { username, command, args },
+      });
       
       // Upsert subscriber record
       try {
@@ -291,19 +328,19 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       } catch { /* non-blocking */ }
 
       // Helper to send inline keyboard message
-      async function sendInlineMsg(text: string, buttons: Array<Array<{text: string; url?: string; callback_data?: string}>>) {
-        const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-        await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      const sendInlineMsg = async (text: string, buttons: Array<Array<{text: string; url?: string; callback_data?: string}>>) => {
+        await callTelegramApiWithGuard({
+          botToken,
+          method: "sendMessage",
+          body: {
             chat_id: chatId,
             text,
             parse_mode: "HTML",
             reply_markup: { inline_keyboard: buttons }
-          })
+          },
+          context: "telegramWebhook.sendInlineMsg",
         });
-      }
+      };
 
       if (command === "/start") {
         // Deep link handler: /start purchase_<id>_<token>
@@ -474,12 +511,11 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
         const purchaseUrl = (botResponse.metadata as any)?.purchaseUrl;
         let sent: boolean;
         if (purchaseUrl) {
-          const inlineUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
           try {
-            const inlineResp = await fetch(inlineUrl, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
+            const inlineData = await callTelegramApiWithGuard({
+              botToken,
+              method: "sendMessage",
+              body: {
                 chat_id: chatId,
                 text: botResponse.message,
                 parse_mode: "HTML",
@@ -489,9 +525,9 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
                     [{ text: "🎬 Preview First", url: "https://creatorvault.live/vaultx" }]
                   ]
                 }
-              }),
-            });
-            const inlineData = await inlineResp.json() as { ok: boolean; description?: string };
+              },
+              context: "telegramWebhook.inlinePurchaseReply",
+            }) as { ok: boolean; description?: string };
             sent = inlineData.ok;
             if (!sent) console.error("[Telegram] Inline button send failed:", inlineData.description);
           } catch (e: any) {

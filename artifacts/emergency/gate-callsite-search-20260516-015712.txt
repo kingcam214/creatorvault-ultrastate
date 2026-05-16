@@ -1,0 +1,317 @@
+# Telegram and Homepage Gate Callsite Search
+Generated: 2026-05-16T01:57:12+00:00
+
+## Telegram send callsites
+server/_core/index.ts:21:import { registerTelegramConnectRoutes } from "../services/telegramConnectRoute";
+server/_core/index.ts:86:  // Telegram webhook
+server/_core/index.ts:100:  // Telegram connect page + status API
+server/_core/index.ts:101:  registerTelegramConnectRoutes(app as any);
+server/_core/index.ts:209:    // ── Telegram Funnel Automation Runner ────────────────────────────────────
+server/_core/index.ts:228:          console.log(`[TelegramFunnel] Processing ${pendingCount} due automation jobs`);
+server/_core/index.ts:248:              const body: any = { chat_id: job.telegram_id, parse_mode: "HTML" };
+server/_core/index.ts:253:                if (buttons.length) body.reply_markup = { inline_keyboard: [buttons] };
+server/_core/index.ts:254:                const r = await fetch(`https://api.telegram.org/bot\${botToken}/sendVideo`, {
+server/_core/index.ts:261:                if (buttons.length) body.reply_markup = { inline_keyboard: [buttons] };
+server/_core/index.ts:262:                const r = await fetch(`https://api.telegram.org/bot\${botToken}/sendMessage`, {
+server/_core/index.ts:322:              chat_id: sub.telegram_id,
+server/_core/index.ts:325:              reply_markup: {
+server/_core/index.ts:332:            await fetch(`https://api.telegram.org/bot\${botToken}/sendMessage`, {
+server/_core/index.ts:345:        console.error("[TelegramFunnel] Cron error:", cronErr.message);
+server/_core/index.ts:348:    // ── End Telegram Funnel Automation Runner ─────────────────────────────────
+server/_core/index.ts.bak_prelogin:64:  // Telegram webhook
+server/challengePaymentHook.ts:9: * - Telegram Stars / bot_payments
+server/migrations/chica_funnel_migration.sql:16:  -- Telegram config (links to telegram_funnels)
+server/migrations/chica_funnel_migration.sql:58:-- Seed Dominican Spanish funnel templates (Tinder → WhatsApp → Telegram → VaultX)
+server/migrations/chica_funnel_migration.sql:67:('Dominican Chica Funnel', 'es_DO', 'whatsapp', 1, 'message', 'Hola! Soy {name} 😊 Gracias por escribirme. Tengo contenido exclusivo y una comunidad VIP en Telegram. ¿Te interesa?', 0),
+server/migrations/chica_funnel_migration.sql:69:('Dominican Chica Funnel', 'es_DO', 'whatsapp', 3, 'cta', 'Aquí está mi canal privado de Telegram donde comparto todo: {telegram_link} 🔒 Únete antes de que llene.', 1),
+server/migrations/chica_funnel_migration.sql:88:('Haitian Chica Funnel', 'ht_HT', 'whatsapp', 1, 'message', 'Bonjou! Mwen se {name} 😊 Mèsi pou ekri m. Mwen gen yon kominote VIP sou Telegram. Eske ou enterese?', 0),
+server/migrations/chica_funnel_migration.sql:89:('Haitian Chica Funnel', 'ht_HT', 'whatsapp', 2, 'cta', 'Men lyen prive Telegram mwen kote mwen pataje tout bagay: {telegram_link} 🔒', 1),
+server/migrations/chica_funnel_v2_templates.sql:11:-- Tinder -> WhatsApp -> Telegram -> VaultX
+server/migrations/chica_funnel_v2_templates.sql:17:('Dominican Chica Funnel', 'es_DO', 'whatsapp', 2, 'message', 'Aquí está mi canal privado de Telegram donde comparto todo: {telegram_link} 🔒 Únete gratis.', 24),
+server/migrations/chica_funnel_v2_templates.sql:26:-- Instagram/TikTok -> WhatsApp -> Telegram -> Boutique/Fitness Guide
+server/migrations/chica_funnel_v2_templates.sql:32:('Delbania Boutique Funnel', 'es_DO', 'whatsapp', 2, 'message', 'Únete a mi canal VIP de Telegram donde comparto mis secretos de belleza, fitness y las nuevas llegadas de mi boutique: {telegram_link} 💄', 24),
+server/migrations/chica_funnel_v2_templates.sql:41:-- Instagram/TikTok -> WhatsApp -> Telegram -> Fitness Plans
+server/migrations/chica_funnel_v2_templates.sql:47:('Lizzy Fitness Funnel', 'es_DO', 'whatsapp', 2, 'message', 'Para ver mis rutinas exclusivas y contenido de estilo de vida, únete a mi Telegram: {telegram_link} 💪', 24),
+server/migrations/chica_funnel_v2_templates.sql:56:-- Instagram/TikTok -> WhatsApp -> Telegram -> Airbnb Bookings
+server/ownerControl.test.ts:26:  let testTelegramBotId: string;
+server/ownerControl.test.ts:40:    // Create test Telegram bot
+server/ownerControl.test.ts:41:    testTelegramBotId = crypto.randomUUID();
+server/ownerControl.test.ts:43:      id: testTelegramBotId,
+server/ownerControl.test.ts:44:      name: "Test Telegram Bot",
+server/ownerControl.test.ts:94:    // Check Telegram bot
+server/ownerControl.test.ts:95:    const telegramBot = bots.find(b => b.id === testTelegramBotId);
+server/ownerControl.test.ts:170:  it("should toggle Telegram bot", async () => {
+server/ownerControl.test.ts:172:    const disableResult = await toggleBot(testTelegramBotId, false);
+server/ownerControl.test.ts:178:    const disabledBot = botsAfterDisable.find(b => b.id === testTelegramBotId);
+server/ownerControl.test.ts:183:    const enableResult = await toggleBot(testTelegramBotId, true);
+server/ownerControl.test.ts:188:    const enabledBot = botsAfterEnable.find(b => b.id === testTelegramBotId);
+server/ownerControl.test.ts:205:    const result = await toggleBroadcast(testTelegramBotId, false);
+server/ownerControl.test.ts:208:    expect(result.botId).toBe(testTelegramBotId);
+server/proofGate.ts:176:    name: "Deploy Telegram Bot",
+server/proofGate.ts:188:    name: "Create Telegram Funnel",
+server/routers/activationWarRoomRouter.ts:316:    if (!row.telegram_ready && !row.telegram_username && !["ready", "complete", "completed"].includes(String(row.telegram_transition_status || "").toLowerCase())) blockers.push({ key: "missing_telegram_funnel_readiness", label: "Telegram funnel readiness is missing", severity: "medium", nextAction: "Confirm Telegram invite, channel, or transition evidence before using Telegram as activation path", sources: ["recruiter_creator_profiles", "creator_conversion_automation"], evidence: { telegramReady: Boolean(row.telegram_ready), telegramUsernamePresent: Boolean(row.telegram_username), telegramTransitionStatus: row.telegram_transition_status || null } });
+server/routers/challengeAutomationRouter.ts:3: * All 49 empire agents wired to real APIs, real DB writes, real Telegram messages.
+server/routers/challengeAutomationRouter.ts:33:// ── Real Telegram message sender ──────────────────────────────────────────────
+server/routers/challengeAutomationRouter.ts:34:async function sendTelegram(
+server/routers/challengeAutomationRouter.ts:43:    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+server/routers/challengeAutomationRouter.ts:46:      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+server/routers/challengeAutomationRouter.ts:60:function escapeTelegramHtml(value: string): string {
+server/routers/challengeAutomationRouter.ts:73:  const teaser = escapeTelegramHtml(params.output.replace(/\s+/g, " ").slice(0, 520));
+server/routers/challengeAutomationRouter.ts:75:    `<b>${escapeTelegramHtml(params.title)}</b>\n\n` +
+server/routers/challengeAutomationRouter.ts:90:    `Tracked VaultX Telegram drop fired. ok=${drop.ok}; trackingCode=${drop.trackingCode}; trackingUrl=${drop.trackingUrl}; messageId=${drop.messageId ?? "none"}; error=${drop.error ?? "none"}`,
+server/routers/challengeAutomationRouter.ts:190:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🎬 <b>Creator Growth Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:206:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🏝️ <b>DR Deal & Recruiting Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:218:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🎙️ <b>Podcast Money Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:239:          `CreatorVault has these features: Telegram bots, AI video generation, creator subscriptions, marketplace, live streaming, adult content verification, Stripe payments, affiliate program. Audit the platform's legal exposure and generate: 1) Top 3 compliance gaps, 2) Updated ToS clause for AI-generated content, 3) GDPR/CCPA compliance checklist.`,
+server/routers/challengeAutomationRouter.ts:271:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🤝 <b>Auto-Recruiter Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:278:          "You are the Engagement Agent. You generate smart replies, run retention sequences, and keep audiences engaged 24/7 across Telegram, Instagram, TikTok, and YouTube.",
+server/routers/challengeAutomationRouter.ts:283:        await sendTelegram(ENGAGEMENT_BOT_TOKEN, OWNER_CHAT_ID, `💬 <b>Engagement Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:302:        const ownerSent = await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💰 <b>Money Follow-Up Agent</b>\n\n${escapeTelegramHtml(output.slice(0, 800))}`, "money_follow_up_owner_alert");
+server/routers/challengeAutomationRouter.ts:309:        return { outcome: `${output}\n\nOwner Telegram sent: ${ownerSent}. ${dropAction}`, revenue: 0, status: "success", action: `recovery_sequences_generated + owner_telegram_${ownerSent ? "sent" : "failed"} + ${dropAction}` };
+server/routers/challengeAutomationRouter.ts:316:          `Generate a platform demo script: a 5-minute voice demo of CreatorVault for a creator with 50K followers who wants to monetize. Include: platform overview, key features (Telegram bots, AI tools, marketplace), pricing, and a close. Write it as KingCam would say it.`,
+server/routers/challengeAutomationRouter.ts:344:          `Repurpose this concept: 'How KingCam built a 7-figure creator empire using AI agents and Telegram bots.' Generate: 1) YouTube video title + description, 2) TikTok hook (first 3 seconds), 3) Instagram carousel outline (5 slides), 4) Email newsletter intro paragraph, 5) Twitter/X thread (5 tweets).`,
+server/routers/challengeAutomationRouter.ts:407:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🏡 <b>Real Estate Empire Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:469:          `Emma Network currently has ${leadCount} leads in pipeline. Generate: 1) 3 DM scripts for recruiting fitness-focused women (Instagram, TikTok, Telegram), 2) Referral incentive program structure (what to offer existing members for referrals), 3) Top 5 hashtags/communities to target for recruitment, 4) Onboarding welcome message for new Emma Network members.`,
+server/routers/challengeAutomationRouter.ts:472:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `💪 <b>Emma Network Recruiter</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:589:        await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💳 <b>Stripe Revenue Agent</b>\n\n${revenueReport}\n\n${analysis.slice(0, 400)}`);
+server/routers/challengeAutomationRouter.ts:593:      // ── 30. Telegram Bot Manager Agent ────────────────────────────────────────
+server/routers/challengeAutomationRouter.ts:605:            const res = await fetch(`https://api.telegram.org/bot${bot.token}/getMe`);
+server/routers/challengeAutomationRouter.ts:618:          "You are the Telegram Bot Manager Agent.",
+server/routers/challengeAutomationRouter.ts:622:        await saveAgentReport(agentSlug, "Telegram Bot Manager Agent", "bot_health_report", `${statusReport}\n\n${analysis}`);
+server/routers/challengeAutomationRouter.ts:623:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🤖 <b>Telegram Bot Manager</b>\n\n${statusReport}\n\n${analysis.slice(0, 400)}`);
+server/routers/challengeAutomationRouter.ts:641:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `👑 <b>Owner Cockpit Daily Briefing</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:677:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🧠 <b>Empire Brain Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:731:          `Generate a comprehensive monetization audit for KingCam's empire: 1) Current revenue stream analysis (Telegram bots, subscriptions, courses, brand deals, affiliate, real estate), 2) Identify 3 untapped revenue streams worth $10K+/month, 3) 90-day monetization roadmap with specific milestones, 4) Revenue diversification score and risk assessment.`,
+server/routers/challengeAutomationRouter.ts:735:        await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `📊 <b>Monetization Strategy Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts:863:          `Generate a legal compliance report for CreatorVault: 1) Top 5 legal risks for a creator monetization platform (adult content, AI-generated content, Telegram bots, marketplace), 2) Creator contract template (key clauses for platform TOS agreement), 3) DMCA takedown notice template, 4) Privacy policy update needed for AI features, 5) Regulatory changes to watch in 2026.`,
+server/routers/challengeAutomationRouter.ts:955:  "telegram-bot-manager-agent": { name: "Telegram Bot Manager Agent", category: "infra", taskType: "bot_health_check" },
+server/routers/challengeAutomationRouter.ts:1292:        daily_update: `Write a compelling Telegram post for a creator's $${goal.toLocaleString()} challenge. Current progress: $${current.toLocaleString()} (${pct}%). Remaining: $${remaining.toLocaleString()}. Make it hype, motivational, and real. Include emojis. 3-5 sentences max.`,
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:3: * All 49 empire agents wired to real APIs, real DB writes, real Telegram messages.
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:32:// ── Real Telegram message sender ──────────────────────────────────────────────
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:33:async function sendTelegram(
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:42:    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:45:      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:59:function escapeTelegramHtml(value: string): string {
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:72:  const teaser = escapeTelegramHtml(params.output.replace(/\s+/g, " ").slice(0, 520));
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:74:    `<b>${escapeTelegramHtml(params.title)}</b>\n\n` +
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:89:    `Tracked VaultX Telegram drop fired. ok=${drop.ok}; trackingCode=${drop.trackingCode}; trackingUrl=${drop.trackingUrl}; messageId=${drop.messageId ?? "none"}; error=${drop.error ?? "none"}`,
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:182:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🎬 <b>Creator Growth Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:198:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🏝️ <b>DR Deal & Recruiting Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:210:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🎙️ <b>Podcast Money Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:231:          `CreatorVault has these features: Telegram bots, AI video generation, creator subscriptions, marketplace, live streaming, adult content verification, Stripe payments, affiliate program. Audit the platform's legal exposure and generate: 1) Top 3 compliance gaps, 2) Updated ToS clause for AI-generated content, 3) GDPR/CCPA compliance checklist.`,
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:263:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🤝 <b>Auto-Recruiter Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:270:          "You are the Engagement Agent. You generate smart replies, run retention sequences, and keep audiences engaged 24/7 across Telegram, Instagram, TikTok, and YouTube.",
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:275:        await sendTelegram(ENGAGEMENT_BOT_TOKEN, OWNER_CHAT_ID, `💬 <b>Engagement Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:294:        const ownerSent = await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💰 <b>Money Follow-Up Agent</b>\n\n${escapeTelegramHtml(output.slice(0, 800))}`, "money_follow_up_owner_alert");
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:301:        return { outcome: `${output}\n\nOwner Telegram sent: ${ownerSent}. ${dropAction}`, revenue: 0, status: "success", action: `recovery_sequences_generated + owner_telegram_${ownerSent ? "sent" : "failed"} + ${dropAction}` };
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:308:          `Generate a platform demo script: a 5-minute voice demo of CreatorVault for a creator with 50K followers who wants to monetize. Include: platform overview, key features (Telegram bots, AI tools, marketplace), pricing, and a close. Write it as KingCam would say it.`,
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:336:          `Repurpose this concept: 'How KingCam built a 7-figure creator empire using AI agents and Telegram bots.' Generate: 1) YouTube video title + description, 2) TikTok hook (first 3 seconds), 3) Instagram carousel outline (5 slides), 4) Email newsletter intro paragraph, 5) Twitter/X thread (5 tweets).`,
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:399:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🏡 <b>Real Estate Empire Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:461:          `Emma Network currently has ${leadCount} leads in pipeline. Generate: 1) 3 DM scripts for recruiting fitness-focused women (Instagram, TikTok, Telegram), 2) Referral incentive program structure (what to offer existing members for referrals), 3) Top 5 hashtags/communities to target for recruitment, 4) Onboarding welcome message for new Emma Network members.`,
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:464:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `💪 <b>Emma Network Recruiter</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:581:        await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💳 <b>Stripe Revenue Agent</b>\n\n${revenueReport}\n\n${analysis.slice(0, 400)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:585:      // ── 30. Telegram Bot Manager Agent ────────────────────────────────────────
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:597:            const res = await fetch(`https://api.telegram.org/bot${bot.token}/getMe`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:610:          "You are the Telegram Bot Manager Agent.",
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:614:        await saveAgentReport(agentSlug, "Telegram Bot Manager Agent", "bot_health_report", `${statusReport}\n\n${analysis}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:615:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🤖 <b>Telegram Bot Manager</b>\n\n${statusReport}\n\n${analysis.slice(0, 400)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:633:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `👑 <b>Owner Cockpit Daily Briefing</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:669:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🧠 <b>Empire Brain Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:723:          `Generate a comprehensive monetization audit for KingCam's empire: 1) Current revenue stream analysis (Telegram bots, subscriptions, courses, brand deals, affiliate, real estate), 2) Identify 3 untapped revenue streams worth $10K+/month, 3) 90-day monetization roadmap with specific milestones, 4) Revenue diversification score and risk assessment.`,
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:727:        await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `📊 <b>Monetization Strategy Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:855:          `Generate a legal compliance report for CreatorVault: 1) Top 5 legal risks for a creator monetization platform (adult content, AI-generated content, Telegram bots, marketplace), 2) Creator contract template (key clauses for platform TOS agreement), 3) DMCA takedown notice template, 4) Privacy policy update needed for AI features, 5) Regulatory changes to watch in 2026.`,
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:947:  "telegram-bot-manager-agent": { name: "Telegram Bot Manager Agent", category: "infra", taskType: "bot_health_check" },
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:1267:        daily_update: `Write a compelling Telegram post for a creator's $${goal.toLocaleString()} challenge. Current progress: $${current.toLocaleString()} (${pct}%). Remaining: $${remaining.toLocaleString()}. Make it hype, motivational, and real. Include emojis. 3-5 sentences max.`,
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:3: * All 49 empire agents wired to real APIs, real DB writes, real Telegram messages.
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:32:// ── Real Telegram message sender ──────────────────────────────────────────────
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:33:async function sendTelegram(
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:42:    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:45:      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:59:function escapeTelegramHtml(value: string): string {
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:72:  const teaser = escapeTelegramHtml(params.output.replace(/\s+/g, " ").slice(0, 520));
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:74:    `<b>${escapeTelegramHtml(params.title)}</b>\n\n` +
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:89:    `Tracked VaultX Telegram drop fired. ok=${drop.ok}; trackingCode=${drop.trackingCode}; trackingUrl=${drop.trackingUrl}; messageId=${drop.messageId ?? "none"}; error=${drop.error ?? "none"}`,
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:182:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🎬 <b>Creator Growth Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:198:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🏝️ <b>DR Deal & Recruiting Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:210:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🎙️ <b>Podcast Money Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:231:          `CreatorVault has these features: Telegram bots, AI video generation, creator subscriptions, marketplace, live streaming, adult content verification, Stripe payments, affiliate program. Audit the platform's legal exposure and generate: 1) Top 3 compliance gaps, 2) Updated ToS clause for AI-generated content, 3) GDPR/CCPA compliance checklist.`,
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:263:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `🤝 <b>Auto-Recruiter Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:270:          "You are the Engagement Agent. You generate smart replies, run retention sequences, and keep audiences engaged 24/7 across Telegram, Instagram, TikTok, and YouTube.",
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:275:        await sendTelegram(ENGAGEMENT_BOT_TOKEN, OWNER_CHAT_ID, `💬 <b>Engagement Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:294:        const ownerSent = await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💰 <b>Money Follow-Up Agent</b>\n\n${escapeTelegramHtml(output.slice(0, 800))}`, "money_follow_up_owner_alert");
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:301:        return { outcome: `${output}\n\nOwner Telegram sent: ${ownerSent}. ${dropAction}`, revenue: 0, status: "success", action: `recovery_sequences_generated + owner_telegram_${ownerSent ? "sent" : "failed"} + ${dropAction}` };
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:308:          `Generate a platform demo script: a 5-minute voice demo of CreatorVault for a creator with 50K followers who wants to monetize. Include: platform overview, key features (Telegram bots, AI tools, marketplace), pricing, and a close. Write it as KingCam would say it.`,
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:336:          `Repurpose this concept: 'How KingCam built a 7-figure creator empire using AI agents and Telegram bots.' Generate: 1) YouTube video title + description, 2) TikTok hook (first 3 seconds), 3) Instagram carousel outline (5 slides), 4) Email newsletter intro paragraph, 5) Twitter/X thread (5 tweets).`,
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:399:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🏡 <b>Real Estate Empire Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:461:          `Emma Network currently has ${leadCount} leads in pipeline. Generate: 1) 3 DM scripts for recruiting fitness-focused women (Instagram, TikTok, Telegram), 2) Referral incentive program structure (what to offer existing members for referrals), 3) Top 5 hashtags/communities to target for recruitment, 4) Onboarding welcome message for new Emma Network members.`,
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:464:        await sendTelegram(RECRUITER_BOT_TOKEN, OWNER_CHAT_ID, `💪 <b>Emma Network Recruiter</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:581:        await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `💳 <b>Stripe Revenue Agent</b>\n\n${revenueReport}\n\n${analysis.slice(0, 400)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:585:      // ── 30. Telegram Bot Manager Agent ────────────────────────────────────────
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:597:            const res = await fetch(`https://api.telegram.org/bot${bot.token}/getMe`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:610:          "You are the Telegram Bot Manager Agent.",
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:614:        await saveAgentReport(agentSlug, "Telegram Bot Manager Agent", "bot_health_report", `${statusReport}\n\n${analysis}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:615:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🤖 <b>Telegram Bot Manager</b>\n\n${statusReport}\n\n${analysis.slice(0, 400)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:633:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `👑 <b>Owner Cockpit Daily Briefing</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:669:        await sendTelegram(TELEGRAM_BOT_TOKEN, OWNER_CHAT_ID, `🧠 <b>Empire Brain Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:723:          `Generate a comprehensive monetization audit for KingCam's empire: 1) Current revenue stream analysis (Telegram bots, subscriptions, courses, brand deals, affiliate, real estate), 2) Identify 3 untapped revenue streams worth $10K+/month, 3) 90-day monetization roadmap with specific milestones, 4) Revenue diversification score and risk assessment.`,
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:727:        await sendTelegram(MONETIZATION_BOT_TOKEN, OWNER_CHAT_ID, `📊 <b>Monetization Strategy Agent</b>\n\n${output.slice(0, 800)}`);
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:855:          `Generate a legal compliance report for CreatorVault: 1) Top 5 legal risks for a creator monetization platform (adult content, AI-generated content, Telegram bots, marketplace), 2) Creator contract template (key clauses for platform TOS agreement), 3) DMCA takedown notice template, 4) Privacy policy update needed for AI features, 5) Regulatory changes to watch in 2026.`,
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:947:  "telegram-bot-manager-agent": { name: "Telegram Bot Manager Agent", category: "infra", taskType: "bot_health_check" },
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:1267:        daily_update: `Write a compelling Telegram post for a creator's $${goal.toLocaleString()} challenge. Current progress: $${current.toLocaleString()} (${pct}%). Remaining: $${remaining.toLocaleString()}. Make it hype, motivational, and real. Include emojis. 3-5 sentences max.`,
+server/routers/checkoutBot.ts:9:  formatCatalogForTelegram,
+server/routers/checkoutBot.ts:32:   * Format catalog for Telegram
+server/routers/checkoutBot.ts:34:  formatForTelegram: publicProcedure
+server/routers/checkoutBot.ts:44:        message: formatCatalogForTelegram(catalog),
+server/routers/commandHub.ts:11:  executeTelegramBroadcast,
+server/routers/commandHub.ts:78:   * Send Telegram broadcast
+server/routers/commandHub.ts:80:  sendTelegramBroadcast: protectedProcedure
+server/routers/commandHub.ts:89:      return await executeTelegramBroadcast({
+server/routers/conversionEngineRouter.ts:81:    existingSystems: ["Stripe systems", "VaultX systems", "Telegram systems"],
+server/routers/conversionEngineRouter.ts:89:    packageName: "Telegram Money Machine",
+server/routers/conversionEngineRouter.ts:90:    description: "Telegram onboarding and campaign transition package using existing funnel, subscriber, and attribution systems.",
+server/routers/conversionEngineRouter.ts:91:    existingSystems: ["Telegram systems", "Recruiter OS", "Stripe systems"],
+server/routers/conversionEngineRouter.ts:101:    existingSystems: ["Recruiter OS", "Media OS", "VaultX systems", "Stripe systems", "Telegram systems"],
+server/routers/conversionEngineRouter.ts:195:    profile.telegramReady ? "Telegram path exists and should be enrolled into onboarding or VIP follow-up." : "Telegram capture path is missing, reducing owned-audience conversion leverage.",
+server/routers/conversionEngineRouter.ts:240:    recurringRevenueOpportunity: `Recurring revenue potential is estimated at ${formattedRecurring} from subscription packaging, VIP escalation, Telegram retention, and Stripe activation. The fastest money path is a paid vault tier, a first-subscriber sprint, and a VIP offer for the most responsive fans.`,
+server/routers/conversionEngineRouter.ts:242:      ? `${name} already has Telegram signal available. Move this creator into the existing Telegram onboarding path, enroll follow-up around the generated packet, and use Telegram as the owned-audience conversion bridge.`
+server/routers/conversionEngineRouter.ts:243:      : `${name} should receive a Telegram transition during onboarding so CreatorVault can move fan attention away from algorithm dependency and into owned follow-up, drops, and VIP pushes.`,
+server/routers/conversionEngineRouter.ts:246:    platformGrowthOpportunity: `The platform growth path is to use ${profile.platform} as the attention source, CreatorVault onboarding as the conversion path, Telegram as the retention bridge, and Stripe-backed subscriptions/VIP as the revenue capture layer.`,
+server/routers/conversionEngineRouter.ts:247:    creatorvaultLeverageExplanation: `CreatorVault gives ${name} leverage by combining Recruiter OS intelligence, Media OS and Trailer systems for intrigue, VaultX and subscription systems for paid access, Telegram systems for owned follow-up, Stripe systems for activation, and Clone systems when persona leverage is worth scaling.`,
+server/routers/conversionEngineRouter.ts:249:    cinematicOnboardingPreview: `Preview the onboarding as a three-step money sprint for ${name}: activate Stripe, launch the paid vault/subscription offer, then transition warm fans into Telegram and VIP escalation.`,
+server/routers/conversionEngineRouter.ts:252:      funnelMapVisual: `${profile.platform} attention → CreatorVault onboarding → Stripe subscription → Telegram retention → VIP offer`,
+server/routers/conversionEngineRouter.ts:255:    connectedSystems: ["Recruiter OS", "Media OS", "Trailer systems", "Teaser Engine", "Stripe systems", "Telegram systems", "VaultX systems", "Clone systems"],
+server/routers/conversionEngineRouter.ts:270:      { offsetHours: 72, action: "transition to Telegram onboarding or VIP setup call" },
+server/routers/conversionEngineRouter.ts:292:    moneyNextAction: intelligence.conversionProbabilityScore >= 75 ? "Send packet, push Telegram transition, and close Stripe-backed paid vault activation." : "Nurture with audit proof, trailer intrigue, and recurring revenue opportunity before activation push.",
+server/routers/conversionEngineRouter.ts:331:    nextMoneyAction: priorityScore >= 70 ? "Send personalized packet and move directly into Telegram and Stripe activation." : "Use audit proof and trailer intrigue to increase readiness before activation push.",
+server/routers/creatorOutreachRouter.ts:98:  return `Turn @${creator.handle}'s ${platform} attention${topic} into a tracked $49 first-money offer, onboarding packet, Telegram follow-up, and paid presentation CTA.`;
+server/routers/creatorOutreachRouter.ts:130:    creatorGrowthRoadmap: ["Package the first paid offer", "Push Telegram proof drop", "Track clicks and replies", "Escalate VIP prospects"],
+server/routers/creatorOutreachRouter.ts:522:  // Send outreach via Telegram bot (for Telegram creators)
+server/routers/creatorOutreachRouter.ts:523:  sendTelegramOutreach: protectedProcedure
+server/routers/creatorOutreachRouter.ts:532:      // Send via Telegram Bot API
+server/routers/creatorOutreachRouter.ts:533:      const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+server/routers/creatorOutreachRouter.ts:537:          chat_id: `@${input.telegramUsername}`,
+server/routers/creatorTools.ts:10:  generateTelegramBroadcast,
+server/routers/creatorTools.ts:54:   * Generate Telegram broadcast
+server/routers/creatorTools.ts:56:  generateTelegramBroadcast: protectedProcedure
+server/routers/creatorTools.ts:65:      const broadcast = await generateTelegramBroadcast({
+server/routers/distributionRouter.ts:464:          // Use existing Telegram bot infrastructure
+server/routers/distributionRouter.ts:483:            throw new Error(`No Telegram channel mapped for slug: ${slug}`);
+server/routers/distributionRouter.ts:492:            `https://api.telegram.org/bot${botToken}/sendVideo`,
+server/routers/distributionRouter.ts:497:                chat_id: chatId,
+server/routers/distributionRouter.ts:505:          if (!data.ok) throw new Error(`Telegram API error: ${data.description}`);
+server/routers/kingWorld3DRouter.ts:232:    description: "Tiered content broadcast — WhatsApp/Telegram sequences",
+server/routers/kingWorld3DRouter.ts:249:    name: "WhatsApp/Telegram",
+server/routers/kingcamScriptWriterRouter.ts:29:  torment_thread: { label: "Torment Thread", systemPrompt: `You are KingCam, a ${KINGCAM_STYLE}. Write a Telegram/social media thread that creates urgency and FOMO. 5-7 posts, each punchy and direct. Topic: empire building, money moves, creator life. Each post should stand alone but build on the last. No fluff. Pure value + entertainment.`, maxTokens: 800 },
+server/routers/kingcamScriptWriterRouter.ts:33:  telegram_post: { label: "Telegram Post", systemPrompt: `You are KingCam, a ${KINGCAM_STYLE}. Write 3 Telegram channel posts: 1) Value post (teach something), 2) Hype post (build excitement), 3) Revenue post (drive sales). Each 2-4 paragraphs. Include emojis strategically. End each with a clear CTA.`, maxTokens: 700 },
+server/routers/messageRouter.ts:215:  sendMessage: protectedProcedure
+server/routers/onboarding.ts:87:      messages: [{ role: "user", content: `Create a CreatorVault activation plan for a real creator. No placeholders and no generic filler.\nGoals: ${input.goals.join(", ")}\nExperience: ${input.experience}\nNiche: ${input.niche}\n\nDesign a 7-step journey that moves from profile setup to uploaded paid content, Telegram distribution, first buyer conversion, follow-up offer, and operator telemetry. Include exact action, required asset, revenue intent, and completion proof for each step.` }],
+server/routers/onboardingV2Router.ts:68:      messages: [{ role: "user", content: `Design a CreatorVault V2 activation workflow for a real ${input.creatorType} creator.\nPrimary goal: ${input.primaryGoal}\nIncome goal: $${input.monthlyIncomeGoal}/month\nPlatforms: ${input.platforms.join(", ")}\n\nCreate a concrete welcome, day-one quick wins, week-one roadmap, first paid offer, Telegram distribution move, and exact proof fields the system should track. No placeholders or generic examples.` }],
+server/routers/presentationBuilderRouter.ts:68:    useCase: "Turn a newly recruited creator into uploaded content, Telegram distribution, first PPV, and follow-up offers.",
+server/routers/presentationBuilderRouter.ts:93:    const prompt = `You are CreatorVault's Presentation Empire operator. Build a production-ready monetization presentation that can be sent to a real prospect today. Do not include placeholders, mock names, fake metrics, or vague filler. If data is unknown, give a concrete collection step and the exact field needed.\n\nTitle: ${input.title}\nTopic: ${input.topic}\nAudience: ${input.audience}\nSlides: ${input.slides}\nStyle: ${input.style || "premium CreatorVault operating brief"}\nCreator handle: ${input.creatorHandle || "not supplied"}\nPlatform: ${input.platform || "not supplied"}\nMonetization goal: ${input.monetizationGoal || "paid creator activation"}\nOffer price USD: ${input.offerPriceUsd ?? 497}\nDistribution channel: ${input.distributionChannel || "Telegram + direct DM follow-up"}\n\nReturn a structured package with: 1) executive summary, 2) slide-by-slide deck with title, proof point, talk track, visual direction, and CTA, 3) outreach message to send with the deck, 4) Telegram internal notification, 5) monetization checklist, 6) exact missing data fields if any.`;
+server/routers/presentationEmpireRouter.ts:45:async function sendTelegram(msg: string) {
+server/routers/presentationEmpireRouter.ts:48:    await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+server/routers/presentationEmpireRouter.ts:51:      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: msg, parse_mode: "HTML" }),
+server/routers/presentationEmpireRouter.ts:339:          // STEP 6: Telegram notification to KingCam
+server/routers/presentationEmpireRouter.ts:351:          await sendTelegram(tgMsg);
+server/routers/presentationEmpireRouter.ts:469:        await sendTelegram(
+server/routers/presentationEmpireRouter.ts:716:          await sendTelegram(
+server/routers/revenueReportingRouter.ts:216:      // Telegram check
+server/routers/revenueReportingRouter.ts:219:          const res = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/getMe`);
+server/routers/telegram.ts:2: * Telegram Bot Integration
+server/routers/telegram.ts:4: * Webhook handler for Telegram bot commands:
+server/routers/telegram.ts:19:// Telegram webhook payload schema
+server/routers/telegram.ts:20:const TelegramWebhookSchema = z.object({
+server/routers/telegram.ts:37:async function sendTelegramMessage(chatId: number, text: string) {
+server/routers/telegram.ts:38:  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+server/routers/telegram.ts:44:      chat_id: chatId,
+server/routers/telegram.ts:51:    console.error('Failed to send Telegram message:', await response.text());
+server/routers/telegram.ts:58:  // Webhook endpoint for Telegram
+server/routers/telegram.ts:60:    .input(TelegramWebhookSchema)
+server/routers/telegram.ts:73:        await sendTelegramMessage(
+server/routers/telegram.ts:87:        // TODO: Link Telegram user to platform user
+server/routers/telegram.ts:88:        await sendTelegramMessage(
+server/routers/telegram.ts:93:          `_Tip: Link your Telegram account in settings to see balance here._`
+server/routers/telegram.ts:98:        await sendTelegramMessage(
+server/routers/telegram.ts:108:        await sendTelegramMessage(
+server/routers/telegram.ts:120:        await sendTelegramMessage(
+server/routers/telegram.ts:134:  // Set webhook URL (call this once to configure Telegram)
+server/routers/telegram.ts:139:      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`;
+server/routers/telegram.ts:154:      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo`;
+server/routers/telegramBot.ts:18:    const c = await openai.chat.completions.create({ model: "gpt-4o-mini", messages: [{ role: "user", content: `Create a Telegram bot script for ${input.botPurpose}:
+server/routers/telegramCampaignRouter.ts:4: * tRPC router for the Telegram AI Drop Machine v1.
+server/routers/telegramCampaignRouter.ts:82:        buyerTelegramId: z.number().optional(),
+server/routers/telegramCampaignRouter.ts:90:        buyerTelegramId: input.buyerTelegramId,
+server/routers/telegramCampaignRouter.ts:102:        buyerTelegramId: z.number().optional(),
+server/routers/telegramCampaignRouter.ts:109:        buyerTelegramId: input.buyerTelegramId,
+server/routers/telegramCampaignRouter.ts:118:        buyerTelegramId: z.number().int().positive(),
+server/routers/telegramCampaignRouter.ts:125:        buyerTelegramId: input.buyerTelegramId,
+server/routers/telegramCampaignRouter.ts:161:          `SELECT message_type, telegram_chat_id, telegram_message_id, sent_at, status
+server/routers/telegramFunnelRouter.ts:2: * VaultX Telegram Funnel OS Router
+server/routers/telegramFunnelRouter.ts:19: *   analytics.overview      - Platform-level Telegram analytics
+server/routers/telegramFunnelRouter.ts:20: *   analytics.attribution   - Attribution chain: Telegram → purchase → revenue
+server/routers/telegramFunnelRouter.ts:55:// ── Telegram API helpers ──────────────────────────────────────────────────────
+server/routers/telegramFunnelRouter.ts:63:  const body: any = { chat_id: chatId, text, parse_mode: parseMode };
+server/routers/telegramFunnelRouter.ts:65:    body.reply_markup = {
+server/routers/telegramFunnelRouter.ts:74:    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+server/routers/telegramFunnelRouter.ts:93:  const body: any = { chat_id: chatId, video: videoUrl, caption, parse_mode: "HTML" };
+server/routers/telegramFunnelRouter.ts:95:    body.reply_markup = {
+server/routers/telegramFunnelRouter.ts:104:    const res = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
+server/routers/telegramFunnelRouter.ts:154:           (telegram_chat_id, telegram_username, display_name, channel_type, owner_type, owner_id, visibility, monetization_level)
+server/routers/telegramFunnelRouter.ts:196:          result = await tgSendVideo(token, channel.telegram_chat_id, input.videoUrl, input.caption, buttons);
+server/routers/telegramFunnelRouter.ts:198:          result = await tgSendMessage(token, channel.telegram_chat_id, input.messageText, buttons);
+server/routers/telegramFunnelRouter.ts:225:          [channel.telegram_chat_id, input.videoUrl ? "video" : "text",
+server/routers/telegramFunnelRouter.ts:585:              result = await tgSendVideo(token, channel.telegram_chat_id, campaign.media_url, campaign.message_text, buttons);
+server/routers/telegramFunnelRouter.ts:587:              result = await tgSendMessage(token, channel.telegram_chat_id, campaign.message_text, buttons);
+server/routers/telegramHubRouter.ts:28:async function sendTelegramMessage(token: string, chatId: string | number, text: string, parseMode = "HTML"): Promise<boolean> {
+server/routers/telegramHubRouter.ts:30:    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+server/routers/telegramHubRouter.ts:33:      body: JSON.stringify({ chat_id: chatId, text, parse_mode: parseMode }),
+server/routers/telegramHubRouter.ts:40:async function sendTelegramVideo(token: string, chatId: string | number, videoUrl: string, caption?: string): Promise<boolean> {
+server/routers/telegramHubRouter.ts:42:    const res = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
+server/routers/telegramHubRouter.ts:45:      body: JSON.stringify({ chat_id: chatId, video: videoUrl, caption, parse_mode: "HTML" }),
+server/routers/telegramHubRouter.ts:54:    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+server/routers/telegramHubRouter.ts:167:        const ok = await sendTelegramMessage(token, channel.channel_id, input.message, input.parseMode);
+server/routers/telegramHubRouter.ts:208:        const ok = await sendTelegramVideo(token, channel.channel_id, input.videoUrl, input.caption);
+server/routers/telegramHubRouter.ts:267:    const ok = await sendTelegramMessage(token, input.chatId, input.message);
+server/routers/telegramMoneyLoopRouter.ts:4: * tRPC router for the first real Telegram money loop:
+server/routers/telegramMoneyLoopRouter.ts:104:        buyerTelegramId: z.number().optional(),
+server/routers/telegramMoneyLoopRouter.ts:116:        buyerTelegramId: z.number(),
+server/routers/vaultxRouter.ts:565:  // PROCEDURE 18 — sendMessage
+server/routers/vaultxRouter.ts:567:  sendMessage: protectedProcedure
+server/routers/vaultxRouter.ts:864:      buyerTelegramId: z.number().optional(),
+server/routers/vaultxRouter.ts:895:          let buyerTelegramId: number | undefined = input.buyerTelegramId;
+server/routers/vaultxRouter.ts:896:          if (!buyerTelegramId) {
+server/routers/vaultxRouter.ts:902:              buyerTelegramId = parseInt(String(tgRows[0].telegram_user_id), 10) || undefined;
+server/routers/vaultxRouter.ts:903:              console.log("[VaultX purchasePpv] Auto-resolved buyerTelegramId for user_id=" + ctx.user.id);
+server/routers/vaultxRouter.ts:911:              buyerTelegramId,
+server/routers/vaultxRouter.ts:915:              [trackingCode, buyerTelegramId || null, purchaseId]
+server/routers/vaultxRouter.ts:917:          } else if (buyerTelegramId) {
+server/routers/vaultxRouter.ts:921:              [buyerTelegramId, purchaseId]
+server/routers/vaultxRouter.ts:924:          // 2. VIP upsell — requires real buyer Telegram ID
+server/routers/vaultxRouter.ts:925:          if (buyerTelegramId) {
+server/routers/vaultxRouter.ts:928:              buyerTelegramId,
+server/routers/vaultxRouter.ts:943:            console.log("[VaultX purchasePpv] No buyerTelegramId — connect token generated for purchase_id=" + purchaseId);
+server/routers/vaultxRouter.ts:3050:        telegram_teaser: { label: "Telegram Teaser", resolution: "720p", format: "H.264" },
+server/routers/vaultxRouter.ts:3166:  "promotional_copy": "Telegram/Instagram teaser copy"
+server/services/abandonedCheckoutRecovery.ts:94:async function findTelegramSubscriber(conn: mysql.Connection, fanId?: number | null): Promise<{ telegram_id: string; username?: string | null } | null> {
+server/services/abandonedCheckoutRecovery.ts:112:async function sendTelegramRecoveryMessage(chatId: string, text: string, recovery: string) {
+server/services/abandonedCheckoutRecovery.ts:114:  const resp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+server/services/abandonedCheckoutRecovery.ts:118:      chat_id: chatId,
+server/services/abandonedCheckoutRecovery.ts:121:      reply_markup: {
+server/services/abandonedCheckoutRecovery.ts:148:    const subscriber = await findTelegramSubscriber(conn, input.fanId);
+server/services/abandonedCheckoutRecovery.ts:152:      const tg = await sendTelegramRecoveryMessage(
+server/services/adultSalesBot.ts:401:         VALUES (1, 1, "telegram", "https://creatorvault.live/uploads/ppv_1778107488797/teaser.mp4", "teaser", "Telegram bot buyer conversion", ?, ?, "posted", "explicit", "vaultx_adult")`,
+server/services/checkoutBot.ts:114: * Format catalog for Telegram
+server/services/checkoutBot.ts:116:export function formatCatalogForTelegram(catalog: ProductCatalogItem[]): string {
+
+## Current emergency env references
+scripts/build-vaultx-hype-assets.py:33:        "headline": "TELEGRAM AUTOMATION TURNS LURKERS INTO BUYERS",
+scripts/build-vaultx-hype-assets.py:213:        draw.text((292, 1030), "AUTOMATION KEEPS THE PRESSURE ON", font=FONT_SM_B, fill=GOLD2)
+client/src/pages/KingCamCommandCenter.tsx:351:            PILLAR 1: EMPIRE & MONEY AUTOMATIONS
+
+## Homepage root files
+client/src/App.tsx
+client/src/pages/CreatorHome.tsx
+client/src/pages/EmmaHome.tsx
+client/src/pages/EmmaNetworkHome.tsx
+client/src/pages/Home.tsx
+client/src/pages/KingHome.tsx

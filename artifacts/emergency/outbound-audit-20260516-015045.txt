@@ -1,0 +1,152 @@
+# Outbound Telegram Audit
+Generated: 2026-05-16T01:50:45+00:00
+
+## Recent challenge/live Telegram JSON artifacts
+2026-05-16 01:42:31.6621923100 artifacts/challenge-runs/vaultx-5k-telegram-preview-1778895751663.md
+2026-05-16 01:42:31.6621923100 artifacts/challenge-runs/vaultx-5k-challenge-promo-proof-1778895751663.json
+2026-05-16 01:41:55.8661484610 artifacts/challenge-runs/vaultx-5k-challenge-promo-proof-1778895715865.json
+2026-05-16 01:41:55.8621484560 artifacts/challenge-runs/vaultx-5k-telegram-preview-1778895715865.md
+2026-05-15 18:03:03.0393799920 artifacts/delivery/vaultx-premium-preview-visual-inspection-2026-05-15.md
+2026-05-15 18:00:57.1544043160 artifacts/visual-drops/vaultx-visual-drop-proof-1778868057156.json
+2026-05-15 17:41:33.4812774740 artifacts/visual-drops/vaultx-visual-drop-proof-1778866893485.json
+2026-05-15 17:41:33.4812774740 artifacts/challenge-runs/live-money-sprint-telemetry.json
+2026-05-15 17:37:30.7113664170 artifacts/visual-drops/vaultx-visual-drop-proof-1778866650713.json
+2026-05-15 17:25:22.1856895820 artifacts/challenge-runs/kingcam-clone-agent-live-telegram-1778865922191.json
+2026-05-15 17:15:59.0133229830 artifacts/challenge-runs/kingcam-clone-agent-live-telegram-1778865359017.json
+2026-05-15 17:08:21.0056789310 artifacts/challenge-runs/kingcam-clone-agent-live-telegram-1778864901011.json
+2026-05-15 17:07:23.5292385440 artifacts/challenge-runs/live-telegram-state.json
+2026-05-15 15:41:59.2136922460 artifacts/challenge-runs/kingcam-clone-agent-live-telegram-1778859719214.json
+2026-05-15 13:49:42.5497988990 artifacts/dry-runs/princesa-de-africa-live-operator-proof-2026-05-15.json
+2026-05-15 13:34:15.7590671450 artifacts/dry-runs/princesa-de-africa-challenge-launch-proof-2026-05-15.json
+
+## Broken-content pattern scan in artifacts
+
+## Database schema references for outreach/telegram logs
+server/_core/index.ts:229:          // Delegate to telegramFunnelRouter.funnel.processAllDue logic inline
+server/routers/distributionRouter.ts:507:          platformPostId = String(data.result.message_id);
+server/routers/distributionRouter.ts:508:          platformPostUrl = `https://t.me/${slug.replace("vaultx-telegram-", "CreatorVault_")}/${data.result.message_id}`;
+server/routers/messageRouter.ts:172:          (SELECT COUNT(*) FROM message_unlocks mu WHERE mu.message_id = m.id AND mu.fan_id = ${userId}) AS is_unlocked_by_me
+server/routers/messageRouter.ts:300:        SELECT id FROM message_unlocks WHERE message_id = ${input.messageId} AND fan_id = ${fanId} LIMIT 1
+server/routers/messageRouter.ts:340:        INSERT IGNORE INTO message_unlocks (message_id, fan_id, amount_paid_cents, stripe_payment_intent_id)
+server/routers/telegram.ts:23:    message_id: z.number(),
+server/routers/telegramCampaignRouter.ts:161:          `SELECT message_type, telegram_chat_id, telegram_message_id, sent_at, status
+server/routers/telegramCampaignRouter.ts:175:            telegramMessageId: campaign.telegram_message_id,
+server/routers/telegramCampaignRouter.ts:214:                  tc.revenue_cents, tc.price_cents, tc.telegram_message_id,
+server/routers/telegramCampaignRouter.ts:276:                  d.tg_message_id, d.tracking_code, d.click_count, d.revenue_cents,
+server/routers/telegramFunnelRouter.ts:80:    return data.ok ? { ok: true, messageId: data.result?.message_id } : { ok: false, error: data.description };
+server/routers/telegramFunnelRouter.ts:110:    return data.ok ? { ok: true, messageId: data.result?.message_id } : { ok: false, error: data.description };
+server/routers/telegramHubRouter.ts:173:              "INSERT INTO telegram_drops (message_id, channel_id, drop_date, content_type, creator_id, caption, created_at) VALUES (?, ?, NOW(), 'text', ?, ?, NOW())",
+server/services/abandonedCheckoutRecovery.ts:126:  const data = await resp.json() as { ok?: boolean; description?: string; result?: { message_id?: number } };
+server/services/abandonedCheckoutRecovery.ts:131:    messageId: data.result?.message_id,
+server/services/telegramBuyerReactivation.ts:112:    return { ok: true, messageId: data.result.message_id };
+server/services/telegramCampaign.ts:389:    const telegramMessageId = String(tgData.result?.message_id || "");
+server/services/telegramCampaign.ts:394:         (campaign_id, message_type, telegram_chat_id, telegram_message_id, message_text, sent_at, status)
+server/services/telegramCampaign.ts:400:    // Update campaign status + message_id
+server/services/telegramCampaign.ts:403:       SET status = 'sent', telegram_message_id = ?
+server/services/telegramCampaign.ts:653:              telegram_message_id, message_text, sent_at, status)
+server/services/telegramCampaign.ts:659:            String(dmData.result?.message_id || ""),
+server/services/telegramDailyDropEngine.ts:11: * - Records tg_message_id, click_count, revenue_cents
+server/services/telegramDailyDropEngine.ts:160:    return { ok: true, messageId: data.result.message_id };
+server/services/telegramDailyDropEngine.ts:229:    console.log(`[daily-drop] Sent tg_message_id=${tgMessageId} tracking_code=${trackingCode}`);
+server/services/telegramDailyDropEngine.ts:269:      "UPDATE telegram_daily_drops SET tracking_code=?, tg_message_id=?, campaign_id=? WHERE id=?",
+server/services/telegramMoneyLoop.ts:127:    const messageId = tgResult.result?.message_id as number | undefined;
+server/services/telegramMoneyLoop.ts:132:         (message_id, channel_id, drop_date, content_type, creator_id, offer_price, caption, has_cta, cta_type)
+server/services/telegramStartHandler.ts:269:      const messageId = dmResult.result.message_id;
+server/services/telegramStartHandler.ts:270:      console.log(`[start-handler] VIP DM sent message_id=${messageId} to chat_id=${chatId}`);
+server/services/telegramVipUpsell.ts:7: * 2. Send real VIP upsell DM via Bot API (returns message_id)
+server/services/telegramVipUpsell.ts:179:        dmMessageId: String(dmRes.result?.message_id),
+server/services/telegramVipUpsell.ts:230:    const dmMessageId = String(dmRes.result?.message_id);
+server/services/telegramVipUpsell.ts:242:           (campaign_id, message_type, telegram_chat_id, telegram_user_id, telegram_message_id, message_text, sent_at, status)
+server/services/vaultxAutonomousAcquisitionOperator.ts:228:    external_message_id VARCHAR(255),
+server/services/vaultxAutonomousAcquisitionOperator.ts:455:  return json.result?.message_id ? String(json.result.message_id) : null;
+server/services/vaultxAutonomousAcquisitionOperator.ts:480:  await rawExec("UPDATE vaultx_outreach_actions SET status='sent', sent_at=CURRENT_TIMESTAMP, external_message_id=?, proof=?, attempt_count=attempt_count+1 WHERE id=?", [externalId, serialize(proof), action.id]);
+server/services/vaultxAutonomousAcquisitionOperator.ts:666:  const actions = await rawQuery<any>(`SELECT a.id, a.uuid, a.lead_id, l.platform, l.handle, a.stage, a.channel, a.status, a.attempt_count, a.due_at, a.sent_at, a.external_message_id, a.error_message, a.message, a.cta_url, a.proof
+server/services/challengeEndToEndExecutor.ts:186:      telegram_message_id VARCHAR(80) NULL,
+server/services/challengeEndToEndExecutor.ts:363:  return Number(data?.result?.message_id || 0) || null;
+server/services/challengeEndToEndExecutor.ts:457:        (task_slug, task_name, mode, price_cents, tracking_code, checkout_session_id, checkout_url, distribution_job_id, telegram_message_id, deliverable_json, proof_json)
+server/services/challengeEndToEndExecutor.ts:492:    SELECT id, task_slug, task_name, mode, price_cents, tracking_code, checkout_session_id, checkout_url, distribution_job_id, telegram_message_id, proof_json, created_at
+server/telegram-webhook.test.ts:77:          message_id: 42,
+server/telegram-webhook.ts:187:        messageId: cq.message?.message_id,
+server/telegram-webhook.ts:252:    const messageId = message.message_id;
+
+## Local DB connection hints
+.env.railway:8:# DATABASE_URL=postgresl://user:passworg@127.0.0.1:5432/default
+server/_core/context.ts:2:import type { User } from "../../drizzle/schema";
+server/_core/env.ts:4:  databaseUrl: process.env.DATABASE_URL ?? "",
+server/_core/index.ts:135:      // Use mysql2 createPool directly — drizzle.$client is not accessible at runtime
+server/_core/index.ts:136:      const mysql2 = await import("mysql2");
+server/_core/index.ts:137:      const attrPool = mysql2.createPool(process.env.DATABASE_URL as string);
+server/_core/index.ts:214:        const mysql2 = await import("mysql2/promise");
+server/_core/index.ts:215:        const dbUrl = process.env.DATABASE_URL || "mysql://creatorvault:KingCam214CreatorVault@127.0.0.1:3306/creatorvault";
+server/_core/index.ts:216:        const m = dbUrl.match(/mysql:\/\/([^:]+):([^@]+)@([^:/]+):(\d+)\/([^?]+)/);
+server/_core/index.ts:219:        const conn = await mysql2.default.createConnection({ host, port: parseInt(port), user, password, database });
+server/_core/localAuth.ts:2:import mysql from "mysql2/promise";
+server/_core/localAuth.ts:15:let pool: mysql.Pool | null = null;
+server/_core/localAuth.ts:17:function getPool(): mysql.Pool {
+server/_core/localAuth.ts:19:    const dbUrl = process.env.DATABASE_URL ?? "";
+server/_core/localAuth.ts:20:    // Parse mysql://user:pass@host:port/db
+server/_core/localAuth.ts:21:    const match = dbUrl.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+server/_core/localAuth.ts:23:      pool = mysql.createPool({
+server/_core/localAuth.ts:34:      pool = mysql.createPool({
+server/_core/localAuth.ts:53:    const [rows] = await db.execute<mysql.RowDataPacket[]>(
+server/_core/sdk.ts:7:import type { User } from "../../drizzle/schema";
+server/_core/stripeWebhook.ts:201:  const { subscriptions, transactions, creatorBalances } = await import("../../drizzle/schema");
+server/_core/stripeWebhook.ts:202:  const { eq } = await import("drizzle-orm");
+server/_core/stripeWebhook.ts.bak.failed_payment_grace_20260509013532:152:  const { subscriptionTiers, subscriptions } = await import("../../drizzle/schema");
+server/_core/stripeWebhook.ts.bak.failed_payment_grace_20260509013532:153:  const { eq, desc } = await import("drizzle-orm");
+server/_core/stripeWebhook.ts.bak.failed_payment_grace_20260509013532:409:  const { subscriptions } = await import("../../drizzle/schema");
+server/_core/stripeWebhook.ts.bak.failed_payment_grace_20260509013532:410:  const { eq, desc } = await import("drizzle-orm");
+server/_core/stripeWebhook.ts.bak.failed_payment_grace_20260509013532:490:  const { subscriptions } = await import("../../drizzle/schema");
+server/_core/stripeWebhook.ts.bak.failed_payment_grace_20260509013532:491:  const { eq, desc } = await import("drizzle-orm");
+server/_core/stripeWebhook.ts.bak.failed_payment_grace_20260509013532:537:  const { transactions, creatorBalances } = await import("../../drizzle/schema");
+server/_core/stripeWebhook.ts.bak.failed_payment_grace_20260509013532:538:  const { eq } = await import("drizzle-orm");
+server/_core/stripeWebhook.ts.bak.failed_payment_grace_20260509013532:642:  const { sql } = await import("drizzle-orm");
+server/_core/stripeWebhook.ts.bak.failed_payment_grace_20260509013532:664:  const { sql } = await import("drizzle-orm");
+server/_core/stripeWebhook.ts.bak.failed_payment_grace_20260509013532:689:  const { subscriptions } = await import("../../drizzle/schema");
+server/_core/stripeWebhook.ts.bak.failed_payment_grace_20260509013532:690:  const { eq } = await import("drizzle-orm");
+server/_core/tts.ts:115:        const mysql = await import("mysql2/promise");
+server/_core/tts.ts:116:        const db = await mysql.default.createConnection(process.env.DATABASE_URL || "mysql://root:@localhost:3306/creatorvault");
+server/aiBot.test.ts:9:import { users, botEvents } from "../drizzle/schema";
+server/aiBot.test.ts:10:import { eq } from "drizzle-orm";
+server/better-sqlite3.d.ts:1:declare module 'better-sqlite3' {
+server/challengePaymentHook.ts:17:import { sql } from "drizzle-orm";
+server/db-fgh.ts:15:} from "../drizzle/schema";
+server/db-fgh.ts:16:import { eq, and, desc } from "drizzle-orm";
+server/db-vaultlive.ts:12:import { liveStreams, liveStreamViewers, liveStreamTips, liveStreamDonations } from "../drizzle/schema";
+server/db-vaultlive.ts:13:import { eq, and, isNull, desc, sql } from "drizzle-orm";
+server/db.js:76:var drizzle_orm_1 = require("drizzle-orm");
+server/db.js:77:var mysql2_1 = require("drizzle-orm/mysql2");
+server/db.js:78:var schema_1 = require("../drizzle/schema");
+server/db.js:84:            if (!_db && process.env.DATABASE_URL) {
+server/db.js:86:                    _db = (0, mysql2_1.drizzle)(process.env.DATABASE_URL);
+server/db.js:98:// Only initialize if DATABASE_URL is set
+server/db.js:99:exports.db = process.env.DATABASE_URL ? (0, mysql2_1.drizzle)(process.env.DATABASE_URL) : null;
+server/db.js:185:                    return [4 /*yield*/, db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.openId, openId)).limit(1)];
+server/db.js:203:                    return [4 /*yield*/, db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.id, id)).limit(1)];
+server/db.js:221:                    return [4 /*yield*/, db.select().from(schema_1.users).orderBy((0, drizzle_orm_1.desc)(schema_1.users.createdAt))];
+server/db.js:237:                    return [4 /*yield*/, db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.role, role)).orderBy((0, drizzle_orm_1.desc)(schema_1.users.createdAt))];
+server/db.js:253:                    return [4 /*yield*/, db.update(schema_1.users).set({ role: role }).where((0, drizzle_orm_1.eq)(schema_1.users.id, userId))];
+server/db.js:271:                    return [4 /*yield*/, db.update(schema_1.users).set({ creatorStatus: status }).where((0, drizzle_orm_1.eq)(schema_1.users.id, userId))];
+server/db.js:289:                    return [4 /*yield*/, db.update(schema_1.users).set(data).where((0, drizzle_orm_1.eq)(schema_1.users.id, userId))];
+server/db.js:326:                    return [4 /*yield*/, db.select().from(schema_1.emmaNetwork).where((0, drizzle_orm_1.eq)(schema_1.emmaNetwork.userId, userId)).limit(1)];
+server/db.js:344:                    return [4 /*yield*/, db.select().from(schema_1.emmaNetwork).orderBy((0, drizzle_orm_1.desc)(schema_1.emmaNetwork.createdAt))];
+server/db.js:360:                    return [4 /*yield*/, db.update(schema_1.emmaNetwork).set(data).where((0, drizzle_orm_1.eq)(schema_1.emmaNetwork.id, id))];
+server/db.js:397:                    return [4 /*yield*/, db.select().from(schema_1.waitlist).where((0, drizzle_orm_1.eq)(schema_1.waitlist.email, email)).limit(1)];
+server/db.js:415:                    return [4 /*yield*/, db.select().from(schema_1.waitlist).orderBy((0, drizzle_orm_1.desc)(schema_1.waitlist.createdAt))];
+server/db.js:431:                    return [4 /*yield*/, db.update(schema_1.waitlist).set({ status: status }).where((0, drizzle_orm_1.eq)(schema_1.waitlist.id, id))];
+server/db.js:468:                    return [4 /*yield*/, db.select().from(schema_1.content).where((0, drizzle_orm_1.eq)(schema_1.content.userId, userId)).orderBy((0, drizzle_orm_1.desc)(schema_1.content.createdAt))];
+server/db.js:484:                    return [4 /*yield*/, db.select().from(schema_1.content).where((0, drizzle_orm_1.eq)(schema_1.content.id, id)).limit(1)];
+server/db.js:502:                    return [4 /*yield*/, db.select().from(schema_1.content).orderBy((0, drizzle_orm_1.desc)(schema_1.content.createdAt))];
+server/db.js:518:                    return [4 /*yield*/, db.update(schema_1.content).set({ status: status }).where((0, drizzle_orm_1.eq)(schema_1.content.id, id))];
+server/db.js:555:                    return [4 /*yield*/, db.select().from(schema_1.payments).where((0, drizzle_orm_1.eq)(schema_1.payments.userId, userId)).orderBy((0, drizzle_orm_1.desc)(schema_1.payments.createdAt))];
+server/db.js:571:                    return [4 /*yield*/, db.select().from(schema_1.payments).where((0, drizzle_orm_1.eq)(schema_1.payments.stripePaymentId, stripePaymentId)).limit(1)];
+server/db.js:608:                    return [4 /*yield*/, db.select().from(schema_1.videoGenerationJobs).where((0, drizzle_orm_1.eq)(schema_1.videoGenerationJobs.id, id)).limit(1)];
+server/db.js:626:                    return [4 /*yield*/, db.select().from(schema_1.videoGenerationJobs).where((0, drizzle_orm_1.eq)(schema_1.videoGenerationJobs.userId, userId)).orderBy((0, drizzle_orm_1.desc)(schema_1.videoGenerationJobs.createdAt))];
+server/db.js:642:                    return [4 /*yield*/, db.update(schema_1.videoGenerationJobs).set(data).where((0, drizzle_orm_1.eq)(schema_1.videoGenerationJobs.id, id))];
+server/db.js:680:                    return [4 /*yield*/, db.select().from(schema_1.analyticsEvents).where((0, drizzle_orm_1.eq)(schema_1.analyticsEvents.userId, userId)).orderBy((0, drizzle_orm_1.desc)(schema_1.analyticsEvents.createdAt)).limit(limit)];
+server/db.js:697:                    return [4 /*yield*/, db.select().from(schema_1.analyticsEvents).where((0, drizzle_orm_1.eq)(schema_1.analyticsEvents.eventType, eventType)).orderBy((0, drizzle_orm_1.desc)(schema_1.analyticsEvents.createdAt)).limit(limit)];
+server/db.js:716:                            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.culturalContentTemplates.culture, culture), (0, drizzle_orm_1.eq)(schema_1.culturalContentTemplates.contentType, contentType)))
+server/db.js:717:                            .orderBy((0, drizzle_orm_1.desc)(schema_1.culturalContentTemplates.effectivenessScore))];
+server/db.js:720:                        .where((0, drizzle_orm_1.eq)(schema_1.culturalContentTemplates.culture, culture))
+server/db.js:721:                        .orderBy((0, drizzle_orm_1.desc)(schema_1.culturalContentTemplates.effectivenessScore))];
+server/db.js:774:                    return [4 /*yield*/, db.select().from(schema_1.brandAffiliations).where((0, drizzle_orm_1.eq)(schema_1.brandAffiliations.userId, userId))];

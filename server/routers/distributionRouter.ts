@@ -26,6 +26,7 @@ import { TRPCError } from "@trpc/server";
 import { db } from "../db";
 import { sql } from "drizzle-orm";
 import { randomBytes, createHash } from "crypto";
+import { callTelegramApiWithGuard } from "../services/telegramOutboundGuard";
 
 // ─── DB helpers ──────────────────────────────────────────────────────────────
 
@@ -486,22 +487,18 @@ export const distributionRouter = router({
           const trackingUrl = `https://creatorvault.live/r/${job.tracking_code}`;
           const caption = (job.caption || "🔥 New exclusive content available") + `\n\n🔗 ${trackingUrl}`;
 
-          // Send video
-          const { default: fetch } = await import("node-fetch");
-          const resp = await fetch(
-            `https://api.telegram.org/bot${botToken}/sendVideo`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                chat_id: chatId,
-                video: job.asset_url,
-                caption,
-                parse_mode: "Markdown",
-              }),
-            }
-          );
-          const data: any = await resp.json();
+          // Send video only when the emergency Telegram outbound guard is explicitly enabled.
+          const data: any = await callTelegramApiWithGuard({
+            botToken,
+            method: "sendVideo",
+            body: {
+              chat_id: chatId,
+              video: job.asset_url,
+              caption,
+              parse_mode: "Markdown",
+            },
+            context: "distributionRouter.job.post.telegramVideo",
+          });
           if (!data.ok) throw new Error(`Telegram API error: ${data.description}`);
 
           platformPostId = String(data.result.message_id);

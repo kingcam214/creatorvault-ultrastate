@@ -24,6 +24,7 @@ import { promisify } from "util";
 import mysql from "mysql2/promise";
 import { scrapeCreatorProfile } from "../services/socialScraperService.js";
 import { detectCulture, generateCulturalCopy } from "../services/culturalVoiceService.js";
+import { callTelegramApiWithGuard } from "../services/telegramOutboundGuard";
 // Remotion engine disabled - using fallback
 const dispatchRender = async (contract: any) => ({ jobId: Date.now().toString(), status: "queued" });
 const getJobState = async (jobId: string) => ({ jobId, status: "processing", progress: 0 });
@@ -45,11 +46,11 @@ async function getDb() {
 async function sendTelegram(msg: string) {
   if (!TELEGRAM_TOKEN) return;
   try {
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: msg, parse_mode: "HTML" }),
-      signal: AbortSignal.timeout(8000),
+    await callTelegramApiWithGuard({
+      botToken: TELEGRAM_TOKEN,
+      method: "sendMessage",
+      body: { chat_id: TELEGRAM_CHAT_ID, text: msg, parse_mode: "HTML" },
+      context: "presentationEmpireRouter.sendTelegram",
     });
   } catch {}
 }

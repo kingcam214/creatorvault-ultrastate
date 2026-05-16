@@ -1,0 +1,118 @@
+{
+  "generatedAt": "2026-05-16T02:21:50.878523+00:00",
+  "generator": "scripts/build-vaultx-premium-assets.py",
+  "productionMode": "deterministic_code_design_no_ai_image_generation",
+  "audience": "Creators and founder network interested in business-safe monetization infrastructure, paid vaults, VIP upsells, Telegram automation, and OnlyFans alternative positioning.",
+  "qualityStandard": "Premium dark-luxury creator monetization campaign, high-contrast Telegram-readable typography, explicit OnlyFans positioning where relevant, no explicit imagery.",
+  "layoutQualityGate": {
+    "canvas": "1080x1350 portrait; optimized for Telegram feed preview and Instagram-style 3:4 posts.",
+    "safeMarginPx": 70,
+    "dominantHeroLines": "One dominant visual claim, maximum 3 hero lines, each fitted inside the safe column.",
+    "copyDensity": "No raw output blocks; captions carry detail, images carry one premium claim plus proof modules.",
+    "contrast": "Dark-luxury background with high-contrast white/gold/cyan/magenta foreground modules.",
+    "brandSafety": "Business-safe creator monetization language; no explicit imagery and no platform-confusing spam design.",
+    "footer": "Tracked CreatorVault/VaultX footer must remain inside the safe area and never collide with chip row."
+  },
+  "drops": [
+    {
+      "id": "onlyfans_crusher_premium",
+      "headline": "VaultX is built to crush OnlyFans dependence.",
+      "body": "OnlyFans can be a channel. VaultX is the owned money loop: creator content, Telegram pressure, paid vault unlocks, VIP escalation, reactivation, and tracked buyer paths inside your ecosystem.",
+      "replyCta": "Reply CRUSH if you want the next OnlyFans-killer proof drop.",
+      "assetPath": "artifacts/visual-drops/premium-assets/onlyfans_crusher_premium.png",
+      "audienceAngle": "business_safe_creator_monetization",
+      "competitivePositioning": "OnlyFans",
+      "layoutQuality": {
+        "heroLineCount": 2,
+        "chipCount": 4,
+        "safeMarginPx": 70,
+        "mode": "versus",
+        "width": 1080,
+        "height": 1350,
+        "fileSizeKb": 285.3,
+        "luminanceSpread": 238.9,
+        "verified": true
+      }
+    },
+    {
+      "id": "telegram_pressure_engine_premium",
+      "headline": "Telegram is not just a chat. It is the pressure engine.",
+      "body": "Your network already watches Telegram. VaultX turns that attention into timed hooks, tracked unlocks, VIP reminders, and repeatable paid actions without giant dead message blocks.",
+      "replyCta": "Reply AUTO if you want the automation angle opened next.",
+      "assetPath": "artifacts/visual-drops/premium-assets/telegram_pressure_engine_premium.png",
+      "audienceAngle": "business_safe_creator_monetization",
+      "competitivePositioning": "CreatorVault/VaultX retention",
+      "layoutQuality": {
+        "heroLineCount": 2,
+        "chipCount": 4,
+        "safeMarginPx": 70,
+        "mode": "flow",
+        "width": 1080,
+        "height": 1350,
+        "fileSizeKb": 266.0,
+        "luminanceSpread": 241.9,
+        "verified": true
+      }
+    },
+    {
+      "id": "do_not_leave_the_vault_premium",
+      "headline": "The platform has more than one money angle.",
+      "body": "VaultX is not just posts. It is Clone Agent execution, AI reels, locked content, VIP sheets, checkout links, creator acquisition, analytics, and retention loops in one ecosystem.",
+      "replyCta": "Reply GEM and stay locked for the next leak.",
+      "assetPath": "artifacts/visual-drops/premium-assets/do_not_leave_the_vault_premium.png",
+      "audienceAngle": "business_safe_creator_monetization",
+      "competitivePositioning": "CreatorVault/VaultX retention",
+      "layoutQuality": {
+        "heroLineCount": 3,
+        "chipCount": 4,
+        "safeMarginPx": 70,
+        "mode": "grid",
+        "width": 1080,
+        "height": 1350,
+        "fileSizeKb": 266.4,
+        "luminanceSpread": 197.4,
+        "verified": true
+      }
+    },
+    {
+      "id": "money_moments_loop_premium",
+      "headline": "VaultX packages content into revenue moments.",
+      "body": "One creator asset can become a teaser, visual hook, Telegram drop, locked vault item, VIP upgrade, and follow-up sequence. The point is to make every drop measurable, monetizable, and impossible to ignore.",
+      "replyCta": "Tap the vault link before this moves into VIP.",
+      "assetPath": "artifacts/visual-drops/premium-assets/money_moments_loop_premium.png",
+      "audienceAngle": "business_safe_creator_monetization",
+      "competitivePositioning": "CreatorVault/VaultX retention",
+      "layoutQuality": {
+        "heroLineCount": 2,
+        "chipCount": 4,
+        "safeMarginPx": 70,
+        "mode": "loop",
+        "width": 1080,
+        "height": 1350,
+        "fileSizeKb": 288.5,
+        "luminanceSpread": 243.5,
+        "verified": true
+      }
+    },
+    {
+      "id": "inner_circle_leak_premium",
+      "headline": "This is CreatorVault-only leverage.",
+      "body": "Not recycled AI prompts. Not random explicit spam. These are branded creator-money systems built around your platform, your audience, and your monetization loop.",
+      "replyCta": "Reply VAULT if you are staying locked in.",
+      "assetPath": "artifacts/visual-drops/premium-assets/inner_circle_leak_premium.png",
+      "audienceAngle": "business_safe_creator_monetization",
+      "competitivePositioning": "CreatorVault/VaultX retention",
+      "layoutQuality": {
+        "heroLineCount": 3,
+        "chipCount": 4,
+        "safeMarginPx": 70,
+        "mode": "memo",
+        "width": 1080,
+        "height": 1350,
+        "fileSizeKb": 271.5,
+        "luminanceSpread": 212.6,
+        "verified": true
+      }
+    }
+  ]
+}

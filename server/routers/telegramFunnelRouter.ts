@@ -25,6 +25,7 @@ import { router, protectedProcedure, publicProcedure } from "../_core/trpc.js";
 import { z } from "zod";
 import mysql from "mysql2/promise";
 import crypto from "crypto";
+import { callTelegramApiWithGuard } from "../services/telegramOutboundGuard";
 
 // ── DB helper ─────────────────────────────────────────────────────────────────
 async function getDb() {
@@ -71,12 +72,12 @@ async function tgSendMessage(
     };
   }
   try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json() as any;
+    const data = await callTelegramApiWithGuard({
+      botToken: token,
+      method: "sendMessage",
+      body,
+      context: "telegramFunnelRouter.tgSendMessage",
+    }) as any;
     return data.ok ? { ok: true, messageId: data.result?.message_id } : { ok: false, error: data.description };
   } catch (e: any) {
     return { ok: false, error: e.message };
@@ -101,12 +102,12 @@ async function tgSendVideo(
     };
   }
   try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json() as any;
+    const data = await callTelegramApiWithGuard({
+      botToken: token,
+      method: "sendVideo",
+      body,
+      context: "telegramFunnelRouter.tgSendVideo",
+    }) as any;
     return data.ok ? { ok: true, messageId: data.result?.message_id } : { ok: false, error: data.description };
   } catch (e: any) {
     return { ok: false, error: e.message };

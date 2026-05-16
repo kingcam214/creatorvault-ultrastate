@@ -1,0 +1,113 @@
+# Homepage Route and Git History Trace
+Generated: 2026-05-16T01:54:29+00:00
+
+## Root route mapping in App.tsx
+490:      <Route path={"/"} component={Home} />
+494:      <Route path={"/dashboard"} component={CreatorHome} />
+567:      <Route path={"/king"} component={KingHome} />
+
+## Home.tsx video-first evidence
+2: * Home.tsx — CreatorVault Landing Page V5 (KingCam-First, Real Assets)
+3: * All 5 required sections. Real KingCam videos seeded into Proof of Work reel.
+4: * Hero uses looping KingCam video background.
+43:// Real video clip component — plays on hover
+44:function VideoReelClip({ label, badge, videoSrc, poster }: {
+45:  label: string; badge: string; videoSrc?: string; poster?: string;
+48:  const videoRef = useRef<HTMLVideoElement>(null);
+52:    const v = videoRef.current;
+74:      {videoSrc ? (
+75:        <video
+76:          ref={videoRef}
+77:          src={videoSrc}
+84:          onCanPlay={() => { videoRef.current?.play().catch(() => {}); }}
+97:      {/* Play button — only show when no video or not hovered */}
+98:      {(!videoSrc || !hovered) && (
+144:  const [heroLoaded, setHeroLoaded] = useState(false);
+183:  // Proof of Work reel — KingCam videos + 7 unique AI-generated cinematic clips
+185:    { label: "Brand Story", badge: "KINGCAM · REPLICATE", videoSrc: "/videos/kingcam-clone-1.mp4" },
+186:    { label: "Music Video", badge: "POLLO AI", videoSrc: "/videos/reel-music-video.mp4" },
+187:    { label: "Clone Drop", badge: "KINGCAM · FLUX LORA", videoSrc: "/videos/kingcam-clone-2.mp4" },
+188:    { label: "Product Drop", badge: "KLING AI", videoSrc: "/videos/reel-product-drop.mp4" },
+189:    { label: "AI Portrait", badge: "OPENART AI", videoSrc: "/videos/reel-ai-portrait.mp4" },
+190:    { label: "HeroCam", badge: "KINGCAM · POLLO AI", videoSrc: "/videos/kingcam-hero-cam.mp4" },
+191:    { label: "Cinematic Trailer", badge: "RUNWAY ML", videoSrc: "/videos/reel-cinematic-trailer.mp4" },
+192:    { label: "Creator Promo", badge: "OPENART AI", videoSrc: "/videos/reel-creator-promo.mp4" },
+193:    { label: "Apparel Drop", badge: "REPLICATE", videoSrc: "/videos/reel-apparel-drop.mp4" },
+194:    { label: "Empire Reel", badge: "KLING AI", videoSrc: "/videos/reel-brand-story.mp4" },
+214:      {/* ── HERO — KingCam full-bleed with video background ── */}
+216:        {/* KingCam looping video background */}
+217:        <video
+229:          <source src="/videos/kingcam-hero-cam.mp4" type="video/mp4" />
+230:          {/* Fallback: static KingCam image if video fails */}
+231:          <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/assets/kingcam-hero.jpg')", backgroundSize: "cover", backgroundPosition: "center 15%" }} />
+232:        </video>
+248:          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.35)", borderRadius: 100, padding: "5px 14px", marginBottom: 18, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.6s ease" }}>
+254:          <h1 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(34px,9vw,64px)", fontWeight: 800, color: "#fff", lineHeight: 1.08, marginBottom: 14, letterSpacing: "-0.02em", opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease 0.15s,transform 0.7s ease 0.15s" }}>
+259:          <p style={{ fontSize: "clamp(13px,3.5vw,16px)", color: "rgba(255,255,255,0.7)", lineHeight: 1.6, marginBottom: 6, maxWidth: 480, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.7s ease 0.3s" }}>
+262:          <p style={{ fontSize: "clamp(12px,3vw,14px)", color: "rgba(255,255,255,0.48)", marginBottom: 26, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.7s ease 0.4s" }}>
+267:          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", marginBottom: 18, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.7s ease 0.5s" }}>
+287:          <div style={{ display: "flex", gap: 0, width: "100%", maxWidth: 480, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, overflow: "hidden", opacity: heroLoaded ? 1 : 0, transition: "opacity 0.8s ease 0.7s" }}>
+323:              <VideoReelClip key={i} label={clip.label} badge={clip.badge} videoSrc={clip.videoSrc} />
+328:          <Link href="/video-lab">
+344:            <ArsenalCard icon="👑" badge="REPLICATE · FLUX" badgeColor="#c9a84c" title="Clone Command" subtitle="Your AI twin, on autopilot." subtitleColor="#c9a84c" description="Train your custom LoRA. Generate on-brand images and videos of yourself in any scene — crimson suit to beach shoot — without a camera." cta="Open Clone Lab →" href="/clone-lab" />
+353:            <ArsenalCard icon="⚡" badge="AUTO PIPELINE" badgeColor="#fb923c" title="Engine" subtitle="Social Factory · FunnelForge · VaultLive." subtitleColor="#fb923c" description="1 video → 30-day content calendar. 5-stage AI sales funnel. Multi-destination live stream. The machine that ships while you sleep." cta="Open Engine →" href="/social-factory" />
+361:          {/* KingCam video panel — plays the clone drop video */}
+364:              {/* Real KingCam video as clone ambassador visual */}
+365:              <video
+373:                <source src="/videos/kingcam-clone-1.mp4" type="video/mp4" />
+374:              </video>
+376:              <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/assets/kingcam-hero.jpg')", backgroundSize: "cover", backgroundPosition: "center top", backgroundRepeat: "no-repeat", zIndex: 0 }} />
+398:              {["LoRA training on 20+ images","Voice cloning via ElevenLabs","On-demand image + video generation","Brand-locked prompts + style presets"].map((feat, i) => (
+
+## Recent commits touching homepage/app/static deployment
+[33m2ab085f[m Separate VaultX challenge UI from empire challenge
+[33m6b70597[m feat(clone-lab): 3D Clone Training Lab — 7 tables, 8 services, GPU-aware training, evaluation arena, Three.js/R3F UI
+[33m4ca4480[m feat: distribution hub foundation - 9 tables, distributionRouter, tracking redirect, attribution events, VaultXDistribution UI
+[33m6128263[m fix: Pollo+Replicate+PPV progress UX — duration->length, clientBundleId sync, Real-ESRGAN input fix, 7-stage progress panel
+[33m9e92286[m feat: VaultXFanLibrary + Law #2/#3 fixes in VaultXStudio
+[33m0c38c9b[m feat: VaultRemix full rebuild + dual-mode architecture (adult/SFW)
+[33me7b1938[m feat: ForYouFeed, AIChatter, TeaserEngine, aiChatterRouter — all real, zero stubs
+[33m257e248[m feat: VaultXChallenges ($5K/$15K), SocialHub consolidation (8 pages → 1 with Audit/Factory/WarRoom tabs), fix App.tsx routes
+[33m80d235a[m fix: zero TypeScript errors — VaultX.tsx (purchasePpv, placeholderData), SocialHub.tsx (useToast, username, optimalTimes)
+[33m475e684[m fix: remove old VaultXVideoEditor, wire AI chatter auto-response, S3 CDN upload pipeline, unified 13-tab editor
+[33m5cf4c2e[m feat(vaultx): add VaultXEditor + VaultXAnalytics + fix ALL TypeScript errors
+[33m409016e[m fix: Telegram getLeads/getMessageHistory SQL bugs, QA test script corrections — 43/45 passing 96%
+[33m684433c[m fix: vaultx.saveContent mysql2 promise bug + build 13 new pages (BrandDeals, DesignDepartment, DubbingAI, ContentDashboard, ChicasEmpire, ChicaCockpit, EditProfile, CreatorHome, EmmaHome, EmmaEmpire, CommandHubV2, CreatorManagement, CreatorSubscriptionTiers)
+[33md5a3146[m fix: add type:module to package.json to resolve NODE_TYPELESS warning
+[33m78dff12[m feat: full automation engine - zero TS errors, all stub pages built, challenge runner, agentTelemetry, aiEmpire dashboard, trailer generator
+[33mcc4d743[m feat: k challenge automation + agent telemetry + 7 pages built
+[33mb5c404c[m fix: remove jsxLocPlugin from vite.config — breaks on TypeScript generics in JSX
+[33m3b75624[m fix: VaultX real Stripe subscribe/tip, ContentVaultMode DB save, lock type UI, @stripe/react-stripe-js
+[33mca83e76[m auto-sync: vite.config.ts,build_vps.sh,patch_vite.py, [2026-04-30 13:53:13] (3 files)
+[33mf3dcaba[m auto-sync: App.tsx, [2026-04-29 00:14:51] (1 files)
+[33m6ad38de[m feat(vaultx): wire full VaultX backend — video-studio REST routes, slowMotion+getJob tRPC, chunked upload, nav fixes, CI/CD fix
+[33mb9432c5[m fix(home): harden VideoReelClip — onCanPlay fallback play() for mobile autoplay block resistance
+[33m215796f[m fix(home): VideoReelClip — add autoPlay + preload=metadata so reel cards show video content instead of black boxes
+[33m7e276b8[m feat(home): wire 7 AI-generated cinematic videos into proof-of-work reel — all unique, no duplicates
+[33m232482e[m feat(home): seed proof-of-work reel with 7 AI-generated cinematic poster images
+[33mc6c0194[m feat(home): V5 — KingCam video hero + real video reel, all 5 sections restored
+[33m689fa12[m feat(home): rebuild homepage V4 — KingCam-first hero, proof-of-work reel, arsenal, clone ambassador, metrics strip
+[33m7ae29b9[m feat(homepage): add HOMEPAGE LIVE CHECK banner for deploy verification
+[33md51559f[m Implement permanent workflow safeguards: main-only deploys, release stamps, route-owner, scope-guard, visual-proof scripts, updated AGENTS.md
+[33m4200c46[m[33m ([m[1;31morigin/work[m[33m)[m Apply homepage updates: font optimization, route aliases, OpenAI dep, local auth
+
+## Recent reflog summary
+[33m821bc35[m HEAD@{2026-05-15 12:43:25 +0000}: checkout: moving from main to pr-3
+[33mdb96f7c[m HEAD@{2026-05-15 12:43:24 +0000}: clone: from https://github.com/kingcam214/creatorvault-ultrastate.git
+
+## Current branch and remotes
+pr-3
+origin	https://github.com/kingcam214/creatorvault-ultrastate.git (fetch)
+origin	https://github.com/kingcam214/creatorvault-ultrastate.git (push)
+
+## Working tree relevant changes
+ [31mM[m server/_core/index.ts
+[31m??[m scripts/activate-princesa-live-system.cjs
+[31m??[m scripts/build-vaultx-hype-assets.py
+[31m??[m scripts/build-vaultx-premium-assets.py
+[31m??[m scripts/launch-vaultx-live-from-history.mjs
+[31m??[m scripts/repair-vaultx-telemetry-dryrun.mjs
+[31m??[m scripts/run-kingcam-dryrun.ts
+[31m??[m scripts/run-kingcam-live-telegram-local.ts
+[31m??[m scripts/run-vaultx-5k-challenge-promo.mjs
+[31m??[m scripts/run-vaultx-visual-drop-sequence.mjs

@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { sql } from "drizzle-orm";
 import { db } from "../db";
+import { callTelegramApiWithGuard } from "./telegramOutboundGuard";
 
 export type LeadBand = "hot" | "warm" | "cool" | "cold";
 export type OutreachStage = "first_touch" | "follow_up_1" | "follow_up_2" | "follow_up_3" | "final_cta" | "handoff";
@@ -380,6 +381,27 @@ function generateMessage(lead: any, stage: OutreachStage) {
   const handle = lead.display_name || `@${lead.handle}`;
   const niche = lead.niche || lead.vertical || "creator brand";
   const cta = lead.cta_url || lead.onboarding_url;
+  const metadata = safeJson<Record<string, any>>(lead.metadata, {});
+  const spanishFirst = metadata.languagePrimary === "es" || metadata.locale === "es-DO" || metadata.dialect === "dr";
+  const dominicanVoice = metadata.dialect === "dr" || metadata.locale === "es-DO";
+
+  if (spanishFirst) {
+    if (stage === "first_touch") {
+      return dominicanVoice
+        ? `${handle}, te escribo directo: tú ya tienes atención y vibra, pero esa atención tiene que caer en un camino pago claro: DM → link → Telegram/VIP → Fansly/VaultX. Te dejé el paso rápido pa' activar eso sin mareo: ${cta}`
+        : `${handle}, nota directa: ya tienes audiencia y señales de compra, pero hace falta ordenar el camino pago: DM, checkout, Telegram/VIP y destino monetizado. Empieza aquí: ${cta}`;
+    }
+    if (stage === "final_cta") {
+      return dominicanVoice
+        ? `${handle}, cierro por aquí: si vamos a mover esto, el próximo paso es activar el link pago y el canal VIP hoy. Entra aquí: ${cta}`
+        : `${handle}, cierro el seguimiento: el siguiente paso es activar el link pago y el canal VIP hoy. Entra aquí: ${cta}`;
+    }
+    const n = stage.replace("follow_up_", "");
+    return dominicanVoice
+      ? `${handle}, follow-up ${n}: la vuelta sigue igual de simple—un solo mensaje, un solo link y Telegram/VIP pa' retener. Dale aquí: ${cta}`
+      : `${handle}, seguimiento ${n}: la ruta sigue simple—un mensaje, un link y Telegram/VIP para retención. Entra aquí: ${cta}`;
+  }
+
   const activity = lead.recent_activity ? ` I saw the recent angle around ${lead.recent_activity}.` : "";
   if (stage === "first_touch") {
     return `${handle} — direct note. VaultX is looking for ${niche} creators who already have audience heat but are leaking paid conversions.${activity} I built a quick monetization path for you: audit the profile, tighten the VIP/Telegram/payment loop, and turn interest into paid subscribers without you manually chasing every fan. If you want the fast path, start here: ${cta}`;
@@ -424,13 +446,13 @@ async function queueDueFollowUps(runId: string, limit: number, config: VaultXOpe
 }
 
 async function sendTelegram(chatId: string, text: string, token: string) {
-  const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: false }),
-  });
-  const json = await response.json() as any;
-  if (!response.ok || !json.ok) throw new Error(json?.description || `Telegram HTTP ${response.status}`);
+  const json = await callTelegramApiWithGuard({
+    botToken: token,
+    method: "sendMessage",
+    body: { chat_id: chatId, text, disable_web_page_preview: false },
+    context: "vaultxAutonomousAcquisitionOperator.sendTelegram",
+  }) as any;
+  if (!json.ok) throw new Error(json?.description || "Telegram send blocked by emergency guard");
   return json.result?.message_id ? String(json.result.message_id) : null;
 }
 

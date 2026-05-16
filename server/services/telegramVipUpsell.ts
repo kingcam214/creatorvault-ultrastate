@@ -13,12 +13,12 @@
  */
 
 import mysql from "mysql2/promise";
+import { callTelegramApiWithGuard } from "./telegramOutboundGuard";
 
 const DB_URL = process.env.DATABASE_URL || "mysql://creatorvault:KingCam214CreatorVault@localhost:3306/creatorvault";
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 const VIP_CHANNEL_CHAT_ID = "-1003817770263"; // VaultX VIP (channel_entity_id=2)
 const VIP_CHANNEL_ENTITY_ID = 2;
-const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 function parseDbUrl(url: string) {
   const m = url.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
@@ -32,12 +32,12 @@ async function getDb() {
 }
 
 async function tgApi(method: string, body: Record<string, unknown>) {
-  const res = await fetch(`${TG_API}/${method}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return res.json() as Promise<{ ok: boolean; result?: any; description?: string }>;
+  return callTelegramApiWithGuard({
+    botToken: BOT_TOKEN,
+    method,
+    body,
+    context: `telegramVipUpsell.${method}`,
+  }) as Promise<{ ok: boolean; result?: any; description?: string }>;
 }
 
 export interface VipUpsellOpts {

@@ -9,6 +9,7 @@ import OpenAI from "openai";
 import { db } from "../db";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import crypto from "crypto";
+import { callTelegramApiWithGuard } from "../services/telegramOutboundGuard";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -529,17 +530,17 @@ export const creatorOutreachRouter = router({
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN not configured");
 
-      // Send via Telegram Bot API
-      const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      // Send via Telegram Bot API only when the emergency outbound gate is explicitly enabled.
+      const data = await callTelegramApiWithGuard({
+        botToken,
+        method: "sendMessage",
+        body: {
           chat_id: `@${input.telegramUsername}`,
           text: input.message,
           parse_mode: "Markdown",
-        }),
-      });
-      const data = await res.json();
+        },
+        context: "creatorOutreachRouter.sendTelegramOutreach",
+      }) as any;
       return { sent: data.ok, result: data };
     }),
 

@@ -1,0 +1,55 @@
+# CreatorVault Emergency Posting Stop Proof
+Generated: 2026-05-16T01:50:08+00:00
+
+## PM2 status before stop
+pm2 not installed or not on PATH
+
+## Current user crontab
+
+## Root crontab
+
+## Scheduler/cron/autoposter/telegram files in repo
+./TELEGRAM_WEBHOOK_READY.md
+./artifacts/challenge-runs/kingcam-clone-agent-live-telegram-1778859719214.json
+./artifacts/challenge-runs/kingcam-clone-agent-live-telegram-1778864901011.json
+./artifacts/challenge-runs/kingcam-clone-agent-live-telegram-1778865359017.json
+./artifacts/challenge-runs/kingcam-clone-agent-live-telegram-1778865922191.json
+./artifacts/challenge-runs/live-telegram-state.json
+./artifacts/challenge-runs/vaultx-5k-telegram-preview-1778895715865.md
+./artifacts/challenge-runs/vaultx-5k-telegram-preview-1778895751663.md
+./artifacts/delivery/vaultx-premium-corrected-package-2026-05-15/premium-assets/telegram_pressure_engine_premium.png
+./artifacts/visual-drops/assets/telegram_automation.png
+./artifacts/visual-drops/premium-assets/telegram_pressure_engine_premium.png
+./client/src/pages/ContentScheduler.tsx
+./client/src/pages/SocialAutoposterAgent.tsx
+./client/src/pages/TelegramMoneyHub.tsx
+./client/src/pages/TelegramSetup.tsx
+./scripts/run-kingcam-live-telegram-local.ts
+./server/media-os/jobs/mediaJobScheduler.ts
+./server/routers/liveSessionScheduler.ts
+./server/routers/scheduler.ts
+./server/routers/socialMediaAutoPoster.ts
+./server/routers/telegram.ts
+./server/routers/telegramBot.ts
+./server/routers/telegramCampaignRouter.ts
+./server/routers/telegramFunnelRouter.ts
+./server/routers/telegramHubRouter.ts
+./server/routers/telegramMoneyLoopRouter.ts
+./server/routers/telegramWebhookRouter.ts
+./server/services/contentScheduler.ts
+./server/services/services/contentScheduler.ts
+./server/services/services/telegramAI.ts
+./server/services/telegramAI.ts
+./server/services/telegramBuyerReactivation.ts
+./server/services/telegramCampaign.ts
+./server/services/telegramConnectRoute.ts
+./server/services/telegramDailyDropEngine.ts
+./server/services/telegramMoneyLoop.ts
+./server/services/telegramStartHandler.ts
+./server/services/telegramVipUpsell.ts
+./server/telegram-webhook.test.ts
+./server/telegram-webhook.ts
+./server/telegram.test.ts
+./server/telegram.ts
+./test-telegram-whatsapp.ts
+./update_yodeiris_telegram.sql

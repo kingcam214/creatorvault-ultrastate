@@ -21,6 +21,7 @@
 import mysql from "mysql2/promise";
 import fetch from "node-fetch";
 import OpenAI from "openai";
+import { callTelegramApiWithGuard } from "./telegramOutboundGuard";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -331,36 +332,44 @@ export async function sendDropToChannel(campaignId: number): Promise<SendDropRes
     const trackedUrl = `${FRONTEND}/r/${campaign.tracking_code}`;
     const priceDollars = (campaign.price_cents / 100).toFixed(2);
 
-    // Build the Telegram message
-    const messageText = `${campaign.ai_hook}\n\n${campaign.ai_caption}\n\n💰 <b>$${priceDollars}</b> to unlock\n\n🔒 Tap below to access exclusive content`;
+    // Build the Telegram message using the emergency premium video-first standard.
+    const messageText = [
+      `<b>${campaign.content_title || "VaultX Premium Drop"} · VIDEO-FIRST VAULTX OFFER</b>`,
+      "",
+      `${campaign.ai_hook || "CreatorVault packaged this drop as a tracked premium visual offer."}`,
+      "",
+      `<b>Visual lane:</b> VaultX preview / premium unlock funnel.`,
+      `<b>Built for:</b> ${campaign.ai_caption || "turning attention into a paid unlock with follow-up routing."}`,
+      `<b>Proof rail:</b> tracked checkout ${campaign.tracking_code} · $${priceDollars} unlock · VIP upgrade path attached.`,
+      "",
+      `<b>Next move:</b> unlock the full drop or preview the VaultX lane below.`,
+    ].join("\n").slice(0, 3900);
 
     // Inline keyboard
     const inlineKeyboard = {
       inline_keyboard: [
         [
-          { text: `🔓 ${campaign.ai_cta || "Unlock Full Video"}`, url: trackedUrl },
-          { text: "👀 Preview First", url: `${FRONTEND}/vaultx` },
+          { text: `${campaign.ai_cta || "Unlock Full Video"}`, url: trackedUrl },
+          { text: "Preview VaultX", url: `${FRONTEND}/vaultx` },
         ],
         [
-          { text: "💎 Go VIP", url: `${FRONTEND}/r/${campaign.tracking_code}-vip` },
+          { text: "Go VIP", url: `${FRONTEND}/r/${campaign.tracking_code}-vip` },
         ],
       ],
     };
 
-    // Send to Free channel
-    const tgUrl = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-    const tgResp = await fetch(tgUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    // Send to Free channel only through the emergency Telegram outbound guard.
+    const tgData = await callTelegramApiWithGuard({
+      botToken: BOT_TOKEN,
+      method: "sendMessage",
+      body: {
         chat_id: FREE_CHANNEL_CHAT_ID,
         text: messageText,
         parse_mode: "HTML",
         reply_markup: inlineKeyboard,
-      }),
-    });
-
-    const tgData = await tgResp.json() as any;
+      },
+      context: "telegramCampaign.sendDropToChannel",
+    }) as any;
 
     if (!tgData.ok) {
       console.error("[TelegramCampaign] sendMessage failed:", tgData.description);
@@ -571,20 +580,17 @@ export async function triggerVipUpsell(opts: {
     // Generate single-use VIP invite link
     let inviteLink: string | undefined;
     try {
-      const inviteResp = await fetch(
-        `https://api.telegram.org/bot${BOT_TOKEN}/createChatInviteLink`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: VIP_CHANNEL_CHAT_ID,
-            member_limit: 1,
-            expire_date: Math.floor(Date.now() / 1000) + 86400 * 3, // 3 days
-            creates_join_request: false,
-          }),
-        }
-      );
-      const inviteData = await inviteResp.json() as any;
+      const inviteData = await callTelegramApiWithGuard({
+        botToken: BOT_TOKEN,
+        method: "createChatInviteLink",
+        body: {
+          chat_id: VIP_CHANNEL_CHAT_ID,
+          member_limit: 1,
+          expire_date: Math.floor(Date.now() / 1000) + 86400 * 3, // 3 days
+          creates_join_request: false,
+        },
+        context: "telegramCampaign.createVipInviteLink",
+      }) as any;
       if (inviteData.ok && inviteData.result?.invite_link) {
         inviteLink = inviteData.result.invite_link;
 
@@ -602,33 +608,35 @@ export async function triggerVipUpsell(opts: {
       console.error("[TelegramCampaign] createChatInviteLink error:", e.message);
     }
 
-    // Build DM text
-    const dmText = inviteLink
-      ? `${vipCopy}\n\n💎 <b>Your VIP Access Link</b> (single-use, expires in 3 days):\n${inviteLink}\n\n⚡ Tap to join <b>CreatorVault VIP</b> now`
-      : `${vipCopy}\n\n💎 <a href="${vipUrl}">Tap here to upgrade to VIP</a>`;
+    // Build DM text using the emergency premium video-first standard.
+    const dmText = [
+      `<b>CREATORVAULT VIP · PREMIUM VISUAL ACCESS</b>`,
+      "",
+      vipCopy,
+      "",
+      `<b>Visual lane:</b> VaultX VIP / premium content rail.`,
+      `<b>Proof rail:</b> single-buyer follow-up after paid unlock · tracked upgrade path ${vipTrackingCode}.`,
+      `<b>Next move:</b> ${inviteLink ? `join with this single-use link within 3 days: ${inviteLink}` : `upgrade through this tracked VIP link: ${vipUrl}`}`,
+    ].join("\n").slice(0, 3900);
 
-    // Send DM
-    const dmResp = await fetch(
-      `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: opts.buyerTelegramId,
-          text: dmText,
-          parse_mode: "HTML",
-          reply_markup: inviteLink
-            ? undefined
-            : {
-                inline_keyboard: [
-                  [{ text: "💎 Join VIP Now", url: vipUrl }],
-                ],
-              },
-        }),
-      }
-    );
-
-    const dmData = await dmResp.json() as any;
+    // Send DM only through the emergency Telegram outbound guard.
+    const dmData = await callTelegramApiWithGuard({
+      botToken: BOT_TOKEN,
+      method: "sendMessage",
+      body: {
+        chat_id: opts.buyerTelegramId,
+        text: dmText,
+        parse_mode: "HTML",
+        reply_markup: inviteLink
+          ? undefined
+          : {
+              inline_keyboard: [
+                [{ text: "Join VIP Now", url: vipUrl }],
+              ],
+            },
+      },
+      context: "telegramCampaign.sendVipUpsellDm",
+    }) as any;
 
     if (!dmData.ok) {
       console.error("[TelegramCampaign] VIP upsell DM failed:", dmData.description);

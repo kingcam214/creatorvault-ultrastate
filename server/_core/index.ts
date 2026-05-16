@@ -23,6 +23,8 @@ import { startDailyDropCron } from "../services/telegramDailyDropEngine";
 import { startReactivationCron } from "../services/telegramBuyerReactivation";
 import { startVaultXAcquisitionCron } from "../services/vaultxAutonomousAcquisitionOperator";
 import { startChallengeAutomationCron } from "../routers/challengeAutomationRouter";
+import { appendMoneySprintTelemetry } from "../services/liveMoneySprintTelemetry";
+import { callTelegramApiWithGuard, logTelegramAutomationDisabled, telegramAutomationEnabled } from "../services/telegramOutboundGuard";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -46,13 +48,17 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   // Run startup tasks (schema bootstrap, etc)
   await runStartupTasks();
-  startDailyDropCron();
-  startReactivationCron();
-  if (process.env.VAULTX_ACQUISITION_AUTORUN !== "false") {
-    startVaultXAcquisitionCron().catch(error => console.error("[VaultX Acquisition] failed to start autonomous operator", error));
-  }
-  if (process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN !== "false") {
-    startChallengeAutomationCron().catch(error => console.error("[VaultX Challenge Agents] failed to start autonomous challenge-agent loop", error));
+  if (telegramAutomationEnabled) {
+    startDailyDropCron();
+    startReactivationCron();
+    if (process.env.VAULTX_ACQUISITION_AUTORUN === "true") {
+      startVaultXAcquisitionCron().catch(error => console.error("[VaultX Acquisition] failed to start autonomous operator", error));
+    }
+    if (process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN === "true") {
+      startChallengeAutomationCron().catch(error => console.error("[VaultX Challenge Agents] failed to start autonomous challenge-agent loop", error));
+    }
+  } else {
+    logTelegramAutomationDisabled("Startup Telegram cron suite");
   }
   
   const app = express();
@@ -103,8 +109,34 @@ async function startServer() {
   // Records click event in attribution_events and redirects to destination URL
   app.get("/r/:trackingCode", async (req, res) => {
     const { trackingCode } = req.params;
-    const fallback = "https://creatorvault.live/vaultx";
-    try {
+      const fallback = "https://creatorvault.live/vaultx";
+      const requestedDestination = typeof req.query.to === "string" ? req.query.to : "";
+      const safeQueryDestination = (() => {
+        try {
+          const parsed = new URL(requestedDestination);
+          return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : "";
+        } catch {
+          return "";
+        }
+      })();
+      const recordSprintClick = (source: string, metadata: Record<string, unknown> = {}) => {
+        try {
+          appendMoneySprintTelemetry({
+            type: "click",
+            trackingCode,
+            source,
+            metadata: {
+              path: req.path,
+              destination: safeQueryDestination || fallback,
+              userAgent: String(req.headers["user-agent"] || "").slice(0, 180),
+              ...metadata,
+            },
+          });
+        } catch (e: any) {
+          console.warn("[money-sprint] click telemetry failed:", e?.message || String(e));
+        }
+      };
+      try {
       // Use mysql2 createPool directly — drizzle.$client is not accessible at runtime
       const mysql2 = await import("mysql2");
       const attrPool = mysql2.createPool(process.env.DATABASE_URL as string);
@@ -116,10 +148,11 @@ async function startServer() {
       const jobs = jobRows as any[];
       if (!jobs.length) {
         attrPool.end();
-        return res.redirect(302, fallback);
+        recordSprintClick("attribution_redirect_no_job", { databaseMatched: false });
+        return res.redirect(302, safeQueryDestination || fallback);
       }
       const job = jobs[0];
-      const destUrl = job.destination_url || fallback;
+      const destUrl = job.destination_url || safeQueryDestination || fallback;
       // Record click event asynchronously (don't block redirect)
       const sessionId = (req.headers["x-session-id"] as string) || null;
       const ipRaw = req.ip || req.socket.remoteAddress || "";
@@ -133,6 +166,7 @@ async function startServer() {
             [trackingCode, job.id, job.creator_id, job.content_id || null, job.channel_identity_id, job.platform, sessionId, ipHash, userAgent]
           );
           await conn.query("UPDATE distribution_jobs SET click_count = click_count + 1 WHERE id = ?", [job.id]);
+          recordSprintClick("attribution_redirect_db_click", { databaseMatched: true, distributionJobId: job.id });
         } catch (e: any) {
           console.warn("[attribution] click record failed:", e.message);
         } finally {
@@ -142,7 +176,8 @@ async function startServer() {
       return res.redirect(302, destUrl);
     } catch (err: any) {
       console.warn("[attribution] redirect error:", err.message);
-      return res.redirect(302, fallback);
+      recordSprintClick("attribution_redirect_db_unavailable", { databaseMatched: false, error: err.message });
+      return res.redirect(302, safeQueryDestination || fallback);
     }
   });
 
@@ -177,8 +212,9 @@ async function startServer() {
     // Initialize simulated bots (no owner dependencies)
 
     // ── Telegram Funnel Automation Runner ────────────────────────────────────
-    // Process due funnel steps, drip sequences, and re-engagement triggers
-    // Runs every 60 seconds
+    // Process due funnel steps, drip sequences, and re-engagement triggers.
+    // Disabled by default during emergency recovery; no outbound Telegram call may run without explicit env approval.
+    if (telegramAutomationEnabled) {
     setInterval(async () => {
       try {
         const mysql2 = await import("mysql2/promise");
@@ -194,6 +230,8 @@ async function startServer() {
         ) as any;
         const pendingCount = (pending as any[])[0]?.cnt || 0;
         
+        const botToken = process.env.TELEGRAM_MONETIZATION_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "";
+
         if (pendingCount > 0) {
           console.log(`[TelegramFunnel] Processing ${pendingCount} due automation jobs`);
           // Delegate to telegramFunnelRouter.funnel.processAllDue logic inline
@@ -209,8 +247,6 @@ async function startServer() {
              LIMIT 50`
           ) as any;
           
-          const botToken = process.env.TELEGRAM_MONETIZATION_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "";
-          
           for (const job of (jobs as any[])) {
             try {
               await conn.execute("UPDATE telegram_automation_jobs SET status = 'running' WHERE id = ?", [job.id]);
@@ -221,18 +257,12 @@ async function startServer() {
                 body.video = job.media_url;
                 body.caption = job.message_text;
                 if (buttons.length) body.reply_markup = { inline_keyboard: [buttons] };
-                const r = await fetch(`https://api.telegram.org/bot\${botToken}/sendVideo`, {
-                  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
-                });
-                const d = await r.json() as any;
+                const d = await callTelegramApiWithGuard({ botToken, method: "sendVideo", body, context: "telegram_funnel_video_step" }) as any;
                 if (!d.ok) throw new Error(d.description);
               } else if (job.message_text) {
                 body.text = job.message_text;
                 if (buttons.length) body.reply_markup = { inline_keyboard: [buttons] };
-                const r = await fetch(`https://api.telegram.org/bot\${botToken}/sendMessage`, {
-                  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
-                });
-                const d = await r.json() as any;
+                const d = await callTelegramApiWithGuard({ botToken, method: "sendMessage", body, context: "telegram_funnel_text_step" }) as any;
                 if (!d.ok) throw new Error(d.description);
               }
               
@@ -299,9 +329,7 @@ async function startServer() {
                 ]]
               }
             };
-            await fetch(`https://api.telegram.org/bot\${botToken}/sendMessage`, {
-              method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(reengageMsg)
-            });
+            await callTelegramApiWithGuard({ botToken, method: "sendMessage", body: reengageMsg, context: "telegram_reengagement_message" });
             // Log outbound message
             await conn.execute(
               "INSERT INTO telegram_message_events (telegram_id, direction, message_type, message_text) VALUES (?, 'outbound', 'reengagement', 'Re-engagement message sent')",
@@ -315,6 +343,9 @@ async function startServer() {
         console.error("[TelegramFunnel] Cron error:", cronErr.message);
       }
     }, 60000); // Every 60 seconds
+    } else {
+      logTelegramAutomationDisabled("Inline Telegram funnel runner");
+    }
     // ── End Telegram Funnel Automation Runner ─────────────────────────────────
 
     // DISABLED 2026-04-20: fake traffic generator was creating 97% fake bot_events // await initializeSimulatedBots();

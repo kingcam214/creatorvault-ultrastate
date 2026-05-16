@@ -1,0 +1,3 @@
+message_id	at	source	tracking_code	task	artifact
+1083	2026-05-15T17:15:59.016Z	challenge_executor_send_telegram	challenge_kingcam-clone-agent_mp76hvnh_09559c	KingCam Clone Agent	artifacts/challenge-runs/kingcam-clone-agent-live-telegram-1778865359017.json
+1084	2026-05-15T17:25:22.190Z	challenge_executor_send_telegram	challenge_kingcam-clone-agent_mp76tzxc_2faf07	KingCam Clone Agent	artifacts/challenge-runs/kingcam-clone-agent-live-telegram-1778865922191.json

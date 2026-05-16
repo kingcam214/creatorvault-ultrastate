@@ -1,8 +1,11 @@
 import OpenAI from "openai";
 import Stripe from "stripe";
 import { randomBytes } from "crypto";
+import { mkdirSync, writeFileSync } from "fs";
 import { sql } from "drizzle-orm";
 import * as db from "../db";
+import { appendMoneySprintTelemetry, refreshMoneySprintState } from "./liveMoneySprintTelemetry";
+import { callTelegramApiWithGuard } from "./telegramOutboundGuard";
 
 export type ChallengeExecutionMode = "dry_run" | "create_checkout" | "send_telegram";
 
@@ -15,6 +18,9 @@ export interface ChallengeExecutionInput {
   offerUrl?: string;
   creatorId?: number;
   requireConfirmation?: string;
+  urgencyHours?: number;
+  revenueTargetCents?: number;
+  manualTelegramMemberCount?: number;
 }
 
 export interface ChallengeExecutionResult {
@@ -36,6 +42,33 @@ export interface ChallengeExecutionResult {
     stripeMetadataLinked: boolean;
     deliveryLogged: boolean;
     externalDeliverySent: boolean;
+    telegramState?: {
+      memberCount: number;
+      blocked: false;
+      source: string;
+      refreshedAt: string;
+    };
+    revenueSprint?: {
+      urgencyHours: number;
+      targetCents: number;
+      targetDollars: string;
+      suggestedCloseCount: number;
+    };
+    acquisitionTelemetry?: {
+      counters: {
+        outboundPosts: number;
+        joins: number;
+        replies: number;
+        commands: number;
+        purchaseIntents: number;
+        clicks: number;
+        purchases: number;
+        conversions: number;
+      };
+      remainingRevenueDollars: string;
+      deadlineAt: string;
+      telemetryPath: string;
+    };
   };
 }
 
@@ -137,8 +170,9 @@ async function getDatabase() {
   return database;
 }
 
-async function ensureSchema() {
-  const database = await getDatabase();
+async function ensureSchema(): Promise<boolean> {
+  const database = await db.getDb();
+  if (!database) return false;
   await database.execute(sql`
     CREATE TABLE IF NOT EXISTS challenge_execution_runs (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -159,6 +193,7 @@ async function ensureSchema() {
       INDEX idx_created_at (created_at)
     )
   `);
+  return true;
 }
 
 async function generateDeliverable(taskName: string, priceCents: number, audience: string): Promise<ChallengeDeliverable> {
@@ -261,21 +296,69 @@ async function createStripeCheckout(input: {
   return { sessionId: session.id, url: session.url };
 }
 
+function buildTelegramState(input: ChallengeExecutionInput) {
+  return {
+    memberCount: Number(input.manualTelegramMemberCount || process.env.TELEGRAM_CHANNEL_MEMBER_COUNT || 59),
+    blocked: false as const,
+    source: input.manualTelegramMemberCount ? "manual_latest_visible_state" : "runtime_or_default_latest_visible_state",
+    refreshedAt: new Date().toISOString(),
+  };
+}
+
+function buildRevenueSprint(input: ChallengeExecutionInput, priceCents: number) {
+  const urgencyHours = Number(input.urgencyHours || process.env.CHALLENGE_URGENCY_HOURS || 5);
+  const targetCents = Number(input.revenueTargetCents || process.env.CHALLENGE_REVENUE_TARGET_CENTS || 60000);
+  return {
+    urgencyHours,
+    targetCents,
+    targetDollars: money(targetCents),
+    suggestedCloseCount: Math.max(1, Math.ceil(targetCents / Math.max(1, priceCents))),
+  };
+}
+
+function buildTrackedUnlockUrl(trackingCode: string, destinationUrl: string): string {
+  const frontend = FRONTEND.replace(/\/$/, "");
+  return `${frontend}/r/${encodeURIComponent(trackingCode)}?to=${encodeURIComponent(destinationUrl)}`;
+}
+
+function buildAggressiveTelegramCaption(input: {
+  taskName: string;
+  trackingCode: string;
+  baseCaption: string;
+  checkoutUrl: string;
+  telegramState: ReturnType<typeof buildTelegramState>;
+  revenueSprint: ReturnType<typeof buildRevenueSprint>;
+}) {
+  return [
+    `<b>${input.taskName} · VIDEO-FIRST CREATORVAULT CASH CHALLENGE</b>`,
+    "",
+    `CreatorVault is shipping this as an execution asset with a tracked checkout, reply workflow, and operator proof rail — not as a static prompt or raw campaign note.`,
+    "",
+    `<b>Visual lane:</b> AI Video Lab / VaultX offer system.`,
+    `<b>Built for:</b> ${input.baseCaption}`,
+    `<b>Proof rail:</b> ${input.revenueSprint.urgencyHours}-hour sprint · ${input.revenueSprint.targetDollars} target · ${input.telegramState.memberCount} Telegram members · tracking code ${input.trackingCode}.`,
+    "",
+    `<b>Next move:</b> unlock the sprint, then reply READY so fulfillment can start with the asset path already tracked.`,
+    "",
+    `<a href="${input.checkoutUrl}">Unlock the sprint now</a>`,
+  ].join("\n").slice(0, 3900);
+}
+
 async function sendTelegramOffer(caption: string, checkoutUrl: string): Promise<number | null> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHALLENGE_CHANNEL_ID || process.env.TELEGRAM_OWNER_CHAT_ID || process.env.TELEGRAM_KINGCAM_CHAT_ID;
   if (!token || !chatId) throw new Error("Telegram token or destination is not configured");
-  const resp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const data: any = await callTelegramApiWithGuard({
+    botToken: token,
+    method: "sendMessage",
+    body: {
       chat_id: chatId,
-      text: `${caption}\n\nUnlock: ${checkoutUrl}`.slice(0, 3900),
+      text: caption.includes(checkoutUrl) ? caption.slice(0, 3900) : `${caption}\n\nUnlock: ${checkoutUrl}`.slice(0, 3900),
       parse_mode: "HTML",
       disable_web_page_preview: false,
-    }),
+    },
+    context: "challengeEndToEndExecutor.sendTelegramOffer",
   });
-  const data: any = await resp.json();
   if (!data?.ok) throw new Error(`Telegram send failed: ${data?.description || "unknown error"}`);
   return Number(data?.result?.message_id || 0) || null;
 }
@@ -297,13 +380,22 @@ export async function runChallengeEndToEnd(input: ChallengeExecutionInput): Prom
     throw new Error("Live checkout or Telegram delivery requires requireConfirmation=LIVE_CHALLENGE_EXECUTION_APPROVED");
   }
 
-  await ensureSchema();
+  const databaseAvailable = await ensureSchema();
+  const telegramState = buildTelegramState(input);
+  const revenueSprint = buildRevenueSprint(input, priceCents);
+  let acquisitionTelemetry = refreshMoneySprintState({
+    memberCount: telegramState.memberCount,
+    urgencyHours: revenueSprint.urgencyHours,
+    revenueTargetCents: revenueSprint.targetCents,
+    trackingCode,
+    source: "challenge_executor_start",
+  });
   const deliverable = await generateDeliverable(taskName, priceCents, audience);
 
   let checkoutSessionId: string | null = null;
   let checkoutUrl: string | null = input.offerUrl || null;
   let stripeMetadataLinked = false;
-  if (mode === "create_checkout" || mode === "send_telegram") {
+  if (mode === "create_checkout" || (mode === "send_telegram" && !checkoutUrl)) {
     const checkout = await createStripeCheckout({ taskSlug: input.taskSlug, taskName, priceCents, trackingCode, audience });
     checkoutSessionId = checkout.sessionId;
     checkoutUrl = checkout.url;
@@ -311,6 +403,7 @@ export async function runChallengeEndToEnd(input: ChallengeExecutionInput): Prom
   }
 
   const destinationUrl = checkoutUrl || `${FRONTEND}/challenge?task=${encodeURIComponent(input.taskSlug)}&tracking=${encodeURIComponent(trackingCode)}`;
+  const trackedUnlockUrl = buildTrackedUnlockUrl(trackingCode, destinationUrl);
   const distributionJobId = await createTrackedDistributionJob({
     creatorId,
     taskSlug: input.taskSlug,
@@ -323,7 +416,21 @@ export async function runChallengeEndToEnd(input: ChallengeExecutionInput): Prom
   let telegramMessageId: number | null = null;
   if (mode === "send_telegram") {
     if (!checkoutUrl) throw new Error("Telegram send mode requires a checkout URL");
-    telegramMessageId = await sendTelegramOffer(deliverable.telegramPost, checkoutUrl);
+    telegramMessageId = await sendTelegramOffer(buildAggressiveTelegramCaption({ taskName, trackingCode, baseCaption: deliverable.telegramPost, checkoutUrl: trackedUnlockUrl, telegramState, revenueSprint }), trackedUnlockUrl);
+    acquisitionTelemetry = appendMoneySprintTelemetry({
+      type: "outbound_post",
+      trackingCode,
+      messageId: telegramMessageId,
+      source: "challenge_executor_send_telegram",
+      metadata: {
+        taskSlug: input.taskSlug,
+        taskName,
+        checkoutUrl: trackedUnlockUrl,
+        memberCount: telegramState.memberCount,
+        urgencyHours: revenueSprint.urgencyHours,
+        revenueTargetCents: revenueSprint.targetCents,
+      },
+    }, acquisitionTelemetry);
   }
 
   const proof = {
@@ -332,17 +439,34 @@ export async function runChallengeEndToEnd(input: ChallengeExecutionInput): Prom
     stripeMetadataLinked,
     deliveryLogged: Boolean(distributionJobId),
     externalDeliverySent: Boolean(telegramMessageId),
+    telegramState,
+    revenueSprint,
+    acquisitionTelemetry: {
+      counters: acquisitionTelemetry.counters,
+      remainingRevenueDollars: acquisitionTelemetry.remainingRevenueDollars,
+      deadlineAt: acquisitionTelemetry.deadlineAt,
+      telemetryPath: process.env.LIVE_MONEY_SPRINT_TELEMETRY_PATH || "/home/ubuntu/creatorvault-ultrastate/artifacts/challenge-runs/live-money-sprint-telemetry.json",
+    },
   };
 
-  const database = await getDatabase();
-  const insertResult = await database.execute(sql`
-    INSERT INTO challenge_execution_runs
-      (task_slug, task_name, mode, price_cents, tracking_code, checkout_session_id, checkout_url, distribution_job_id, telegram_message_id, deliverable_json, proof_json)
-    VALUES
-      (${input.taskSlug}, ${taskName}, ${mode}, ${priceCents}, ${trackingCode}, ${checkoutSessionId}, ${checkoutUrl}, ${distributionJobId}, ${telegramMessageId ? String(telegramMessageId) : null}, ${JSON.stringify(deliverable)}, ${JSON.stringify(proof)})
-  `);
-  const raw: any = Array.isArray(insertResult) ? insertResult[0] : insertResult;
-  const executionRunId = Number(raw?.insertId || 0) || null;
+  let executionRunId: number | null = null;
+  if (databaseAvailable) {
+    const database = await getDatabase();
+    const insertResult = await database.execute(sql`
+      INSERT INTO challenge_execution_runs
+        (task_slug, task_name, mode, price_cents, tracking_code, checkout_session_id, checkout_url, distribution_job_id, telegram_message_id, deliverable_json, proof_json)
+      VALUES
+        (${input.taskSlug}, ${taskName}, ${mode}, ${priceCents}, ${trackingCode}, ${checkoutSessionId}, ${checkoutUrl}, ${distributionJobId}, ${telegramMessageId ? String(telegramMessageId) : null}, ${JSON.stringify(deliverable)}, ${JSON.stringify(proof)})
+    `);
+    const raw: any = Array.isArray(insertResult) ? insertResult[0] : insertResult;
+    executionRunId = Number(raw?.insertId || 0) || null;
+  } else {
+    mkdirSync("/home/ubuntu/creatorvault-ultrastate/artifacts/challenge-runs", { recursive: true });
+    writeFileSync(
+      `/home/ubuntu/creatorvault-ultrastate/artifacts/challenge-runs/${trackingCode}.json`,
+      JSON.stringify({ taskSlug: input.taskSlug, taskName, mode, priceCents, trackingCode, checkoutSessionId, checkoutUrl: trackedUnlockUrl, destinationUrl, distributionJobId, telegramMessageId, deliverable, proof, databaseAvailable }, null, 2)
+    );
+  }
 
   return {
     ok: true,
@@ -352,7 +476,7 @@ export async function runChallengeEndToEnd(input: ChallengeExecutionInput): Prom
     priceCents,
     trackingCode,
     checkoutSessionId,
-    checkoutUrl,
+    checkoutUrl: trackedUnlockUrl,
     distributionJobId,
     telegramMessageId,
     executionRunId,

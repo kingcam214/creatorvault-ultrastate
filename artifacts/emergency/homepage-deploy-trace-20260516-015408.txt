@@ -1,0 +1,236 @@
+# Homepage Deployment Trace
+Generated: 2026-05-16T01:54:08+00:00
+
+## Package scripts
+{
+  "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
+  "build": "NODE_OPTIONS=\"--max-old-space-size=4096\" vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+  "start": "NODE_ENV=production node dist/index.js",
+  "check": "tsc --noEmit",
+  "format": "prettier --write .",
+  "test": "vitest run",
+  "db:push": "drizzle-kit generate && drizzle-kit migrate",
+  "visual-proof": "node scripts/visual-proof.js",
+  "route-owner": "node scripts/route-owner.js",
+  "scope-guard": "node scripts/scope-guard.js",
+  "build:client": "NODE_OPTIONS=\"--max-old-space-size=4096\" vite build",
+  "build:server": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist"
+}
+
+## Static/deploy config files
+./backups/recruiter-os-20260509T041023Z/vite.config.ts
+./ecosystem.config.cjs
+./ecosystem.config.js
+./public/nginx-BpAMiNFr.js
+./tsconfig.json
+./vite.config.ts
+
+## Public video assets
+2026-05-15 12:43:24.6280850260 10708544 client/public/videos/kingcam-hero-cam.mp4
+2026-05-15 12:43:24.6080848830 1666411 client/public/videos/kingcam-clone-2.mp4
+2026-05-15 12:43:24.6040848550 11968969 client/public/videos/kingcam-clone-1.mp4
+
+## Built dist homepage evidence
+
+
+## Server static serving references
+server/_core/index.ts:13:import { serveStatic, setupVite } from "./vite";
+server/_core/index.ts:140:        "SELECT destination_url, id, creator_id, content_id, channel_identity_id, platform FROM distribution_jobs WHERE tracking_code = ? LIMIT 1",
+server/_core/index.ts:160:            "INSERT INTO attribution_events (tracking_code, distribution_job_id, creator_id, content_id, channel_identity_id, platform, event_type, session_id, ip_hash, user_agent) VALUES (?, ?, ?, ?, ?, ?, 'click', ?, ?, ?)",
+server/_core/index.ts:163:          await conn.query("UPDATE distribution_jobs SET click_count = click_count + 1 WHERE id = ?", [job.id]);
+server/_core/index.ts:164:          recordSprintClick("attribution_redirect_db_click", { databaseMatched: true, distributionJobId: job.id });
+server/_core/index.ts:184:  app.use("/uploads", express.static(durableUploadsDir, {
+server/_core/index.ts:194:    serveStatic(app);
+server/_core/index.ts.bak_prelogin:9:import { serveStatic, setupVite } from "./vite";
+server/_core/index.ts.bak_prelogin:78:    serveStatic(app);
+server/_core/map.ts:108:      distance: { text: string; value: number };
+server/_core/map.ts:115:        distance: { text: string; value: number };
+server/_core/map.ts:134:      distance: { text: string; value: number };
+server/_core/map.ts:249: * Output: DirectionsResult  // routes[0].legs[0].distance, duration, steps
+server/_core/map.ts:253: * DISTANCE MATRIX - Calculate travel times/distances for multiple origin-destination pairs
+server/_core/map.ts:254: * Endpoint: /maps/api/distancematrix/json
+server/_core/vite.ts:7:import { createServer as createViteServer } from "vite";
+server/_core/vite.ts:8:import viteConfig from "../../vite.config";
+server/_core/vite.ts:21:  const vite = await createViteServer({
+server/_core/vite.ts:22:    ...viteConfig,
+server/_core/vite.ts:28:  app.use(vite.middlewares);
+server/_core/vite.ts:33:      const clientTemplate = path.resolve(process.cwd(), "client", "index.html");
+server/_core/vite.ts:35:      // always reload the index.html file from disk incase it changes
+server/_core/vite.ts:41:      const page = await vite.transformIndexHtml(url, template);
+server/_core/vite.ts:44:      vite.ssrFixStacktrace(e as Error);
+server/_core/vite.ts:50:export function serveStatic(app: Express) {
+server/_core/vite.ts:51:  const distPath = path.resolve(process.cwd(), "dist", "public");
+server/_core/vite.ts:52:  if (!fs.existsSync(distPath)) {
+server/_core/vite.ts:54:      `Could not find the build directory: ${distPath}, make sure to build the client first`
+server/_core/vite.ts:58:  app.use(express.static(distPath));
+server/_core/vite.ts:60:  // fall through to index.html if the file doesn't exist
+server/_core/vite.ts:62:    res.sendFile(path.resolve(distPath, "index.html"));
+server/aiBot.test.ts:7:import { describe, it, expect, beforeAll } from "vitest";
+server/auth.logout.test.ts:1:import { describe, expect, it } from "vitest";
+server/fgh-integration.test.ts:1:import { describe, it, expect, beforeAll } from "vitest";
+server/media-os/contracts/mediaContracts.ts:26:  | "distribution";
+server/media-os/contracts/mediaContracts.ts:196:  distribution: DistributionManifest;
+server/media-os/contracts/mediaContracts.ts:211:  distributionHandoff: DistributionManifest;
+server/media-os/contracts/operationalContracts.ts:29:  | "distribution_readiness";
+server/media-os/contracts/operationalContracts.ts:166:  category: "tts" | "clone" | "render" | "storage" | "distribution";
+server/media-os/operational/operationalMediaOS.ts:76:  const distributionStatus = asString(mediaOS?.distributionHandoff?.status, "blocked");
+server/media-os/operational/operationalMediaOS.ts:85:  const distributionJob = transitionJob(baseJob({ kind: "distribution_readiness", state: "created", priority: 30, trailerProjectId, selectedAssetIds, providerId: "future-distribution-targets", suffix: "distribution", generatedAt, dependsOn: [renderJob.jobId] }), ["queued"], generatedAt);
+server/media-os/operational/operationalMediaOS.ts:87:  const jobs = [validationJob, voiceJob, cloneJob, renderJob, storageJob, distributionJob];
+server/media-os/operational/operationalMediaOS.ts:92:  const providers = buildProviderReliabilityManifest({ voiceoverStatus, cloneRegistryStatus, renderStatus, distributionStatus, generatedAt });
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:247:    destinations: ["creatorvault_project_library", "future_platform_distribution_manifest"],
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:248:    warnings: [normalizeWarning("distribution", "Distribution remains blocked until render completion and validation proof exist.", "info")],
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:255:    { stage: "narrative_planning", producer: "buildGroundedTrailerBlueprint", consumes: ["SceneManifest"], emits: ["SceneManifest"], status: "complete", isolationClaim: "Narrative planning emits structured scene intent without rendering or distribution side effects." },
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:262:    { stage: "validation", producer: "validationHandoff", consumes: ["TimelineManifest", "RenderManifest"], emits: ["ValidationReport"], status: "handoff_prepared", isolationClaim: "Validation remains independent and mandatory before any real render/distribution claim." },
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:264:    { stage: "distribution", producer: "distributionHandoff", consumes: ["RenderManifest"], emits: ["DistributionManifest"], status: "blocked", isolationClaim: "Distribution remains blocked until a real render output and validation proof exist." },
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:281:  const distribution = buildDistributionManifest();
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:294:    createMediaOSEvent({ sequence: 10, name: MEDIA_OS_EVENT_NAMES.DISTRIBUTION_READY, stage: "distribution", status: distribution.status, producer: "distributionHandoff", trailerProjectId, selectedAssetIds, consumes: ["RenderManifest"], emits: ["DistributionManifest"], timestamp: generatedAt, warnings: distribution.warnings, notes: "Distribution is blocked until real render output and validation proof exist." }),
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:310:    distribution,
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:324:    distributionHandoff: distribution,
+server/media-os/orchestration/trailerMediaOSOrchestrator.ts:343:      ...distribution.warnings,
+server/media-os/providers/providerReliabilityManager.ts:11:  distributionStatus: string;
+server/media-os/providers/providerReliabilityManager.ts:93:      providerId: "future-distribution-targets",
+server/media-os/providers/providerReliabilityManager.ts:94:      category: "distribution",
+server/media-os/providers/providerReliabilityManager.ts:95:      capability: "post_render_distribution_readiness",
+server/media-os/providers/providerReliabilityManager.ts:96:      health: normalizeHealth(input.distributionStatus),
+server/media-os/providers/providerReliabilityManager.ts:104:      lastFailureReason: input.distributionStatus.toLowerCase().includes("blocked") ? "Distribution waits for validated render output." : null,
+server/ownerControl.test.ts:7:import { describe, it, expect, beforeAll } from "vitest";
+server/routers.test.ts:1:import { describe, it, expect, beforeAll } from "vitest";
+server/routers.ts:260:import { distributionRouter } from "./routers/distributionRouter";
+server/routers.ts:1006:  distribution: distributionRouter,
+server/routers/activationWarRoomRouter.ts:316:    if (!row.telegram_ready && !row.telegram_username && !["ready", "complete", "completed"].includes(String(row.telegram_transition_status || "").toLowerCase())) blockers.push({ key: "missing_telegram_funnel_readiness", label: "Telegram funnel readiness is missing", severity: "medium", nextAction: "Confirm Telegram invite, channel, or transition evidence before using Telegram as activation path", sources: ["recruiter_creator_profiles", "creator_conversion_automation"], evidence: { telegramReady: Boolean(row.telegram_ready), telegramUsernamePresent: Boolean(row.telegram_username), telegramTransitionStatus: row.telegram_transition_status || null } });
+server/routers/agentTelemetryRouter.ts:62:        // Active agents count (distinct agents in the time window)
+server/routers/apparelRouter.ts:28:Create: 3 distinct design concepts with descriptions, placement suggestions, and product recommendations (t-shirt, hoodie, hat, etc.).`,
+server/routers/batchGeneration.ts:19:        content: `Generate a batch of ${input.count} unique ${input.type} about "${input.topic}"${input.platform ? ` for ${input.platform}` : ""}${input.tone ? ` with ${input.tone} tone` : ""}. Number each one. Make each distinctly different.`,
+server/routers/challengeAutomationRouter.ts:332:          "You are the Hollywood Show Agent. You manage production, booking, scripting, and distribution for KingCam's Hollywood shows.",
+server/routers/challengeAutomationRouter.ts:533:          "You are the Podcast Studio Agent. You handle full podcast production — outlines, show notes, clips, and distribution.",
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:324:          "You are the Hollywood Show Agent. You manage production, booking, scripting, and distribution for KingCam's Hollywood shows.",
+server/routers/challengeAutomationRouter.ts.bak.ai_agent_cash_hotfix_20260515043929:525:          "You are the Podcast Studio Agent. You handle full podcast production — outlines, show notes, clips, and distribution.",
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:324:          "You are the Hollywood Show Agent. You manage production, booking, scripting, and distribution for KingCam's Hollywood shows.",
+server/routers/challengeAutomationRouter.ts.bak.timeout_patch_20260515050043:525:          "You are the Podcast Studio Agent. You handle full podcast production — outlines, show notes, clips, and distribution.",
+server/routers/cloneEmpireRouter.ts:37:const PUBLIC_VIDEO_DIR = "/root/creatorvault/dist/public/videos/clone";
+server/routers/conversionEngineRouter.ts:32:  "telegram_invited",
+server/routers/conversionEngineRouter.ts:53:const telegramTransitionSchema = z.enum(["not_started", "invite_ready", "invite_sent", "joined", "funnel_enrolled"]);
+server/routers/conversionEngineRouter.ts:275:  const telegramStatus = profile.telegramReady ? "invite_ready" : "not_started";
+server/routers/conversionEngineRouter.ts:457:          SUM(CASE WHEN cca.telegram_transition_status IN ('invite_ready','invite_sent','joined','funnel_enrolled') THEN 1 ELSE 0 END) AS telegram_transitions,
+server/routers/creatorOutreachRouter.ts:580:  // Run the production-backed acquisition → outreach → distribution → telemetry closing loop
+server/routers/creatorOutreachRouter.ts:692:        throw new Error("No existing distribution channel identity is available for the creator closing loop; create or seed a channel before claiming distribution scheduling success.");
+server/routers/creatorOutreachRouter.ts:700:      const distributionPlatform = "telegram";
+server/routers/creatorOutreachRouter.ts:702:        INSERT INTO distribution_jobs
+server/routers/creatorOutreachRouter.ts:706:          (${creatorId}, ${channel.id}, NULL, ${distributionPlatform}, NULL,
+server/routers/creatorOutreachRouter.ts:710:      const distributionRows = extractRows(await db.execute(sql`
+server/routers/creatorOutreachRouter.ts:711:        SELECT * FROM distribution_jobs WHERE tracking_code = ${trackingCode} ORDER BY created_at DESC LIMIT 1
+server/routers/creatorOutreachRouter.ts:713:      const distributionJob = distributionRows[0];
+server/routers/creatorOutreachRouter.ts:714:      if (!distributionJob?.id) throw new Error("distribution_jobs insert did not return a persisted tracked job row");
+server/routers/creatorOutreachRouter.ts:724:           'creator_acquisition_to_distribution', ${creator.handle}, 'success',
+server/routers/creatorOutreachRouter.ts:725:           ${now}, ${now}, ${`Persisted outreach lead ${lead.id}, distribution job ${distributionJob.id}, and tracking code ${trackingCode}`},
+server/routers/creatorOutreachRouter.ts:727:           ${JSON.stringify({ leadId: lead.id, distributionJobId: distributionJob.id, trackingCode, sourcePlatform: platform, distributionPlatform, creatorHandle: creator.handle, sourceTable: creator.source_table || null, sourceId: creator.source_id || null })})
+server/routers/creatorOutreachRouter.ts:748:        distributionJob: {
+server/routers/creatorOutreachRouter.ts:749:          id: distributionJob.id,
+server/routers/creatorOutreachRouter.ts:752:          status: distributionJob.status,
+server/routers/creatorOutreachRouter.ts:753:          channelIdentityId: distributionJob.channel_identity_id,
+server/routers/creatorOutreachRouter.ts:754:          platform: distributionJob.platform,
+server/routers/distributionRouter.ts:2: * distributionRouter.ts — VaultX Distribution Hub Backend
+server/routers/distributionRouter.ts:12: *   job.create                  — create a distribution job (with tracking code)
+server/routers/distributionRouter.ts:13: *   job.list                    — list distribution jobs for creator
+server/routers/distributionRouter.ts:112:export const distributionRouter = router({
+server/routers/distributionRouter.ts:323:        `INSERT INTO distribution_jobs 
+server/routers/distributionRouter.ts:342:      const jobs = await rawQuery(`SELECT * FROM distribution_jobs WHERE id = ?`, [jobId]);
+server/routers/distributionRouter.ts:370:        FROM distribution_jobs dj
+server/routers/distributionRouter.ts:393:         FROM distribution_jobs dj
+server/routers/distributionRouter.ts:418:        `UPDATE distribution_jobs SET status = 'ready' WHERE id = ?`,
+server/routers/distributionRouter.ts:430:         FROM distribution_jobs dj
+server/routers/distributionRouter.ts:443:      await rawExec(`UPDATE distribution_jobs SET status = 'posting' WHERE id = ?`, [input.jobId]);
+server/routers/distributionRouter.ts:523:          throw new Error("Twitter API credentials required. See /vaultx/distribution for setup instructions.");
+server/routers/distributionRouter.ts:531:          `UPDATE distribution_jobs 
+server/routers/distributionRouter.ts:546:          `UPDATE distribution_jobs SET status = 'failed', error_message = ? WHERE id = ?`,
+server/routers/distributionRouter.ts:565:         FROM distribution_jobs dj
+server/routers/distributionRouter.ts:577:          (tracking_code, distribution_job_id, creator_id, content_id, channel_identity_id, platform, event_type, session_id, ip_hash, user_agent)
+server/routers/distributionRouter.ts:606:        `SELECT * FROM distribution_jobs WHERE tracking_code = ?`,
+server/routers/distributionRouter.ts:614:          (tracking_code, distribution_job_id, creator_id, content_id, channel_identity_id, platform, event_type, user_id, revenue_cents)
+server/routers/hollywoodReplacementRouter.ts:63:Provide: pre-production checklist, production schedule, post-production workflow, and distribution strategy.`,
+server/routers/onboarding.ts:87:      messages: [{ role: "user", content: `Create a CreatorVault activation plan for a real creator. No placeholders and no generic filler.\nGoals: ${input.goals.join(", ")}\nExperience: ${input.experience}\nNiche: ${input.niche}\n\nDesign a 7-step journey that moves from profile setup to uploaded paid content, Telegram distribution, first buyer conversion, follow-up offer, and operator telemetry. Include exact action, required asset, revenue intent, and completion proof for each step.` }],
+server/routers/onboardingV2Router.ts:68:      messages: [{ role: "user", content: `Design a CreatorVault V2 activation workflow for a real ${input.creatorType} creator.\nPrimary goal: ${input.primaryGoal}\nIncome goal: $${input.monthlyIncomeGoal}/month\nPlatforms: ${input.platforms.join(", ")}\n\nCreate a concrete welcome, day-one quick wins, week-one roadmap, first paid offer, Telegram distribution move, and exact proof fields the system should track. No placeholders or generic examples.` }],
+server/routers/orchestrator.ts:5: * This is the SINGLE API for all content creation, optimization, and distribution.
+server/routers/orchestrator.ts:53:   * Runs complete pipeline: optimization → asset generation → platform adaptation → distribution.
+server/routers/podcasting.ts:3: * Complete podcast production, distribution, and monetization API
+server/routers/presentationBuilderRouter.ts:68:    useCase: "Turn a newly recruited creator into uploaded content, Telegram distribution, first PPV, and follow-up offers.",
+server/routers/presentationBuilderRouter.ts:90:    distributionChannel: z.string().optional(),
+server/routers/presentationBuilderRouter.ts:93:    const prompt = `You are CreatorVault's Presentation Empire operator. Build a production-ready monetization presentation that can be sent to a real prospect today. Do not include placeholders, mock names, fake metrics, or vague filler. If data is unknown, give a concrete collection step and the exact field needed.\n\nTitle: ${input.title}\nTopic: ${input.topic}\nAudience: ${input.audience}\nSlides: ${input.slides}\nStyle: ${input.style || "premium CreatorVault operating brief"}\nCreator handle: ${input.creatorHandle || "not supplied"}\nPlatform: ${input.platform || "not supplied"}\nMonetization goal: ${input.monetizationGoal || "paid creator activation"}\nOffer price USD: ${input.offerPriceUsd ?? 497}\nDistribution channel: ${input.distributionChannel || "Telegram + direct DM follow-up"}\n\nReturn a structured package with: 1) executive summary, 2) slide-by-slide deck with title, proof point, talk track, visual direction, and CTA, 3) outreach message to send with the deck, 4) Telegram internal notification, 5) monetization checklist, 6) exact missing data fields if any.`;
+server/routers/smartCaptions.ts:67:  const uploadsDir = path.resolve(process.cwd(), "dist", "public", "uploads", subdir, uuid);
+server/routers/socialMediaAutoPoster.ts:24:      const metadata = { platform, scheduledFor, mediaUrls: input.mediaUrls ?? [], distributionState: "queued", createdBy: ctx.user.id };
+server/routers/telegramCampaignRouter.ts:11: *   telegramCampaign.triggerVipUpsell   — send VIP upsell DM + invite link
+server/routers/telegramCampaignRouter.ts:146:           LEFT JOIN distribution_jobs dj ON dj.id = tc.distribution_job_id
+server/routers/telegramFunnelRouter.ts:146:      visibility: z.enum(["public","private","invite_only"]).default("public"),
+server/routers/telegramFunnelRouter.ts:688:        // Also pull from distribution attribution_events
+server/routers/telegramFunnelRouter.ts:689:        const [distResult] = await db.execute(
+server/routers/telegramFunnelRouter.ts:695:        return { conversions: rows(result), clicks: rows(distResult) };
+server/routers/telegramMoneyLoopRouter.ts:9: *   drop.status          — get distribution_jobs row + click/conversion counts
+server/routers/telegramMoneyLoopRouter.ts:11: *   vip.upsell           — send DM + generate single-use VIP invite link
+server/routers/telegramMoneyLoopRouter.ts:71:           FROM distribution_jobs dj
+server/routers/telegramMoneyLoopRouter.ts:159:  "vip.inviteLinks": protectedProcedure
+server/routers/telegramMoneyLoopRouter.ts:165:          `SELECT id, invite_url, is_used, expires_at, used_at, created_at
+server/routers/telegramMoneyLoopRouter.ts:166:           FROM telegram_invite_links
+server/routers/telegramMoneyLoopRouter.ts:171:        return { inviteLinks: rows(ilRows) };
+server/routers/vaultxRouter.ts:19:import { distributionEngineExport } from "../services/distributionEngineService";
+server/routers/vaultxRouter.ts:26:const UPLOAD_DIR = "/root/creatorvault/dist/public/uploads/vaultx";
+server/routers/vaultxRouter.ts:1460:      const sourceUrl = `/root/creatorvault/dist/public${proj[0].output_url}`;
+server/routers/vaultxRouter.ts:1958:        sourcePath = `/root/creatorvault/dist/public${sourcePath}`;
+server/routers/vaultxRouter.ts:2065:  // ─── PROCEDURE 50: distributeContent ─────────────────────────────────────
+server/routers/vaultxRouter.ts:2066:  distributeContent: protectedProcedure
+server/routers/vaultxRouter.ts:2089:      const result = await distributionEngineExport({
+server/routers/vaultxRouter.ts:2617:              negative_prompt: "ugly, distorted, unnatural, over-processed, plastic skin, blurry, low quality",
+server/routers/vaultxRouter.ts:2812:  // Generate 3 distinct AI variations: Natural, Enhanced, Cinematic
+server/routers/vaultxRouter.ts:2860:                negative_prompt: "ugly, distorted, unnatural, over-processed, plastic skin",
+server/routers/vaultxRouter.ts:3355:      const negativePrompt = "ugly, distorted, unnatural, over-processed, plastic skin, blurry, low quality, deformed";
+server/routers/videoEnhanceRouter.ts:116:  const dir = path.resolve(process.cwd(), "dist", "public", "uploads", subdir, uuid);
+server/routers/videoEnhanceRouter.ts:188:  const prompt = `You are an expert adult content monetization editor. Analyze this video transcript and identify the ${count} best moments for short clips.\n\nTranscript:${segCtx}\nFull text: ${transcript || "(no speech detected)"}\nVideo duration: ${videoDuration}s\n\nFor each moment provide: start time (seconds), end time (max 60s clip), hook title (5-8 words, punchy), caption text (1 sentence, platform-safe), suggested PPV price (USD).\n\nIf no transcript is available, distribute moments evenly across the video duration.\n\nRespond ONLY with valid JSON array:\n[{"start":0,"end":30,"title":"...","caption":"...","price":9.99}]`;
+server/routers/videoEnhanceRouter.ts:393:      const prompt = `You are a professional video editor analyzing a video transcript for scene detection.\n\nTranscript:${segmentContext}\n\nFull text: ${input.transcript}\n${input.videoDuration ? `Video duration: ${input.videoDuration}s` : ""}\n\nDetect distinct scenes or segments. For each scene provide:\n1. A short descriptive label (3-5 words)\n2. Recommended start time (seconds)\n3. Recommended end time (seconds)\n4. Scene type (intro/action/dialogue/outro/highlight/transition)\n5. Energy level (low/medium/high)\n\nRespond ONLY with valid JSON array:\n[{"label":"...","start":0,"end":15,"type":"intro","energy":"medium","reason":"..."}]`;
+server/routers/videoEnhanceRouter.ts:410:        message: scenes.length > 0 ? `AI detected ${scenes.length} scenes` : "No distinct scenes detected",
+server/routers/videoEnhanceRouter.ts:446:          : "No distinct moments detected",
+server/routers/videoEnhanceRouter.ts:1210:          const negativePrompt = "over-processed, plastic skin, unnatural, harsh, distorted body";
+server/routers/videoEnhanceRouter.ts:1426:        negativePrompt: parsed.negativePrompt || "low quality, blurry, distorted",
+server/routers/videoEnhanceRouter.ts:1576:          negative_prompt: "low quality audio, distorted, harsh, unpleasant",
+server/routers/videoStudioRouter.ts:5: * (outside dist/public — survives every frontend redeploy)
+server/routers/videoStudioRouter.ts:6: * Served via express.static("/uploads") mounted in server/index.ts
+server/routers/videoStudioRouter.ts:25:// ─── Durable uploads directory (outside dist/ — survives redeploys) ──────────
+server/services/adultSalesBot.ts:388:    // Save tracking code to distribution_jobs for attribution
+server/services/adultSalesBot.ts:400:        `INSERT IGNORE INTO distribution_jobs (creator_id, channel_identity_id, platform, asset_url, asset_type, caption, tracking_code, destination_url, status, content_safety_level, brand_lane)
+server/services/automatedDirectorService.ts:442:  const uploadDirBase = "/root/creatorvault/dist/public";
+server/services/contentOrchestrator.test.ts:7:import { describe, it, expect, vi, beforeEach } from "vitest";
+server/services/contentOrchestrator.test.ts:174:      expect(result.distributionResults?.immediate).toBeDefined();
+server/services/contentOrchestrator.test.ts:197:      expect(result.distributionResults?.scheduled).toBeDefined();
+server/services/contentOrchestrator.test.ts:216:      expect(result.distributionResults).toBeUndefined();
+server/services/contentOrchestrator.ts:6: * This is the SINGLE ENTRY POINT for content creation, optimization, and distribution.
+server/services/contentOrchestrator.ts:18: * 5. Route to distribution (immediate/scheduled/draft)
+server/services/contentOrchestrator.ts:106:  distributionResults?: {
+server/services/contentOrchestrator.ts:170: * Runs complete pipeline from input to distribution.
+server/services/contentOrchestrator.ts:233:    // Step 7: Route to distribution
+server/services/contentOrchestrator.ts:234:    const distributionResults = await distributeContent(input, adaptations, contentId);
+server/services/contentOrchestrator.ts:295:      distributionResults,
+server/services/contentOrchestrator.ts:615: * Routes content to appropriate distribution channel:
+server/services/contentOrchestrator.ts:620:async function distributeContent(
+server/services/contentOrchestrator.ts:624:): Promise<OrchestrationResult["distributionResults"]> {
+server/services/contentOrchestrator.ts:682:  // Draft: No distribution, just save
+server/services/contentProtectionService.ts:201:    // Using Hamming distance on frame hashes for fuzzy matching
+server/services/contentProtectionService.ts:206:      // Simple exact match for now — in production this would use pHash distance
+server/services/dayShiftDoctor.test.ts:5:import { describe, it, expect } from "vitest";
+server/services/distributionEngineService.ts:288:    const tmpInput = path.join(UPLOAD_DIR, `dist_input_${Date.now()}.mp4`);
+server/services/distributionEngineService.ts:295:  const outputFilename = `dist_${platformId}_${Date.now()}.mp4`;
+server/services/distributionEngineService.ts:364:export async function distributeContent(params: {
+server/services/distributionEngineService.ts:467:export const distributionEngineExport = distributeContent;
+server/services/hollywoodReplacement.ts:131:    distribution: number;
+server/services/hollywoodReplacement.ts:138:    distribution: number;
+server/services/hollywoodReplacement.ts:148:    short_film: { crew: 50000, equipment: 30000, location: 20000, postProduction: 40000, distribution: 10000 },
+server/services/hollywoodReplacement.ts:149:    series: { crew: 200000, equipment: 100000, location: 80000, postProduction: 150000, distribution: 50000 },
+server/services/hollywoodReplacement.ts:150:    documentary: { crew: 30000, equipment: 20000, location: 15000, postProduction: 25000, distribution: 10000 },
+server/services/hollywoodReplacement.ts:151:    commercial: { crew: 80000, equipment: 50000, location: 30000, postProduction: 60000, distribution: 20000 },
+server/services/hollywoodReplacement.ts:152:    music_video: { crew: 40000, equipment: 25000, location: 15000, postProduction: 30000, distribution: 10000 }
+server/services/hollywoodReplacement.ts:166:    distribution: 10 // Platform-native (no external costs)
+server/services/hollywoodReplacement.ts:318:    "Multi-platform distribution",
+server/services/marketplace/systems-fgh.test.ts:6:import { describe, it, expect } from "vitest";
+server/services/platformPosting.test.ts:1:import { describe, it, expect, beforeEach, vi } from "vitest";
+server/services/podcastDistribution.ts:3: * Handles RSS feed generation and multi-platform distribution
+server/services/services/automatedDirectorService.ts:442:  const uploadDirBase = "/root/creatorvault/dist/public";
+server/services/services/contentOrchestrator.test.ts:7:import { describe, it, expect, vi, beforeEach } from "vitest";
+server/services/services/contentOrchestrator.test.ts:174:      expect(result.distributionResults?.immediate).toBeDefined();
+server/services/services/contentOrchestrator.test.ts:197:      expect(result.distributionResults?.scheduled).toBeDefined();

@@ -1,0 +1,39 @@
+# Candidate missing homepage assets
+## reel-ai-portrait.mp4
+## reel-apparel-drop.mp4
+## reel-brand-story.mp4
+## reel-cinematic-trailer.mp4
+## reel-creator-promo.mp4
+## reel-music-video.mp4
+## reel-product-drop.mp4
+## kingcam-hero.jpg
+
+# Existing media inventory compact
+artifacts/delivery/vaultx-premium-corrected-package-2026-05-15/premium-assets/do_not_leave_the_vault_premium.png 272841 bytes
+artifacts/delivery/vaultx-premium-corrected-package-2026-05-15/premium-assets/inner_circle_leak_premium.png 281095 bytes
+artifacts/delivery/vaultx-premium-corrected-package-2026-05-15/premium-assets/money_moments_loop_premium.png 295383 bytes
+artifacts/delivery/vaultx-premium-corrected-package-2026-05-15/premium-assets/onlyfans_crusher_premium.png 292196 bytes
+artifacts/delivery/vaultx-premium-corrected-package-2026-05-15/premium-assets/telegram_pressure_engine_premium.png 272402 bytes
+artifacts/visual-drops/assets/creator_money_gems.png 268456 bytes
+artifacts/visual-drops/assets/inner_circle_leak.png 247883 bytes
+artifacts/visual-drops/assets/money_printer_cheat_code.png 276169 bytes
+artifacts/visual-drops/assets/onlyfans_crusher.png 295395 bytes
+artifacts/visual-drops/assets/telegram_automation.png 289717 bytes
+artifacts/visual-drops/premium-assets/do_not_leave_the_vault_premium.png 272841 bytes
+artifacts/visual-drops/premium-assets/inner_circle_leak_premium.png 281095 bytes
+artifacts/visual-drops/premium-assets/money_moments_loop_premium.png 295383 bytes
+artifacts/visual-drops/premium-assets/onlyfans_crusher_premium.png 292196 bytes
+artifacts/visual-drops/premium-assets/telegram_pressure_engine_premium.png 272402 bytes
+client/public/images/clone-ambassador.webp 65260 bytes
+client/public/images/reel/reel-ai-portrait.png 1783071 bytes
+client/public/images/reel/reel-apparel-drop.png 1957865 bytes
+client/public/images/reel/reel-cinematic-trailer.png 1681790 bytes
+client/public/images/reel/reel-creator-promo.png 1729534 bytes
+client/public/images/reel/reel-music-video.png 1522746 bytes
+client/public/images/reel/reel-podcast-clip.png 1501629 bytes
+client/public/images/reel/reel-product-drop.png 1958092 bytes
+client/public/logo-black.png 97211 bytes
+client/public/logo-white.png 292594 bytes
+client/public/videos/kingcam-clone-1.mp4 11968969 bytes
+client/public/videos/kingcam-clone-2.mp4 1666411 bytes
+client/public/videos/kingcam-hero-cam.mp4 10708544 bytes

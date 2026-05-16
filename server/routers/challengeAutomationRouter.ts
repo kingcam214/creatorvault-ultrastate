@@ -12,6 +12,7 @@ import * as db from "../db";
 import { sql } from "drizzle-orm";
 import { sendFreeChannelDrop } from "../services/telegramMoneyLoop";
 import { getRecentChallengeExecutions, runChallengeEndToEnd } from "../services/challengeEndToEndExecutor";
+import { callTelegramApiWithGuard } from "../services/telegramOutboundGuard";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // @ts-ignore
@@ -40,12 +41,12 @@ async function sendTelegram(
 ): Promise<boolean> {
   if (!token || !chatId) return false;
   try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
-    });
-    const data = await res.json() as any;
+    const data = await callTelegramApiWithGuard({
+      botToken: token,
+      method: "sendMessage",
+      body: { chat_id: chatId, text, parse_mode: "HTML" },
+      context: `challengeAutomationRouter.${messageType}`,
+    }) as any;
     const ok = data.ok === true;
     if (ok) {
       await db.db.execute(sql`
@@ -602,8 +603,12 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
         const botStatuses: string[] = [];
         for (const bot of bots) {
           try {
-            const res = await fetch(`https://api.telegram.org/bot${bot.token}/getMe`);
-            const data = await res.json() as any;
+            const data = await callTelegramApiWithGuard({
+              botToken: bot.token,
+              method: "getMe",
+              context: `challengeAutomationRouter.getMe.${bot.name}`,
+              allowReadOnly: true,
+            }) as any;
             if (data.ok) {
               botStatuses.push(`✅ ${bot.name} (@${data.result.username}) — ONLINE`);
             } else {

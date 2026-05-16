@@ -19,9 +19,9 @@
 
 import mysql2 from "mysql2/promise";
 import crypto from "crypto";
+import { callTelegramApiWithGuard } from "./telegramOutboundGuard";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
-const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 const VIP_CHANNEL_CHAT_ID = "-1003817770263";
 const VIP_CHANNEL_ENTITY_ID = 2;
 
@@ -37,28 +37,28 @@ async function sendTelegramMessage(chatId: number | string, text: string, replyM
   };
   if (replyMarkup) body.reply_markup = replyMarkup;
 
-  const res = await fetch(`${TG_API}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return res.json() as Promise<any>;
+  return callTelegramApiWithGuard({
+    botToken: BOT_TOKEN,
+    method: "sendMessage",
+    body,
+    context: "telegramStartHandler.sendTelegramMessage",
+  }) as Promise<any>;
 }
 
 async function createVipInviteLink(label: string) {
   const expireDate = Math.floor(Date.now() / 1000) + 86400; // 24h
-  const res = await fetch(`${TG_API}/createChatInviteLink`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const data = await callTelegramApiWithGuard({
+    botToken: BOT_TOKEN,
+    method: "createChatInviteLink",
+    body: {
       chat_id: VIP_CHANNEL_CHAT_ID,
       name: label,
       member_limit: 1,
       expire_date: expireDate,
       creates_join_request: false,
-    }),
-  });
-  const data = await res.json() as any;
+    },
+    context: "telegramStartHandler.createVipInviteLink",
+  }) as any;
   return { ok: data.ok, inviteUrl: data.result?.invite_link, expireDate, raw: data };
 }
 

@@ -1,0 +1,32 @@
+# Homepage Asset Verification
+Generated: 2026-05-16T01:55:17+00:00
+
+## Video references in Home.tsx
+/videos/kingcam-clone-1.mp4
+/videos/kingcam-clone-2.mp4
+/videos/kingcam-hero-cam.mp4
+/videos/reel-ai-portrait.mp4
+/videos/reel-apparel-drop.mp4
+/videos/reel-brand-story.mp4
+/videos/reel-cinematic-trailer.mp4
+/videos/reel-creator-promo.mp4
+/videos/reel-music-video.mp4
+/videos/reel-product-drop.mp4
+
+## Asset existence check
+OK /videos/kingcam-clone-1.mp4 11968969 bytes
+OK /videos/kingcam-clone-2.mp4 1666411 bytes
+OK /videos/kingcam-hero-cam.mp4 10708544 bytes
+MISSING /videos/reel-ai-portrait.mp4
+MISSING /videos/reel-apparel-drop.mp4
+MISSING /videos/reel-brand-story.mp4
+MISSING /videos/reel-cinematic-trailer.mp4
+MISSING /videos/reel-creator-promo.mp4
+MISSING /videos/reel-music-video.mp4
+MISSING /videos/reel-product-drop.mp4
+
+## Image references in Home.tsx
+/assets/kingcam-hero.jpg
+
+## Image existence check
+MISSING /assets/kingcam-hero.jpg
