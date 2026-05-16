@@ -1,8 +1,13 @@
 import { randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
+import { buildAdaptiveTrailerPlan, buildCloneAwareTrailerMode } from "../services/adaptiveTrailerPlanner";
+import { buildCinematicPacingPlan, buildSoundDesignPlan, buildTimelineInspectorModel, buildVoiceoverSyncPlan } from "../services/cinematicPacingEngine";
+import { analyzeTrailerRetention } from "../services/trailerRetentionAnalyzer";
+import { buildTrailerMediaOSManifest } from "../media-os/orchestration/trailerMediaOSOrchestrator";
 
 const mediaFilterSchema = z.enum(["all", "videos", "images"]).default("all");
 
@@ -17,6 +22,115 @@ function extractRows(result: unknown): any[] {
   if (Array.isArray(result)) return result;
   if ((result as any)?.rows) return (result as any).rows;
   return [];
+}
+
+
+function asNumber(value: unknown, fallback = 0): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function assetKind(row: any): string {
+  const type = String(row.asset_type ?? row.mime_type ?? "").toLowerCase();
+  return type.includes("video") ? "video" : type.includes("image") ? "image" : "media";
+}
+
+function defaultSceneCopy(role: string, projectName: string, title?: string | null): string {
+  const name = (title || projectName || "the offer").trim();
+  if (role === "hook") return `Stop scrolling. ${name} is built to turn attention into momentum.`;
+  if (role === "proof") return "Real media, real proof, and a trailer system that understands the sale.";
+  if (role === "offer") return "One cinematic package: hook, story, captions, voice, variants, and launch assets.";
+  if (role === "cta") return "Launch the trailer. Ship the campaign. Keep the factory moving.";
+  return "Show the transformation fast, clean, and impossible to ignore.";
+}
+
+function buildTrailerProductionPackage(input: any, id: string, ownedAssets: any[], selectedAssetIds: string[]) {
+  const generatedAt = new Date().toISOString();
+  const scriptLines = String(input.scriptText ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const hooks = (input.hooks?.length ? input.hooks : scriptLines).slice(0, 6);
+  const roles = ["hook", "proof", "transformation", "offer", "cta"];
+  const sceneInputs = Array.isArray(input.segments) && input.segments.length > 0 ? input.segments : ownedAssets.map((asset, index) => ({
+    sceneIndex: index,
+    text: scriptLines[index] || hooks[index] || defaultSceneCopy(roles[Math.min(index, roles.length - 1)] ?? "transformation", input.projectName, input.title),
+    visualDescription: `${assetKind(asset)} asset ${String(asset.original_name ?? asset.file_name ?? asset.id)} drives this beat.`,
+    duration: assetKind(asset) === "video" ? Math.min(6, Math.max(3, asNumber(asset.duration, 4))) : 3.5,
+  }));
+
+  const scenes = sceneInputs.map((scene: any, index: number) => {
+    const asset = ownedAssets[index % Math.max(1, ownedAssets.length)] ?? ownedAssets[0] ?? {};
+    const role = roles[Math.min(index, roles.length - 1)] ?? "transformation";
+    return {
+      sceneIndex: asNumber(scene.sceneIndex, index),
+      role,
+      durationSeconds: asNumber(scene.duration, role === "hook" ? 3.2 : role === "cta" ? 4 : 4.5),
+      overlayText: String(scene.text || defaultSceneCopy(role, input.projectName, input.title)),
+      visualDescription: scene.visualDescription ?? null,
+      sourceAssetId: String(asset.id ?? selectedAssetIds[index] ?? selectedAssetIds[0] ?? ""),
+      sourceUrl: asset.public_url ?? asset.storage_path ?? null,
+      assetKind: assetKind(asset),
+      sourceFeature: asset.source_type ?? null,
+      warnings: asset.status && asset.status !== "ready" ? [`Asset status is ${asset.status}; render gate must revalidate before output.`] : [],
+    };
+  });
+
+  const assetIntelligence = ownedAssets.map((asset) => ({
+    id: String(asset.id),
+    kind: assetKind(asset),
+    fileName: asset.original_name ?? asset.file_name ?? "Untitled asset",
+    sourceType: asset.source_type ?? null,
+    createdByFeature: asset.source_type ?? null,
+    width: asset.width ? Number(asset.width) : null,
+    height: asset.height ? Number(asset.height) : null,
+    durationSeconds: asset.duration ? Number(asset.duration) : null,
+    hasAudio: assetKind(asset) === "video",
+    hasVideo: assetKind(asset) === "video",
+    suitabilityScore: assetKind(asset) === "video" ? 91 : 78,
+  }));
+
+  const readinessWarnings = [
+    ...(ownedAssets.length < 3 ? ["Add at least three grounded assets for a stronger multi-beat trailer."] : []),
+    ...(scriptLines.length === 0 ? ["No script lines supplied; deterministic scene copy was generated from the project brief."] : []),
+  ];
+
+  const blueprint = {
+    version: "creatorvault.grounded_trailer_blueprint.v1",
+    trailerProjectId: id,
+    generatedAt,
+    project: {
+      id,
+      name: input.projectName,
+      type: input.projectType ?? "launch_trailer",
+      title: input.title ?? null,
+      concept: input.concept ?? null,
+      format: input.format ?? "16:9",
+    },
+    readiness: {
+      assetCount: ownedAssets.length,
+      visualSceneCount: scenes.length,
+      estimatedDurationSeconds: scenes.reduce((sum: number, scene: any) => sum + asNumber(scene.durationSeconds, 4), 0),
+      warnings: readinessWarnings,
+    },
+    hooks,
+    scenes,
+    assetIntelligence,
+    lineage: { selectedAssetIds },
+    manifestIntegrity: {
+      deterministicBasis: "ordered ready user-owned media_assets plus user project input",
+      noRenderClaim: "This package is a production blueprint and command-center manifest; output URLs require a downstream render job.",
+    },
+  };
+
+  const pacingPlan = buildCinematicPacingPlan(blueprint as any);
+  const soundDesignPlan = buildSoundDesignPlan(blueprint as any, pacingPlan as any);
+  const voiceoverSync = buildVoiceoverSyncPlan(blueprint as any, pacingPlan as any);
+  const timelineInspector = buildTimelineInspectorModel(blueprint as any, pacingPlan as any, soundDesignPlan as any, voiceoverSync as any);
+  const adaptiveTrailerPlan = buildAdaptiveTrailerPlan(blueprint as any, pacingPlan as any);
+  const retentionReport = analyzeTrailerRetention(blueprint as any, pacingPlan as any, adaptiveTrailerPlan as any);
+
+  return { blueprint, pacingPlan, soundDesignPlan, voiceoverSync, timelineInspector, adaptiveTrailerPlan, retentionReport };
 }
 
 export const mediaAssetsRouter = router({
@@ -128,14 +242,31 @@ export const mediaAssetsRouter = router({
       const selectedIdsSql = sql.join(input.selectedAssetIds.map((assetId) => sql`${assetId}`), sql`, `);
       const ownedAssetsResult = await db.execute(
         sql`
-          SELECT id
+          SELECT
+            id,
+            asset_type,
+            source_type,
+            file_name,
+            original_name,
+            mime_type,
+            public_url,
+            thumbnail_url,
+            storage_path,
+            duration,
+            width,
+            height,
+            status,
+            created_at
           FROM media_assets
           WHERE user_id = ${ctx.user.id}
             AND id IN (${selectedIdsSql})
+            AND status = 'ready'
           LIMIT ${input.selectedAssetIds.length}
         ` as any
       );
-      const ownedAssets = extractRows(ownedAssetsResult);
+      const ownedAssetsUnsorted = extractRows(ownedAssetsResult);
+      const ownedById = new Map(ownedAssetsUnsorted.map((asset: any) => [String(asset.id), asset]));
+      const ownedAssets = input.selectedAssetIds.map((assetId) => ownedById.get(String(assetId))).filter(Boolean);
 
       if (ownedAssets.length === 0) {
         throw new Error("No valid media assets selected");
@@ -143,7 +274,25 @@ export const mediaAssetsRouter = router({
 
       const primaryAssetId = String((ownedAssets[0] as any).id);
       const hooks = input.hooks ?? [];
-      const scenesJson = input.segments ? JSON.stringify(input.segments) : null;
+      const productionCore = buildTrailerProductionPackage(input, id, ownedAssets, input.selectedAssetIds);
+      const cloneAwareTrailerMode = await buildCloneAwareTrailerMode(productionCore.blueprint as any);
+      const mediaOSManifest = buildTrailerMediaOSManifest({
+        ...productionCore.blueprint,
+        cinematicPacing: productionCore.pacingPlan,
+        soundDesign: productionCore.soundDesignPlan,
+        voiceoverSync: productionCore.voiceoverSync,
+        timelineInspector: productionCore.timelineInspector,
+        adaptiveTrailerPlan: productionCore.adaptiveTrailerPlan,
+        retentionReport: productionCore.retentionReport,
+        cloneIntegration: cloneAwareTrailerMode,
+        renderHandoff: {
+          status: "handoff_prepared",
+          recommendedNextEngine: "ffmpeg_or_remotion_render_worker",
+          requiredBeforeRender: ["asset_file_access_verified", "caption_safe_zones_checked", "voiceover_job_completed_or_muted_export_selected", "output_storage_path_allocated"],
+          warnings: ["No rendered trailer URL is exposed until a render job writes and validates a real MP4."],
+        },
+      } as any);
+      const scenesJson = JSON.stringify(productionCore.blueprint.scenes);
       const hooksJson = hooks.length > 0 ? JSON.stringify(hooks) : null;
 
       await db.execute(
@@ -184,6 +333,17 @@ export const mediaAssetsRouter = router({
         success: true,
         trailerProjectId: id,
         mediaAssetCount: ownedAssets.length,
+        productionPackage: {
+          ...productionCore,
+          cloneAwareTrailerMode,
+          mediaOSManifest,
+          renderReadiness: {
+            status: "handoff_prepared",
+            canClaimRenderedOutput: false,
+            nextEngine: "ffmpeg_or_remotion_render_worker",
+            requiredBeforeRender: ["asset_file_access_verified", "caption_safe_zones_checked", "voiceover_job_completed_or_muted_export_selected", "output_storage_path_allocated"],
+          },
+        },
       };
     }),
 
