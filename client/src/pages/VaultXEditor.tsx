@@ -48,11 +48,51 @@ const WORKFLOW_STEPS = [
 ];
 
 const PRODUCTION_PRESETS = [
-  { id: "premium_ppv", label: "Premium PPV Drop", desc: "Master export, paid preview, VIP caption pack, and upsell message.", color: C.gold },
-  { id: "safe_funnel", label: "SFW Funnel Sprint", desc: "Platform-safe teaser, CTA overlay, captions, and social-ready cutdowns.", color: C.green },
-  { id: "viral_teaser", label: "Viral Teaser Factory", desc: "Hook-first short edits, captions, punch zooms, and watch-time pacing.", color: C.pink },
-  { id: "retention", label: "Subscriber Retention Pack", desc: "Archive master, loyalty copy, calendar placement, and renewal assets.", color: C.accent },
-];
+  {
+    id: "premium_ppv",
+    label: "Premium PPV Drop",
+    desc: "Master export, paid teaser, VIP caption pack, and upsell message.",
+    color: C.gold,
+    outputs: ["master", "ppv_drop", "caption_pack", "thumbnail", "archive"],
+    compliance: "vip",
+    format: "9:16",
+    platforms: ["onlyfans", "telegram_teaser", "master"],
+    watermark: true,
+  },
+  {
+    id: "safe_funnel",
+    label: "SFW Funnel Sprint",
+    desc: "Platform-safe teaser, CTA overlay, captions, and social-ready cutdowns.",
+    color: C.green,
+    outputs: ["sfw_teaser", "social_cut", "caption_pack", "thumbnail", "calendar"],
+    compliance: "platform_safe",
+    format: "9:16",
+    platforms: ["instagram_sfw", "tiktok", "twitter"],
+    watermark: true,
+  },
+  {
+    id: "viral_teaser",
+    label: "Viral Teaser Factory",
+    desc: "Hook-first short edits, captions, punch zooms, and watch-time pacing.",
+    color: C.pink,
+    outputs: ["sfw_teaser", "social_cut", "caption_pack", "thumbnail"],
+    compliance: "platform_safe",
+    format: "9:16",
+    platforms: ["tiktok", "instagram_sfw", "twitter"],
+    watermark: true,
+  },
+  {
+    id: "retention",
+    label: "Subscriber Retention Pack",
+    desc: "Archive master, loyalty copy, calendar placement, and renewal assets.",
+    color: C.accent,
+    outputs: ["master", "caption_pack", "calendar", "archive", "ppv_drop"],
+    compliance: "subscriber",
+    format: "4:5",
+    platforms: ["onlyfans", "master", "telegram_teaser"],
+    watermark: false,
+  },
+] as const;
 
 const WORLD_CLASS_OUTPUTS = [
   { id: "master", label: "Studio Master", desc: "High-quality source export with color, audio, and caption polish.", icon: FileVideo, color: C.accent },
@@ -64,6 +104,24 @@ const WORLD_CLASS_OUTPUTS = [
   { id: "calendar", label: "Launch Calendar", desc: "Two-week campaign timing with distribution and monetization notes.", icon: Calendar, color: "#F97316" },
   { id: "archive", label: "Vault Archive", desc: "Organized backups with metadata, tags, and reuse notes for future drops.", icon: HardDrive, color: "#64748B" },
 ];
+
+const COMPLIANCE_MODES = {
+  platform_safe: { label: "Platform Safe", desc: "Cropped, blurred, or censored preview assets for public discovery.", color: C.green, icon: Shield },
+  subscriber: { label: "Subscriber", desc: "Unlocked member content with captions, watermark, and retention copy.", color: C.accent, icon: Lock },
+  vip: { label: "VIP / PPV", desc: "Premium paid drop with price framing, teaser, and upsell messaging.", color: C.gold, icon: Crown },
+  archive: { label: "Archive", desc: "Clean source backup with metadata for reuse and future launches.", color: "#64748B", icon: HardDrive },
+} as const;
+
+const OUTPUT_LANE_COPY: Record<string, string> = {
+  master: "polished master",
+  sfw_teaser: "safe teaser",
+  ppv_drop: "paid PPV drop",
+  social_cut: "social cutdowns",
+  caption_pack: "sales copy",
+  thumbnail: "cover art",
+  calendar: "launch plan",
+  archive: "vault archive",
+};
 
 
 // ============================================================================
@@ -1127,6 +1185,29 @@ export default function VaultXEditor() {
   const [complianceMode, setComplianceMode] = useState<"platform_safe" | "subscriber" | "vip" | "archive">("platform_safe");
   const [watermarkIdentity, setWatermarkIdentity] = useState("@YourHandle");
   const [targetFormat, setTargetFormat] = useState<"9:16" | "16:9" | "1:1" | "4:5">("9:16");
+  const selectedCompliance = COMPLIANCE_MODES[complianceMode];
+  const SelectedComplianceIcon = selectedCompliance.icon;
+  const selectedPreset = PRODUCTION_PRESETS.find(p => p.id === productionPreset) ?? PRODUCTION_PRESETS[0];
+  const selectedOutputLabels = selectedOutputPackages.map(id => OUTPUT_LANE_COPY[id] ?? id.replace("_", " "));
+  const outputReadiness = Math.round(([
+    Boolean(sourceUrl),
+    Boolean(analysis),
+    selectedOutputPackages.length >= 3,
+    exportPresets.length > 0,
+    Boolean(watermarkIdentity.trim()),
+  ].filter(Boolean).length / 5) * 100);
+
+  const applyProductionPreset = useCallback((presetId: string) => {
+    const preset = PRODUCTION_PRESETS.find(p => p.id === presetId) ?? PRODUCTION_PRESETS[0];
+    setProductionPreset(preset.id);
+    setSelectedOutputPackages([...preset.outputs]);
+    setComplianceMode(preset.compliance as typeof complianceMode);
+    setTargetFormat(preset.format as typeof targetFormat);
+    setExportPresets([...preset.platforms]);
+    if (preset.watermark && watermarkIdentity === "@YourHandle") setWatermarkIdentity("@VaultXCreator");
+    setToolStatus(`${preset.label} loaded: ${preset.outputs.length} deliverables, ${preset.platforms.length} export targets.`);
+  }, [complianceMode, targetFormat, watermarkIdentity]);
+
   const bodyCinemaCollectionsQ = trpc.vaultx.getBodyCinemaCollections.useQuery(
     { projectId: projectId ?? undefined, limit: 12 },
     { enabled: !!projectId }
@@ -1316,7 +1397,7 @@ export default function VaultXEditor() {
             </div>
             <span className="text-sm font-black" style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>VaultX</span>
             <span className="text-sm font-black text-white">AI Editor</span>
-            <span className="hidden xl:inline-flex px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.14em]" style={{ background: "rgba(236,72,153,0.12)", color: "#f0abfc", border: "1px solid rgba(236,72,153,0.24)" }}>CapCut-style creator-business workflow</span>
+            <span className="hidden xl:inline-flex px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.14em]" style={{ background: "rgba(236,72,153,0.12)", color: "#f0abfc", border: "1px solid rgba(236,72,153,0.24)" }}>Adult creator output OS</span>
           </div>
           <div className="w-px h-4" style={{ background: "rgba(255,255,255,0.1)" }} />
           <button onClick={() => setShowProjectList(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -1357,6 +1438,9 @@ export default function VaultXEditor() {
               <span className="text-[9px] font-black" style={{ color: "#8B5CF6" }}>AI RUNNING</span>
             </div>
           )}
+          <a href="/vaultx/distribution" className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black" style={{ background: "rgba(16,185,129,0.12)", color: "#86efac", border: "1px solid rgba(16,185,129,0.24)" }}>
+            <Share2 size={10} />Distribution
+          </a>
           <a href="/vault-x/studio" className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black" style={{ background: "rgba(236,72,153,0.12)", color: "#f0abfc", border: "1px solid rgba(236,72,153,0.24)" }}>
             <Sparkles size={10} />Studio
           </a>
@@ -1369,7 +1453,7 @@ export default function VaultXEditor() {
       {/* ── WORLD-CLASS COMMAND STRIP ── */}
       <div className="hidden lg:grid grid-cols-4 gap-2 px-4 py-2 flex-shrink-0" style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.10), rgba(236,72,153,0.08), rgba(16,185,129,0.07))", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         {PRODUCTION_PRESETS.map(preset => (
-          <button key={preset.id} onClick={() => setProductionPreset(preset.id)} className="text-left p-3 rounded-2xl transition-all" style={{ background: productionPreset === preset.id ? `${preset.color}18` : "rgba(0,0,0,0.28)", border: `1px solid ${productionPreset === preset.id ? preset.color + "55" : "rgba(255,255,255,0.06)"}` }}>
+          <button key={preset.id} onClick={() => applyProductionPreset(preset.id)} className="text-left p-3 rounded-2xl transition-all" style={{ background: productionPreset === preset.id ? `${preset.color}18` : "rgba(0,0,0,0.28)", border: `1px solid ${productionPreset === preset.id ? preset.color + "55" : "rgba(255,255,255,0.06)"}` }}>
             <div className="flex items-center justify-between gap-2 mb-1">
               <span className="text-[10px] font-black tracking-wide" style={{ color: productionPreset === preset.id ? preset.color : "#9CA3AF" }}>{preset.label}</span>
               {productionPreset === preset.id && <CheckCircle size={12} style={{ color: preset.color }} />}
@@ -1412,7 +1496,10 @@ export default function VaultXEditor() {
           <div className="flex flex-col gap-2 p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="flex items-center justify-between">
               <p className="text-[9px] font-black tracking-widest" style={{ color: C.gold }}>CREATOR BRIEF</p>
-              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md" style={{ background: C.greenDim, color: C.green }}>READY OS</span>
+              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md" style={{ background: outputReadiness >= 80 ? C.greenDim : C.goldDim, color: outputReadiness >= 80 ? C.green : C.gold }}>{outputReadiness}% READY</span>
+            </div>
+            <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+              <div className="h-full rounded-full" style={{ width: `${outputReadiness}%`, background: outputReadiness >= 80 ? C.green : C.gold, transition: "width 0.25s" }} />
             </div>
             <div className="grid grid-cols-2 gap-1">
               {(["9:16", "16:9", "1:1", "4:5"] as const).map(fmt => (
@@ -1425,6 +1512,17 @@ export default function VaultXEditor() {
               ))}
             </div>
             <input value={watermarkIdentity} onChange={e => setWatermarkIdentity(e.target.value)} className="px-2 py-1.5 rounded-lg text-[9px] font-bold" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.08)", color: C.text, outline: "none" }} placeholder="@Creator watermark" />
+            <div className="p-2 rounded-xl" style={{ background: `${selectedCompliance.color}12`, border: `1px solid ${selectedCompliance.color}33` }}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <SelectedComplianceIcon size={10} style={{ color: selectedCompliance.color }} />
+                <span className="text-[8px] font-black" style={{ color: selectedCompliance.color }}>{selectedCompliance.label.toUpperCase()}</span>
+              </div>
+              <p className="text-[8px] leading-snug" style={{ color: C.muted }}>{selectedCompliance.desc}</p>
+            </div>
+            <div className="p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <p className="text-[8px] font-black mb-1" style={{ color: C.muted }}>SELECTED OUTPUTS</p>
+              <p className="text-[8px] leading-snug capitalize" style={{ color: C.text }}>{selectedOutputLabels.length ? selectedOutputLabels.join(" · ") : "Choose deliverables"}</p>
+            </div>
             <div className="flex flex-col gap-1">
               {[
                 { label: "Source", ok: !!sourceUrl },
@@ -1518,6 +1616,11 @@ export default function VaultXEditor() {
                   <Send size={12} />PUBLISH
                 </button>
               </div>
+              {toolStatus && (
+                <div className="mx-4 mt-3 px-3 py-2 rounded-2xl text-[10px] font-bold flex items-center gap-2" style={{ background: "rgba(139,92,246,0.10)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.24)" }}>
+                  <Info size={12} />{toolStatus}
+                </div>
+              )}
               <div className="flex-1 overflow-y-auto p-4">
                 {variations.length > 0 ? (
                   <div className="flex flex-col gap-4">
@@ -1577,8 +1680,8 @@ export default function VaultXEditor() {
                           <Zap size={12} /><span className="text-[10px] font-black tracking-[0.18em]">WORLD-CLASS EXPORT OS</span>
                         </div>
                         <div>
-                          <h1 className="text-3xl xl:text-5xl font-black leading-[0.92] tracking-tight text-white">Turn one raw asset into a full creator revenue package.</h1>
-                          <p className="mt-3 max-w-xl text-sm leading-relaxed" style={{ color: C.muted }}>Upload once, then package a polished master, safe teaser, PPV drop, caption pack, social cutdowns, thumbnail, launch calendar, and archive output from the same command center.</p>
+                          <h1 className="text-3xl xl:text-5xl font-black leading-[0.92] tracking-tight text-white">Turn one raw asset into a complete adult-creator launch package.</h1>
+                          <p className="mt-3 max-w-xl text-sm leading-relaxed" style={{ color: C.muted }}>Upload once, then leave with a polished master, platform-safe teaser, paid PPV drop, subscriber copy, social cutdowns, thumbnail, launch calendar, and vault archive without mixing VaultX with the clean CreatorVault lane.</p>
                         </div>
                       </div>
                       <div className="grid md:grid-cols-4 gap-2">
@@ -1607,6 +1710,13 @@ export default function VaultXEditor() {
                             </button>
                           );
                         })}
+                      </div>
+                      <div className="p-3 rounded-2xl" style={{ background: `${selectedPreset.color}10`, border: `1px solid ${selectedPreset.color}33` }}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[9px] font-black tracking-widest" style={{ color: selectedPreset.color }}>CURRENT BUILD</span>
+                          <span className="text-[9px] font-black" style={{ color: C.text }}>{selectedPreset.label}</span>
+                        </div>
+                        <p className="text-[10px] leading-relaxed" style={{ color: C.muted }}>{selectedOutputLabels.join(" · ")} for {targetFormat} in {selectedCompliance.label} mode.</p>
                       </div>
                       <button onClick={() => fileInputRef.current?.click()} className="w-full py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2" style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)", color: "#fff" }}><Upload size={15} />UPLOAD AND BUILD OUTPUT PACKAGE</button>
                     </div>
