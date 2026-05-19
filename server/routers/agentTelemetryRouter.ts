@@ -4,6 +4,13 @@ import { router, protectedProcedure } from "../_core/trpc";
 import * as db from "../db";
 import { eq, desc, gte, and, sql } from "drizzle-orm";
 
+function rowsFromExecute(result: any): any[] {
+  if (!result) return [];
+  if (Array.isArray(result) && Array.isArray(result[0])) return result[0];
+  if (Array.isArray(result)) return result;
+  return result.rows ?? [];
+}
+
 // Time range helper
 function getStartDate(timeRange: string): Date | null {
   const now = new Date();
@@ -163,6 +170,104 @@ export const agentTelemetryRouter = router({
       } catch (e) {
         console.error("[agentTelemetry.getAgentLeaderboard]", e);
         return [];
+      }
+    }),
+
+  getLiveOperationsStatus: protectedProcedure
+    .query(async () => {
+      try {
+        const challengeRows = rowsFromExecute(await db.db.execute(sql`
+          SELECT id, week_number, target_revenue, current_revenue, status, start_date, created_at
+          FROM empire_challenges
+          WHERE status = 'active'
+          ORDER BY week_number ASC
+          LIMIT 1
+        `));
+        const challenge = challengeRows[0] ?? null;
+
+        const txRows = rowsFromExecute(await db.db.execute(sql`
+          SELECT COUNT(*) as transaction_count, COALESCE(SUM(amount), 0) as total_revenue
+          FROM empire_challenge_transactions
+          WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        `));
+
+        const agentRows = rowsFromExecute(await db.db.execute(sql`
+          SELECT
+            COUNT(*) as total_agents,
+            SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_agents,
+            SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) as paused_agents,
+            SUM(CASE WHEN is_for_sale = 1 OR base_price_cents > 0 THEN 1 ELSE 0 END) as priced_agents,
+            COALESCE(SUM(total_revenue_generated), 0) as agent_lifetime_revenue
+          FROM empire_agents
+        `));
+
+        const recentDrops = rowsFromExecute(await db.db.execute(sql`
+          SELECT id, tracking_code, price_cents, sent_at, status, telegram_message_id
+          FROM telegram_drops
+          ORDER BY sent_at DESC
+          LIMIT 6
+        `));
+
+        const recentReports = rowsFromExecute(await db.db.execute(sql`
+          SELECT agent_slug, agent_name, report_type, revenue_impact, created_at
+          FROM empire_agent_reports
+          ORDER BY created_at DESC
+          LIMIT 8
+        `));
+
+        const currentRevenue = Number(challenge?.current_revenue ?? txRows[0]?.total_revenue ?? 0);
+        const targetRevenue = Number(challenge?.target_revenue ?? 5000);
+        const revenue7d = Number(txRows[0]?.total_revenue ?? 0);
+        const dailyVelocity = revenue7d / 7;
+        const remaining = Math.max(0, targetRevenue - currentRevenue);
+        const daysToTarget = dailyVelocity > 0 ? Math.ceil(remaining / dailyVelocity) : null;
+        const projectedTargetDate = daysToTarget !== null
+          ? new Date(Date.now() + daysToTarget * 86400000).toISOString()
+          : null;
+
+        return {
+          challenge: challenge ? {
+            id: challenge.id,
+            weekNumber: Number(challenge.week_number ?? 1),
+            status: challenge.status,
+            targetRevenue,
+            currentRevenue,
+            progressPct: targetRevenue > 0 ? Math.min(100, Math.round((currentRevenue / targetRevenue) * 10000) / 100) : 0,
+          } : null,
+          agents: {
+            total: Number(agentRows[0]?.total_agents ?? 0),
+            active: Number(agentRows[0]?.active_agents ?? 0),
+            paused: Number(agentRows[0]?.paused_agents ?? 0),
+            priced: Number(agentRows[0]?.priced_agents ?? 0),
+            lifetimeRevenue: Number(agentRows[0]?.agent_lifetime_revenue ?? 0),
+          },
+          revenueLoop: {
+            transactionCount7d: Number(txRows[0]?.transaction_count ?? 0),
+            revenue7d,
+            dailyVelocity,
+            projectedTargetDate,
+            sixStepPath: [
+              'Agent execution selects a priced offer.',
+              'Stripe checkout link is created or the existing VaultX unlock URL is reused.',
+              'Telegram drop is sent through the tracked Telegram money-loop service.',
+              'Click and purchase attribution is written back to revenue tables.',
+              'Challenge progress is updated from verified transaction data.',
+              'Owner dashboard and Agent Live refresh from real telemetry.',
+            ],
+          },
+          recentDrops,
+          recentReports,
+        };
+      } catch (e) {
+        console.error('[agentTelemetry.getLiveOperationsStatus]', e);
+        return {
+          challenge: null,
+          agents: { total: 0, active: 0, paused: 0, priced: 0, lifetimeRevenue: 0 },
+          revenueLoop: { transactionCount7d: 0, revenue7d: 0, dailyVelocity: 0, projectedTargetDate: null, sixStepPath: [] },
+          recentDrops: [],
+          recentReports: [],
+          error: e instanceof Error ? e.message : String(e),
+        };
       }
     }),
 

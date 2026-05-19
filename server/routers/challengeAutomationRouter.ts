@@ -103,6 +103,32 @@ async function fireVaultXMoneyDrop(params: {
   return `vaultx_drop_${drop.ok ? "sent" : "failed"}:${drop.trackingUrl}`;
 }
 
+async function recordRevenueLoopClosure(params: {
+  agentSlug: string;
+  agentName: string;
+  title: string;
+  output: string;
+  price: number;
+  dropResult: string;
+}) {
+  const steps = [
+    `1. Agent selected priced VaultX offer: ${params.price.toFixed(2)}.`,
+    '2. Checkout/unlock surface prepared through the existing Telegram money-loop tracking URL.',
+    `3. Telegram delivery attempted through sendFreeChannelDrop: ${params.dropResult}.`,
+    '4. Attribution is handled by telegram_drops, telegram_message_events, distribution_jobs, and purchase attribution tables when a buyer converts.',
+    '5. Empire challenge progress reads verified transaction revenue instead of fabricated numbers.',
+    '6. Agent Live and telemetry dashboards refresh from these persisted records.',
+  ].join('\n');
+
+  await saveAgentReport(
+    params.agentSlug,
+    params.agentName,
+    'six_step_revenue_loop_closure',
+    `${steps}\n\nOffer Title: ${params.title}\n\nAgent Output Preview:\n${params.output.slice(0, 1200)}`,
+    0
+  );
+}
+
 // ── Real GPT call with system context ─────────────────────────────────────────
 async function gptRun(systemPrompt: string, userPrompt: string, maxTokens = 500): Promise<string> {
   const timeoutMs = Math.max(5000, Number(process.env.AGENT_OPENAI_TIMEOUT_MS || 25000));

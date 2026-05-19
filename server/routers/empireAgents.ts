@@ -117,6 +117,13 @@ export const empireAgents = router({
     return { stopped: true, agentId: input.agentId, agentSlug: agent.slug, agentName: agent.name, status: "inactive" };
   }),
 
+  resumeAgent: protectedProcedure.input(z.object({ agentId: z.number(), reason: z.string().optional() })).mutation(async ({ input }) => {
+    const agent = await getAgentById(input.agentId);
+    await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE id = ${input.agentId}`);
+    await insertAgentReport(agent, "agent_resumed", `Agent resumed by owner${input.reason ? `: ${input.reason}` : "."}`);
+    return { resumed: true, agentId: input.agentId, agentSlug: agent.slug, agentName: agent.name, status: "active" };
+  }),
+
   getActiveChallenge: protectedProcedure.query(async () => {
     const result = await db.db.execute(sql`
       SELECT * FROM empire_challenges WHERE status = 'active' ORDER BY week_number ASC LIMIT 1

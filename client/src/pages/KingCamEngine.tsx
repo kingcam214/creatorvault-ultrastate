@@ -5,7 +5,7 @@ import { Link } from "wouter";
 import {
   Cpu, ChevronLeft, Play, Mic, Video, Image, RefreshCw,
   CheckCircle, Clock, AlertCircle, Download, Eye, Zap,
-  Film, Sparkles, ArrowRight, Send, TrendingUp
+  Film, Sparkles, ArrowRight, Send, TrendingUp, Activity, Bot
 } from "lucide-react";
 
 const VIDEO_STYLES = [
@@ -208,6 +208,16 @@ export function KingCamEngine() {
               </Link>
             </div>
             <div style={{ flex: 1, padding: 24 }}>
+              <Link href="/king/agent-live" style={{ textDecoration: "none" }}>
+                <div style={{ marginBottom: 18, padding: 18, borderRadius: 16, border: "1px solid rgba(201,168,76,0.34)", background: "linear-gradient(135deg, rgba(201,168,76,0.16), rgba(56,189,248,0.08))", display: "grid", gridTemplateColumns: "1fr auto", gap: 14, alignItems: "center", cursor: "pointer" }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#C9A84C", fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 900, marginBottom: 8 }}><Activity size={13} /> Owner Operations</div>
+                    <div style={{ fontSize: 21, fontWeight: 900, color: "#fff", marginBottom: 4 }}>AGENT LIVE</div>
+                    <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.45 }}>Run, pause, resume, and verify the 49-agent money loop from real telemetry, challenge progress, Telegram drops, and priced-agent inventory.</div>
+                  </div>
+                  <div style={{ width: 54, height: 54, borderRadius: 18, background: "rgba(201,168,76,0.18)", display: "grid", placeItems: "center", border: "1px solid rgba(201,168,76,0.28)" }}><Bot size={24} color="#C9A84C" /></div>
+                </div>
+              </Link>
               {outputType === "clone_image" ? (
                 <div>
                   <label style={{ fontSize: 11, color: "#666", textTransform: "uppercase", letterSpacing: "1px", display: "block", marginBottom: 12 }}>Image Prompt</label>

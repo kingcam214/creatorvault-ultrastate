@@ -398,6 +398,7 @@ import ChuuchMembersPage from "./pages/ChuuchMembers";
 import EmpireCockpitV3 from "./pages/EmpireCockpitV3";
 import AgentApprovalInbox from "./pages/AgentApprovalInbox";
 import AgentCommandTower from "./pages/AgentCommandTower";
+import AgentLive from "./pages/AgentLive";
 import AlbumCoverDesigner from "./pages/AlbumCoverDesigner";
 import BCBPanel from "./pages/BCBPanel";
 import BotMonetizationDashboard from "./pages/BotMonetizationDashboard";
@@ -568,6 +569,7 @@ function Router() {
           <Route path="/king/gem-center" component={KingGemCenter} />
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/king/demos"} component={KingCamDemos} />
+      <Route path="/king/agent-live" component={AgentLive} />
       <Route path={"/king/presentation-builder"} component={PresentationBuilder} />
       <Route path={"/presentation-builder"} component={PresentationBuilder} />
       <Route path="/king/telegram-hub" component={TelegramMoneyHub} />

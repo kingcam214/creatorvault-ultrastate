@@ -196,7 +196,7 @@ export default function Home() {
     { label: "KingCam Operator Proof", badge: "KINGCAM · POLLO", category: "FOUNDER", videoSrc: "/videos/kingcam-hero-cam.mp4", poster: "/assets/kingcam-hero.jpg" },
     { label: "Clone Ambassador", badge: "FLUX LORA", category: "CLONE LAB", videoSrc: "/videos/kingcam-clone-1.mp4", poster: "/assets/kingcam-hero.jpg" },
     { label: "Empire Brand Story", badge: "KLING AI", category: "PLATFORM", videoSrc: "/videos/reel-brand-story.mp4", poster: "/images/reel/reel-cinematic-trailer.png" },
-    { label: "VaultX Premium Flow", badge: "CREATORVAULT", category: "MONETIZE", poster: "/images/reel/reel-product-drop.png" },
+    { label: "VaultX Premium Flow", badge: "CREATORVAULT", category: "MONETIZE", videoSrc: "/videos/vaultx-cinematic-trailer.mp4", poster: "/images/reel/reel-product-drop.png" },
   ];
 
   const commandCards = [
@@ -212,7 +212,7 @@ export default function Home() {
     { title: "Commerce", tag: "Products · funnels", videoSrc: "/videos/reel-product-drop.mp4", poster: "/images/reel/reel-product-drop.png", tone: "#4ade80" },
     { title: "Apparel", tag: "Mockups · lookbooks", videoSrc: "/videos/reel-apparel-drop.mp4", poster: "/images/reel/reel-apparel-drop.png", tone: "#fb923c" },
     { title: "Creator Promo", tag: "Campaign machine", videoSrc: "/videos/reel-creator-promo.mp4", poster: "/images/reel/reel-creator-promo.png", tone: "#38bdf8" },
-    { title: "VaultX", tag: "Premium monetization", poster: "/images/reel/reel-product-drop.png", tone: "#c9a84c" },
+    { title: "VaultX", tag: "Premium monetization", videoSrc: "/videos/vaultx-cinematic-trailer.mp4", poster: "/images/reel/reel-product-drop.png", tone: "#c9a84c" },
   ];
 
   const distributionSteps = ["Vertical Reel", "Story Cut", "Shorts Export", "Caption Pack", "Landing Page", "Telegram Drop", "VIP Funnel", "Analytics Loop"];
@@ -332,6 +332,43 @@ export default function Home() {
           <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.4)" }} />
         </div>
       </div>
+
+      {/* ── VAULTX HERO / SOCIAL PROOF / BODY CINEMA ── */}
+      <section style={{ position: "relative", zIndex: 1, padding: "76px 20px 62px", borderTop: "1px solid rgba(201,168,76,0.18)", overflow: "hidden", background: "linear-gradient(180deg,#050508 0%,#09070b 100%)" }}>
+        <video autoPlay muted loop playsInline preload="metadata" poster="/images/reel/reel-product-drop.png" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.22 }}>
+          <source src="/videos/vaultx-cinematic-trailer.mp4" type="video/mp4" />
+        </video>
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 18% 20%,rgba(201,168,76,0.18),transparent 30%),linear-gradient(180deg,rgba(5,5,8,0.74),#050508 88%)" }} />
+        <div style={{ position: "relative", maxWidth: 1120, margin: "0 auto", display: "grid", gridTemplateColumns: "1.05fr .95fr", gap: 34, alignItems: "center" }}>
+          <div>
+            <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.28em", textTransform: "uppercase", color: "#c9a84c", marginBottom: 12 }}>VAULTX — THE PRIVATE MONETIZATION LAYER</p>
+            <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(30px,7vw,58px)", lineHeight: 1.02, fontWeight: 850, color: "#fff", marginBottom: 16 }}>Premium creators need a revenue engine, not another link-in-bio.</h2>
+            <p style={{ fontSize: 15, lineHeight: 1.75, color: "rgba(255,255,255,0.64)", maxWidth: 620 }}>VaultX packages adult-safe premium content workflows into tracked drops, private unlocks, fan movement, and creator-owned monetization. The pitch is not shock value. The pitch is control: proof, privacy, payment flow, and repeatable demand.</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 24 }}>
+              <Link href="/vault-x"><button style={{ background: "#c9a84c", color: "#050508", border: "none", borderRadius: 9, padding: "13px 22px", fontWeight: 900, letterSpacing: "0.06em", cursor: "pointer", textTransform: "uppercase" }}>Open VaultX →</button></Link>
+              <a href="#waitlist" style={{ textDecoration: "none" }}><button style={{ background: "rgba(255,255,255,0.07)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 9, padding: "13px 22px", fontWeight: 800, cursor: "pointer" }}>Request access</button></a>
+            </div>
+          </div>
+          <div style={{ display: "grid", gap: 14 }}>
+            {[
+              { k: "Stripe-ready", v: "paid unlock surfaces and attribution paths" },
+              { k: "Telegram-ready", v: "tracked drops, fan routing, and VIP movement" },
+              { k: "Creator-safe", v: "age-gated positioning without cheap language" },
+              { k: "Challenge-linked", v: "verified transactions feed revenue goals" },
+            ].map((item) => (
+              <div key={item.k} style={{ padding: 18, borderRadius: 16, background: "rgba(255,255,255,0.055)", border: "1px solid rgba(255,255,255,0.11)", backdropFilter: "blur(12px)" }}>
+                <div style={{ color: "#c9a84c", fontSize: 13, fontWeight: 900, marginBottom: 5 }}>{item.k}</div>
+                <div style={{ color: "rgba(255,255,255,0.56)", fontSize: 13 }}>{item.v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ position: "relative", maxWidth: 1120, margin: "32px auto 0", display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 10 }}>
+          {["Private unlocks", "Premium drops", "Creator-owned data", "Body Cinema campaigns"].map((label) => (
+            <div key={label} style={{ padding: "14px 12px", textAlign: "center", borderRadius: 14, background: "rgba(201,168,76,0.09)", border: "1px solid rgba(201,168,76,0.2)", color: "rgba(255,255,255,0.72)", fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</div>
+          ))}
+        </div>
+      </section>
 
       {/* ── PROOF OF WORK ── */}
       <div ref={reelRef.ref} style={{ position: "relative", zIndex: 1, padding: "72px 0 56px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
