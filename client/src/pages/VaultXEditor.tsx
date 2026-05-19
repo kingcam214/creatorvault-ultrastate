@@ -123,6 +123,33 @@ const OUTPUT_LANE_COPY: Record<string, string> = {
   archive: "vault archive",
 };
 
+const CREATOR_INTELLIGENCE_RULES = [
+  {
+    label: "Hook Shot",
+    icon: Target,
+    color: C.pink,
+    detail: "Open with the clearest face, eye-line, movement, or luxury-frame moment. Do not waste the first three seconds on setup.",
+  },
+  {
+    label: "Angle Stack",
+    icon: Camera,
+    color: C.accent,
+    detail: "Build a sequence from wide context, medium body language, close detail, reaction, then reveal. Reorder weak footage around the strongest frame.",
+  },
+  {
+    label: "Teaser Logic",
+    icon: EyeOff,
+    color: C.green,
+    detail: "For public channels, crop, blur, or cut before the explicit payoff. Give enough tension to click, but reserve the unlock moment for paid viewers.",
+  },
+  {
+    label: "Paid Package",
+    icon: DollarSign,
+    color: C.gold,
+    detail: "Every paid drop needs a master file, cover frame, title, price cue, direct message copy, tags, and archived source for future bundles.",
+  },
+];
+
 
 // ============================================================================
 // TYPES
@@ -201,6 +228,66 @@ const BODY_REGIONS = [
 ] as const;
 
 const TRACK_COLORS = ["#8B5CF6", "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#EC4899"];
+
+async function parseVideoStudioUrl(response: Response, operation: string): Promise<string> {
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data?.url) {
+    throw new Error(data?.error || data?.message || `${operation} failed before producing an output file.`);
+  }
+  return data.url as string;
+}
+
+function filenameFromUrl(url: string, fallback: string): string {
+  try {
+    return decodeURIComponent(new URL(url).pathname.split("/").filter(Boolean).pop() || fallback);
+  } catch {
+    return fallback;
+  }
+}
+
+async function uploadVaultXFile(file: File, onProgress?: (progress: number) => void): Promise<{ url: string; filename: string }> {
+  const uploadId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const chunkSize = 8 * 1024 * 1024;
+  const totalChunks = Math.max(1, Math.ceil(file.size / chunkSize));
+
+  const initRes = await fetch("/api/video/upload/init", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ uploadId, totalChunks, filename: file.name }),
+  });
+  if (!initRes.ok) {
+    const err = await initRes.json().catch(() => ({}));
+    throw new Error(err.error || "Upload session could not be initialized.");
+  }
+
+  let uploaded: { url: string; filename: string } | null = null;
+  for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
+    const start = chunkIndex * chunkSize;
+    const chunk = file.slice(start, Math.min(start + chunkSize, file.size));
+    const fd = new FormData();
+    fd.append("uploadId", uploadId);
+    fd.append("chunkIndex", String(chunkIndex));
+    fd.append("chunk", chunk, file.name);
+    const chunkRes = await fetch("/api/video/upload/chunk", { method: "POST", body: fd });
+    const chunkData = await chunkRes.json().catch(() => null);
+    if (!chunkRes.ok) throw new Error(chunkData?.error || `Upload chunk ${chunkIndex + 1} failed.`);
+    onProgress?.(Math.round(((chunkIndex + 1) / totalChunks) * 100));
+    if (chunkData?.complete && chunkData.file?.url) uploaded = chunkData.file;
+  }
+
+  if (!uploaded) {
+    const finalRes = await fetch("/api/video/upload/finalize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uploadId, filename: file.name }),
+    });
+    const finalData = await finalRes.json().catch(() => null);
+    if (!finalRes.ok || !finalData?.url) throw new Error(finalData?.error || "Upload finalization failed.");
+    uploaded = finalData;
+  }
+
+  return uploaded;
+}
 
 // ============================================================================
 
@@ -428,25 +515,22 @@ function PPVPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddAudi
       trimFd.append("start", "0");
       trimFd.append("end", String(teaserLen));
       const trimRes = await fetch("/api/video-studio/trim", { method: "POST", body: trimFd });
-      const trimData = await trimRes.json();
-      let cleanUrl = trimData.url;
+      let cleanUrl = await parseVideoStudioUrl(trimRes, "PPV teaser trim");
       if (addWatermark && watermarkText) {
         const watermarkFd = new FormData();
         watermarkFd.append("video", await fetch(cleanUrl).then(r => r.blob()), "teaser.mp4");
         watermarkFd.append("text", watermarkText);
-        watermarkFd.append("position", "top-right");
+        watermarkFd.append("position", "top_right");
         const watermarkRes = await fetch("/api/video-studio/watermark", { method: "POST", body: watermarkFd });
-        const watermarkData = await watermarkRes.json();
-        cleanUrl = watermarkData.url;
+        cleanUrl = await parseVideoStudioUrl(watermarkRes, "PPV watermark");
       }
       if (blurEnd) {
         const teaseFd = new FormData();
         teaseFd.append("video", await fetch(cleanUrl).then(r => r.blob()), "teaser.mp4");
-        teaseFd.append("mode", "blur");
-        teaseFd.append("intensity", String(blurIntensity));
+        teaseFd.append("filter", "ppv_censor");
+        teaseFd.append("intensity", String(Math.max(0.1, Math.min(1, blurIntensity / 40))));
         const teaseRes = await fetch("/api/video-studio/filter", { method: "POST", body: teaseFd });
-        const teaseData = await teaseRes.json();
-        cleanUrl = teaseData.url;
+        cleanUrl = await parseVideoStudioUrl(teaseRes, "PPV end blur");
       }
       if (activeSub === "ppv-price-tag") {
         const priceFd = new FormData();
@@ -455,10 +539,9 @@ function PPVPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddAudi
         priceFd.append("position", "center");
         priceFd.append("style", "gold-badge");
         const priceRes = await fetch("/api/video-studio/add-text", { method: "POST", body: priceFd });
-        const priceData = await priceRes.json();
-        cleanUrl = priceData.url;
+        cleanUrl = await parseVideoStudioUrl(priceRes, "PPV price overlay");
       }
-      await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
+      await createAsset.mutateAsync({ fileUrl: cleanUrl, assetType: "output", filename: filenameFromUrl(cleanUrl, "vaultx-ppv-teaser.mp4"), durationSeconds: teaserLen, mimeType: "video/mp4", metadata: { source: "vaultx", isVaultxOutput: true, operation: activeSub, price } });
       onAddClip({ id: Date.now().toString(), src: cleanUrl, assetUrl: cleanUrl, duration: teaserLen, type: "video", name: "PPV Teaser" });
       onStatus("PPV teaser created");
     } catch (e: any) { onStatus("Error: " + e.message); }
@@ -576,12 +659,21 @@ function CensorPanel({ clipUrl, onStatus, projectId, onAddClip, onAddAudioTrack 
       const blob = await fetch(clipUrl).then(r => r.blob());
       const fd = new FormData();
       fd.append("video", blob, "clip.mp4");
-      fd.append("mode", activeSub === "censor-mosaic" ? "mosaic" : activeSub === "censor-bar" ? "bar" : "blur");
-      fd.append("intensity", String(intensity));
+      const filterMap: Record<string, string> = {
+        "censor-smart": "censor_blur",
+        "censor-face": "blur",
+        "censor-region": "censor_blur",
+        "censor-mosaic": "mosaic",
+        "censor-bar": "black_bar",
+        "censor-sticker": "ppv_censor",
+        "censor-export": "censor_blur",
+      };
+      fd.append("filter", filterMap[activeSub] ?? "censor_blur");
+      fd.append("intensity", String(Math.max(0.1, Math.min(1, intensity / 40))));
       const res = await fetch("/api/video-studio/filter", { method: "POST", body: fd });
-      const data = await res.json();
-      await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
-      onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration: 30, type: "video", name: "Censored" });
+      const url = await parseVideoStudioUrl(res, "Censor export");
+      await createAsset.mutateAsync({ fileUrl: url, assetType: "output", filename: filenameFromUrl(url, "vaultx-censored.mp4"), durationSeconds: 30, mimeType: "video/mp4", metadata: { source: "vaultx", isVaultxOutput: true, operation: activeSub } });
+      onAddClip({ id: Date.now().toString(), src: url, assetUrl: url, duration: 30, type: "video", name: "Censored" });
       onStatus("Censor applied");
     } catch (e: any) { onStatus("Error: " + e.message); }
     finally { setBusy(false); }
@@ -647,15 +739,14 @@ function ScenePanel({ clipUrl, onStatus }: { clipUrl: string; onStatus: (s: stri
         const blob = await fetch(clipUrl).then(r => r.blob());
         const fd = new FormData();
         fd.append("video", blob, "clip.mp4");
-        fd.append("mode", "trim");
         fd.append("start", "0");
         fd.append("end", "30");
-        const res = await fetch("/api/video-studio/filter", { method: "POST", body: fd });
-        const data = await res.json();
-        onStatus("Trim complete: " + data.url);
+        const res = await fetch("/api/video-studio/trim", { method: "POST", body: fd });
+        const url = await parseVideoStudioUrl(res, "Scene trim");
+        onStatus("Trim complete: " + url);
       } catch (e: any) { onStatus("Error: " + e.message); }
     } else {
-      onStatus(activeSub + " applied");
+      onStatus(`${cat.tools.find(t => t.id === activeSub)?.label ?? activeSub} is not wired to a real render yet.`);
     }
     setBusy(false);
   };
@@ -714,7 +805,7 @@ function MotionPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddA
     onSuccess: async (data: any) => {
       const url = (data as any).outputUrl ?? (data as any).url ?? "";
       if (url) {
-        await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
+        await createAsset.mutateAsync({ fileUrl: url, assetType: "output", filename: filenameFromUrl(url, "vaultx-slow-motion.mp4"), durationSeconds: duration * 2, mimeType: "video/mp4", metadata: { source: "vaultx", isVaultxOutput: true, operation: "motion-slowmo" } });
         onAddClip({ id: Date.now().toString(), src: url, assetUrl: url, duration: duration * 2, type: "video", name: "Slow Motion" });
         onStatus("Slow motion complete");
       }
@@ -731,30 +822,22 @@ function MotionPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddA
         return;
       }
       if (activeSub === "motion-reverse") {
-        const blob = await fetch(clipUrl).then(r => r.blob());
-        const fd = new FormData();
-        fd.append("video", blob, "clip.mp4");
-        fd.append("mode", "reverse");
-        const res = await fetch("/api/video-studio/filter", { method: "POST", body: fd });
-        const data = await res.json();
-        await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
-        onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration, type: "video", name: "Reversed" });
-        onStatus("Reverse complete");
+        onStatus("Reverse is not wired to a real render endpoint yet. Use Speed Ramp or Slow Motion for real output today.");
         return;
       }
       if (activeSub === "motion-ramp") {
         const blob = await fetch(clipUrl).then(r => r.blob());
         const fd = new FormData();
         fd.append("video", blob, "clip.mp4");
-        fd.append("factor", String(speedFactor));
+        fd.append("speed", String(speedFactor));
         const res = await fetch("/api/video-studio/speed", { method: "POST", body: fd });
-        const data = await res.json();
-        await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
-        onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration: duration / speedFactor, type: "video", name: "Speed Ramp" });
+        const url = await parseVideoStudioUrl(res, "Speed ramp");
+        await createAsset.mutateAsync({ fileUrl: url, assetType: "output", filename: filenameFromUrl(url, "vaultx-speed-ramp.mp4"), durationSeconds: duration / speedFactor, mimeType: "video/mp4", metadata: { source: "vaultx", isVaultxOutput: true, operation: activeSub, speedFactor } });
+        onAddClip({ id: Date.now().toString(), src: url, assetUrl: url, duration: duration / speedFactor, type: "video", name: "Speed Ramp" });
         onStatus("Speed ramp complete");
         return;
       }
-      onStatus(activeSub + " applied");
+      onStatus(`${cat.tools.find(t => t.id === activeSub)?.label ?? activeSub} is not wired to a real render yet.`);
     } catch (e: any) { onStatus("Error: " + e.message); }
     finally { setBusy(false); }
   };
@@ -846,12 +929,12 @@ function ColorPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddAu
         fd.append("contrast", String(contrast));
         fd.append("saturation", String(saturation));
       } else {
-        fd.append("lut", LUT_MAP[activeSub] ?? "velvet_skin");
+        fd.append("look", LUT_MAP[activeSub] ?? "velvet_skin");
       }
       const res = await fetch("/api/video-studio/color-grade", { method: "POST", body: fd });
-      const data = await res.json();
-      await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
-      onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration, type: "video", name: cat.tools.find(t => t.id === activeSub)?.label ?? "Graded" });
+      const url = await parseVideoStudioUrl(res, "Color grade");
+      await createAsset.mutateAsync({ fileUrl: url, assetType: "output", filename: filenameFromUrl(url, "vaultx-graded.mp4"), durationSeconds: duration, mimeType: "video/mp4", metadata: { source: "vaultx", isVaultxOutput: true, operation: activeSub } });
+      onAddClip({ id: Date.now().toString(), src: url, assetUrl: url, duration, type: "video", name: cat.tools.find(t => t.id === activeSub)?.label ?? "Graded" });
       onStatus("Color grade applied");
     } catch (e: any) { onStatus("Error: " + e.message); }
     finally { setBusy(false); }
@@ -921,8 +1004,10 @@ function TextPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddAud
         const transcribed = await transcribeMutation.mutateAsync({ videoUrl: clipUrl });
         const caption = await utils.smartCaptions.getCaptionById.fetch({ captionId: (transcribed as any).captionId });
         const styled = await applyStyleMutation.mutateAsync({ captionId: (transcribed as any).captionId, styleId: "bold-white", customizations: {} });
-        await createAsset.mutateAsync({ fileUrl: (styled as any).outputUrl ?? "", assetType: "video", filename: "captioned_output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
-        onAddClip({ id: Date.now().toString(), src: (styled as any).outputUrl, assetUrl: (styled as any).outputUrl, duration, type: "video", name: "Captioned" });
+        const outputUrl = (styled as any).outputUrl;
+        if (!outputUrl) throw new Error("Caption styling finished without a usable output file.");
+        await createAsset.mutateAsync({ fileUrl: outputUrl, assetType: "output", filename: filenameFromUrl(outputUrl, "captioned_output.mp4"), durationSeconds: duration, mimeType: "video/mp4", metadata: { source: "vaultx", isVaultxOutput: true, operation: activeSub } });
+        onAddClip({ id: Date.now().toString(), src: outputUrl, assetUrl: outputUrl, duration, type: "video", name: "Captioned" });
         onStatus("Captions burned in");
         return;
       }
@@ -934,13 +1019,13 @@ function TextPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddAud
         fd.append("position", "center");
         fd.append("style", "white-bold");
         const res = await fetch("/api/video-studio/add-text", { method: "POST", body: fd });
-        const data = await res.json();
-        await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
-        onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration, type: "video", name: "Text Overlay" });
+        const url = await parseVideoStudioUrl(res, "Text overlay");
+        await createAsset.mutateAsync({ fileUrl: url, assetType: "output", filename: filenameFromUrl(url, "vaultx-text-overlay.mp4"), durationSeconds: duration, mimeType: "video/mp4", metadata: { source: "vaultx", isVaultxOutput: true, operation: activeSub, overlayText } });
+        onAddClip({ id: Date.now().toString(), src: url, assetUrl: url, duration, type: "video", name: "Text Overlay" });
         onStatus("Text overlay added");
         return;
       }
-      onStatus(activeSub + " applied");
+      onStatus(`${cat.tools.find(t => t.id === activeSub)?.label ?? activeSub} is not wired to a real render yet.`);
     } catch (e: any) { onStatus("Error: " + e.message); }
     finally { setBusy(false); }
   };
@@ -997,13 +1082,14 @@ function AudioPanel({ clipUrl, onStatus, projectId, onAddClip, onAddAudioTrack }
       const blob = await fetch(clipUrl).then(r => r.blob());
       const fd = new FormData();
       fd.append("video", blob, "clip.mp4");
-      if (activeSub === "audio-normalize") fd.append("mode", "loudnorm");
-      else if (activeSub === "audio-denoise") fd.append("mode", "denoise");
-      else fd.append("mode", "loudnorm");
+      if (activeSub === "audio-normalize") fd.append("mode", "normalize");
+      else if (activeSub === "audio-denoise") fd.append("mode", "cleanup");
+      else if (activeSub === "audio-mute") fd.append("mode", "mute");
+      else fd.append("mode", "voice_enhance");
       const res = await fetch("/api/video-studio/audio", { method: "POST", body: fd });
-      const data = await res.json();
-      await createAsset.mutateAsync({ fileUrl: "", assetType: "video", filename: "output.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
-      onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration: 30, type: "video", name: "Audio Enhanced" });
+      const url = await parseVideoStudioUrl(res, "Audio enhancement");
+      await createAsset.mutateAsync({ fileUrl: url, assetType: "output", filename: filenameFromUrl(url, "vaultx-audio-enhanced.mp4"), durationSeconds: 30, mimeType: "video/mp4", metadata: { source: "vaultx", isVaultxOutput: true, operation: activeSub } });
+      onAddClip({ id: Date.now().toString(), src: url, assetUrl: url, duration: 30, type: "video", name: "Audio Enhanced" });
       onStatus("Audio enhanced");
     } catch (e: any) { onStatus("Error: " + e.message); }
     finally { setBusy(false); }
@@ -1065,14 +1151,12 @@ function FormatPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddA
       const fd = new FormData();
       fd.append("video", blob, "clip.mp4");
       fd.append("format", "mp4");
-      fd.append("width", String(cfg.width));
-      fd.append("height", String(cfg.height));
-      fd.append("fps", String(cfg.fps));
-      fd.append("crf", String(cfg.crf));
+      fd.append("resolution", cfg.width >= 3840 ? "4k" : cfg.width >= 1920 ? "1080p" : "720p");
+      fd.append("platform", activeSub.replace("format-", ""));
       const res = await fetch("/api/video-studio/convert", { method: "POST", body: fd });
-      const data = await res.json();
-      await createAsset.mutateAsync({ fileUrl: data.url ?? "", assetType: "video", filename: "formatted_export.mp4", metadata: { source: "vaultx", isVaultxOutput: true } });
-      onAddClip({ id: Date.now().toString(), src: data.url, assetUrl: data.url, duration, type: "video", name: cat.tools.find(t => t.id === activeSub)?.label ?? "Formatted" });
+      const url = await parseVideoStudioUrl(res, "Platform export");
+      await createAsset.mutateAsync({ fileUrl: url, assetType: "output", filename: filenameFromUrl(url, "formatted_export.mp4"), durationSeconds: duration, mimeType: "video/mp4", metadata: { source: "vaultx", isVaultxOutput: true, operation: activeSub, platform: activeSub.replace("format-", "") } });
+      onAddClip({ id: Date.now().toString(), src: url, assetUrl: url, duration, type: "video", name: cat.tools.find(t => t.id === activeSub)?.label ?? "Formatted" });
       onStatus("Export ready for " + (cat.tools.find(t => t.id === activeSub)?.label ?? activeSub));
     } catch (e: any) { onStatus("Error: " + e.message); }
     finally { setBusy(false); }
@@ -1196,6 +1280,16 @@ export default function VaultXEditor() {
     exportPresets.length > 0,
     Boolean(watermarkIdentity.trim()),
   ].filter(Boolean).length / 5) * 100);
+  const creatorIntelligence = CREATOR_INTELLIGENCE_RULES.map(rule => ({
+    ...rule,
+    action: rule.label === "Hook Shot"
+      ? (analysis ? `Lead with ${analysis.strongest_assets?.[0] ?? "the highest-retention frame"}; cut anything slow before the hook.` : "Upload and analyze first so VaultX can pick the strongest lead moment.")
+      : rule.label === "Angle Stack"
+        ? `Build ${targetFormat} pacing for ${selectedPreset.label}: establish, move, close detail, reaction, CTA.`
+        : rule.label === "Teaser Logic"
+          ? (complianceMode === "platform_safe" ? "Use blur/crop/censor tools before exporting public teaser cuts." : "Create a public teaser plus a subscriber or VIP unlock version, not one generic file.")
+          : `Package ${selectedOutputLabels.join(" · ") || "master · teaser · cover · copy"} with watermark ${watermarkIdentity || "set before export"}.`,
+  }));
 
   const applyProductionPreset = useCallback((presetId: string) => {
     const preset = PRODUCTION_PRESETS.find(p => p.id === presetId) ?? PRODUCTION_PRESETS[0];
@@ -1225,24 +1319,22 @@ export default function VaultXEditor() {
   }, [projectId, project, createProjectMut]);
 
   const handleFileUpload = useCallback(async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    toast.loading("Uploading...");
+    const toastId = toast.loading("Uploading 0%...");
     try {
-      const resp = await fetch("/api/upload/vaultx", { method: "POST", body: formData });
-      const data = await resp.json();
-      if (data.url) {
-        setSourceUrl(data.url);
-        setCurrentSource(data.url);
-        setContentType(file.type.startsWith("video") ? "video" : "photo");
-        toast.success("Uploaded — analyzing...");
-        const pid = await ensureProject();
-        const result = await analyzeContentMut.mutateAsync({ sourceUrl: data.url, projectType: file.type.startsWith("video") ? "video" : "photo", projectId: pid });
-        setAnalysis(result.analysis as ContentAnalysis);
-        toast.success("Content analyzed");
+      const uploaded = await uploadVaultXFile(file, progress => toast.loading(`Uploading ${progress}%...`, { id: toastId }));
+      setSourceUrl(uploaded.url);
+      setCurrentSource(uploaded.url);
+      setContentType(file.type.startsWith("video") ? "video" : "photo");
+      toast.success("Uploaded — analyzing...", { id: toastId });
+      const pid = await ensureProject();
+      const result = await analyzeContentMut.mutateAsync({ sourceUrl: uploaded.url, projectType: file.type.startsWith("video") ? "video" : "photo", projectId: pid });
+      setAnalysis(result.analysis as ContentAnalysis);
+      if (file.type.startsWith("video")) {
+        setEditorClips(prev => [{ id: Date.now().toString(), src: uploaded.url, assetUrl: uploaded.url, fileUrl: uploaded.url, duration: project.durationSeconds || 60, type: "video", name: uploaded.filename }, ...prev]);
       }
-    } catch (e: any) { toast.error("Upload failed: " + e.message); }
-  }, [ensureProject, analyzeContentMut]);
+      toast.success("Content analyzed and ready for real editor tools");
+    } catch (e: any) { toast.error("Upload failed: " + e.message, { id: toastId }); }
+  }, [ensureProject, analyzeContentMut, project.durationSeconds]);
 
   const handleEnhance = useCallback(async () => {
     if (!sourceUrl) { toast.error("Upload content first"); return; }
@@ -1535,6 +1627,30 @@ export default function VaultXEditor() {
                   <span className="font-black" style={{ color: item.ok ? C.green : C.mutedLo }}>{item.ok ? "LOCKED" : "PENDING"}</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Creator intelligence */}
+          <div className="flex flex-col gap-2 p-3 rounded-2xl" style={{ background: "linear-gradient(180deg, rgba(236,72,153,0.08), rgba(139,92,246,0.05))", border: "1px solid rgba(236,72,153,0.16)" }}>
+            <div className="flex items-center justify-between">
+              <p className="text-[9px] font-black tracking-widest" style={{ color: C.pink }}>CREATOR INTELLIGENCE</p>
+              <span className="text-[7px] font-black px-1.5 py-0.5 rounded-md" style={{ background: C.pinkDim, color: C.pink }}>SHOT → TEASER → PAID</span>
+            </div>
+            <p className="text-[8px] leading-snug" style={{ color: C.muted }}>This is the part that tells the creator what to do with the footage, not just which button to click.</p>
+            <div className="flex flex-col gap-1.5">
+              {creatorIntelligence.map(item => {
+                const Icon = item.icon as any;
+                return (
+                  <div key={item.label} className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.32)", border: `1px solid ${item.color}26` }}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Icon size={10} style={{ color: item.color }} />
+                      <span className="text-[8px] font-black" style={{ color: item.color }}>{item.label.toUpperCase()}</span>
+                    </div>
+                    <p className="text-[8px] leading-snug mb-1" style={{ color: C.text }}>{item.action}</p>
+                    <p className="text-[7px] leading-snug" style={{ color: C.muted }}>{item.detail}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
