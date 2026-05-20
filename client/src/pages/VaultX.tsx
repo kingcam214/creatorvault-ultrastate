@@ -2162,306 +2162,196 @@ function VaultXPublicLanding() {
     });
   };
 
-  const architectureLayers = [
+  const priceLabel = `$${Number.isFinite(offerPrice) ? offerPrice : 97}`;
+
+  const deliverables = [
     {
-      layer: "01",
       icon: Video,
-      eyebrow: "Editing Command Center",
-      title: "CapCut-style speed with business control",
-      body: "VaultX gives creators a browser-native editing workspace for timeline cuts, captions, thumbnails, vertical exports, campaign packaging, and asset organization without scattering work across separate apps, drives, and spreadsheets.",
-      proof: "Edit the content and prepare the business package in the same place."
+      title: "Angle Stack",
+      body: "Turn one raw clip into multiple buyer-ready angles: hero framing, close crop, reveal cut, profile crop, and vertical story version.",
     },
     {
-      layer: "02",
-      icon: Layers,
-      eyebrow: "Asset Orchestration",
-      title: "Raw media becomes an organized launch system",
-      body: "Upload raw clips, images, scripts, captions, brand notes, and offer details into one operating layer so every asset has a clear next step: edit, package, schedule, distribute, or analyze.",
-      proof: "No more losing money inside folders, phones, and half-finished drafts."
+      icon: Sparkles,
+      title: "Skin Pop Polish",
+      body: "A creator-safe finishing pass focused on glow, contrast, pacing, caption rhythm, and premium visual presentation.",
     },
     {
-      layer: "03",
-      icon: Shield,
-      eyebrow: "Public-Safe Packaging",
-      title: "Professional previews without showing too much",
-      body: "VaultX is designed to help creators build polished public-facing teasers, previews, captions, and promotional packages while keeping private or premium material protected behind the right access flow.",
-      proof: "Attention-grabbing on the surface. Protected where it counts."
+      icon: Eye,
+      title: "Reveal Teaser System",
+      body: "Build public-safe teasers that create curiosity without exposing the premium asset before the checkout moment.",
     },
     {
-      layer: "04",
-      icon: TrendingUp,
-      eyebrow: "Retention Intelligence",
-      title: "Know what keeps viewers watching",
-      body: "Hook notes, pacing signals, caption strategy, offer placement, and performance feedback help creators tighten the edit before they publish instead of guessing after the drop goes cold.",
-      proof: "Creative decisions become measurable business decisions."
+      icon: Camera,
+      title: "Close-Up Isolator",
+      body: "Pull the most magnetic body, outfit, motion, and expression moments into short clips that feel intentional instead of random.",
     },
     {
-      layer: "05",
-      icon: Send,
-      eyebrow: "Distribution Router",
-      title: "One finished package feeds every channel",
-      body: "VaultX packages vertical clips, captions, story versions, fan-message copy, Telegram drops, and campaign CTAs from one master workflow so creators can launch without rebuilding the same post five times.",
-      proof: "Upload once, then route the campaign everywhere it needs to go."
+      icon: Play,
+      title: "60-Second Body Highlight Reel",
+      body: "Package a concise highlight sequence for profile posts, fan drops, paid previews, Telegram pushes, and follow-up campaigns.",
     },
     {
-      layer: "06",
       icon: DollarSign,
-      eyebrow: "Revenue Operations",
-      title: "Tie every drop back to the money path",
-      body: "Pricing notes, offer sequencing, VIP follow-up, checkout recovery, subscriber movement, and analytics connect the creative workflow to revenue operations so the editor becomes part of the business engine.",
-      proof: "The edit is not the finish line. It is the start of the revenue loop."
+      title: "Revenue Route Notes",
+      body: "Get clear next-step guidance for where to use each cut: free preview, paid unlock, VIP message, or retargeting follow-up.",
     },
   ];
 
-  const workflow = [
-    { step: "Ingest", detail: "Bring raw clips, campaign notes, captions, offers, and brand assets into one creator-business workspace." },
-    { step: "Edit", detail: "Trim, caption, format, thumbnail, and organize content into ready-to-use vertical packages." },
-    { step: "Package", detail: "Turn one finished asset into preview cuts, fan-message copy, product cards, and premium offer flows." },
-    { step: "Distribute", detail: "Route each package to the right destination: profile, fan message, Telegram, campaign page, or social export." },
-    { step: "Optimize", detail: "Track what gets attention, what converts, and where the next follow-up should happen." },
+  const moneyFlow = [
+    { step: "Upload", copy: "Bring the raw clip, selfie set, gym clip, outfit change, or creator footage into the VaultX workflow." },
+    { step: "Cinema Cut", copy: "The kit breaks it into angles, hook moments, safe teasers, premium-ready highlights, and caption-ready assets." },
+    { step: "Launch", copy: "Use the finished package for profile drops, fan messages, Telegram pushes, paid unlocks, and offer follow-up." },
   ];
 
-  const automationCards = [
-    { title: "Presenter-led product demo", body: "The hero now feels like a confident founder walkthrough instead of an abstract graphic, making VaultX easier to understand in the first five seconds.", accent: "#ef4444" },
-    { title: "Business-safe public page", body: "The public experience stays polished, professional, and platform-safe while clearly speaking to premium creator operations.", accent: "#ec4899" },
-    { title: "Creator revenue workflow", body: "Editing, packaging, fan campaigns, follow-up, and analytics are presented as one connected money system.", accent: "#f59e0b" },
-    { title: "Built to replace tool chaos", body: "VaultX positions itself against scattered editing apps, folders, captions docs, campaign notes, and manual fan follow-up.", accent: "#9333ea" },
+  const proofTiles = [
+    { value: "5", label: "creator-ready cut types" },
+    { value: "60s", label: "highlight reel target" },
+    { value: "18+", label: "adult creator business context" },
+    { value: "$97", label: "real Stripe offer" },
   ];
 
-  const proofStats = [
-    { value: "01", label: "Editor workspace" },
-    { value: "06", label: "Workflow layers" },
-    { value: "24/7", label: "Campaign engine" },
-    { value: "$", label: "Revenue focus" },
-  ];
-
-  const visualTiles = [
-    { label: "Teaser Cut", tone: "#ef4444", copy: "Safe preview packaged for discovery" },
-    { label: "VIP Unlock", tone: "#f59e0b", copy: "Paid access routed to the right offer" },
-    { label: "Fan Drop", tone: "#ec4899", copy: "Message, CTA, and follow-up ready" },
-    { label: "Revenue Read", tone: "#9333ea", copy: "Hook, price, and conversion signal" },
-  ];
-
-  const trailerChapters = [
-    { time: "00:00", label: "Meet the workflow", detail: "A confident presenter introduces VaultX as the operating layer between raw content and revenue." },
-    { time: "00:08", label: "Upload and organize", detail: "Assets, notes, captions, and campaign ideas move into a single product workspace." },
-    { time: "00:18", label: "Edit and package", detail: "The editor turns raw media into vertical cuts, captions, thumbnails, previews, and campaign-ready packages." },
-    { time: "00:32", label: "Route the drop", detail: "VaultX prepares the right version for profile posts, fan messages, Telegram drops, and social exports." },
-    { time: "00:46", label: "Automate follow-up", detail: "Campaign logic keeps the conversation moving with VIP routing, reminders, and next-step offers." },
-    { time: "00:58", label: "Read the money", detail: "Analytics connect attention, conversion, subscriber movement, and revenue back to the next creative decision." },
-  ];
-
-  const factoryBeats = [
-    { label: "Executive walkthrough", value: "A professional presenter frames the product like a serious business system, not a vague visual concept." },
-    { label: "Editing workflow", value: "Creators see where raw assets become clips, captions, thumbnails, packages, and exports." },
-    { label: "Campaign orchestration", value: "The page explains how finished content moves into fan messaging, Telegram drops, social cuts, and follow-up." },
-    { label: "Revenue command", value: "Analytics, pricing notes, VIP paths, and performance reads make VaultX feel like an operator for the business." },
+  const faqs = [
+    {
+      q: "Is this explicit content?",
+      a: "No. This public page is business-safe. The product is for adult, fitness, beauty, and body-led creators who need premium, platform-aware content packaging without exposing private material in the sales page.",
+    },
+    {
+      q: "What happens after checkout?",
+      a: "Stripe processes the purchase and returns you to CreatorVault. Access and challenge credit are finalized only after the live webhook confirms the completed payment.",
+    },
+    {
+      q: "Who is this for?",
+      a: "Creators who already have raw footage but need a sharper money path: better teasers, stronger highlights, cleaner visual polish, and content versions that are ready to send, post, and monetize.",
+    },
   ];
 
   return (
-    <div className="min-h-screen overflow-hidden relative text-white" style={{ background: "#030305" }}>
+    <div className="min-h-screen text-white overflow-hidden relative" style={{ background: "#060606" }}>
       <style>{`
-        @keyframes vaultx-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
-        @keyframes vaultx-scan { 0%{transform:translateX(-120%);opacity:0} 25%{opacity:.8} 100%{transform:translateX(140%);opacity:0} }
-        @keyframes vaultx-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.22)} 50%{box-shadow:0 0 0 14px rgba(239,68,68,0)} }
-        .vaultx-glass{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);box-shadow:0 24px 80px rgba(0,0,0,.45);backdrop-filter:blur(18px)}
-        .vaultx-card{transition:transform .25s ease,border-color .25s ease,background .25s ease}.vaultx-card:hover{transform:translateY(-5px);border-color:rgba(239,68,68,.38);background:rgba(255,255,255,.065)}
+        @keyframes vxGlow { 0%,100%{opacity:.55;transform:scale(1)} 50%{opacity:.9;transform:scale(1.08)} }
+        @keyframes vxFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        .vx-shell{max-width:1180px;margin:0 auto;padding-left:20px;padding-right:20px}
+        .vx-glass{background:linear-gradient(180deg,rgba(20,20,20,.86),rgba(10,10,10,.76));border:1px solid rgba(201,168,76,.18);box-shadow:0 24px 80px rgba(0,0,0,.48);backdrop-filter:blur(18px)}
+        .vx-card{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);transition:transform .22s ease,border-color .22s ease,background .22s ease}.vx-card:hover{transform:translateY(-4px);border-color:rgba(201,168,76,.34);background:rgba(255,255,255,.065)}
+        .vx-gold{background:linear-gradient(135deg,#c9a84c,#f3d68b);-webkit-background-clip:text;background-clip:text;color:transparent}
+        .vx-btn{background:linear-gradient(135deg,#c9a84c,#f3d68b);color:#050505;box-shadow:0 20px 55px rgba(201,168,76,.28)}
+        .vx-btn:disabled{opacity:.55;cursor:not-allowed;filter:saturate(.4)}
       `}</style>
-      <div className="absolute inset-0 z-0" style={{ background: "radial-gradient(circle at 18% 8%, rgba(239,68,68,.34), transparent 34%), radial-gradient(circle at 82% 18%, rgba(236,72,153,.24), transparent 30%), radial-gradient(circle at 50% 78%, rgba(147,51,234,.22), transparent 36%)" }} />
-      <div className="absolute inset-0 z-0 opacity-[.06]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px)", backgroundSize: "54px 54px" }} />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(circle at 18% 6%, rgba(201,168,76,.22), transparent 32%), radial-gradient(circle at 88% 18%, rgba(6,182,212,.13), transparent 30%), radial-gradient(circle at 50% 92%, rgba(239,68,68,.12), transparent 36%)" }} />
+      <div className="absolute inset-0 pointer-events-none opacity-[.05]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
 
-      <nav className="relative z-10 flex items-center justify-between px-6 md:px-10 py-6 max-w-7xl mx-auto">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", animation: "vaultx-pulse 3s infinite" }}>
-            <Flame className="w-5 h-5 text-white" />
-          </div>
+      <nav className="vx-shell relative z-10 flex items-center justify-between py-5 md:py-7">
+        <a href="/vault-x?offer=body-cinema" className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center kc-animate-pulse-gold" style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)" }}><Flame className="w-5 h-5 text-black" /></div>
           <div>
-            <div className="text-white font-black text-xl tracking-tight">VaultX</div>
-            <div className="text-[10px] uppercase tracking-[0.28em] font-bold" style={{ color: "#fca5a5" }}>Creator Business OS</div>
+            <div className="font-black text-xl tracking-tight">VaultX</div>
+            <div className="text-[10px] uppercase tracking-[.28em] font-black" style={{ color: "#c9a84c" }}>Body Cinema</div>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <a href="/login" className="hidden sm:inline-flex text-sm font-bold px-5 py-2.5 rounded-xl transition-all hover:bg-white/10" style={{ color: "#d1d5db" }}>Sign In</a>
-          {isBodyCinemaOffer ? (
-            <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="text-sm font-black px-6 py-3 rounded-xl transition-all hover:scale-105 disabled:opacity-60" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 40px rgba(236,72,153,.32)" }}>{vaultXOfferCheckout.isPending ? "Opening Checkout..." : "Buy Body Cinema"}</button>
-          ) : (
-            <a href="/vault-x/editor" className="text-sm font-black px-6 py-3 rounded-xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 40px rgba(236,72,153,.32)" }}>Open Editor</a>
-          )}
+        </a>
+        <div className="flex items-center gap-2 md:gap-3">
+          <a href="/login" className="hidden sm:inline-flex px-4 py-2.5 rounded-xl text-sm font-bold border border-white/10 text-white/70 hover:text-white hover:bg-white/5">Sign In</a>
+          <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center gap-2 px-4 md:px-6 py-3 rounded-2xl text-sm font-black">
+            <CreditCard className="w-4 h-4" /> {vaultXOfferCheckout.isPending ? "Opening..." : `${priceLabel} Checkout`}
+          </button>
         </div>
       </nav>
 
       <main className="relative z-10">
-        {isBodyCinemaOffer && (
-          <section className="max-w-7xl mx-auto px-6 md:px-10 pt-6">
-            <div className="rounded-[2rem] p-5 md:p-7" style={{ background: "linear-gradient(135deg, rgba(239,68,68,.2), rgba(236,72,153,.16), rgba(147,51,234,.14))", border: "1px solid rgba(252,165,165,.28)", boxShadow: "0 24px 80px rgba(0,0,0,.32)" }}>
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-                <div>
-                  <div className="text-xs font-black uppercase tracking-[.22em] mb-2" style={{ color: "#fecaca" }}>Live VaultX offer · real Stripe checkout</div>
-                  <h2 className="text-2xl md:text-4xl font-black tracking-[-.04em] leading-tight">Body Cinema Revenue Kit</h2>
-                  <p className="text-sm md:text-base leading-7 mt-2 max-w-3xl" style={{ color: "#f5d0d0" }}>A production checkout path for the VaultX Body Cinema offer. Payment is processed by Stripe and challenge revenue is credited only after the webhook confirms a completed payment.</p>
-                  {paidSessionId && <div className="mt-3 text-sm font-bold" style={{ color: "#bbf7d0" }}>Payment return detected. Final access and revenue credit depend on Stripe webhook confirmation for session {paidSessionId.slice(0, 12)}...</div>}
-                </div>
-                <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl font-black whitespace-nowrap transition-all hover:scale-105 disabled:opacity-60" style={{ background: "white", color: "#09090b" }}>
-                  <CreditCard className="w-5 h-5" /> {vaultXOfferCheckout.isPending ? "Opening secure checkout..." : `Buy Now — $${offerPrice}`}
-                </button>
-              </div>
+        {paidSessionId && (
+          <section className="vx-shell pt-2">
+            <div className="rounded-2xl p-4 border" style={{ background: "rgba(16,185,129,.11)", borderColor: "rgba(16,185,129,.28)", color: "#bbf7d0" }}>
+              <strong>Payment return detected.</strong> Final access and challenge revenue credit depend on the Stripe webhook confirmation for session {paidSessionId.slice(0, 12)}...
             </div>
           </section>
         )}
-        <section className="max-w-7xl mx-auto px-6 md:px-10 pt-8 md:pt-12 pb-20">
-          <div className="grid lg:grid-cols-[.86fr_1.14fr] gap-10 items-center">
+
+        <section className="vx-shell pt-8 md:pt-14 pb-16 md:pb-24">
+          <div className="grid lg:grid-cols-[1fr_.9fr] gap-10 lg:gap-14 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-7" style={{ background: "rgba(239,68,68,.12)", border: "1px solid rgba(239,68,68,.28)" }}>
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#ef4444" }} />
-                <span className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: "#fca5a5" }}>Presenter-led walkthrough · creator business OS</span>
+              <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-6" style={{ background: "rgba(201,168,76,.12)", border: "1px solid rgba(201,168,76,.28)", color: "#f3d68b" }}>
+                <Shield className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.18em]">Secure Stripe checkout · public-safe creator offer</span>
               </div>
-              <h1 className="font-black leading-[.88] tracking-[-.055em] mb-7" style={{ fontSize: "clamp(3.2rem, 7vw, 7rem)" }}>
-                Your creator business, explained in one confident workflow.
+              <h1 className="font-black leading-[.9] tracking-[-.055em] mb-6" style={{ fontSize: "clamp(3rem, 8vw, 7.2rem)" }}>
+                Make the body look expensive before you sell it.
               </h1>
-              <p className="text-lg md:text-xl max-w-2xl leading-8 mb-8" style={{ color: "#c7c7d1" }}>
-                VaultX now opens with a professional product walkthrough: a polished presenter breaks down how creators move from raw media to edited clips, packaged campaigns, distribution, fan follow-up, and revenue analytics without juggling disconnected tools.
+              <p className="text-lg md:text-2xl leading-8 md:leading-10 max-w-2xl mb-8" style={{ color: "#d8d8d3" }}>
+                <strong>Body Cinema</strong> is the VaultX revenue kit for creators who have raw footage but need it cut into seductive, premium, platform-safe assets that are ready to post, message, tease, and monetize.
               </p>
-              <div className="flex flex-wrap gap-4 mb-10">
-                {isBodyCinemaOffer ? (
-                  <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="inline-flex items-center gap-2 text-base font-black px-8 py-4 rounded-2xl transition-all hover:scale-105 disabled:opacity-60" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 50px rgba(239,68,68,.35)" }}>
-                    <CreditCard className="w-5 h-5" /> {vaultXOfferCheckout.isPending ? "Opening Checkout..." : `Buy Body Cinema — $${offerPrice}`}
-                  </button>
-                ) : (
-                  <a href="/vault-x/editor" className="inline-flex items-center gap-2 text-base font-black px-8 py-4 rounded-2xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 50px rgba(239,68,68,.35)" }}>
-                    <Play className="w-5 h-5" /> Open VaultX Editor
-                  </a>
-                )}
-                <a href="#vaultx-walkthrough" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "white", border: "1px solid rgba(255,255,255,.16)" }}>
-                  See the breakdown <ArrowUpRight className="w-5 h-5" />
-                </a>
-                <a href="/login" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "#fecaca", border: "1px solid rgba(252,165,165,.22)" }}>
-                  Build My Vault
-                </a>
+              <div className="flex flex-col sm:flex-row gap-3 mb-8">
+                <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex justify-center items-center gap-2 rounded-2xl px-8 py-4 text-base font-black">
+                  <Unlock className="w-5 h-5" /> {vaultXOfferCheckout.isPending ? "Opening secure checkout..." : `Unlock Body Cinema — ${priceLabel}`}
+                </button>
+                <a href="#body-cinema-kit" className="inline-flex justify-center items-center gap-2 rounded-2xl px-8 py-4 text-base font-bold border border-white/15 text-white hover:bg-white/5">See what you get <ChevronRight className="w-5 h-5" /></a>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl">
-                {proofStats.map((stat) => (
-                  <div key={stat.label} className="vaultx-glass rounded-2xl p-4">
-                    <div className="text-2xl md:text-3xl font-black">{stat.value}</div>
-                    <div className="text-xs font-semibold mt-1" style={{ color: "#8b8b98" }}>{stat.label}</div>
-                  </div>
-                ))}
-              </div>
+              <p className="text-sm leading-6 max-w-xl" style={{ color: "#888" }}>
+                No fake revenue claims. No pretend payment events. The purchase path is real Stripe Checkout, and any challenge ledger movement waits for the live payment webhook.
+              </p>
             </div>
 
-            <div id="vaultx-walkthrough" className="vaultx-glass rounded-[2.25rem] overflow-hidden" style={{ background: "rgba(0,0,0,.52)", border: "1px solid rgba(255,255,255,.12)" }}>
-              <div className="relative aspect-[16/10] md:aspect-video overflow-hidden" style={{ background: "#050508" }}>
-                <picture>
-                  <source media="(max-width: 720px)" srcSet="/images/vaultx/vaultx-business-presenter-mobile.png" />
-                  <img
-                    src="/images/vaultx/vaultx-business-presenter-hero.png"
-                    alt="Professional VaultX presenter showing the creator business editing and revenue dashboard"
-                    className="absolute inset-0 w-full h-full object-cover"
-                    loading="eager"
-                  />
-                </picture>
-                <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(0,0,0,.1), rgba(0,0,0,.08) 45%, rgba(0,0,0,.3)), linear-gradient(0deg, rgba(0,0,0,.55), transparent 45%)" }} />
-                <div className="absolute left-4 top-4 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[.16em]" style={{ background: "rgba(0,0,0,.58)", color: "#fecaca", border: "1px solid rgba(252,165,165,.35)", backdropFilter: "blur(12px)" }}>Business walkthrough</div>
-                <div className="absolute right-4 top-4 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[.16em]" style={{ background: "rgba(0,0,0,.58)", color: "#fff", border: "1px solid rgba(255,255,255,.18)", backdropFilter: "blur(12px)" }}>Public-safe demo</div>
-                <div className="absolute left-5 right-5 bottom-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-                  <div>
-                    <div className="text-xs font-black uppercase tracking-[.2em] mb-2" style={{ color: "#fca5a5" }}>Hosted product breakdown</div>
-                    <h2 className="text-2xl md:text-4xl font-black tracking-[-.04em] leading-none max-w-xl">A confident presenter walks creators through the whole money workflow.</h2>
+            <div className="vx-glass rounded-[2rem] p-4 md:p-6 relative" style={{ animation: "vxFloat 5s ease-in-out infinite" }}>
+              <div className="absolute -inset-6 rounded-full blur-3xl opacity-40" style={{ background: "radial-gradient(circle, rgba(201,168,76,.32), transparent 64%)", animation: "vxGlow 4s ease-in-out infinite" }} />
+              <div className="relative rounded-[1.6rem] overflow-hidden border border-white/10" style={{ background: "linear-gradient(160deg,#171717,#050505)" }}>
+                <div className="aspect-[4/5] p-5 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="kc-badge kc-badge-gold">Body Cinema Kit</span>
+                    <span className="text-xs font-black text-white/60">VaultX</span>
                   </div>
-                  <a href="/vault-x/editor" className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-black whitespace-nowrap" style={{ background: "white", color: "#08080b" }}>Open Editor <ChevronRight className="w-4 h-4" /></a>
-                </div>
-              </div>
-              <div className="p-5 md:p-6">
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <div>
-                    <div className="text-xs font-black uppercase tracking-[.2em] mb-1" style={{ color: "#fca5a5" }}>60-second business demo</div>
-                    <h2 className="text-2xl md:text-3xl font-black tracking-[-.03em]">The breakdown is clear, polished, and revenue-focused.</h2>
-                  </div>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {trailerChapters.map((chapter) => (
-                    <a key={chapter.time} href="#vaultx-walkthrough" className="rounded-2xl p-4 transition-all hover:bg-white/10" style={{ background: "rgba(255,255,255,.045)", border: "1px solid rgba(255,255,255,.08)" }}>
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-[11px] font-black px-2.5 py-1 rounded-full" style={{ color: "#0a0a0a", background: "#fca5a5" }}>{chapter.time}</span>
-                        <span className="text-sm font-black">{chapter.label}</span>
+                  <div className="space-y-3">
+                    <div className="h-40 rounded-[1.5rem] relative overflow-hidden" style={{ background: "radial-gradient(circle at 40% 20%, rgba(245,194,122,.28), transparent 28%), linear-gradient(145deg,#2a1812,#080808 70%)" }}>
+                      <div className="absolute left-6 right-6 top-8 h-24 rounded-full blur-2xl" style={{ background: "rgba(201,168,76,.26)" }} />
+                      <div className="absolute inset-x-8 bottom-6 h-2 rounded-full" style={{ background: "linear-gradient(90deg,transparent,#c9a84c,transparent)" }} />
+                      <div className="absolute bottom-5 left-5 right-5 grid grid-cols-5 gap-2">
+                        {[0,1,2,3,4].map((i) => <div key={i} className="h-16 rounded-xl" style={{ background: `rgba(255,255,255,${0.08 + i * 0.025})`, border: "1px solid rgba(255,255,255,.08)" }} />)}
                       </div>
-                      <p className="text-xs leading-5" style={{ color: "#a8a8b3" }}>{chapter.detail}</p>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="max-w-7xl mx-auto px-6 md:px-10 pb-16">
-          <div className="vaultx-glass rounded-[2rem] p-6 md:p-8" style={{ background: "linear-gradient(135deg, rgba(239,68,68,.12), rgba(147,51,234,.1))" }}>
-            <div className="grid lg:grid-cols-[.7fr_1.3fr] gap-8 items-start">
-              <div>
-                <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#fca5a5" }}>A real business walkthrough, not a vague graphic</div>
-                <h2 className="text-3xl md:text-5xl font-black tracking-[-.04em] leading-none mb-4">VaultX is now framed like a serious creator-operations product.</h2>
-                <p className="text-sm md:text-base leading-7" style={{ color: "#b8b8c3" }}>The page leads with a professional presenter and a concrete product breakdown because the promise is not just prettier content. The promise is organized editing, packaging, distribution, follow-up, and revenue visibility in one workflow.</p>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {factoryBeats.map((beat) => (
-                  <div key={beat.label} className="rounded-3xl p-5" style={{ background: "rgba(0,0,0,.32)", border: "1px solid rgba(255,255,255,.08)" }}>
-                    <div className="text-sm font-black mb-2" style={{ color: "#fff" }}>{beat.label}</div>
-                    <p className="text-sm leading-6" style={{ color: "#aaaab6" }}>{beat.value}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {proofTiles.map((tile) => (
+                        <div key={tile.label} className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)" }}>
+                          <div className="text-2xl font-black vx-gold">{tile.value}</div>
+                          <div className="text-xs leading-4 text-white/55 mt-1">{tile.label}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="border-y border-white/10 py-10 px-6 md:px-10" style={{ background: "rgba(255,255,255,.025)" }}>
-          <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-5">
-            {automationCards.map((card) => (
-              <div key={card.title} className="vaultx-card rounded-3xl p-6" style={{ border: "1px solid rgba(255,255,255,.09)", background: "rgba(255,255,255,.04)" }}>
-                <div className="w-10 h-10 rounded-2xl mb-5" style={{ background: `radial-gradient(circle, ${card.accent}55, ${card.accent}15)` }} />
-                <h3 className="text-xl font-black mb-3">{card.title}</h3>
-                <p className="text-sm leading-6" style={{ color: "#a8a8b3" }}>{card.body}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section id="vaultx-architecture" className="max-w-7xl mx-auto px-6 md:px-10 py-24">
-          <div className="max-w-3xl mb-12">
-            <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#fca5a5" }}>Six-layer business engine</div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-5">Not another link-in-bio. A full-stack creator business system.</h2>
-            <p className="text-lg leading-8" style={{ color: "#b8b8c3" }}>VaultX combines editing, asset organization, public-safe packaging, retention intelligence, distribution, and revenue operations into one workflow. The public page stays polished and professional while the product speaks directly to the operational reality of premium creators.</p>
-          </div>
-          <div className="grid lg:grid-cols-3 gap-5">
-            {architectureLayers.map(({ layer, icon: Icon, eyebrow, title, body, proof }) => (
-              <div key={title} className="vaultx-card rounded-[2rem] p-6" style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.09)" }}>
-                <div className="flex items-center justify-between mb-8">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(239,68,68,.28), rgba(147,51,234,.2))" }}><Icon className="w-6 h-6" /></div>
-                  <div className="text-4xl font-black" style={{ color: "rgba(255,255,255,.1)" }}>{layer}</div>
+                  <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn w-full rounded-2xl py-4 font-black flex items-center justify-center gap-2"><CreditCard className="w-5 h-5" /> Buy the kit now</button>
                 </div>
-                <div className="text-[11px] font-black uppercase tracking-[.18em] mb-3" style={{ color: "#fca5a5" }}>{eyebrow}</div>
-                <h3 className="text-2xl font-black leading-tight mb-4">{title}</h3>
-                <p className="text-sm leading-7 mb-5" style={{ color: "#aaaab6" }}>{body}</p>
-                <div className="text-sm font-bold rounded-2xl p-4" style={{ color: "#fff", background: "rgba(0,0,0,.28)", border: "1px solid rgba(255,255,255,.07)" }}>{proof}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="body-cinema-kit" className="vx-shell pb-16 md:pb-24">
+          <div className="max-w-3xl mb-10">
+            <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#c9a84c" }}>What the buyer receives</div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-5">A content-money kit, not another empty landing page.</h2>
+            <p className="text-base md:text-lg leading-8" style={{ color: "#b8b8b8" }}>The offer is built for the moment a creator already has usable footage but does not have the angles, teaser sequence, premium polish, or revenue routing needed to turn that footage into a paid asset path.</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {deliverables.map(({ icon: Icon, title, body }) => (
+              <div key={title} className="vx-card rounded-[1.7rem] p-6">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5" style={{ background: "rgba(201,168,76,.14)", border: "1px solid rgba(201,168,76,.25)", color: "#f3d68b" }}><Icon className="w-6 h-6" /></div>
+                <h3 className="text-2xl font-black mb-3">{title}</h3>
+                <p className="text-sm leading-7" style={{ color: "#aaa" }}>{body}</p>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="max-w-7xl mx-auto px-6 md:px-10 pb-24">
-          <div className="grid lg:grid-cols-[.9fr_1.1fr] gap-10 items-start vaultx-glass rounded-[2.5rem] p-6 md:p-10">
+        <section className="vx-shell pb-16 md:pb-24">
+          <div className="vx-glass rounded-[2rem] p-6 md:p-10 grid lg:grid-cols-[.8fr_1.2fr] gap-8 items-start">
             <div>
-              <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#fca5a5" }}>Orchestrated money route</div>
-              <h2 className="text-4xl md:text-5xl font-black tracking-[-.04em] leading-none mb-5">From raw asset to revenue decision.</h2>
-              <p className="text-base leading-8 mb-7" style={{ color: "#b8b8c3" }}>The goal is a product narrative that makes creators instantly understand the business advantage: upload the asset once, edit the right version, package the campaign, route the drop, follow up with fans, and read which creative decisions are actually driving money.</p>
-              <a href="/vault-x/editor" className="inline-flex items-center gap-2 text-sm font-black px-6 py-3 rounded-2xl" style={{ background: "#fff", color: "#08080b" }}>Open the creator workflow <ArrowUpRight className="w-4 h-4" /></a>
+              <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#c9a84c" }}>Money path</div>
+              <h2 className="text-4xl md:text-5xl font-black tracking-[-.04em] leading-none mb-5">Raw footage becomes a buyer sequence.</h2>
+              <p className="text-base leading-8 mb-7" style={{ color: "#b8b8b8" }}>Body Cinema is positioned around practical creator revenue mechanics: make the first frame stronger, cut the asset into monetizable versions, and give every version a job in the funnel.</p>
+              <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center gap-2 rounded-2xl px-7 py-4 font-black"><Crown className="w-5 h-5" /> Get Body Cinema</button>
             </div>
-            <div className="space-y-4">
-              {workflow.map((item, index) => (
-                <div key={item.step} className="flex gap-4 rounded-3xl p-5" style={{ background: "rgba(0,0,0,.28)", border: "1px solid rgba(255,255,255,.08)" }}>
-                  <div className="w-10 h-10 rounded-2xl flex-shrink-0 flex items-center justify-center font-black" style={{ background: "rgba(239,68,68,.18)", color: "#fca5a5" }}>{index + 1}</div>
+            <div className="grid gap-3">
+              {moneyFlow.map((item, index) => (
+                <div key={item.step} className="rounded-3xl p-5 flex gap-4" style={{ background: "rgba(0,0,0,.32)", border: "1px solid rgba(255,255,255,.08)" }}>
+                  <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center font-black" style={{ background: "rgba(201,168,76,.16)", color: "#f3d68b" }}>{index + 1}</div>
                   <div>
-                    <h3 className="font-black text-lg mb-1">{item.step}</h3>
-                    <p className="text-sm leading-6" style={{ color: "#aaaab6" }}>{item.detail}</p>
+                    <h3 className="text-xl font-black mb-1">{item.step}</h3>
+                    <p className="text-sm leading-7" style={{ color: "#aaa" }}>{item.copy}</p>
                   </div>
                 </div>
               ))}
@@ -2469,15 +2359,23 @@ function VaultXPublicLanding() {
           </div>
         </section>
 
-        <section className="px-6 md:px-10 pb-24">
-          <div className="max-w-5xl mx-auto text-center rounded-[2.5rem] p-8 md:p-14" style={{ background: "linear-gradient(135deg, rgba(220,38,38,.22), rgba(236,72,153,.18), rgba(147,51,234,.18))", border: "1px solid rgba(255,255,255,.12)" }}>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-7" style={{ background: "rgba(0,0,0,.25)", border: "1px solid rgba(255,255,255,.12)" }}><Lock className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.16em]">Business-safe, premium, creator-aware</span></div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">Make VaultX feel like the confident operator behind the creator business.</h2>
-            <p className="text-lg leading-8 max-w-3xl mx-auto mb-9" style={{ color: "#f5d0d0" }}>The upgraded page keeps the public presentation polished and safe while making the product more concrete: a premium presenter, a clear workflow, and a direct path into the editor where creators can start organizing, packaging, distributing, and measuring their content business.</p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <a href="/vault-x/editor" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-black" style={{ background: "white", color: "#09090b" }}><Crown className="w-5 h-5" /> Open VaultX Editor</a>
-              <a href="/" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-bold" style={{ color: "white", border: "1px solid rgba(255,255,255,.2)" }}>Back to CreatorVault</a>
-            </div>
+        <section className="vx-shell pb-16 md:pb-24">
+          <div className="grid lg:grid-cols-3 gap-4">
+            {faqs.map((item) => (
+              <div key={item.q} className="vx-card rounded-[1.7rem] p-6">
+                <h3 className="text-xl font-black mb-3">{item.q}</h3>
+                <p className="text-sm leading-7" style={{ color: "#aaa" }}>{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="px-5 pb-20 md:pb-28">
+          <div className="max-w-5xl mx-auto text-center rounded-[2rem] p-7 md:p-12" style={{ background: "linear-gradient(135deg,rgba(201,168,76,.22),rgba(6,182,212,.10),rgba(239,68,68,.10))", border: "1px solid rgba(201,168,76,.25)" }}>
+            <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-6" style={{ background: "rgba(0,0,0,.28)", border: "1px solid rgba(255,255,255,.12)" }}><Lock className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.16em]">Secure payment. Webhook-proved credit.</span></div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">If the clip already has attention, Body Cinema gives it a money route.</h2>
+            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>Buy the kit, complete Stripe Checkout, and return to CreatorVault for the access path. This is the buyer page that should be used for VaultX Body Cinema outreach.</p>
+            <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center justify-center gap-2 rounded-2xl px-9 py-4 font-black"><CreditCard className="w-5 h-5" /> {vaultXOfferCheckout.isPending ? "Opening secure checkout..." : `Unlock Body Cinema — ${priceLabel}`}</button>
           </div>
         </section>
       </main>

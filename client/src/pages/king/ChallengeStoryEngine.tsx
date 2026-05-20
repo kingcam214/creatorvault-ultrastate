@@ -2,40 +2,45 @@ import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { Trophy, ChevronLeft, Zap, Send, RefreshCw, CheckCircle, CreditCard, ShieldCheck, Megaphone } from "lucide-react";
-
-const POST_TYPES = [
-  { key: "daily_update", label: "Daily Update", desc: "Current progress toward the live-payment goal", color: "#C9A84C" },
-  { key: "milestone", label: "Milestone Post", desc: "Celebrate a proved revenue movement", color: "#27AE60" },
-  { key: "countdown", label: "Countdown Trailer", desc: "Push urgency into the paid offer", color: "#E74C3C" },
-  { key: "torment_thread", label: "Torment Thread", desc: "Viral pressure and public accountability", color: "#9B59B6" },
-  { key: "victory", label: "Victory Trailer", desc: "Use only after live revenue proves the win", color: "#F39C12" },
-  { key: "recap", label: "Weekly Recap", desc: "Seven-day challenge proof summary", color: "#00D9FF" },
-];
+import { Trophy, ChevronLeft, Zap, RefreshCw, CheckCircle, CreditCard, ShieldCheck, Megaphone, Crown, BarChart2, Bot, Lock, ArrowRight, Flame } from "lucide-react";
 
 type OfferSlug = "agent-challenge-entry" | "vaultx-agent-revenue-pack" | "operator-proof-sprint";
 
-const OFFER_CARDS: Array<{ slug: OfferSlug; name: string; price: string; promise: string; cta: string }> = [
+const OFFER_CARDS: Array<{
+  slug: OfferSlug;
+  name: string;
+  price: string;
+  promise: string;
+  cta: string;
+  bestFor: string;
+  contents: string[];
+}> = [
   {
     slug: "agent-challenge-entry",
     name: "AI Agent Challenge Entry",
     price: "$29",
-    promise: "Join the challenge proof feed and unlock the entry-level revenue sprint.",
+    promise: "Enter the public revenue challenge and follow the live proof path from attention to paid action.",
     cta: "Enter Challenge",
+    bestFor: "Curious buyers who want the challenge access point and proof-feed context.",
+    contents: ["Challenge entry access", "Live proof-feed context", "Revenue sprint orientation"],
   },
   {
     slug: "vaultx-agent-revenue-pack",
     name: "VaultX Agent Revenue Pack",
     price: "$49",
-    promise: "Buy the VaultX challenge pack tied to agent drops, proof tracking, and today’s revenue push.",
+    promise: "Buy the VaultX-aligned pack built around agent drops, buyer routing, and today’s revenue push.",
     cta: "Buy Revenue Pack",
+    bestFor: "Creators and operators who want the VaultX offer tied directly to challenge momentum.",
+    contents: ["VaultX revenue offer context", "Agent-drop campaign angle", "Proof-based buyer routing"],
   },
   {
     slug: "operator-proof-sprint",
     name: "Operator Proof Sprint",
     price: "$97",
-    promise: "Premium sprint access for buyers who want the operator-grade challenge workflow and proof layer.",
+    promise: "Unlock the premium sprint for buyers who want the operator-grade challenge workflow and proof layer.",
     cta: "Start Proof Sprint",
+    bestFor: "Serious buyers who want the strongest challenge offer and premium proof positioning.",
+    contents: ["Premium challenge sprint", "Operator proof workflow", "Highest-intent revenue route"],
   },
 ];
 
@@ -52,9 +57,6 @@ function getQueryValue(key: string): string {
 
 export function ChallengeStoryEngine() {
   const { toast } = useToast();
-  const [postType, setPostType] = useState("daily_update");
-  const [channel, setChannel] = useState("");
-  const [generatedContent, setGeneratedContent] = useState<any>(null);
   const [selectedOffer, setSelectedOffer] = useState<OfferSlug>(getInitialOffer());
   const [buyerEmail, setBuyerEmail] = useState("");
 
@@ -64,20 +66,6 @@ export function ChallengeStoryEngine() {
 
   const { data: publicOfferState } = (trpc.challengeAutomation as any)?.getPublicChallengeOfferState?.useQuery?.() || { data: null };
   const challenge = publicOfferState?.challenge ?? null;
-  const { data: channels } = (trpc.telegramHub as any)?.getChannels?.useQuery?.() || { data: null };
-
-  const generate = (trpc.challengeAutomation as any)?.generateChallengePost?.useMutation?.({
-    onSuccess: (d: any) => {
-      setGeneratedContent(d);
-      toast({ title: "Challenge content generated" });
-    },
-    onError: (e: any) => toast({ title: "Generation failed", description: e.message, variant: "destructive" }),
-  }) || { mutate: () => {}, isPending: false };
-
-  const post = (trpc.telegramHub as any)?.broadcastMessage?.useMutation?.({
-    onSuccess: () => toast({ title: "Posted to Telegram" }),
-    onError: (e: any) => toast({ title: "Telegram post failed", description: e.message, variant: "destructive" }),
-  }) || { mutate: () => {}, isPending: false };
 
   const checkout = (trpc.challengeAutomation as any)?.createChallengeCheckout?.useMutation?.({
     onSuccess: (d: any) => {
@@ -108,135 +96,173 @@ export function ChallengeStoryEngine() {
     });
   };
 
+  const proofBlocks = [
+    {
+      icon: ShieldCheck,
+      title: "Live-payment proof only",
+      body: publicOfferState?.moneyTruth || "This page cannot add challenge revenue by itself. Only a live Stripe webhook with challenge metadata can move the challenge ledger.",
+    },
+    {
+      icon: Bot,
+      title: "Agent-led revenue push",
+      body: "The challenge is positioned around automated attention, direct offers, checkout routing, and public accountability instead of vague motivational posting.",
+    },
+    {
+      icon: BarChart2,
+      title: "Visible challenge ledger",
+      body: "The buyer sees the target, the current proven revenue, and the gap. That creates urgency without pretending money moved before Stripe confirms it.",
+    },
+  ];
+
+  const pathSteps = [
+    { label: "Choose", body: "Pick the entry, VaultX revenue pack, or premium proof sprint based on how close you want to get to the operator workflow." },
+    { label: "Pay", body: "Stripe handles the checkout. A successful return is not counted as revenue until the webhook proves the payment." },
+    { label: "Prove", body: "The challenge ledger and campaign story move only from confirmed money, giving the public challenge a real accountability spine." },
+  ];
+
   return (
-    <div style={{ minHeight: "100vh", background: "#080810", color: "white", fontFamily: "system-ui,sans-serif" }}>
-      <div style={{ borderBottom: "1px solid #1a1a2e", padding: "16px 24px", display: "flex", alignItems: "center", gap: 16, background: "#0a0a1a" }}>
-        <Link href="/king"><button style={{ background: "none", border: "1px solid #333", borderRadius: 8, padding: "6px 12px", color: "#888", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}><ChevronLeft size={14} /> King Hub</button></Link>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: "#C9A84C22", border: "1px solid #C9A84C44", display: "flex", alignItems: "center", justifyContent: "center" }}><Trophy size={16} color="#C9A84C" /></div>
-          <div><div style={{ fontSize: 16, fontWeight: 700 }}>AI Agent Challenge</div><div style={{ fontSize: 11, color: "#777" }}>Public offer, live-payment checkout, proof-based story engine</div></div>
-        </div>
-      </div>
+    <div className="min-h-screen text-white relative overflow-hidden" style={{ background: "#070707", fontFamily: "var(--kc-font-ui)" }}>
+      <style>{`
+        @keyframes acGlow{0%,100%{opacity:.48;transform:scale(1)}50%{opacity:.86;transform:scale(1.08)}}
+        .ac-shell{max-width:1180px;margin:0 auto;padding-left:20px;padding-right:20px}
+        .ac-glass{background:linear-gradient(180deg,rgba(20,20,20,.88),rgba(8,8,8,.78));border:1px solid rgba(201,168,76,.18);box-shadow:0 28px 90px rgba(0,0,0,.52);backdrop-filter:blur(18px)}
+        .ac-card{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);transition:transform .22s ease,border-color .22s ease,background .22s ease}.ac-card:hover{transform:translateY(-4px);border-color:rgba(201,168,76,.34);background:rgba(255,255,255,.065)}
+        .ac-gold{background:linear-gradient(135deg,#c9a84c,#f3d68b);-webkit-background-clip:text;background-clip:text;color:transparent}
+        .ac-btn{background:linear-gradient(135deg,#c9a84c,#f3d68b);color:#060606;box-shadow:0 20px 55px rgba(201,168,76,.28)}
+        .ac-btn:disabled{opacity:.55;cursor:not-allowed;filter:saturate(.4)}
+        .ac-input{width:100%;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12);border-radius:16px;color:white;padding:14px 15px;outline:none}.ac-input:focus{border-color:rgba(201,168,76,.55);box-shadow:0 0 0 4px rgba(201,168,76,.12)}
+      `}</style>
+      <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(circle at 18% 8%, rgba(201,168,76,.22), transparent 32%), radial-gradient(circle at 86% 20%, rgba(6,182,212,.13), transparent 30%), radial-gradient(circle at 45% 90%, rgba(245,158,11,.12), transparent 38%)" }} />
+      <div className="absolute inset-0 pointer-events-none opacity-[.05]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
 
-      {checkoutStatus === "success" && (
-        <div style={{ margin: "18px 24px 0", border: "1px solid #27AE6044", background: "#0D2A1B", borderRadius: 12, padding: 14, color: "#BFF5D2", display: "flex", gap: 10, alignItems: "center" }}>
-          <CheckCircle size={18} /> Stripe checkout returned success. Challenge revenue will show only after the live Stripe webhook proves the payment and credits the challenge ledger.
-        </div>
-      )}
-      {checkoutStatus === "cancelled" && (
-        <div style={{ margin: "18px 24px 0", border: "1px solid #E74C3C44", background: "#2A1010", borderRadius: 12, padding: 14, color: "#FFB8B8" }}>
-          Checkout was cancelled. No revenue was counted and no challenge credit was created.
-        </div>
-      )}
-
-      <div style={{ padding: 24, display: "grid", gridTemplateColumns: "380px 1fr", gap: 20 }}>
-        <div style={{ display: "grid", gap: 12 }}>
-          <div style={{ background: "linear-gradient(180deg,#151525,#0f0f1a)", border: "1px solid #C9A84C66", borderRadius: 16, padding: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#C9A84C", fontSize: 12, fontWeight: 900, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}><Megaphone size={14} /> Buyer Offer</div>
-            <div style={{ fontSize: 30, fontWeight: 950, lineHeight: 1.05, marginBottom: 8 }}>Join the AI Agent Challenge revenue sprint.</div>
-            <div style={{ fontSize: 13, color: "#B8B8C8", lineHeight: 1.6, marginBottom: 16 }}>This page is now the public acquisition destination. It can take traffic from Telegram drops, show the offer, start Stripe Checkout, and wait for the live webhook before counting revenue.</div>
-
-            <div style={{ display: "grid", gap: 8, marginBottom: 14 }}>
-              {OFFER_CARDS.map((offer) => (
-                <button key={offer.slug} onClick={() => setSelectedOffer(offer.slug)} style={{ padding: 12, borderRadius: 12, border: `1px solid ${selectedOffer === offer.slug ? "#C9A84C" : "#292944"}`, background: selectedOffer === offer.slug ? "#C9A84C18" : "#0a0a1a", color: "white", cursor: "pointer", textAlign: "left" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 4 }}><strong>{offer.name}</strong><span style={{ color: "#C9A84C", fontWeight: 900 }}>{offer.price}</span></div>
-                  <div style={{ color: "#888", fontSize: 12, lineHeight: 1.45 }}>{offer.promise}</div>
-                </button>
-              ))}
-            </div>
-
-            <input value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} placeholder="Buyer email for Stripe receipt, optional" style={{ width: "100%", padding: "12px 13px", borderRadius: 10, border: "1px solid #292944", background: "#080810", color: "white", marginBottom: 10 }} />
-            <button onClick={startCheckout} disabled={checkout.isPending} style={{ width: "100%", padding: "14px", borderRadius: 12, border: "none", background: checkout.isPending ? "#24243a" : "linear-gradient(135deg,#C9A84C,#F39C12)", color: checkout.isPending ? "#777" : "#080810", cursor: checkout.isPending ? "not-allowed" : "pointer", fontSize: 15, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              {checkout.isPending ? <><RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} /> Opening Stripe...</> : <><CreditCard size={16} /> {activeOffer.cta} via Stripe</>}
-            </button>
-
-            <div style={{ marginTop: 12, border: "1px solid #27AE6044", background: "#0B1D14", color: "#BFF5D2", borderRadius: 10, padding: 10, fontSize: 12, lineHeight: 1.5, display: "flex", gap: 8 }}>
-              <ShieldCheck size={16} /> {publicOfferState?.moneyTruth || "Money truth: this page cannot add challenge revenue by itself. Only a live Stripe webhook with challenge metadata can move the challenge ledger."}
-            </div>
+      <nav className="ac-shell relative z-10 flex items-center justify-between py-5 md:py-7">
+        <div className="flex items-center gap-3">
+          <Link href="/king"><button className="hidden sm:inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold border border-white/10 text-white/65 hover:text-white hover:bg-white/5"><ChevronLeft size={15} /> King Hub</button></Link>
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center kc-animate-pulse-gold" style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)" }}><Trophy className="w-5 h-5 text-black" /></div>
+          <div>
+            <div className="font-black text-xl tracking-tight">AI Agent Challenge</div>
+            <div className="text-[10px] uppercase tracking-[.25em] font-black" style={{ color: "#c9a84c" }}>Public revenue sprint</div>
           </div>
+        </div>
+        <button onClick={startCheckout} disabled={checkout.isPending} className="ac-btn inline-flex items-center gap-2 px-4 md:px-6 py-3 rounded-2xl text-sm font-black">
+          {checkout.isPending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />} {checkout.isPending ? "Opening..." : activeOffer.price}
+        </button>
+      </nav>
 
-          {challenge && (
-            <div style={{ background: "#0f0f1a", border: "1px solid #C9A84C44", borderRadius: 12, padding: 16 }}>
-              <div style={{ fontSize: 12, color: "#C9A84C", fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1px" }}>Live Challenge Ledger</div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: "white" }}>${currentRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-              <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>of ${targetRevenue.toLocaleString()} goal. This number is live-payment proof only.</div>
-              <div style={{ height: 6, background: "#1a1a2e", borderRadius: 3, marginBottom: 6 }}>
-                <div style={{ height: "100%", width: `${Math.min(progress, 100)}%`, background: "linear-gradient(90deg,#C9A84C,#F39C12)", borderRadius: 3, transition: "width 0.5s ease" }} />
+      <main className="relative z-10">
+        {checkoutStatus === "success" && (
+          <section className="ac-shell pt-2">
+            <div className="rounded-2xl p-4 border flex gap-3 items-start" style={{ background: "rgba(16,185,129,.11)", borderColor: "rgba(16,185,129,.28)", color: "#bbf7d0" }}>
+              <CheckCircle size={20} /> <div><strong>Stripe checkout returned success.</strong> Challenge revenue will show only after the live Stripe webhook proves the payment and credits the challenge ledger.</div>
+            </div>
+          </section>
+        )}
+        {checkoutStatus === "cancelled" && (
+          <section className="ac-shell pt-2">
+            <div className="rounded-2xl p-4 border" style={{ background: "rgba(239,68,68,.11)", borderColor: "rgba(239,68,68,.28)", color: "#fecaca" }}>Checkout was cancelled. No revenue was counted and no challenge credit was created.</div>
+          </section>
+        )}
+
+        <section className="ac-shell pt-8 md:pt-14 pb-16 md:pb-24">
+          <div className="grid lg:grid-cols-[.95fr_1.05fr] gap-10 lg:gap-14 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-6" style={{ background: "rgba(201,168,76,.12)", border: "1px solid rgba(201,168,76,.28)", color: "#f3d68b" }}>
+                <Megaphone className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.18em]">Live public offer · real Stripe checkout</span>
               </div>
-              <div style={{ fontSize: 11, color: "#666" }}>{progress.toFixed(1)}% complete</div>
+              <h1 className="font-black leading-[.9] tracking-[-.055em] mb-6" style={{ fontSize: "clamp(3rem, 8vw, 7rem)" }}>
+                Watch the agents turn pressure into paid proof.
+              </h1>
+              <p className="text-lg md:text-2xl leading-8 md:leading-10 max-w-2xl mb-8" style={{ color: "#d8d8d3" }}>
+                The <strong>AI Agent Challenge</strong> is a public revenue sprint where every buyer enters through a real offer, every checkout routes through Stripe, and every dollar on the board has to be proven by the live payment webhook.
+              </p>
+              <div className="grid sm:grid-cols-3 gap-3 max-w-2xl mb-8">
+                <div className="ac-card rounded-2xl p-4"><div className="text-2xl font-black ac-gold">${currentRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div><div className="text-xs text-white/55 mt-1">proven revenue</div></div>
+                <div className="ac-card rounded-2xl p-4"><div className="text-2xl font-black ac-gold">${targetRevenue.toLocaleString()}</div><div className="text-xs text-white/55 mt-1">challenge target</div></div>
+                <div className="ac-card rounded-2xl p-4"><div className="text-2xl font-black ac-gold">{Math.min(progress, 100).toFixed(1)}%</div><div className="text-xs text-white/55 mt-1">complete</div></div>
+              </div>
+              <div className="h-2 rounded-full mb-8" style={{ background: "rgba(255,255,255,.08)" }}>
+                <div className="h-full rounded-full" style={{ width: `${Math.min(progress, 100)}%`, background: "linear-gradient(90deg,#c9a84c,#f3d68b)", transition: "width .5s ease" }} />
+              </div>
             </div>
-          )}
 
-          <div style={{ background: "#0f0f1a", border: "1px solid #1a1a2e", borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 11, color: "#666", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 10 }}>Operator Post Type</div>
-            <div style={{ display: "grid", gap: 6 }}>
-              {POST_TYPES.map((t) => (
-                <button key={t.key} onClick={() => setPostType(t.key)} style={{ padding: "10px 12px", borderRadius: 8, border: `1px solid ${postType === t.key ? t.color : "#1a1a2e"}`, background: postType === t.key ? `${t.color}15` : "#0a0a1a", cursor: "pointer", textAlign: "left" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: postType === t.key ? t.color : "#aaa" }}>{t.label}</div>
-                  <div style={{ fontSize: 11, color: "#555" }}>{t.desc}</div>
+            <div className="ac-glass rounded-[2rem] p-5 md:p-7 relative">
+              <div className="absolute -inset-6 rounded-full blur-3xl opacity-40" style={{ background: "radial-gradient(circle, rgba(201,168,76,.3), transparent 64%)", animation: "acGlow 4s ease-in-out infinite" }} />
+              <div className="relative">
+                <div className="flex items-start justify-between gap-4 mb-5">
+                  <div>
+                    <div className="text-xs font-black uppercase tracking-[.2em] mb-2" style={{ color: "#c9a84c" }}>Selected offer</div>
+                    <h2 className="text-3xl md:text-4xl font-black leading-none">{activeOffer.name}</h2>
+                  </div>
+                  <div className="text-3xl font-black ac-gold whitespace-nowrap">{activeOffer.price}</div>
+                </div>
+                <p className="text-base leading-7 mb-5" style={{ color: "#d8d8d3" }}>{activeOffer.promise}</p>
+                <p className="text-sm leading-6 mb-5" style={{ color: "#999" }}>{activeOffer.bestFor}</p>
+                <div className="grid gap-2 mb-6">
+                  {activeOffer.contents.map((item) => (
+                    <div key={item} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: "rgba(255,255,255,.045)", border: "1px solid rgba(255,255,255,.08)" }}><CheckCircle className="w-4 h-4" style={{ color: "#10b981" }} /><span className="text-sm font-semibold text-white/85">{item}</span></div>
+                  ))}
+                </div>
+                <div className="grid gap-2 mb-5">
+                  {OFFER_CARDS.map((offer) => (
+                    <button key={offer.slug} onClick={() => setSelectedOffer(offer.slug)} className="rounded-2xl p-4 text-left transition-all" style={{ border: `1px solid ${selectedOffer === offer.slug ? "rgba(201,168,76,.65)" : "rgba(255,255,255,.1)"}`, background: selectedOffer === offer.slug ? "rgba(201,168,76,.12)" : "rgba(0,0,0,.22)" }}>
+                      <div className="flex items-center justify-between gap-4"><strong>{offer.name}</strong><span className="font-black" style={{ color: "#f3d68b" }}>{offer.price}</span></div>
+                    </button>
+                  ))}
+                </div>
+                <input value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} placeholder="Buyer email for Stripe receipt, optional" className="ac-input mb-3" />
+                <button onClick={startCheckout} disabled={checkout.isPending} className="ac-btn w-full rounded-2xl py-4 font-black flex items-center justify-center gap-2">
+                  {checkout.isPending ? <><RefreshCw className="w-5 h-5 animate-spin" /> Opening Stripe...</> : <><CreditCard className="w-5 h-5" /> {activeOffer.cta} via Stripe</>}
                 </button>
+                <div className="mt-4 rounded-2xl p-4 flex gap-3 items-start" style={{ background: "rgba(16,185,129,.1)", border: "1px solid rgba(16,185,129,.24)", color: "#bbf7d0" }}>
+                  <Lock className="w-5 h-5 flex-shrink-0" />
+                  <p className="text-sm leading-6 m-0">Revenue is credited only after Stripe confirms payment through the live webhook. This keeps the challenge honest and buyer-facing.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="ac-shell pb-16 md:pb-24">
+          <div className="grid lg:grid-cols-3 gap-4">
+            {proofBlocks.map(({ icon: Icon, title, body }) => (
+              <div key={title} className="ac-card rounded-[1.7rem] p-6">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5" style={{ background: "rgba(201,168,76,.14)", border: "1px solid rgba(201,168,76,.25)", color: "#f3d68b" }}><Icon className="w-6 h-6" /></div>
+                <h3 className="text-2xl font-black mb-3">{title}</h3>
+                <p className="text-sm leading-7" style={{ color: "#aaa" }}>{body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="ac-shell pb-16 md:pb-24">
+          <div className="ac-glass rounded-[2rem] p-6 md:p-10 grid lg:grid-cols-[.75fr_1.25fr] gap-8 items-start">
+            <div>
+              <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#c9a84c" }}>Challenge mechanics</div>
+              <h2 className="text-4xl md:text-5xl font-black tracking-[-.04em] leading-none mb-5">The story is simple: choose, pay, prove.</h2>
+              <p className="text-base leading-8" style={{ color: "#b8b8b8" }}>The public page now sells the offer first and uses the ledger as credibility. It no longer looks like an internal posting tool; it looks like a live revenue challenge with a checkout path.</p>
+            </div>
+            <div className="grid gap-3">
+              {pathSteps.map((step, index) => (
+                <div key={step.label} className="rounded-3xl p-5 flex gap-4" style={{ background: "rgba(0,0,0,.32)", border: "1px solid rgba(255,255,255,.08)" }}>
+                  <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center font-black" style={{ background: "rgba(201,168,76,.16)", color: "#f3d68b" }}>{index + 1}</div>
+                  <div><h3 className="text-xl font-black mb-1">{step.label}</h3><p className="text-sm leading-7" style={{ color: "#aaa" }}>{step.body}</p></div>
+                </div>
               ))}
             </div>
           </div>
+        </section>
 
-          {(channels as any)?.channels?.length > 0 && (
-            <div style={{ background: "#0f0f1a", border: "1px solid #1a1a2e", borderRadius: 12, padding: 16 }}>
-              <div style={{ fontSize: 11, color: "#666", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 8 }}>Target Channel</div>
-              <select value={channel} onChange={(e) => setChannel(e.target.value)} style={{ width: "100%", padding: "8px 10px", background: "#0a0a1a", border: "1px solid #1a1a2e", borderRadius: 8, color: "white", fontSize: 13, outline: "none" }}>
-                <option value="">All channels</option>
-                {(channels as any)?.channels?.map((c: any) => <option key={c.id} value={c.chat_id}>{c.name || c.chat_id}</option>)}
-              </select>
-            </div>
-          )}
-
-          <button onClick={() => generate.mutate({ postType, challengeData: challenge })} disabled={generate.isPending} style={{ padding: "14px", borderRadius: 10, border: "none", background: generate.isPending ? "#1a1a2e" : "linear-gradient(135deg,#C9A84C,#F39C12)", color: generate.isPending ? "#555" : "#000", cursor: generate.isPending ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            {generate.isPending ? <><RefreshCw size={15} style={{ animation: "spin 1s linear infinite" }} /> Generating...</> : <><Zap size={15} /> Generate Challenge Content</>}
-          </button>
-        </div>
-
-        <div>
-          {!generatedContent ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", color: "#555", minHeight: 520, border: "1px dashed #292944", borderRadius: 18, background: "#0A0A14" }}>
-              <Trophy size={48} style={{ marginBottom: 16 }} />
-              <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, color: "#DDD" }}>Buyer path and operator content are on the same page.</div>
-              <div style={{ fontSize: 13, maxWidth: 520, textAlign: "center", lineHeight: 1.6 }}>Traffic can land here, select a paid challenge offer, start Stripe Checkout, and the operator can generate proof-based challenge content from the live ledger.</div>
-            </div>
-          ) : (
-            <div style={{ display: "grid", gap: 16 }}>
-              {generatedContent.text && (
-                <div style={{ background: "#0f0f1a", border: "1px solid #1a1a2e", borderRadius: 12, padding: 20 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: "#C9A84C", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    Generated Challenge Post
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => { navigator.clipboard.writeText(generatedContent.text); toast({ title: "Copied" }); }} style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid #333", background: "none", color: "#888", cursor: "pointer", fontSize: 12 }}>Copy</button>
-                      <button onClick={() => post.mutate({ message: generatedContent.text, channelIds: [(channel || undefined) ?? ""] })} disabled={post.isPending} style={{ padding: "5px 12px", borderRadius: 6, border: "none", background: "#00D9FF", color: "#000", cursor: post.isPending ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                        {post.isPending ? <RefreshCw size={12} style={{ animation: "spin 1s linear infinite" }} /> : <Send size={12} />} Post to Telegram
-                      </button>
-                    </div>
-                  </div>
-                  <pre style={{ color: "#e0e0e0", fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap", fontFamily: "inherit", margin: 0 }}>{generatedContent.text}</pre>
-                </div>
-              )}
-              {generatedContent.hashtags?.length > 0 && (
-                <div style={{ background: "#0f0f1a", border: "1px solid #1a1a2e", borderRadius: 12, padding: 16 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "#888" }}>Hashtags</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{generatedContent.hashtags.map((h: string, i: number) => <span key={i} style={{ padding: "4px 10px", borderRadius: 20, background: "#C9A84C20", color: "#C9A84C", fontSize: 12 }}>#{h.replace("#", "")}</span>)}</div>
-                </div>
-              )}
-              {generatedContent.videoScript && (
-                <div style={{ background: "#0f0f1a", border: "1px solid #1a1a2e", borderRadius: 12, padding: 16 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "#888", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    Video Script
-                    <Link href="/king/engine"><button style={{ padding: "5px 12px", borderRadius: 6, border: "none", background: "#C9A84C", color: "#000", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Open in Engine</button></Link>
-                  </div>
-                  <pre style={{ color: "#e0e0e0", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: "inherit", margin: 0 }}>{generatedContent.videoScript}</pre>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}*{box-sizing:border-box}`}</style>
+        <section className="px-5 pb-20 md:pb-28">
+          <div className="max-w-5xl mx-auto text-center rounded-[2rem] p-7 md:p-12" style={{ background: "linear-gradient(135deg,rgba(201,168,76,.22),rgba(6,182,212,.10),rgba(245,158,11,.10))", border: "1px solid rgba(201,168,76,.25)" }}>
+            <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-6" style={{ background: "rgba(0,0,0,.28)", border: "1px solid rgba(255,255,255,.12)" }}><Flame className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.16em]">Public offer destination</span></div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">Pick the offer and enter the live-money sprint.</h2>
+            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>This page is ready for Telegram drops, buyer DMs, and challenge traffic because the offer is visible, the price is clear, and Stripe is the only path that can move revenue.</p>
+            <button onClick={startCheckout} disabled={checkout.isPending} className="ac-btn inline-flex items-center justify-center gap-2 rounded-2xl px-9 py-4 font-black">
+              {checkout.isPending ? <><RefreshCw className="w-5 h-5 animate-spin" /> Opening secure checkout...</> : <>{activeOffer.cta} <ArrowRight className="w-5 h-5" /></>}
+            </button>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
