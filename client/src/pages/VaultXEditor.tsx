@@ -1290,6 +1290,22 @@ export default function VaultXEditor() {
           ? (complianceMode === "platform_safe" ? "Use blur/crop/censor tools before exporting public teaser cuts." : "Create a public teaser plus a subscriber or VIP unlock version, not one generic file.")
           : `Package ${selectedOutputLabels.join(" · ") || "master · teaser · cover · copy"} with watermark ${watermarkIdentity || "set before export"}.`,
   }));
+  const generatedFocusClipCount = bodyCinemaRegions.filter(region => Boolean(focusClips[region])).length;
+  const bodyCinemaRealRenderUrl = bodyCinemaPlan?.renderedOutputUrl || bodyCinemaPlan?.finalVideoUrl || bodyCinemaPlan?.renderedVideoUrl || null;
+  const bodyCinemaReadinessItems = [
+    { label: "Source asset", ready: Boolean(sourceUrl || variations[selectedVariation]?.url), detail: "Upload or enhancement file exists." },
+    { label: "Body map", ready: Boolean(bodyMap), detail: "Scan has identified the usable visual regions." },
+    { label: "Reveal shot", ready: Boolean(revealShotUrl), detail: "Provider-generated reveal clip exists." },
+    { label: "Focus clips", ready: generatedFocusClipCount > 0, detail: `${generatedFocusClipCount}/${bodyCinemaRegions.length} selected regions have generated clips.` },
+    { label: "Captions", ready: Boolean(captions), detail: "Teaser, subscriber, PPV, and message copy exists." },
+    { label: "Export plan", ready: bodyCinemaPlatforms.length > 0 && ppvPrice >= 3, detail: `${bodyCinemaPlatforms.length} destinations selected at $${ppvPrice}.` },
+    { label: "Final render", ready: Boolean(bodyCinemaRealRenderUrl), detail: bodyCinemaRealRenderUrl ? "A rendered Body Cinema video URL exists." : "Only a production plan exists until Remotion/queue rendering is wired." },
+  ];
+  const bodyCinemaReadyCount = bodyCinemaReadinessItems.filter(item => item.ready).length;
+  const bodyCinemaReadinessScore = Math.round((bodyCinemaReadyCount / bodyCinemaReadinessItems.length) * 100);
+  const BodyCinemaStatusIcon = bodyCinemaRealRenderUrl ? CheckCircle : bodyCinemaPlan ? AlertTriangle : Info;
+  const bodyCinemaStatusLabel = bodyCinemaRealRenderUrl ? "RENDER READY" : bodyCinemaPlan ? "PLAN ONLY" : "NOT READY";
+  const bodyCinemaStatusColor = bodyCinemaRealRenderUrl ? "#10B981" : bodyCinemaPlan ? "#F59E0B" : "#6B7280";
 
   const applyProductionPreset = useCallback((presetId: string) => {
     const preset = PRODUCTION_PRESETS.find(p => p.id === presetId) ?? PRODUCTION_PRESETS[0];
@@ -1437,16 +1453,20 @@ export default function VaultXEditor() {
       });
       setBodyCinemaPlan(result.productionPlan);
       await utils.vaultx.getBodyCinemaCollections.invalidate();
-      toast.success("Body Cinema Collection packaged for sale");
+      toast.success("Body Cinema production plan saved. Final render is still required before calling it a finished video.");
     } catch (e: any) { toast.error("Body Cinema packaging failed: " + e.message); }
   }, [sourceUrl, variations, selectedVariation, ensureProject, createBodyCinemaCollectionMut, bodyCinemaName, bodyCinemaRegions, bodyCinemaStyle, bodyCinemaPlatforms, ppvPrice, utils]);
 
-  const handlePublishBodyCinemaCollection = useCallback(async (collectionId: string, collectionName: string) => {
+  const handlePublishBodyCinemaCollection = useCallback(async (collectionId: string, collectionName: string, hasRenderedOutput = false) => {
+    if (!hasRenderedOutput) {
+      toast.error("This Body Cinema collection is still a production plan. Render a final video before publishing it as a finished drop.");
+      return;
+    }
     try {
       const result = await publishBodyCinemaCollectionMut.mutateAsync({
         collectionId,
         title: collectionName,
-        description: "Body Cinema Collection produced in VaultX Editor with reveal, focus clips, platform exports, and PPV monetization.",
+        description: "Body Cinema final render produced in VaultX Editor with reveal, focus clips, platform exports, and PPV monetization.",
         accessTier: "ppv",
       });
       await utils.vaultx.getBodyCinemaCollections.invalidate();
@@ -1947,11 +1967,33 @@ export default function VaultXEditor() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-[9px] font-black tracking-widest" style={{ color: "#C9A84C" }}>BODY CINEMA COLLECTION</p>
-                      <p className="text-[8px] mt-1" style={{ color: "#6B7280" }}>Package the reveal, focus clips, captions, PPV price, and export plan into one sellable VaultX drop.</p>
+                      <p className="text-[8px] mt-1" style={{ color: "#6B7280" }}>Create the Body Cinema production plan, then render and publish only when a real final video exists.</p>
                     </div>
                     <div className="flex items-center gap-1 px-2 py-1 rounded-xl" style={{ background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.25)" }}>
-                      <Clapperboard size={10} style={{ color: "#C9A84C" }} />
-                      <span className="text-[8px] font-black" style={{ color: "#C9A84C" }}>REVENUE READY</span>
+                      <BodyCinemaStatusIcon size={10} style={{ color: bodyCinemaStatusColor }} />
+                      <span className="text-[8px] font-black" style={{ color: bodyCinemaStatusColor }}>{bodyCinemaStatusLabel}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: `1px solid ${bodyCinemaRealRenderUrl ? "rgba(16,185,129,0.22)" : "rgba(245,158,11,0.2)"}` }}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <BodyCinemaStatusIcon size={12} style={{ color: bodyCinemaStatusColor }} />
+                        <span className="text-[8px] font-black tracking-widest" style={{ color: bodyCinemaStatusColor }}>READINESS {bodyCinemaReadinessScore}%</span>
+                      </div>
+                      <span className="text-[8px] font-bold" style={{ color: "#6B7280" }}>{bodyCinemaReadyCount}/{bodyCinemaReadinessItems.length} real requirements met</span>
+                    </div>
+                    <p className="text-[8px] leading-relaxed" style={{ color: "#9CA3AF" }}>{bodyCinemaRealRenderUrl ? "This package has a real rendered output and can be published as a finished Body Cinema asset." : "This is not a finished video yet. VaultX can save the shot/export plan now, but publishing as a finished drop stays locked until a real render URL exists."}</p>
+                    <div className="grid grid-cols-2 gap-1">
+                      {bodyCinemaReadinessItems.map(item => (
+                        <div key={item.label} className="flex items-start gap-1.5 rounded-lg px-2 py-1" style={{ background: item.ready ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.025)", border: `1px solid ${item.ready ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.06)"}` }}>
+                          {item.ready ? <CheckCircle size={9} style={{ color: "#10B981", marginTop: 1 }} /> : <Clock size={9} style={{ color: "#6B7280", marginTop: 1 }} />}
+                          <div className="min-w-0">
+                            <p className="text-[7px] font-black" style={{ color: item.ready ? "#10B981" : "#6B7280" }}>{item.label.toUpperCase()}</p>
+                            <p className="text-[7px] leading-tight" style={{ color: "#6B7280" }}>{item.detail}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -1999,7 +2041,7 @@ export default function VaultXEditor() {
                   <button onClick={handleCreateBodyCinemaCollection} disabled={!sourceUrl || isAnyProcessing}
                     className="w-full py-2 rounded-xl text-[9px] font-black flex items-center justify-center gap-2"
                     style={{ background: (!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.04)" : "linear-gradient(135deg, rgba(201,168,76,0.32), rgba(236,72,153,0.24))", color: (!sourceUrl || isAnyProcessing) ? "#374151" : "#F7E7B4", border: `1px solid ${(!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.06)" : "rgba(201,168,76,0.35)"}` }}>
-                    {createBodyCinemaCollectionMut.isPending ? <><Loader2 size={10} className="animate-spin" />PACKAGING...</> : <><Crown size={10} />CREATE BODY CINEMA COLLECTION</>}
+                    {createBodyCinemaCollectionMut.isPending ? <><Loader2 size={10} className="animate-spin" />SAVING PLAN...</> : <><Crown size={10} />CREATE PRODUCTION PLAN</>}
                   </button>
 
                   {bodyCinemaPlan && (
@@ -2013,12 +2055,17 @@ export default function VaultXEditor() {
                   {(bodyCinemaCollectionsQ.data?.collections?.length ?? 0) > 0 && (
                     <div className="flex flex-col gap-2">
                       <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>RECENT COLLECTIONS</span>
-                      {bodyCinemaCollectionsQ.data?.collections?.slice(0, 3).map((collection: any) => (
-                        <div key={collection.id} className="flex items-center justify-between gap-2 p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                          <div className="min-w-0"><p className="text-[9px] font-black truncate" style={{ color: "#FFFFFF" }}>{collection.collection_name}</p><p className="text-[8px]" style={{ color: "#6B7280" }}>{collection.cinematic_style} · ${Number(collection.ppv_price_cents || 0) / 100} · {collection.status}</p></div>
-                          <button onClick={() => handlePublishBodyCinemaCollection(collection.id, collection.collection_name)} disabled={collection.status === "published" || isAnyProcessing} className="px-3 py-1 rounded-lg text-[8px] font-black" style={{ background: collection.status === "published" ? "rgba(16,185,129,0.12)" : "rgba(16,185,129,0.18)", color: collection.status === "published" ? "#10B981" : "#FFFFFF", border: "1px solid rgba(16,185,129,0.28)" }}>{collection.status === "published" ? "LIVE" : "PUBLISH"}</button>
-                        </div>
-                      ))}
+                      {bodyCinemaCollectionsQ.data?.collections?.slice(0, 3).map((collection: any) => {
+                        const plan = collection.production_plan || {};
+                        const renderedUrl = plan.renderedOutputUrl || plan.finalVideoUrl || plan.renderedVideoUrl || collection.rendered_output_url || null;
+                        const canPublishFinished = Boolean(renderedUrl);
+                        return (
+                          <div key={collection.id} className="flex items-center justify-between gap-2 p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                            <div className="min-w-0"><p className="text-[9px] font-black truncate" style={{ color: "#FFFFFF" }}>{collection.collection_name}</p><p className="text-[8px]" style={{ color: "#6B7280" }}>{collection.cinematic_style} · ${Number(collection.ppv_price_cents || 0) / 100} · {collection.status} · {canPublishFinished ? "final render" : "plan only"}</p></div>
+                            <button onClick={() => handlePublishBodyCinemaCollection(collection.id, collection.collection_name, canPublishFinished)} disabled={collection.status === "published" || isAnyProcessing || !canPublishFinished} className="px-3 py-1 rounded-lg text-[8px] font-black" style={{ background: collection.status === "published" ? "rgba(16,185,129,0.12)" : canPublishFinished ? "rgba(16,185,129,0.18)" : "rgba(245,158,11,0.1)", color: collection.status === "published" ? "#10B981" : canPublishFinished ? "#FFFFFF" : "#F59E0B", border: `1px solid ${canPublishFinished ? "rgba(16,185,129,0.28)" : "rgba(245,158,11,0.25)"}` }}>{collection.status === "published" ? "LIVE" : canPublishFinished ? "PUBLISH" : "NEEDS RENDER"}</button>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

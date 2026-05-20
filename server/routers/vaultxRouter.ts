@@ -3809,13 +3809,14 @@ Generate body-focused captions and return ONLY valid JSON:
       if (!rows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Body Cinema Collection not found" });
       const collection = rows[0];
       const plan = collection.production_plan ? JSON.parse(collection.production_plan) : {};
-      const contentUrl = plan.heroAsset || collection.hero_asset_url || collection.source_asset_url;
-      if (!contentUrl) throw new TRPCError({ code: "BAD_REQUEST", message: "Collection has no publishable asset URL" });
+      const contentUrl = plan.renderedOutputUrl || plan.finalVideoUrl || plan.renderedVideoUrl || collection.rendered_output_url;
+      if (!contentUrl) throw new TRPCError({ code: "BAD_REQUEST", message: "This Body Cinema collection is a production plan only. Render a final video before publishing it as finished content." });
+      const thumbnailUrl = plan.heroAsset || collection.hero_asset_url || collection.source_asset_url || contentUrl;
       const creatorId = await getCreatorId(ctx.user.id);
       const result = await rawExec(
         `INSERT INTO vaultx_content (creator_id, title, description, content_url, thumbnail_url, content_type, access_tier, ppv_price, tags, status, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, 'video', ?, ?, ?, 'active', NOW(), NOW())`,
-        [creatorId || ctx.user.id, input.title || collection.collection_name, input.description || "Body Cinema Collection produced in VaultX Editor.", contentUrl, contentUrl, input.accessTier, collection.ppv_price_cents ? collection.ppv_price_cents / 100 : null, JSON.stringify(["body-cinema", collection.cinematic_style])]
+        [creatorId || ctx.user.id, input.title || collection.collection_name, input.description || "Body Cinema final render produced in VaultX Editor.", contentUrl, thumbnailUrl, input.accessTier, collection.ppv_price_cents ? collection.ppv_price_cents / 100 : null, JSON.stringify(["body-cinema", collection.cinematic_style])]
       );
       await rawExec(
         "UPDATE vaultx_body_cinema_collections SET status = 'published', published_content_id = ?, updated_at = NOW() WHERE id = ? AND creator_id = ?",
