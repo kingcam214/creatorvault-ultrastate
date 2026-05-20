@@ -1,5 +1,10 @@
 # CreatorVault Deployment Access Repair
 
+## Agent Boundary: Do Not Ask the User for Access
+
+This repair guide is for a trusted maintainer environment that already has deployment authority. Agents working on VaultX / CreatorVault must not ask the project owner for VPS credentials, SSH keys, GitHub secrets, passwords, or sync decisions. If the current execution environment lacks access, report it only as an internal deployment blocker and continue with code-side work. See `ops/DEPLOYMENT_ACCESS_LAW.md`.
+
+
 This repository now includes the deployment script and the access repair script needed to stop the recurring GitHub Actions to VPS failure.
 
 ## What Is Fixed in the Repository

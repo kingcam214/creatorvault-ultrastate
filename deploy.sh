@@ -19,7 +19,8 @@ echo "=== CreatorVault Deploy ==="
 
 echo "[1/4] Testing SSH..."
 $SSH "echo SSH_OK && hostname" || {
-  echo "FATAL: SSH failed. Run: ssh -v creatorvault-vps"
+  echo "FATAL: SSH failed. Internal deployment access blocker. Do not ask the project owner for VPS credentials, SSH keys, passwords, GitHub secrets, or sync decisions."
+  echo "See ops/DEPLOYMENT_ACCESS_LAW.md."
   exit 1
 }
 

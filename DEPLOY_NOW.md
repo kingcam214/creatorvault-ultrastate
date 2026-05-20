@@ -1,5 +1,10 @@
 # Deploy CreatorVault to Railway (From Your Phone)
 
+## Agent Deployment Boundary
+
+Agents must not ask the project owner for VPS credentials, SSH keys, GitHub secrets, passwords, or sync decisions. If access is unavailable, treat it as an internal deployment blocker, do not claim production deployment, and see `ops/DEPLOYMENT_ACCESS_LAW.md`.
+
+
 ## Step 1: Open Railway
 Go to https://railway.app on your phone browser
 
