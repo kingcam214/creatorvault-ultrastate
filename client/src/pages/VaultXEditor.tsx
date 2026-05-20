@@ -1292,6 +1292,8 @@ export default function VaultXEditor() {
   }));
   const generatedFocusClipCount = bodyCinemaRegions.filter(region => Boolean(focusClips[region])).length;
   const bodyCinemaRealRenderUrl = bodyCinemaPlan?.renderedOutputUrl || bodyCinemaPlan?.finalVideoUrl || bodyCinemaPlan?.renderedVideoUrl || null;
+  const bodyCinemaTeaserUrl = bodyCinemaPlan?.teaserUrl || bodyCinemaPlan?.platformExports?.find?.((item: any) => item?.url && String(item.platform || "").includes("telegram"))?.url || null;
+  const bodyCinemaThumbnailUrl = bodyCinemaPlan?.thumbnailUrl || bodyCinemaPlan?.heroAsset || null;
   const bodyCinemaReadinessItems = [
     { label: "Source asset", ready: Boolean(sourceUrl || variations[selectedVariation]?.url), detail: "Upload or enhancement file exists." },
     { label: "Body map", ready: Boolean(bodyMap), detail: "Scan has identified the usable visual regions." },
@@ -1299,7 +1301,7 @@ export default function VaultXEditor() {
     { label: "Focus clips", ready: generatedFocusClipCount > 0, detail: `${generatedFocusClipCount}/${bodyCinemaRegions.length} selected regions have generated clips.` },
     { label: "Captions", ready: Boolean(captions), detail: "Teaser, subscriber, PPV, and message copy exists." },
     { label: "Export plan", ready: bodyCinemaPlatforms.length > 0 && ppvPrice >= 3, detail: `${bodyCinemaPlatforms.length} destinations selected at $${ppvPrice}.` },
-    { label: "Final render", ready: Boolean(bodyCinemaRealRenderUrl), detail: bodyCinemaRealRenderUrl ? "A rendered Body Cinema video URL exists." : "Only a production plan exists until Remotion/queue rendering is wired." },
+    { label: "Final render", ready: Boolean(bodyCinemaRealRenderUrl), detail: bodyCinemaRealRenderUrl ? "FFmpeg produced a downloadable master video, teaser, and thumbnail." : "Create the collection to render real FFmpeg output." },
   ];
   const bodyCinemaReadyCount = bodyCinemaReadinessItems.filter(item => item.ready).length;
   const bodyCinemaReadinessScore = Math.round((bodyCinemaReadyCount / bodyCinemaReadinessItems.length) * 100);
@@ -1452,8 +1454,11 @@ export default function VaultXEditor() {
         ppvPriceCents: Math.round(ppvPrice * 100),
       });
       setBodyCinemaPlan(result.productionPlan);
+      if (result.productionPlan?.renderedOutputUrl || result.productionPlan?.finalVideoUrl) {
+        setEditorClips(prev => [{ id: Date.now().toString(), src: result.productionPlan.renderedOutputUrl || result.productionPlan.finalVideoUrl, assetUrl: result.productionPlan.renderedOutputUrl || result.productionPlan.finalVideoUrl, fileUrl: result.productionPlan.renderedOutputUrl || result.productionPlan.finalVideoUrl, duration: result.productionPlan.renderMeta?.durationSeconds || result.productionPlan.remotionComposition?.totalDuration || 24, type: "video", name: `${bodyCinemaName || "Body Cinema"} master render` }, ...prev]);
+      }
       await utils.vaultx.getBodyCinemaCollections.invalidate();
-      toast.success("Body Cinema production plan saved. Final render is still required before calling it a finished video.");
+      toast.success("Body Cinema rendered: master video, teaser, thumbnail, and platform outputs are ready.");
     } catch (e: any) { toast.error("Body Cinema packaging failed: " + e.message); }
   }, [sourceUrl, variations, selectedVariation, ensureProject, createBodyCinemaCollectionMut, bodyCinemaName, bodyCinemaRegions, bodyCinemaStyle, bodyCinemaPlatforms, ppvPrice, utils]);
 
@@ -1967,7 +1972,7 @@ export default function VaultXEditor() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-[9px] font-black tracking-widest" style={{ color: "#C9A84C" }}>BODY CINEMA COLLECTION</p>
-                      <p className="text-[8px] mt-1" style={{ color: "#6B7280" }}>Create the Body Cinema production plan, then render and publish only when a real final video exists.</p>
+                      <p className="text-[8px] mt-1" style={{ color: "#6B7280" }}>Create a real FFmpeg-rendered Body Cinema master, teaser, thumbnail, and platform export package from the uploaded asset.</p>
                     </div>
                     <div className="flex items-center gap-1 px-2 py-1 rounded-xl" style={{ background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.25)" }}>
                       <BodyCinemaStatusIcon size={10} style={{ color: bodyCinemaStatusColor }} />
@@ -1983,7 +1988,7 @@ export default function VaultXEditor() {
                       </div>
                       <span className="text-[8px] font-bold" style={{ color: "#6B7280" }}>{bodyCinemaReadyCount}/{bodyCinemaReadinessItems.length} real requirements met</span>
                     </div>
-                    <p className="text-[8px] leading-relaxed" style={{ color: "#9CA3AF" }}>{bodyCinemaRealRenderUrl ? "This package has a real rendered output and can be published as a finished Body Cinema asset." : "This is not a finished video yet. VaultX can save the shot/export plan now, but publishing as a finished drop stays locked until a real render URL exists."}</p>
+                    <p className="text-[8px] leading-relaxed" style={{ color: "#9CA3AF" }}>{bodyCinemaRealRenderUrl ? "This package has real downloadable output and can be published as a finished Body Cinema asset." : "Create the collection to generate a real FFmpeg master, teaser, and thumbnail before publishing."}</p>
                     <div className="grid grid-cols-2 gap-1">
                       {bodyCinemaReadinessItems.map(item => (
                         <div key={item.label} className="flex items-start gap-1.5 rounded-lg px-2 py-1" style={{ background: item.ready ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.025)", border: `1px solid ${item.ready ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.06)"}` }}>
@@ -2041,14 +2046,23 @@ export default function VaultXEditor() {
                   <button onClick={handleCreateBodyCinemaCollection} disabled={!sourceUrl || isAnyProcessing}
                     className="w-full py-2 rounded-xl text-[9px] font-black flex items-center justify-center gap-2"
                     style={{ background: (!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.04)" : "linear-gradient(135deg, rgba(201,168,76,0.32), rgba(236,72,153,0.24))", color: (!sourceUrl || isAnyProcessing) ? "#374151" : "#F7E7B4", border: `1px solid ${(!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.06)" : "rgba(201,168,76,0.35)"}` }}>
-                    {createBodyCinemaCollectionMut.isPending ? <><Loader2 size={10} className="animate-spin" />SAVING PLAN...</> : <><Crown size={10} />CREATE PRODUCTION PLAN</>}
+                    {createBodyCinemaCollectionMut.isPending ? <><Loader2 size={10} className="animate-spin" />RENDERING OUTPUTS...</> : <><Crown size={10} />CREATE + RENDER BODY CINEMA</>}
                   </button>
 
                   {bodyCinemaPlan && (
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(201,168,76,0.15)" }}><p className="text-[7px] font-black" style={{ color: "#6B7280" }}>DURATION</p><p className="text-xs font-black" style={{ color: "#C9A84C" }}>{bodyCinemaPlan.remotionComposition?.totalDuration || 0}s</p></div>
-                      <div className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(201,168,76,0.15)" }}><p className="text-[7px] font-black" style={{ color: "#6B7280" }}>SCENES</p><p className="text-xs font-black" style={{ color: "#C9A84C" }}>{bodyCinemaPlan.remotionComposition?.scenes?.length || 0}</p></div>
-                      <div className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(201,168,76,0.15)" }}><p className="text-[7px] font-black" style={{ color: "#6B7280" }}>EXPORTS</p><p className="text-xs font-black" style={{ color: "#C9A84C" }}>{bodyCinemaPlan.platformExports?.length || 0}</p></div>
+                    <div className="flex flex-col gap-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(201,168,76,0.15)" }}><p className="text-[7px] font-black" style={{ color: "#6B7280" }}>DURATION</p><p className="text-xs font-black" style={{ color: "#C9A84C" }}>{bodyCinemaPlan.renderMeta?.durationSeconds || bodyCinemaPlan.remotionComposition?.totalDuration || 0}s</p></div>
+                        <div className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(201,168,76,0.15)" }}><p className="text-[7px] font-black" style={{ color: "#6B7280" }}>ENGINE</p><p className="text-xs font-black" style={{ color: "#C9A84C" }}>{(bodyCinemaPlan.renderMeta?.engine || "ffmpeg").toUpperCase()}</p></div>
+                        <div className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(201,168,76,0.15)" }}><p className="text-[7px] font-black" style={{ color: "#6B7280" }}>EXPORTS</p><p className="text-xs font-black" style={{ color: "#C9A84C" }}>{bodyCinemaPlan.platformExports?.length || 0}</p></div>
+                      </div>
+                      {bodyCinemaRealRenderUrl && (
+                        <div className="grid grid-cols-3 gap-2">
+                          <a href={bodyCinemaRealRenderUrl} target="_blank" rel="noreferrer" className="py-2 rounded-xl text-[8px] font-black text-center" style={{ background: "rgba(16,185,129,0.14)", color: "#86efac", border: "1px solid rgba(16,185,129,0.28)" }}>DOWNLOAD MASTER</a>
+                          <a href={bodyCinemaTeaserUrl || bodyCinemaRealRenderUrl} target="_blank" rel="noreferrer" className="py-2 rounded-xl text-[8px] font-black text-center" style={{ background: "rgba(236,72,153,0.12)", color: "#f0abfc", border: "1px solid rgba(236,72,153,0.26)" }}>DOWNLOAD TEASER</a>
+                          <a href={bodyCinemaThumbnailUrl || bodyCinemaRealRenderUrl} target="_blank" rel="noreferrer" className="py-2 rounded-xl text-[8px] font-black text-center" style={{ background: "rgba(201,168,76,0.14)", color: "#F7E7B4", border: "1px solid rgba(201,168,76,0.28)" }}>THUMBNAIL</a>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -2062,7 +2076,10 @@ export default function VaultXEditor() {
                         return (
                           <div key={collection.id} className="flex items-center justify-between gap-2 p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.07)" }}>
                             <div className="min-w-0"><p className="text-[9px] font-black truncate" style={{ color: "#FFFFFF" }}>{collection.collection_name}</p><p className="text-[8px]" style={{ color: "#6B7280" }}>{collection.cinematic_style} · ${Number(collection.ppv_price_cents || 0) / 100} · {collection.status} · {canPublishFinished ? "final render" : "plan only"}</p></div>
-                            <button onClick={() => handlePublishBodyCinemaCollection(collection.id, collection.collection_name, canPublishFinished)} disabled={collection.status === "published" || isAnyProcessing || !canPublishFinished} className="px-3 py-1 rounded-lg text-[8px] font-black" style={{ background: collection.status === "published" ? "rgba(16,185,129,0.12)" : canPublishFinished ? "rgba(16,185,129,0.18)" : "rgba(245,158,11,0.1)", color: collection.status === "published" ? "#10B981" : canPublishFinished ? "#FFFFFF" : "#F59E0B", border: `1px solid ${canPublishFinished ? "rgba(16,185,129,0.28)" : "rgba(245,158,11,0.25)"}` }}>{collection.status === "published" ? "LIVE" : canPublishFinished ? "PUBLISH" : "NEEDS RENDER"}</button>
+                            <div className="flex items-center gap-1">
+                              {renderedUrl && <a href={renderedUrl} target="_blank" rel="noreferrer" className="px-2 py-1 rounded-lg text-[8px] font-black" style={{ background: "rgba(59,130,246,0.14)", color: "#93c5fd", border: "1px solid rgba(59,130,246,0.28)" }}>OPEN</a>}
+                              <button onClick={() => handlePublishBodyCinemaCollection(collection.id, collection.collection_name, canPublishFinished)} disabled={collection.status === "published" || isAnyProcessing || !canPublishFinished} className="px-3 py-1 rounded-lg text-[8px] font-black" style={{ background: collection.status === "published" ? "rgba(16,185,129,0.12)" : canPublishFinished ? "rgba(16,185,129,0.18)" : "rgba(245,158,11,0.1)", color: collection.status === "published" ? "#10B981" : canPublishFinished ? "#FFFFFF" : "#F59E0B", border: `1px solid ${canPublishFinished ? "rgba(16,185,129,0.28)" : "rgba(245,158,11,0.25)"}` }}>{collection.status === "published" ? "LIVE" : canPublishFinished ? "PUBLISH" : "NEEDS RENDER"}</button>
+                            </div>
                           </div>
                         );
                       })}

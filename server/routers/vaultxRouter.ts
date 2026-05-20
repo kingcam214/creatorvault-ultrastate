@@ -25,6 +25,7 @@ import { qualityGate } from "../services/qualityGate";
 const OWNER_IDS = [6, 33];
 const PLATFORM_FEE = 0.15;
 const UPLOAD_DIR = "/root/creatorvault/dist/public/uploads/vaultx";
+const PUBLIC_UPLOADS_DIR = path.resolve(process.cwd(), "..", "uploads");
 
 // Raw MySQL2 connection for tables not in Drizzle schema
 async function rawQuery(query: string, params: any[] = []): Promise<any[]> {
@@ -103,6 +104,120 @@ function runFFmpeg(args: string[]): Promise<void> {
       else reject(new Error(`FFmpeg exited ${code}: ${stderr.slice(-500)}`));
     });
   });
+}
+
+function publicUploadUrl(...parts: string[]): string {
+  return `/uploads/${parts.map((part) => encodeURIComponent(part)).join("/")}`;
+}
+
+function safeFileStem(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 72) || "body-cinema";
+}
+
+function isProbablyImage(filePath: string): boolean {
+  return /\.(jpg|jpeg|png|webp|gif)$/i.test(filePath);
+}
+
+function normalizeLocalUploadPath(assetUrl: string): string | null {
+  if (!assetUrl) return null;
+  if (assetUrl.startsWith("/uploads/")) return path.join(PUBLIC_UPLOADS_DIR, decodeURIComponent(assetUrl.replace(/^\/uploads\//, "")));
+  try {
+    const parsed = new URL(assetUrl);
+    if (parsed.pathname.startsWith("/uploads/")) {
+      return path.join(PUBLIC_UPLOADS_DIR, decodeURIComponent(parsed.pathname.replace(/^\/uploads\//, "")));
+    }
+  } catch (_) {
+    if (path.isAbsolute(assetUrl)) return assetUrl;
+  }
+  return null;
+}
+
+async function resolveBodyCinemaSource(assetUrl: string, workspaceDir: string): Promise<string> {
+  const localPath = normalizeLocalUploadPath(assetUrl);
+  if (localPath && fs.existsSync(localPath)) return localPath;
+  if (path.isAbsolute(assetUrl) && fs.existsSync(assetUrl)) return assetUrl;
+  const parsed = new URL(assetUrl);
+  const ext = path.extname(parsed.pathname).match(/^\.[a-z0-9]+$/i)?.[0] || ".bin";
+  const downloadPath = path.join(workspaceDir, `source-${randomUUID()}${ext}`);
+  const response = await fetch(assetUrl);
+  if (!response.ok) throw new Error(`Unable to fetch source asset (${response.status})`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  fs.writeFileSync(downloadPath, buffer);
+  return downloadPath;
+}
+
+function ffprobeJson(filePath: string): any | null {
+  try {
+    return JSON.parse(execSync(`ffprobe -v quiet -print_format json -show_streams -show_format ${JSON.stringify(filePath)}`, { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 }));
+  } catch (_) {
+    return null;
+  }
+}
+
+function hasVideoStream(filePath: string): boolean {
+  const probe = ffprobeJson(filePath);
+  return Boolean(probe?.streams?.some((stream: any) => stream.codec_type === "video")) && !isProbablyImage(filePath);
+}
+
+function drawTextFilter(text: string, fontSize = 44): string {
+  const escaped = text.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/:/g, "\\:");
+  return `drawbox=x=0:y=ih-170:w=iw:h=170:color=black@0.48:t=fill,drawtext=text='${escaped}':x=(w-text_w)/2:y=h-118:fontsize=${fontSize}:fontcolor=white:shadowcolor=black@0.7:shadowx=2:shadowy=2`;
+}
+
+async function renderBodyCinemaArtifacts(input: {
+  creatorId: number;
+  collectionId: string;
+  collectionName: string;
+  sourceUrl: string;
+  style: { label: string; palette: string[]; hook: string };
+  platforms: string[];
+  durationSeconds: number;
+}): Promise<{ renderedOutputUrl: string; teaserUrl: string; thumbnailUrl: string; platformExports: any[]; renderMeta: any }> {
+  const renderDir = path.join(PUBLIC_UPLOADS_DIR, "body-cinema", String(input.creatorId), input.collectionId);
+  fs.mkdirSync(renderDir, { recursive: true });
+  const sourcePath = await resolveBodyCinemaSource(input.sourceUrl, renderDir);
+  const stem = safeFileStem(input.collectionName);
+  const masterPath = path.join(renderDir, `${stem}-master.mp4`);
+  const teaserPath = path.join(renderDir, `${stem}-teaser.mp4`);
+  const thumbnailPath = path.join(renderDir, `${stem}-thumb.jpg`);
+  const isVideo = hasVideoStream(sourcePath);
+  const masterDuration = Math.max(12, Math.min(45, input.durationSeconds || 24));
+  const teaserDuration = Math.min(9, masterDuration);
+  const baseVideoFilter = `scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,eq=contrast=1.05:saturation=1.08,${drawTextFilter(input.style.hook, 46)}`;
+  const teaserFilter = `scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,eq=contrast=1.08:saturation=1.12,${drawTextFilter("UNLOCK THE FULL BODY CINEMA COLLECTION", 38)}`;
+
+  if (isVideo) {
+    await runFFmpeg(["-i", sourcePath, "-t", String(masterDuration), "-vf", baseVideoFilter, "-c:v", "libx264", "-preset", "fast", "-crf", "20", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", masterPath]);
+    await runFFmpeg(["-i", sourcePath, "-t", String(teaserDuration), "-vf", teaserFilter, "-an", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart", teaserPath]);
+  } else {
+    await runFFmpeg(["-loop", "1", "-i", sourcePath, "-t", String(masterDuration), "-vf", `zoompan=z='min(zoom+0.0015,1.18)':d=${Math.round(masterDuration * 30)}:s=1080x1920:fps=30,${drawTextFilter(input.style.hook, 46)}`, "-c:v", "libx264", "-preset", "fast", "-crf", "20", "-pix_fmt", "yuv420p", "-movflags", "+faststart", masterPath]);
+    await runFFmpeg(["-loop", "1", "-i", sourcePath, "-t", String(teaserDuration), "-vf", `zoompan=z='min(zoom+0.0025,1.15)':d=${Math.round(teaserDuration * 30)}:s=1080x1920:fps=30,${drawTextFilter("UNLOCK THE FULL BODY CINEMA COLLECTION", 38)}`, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart", teaserPath]);
+  }
+
+  await runFFmpeg(["-i", masterPath, "-ss", "1", "-frames:v", "1", "-q:v", "2", thumbnailPath]);
+  const relParts = ["body-cinema", String(input.creatorId), input.collectionId];
+  const masterUrl = publicUploadUrl(...relParts, `${stem}-master.mp4`);
+  const teaserUrl = publicUploadUrl(...relParts, `${stem}-teaser.mp4`);
+  const thumbnailUrl = publicUploadUrl(...relParts, `${stem}-thumb.jpg`);
+  const platformExports = input.platforms.map((platform) => ({
+    platform,
+    preset: platform === "instagram_reel" || platform === "twitter" ? "9:16 teaser MP4" : platform === "telegram" ? "private-channel teaser MP4" : "subscriber master MP4",
+    status: "rendered",
+    url: platform === "instagram_reel" || platform === "twitter" || platform === "telegram" ? teaserUrl : masterUrl,
+  }));
+  return {
+    renderedOutputUrl: masterUrl,
+    teaserUrl,
+    thumbnailUrl,
+    platformExports,
+    renderMeta: {
+      engine: "ffmpeg",
+      sourceKind: isVideo ? "video" : "image",
+      durationSeconds: masterDuration,
+      outputs: { masterPath, teaserPath, thumbnailPath },
+      renderedAt: new Date().toISOString(),
+    },
+  };
 }
 
 export const vaultxRouter = router({
@@ -3715,7 +3830,7 @@ Generate body-focused captions and return ONLY valid JSON:
         enhancement: bodyMap.region_scores?.[region] || null,
         sceneLabel: region === "full" ? "Full Body Reveal" : `${region.charAt(0).toUpperCase()}${region.slice(1)} Focus`,
       }));
-      const productionPlan = {
+      const productionPlan: any = {
         collectionId,
         creatorName,
         style,
@@ -3731,8 +3846,8 @@ Generate body-focused captions and return ONLY valid JSON:
         },
         platformExports: input.platforms.map((platform) => ({
           platform,
-          preset: platform === "instagram_reel" ? "9:16 censored teaser" : platform === "telegram" ? "720p private-channel teaser" : "1080p subscriber master",
-          status: "ready_to_queue",
+          preset: platform === "instagram_reel" ? "9:16 teaser" : platform === "telegram" ? "private-channel teaser" : "subscriber master",
+          status: "render_pending",
         })),
         remotionComposition: {
           totalDuration: Math.max(22, 8 + regions.length * 5 + 5),
@@ -3744,6 +3859,31 @@ Generate body-focused captions and return ONLY valid JSON:
           ],
         },
       };
+
+      let renderResult: Awaited<ReturnType<typeof renderBodyCinemaArtifacts>>;
+      try {
+        renderResult = await renderBodyCinemaArtifacts({
+          creatorId: ctx.user.id,
+          collectionId,
+          collectionName: input.collectionName,
+          sourceUrl,
+          style,
+          platforms: input.platforms,
+          durationSeconds: productionPlan.remotionComposition.totalDuration,
+        });
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Body Cinema FFmpeg render failed: ${error?.message || String(error)}`,
+        });
+      }
+      productionPlan.renderedOutputUrl = renderResult.renderedOutputUrl;
+      productionPlan.finalVideoUrl = renderResult.renderedOutputUrl;
+      productionPlan.teaserUrl = renderResult.teaserUrl;
+      productionPlan.thumbnailUrl = renderResult.thumbnailUrl;
+      productionPlan.heroAsset = renderResult.thumbnailUrl || productionPlan.heroAsset;
+      productionPlan.platformExports = renderResult.platformExports;
+      productionPlan.renderMeta = renderResult.renderMeta;
 
       await rawExec(
         `INSERT INTO vaultx_body_cinema_collections
@@ -3772,7 +3912,20 @@ Generate body-focused captions and return ONLY valid JSON:
         [JSON.stringify(nextCollections.slice(0, 20)), collectionId, JSON.stringify(productionPlan.remotionComposition), input.projectId, ctx.user.id]
       );
 
-      return { success: true, collection: { id: collectionId, projectId: input.projectId, collectionName: input.collectionName, status: "ready", ppvPriceCents: input.ppvPriceCents }, productionPlan };
+      return {
+        success: true,
+        collection: {
+          id: collectionId,
+          projectId: input.projectId,
+          collectionName: input.collectionName,
+          status: "ready",
+          ppvPriceCents: input.ppvPriceCents,
+          renderedOutputUrl: renderResult.renderedOutputUrl,
+          teaserUrl: renderResult.teaserUrl,
+          thumbnailUrl: renderResult.thumbnailUrl,
+        },
+        productionPlan,
+      };
     }),
 
   // ─── PROCEDURE: getBodyCinemaCollections ───────────────────────────────────
@@ -3811,7 +3964,7 @@ Generate body-focused captions and return ONLY valid JSON:
       const plan = collection.production_plan ? JSON.parse(collection.production_plan) : {};
       const contentUrl = plan.renderedOutputUrl || plan.finalVideoUrl || plan.renderedVideoUrl || collection.rendered_output_url;
       if (!contentUrl) throw new TRPCError({ code: "BAD_REQUEST", message: "This Body Cinema collection is a production plan only. Render a final video before publishing it as finished content." });
-      const thumbnailUrl = plan.heroAsset || collection.hero_asset_url || collection.source_asset_url || contentUrl;
+      const thumbnailUrl = plan.thumbnailUrl || plan.heroAsset || collection.hero_asset_url || collection.source_asset_url || contentUrl;
       const creatorId = await getCreatorId(ctx.user.id);
       const result = await rawExec(
         `INSERT INTO vaultx_content (creator_id, title, description, content_url, thumbnail_url, content_type, access_tier, ppv_price, tags, status, created_at, updated_at)
