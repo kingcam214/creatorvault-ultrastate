@@ -2134,6 +2134,34 @@ export function RealmToggle() {
 
 
 function VaultXPublicLanding() {
+  const offerParams = new URLSearchParams(window.location.search);
+  const offerSlug = offerParams.get("offer") || "";
+  const offerPrice = Number(offerParams.get("price") || "97");
+  const offerRef = offerParams.get("ref") || "direct";
+  const paidSessionId = offerParams.get("session_id") || "";
+  const isBodyCinemaOffer = offerSlug === "body-cinema";
+  const vaultXOfferCheckout = trpc.stripeCheckout.createVaultXOfferCheckout.useMutation({
+    onSuccess: (result) => {
+      window.location.href = result.url;
+    },
+    onError: (error) => {
+      toast.error(error.message || "VaultX checkout is not available right now.");
+    },
+  });
+
+  const startVaultXOfferCheckout = () => {
+    if (!isBodyCinemaOffer) {
+      window.location.href = "/vault-x/editor";
+      return;
+    }
+
+    vaultXOfferCheckout.mutate({
+      offer: offerSlug,
+      price: offerPrice,
+      ref: offerRef,
+    });
+  };
+
   const architectureLayers = [
     {
       layer: "01",
@@ -2254,11 +2282,32 @@ function VaultXPublicLanding() {
         </div>
         <div className="flex items-center gap-3">
           <a href="/login" className="hidden sm:inline-flex text-sm font-bold px-5 py-2.5 rounded-xl transition-all hover:bg-white/10" style={{ color: "#d1d5db" }}>Sign In</a>
-          <a href="/vault-x/editor" className="text-sm font-black px-6 py-3 rounded-xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 40px rgba(236,72,153,.32)" }}>Open Editor</a>
+          {isBodyCinemaOffer ? (
+            <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="text-sm font-black px-6 py-3 rounded-xl transition-all hover:scale-105 disabled:opacity-60" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 40px rgba(236,72,153,.32)" }}>{vaultXOfferCheckout.isPending ? "Opening Checkout..." : "Buy Body Cinema"}</button>
+          ) : (
+            <a href="/vault-x/editor" className="text-sm font-black px-6 py-3 rounded-xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 40px rgba(236,72,153,.32)" }}>Open Editor</a>
+          )}
         </div>
       </nav>
 
       <main className="relative z-10">
+        {isBodyCinemaOffer && (
+          <section className="max-w-7xl mx-auto px-6 md:px-10 pt-6">
+            <div className="rounded-[2rem] p-5 md:p-7" style={{ background: "linear-gradient(135deg, rgba(239,68,68,.2), rgba(236,72,153,.16), rgba(147,51,234,.14))", border: "1px solid rgba(252,165,165,.28)", boxShadow: "0 24px 80px rgba(0,0,0,.32)" }}>
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+                <div>
+                  <div className="text-xs font-black uppercase tracking-[.22em] mb-2" style={{ color: "#fecaca" }}>Live VaultX offer · real Stripe checkout</div>
+                  <h2 className="text-2xl md:text-4xl font-black tracking-[-.04em] leading-tight">Body Cinema Revenue Kit</h2>
+                  <p className="text-sm md:text-base leading-7 mt-2 max-w-3xl" style={{ color: "#f5d0d0" }}>A production checkout path for the VaultX Body Cinema offer. Payment is processed by Stripe and challenge revenue is credited only after the webhook confirms a completed payment.</p>
+                  {paidSessionId && <div className="mt-3 text-sm font-bold" style={{ color: "#bbf7d0" }}>Payment return detected. Final access and revenue credit depend on Stripe webhook confirmation for session {paidSessionId.slice(0, 12)}...</div>}
+                </div>
+                <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl font-black whitespace-nowrap transition-all hover:scale-105 disabled:opacity-60" style={{ background: "white", color: "#09090b" }}>
+                  <CreditCard className="w-5 h-5" /> {vaultXOfferCheckout.isPending ? "Opening secure checkout..." : `Buy Now — $${offerPrice}`}
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
         <section className="max-w-7xl mx-auto px-6 md:px-10 pt-8 md:pt-12 pb-20">
           <div className="grid lg:grid-cols-[.86fr_1.14fr] gap-10 items-center">
             <div>
@@ -2273,9 +2322,15 @@ function VaultXPublicLanding() {
                 VaultX now opens with a professional product walkthrough: a polished presenter breaks down how creators move from raw media to edited clips, packaged campaigns, distribution, fan follow-up, and revenue analytics without juggling disconnected tools.
               </p>
               <div className="flex flex-wrap gap-4 mb-10">
-                <a href="/vault-x/editor" className="inline-flex items-center gap-2 text-base font-black px-8 py-4 rounded-2xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 50px rgba(239,68,68,.35)" }}>
-                  <Play className="w-5 h-5" /> Open VaultX Editor
-                </a>
+                {isBodyCinemaOffer ? (
+                  <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="inline-flex items-center gap-2 text-base font-black px-8 py-4 rounded-2xl transition-all hover:scale-105 disabled:opacity-60" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 50px rgba(239,68,68,.35)" }}>
+                    <CreditCard className="w-5 h-5" /> {vaultXOfferCheckout.isPending ? "Opening Checkout..." : `Buy Body Cinema — $${offerPrice}`}
+                  </button>
+                ) : (
+                  <a href="/vault-x/editor" className="inline-flex items-center gap-2 text-base font-black px-8 py-4 rounded-2xl transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #dc2626, #ec4899, #9333ea)", color: "white", boxShadow: "0 0 50px rgba(239,68,68,.35)" }}>
+                    <Play className="w-5 h-5" /> Open VaultX Editor
+                  </a>
+                )}
                 <a href="#vaultx-walkthrough" className="inline-flex items-center gap-2 text-base font-bold px-8 py-4 rounded-2xl transition-all hover:bg-white/10" style={{ color: "white", border: "1px solid rgba(255,255,255,.16)" }}>
                   See the breakdown <ArrowUpRight className="w-5 h-5" />
                 </a>
