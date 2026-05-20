@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { ArrowLeft, ShoppingCart, Package, Star, TrendingUp, Shield, Download, Truck, Clock , Calendar} from 'lucide-react';
 
 export default function MarketplaceProduct() {
-  const [, params] = useRoute("/marketplace/:productId");
+  const [, params] = useRoute<{ productId: string }>("/marketplace/:productId");
   const [, navigate] = useLocation();
   const productId = params?.productId;
   const [selectedImage, setSelectedImage] = useState(0);

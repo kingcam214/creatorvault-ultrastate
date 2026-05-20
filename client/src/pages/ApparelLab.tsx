@@ -1044,12 +1044,12 @@ function CollectionMode() {
           </div>
           <GoldRule />
           {/* Link to project */}
-          {(myProjects.data as any[] | undefined)?.length ? (
+          {((myProjects.data as any)?.projects as any[] | undefined)?.length ? (
             <div>
               <Label>Link to Project</Label>
               <div className="space-y-1">
   // @ts-ignore
-                {((myProjects.data as unknown) as any[]).slice(0, 4).map((p: any) => (
+                {(((myProjects.data as any)?.projects as any[] | undefined) ?? []).slice(0, 4).map((p: any) => (
                   <button key={p.id} onClick={() => setProjectId(p.id)}
                     className="w-full text-left px-3 py-2 transition-all"
                     style={{
@@ -1968,8 +1968,8 @@ function MyVault() {
   const projects = trpc.apparel.getMyProjects.useQuery();
   const orders   = trpc.apparel.getMyOrders.useQuery();
 
-  const pRows = (projects.data as any[] | undefined) ?? [];
-  const oRows = (orders.data as any[] | undefined) ?? [];
+  const pRows = ((projects.data as any)?.projects as any[] | undefined) ?? [];
+  const oRows = ((orders.data as any)?.orders as any[] | undefined) ?? [];
 
   const STATS = [
     { label: "Projects",  value: pRows.length,                                                                        icon: FolderOpen },

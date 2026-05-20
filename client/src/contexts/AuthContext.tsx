@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: user, isLoading } = trpc.auth.me.useQuery();
 
   return (
-    <AuthContext.Provider value={{ user, isLoading }}>
+    <AuthContext.Provider value={{ user: user as unknown as User | null | undefined, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

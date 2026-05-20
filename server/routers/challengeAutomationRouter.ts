@@ -1180,8 +1180,39 @@ async function getActiveChallengeForCheckout() {
   return rows[0];
 }
 
+async function getPublicChallengeOfferState() {
+  const result = await db.db.execute(sql`
+    SELECT id, title, target_revenue, current_revenue, status
+    FROM empire_challenges
+    WHERE status = 'active'
+    ORDER BY week_number ASC
+    LIMIT 1
+  `);
+  const rows = extractRows(result, "public AI Agent Challenge offer lookup");
+  const challenge = rows[0] ?? null;
+
+  return {
+    challenge: challenge ? {
+      id: Number(challenge.id),
+      title: challenge.title,
+      targetRevenue: Number(challenge.target_revenue ?? 5000),
+      currentRevenue: Number(challenge.current_revenue ?? 0),
+      status: challenge.status,
+    } : null,
+    offers: Object.entries(AI_CHALLENGE_OFFERS).map(([slug, offer]) => ({
+      slug,
+      name: offer.name,
+      amountCents: offer.amountCents,
+      description: offer.description,
+    })),
+    moneyTruth: "Challenge revenue is credited only after a live Stripe webhook proves a completed payment with AI Agent Challenge metadata.",
+  };
+}
+
 // ── ROUTER ─────────────────────────────────────────────────────────────────────
 export const challengeAutomationRouter = router({
+
+  getPublicChallengeOfferState: publicProcedure.query(async () => getPublicChallengeOfferState()),
 
   createChallengeCheckout: publicProcedure
     .input(z.object({

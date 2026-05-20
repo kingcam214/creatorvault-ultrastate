@@ -173,8 +173,9 @@ export default function RecruiterOSCommandCenter() {
   const queueQuery = trpc.recruiterOS.getQueue.useQuery({ status: statusFilter === "all" ? undefined : statusFilter, limit: 50 });
 
   const ingestMutation = trpc.recruiterOS.ingestCreator.useMutation({
-    onSuccess: async (record: CreatorRecord) => {
-      toast.success(`Recruiter OS scored @${record.handle} at ${record.totalScore}/100`);
+    onSuccess: async (record) => {
+      const savedRecord = record as CreatorRecord;
+      toast.success(`Recruiter OS scored @${savedRecord.handle} at ${savedRecord.totalScore}/100`);
       setForm(defaultForm);
       await Promise.all([dashboardQuery.refetch(), queueQuery.refetch()]);
     },
@@ -182,7 +183,8 @@ export default function RecruiterOSCommandCenter() {
   });
 
   const updateStatusMutation = trpc.recruiterOS.updateStatus.useMutation({
-    onSuccess: async ({ record }: { record: CreatorRecord | null }) => {
+    onSuccess: async (data) => {
+      const record = data.record as CreatorRecord | null | undefined;
       toast.success(record ? `Updated @${record.handle} to ${record.status}` : "Recruiter status updated");
       await Promise.all([dashboardQuery.refetch(), queueQuery.refetch()]);
     },

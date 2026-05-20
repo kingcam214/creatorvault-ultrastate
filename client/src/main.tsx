@@ -57,7 +57,7 @@ const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: "/api/trpc",
-      transformer: superjson,
+      transformer: superjson as any,
       headers() {
         // Send stored JWT as Authorization header on every request.
         // This is the fallback for mobile Safari and environments where

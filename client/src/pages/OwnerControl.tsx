@@ -189,23 +189,23 @@ export default function OwnerControl() {
                           {dbHealth.status}
                         </Badge>
                       </div>
-                      {dbHealth.tables && (
+                      {(dbHealth as any).tables && (
                         <>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-400">Users</span>
-                            <span className="text-white">{dbHealth.tables.users}</span>
+                            <span className="text-white">{(dbHealth as any).tables.users}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-400">Bot Events</span>
-                            <span className="text-white">{dbHealth.tables.botEvents}</span>
+                            <span className="text-white">{(dbHealth as any).tables.botEvents}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-400">Telegram Bots</span>
-                            <span className="text-white">{dbHealth.tables.telegramBots}</span>
+                            <span className="text-white">{(dbHealth as any).tables.telegramBots}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-400">WhatsApp Providers</span>
-                            <span className="text-white">{dbHealth.tables.whatsappProviders}</span>
+                            <span className="text-white">{(dbHealth as any).tables.whatsappProviders}</span>
                           </div>
                         </>
                       )}

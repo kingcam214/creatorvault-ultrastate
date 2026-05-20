@@ -217,6 +217,15 @@ type FirstDollarSummary = {
   first_dollar_clock_count?: number;
 };
 
+type FirstDollarTruthFlags = {
+  checkoutIsStripeSessionBacked?: boolean;
+  revenueIsLedgerBacked?: boolean;
+  syntheticMetricsIncluded?: boolean;
+  fakeUrgencyIncluded?: boolean;
+  automatedOutreachSent?: boolean;
+  outboundSendEnabled?: boolean;
+};
+
 type RecoveryOperatorStatus = "new" | "reviewing" | "contacted_manually" | "objection_logged" | "checkout_fixed" | "recovered_ledger_confirmed" | "closed_no_recovery";
 
 const recoveryStatuses: RecoveryOperatorStatus[] = ["new", "reviewing", "contacted_manually", "objection_logged", "checkout_fixed", "recovered_ledger_confirmed", "closed_no_recovery"];
@@ -688,7 +697,7 @@ export default function ActivationWarRoomCommandCenter() {
   const recoveryQueue = (firstDollarRecovery.data?.recoveryQueue || []) as FirstDollarRecoveryRow[];
   const firstDollarClocks = (firstDollarRecovery.data?.firstDollarClocks || []) as FirstDollarClockRow[];
   const recoverySummary = (firstDollarRecovery.data?.summary || {}) as FirstDollarSummary;
-  const recoveryTruthFlags = firstDollarRecovery.data?.truthFlags || {};
+  const recoveryTruthFlags = (firstDollarRecovery.data?.truthFlags || {}) as FirstDollarTruthFlags;
   const urgentCreators = useMemo(() => creators.filter((row) => Number(row.intervention_priority || 0) >= 70 || Number(row.blocker_count || 0) > 0), [creators]);
 
   const refreshAll = () => {

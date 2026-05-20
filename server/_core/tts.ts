@@ -43,7 +43,7 @@ export interface TTSResult {
 async function uploadAudioBuffer(buffer: Buffer, filename: string): Promise<string> {
   const { storagePut } = await import("../storage.js");
   const key = `tts/${Date.now()}_${filename}`;
-  const url = await storagePut(key, buffer, "audio/mpeg");
+  const { url } = await storagePut(key, buffer, "audio/mpeg");
   return url;
 }
 

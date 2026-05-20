@@ -7,7 +7,7 @@ import { ArrowLeft, TrendingUp, Eye, ShoppingCart, DollarSign, Users, Calendar }
 import { useLocation } from "wouter";
 
 export default function MarketplaceAnalytics() {
-  const [, params] = useRoute("/marketplace/analytics/:productId");
+  const [, params] = useRoute<{ productId: string }>("/marketplace/analytics/:productId");
   const [, navigate] = useLocation();
   const productId = params?.productId;
 

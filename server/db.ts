@@ -18,23 +18,33 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+type DatabaseLike = {
+  execute: <T = unknown>(...args: any[]) => Promise<T>;
+  select: (...args: any[]) => any;
+  insert: (...args: any[]) => any;
+  update: (...args: any[]) => any;
+  delete: (...args: any[]) => any;
+  [key: string]: any;
+};
 
-export async function getDb() {
+let _db: DatabaseLike | null = null;
+
+export async function getDb(): Promise<DatabaseLike> {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _db = drizzle(process.env.DATABASE_URL) as unknown as DatabaseLike;
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
     }
   }
+  if (!_db) throw new Error("Database is not configured");
   return _db;
 }
 
 // Export db instance for direct use
 // Only initialize if DATABASE_URL is set
-export const db = process.env.DATABASE_URL ? drizzle(process.env.DATABASE_URL) : null as any;
+export const db: DatabaseLike = process.env.DATABASE_URL ? (drizzle(process.env.DATABASE_URL) as unknown as DatabaseLike) : (null as unknown as DatabaseLike);
 
 // ============ USER MANAGEMENT ============
 

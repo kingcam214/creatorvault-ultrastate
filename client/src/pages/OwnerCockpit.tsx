@@ -346,7 +346,7 @@ export default function OwnerCockpit() {
               <MetricCard label="Creators"       value={governance?.byRole?.creator || "—"}          sub="active creators"        icon={Star}      color={C.gold}   />
               <MetricCard label="Active Bots"    value={stats?.bots?.active || "—"}                  sub={`of ${stats?.bots?.total || 0} total`} icon={Bot} color={C.green} trend="up" />
               <MetricCard label="Deployments"    value={stats?.deployments?.active || "—"}           sub="services running"       icon={Server}    color={C.cyan}   />
-              <MetricCard label="DB Health"      value={dbHealth?.status === "healthy" ? "OK" : "!"} sub={`${dbHealth?.tables?.users || 0} users`} icon={Database} color={dbHealth?.status === "healthy" ? C.green : C.red} />
+              <MetricCard label="DB Health"      value={dbHealth?.status === "healthy" ? "OK" : "!"} sub={`${(dbHealth as any)?.tables?.users || 0} users`} icon={Database} color={dbHealth?.status === "healthy" ? C.green : C.red} />
             </div>
 
             {/* Empire sections */}
@@ -416,7 +416,7 @@ export default function OwnerCockpit() {
                     </div>
                   </div>
                 </div>
-                {dbHealth?.tables && Object.entries(dbHealth.tables).map(([table, count]) => (
+                {(dbHealth as any)?.tables && Object.entries((dbHealth as any).tables).map(([table, count]) => (
                   <div key={table} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
                     <span style={{ fontSize: "13px", color: C.mutedHi, fontFamily: "monospace" }}>{table}</span>
                     <span style={{ fontSize: "16px", fontWeight: 700, color: C.text }}>{count as number}</span>

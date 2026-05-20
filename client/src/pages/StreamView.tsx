@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { DollarSign, Video } from "lucide-react";
 
 export default function StreamView() {
-  const [, params] = useRoute("/stream/:id");
+  const [, params] = useRoute<{ id: string }>("/stream/:id");
   const streamId = params?.id ? parseInt(params.id) : null;
 
   const { data: stream, isLoading } = trpc.vaultLive.getStream.useQuery(

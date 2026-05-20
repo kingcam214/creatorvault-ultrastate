@@ -296,7 +296,7 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       } catch { /* non-blocking */ }
 
       // Helper to send inline keyboard message
-      async function sendInlineMsg(text: string, buttons: Array<Array<{text: string; url?: string; callback_data?: string}>>) {
+      const sendInlineMsg = async (text: string, buttons: Array<Array<{text: string; url?: string; callback_data?: string}>>) => {
         const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
         const approvedText = qualityGate.check(text, {
           surface: "telegram-dm",
@@ -314,7 +314,7 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
             reply_markup: { inline_keyboard: buttons }
           })
         });
-      }
+      };
 
       if (command === "/start") {
         // Deep link handler: /start purchase_<id>_<token>

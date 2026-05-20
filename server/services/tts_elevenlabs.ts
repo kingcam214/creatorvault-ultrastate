@@ -11,7 +11,7 @@
  * ============================================================================
  */
 
-import { ENV } from "./env.js";
+import { ENV } from "../_core/env";
 
 const ELEVENLABS_BASE = "https://api.elevenlabs.io/v1";
 const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY;
@@ -43,7 +43,7 @@ export interface TTSResult {
 async function uploadAudioBuffer(buffer: Buffer, filename: string): Promise<string> {
   const { storagePut } = await import("../storage.js");
   const key = `tts/${Date.now()}_${filename}`;
-  const url = await storagePut(key, buffer, "audio/mpeg");
+  const { url } = await storagePut(key, buffer, "audio/mpeg");
   return url;
 }
 
@@ -113,7 +113,7 @@ export async function generateSpeech(
       // Sync voice_clones table
       try {
         const { getDb } = await import("../db.js");
-        const db = getDb();
+        const db = await getDb();
         await db.execute(
           `INSERT INTO voice_clones (id, creator_id, voice_name, sample_audio_url, voice_characteristics, is_active, usage_count)
            VALUES (?, 1, 'KingCam', ?, ?, 1, 1)

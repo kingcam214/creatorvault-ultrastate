@@ -62,7 +62,8 @@ export function ChallengeStoryEngine() {
   const source = getQueryValue("source") || "public_challenge_offer";
   const sessionId = getQueryValue("session_id");
 
-  const { data: challenge } = (trpc.challengeAutomation as any)?.getActiveChallenge?.useQuery?.() || { data: null };
+  const { data: publicOfferState } = (trpc.challengeAutomation as any)?.getPublicChallengeOfferState?.useQuery?.() || { data: null };
+  const challenge = publicOfferState?.challenge ?? null;
   const { data: channels } = (trpc.telegramHub as any)?.getChannels?.useQuery?.() || { data: null };
 
   const generate = (trpc.challengeAutomation as any)?.generateChallengePost?.useMutation?.({
@@ -94,8 +95,8 @@ export function ChallengeStoryEngine() {
     [selectedOffer],
   );
 
-  const currentRevenue = parseFloat(String(challenge?.current_revenue || 0));
-  const targetRevenue = parseFloat(String(challenge?.target_revenue || 5000));
+  const currentRevenue = parseFloat(String(challenge?.currentRevenue || 0));
+  const targetRevenue = parseFloat(String(challenge?.targetRevenue || 5000));
   const progress = targetRevenue > 0 ? (currentRevenue / targetRevenue) * 100 : 0;
 
   const startCheckout = () => {
@@ -150,7 +151,7 @@ export function ChallengeStoryEngine() {
             </button>
 
             <div style={{ marginTop: 12, border: "1px solid #27AE6044", background: "#0B1D14", color: "#BFF5D2", borderRadius: 10, padding: 10, fontSize: 12, lineHeight: 1.5, display: "flex", gap: 8 }}>
-              <ShieldCheck size={16} /> Money truth: this page cannot add challenge revenue by itself. Only a live Stripe webhook with challenge metadata can move the challenge ledger.
+              <ShieldCheck size={16} /> {publicOfferState?.moneyTruth || "Money truth: this page cannot add challenge revenue by itself. Only a live Stripe webhook with challenge metadata can move the challenge ledger."}
             </div>
           </div>
 

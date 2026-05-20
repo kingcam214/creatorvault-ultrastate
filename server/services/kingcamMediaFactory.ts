@@ -19,6 +19,7 @@
 import { generateKingCamScript } from "./kingcamScriptGenerator.js";
 import { generateSpeech, KINGCAM_VOICE_PROFILE } from "../_core/tts.js";
 import { generateKingCamImage, generateKingCamVideo } from "./kingcamAI.js";
+import type { ContentVertical as GeneratorContentVertical } from "./kingcamAI.js";
 import { storagePut } from "../storage.js";
 import mysql from "mysql2/promise";
 
@@ -42,6 +43,12 @@ export type ContentVertical =
   | "adult"
   | "general"
   | "telegram_drop";
+
+function toGeneratorVertical(vertical: ContentVertical): GeneratorContentVertical {
+  if (vertical === "clone_lab") return "clone_lab";
+  if (vertical === "telegram_drop") return "social_content";
+  return "video_studio";
+}
 
 export interface FactoryOptions {
   topic: string;
@@ -94,7 +101,7 @@ async function insertCloneVideo(params: {
   renderProvider: string;
   renderStatus: "pending" | "rendering" | "ready" | "failed";
 }): Promise<void> {
-  const db = getDb();
+  const db = await getDb();
   await db.execute(
     `INSERT INTO kingcam_clone_videos
        (id, user_id, context, title, script, style, video_url, audio_url,
@@ -131,7 +138,7 @@ async function insertMediaAsset(params: {
   duration: number | null;
   feature: string;
 }): Promise<string> {
-  const db = getDb();
+  const db = await getDb();
   const assetId = randomUUID();
   await db.execute(
     `INSERT INTO media_assets
@@ -181,6 +188,7 @@ export async function runKingCamFactory(
   } = options;
 
   const jobId = randomUUID();
+  const generatorVertical = toGeneratorVertical(vertical);
   const errors: string[] = [];
   const result: FactoryResult = {
     jobId,
@@ -254,7 +262,7 @@ export async function runKingCamFactory(
       styleLevel: mode === "FAST" ? "social" : "editorial",
       aspectRatio,
       referenceImageUrl,
-      vertical,
+      vertical: generatorVertical,
     });
     result.imageUrl = imageResult.url;
     result.provider.image = `${imageResult.provider}/${imageResult.model}`;
@@ -277,7 +285,7 @@ export async function runKingCamFactory(
         aspectRatio,
         duration: videoDuration,
         mode: "pro",
-        vertical,
+        vertical: generatorVertical,
       });
       result.videoUrl = videoResult.url;
       result.thumbnailUrl = result.imageUrl; // Use generated image as thumbnail

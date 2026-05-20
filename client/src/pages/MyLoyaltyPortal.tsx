@@ -59,7 +59,7 @@ export default function MyLoyaltyPortal() {
   const ptsToNext = tier.nextAt ? tier.nextAt - p.loyalty_score : null;
   const taskRate = p.total_tasks_assigned > 0
     ? Math.round((p.total_tasks_completed / p.total_tasks_assigned) * 100) : 0;
-  const activeWarnings = (myWarnings as any[] | undefined)?.filter((w: any) => !w.resolved) ?? [];
+  const activeWarnings = (((myWarnings as any)?.warnings as any[] | undefined) ?? []).filter((w: any) => !w.resolved);
 
   return (
     <div className="space-y-8 p-6">

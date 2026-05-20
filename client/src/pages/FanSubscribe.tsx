@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
 export default function FanSubscribe() {
-  const [, params] = useRoute("/subscribe/:tierId");
+  const [, params] = useRoute<{ tierId: string }>("/subscribe/:tierId");
   const { user } = useAuth();
   const { toast } = useToast();
   const tierId = params?.tierId ? parseInt(params.tierId) : 0;

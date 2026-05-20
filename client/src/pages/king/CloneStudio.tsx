@@ -180,9 +180,9 @@ export default function CloneStudio() {
             style={{ width: "100%", minHeight: 96, resize: "vertical", background: "#101010", color: C.text, border: `1px solid ${C.border}`, borderRadius: 2, padding: 8, marginBottom: 12 }}
           />
 
-          <TileGroup label="Resolution" options={RES_OPTIONS} value={resolution} onChange={setResolution} />
-          <TileGroup label="Length" options={LEN_OPTIONS} value={length} onChange={setLength} />
-          <TileGroup label="Mode" options={MODE_OPTIONS} value={mode} onChange={setMode} />
+          <TileGroup label="Resolution" options={RES_OPTIONS} value={resolution} onChange={(value) => setResolution(value as typeof resolution)} />
+          <TileGroup label="Length" options={LEN_OPTIONS} value={length} onChange={(value) => setLength(value as typeof length)} />
+          <TileGroup label="Mode" options={MODE_OPTIONS} value={mode} onChange={(value) => setMode(value as typeof mode)} />
 
           <button
             onClick={onGenerate}

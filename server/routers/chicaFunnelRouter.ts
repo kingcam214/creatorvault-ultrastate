@@ -6,6 +6,11 @@ import { db } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 
 // Chica business model types
+async function queryRows(sql: string, params?: any[]): Promise<any[]> {
+  const result = await db.execute(sql, params);
+  return Array.isArray(result) ? (result[0] as any[]) : [];
+}
+
 const CHICA_FUNNEL_TYPES = {
   8001: { name: 'Delbania', template: 'Delbania Boutique Funnel', type: 'boutique_fitness', platform: 'boutique' },
   8002: { name: 'Marielka', template: 'Dominican Chica Funnel', type: 'adult_content', platform: 'vaultx' },
@@ -16,7 +21,7 @@ const CHICA_FUNNEL_TYPES = {
 export const chicaFunnelRouter = router({
   // List all chica funnels
   list: kingProcedure.query(async () => {
-    const [rows] = await db.execute(
+    const rows = await queryRows(
       `SELECT cf.*, 
         (SELECT COUNT(*) FROM chica_funnel_steps cfs WHERE cfs.funnel_id = cf.id) as step_count
        FROM chica_funnels cf ORDER BY cf.chica_user_id`
@@ -28,14 +33,14 @@ export const chicaFunnelRouter = router({
   get: kingProcedure
     .input(z.object({ funnelId: z.string() }))
     .query(async ({ input }) => {
-      const [funnels] = await db.execute(
+      const funnels = await queryRows(
         'SELECT * FROM chica_funnels WHERE id = ?',
         [input.funnelId]
       );
       const funnel = (funnels as any[])[0];
       if (!funnel) throw new Error('Funnel not found');
 
-      const [steps] = await db.execute(
+      const steps = await queryRows(
         'SELECT * FROM chica_funnel_steps WHERE funnel_id = ? ORDER BY platform, step_order',
         [input.funnelId]
       );
@@ -51,7 +56,7 @@ export const chicaFunnelRouter = router({
       if (!chicaConfig) throw new Error(`No funnel config for chica ID ${chicaUserId}`);
 
       // Check if funnel already exists
-      const [existing] = await db.execute(
+      const existing = await queryRows(
         'SELECT id FROM chica_funnels WHERE chica_user_id = ?',
         [chicaUserId]
       );
@@ -67,7 +72,7 @@ export const chicaFunnelRouter = router({
       );
 
       // Copy steps from template
-      const [templates] = await db.execute(
+      const templates = await queryRows(
         'SELECT * FROM chica_funnel_templates WHERE template_name = ? ORDER BY platform, step_order',
         [chicaConfig.template]
       );
@@ -88,7 +93,7 @@ export const chicaFunnelRouter = router({
     const results = [];
     for (const [chicaId, config] of Object.entries(CHICA_FUNNEL_TYPES)) {
       const userId = parseInt(chicaId);
-      const [existing] = await db.execute(
+      const existing = await queryRows(
         'SELECT id FROM chica_funnels WHERE chica_user_id = ?',
         [userId]
       );
@@ -104,7 +109,7 @@ export const chicaFunnelRouter = router({
         [funnelId, userId, `${config.name}'s Funnel`]
       );
 
-      const [templates] = await db.execute(
+      const templates = await queryRows(
         'SELECT * FROM chica_funnel_templates WHERE template_name = ? ORDER BY platform, step_order',
         [config.template]
       );

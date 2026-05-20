@@ -91,6 +91,10 @@ import { chicaCockpitRouter } from './routers/chicaCockpitRouter';
 import { chicaFunnelRouter } from './routers/chicaFunnelRouter';
 import { recruitmentWeaponRouter } from "./routers/recruitmentWeaponRouter";
 import { creatorOutreachRouter } from "./routers/creatorOutreachRouter";
+import { activationWarRoomRouter } from "./routers/activationWarRoomRouter";
+import { conversionEngineRouter } from "./routers/conversionEngineRouter";
+import { dailyRevenueEngineRouter } from "./routers/dailyRevenueEngineRouter";
+import { recruiterOSRouter } from "./routers/recruiterOSRouter";
 import { automatedDirectorRouter } from "./routers/automatedDirectorRouter";
 import { revenueReportingRouter } from "./routers/revenueReportingRouter";
 import { teaserEngineRouter } from "./routers/teaserEngineRouter";
@@ -996,6 +1000,10 @@ export const appRouter = router({
   cloneEmpire: cloneEmpireRouter,
   agentTelemetry: agentTelemetryRouter,
   challengeAutomation: challengeAutomationRouter,
+  activationWarRoom: activationWarRoomRouter,
+  conversionEngine: conversionEngineRouter,
+  dailyRevenueEngine: dailyRevenueEngineRouter,
+  recruiterOS: recruiterOSRouter,
   // ── VaultX Revenue Operations Pipeline ──────────────────────────────────────
   creatorOutreach: creatorOutreachRouter,
   automatedDirector: automatedDirectorRouter,

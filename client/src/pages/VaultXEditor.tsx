@@ -286,7 +286,7 @@ async function uploadVaultXFile(file: File, onProgress?: (progress: number) => v
     uploaded = finalData;
   }
 
-  return uploaded;
+  return uploaded!;
 }
 
 // ============================================================================
