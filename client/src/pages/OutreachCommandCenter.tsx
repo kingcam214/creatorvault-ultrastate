@@ -19,7 +19,7 @@ const SCORE_COLOR = (score: number) =>
 
 export default function OutreachCommandCenter() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"pipeline" | "director" | "revenue">("pipeline");
+  const [activeTab, setActiveTab] = useState<"warroom" | "pipeline" | "director" | "revenue">("warroom");
   const [selectedCreators, setSelectedCreators] = useState<any[]>([]);
   const [replyModal, setReplyModal] = useState<{ handle: string; message: string } | null>(null);
   const [replyInput, setReplyInput] = useState("");
@@ -41,6 +41,62 @@ export default function OutreachCommandCenter() {
   const applyStyle = trpc.automatedDirector.applyStyle.useMutation();
   const applyEnhance = trpc.automatedDirector.applyEnhance.useMutation();
   const runPipeline = trpc.automatedDirector.runFullPipeline.useMutation();
+  const vaultxConfigQuery = trpc.vaultxAcquisition.getConfig.useQuery(undefined, { retry: false, refetchInterval: 45000 });
+  const vaultxBoardQuery = trpc.vaultxAcquisition.getBoard.useQuery({ limit: 80 }, { retry: false, refetchInterval: 30000 });
+  const vaultxProofQuery = trpc.vaultxAcquisition.getProof.useQuery({ limit: 80 }, { retry: false, refetchInterval: 30000 });
+  const bootstrapAcquisition = trpc.vaultxAcquisition.bootstrap.useMutation({
+    onSuccess: () => {
+      vaultxConfigQuery.refetch();
+      vaultxBoardQuery.refetch();
+      vaultxProofQuery.refetch();
+    },
+  });
+  const runAcquisitionNow = trpc.vaultxAcquisition.runNow.useMutation({
+    onSuccess: () => {
+      vaultxBoardQuery.refetch();
+      vaultxProofQuery.refetch();
+    },
+  });
+
+  const acquisitionConfig = ((vaultxConfigQuery.data as any)?.config ?? {}) as any;
+  const acquisitionBoard = ((vaultxBoardQuery.data ?? {}) as any);
+  const acquisitionProof = ((vaultxProofQuery.data ?? {}) as any);
+  const acquisitionLeads = ((acquisitionBoard.leads ?? []) as any[]);
+  const acquisitionActions = ((acquisitionBoard.actions ?? []) as any[]);
+  const acquisitionHandoffs = ((acquisitionBoard.handoffs ?? []) as any[]);
+  const acquisitionRuns = ((acquisitionBoard.runs ?? []) as any[]);
+  const acquisitionTelemetry = ((acquisitionProof.telemetry ?? []) as any[]);
+  const acquisitionSummary = ((acquisitionProof.summary ?? {}) as any);
+  const acquisitionLiveEnabled = acquisitionConfig.liveSendsEnabled === true || acquisitionConfig.enabled === true;
+  const acquisitionBusy = bootstrapAcquisition.isPending || runAcquisitionNow.isPending;
+
+  const refreshAcquisitionWarRoom = () => {
+    vaultxConfigQuery.refetch();
+    vaultxBoardQuery.refetch();
+    vaultxProofQuery.refetch();
+  };
+
+  const handleBootstrapAcquisition = async () => {
+    try {
+      await bootstrapAcquisition.mutateAsync();
+      toast({ title: "Acquisition schema verified", description: "The operator tables and proof ledger are ready." });
+    } catch (e: any) {
+      toast({ title: "Bootstrap failed", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleRunAcquisition = async (mode: "test" | "manual") => {
+    try {
+      const result = await runAcquisitionNow.mutateAsync({ mode, sourceLimit: 80, outreachLimit: 50, followUpLimit: 50 });
+      const proof = result as any;
+      toast({
+        title: mode === "test" ? "Test acquisition sweep complete" : "Manual acquisition sweep complete",
+        description: `Sourced ${proof?.sourced ?? 0}, queued ${proof?.queued ?? 0}, sent ${proof?.sent ?? 0}, dry-run ${proof?.dryRun === false ? "off" : "on"}, failed ${proof?.failed ?? 0}.`,
+      });
+    } catch (e: any) {
+      toast({ title: "Acquisition sweep failed", description: e.message, variant: "destructive" });
+    }
+  };
 
   // Auto-refresh revenue summary every 60 seconds
   useEffect(() => {
@@ -212,7 +268,7 @@ export default function OutreachCommandCenter() {
 
       {/* Tabs */}
       <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 4 }}>
-        {(["pipeline", "director", "revenue"] as const).map(tab => (
+        {(["warroom", "pipeline", "director", "revenue"] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -229,10 +285,132 @@ export default function OutreachCommandCenter() {
               color: activeTab === tab ? "#fff" : "#888",
             }}
           >
-            {tab === "pipeline" ? "🎯 Outreach Pipeline" : tab === "director" ? "🎬 Automated Director" : "📈 Revenue Reports"}
+            {tab === "warroom" ? "Same-Day War Room" : tab === "pipeline" ? "Outreach Pipeline" : tab === "director" ? "Automated Director" : "Revenue Reports"}
           </button>
         ))}
       </div>
+
+
+      {/* ── Tab: Same-Day Acquisition War Room ── */}
+      {activeTab === "warroom" && (
+        <div>
+          <div style={{
+            background: acquisitionLiveEnabled ? "rgba(255,204,0,0.10)" : "rgba(0,255,136,0.08)",
+            border: `1px solid ${acquisitionLiveEnabled ? "rgba(255,204,0,0.35)" : "rgba(0,255,136,0.28)"}`,
+            borderRadius: 14,
+            padding: 18,
+            marginBottom: 18,
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+              <div style={{ maxWidth: 860 }}>
+                <div style={{ fontSize: 12, color: acquisitionLiveEnabled ? "#ffcc00" : "#00ff88", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>
+                  {acquisitionLiveEnabled ? "Live-send capable: verify proof before claiming acquisition" : "Approval-gated: queued work is not counted as contacted"}
+                </div>
+                <h2 style={{ margin: 0, fontSize: 24, fontWeight: 850 }}>Same-Day Acquisition War Room</h2>
+                <p style={{ margin: "8px 0 0", color: "#aaa", lineHeight: 1.6, fontSize: 14 }}>
+                  This panel separates real acquisition from generated copy. A lead only counts as contacted when the proof ledger shows a delivery id, relay handoff, or manual-send confirmation tied to that lead and tracking link.
+                </p>
+              </div>
+              <button
+                onClick={refreshAcquisitionWarRoom}
+                style={{ height: 42, padding: "10px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.06)", color: "#fff", cursor: "pointer", fontWeight: 700 }}
+              >
+                Refresh proof
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(150px, 1fr))", gap: 12, marginBottom: 18 }}>
+            {[
+              { label: "Total leads", value: acquisitionSummary.total_leads ?? acquisitionLeads.length, color: "#7c3aed" },
+              { label: "Hot leads", value: acquisitionSummary.hot_leads ?? acquisitionLeads.filter(l => l.priority_band === "hot").length, color: "#db2777" },
+              { label: "Queued actions", value: acquisitionActions.filter(a => a.status === "queued" || a.status === "pending").length, color: "#ffcc00" },
+              { label: "Contacted w/proof", value: acquisitionSummary.contacted ?? acquisitionActions.filter(a => a.status === "sent" && (a.external_message_id || a.proof)).length, color: "#00ff88" },
+              { label: "Human handoffs", value: acquisitionSummary.handoff_required ?? acquisitionHandoffs.length, color: "#60a5fa" },
+            ].map(metric => (
+              <div key={metric.label} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 16 }}>
+                <div style={{ fontSize: 26, fontWeight: 850, color: metric.color }}>{metric.value ?? 0}</div>
+                <div style={{ fontSize: 11, color: "#777", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>{metric.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 360px", gap: 16, marginBottom: 18 }}>
+            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 18 }}>
+              <h3 style={{ margin: "0 0 10px", fontSize: 16, fontWeight: 800 }}>Today’s execution controls</h3>
+              <p style={{ margin: "0 0 16px", color: "#999", fontSize: 13, lineHeight: 1.6 }}>
+                Run test mode first to source and queue without pretending messages were delivered. Manual mode still obeys backend approval gates and will surface handoffs when direct sending is unavailable.
+              </p>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button onClick={handleBootstrapAcquisition} disabled={acquisitionBusy} style={{ padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.06)", color: "#fff", cursor: acquisitionBusy ? "not-allowed" : "pointer", fontWeight: 750 }}>
+                  Verify schema
+                </button>
+                <button onClick={() => handleRunAcquisition("test")} disabled={acquisitionBusy} style={{ padding: "11px 16px", borderRadius: 10, border: "none", background: acquisitionBusy ? "#333" : "linear-gradient(135deg, #7c3aed, #db2777)", color: "#fff", cursor: acquisitionBusy ? "not-allowed" : "pointer", fontWeight: 750 }}>
+                  Run test sweep
+                </button>
+                <button onClick={() => handleRunAcquisition("manual")} disabled={acquisitionBusy} style={{ padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(0,255,136,0.32)", background: acquisitionBusy ? "#333" : "rgba(0,255,136,0.10)", color: "#a7f3d0", cursor: acquisitionBusy ? "not-allowed" : "pointer", fontWeight: 750 }}>
+                  Run manual sweep
+                </button>
+              </div>
+            </div>
+
+            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 18 }}>
+              <h3 style={{ margin: "0 0 10px", fontSize: 16, fontWeight: 800 }}>Proof state</h3>
+              <div style={{ fontSize: 13, color: "#aaa", lineHeight: 1.7 }}>
+                <div>Mode: <strong style={{ color: acquisitionLiveEnabled ? "#ffcc00" : "#00ff88" }}>{acquisitionLiveEnabled ? "live capable" : "approval gated"}</strong></div>
+                <div>Last run: <strong style={{ color: "#fff" }}>{acquisitionRuns[0]?.started_at || acquisitionTelemetry[0]?.created_at || "not recorded"}</strong></div>
+                <div>Proof events: <strong style={{ color: "#fff" }}>{acquisitionTelemetry.length}</strong></div>
+                <div>API status: <strong style={{ color: vaultxBoardQuery.error ? "#ff6b6b" : "#00ff88" }}>{vaultxBoardQuery.error ? vaultxBoardQuery.error.message : "responding"}</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.15fr) minmax(340px, 0.85fr)", gap: 16 }}>
+            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 18, overflow: "hidden" }}>
+              <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800 }}>Lead board: act today, count only proof</h3>
+              <div style={{ display: "grid", gap: 10 }}>
+                {acquisitionLeads.slice(0, 12).map((lead) => (
+                  <div key={lead.id || lead.uuid || `${lead.platform}-${lead.handle}`} style={{ display: "grid", gridTemplateColumns: "1.1fr 0.55fr 0.55fr 1fr", gap: 12, alignItems: "center", padding: "12px", borderRadius: 10, background: "rgba(0,0,0,0.18)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div>
+                      <div style={{ fontWeight: 800 }}>@{lead.handle}</div>
+                      <div style={{ color: "#777", fontSize: 12 }}>{lead.platform} · {lead.source || lead.niche || "sourced"}</div>
+                    </div>
+                    <div style={{ color: SCORE_COLOR(Number(lead.score || 0)), fontWeight: 800 }}>{lead.priority_band || "unscored"} · {Number(lead.score || 0)}</div>
+                    <div style={{ color: lead.status === "contacted" ? "#00ff88" : lead.handoff_required ? "#ffcc00" : "#aaa", fontSize: 12, fontWeight: 750 }}>{lead.status || "queued"}</div>
+                    <div style={{ color: "#aaa", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lead.handoff_reason || lead.cta_url || "next action pending"}</div>
+                  </div>
+                ))}
+                {acquisitionLeads.length === 0 && (
+                  <div style={{ color: "#777", padding: 18, textAlign: "center", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 10 }}>
+                    No acquisition leads are visible yet. Verify schema, then run a test sweep to source and score today’s prospects.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 18 }}>
+              <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800 }}>Recent outbound actions</h3>
+              <div style={{ display: "grid", gap: 10, maxHeight: 520, overflowY: "auto" }}>
+                {acquisitionActions.slice(0, 12).map((action) => (
+                  <div key={action.id || action.uuid} style={{ padding: 12, borderRadius: 10, background: "rgba(0,0,0,0.18)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
+                      <strong>@{action.handle}</strong>
+                      <span style={{ color: action.status === "sent" ? "#00ff88" : action.status === "failed" ? "#ff6b6b" : "#ffcc00", fontSize: 12, fontWeight: 800 }}>{action.status}</span>
+                    </div>
+                    <div style={{ color: "#888", fontSize: 12, marginBottom: 8 }}>{action.channel} · {action.stage} · attempts {action.attempt_count ?? 0}</div>
+                    <div style={{ color: "#aaa", fontSize: 12, lineHeight: 1.5 }}>{action.error_message || action.external_message_id || action.cta_url || "No external delivery proof attached yet."}</div>
+                  </div>
+                ))}
+                {acquisitionActions.length === 0 && (
+                  <div style={{ color: "#777", padding: 18, textAlign: "center", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 10 }}>
+                    No outbound actions yet. Generated leads will appear here with their send status and proof fields.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Tab: Pipeline ── */}
       {activeTab === "pipeline" && (
