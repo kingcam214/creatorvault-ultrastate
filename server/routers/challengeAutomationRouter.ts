@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import { randomUUID } from "crypto";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
 import OpenAI from "openai";
 import Stripe from "stripe";
 import * as db from "../db";
@@ -29,6 +29,25 @@ const RECRUITER_BOT_TOKEN = process.env.TELEGRAM_RECRUITER_BOT_TOKEN || "";
 const ENGAGEMENT_BOT_TOKEN = process.env.TELEGRAM_ENGAGEMENT_BOT_TOKEN || "";
 const MONETIZATION_BOT_TOKEN = process.env.TELEGRAM_MONETIZATION_BOT_TOKEN || "";
 const OWNER_CHAT_ID = process.env.TELEGRAM_OWNER_CHAT_ID || process.env.TELEGRAM_KINGCAM_CHAT_ID || "";
+const FRONTEND_BASE_URL = process.env.VITE_FRONTEND_FORGE_API_URL || process.env.FRONTEND_URL || "https://creatorvault.live";
+
+const AI_CHALLENGE_OFFERS: Record<string, { name: string; amountCents: number; description: string }> = {
+  "agent-challenge-entry": {
+    name: "AI Agent Challenge Entry",
+    amountCents: 2900,
+    description: "Entry access to the CreatorVault AI Agent Challenge revenue sprint and proof feed.",
+  },
+  "vaultx-agent-revenue-pack": {
+    name: "VaultX Agent Revenue Pack",
+    amountCents: 4900,
+    description: "VaultX revenue playbook access tied to the AI Agent Challenge buyer journey.",
+  },
+  "operator-proof-sprint": {
+    name: "Operator Proof Sprint",
+    amountCents: 9700,
+    description: "Premium AI Agent Challenge sprint access with operator proof workflow.",
+  },
+};
 
 // ── Real Telegram message sender ──────────────────────────────────────────────
 async function sendTelegram(
@@ -87,10 +106,13 @@ async function fireVaultXMoneyDrop(params: {
     `<b>Tonight's VaultX unlock is live.</b> Tap below to open the paid CreatorVault/VaultX offer and push the $5K challenge forward.`
   ).slice(0, 1000);
 
+  const challengeOfferUrl = `${FRONTEND_BASE_URL}/ai-agent-challenge?offer=vaultx-agent-revenue-pack&source=telegram_drop`;
   const drop = await sendFreeChannelDrop({
     caption,
     price: params.price,
     creatorId: 1,
+    destinationUrl: challengeOfferUrl,
+    ctaLabel: `Join AI Agent Challenge ($49)`,
   });
 
   await saveAgentReport(
@@ -1034,12 +1056,20 @@ let lastAutonomousCycle: any = null;
 
 async function creditAgentRevenueToActiveChallenge(amount: number, source: string, description: string) {
   if (!amount || amount <= 0) return null;
-  const cr = await db.db.execute(sql`SELECT id FROM empire_challenges WHERE status = 'active' LIMIT 1`);
-  const crows = extractRows(cr);
-  if (!crows[0]) return null;
-  await db.db.execute(sql`INSERT INTO empire_challenge_transactions (challenge_id, amount, source, description) VALUES (${crows[0].id}, ${amount}, ${source}, ${description.slice(0, 240)})`);
-  await db.db.execute(sql`UPDATE empire_challenges SET current_revenue = current_revenue + ${amount}, status = CASE WHEN current_revenue + ${amount} >= target_revenue THEN 'met' ELSE status END, timestamp_met = CASE WHEN current_revenue + ${amount} >= target_revenue AND timestamp_met IS NULL THEN NOW() ELSE timestamp_met END WHERE id = ${crows[0].id}`);
-  return crows[0].id;
+
+  await db.db.execute(sql`
+    INSERT INTO empire_agent_reports (agent_slug, agent_name, report_type, content, revenue_impact, created_at)
+    VALUES (
+      'money-truth-gate',
+      'Money Truth Gate',
+      'challenge_credit_refused_agent_estimate',
+      ${JSON.stringify({ amount, source, description: description.slice(0, 240), reason: "agent_estimated_revenue_is_not_live_payment_proof" }).slice(0, 12000)},
+      0,
+      NOW()
+    )
+  `);
+
+  return null;
 }
 
 export async function runChallengeAutomationCycle(mode: "priority" | "full" = "priority") {
@@ -1074,11 +1104,11 @@ export async function runChallengeAutomationCycle(mode: "priority" | "full" = "p
       }
     }
 
-    const challengeId = await creditAgentRevenueToActiveChallenge(
-      totalRevenue,
-      mode === "full" ? "agent_swarm_full_autonomous_cycle" : "agent_swarm_priority_autonomous_cycle",
-      `${mode} autonomous agent cycle completed; ${results.filter(r => r.status === "success").length}/${results.length} agents succeeded`,
-    );
+      const challengeId = await creditAgentRevenueToActiveChallenge(
+        totalRevenue,
+        mode === "full" ? "agent_swarm_full_autonomous_cycle" : "agent_swarm_priority_autonomous_cycle",
+        `${mode} autonomous agent cycle completed; ${results.filter(r => r.status === "success").length}/${results.length} agents succeeded`,
+      );
 
     const summary = {
       skipped: false,
@@ -1143,8 +1173,75 @@ export async function startChallengeAutomationCron() {
   return getChallengeAutomationStatus();
 }
 
+async function getActiveChallengeForCheckout() {
+  const result = await db.db.execute(sql`SELECT id, title, target_revenue, current_revenue, status FROM empire_challenges WHERE status = 'active' ORDER BY week_number ASC LIMIT 1`);
+  const rows = extractRows(result, "active AI Agent Challenge checkout lookup");
+  if (!rows[0]) throw new Error("No active AI Agent Challenge found for checkout");
+  return rows[0];
+}
+
 // ── ROUTER ─────────────────────────────────────────────────────────────────────
 export const challengeAutomationRouter = router({
+
+  createChallengeCheckout: publicProcedure
+    .input(z.object({
+      offerSlug: z.enum(["agent-challenge-entry", "vaultx-agent-revenue-pack", "operator-proof-sprint"]).default("agent-challenge-entry"),
+      buyerEmail: z.string().email().optional(),
+      trackingCode: z.string().max(128).optional(),
+      source: z.string().max(80).default("public_challenge_offer"),
+    }))
+    .mutation(async ({ input }) => {
+      if (!process.env.STRIPE_SECRET_KEY) throw new Error("Stripe checkout is not configured");
+      const offer = AI_CHALLENGE_OFFERS[input.offerSlug];
+      const activeChallenge = await getActiveChallengeForCheckout();
+      const metadata = {
+        type: "ai_agent_challenge_purchase",
+        challengeRevenueEligible: "true",
+        challengeId: String(activeChallenge.id),
+        offerSlug: input.offerSlug,
+        trackingCode: input.trackingCode || "direct",
+        source: input.source,
+      };
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        mode: "payment",
+        customer_email: input.buyerEmail,
+        line_items: [{
+          price_data: {
+            currency: "usd",
+            unit_amount: offer.amountCents,
+            product_data: {
+              name: offer.name,
+              description: offer.description,
+              metadata: {
+                challengeId: String(activeChallenge.id),
+                offerSlug: input.offerSlug,
+              },
+            },
+          },
+          quantity: 1,
+        }],
+        metadata,
+        payment_intent_data: {
+          metadata: {
+            ...metadata,
+            challengeCredited: "via_checkout_session",
+          },
+        },
+        success_url: `${FRONTEND_BASE_URL}/ai-agent-challenge?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${FRONTEND_BASE_URL}/ai-agent-challenge?checkout=cancelled&offer=${input.offerSlug}`,
+      });
+
+      return {
+        checkoutUrl: session.url,
+        sessionId: session.id,
+        challengeId: activeChallenge.id,
+        offerSlug: input.offerSlug,
+        amountCents: offer.amountCents,
+        revenueCountsOnlyAfterLiveWebhook: true,
+      };
+    }),
 
   getAutonomousStatus: protectedProcedure.query(async () => getChallengeAutomationStatus()),
 
@@ -1181,9 +1278,18 @@ export const challengeAutomationRouter = router({
       const rows = extractRows(challengeResult);
       if (!rows[0]) throw new Error("No active challenge found");
       const challengeId = rows[0].id;
-      await db.db.execute(sql`INSERT INTO empire_challenge_transactions (challenge_id, amount, source, description) VALUES (${challengeId}, ${input.amount}, ${input.source}, ${input.description ?? null})`);
-      await db.db.execute(sql`UPDATE empire_challenges SET current_revenue = current_revenue + ${input.amount}, status = CASE WHEN current_revenue + ${input.amount} >= target_revenue THEN 'met' ELSE status END, timestamp_met = CASE WHEN current_revenue + ${input.amount} >= target_revenue AND timestamp_met IS NULL THEN NOW() ELSE timestamp_met END WHERE id = ${challengeId}`);
-      return { success: true, amount: input.amount, challengeId };
+      await db.db.execute(sql`
+        INSERT INTO empire_agent_reports (agent_slug, agent_name, report_type, content, revenue_impact, created_at)
+        VALUES (
+          'money-truth-gate',
+          'Money Truth Gate',
+          'manual_challenge_revenue_refused',
+          ${JSON.stringify({ amount: input.amount, source: input.source, description: input.description ?? null, reason: "manual_revenue_requires_live_payment_proof" }).slice(0, 12000)},
+          0,
+          NOW()
+        )
+      `);
+      return { success: false, credited: false, amount: input.amount, challengeId, reason: "manual_revenue_requires_live_payment_proof" };
     }),
 
   // Run a single agent — REAL execution
@@ -1196,12 +1302,7 @@ export const challengeAutomationRouter = router({
 
       if (input.creditToChallenge && revenue > 0) {
         try {
-          const cr = await db.db.execute(sql`SELECT id FROM empire_challenges WHERE status = 'active' LIMIT 1`);
-          const crows = extractRows(cr);
-          if (crows[0]) {
-            await db.db.execute(sql`INSERT INTO empire_challenge_transactions (challenge_id, amount, source, description) VALUES (${crows[0].id}, ${revenue}, ${input.agentSlug}, ${outcome.slice(0, 200)})`);
-            await db.db.execute(sql`UPDATE empire_challenges SET current_revenue = current_revenue + ${revenue}, status = CASE WHEN current_revenue + ${revenue} >= target_revenue THEN 'met' ELSE status END, timestamp_met = CASE WHEN current_revenue + ${revenue} >= target_revenue AND timestamp_met IS NULL THEN NOW() ELSE timestamp_met END WHERE id = ${crows[0].id}`);
-          }
+          await creditAgentRevenueToActiveChallenge(revenue, input.agentSlug, outcome.slice(0, 200));
         } catch (challengeCreditError) {
           throw new Error(`Challenge revenue credit failed for ${input.agentSlug}: ${challengeCreditError instanceof Error ? challengeCreditError.message : String(challengeCreditError)}`);
         }
@@ -1228,12 +1329,7 @@ export const challengeAutomationRouter = router({
 
       if (input.creditToChallenge && totalRevenue > 0) {
         try {
-          const cr = await db.db.execute(sql`SELECT id FROM empire_challenges WHERE status = 'active' LIMIT 1`);
-          const crows = extractRows(cr);
-          if (crows[0]) {
-            await db.db.execute(sql`INSERT INTO empire_challenge_transactions (challenge_id, amount, source, description) VALUES (${crows[0].id}, ${totalRevenue}, 'agent_swarm', 'Full real execution cycle — ${allSlugs.length} agents ran')`);
-            await db.db.execute(sql`UPDATE empire_challenges SET current_revenue = current_revenue + ${totalRevenue}, status = CASE WHEN current_revenue + ${totalRevenue} >= target_revenue THEN 'met' ELSE status END, timestamp_met = CASE WHEN current_revenue + ${totalRevenue} >= target_revenue AND timestamp_met IS NULL THEN NOW() ELSE timestamp_met END WHERE id = ${crows[0].id}`);
-          }
+          await creditAgentRevenueToActiveChallenge(totalRevenue, 'agent_swarm', `Full execution cycle completed; ${allSlugs.length} agents ran`);
         } catch (challengeCreditError) {
           throw new Error(`Full-cycle challenge revenue credit failed: ${challengeCreditError instanceof Error ? challengeCreditError.message : String(challengeCreditError)}`);
         }

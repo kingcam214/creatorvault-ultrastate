@@ -11,7 +11,7 @@ import type { Request, Response } from "express";
 import Stripe from "stripe";
 import { verifyWebhookSignature } from "../services/stripeVaultLive";
 import * as dbVaultLive from "../db-vaultlive";
-import { creditChallengePayment, creditChallengePaymentCents } from "../challengePaymentHook";
+import { creditChallengePaymentCents, type ChallengePaymentProof } from "../challengePaymentHook";
 
 /**
  * Stripe webhook endpoint handler
@@ -44,19 +44,25 @@ export async function handleStripeWebhook(req: Request, res: Response) {
     return res.status(400).send(`Webhook Error: ${err instanceof Error ? err.message : "Unknown error"}`);
   }
 
-  console.log(`[Stripe Webhook] Received event: ${event.type}`);
+  console.log(`[Stripe Webhook] Received event: ${event.type}`, { livemode: event.livemode });
 
   try {
     // Handle checkout.session.completed
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       
-      // Credit challenge for every completed checkout
-      if (session.amount_total && session.amount_total > 0) {
-        const desc = session.metadata?.tierId
-          ? `Stripe subscription checkout — tier ${session.metadata.tierId}`
-          : `Stripe checkout — ${session.metadata?.type || 'payment'}`;
-        await creditChallengePaymentCents(session.amount_total, "stripe_checkout", desc);
+      // Credit AI Agent Challenge revenue only when the checkout was created
+      // explicitly for the challenge. Other live Stripe payments remain real
+      // platform money, but they are not AI Agent Challenge revenue.
+      if (session.amount_total && session.amount_total > 0 && isChallengeRevenueEligible(session.metadata)) {
+        const challengeId = session.metadata?.challengeId || "active";
+        const offerSlug = session.metadata?.offerSlug || session.metadata?.type || "ai_agent_challenge_purchase";
+        const desc = `AI Agent Challenge checkout — ${offerSlug}; challenge=${challengeId}`;
+        await creditChallengePaymentCents(session.amount_total, "stripe_ai_agent_challenge_checkout", desc, buildStripeChallengeProof(event, session, {
+          paymentObjectId: session.payment_intent ? String(session.payment_intent) : session.id,
+          customerRef: getStripeCustomerRef(session.customer, session.customer_email || session.customer_details?.email),
+          productRef: `ai_agent_challenge:${challengeId}:${offerSlug}`,
+        }));
       }
 
       // Check if this is a subscription checkout (has tierId in metadata)
@@ -70,19 +76,32 @@ export async function handleStripeWebhook(req: Request, res: Response) {
       const pi = event.data.object as Stripe.PaymentIntent;
       // Only credit if not already credited via checkout.session.completed
       // (checkout sessions also fire payment_intent.succeeded — skip duplicates)
-      if (pi.amount > 0 && !pi.metadata?.challengeCredited) {
-        await creditChallengePaymentCents(pi.amount, "stripe_payment_intent", `Stripe payment — ${pi.description || pi.id}`);
+      if (pi.amount > 0 && isChallengeRevenueEligible(pi.metadata) && pi.metadata?.challengeCredited !== "via_checkout_session") {
+        await creditChallengePaymentCents(pi.amount, "stripe_ai_agent_challenge_payment_intent", `AI Agent Challenge payment intent — ${pi.description || pi.id}`, buildStripeChallengeProof(event, pi, {
+          paymentObjectId: pi.id,
+          customerRef: getStripeCustomerRef(pi.customer, pi.receipt_email),
+          productRef: pi.metadata?.challengeId ? `ai_agent_challenge:${pi.metadata.challengeId}:${pi.metadata.offerSlug || pi.metadata.type || "payment_intent"}` : "ai_agent_challenge:payment_intent",
+        }));
       }
     } else if (event.type === "invoice.paid") {
       const invoice = event.data.object as Stripe.Invoice;
-      if (invoice.amount_paid > 0) {
-        await creditChallengePaymentCents(invoice.amount_paid, "stripe_subscription_renewal", `Stripe subscription renewal — ${invoice.customer_email || invoice.customer}`);
+      const invoicePaymentObject = invoice as Stripe.Invoice & { payment_intent?: string | Stripe.PaymentIntent | null; subscription?: string | Stripe.Subscription | null };
+      if (invoice.amount_paid > 0 && isChallengeRevenueEligible(invoice.metadata)) {
+        await creditChallengePaymentCents(invoice.amount_paid, "stripe_ai_agent_challenge_subscription_renewal", `AI Agent Challenge subscription renewal — ${invoice.customer_email || invoice.customer}`, buildStripeChallengeProof(event, invoice, {
+          paymentObjectId: invoicePaymentObject.payment_intent ? String(invoicePaymentObject.payment_intent) : invoice.id,
+          customerRef: getStripeCustomerRef(invoice.customer, invoice.customer_email),
+          productRef: invoice.metadata?.challengeId ? `ai_agent_challenge:${invoice.metadata.challengeId}:${invoicePaymentObject.subscription || "subscription"}` : "ai_agent_challenge:subscription_renewal",
+        }));
       }
     } else if (event.type === "charge.succeeded") {
       const charge = event.data.object as Stripe.Charge;
       // Only credit standalone charges (not attached to payment intents already credited)
-      if (charge.amount > 0 && !charge.payment_intent) {
-        await creditChallengePaymentCents(charge.amount, "stripe_charge", `Stripe charge — ${charge.description || charge.id}`);
+      if (charge.amount > 0 && !charge.payment_intent && isChallengeRevenueEligible(charge.metadata)) {
+        await creditChallengePaymentCents(charge.amount, "stripe_ai_agent_challenge_charge", `AI Agent Challenge charge — ${charge.description || charge.id}`, buildStripeChallengeProof(event, charge, {
+          paymentObjectId: charge.id,
+          customerRef: getStripeCustomerRef(charge.customer, charge.billing_details?.email),
+          productRef: charge.metadata?.challengeId ? `ai_agent_challenge:${charge.metadata.challengeId}:${charge.metadata.offerSlug || charge.metadata.type || "charge"}` : "ai_agent_challenge:charge",
+        }));
       }
     }
 
@@ -92,6 +111,33 @@ export async function handleStripeWebhook(req: Request, res: Response) {
     console.error("[Stripe Webhook] Error processing event:", err);
     res.status(500).send(`Webhook Error: ${err instanceof Error ? err.message : "Unknown error"}`);
   }
+}
+
+function getStripeCustomerRef(customer: string | Stripe.Customer | Stripe.DeletedCustomer | null | undefined, email?: string | null): string {
+  if (typeof customer === "string" && customer.trim()) return customer;
+  if (customer && typeof customer === "object" && "id" in customer && customer.id) return customer.id;
+  return email || "";
+}
+
+function isChallengeRevenueEligible(metadata: Stripe.Metadata | null | undefined): boolean {
+  return metadata?.challengeRevenueEligible === "true" && metadata?.type === "ai_agent_challenge_purchase";
+}
+
+function buildStripeChallengeProof(
+  event: Stripe.Event,
+  object: { id?: string },
+  refs: { paymentObjectId: string; customerRef: string; productRef: string },
+): ChallengePaymentProof {
+  return {
+    mode: event.livemode ? "live" : "test",
+    provider: "stripe",
+    proofId: `${event.id}:${refs.paymentObjectId || object.id || "unknown"}`,
+    paymentObjectId: refs.paymentObjectId || object.id || "",
+    customerRef: refs.customerRef,
+    productRef: refs.productRef,
+    channel: "stripe_webhook",
+    eventType: event.type,
+  };
 }
 
 /**

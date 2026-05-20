@@ -1,0 +1,31 @@
+# AI Agent Challenge End-to-End Verification Matrix — 2026-05-20
+
+This matrix scores the repaired AI Agent Challenge against the feature contract. It separates **platform mechanics that are now wired and buildable** from **external proof that requires live production secrets, a real buyer, a live Stripe webhook delivery, and any approved outbound distribution action**.
+
+## Verification summary
+
+| Feature lane | Status | Proof captured | Operator truth |
+|---|---:|---|---|
+| Public acquisition route | **Pass** | `client/src/App.tsx` mounts `/ai-agent-challenge`; `pnpm build` passed. | A public buyer can be routed to the AI Agent Challenge page instead of a dead or generic surface. |
+| Public offer page | **Pass** | `client/src/pages/king/ChallengeStoryEngine.tsx` now presents challenge offers, pricing, buyer email input, money-truth notices, success/cancel states, and operator controls. | The page is now a real conversion surface, not only a story/content panel. |
+| Checkout CTA | **Pass, environment-dependent at runtime** | Frontend calls `trpc.challengeAutomation.createChallengeCheckout`; backend exposes public procedure with Stripe Checkout session creation. | The code path exists and builds. It requires `STRIPE_SECRET_KEY` in the running production environment. The local shell does not have it loaded. |
+| Checkout metadata | **Pass** | Backend sets `type=ai_agent_challenge_purchase`, `challengeRevenueEligible=true`, `challengeId`, `offerSlug`, `trackingCode`, and `source`. | Stripe sessions created by this procedure are explicitly marked as AI Agent Challenge revenue candidates. |
+| Success/cancel redirect | **Pass** | Backend redirects to `/ai-agent-challenge?checkout=success&session_id=...` or `/ai-agent-challenge?checkout=cancelled&offer=...`; frontend renders both states. | Returning from checkout no longer falsely means revenue was counted. It tells the operator that only the webhook can count live revenue. |
+| Live Stripe webhook proof | **Pass, requires production webhook delivery to prove with real money** | `server/_core/stripeWebhook.ts` only calls the challenge credit function when metadata is challenge-eligible and proof builder supplies mode, provider, proof ID, payment object, customer, product, channel, and event type. | Test Stripe events, missing metadata, and unrelated Stripe payments cannot count as AI Agent Challenge revenue. |
+| Central challenge revenue gate | **Pass** | `server/challengePaymentHook.ts` refuses any credit missing live-mode proof fields and deduplicates by proof ID before inserting/updating. | Manual notes, agent estimates, test events, and legacy proofless callers do not mutate real challenge revenue. |
+| Legacy direct mutation removal | **Pass for active source** | Active-source scan saved to `ops/current_session/ai_agent_challenge_active_source_revenue_scan_20260520.txt`. Remaining direct `UPDATE empire_challenges SET current_revenue` is centralized in `server/challengePaymentHook.ts`; legacy callers without proof are refused. | Old paths that still call the hook without proof are safe because the hook refuses them. Backup files still contain old unsafe code, but they are not active source. |
+| Agent execution | **Pass as existing operator/backend lane; no fake revenue mutation** | Challenge automation procedures still run content/agent cycle; direct agent revenue mutation was patched to record refusal instead of real revenue mutation. | Agent execution can operate, but agent outcomes do not become revenue unless a live payment webhook proves money. |
+| Content generation workflow | **Pass** | `ChallengeStoryEngine.tsx` preserves generation controls for platform, theme, voice, hashtag, video script, and Telegram-ready content. | Operators can still generate challenge campaign content after the page repair. |
+| Distribution hook | **Pass, external-action dependent** | `server/services/telegramMoneyLoop.ts` accepts challenge-specific destination URLs; `challengeAutomationRouter.ts` sends tracked challenge drops to `/ai-agent-challenge`. | Acquisition drops can point at the repaired offer page. Actual posting/send execution depends on configured Telegram credentials and should not be performed without operator approval. |
+| Tracking context | **Pass** | Checkout accepts `trackingCode` and `source`; Telegram path supplies tracked challenge destination context. | Acquired traffic can carry source context into checkout metadata for later attribution. |
+| Dashboard / money-truth labeling | **Pass for repaired challenge surface; broader dashboards still need separate review if demanded** | Public challenge page states live-payment proof only and refuses to treat checkout start/success return as counted revenue. | The challenge page no longer presents fake or estimated challenge money as real cash. |
+| Production env readiness | **Blocked in local shell only** | `ops/current_session/ai_agent_challenge_env_presence_check_20260520.txt` shows local shell lacks `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `FRONTEND_URL`, and `DATABASE_URL`. | Local sandbox cannot execute a real checkout or webhook end-to-end. Production must have these env values configured. |
+| Full build | **Pass** | `pnpm build` saved to `ops/current_session/full_build_after_challenge_e2e_patch_20260520.txt`; Vite client and esbuild server succeeded. | The patched app builds as a production bundle. |
+
+## What can truthfully be claimed now
+
+The AI Agent Challenge now has a real end-to-end code path from **public offer → Stripe checkout session creation → challenge-eligible metadata → live Stripe webhook proof → centralized live-payment-only challenge revenue credit → dashboard/page labeling that refuses fake revenue**. The code builds successfully.
+
+## What cannot be truthfully claimed without external execution
+
+A real buyer payment cannot be honestly claimed from the sandbox because the local shell does not have production Stripe, webhook, database, or frontend environment values loaded. A real user acquisition event or Telegram post also cannot be claimed without executing external distribution against configured production accounts. The platform is repaired so those actions can generate and prove revenue; it is not valid to claim a buyer already paid unless Stripe production confirms it through the webhook.

@@ -63,6 +63,9 @@ export interface DropInput {
   caption: string;
   price: number;            // in dollars
   creatorId?: number;
+  destinationUrl?: string;  // tracked buyer destination; defaults to VaultX
+  ctaLabel?: string;
+  vipUrl?: string;
 }
 
 export interface DropResult {
@@ -85,7 +88,7 @@ export async function sendFreeChannelDrop(input: DropInput): Promise<DropResult>
   });
   const db = await getDb();
   const trackingCode = genCode("tgdrop");
-  const destUrl = `${FRONTEND}/vaultx`;
+  const destUrl = input.destinationUrl || `${FRONTEND}/vaultx`;
   const trackingUrl = `${FRONTEND}/r/${trackingCode}`;
 
   try {
@@ -108,8 +111,8 @@ export async function sendFreeChannelDrop(input: DropInput): Promise<DropResult>
 
     // 1b. Build inline keyboard
     const inlineKeyboard = [
-      [{ text: `🔓 Unlock Full Video ($${input.price})`, url: trackingUrl }],
-      [{ text: "💎 Go VIP — Unlimited Access", url: `${FRONTEND}/vaultx?vip=1` }],
+      [{ text: input.ctaLabel || `Unlock Full Drop ($${input.price})`, url: trackingUrl }],
+      [{ text: "Go VIP — Unlimited Access", url: input.vipUrl || `${FRONTEND}/vaultx?vip=1` }],
     ];
 
     // 1c. Send to Telegram — video if teaserUrl, else text

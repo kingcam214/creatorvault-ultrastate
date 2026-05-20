@@ -87,11 +87,9 @@ export const aiEmpireRouter = router({
     const challengeRows = Array.isArray(challengeResult) ? challengeResult : (challengeResult as any)[0] ?? [];
     if (!challengeRows[0]) throw new Error("No active challenge");
     const challengeId = challengeRows[0].id;
-    await db.db.execute(sql`INSERT INTO empire_challenge_transactions (challenge_id, amount, source, description) VALUES (${challengeId}, ${input.amount}, ${input.engine}, ${input.description ?? `${ENGINE_CONFIGS[input.engine]?.name} revenue`})`);
-    await db.db.execute(sql`UPDATE empire_challenges SET current_revenue = current_revenue + ${input.amount}, status = CASE WHEN current_revenue + ${input.amount} >= target_revenue THEN 'met' ELSE status END, timestamp_met = CASE WHEN current_revenue + ${input.amount} >= target_revenue AND timestamp_met IS NULL THEN NOW() ELSE timestamp_met END WHERE id = ${challengeId}`);
     const eventId = randomUUID();
     const now = new Date();
-    await db.db.execute(sql`INSERT INTO agent_telemetry_events (id, agent_id, agent_name, agent_category, task_type, status, started_at, finished_at, outcome, revenue_generated) VALUES (${eventId}, ${input.engine}, ${ENGINE_CONFIGS[input.engine]?.name ?? input.engine}, 'sales', 'revenue_logged', 'success', ${now}, ${now}, ${input.description ?? `$${input.amount} logged from ${input.engine}`}, ${input.amount})`);
-    return { success: true, amount: input.amount, engine: input.engine };
+    await db.db.execute(sql`INSERT INTO agent_telemetry_events (id, agent_id, agent_name, agent_category, task_type, status, started_at, finished_at, outcome, revenue_generated) VALUES (${eventId}, ${input.engine}, ${ENGINE_CONFIGS[input.engine]?.name ?? input.engine}, 'sales', 'revenue_log_refused', 'success', ${now}, ${now}, ${input.description ?? `$${input.amount} proof-required entry from ${input.engine}`}, 0)`);
+    return { success: false, credited: false, amount: input.amount, engine: input.engine, challengeId, reason: "ai_empire_manual_revenue_requires_live_payment_proof" };
   }),
 });
