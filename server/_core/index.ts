@@ -24,6 +24,7 @@ import { startDailyDropCron } from "../services/telegramDailyDropEngine";
 import { startReactivationCron } from "../services/telegramBuyerReactivation";
 import { startVaultXAcquisitionCron } from "../services/vaultxAutonomousAcquisitionOperator";
 import { startChallengeAutomationCron } from "../routers/challengeAutomationRouter";
+import { startCreatorVaultOvernightRevenueCron } from "../services/creatorVaultOvernightRevenue";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -66,6 +67,11 @@ async function startServer() {
     startChallengeAutomationCron().catch(error => console.error("[VaultX Challenge Agents] failed to start autonomous challenge-agent loop", error));
   } else {
     console.log("[TelegramLockdown] challenge-agent loop disabled by default");
+  }
+  if (process.env.CREATORVAULT_VIDEO_REVENUE_AUTORUN === "true") {
+    startCreatorVaultOvernightRevenueCron();
+  } else {
+    console.log("[CreatorVaultRevenue] native video revenue loop disabled by default");
   }
   
   const app = express();

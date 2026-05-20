@@ -219,6 +219,23 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
           body: JSON.stringify({ callback_query_id: cq.id }),
         });
       } catch { /* ignore */ }
+
+      const callbackData = String(cq.data || "");
+      if (callbackData.startsWith("cv_offer:")) {
+        try {
+          const { handleCreatorVaultOfferCallback } = await import("./services/creatorVaultOvernightRevenue");
+          await handleCreatorVaultOfferCallback({
+            telegramId: String(cqUserId || cq.message?.chat?.id),
+            username: cq.from?.username || cqUsername,
+            firstName: cq.from?.first_name,
+            offerSlug: callbackData.replace("cv_offer:", ""),
+          });
+        } catch (e: any) {
+          console.error("[Telegram Webhook] CreatorVault offer callback failed:", e?.message || e);
+        }
+        return res.status(200).json({ ok: true });
+      }
+
       console.log("[Telegram Webhook] callback_query from", cqUserId, cqUsername);
       return res.status(200).json({ ok: true });
     }
@@ -366,6 +383,21 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
             }, startParam);
           } catch (e: any) {
             console.error("[Telegram Webhook] start deep link error:", e.message);
+          }
+          res.status(200).json({ ok: true });
+          return;
+        }
+        if (startParam && startParam.startsWith("cv_offer_")) {
+          try {
+            const { handleCreatorVaultOfferCallback } = await import("./services/creatorVaultOvernightRevenue");
+            await handleCreatorVaultOfferCallback({
+              telegramId: String(chatId || userId),
+              username: message.from?.username,
+              firstName: message.from?.first_name,
+              offerSlug: startParam.replace("cv_offer_", ""),
+            });
+          } catch (e: any) {
+            console.error("[Telegram Webhook] CreatorVault offer start failed:", e.message);
           }
           res.status(200).json({ ok: true });
           return;

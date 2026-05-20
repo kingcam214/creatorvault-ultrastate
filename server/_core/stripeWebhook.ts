@@ -65,8 +65,16 @@ export async function handleStripeWebhook(req: Request, res: Response) {
         }));
       }
 
-      // Check if this is a subscription checkout (has tierId in metadata)
-      if (session.metadata?.tierId) {
+      if (session.metadata?.type === "creatorvault_telegram_video_offer") {
+        const { fulfillCreatorVaultVideoOfferPurchase } = await import("../services/creatorVaultOvernightRevenue");
+        await fulfillCreatorVaultVideoOfferPurchase({
+          id: session.id,
+          amount_total: session.amount_total,
+          customer_email: session.customer_email || session.customer_details?.email || null,
+          metadata: session.metadata as Record<string, string>,
+        });
+      } else if (session.metadata?.tierId) {
+        // Check if this is a subscription checkout (has tierId in metadata)
         await handleSubscriptionCheckout(session);
       } else {
         // VaultLive tip/donation
