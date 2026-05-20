@@ -338,7 +338,7 @@ async function lastPublicVideoDropAt(conn: mysql.Connection): Promise<number> {
   try {
     const [rows] = await conn.execute(
       `SELECT created_at FROM telegram_message_events
-       WHERE direction='outbound' AND message_type='creatorvault_native_video_revenue_drop'
+       WHERE direction='outbound' AND message_type='cv_video_drop'
        ORDER BY created_at DESC LIMIT 1`
     ) as any;
     const value = rows?.[0]?.created_at ? new Date(rows[0].created_at).getTime() : 0;
@@ -371,7 +371,7 @@ async function createDistributionJob(conn: mysql.Connection, offer: RevenueOffer
     await conn.execute(
       `INSERT INTO distribution_jobs
        (creator_id, channel_identity_id, platform, asset_url, asset_type, caption, tracking_code, destination_url, status, content_safety_level, brand_lane, platform_post_id)
-       VALUES (?, 1, 'telegram', ?, 'video', ?, ?, ?, 'posted', 'sensitive', 'vaultx_video_first', ?)`,
+       VALUES (?, 1, 'telegram', ?, 'teaser', ?, ?, ?, 'posted', 'sensitive', 'vaultx_adult', ?)`,
       [OWNER_USER_ID, videoUrl, caption, trackingCode, checkoutUrl, messageId ? String(messageId) : null]
     );
   } catch (err: any) {
@@ -441,7 +441,7 @@ async function publishNativeVideoDrop(offer: RevenueOffer, generated: FactoryRes
   try {
     await logEvent(conn, {
       telegramId: channelChatId,
-      messageType: "creatorvault_native_video_revenue_drop",
+      messageType: "cv_video_drop",
       text: `${offer.slug} | ${caption}`,
     });
     await createDistributionJob(conn, offer, nativeVideo.videoUrl, checkoutUrl, caption, sent.result?.message_id || null);
