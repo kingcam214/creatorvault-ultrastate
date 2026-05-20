@@ -492,9 +492,24 @@ async function dispatchAction(action: any, config: VaultXOperatorConfig, runId: 
   if (mode === "test" || !liveApproval.approved) {
     proof.reason = mode === "test" ? "test_mode_forces_dry_run" : "live_send_approval_state_missing";
     proof.messagePreview = approvedMessage;
+    proof.manualHandoffCreated = true;
+    const handoffContext = {
+      actionId: action.id,
+      stage: action.stage,
+      channel: action.channel,
+      messagePreview: approvedMessage,
+      ctaUrl: action.cta_url || lead.cta_url || lead.onboarding_url || null,
+      leadHandle: lead.handle ? `@${lead.handle}` : null,
+      leadPlatform: lead.platform || null,
+      leadProfileUrl: lead.profile_url || null,
+      approvalState: proof.liveApproval,
+      dryRunOnly: proof.dryRunOnly,
+      blockedReason: proof.reason,
+    };
     await rawExec("UPDATE vaultx_outreach_actions SET status='skipped', proof=?, attempt_count=attempt_count+1 WHERE id=?", [serialize(proof), action.id]);
+    await createHandoff(lead.id, runId, "manual_send_required", "high", handoffContext);
     await logTelemetry({ runId, leadId: lead.id, eventType: "outreach_dry_run", status: "success", score: lead.score, priorityBand: lead.priority_band, channel: action.channel, outcome: action.stage, metadata: proof });
-    return { actionId: action.id, leadId: lead.id, channel: action.channel, externalId: null, proof, dryRun: true };
+    return { actionId: action.id, leadId: lead.id, channel: action.channel, externalId: null, proof, dryRun: true, handoffCreated: true };
   }
 
   if (action.channel === "telegram" && lead.telegram_chat_id && config.telegramBotToken) {
@@ -532,8 +547,10 @@ async function executeDueActions(runId: string, limit: number, config: VaultXOpe
   for (const action of actions) {
     try {
       const proof = await dispatchAction(action, config, runId, mode);
-      if (proof.dryRun) dryRun += 1;
-      else sent += 1;
+      if (proof.dryRun) {
+        dryRun += 1;
+        if (proof.handoffCreated) handoff += 1;
+      } else sent += 1;
       proofs.push(proof);
     } catch (error: any) {
       failed += 1;
