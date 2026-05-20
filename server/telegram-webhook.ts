@@ -131,20 +131,56 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       }
     }
 
-    // Handle Telegram Stars successful_payment
+    // Handle Telegram Stars successful_payment with durable live proof
     if (update.message?.successful_payment) {
       const payment = update.message.successful_payment;
-      const starsAmount = payment.total_amount; // in smallest currency unit (stars = 1:1)
-      const dollarEquiv = starsAmount * 0.013; // ~$0.013 per star
+      const starsAmount = payment.total_amount; // Telegram Stars: XTR amount is 1:1 stars
+      const dollarEquiv = starsAmount * 0.013; // operational estimate for challenge attribution only
+      const userRef = String(update.message.from?.id || update.message.chat?.id || "telegram_user_unknown");
+      const payload = String(payment.invoice_payload || "telegram_stars_payload_missing");
+      const proofId = `telegram_stars:${payment.telegram_payment_charge_id || payload}:${userRef}`;
+      try {
+        await db.insert(botEvents).values({
+          userId: bot.createdBy,
+          channel: "telegram",
+          eventType: "telegram_stars_successful_payment",
+          eventData: {
+            botId: bot.id,
+            chatId: update.message.chat?.id,
+            telegramUserId: update.message.from?.id,
+            username: update.message.from?.username,
+            starsAmount,
+            currency: payment.currency,
+            invoicePayload: payload,
+            telegramPaymentChargeId: payment.telegram_payment_charge_id,
+            providerPaymentChargeId: payment.provider_payment_charge_id,
+            proofId,
+            rawPayment: payment,
+          },
+          outcome: "success",
+        });
+      } catch (eventError) {
+        console.error("[Telegram Stars] Failed to persist payment event", eventError);
+      }
       try {
         const { creditChallengePayment } = await import("./challengePaymentHook");
-        await creditChallengePayment(
+        const credit = await creditChallengePayment(
           dollarEquiv,
           "telegram_stars",
-          `Telegram Stars payment — ${starsAmount} stars from user ${update.message.from?.username || update.message.from?.id}`
+          `Telegram Stars live payment — ${starsAmount} stars from user ${update.message.from?.username || update.message.from?.id}`,
+          {
+            mode: "live",
+            provider: "telegram",
+            proofId,
+            paymentObjectId: payment.telegram_payment_charge_id || payload,
+            customerRef: userRef,
+            productRef: payload,
+            channel: "telegram_stars",
+            eventType: "successful_payment",
+          }
         );
-        console.log(`[Telegram Stars] ${starsAmount} stars (~$${dollarEquiv.toFixed(2)}) credited to challenge`);
-      } catch { /* never block */ }
+        console.log(`[Telegram Stars] ${starsAmount} stars (~$${dollarEquiv.toFixed(2)}) processed:`, credit);
+      } catch (e: any) { console.error("[Telegram Stars] challenge credit failed", e?.message || e); }
     }
 
     // Handle pre_checkout_query (must answer OK)
@@ -296,7 +332,7 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
       } catch { /* non-blocking */ }
 
       // Helper to send inline keyboard message
-      const sendInlineMsg = async (text: string, buttons: Array<Array<{text: string; url?: string; callback_data?: string}>>) => {
+      const sendInlineMsg = async (text: string, buttons: Array<Array<{text: string; url?: string; callback_data?: string; web_app?: { url: string }}>>) => {
         const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
         const approvedText = qualityGate.check(text, {
           surface: "telegram-dm",
@@ -341,6 +377,21 @@ router.post("/webhook/:botToken", express.json(), async (req, res) => {
           [
             [{ text: "🎬 Browse Content", url: `${FRONTEND}/vaultx` }],
             [{ text: "💎 Go VIP", url: `${FRONTEND}/r/${trackingCode}-vip` }, { text: "🔓 Unlock Drop", url: `${FRONTEND}/vaultx` }]
+          ]
+        );
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      if (command === "/packages" || command === "/stars") {
+        const miniAppUrl = `${FRONTEND}/vaultx?source=telegram_mini_app&segment=all&stars=1&tc=tgcmd${Date.now().toString(36)}`;
+        await sendInlineMsg(
+          `<b>CreatorVault / VaultX package rails are open.</b>
+
+Pick the lane that matches you: studio, platform, distributor, indie creator, solo operator, or creator group. Telegram Stars support is active for native Telegram checkout where the bot is configured for Stars.`,
+          [
+            [{ text: "Open VaultX Mini App", web_app: { url: miniAppUrl } }, { text: "Open in Browser", url: miniAppUrl }],
+            [{ text: "Indie / Solo / Group", url: `${FRONTEND}/vaultx?source=telegram_mini_app&segment=indie_creator&stars=1` }, { text: "Studio / Platform", url: `${FRONTEND}/vaultx?source=telegram_mini_app&segment=studio&stars=1` }]
           ]
         );
         res.status(200).json({ ok: true });

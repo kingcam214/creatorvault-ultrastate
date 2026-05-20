@@ -209,6 +209,11 @@ export interface MediaOSManifestEnvelope {
   validationHandoff: ValidationReport;
   renderHandoff: RenderManifest;
   distributionHandoff: DistributionManifest;
+  creatorVaultDeliverySystem?: import("./creatorVaultDeliveryContract").CreatorVaultDeliverySystemContract;
+  studioGradeTrailerPackages?: import("./creatorVaultDeliveryContract").CreatorVaultProductPackageInput[];
+  brollPackaging?: Record<string, unknown>;
+  providerAwareRenderControl?: Record<string, unknown>;
+  monetizationSummary?: Record<string, unknown>;
   orchestrationTrace: Array<{
     stage: MediaOSStageName;
     inputContracts: MediaOSContractName[];
@@ -220,7 +225,12 @@ export interface MediaOSManifestEnvelope {
     noHiddenProviderCalls: boolean;
     validationIndependent: boolean;
     renderPipelineSeparate: boolean;
-    deterministicManifestPreserved: boolean;
+    providerRenderBlockedWithoutProof?: boolean;
+    brollLineageRequired?: boolean;
+      monetizationPackageRequired?: boolean;
+      creatorVaultDeliveryContractRequired?: boolean;
+      genericMediaOutputBlocked?: boolean;
+      deterministicManifestPreserved: boolean;
     existingTrailerRoutePreserved: boolean;
   };
   warnings: MediaOSWarning[];

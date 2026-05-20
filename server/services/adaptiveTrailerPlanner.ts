@@ -1,5 +1,7 @@
 import { getProductionModel } from "./cloneModelRegistry";
 
+import { buildCreatorVaultDeliverySystemContract } from "../media-os/contracts/creatorVaultDeliveryContract";
+
 type BlueprintLike = {
   generatedAt?: string;
   project?: {
@@ -122,6 +124,19 @@ function buildStructure(blueprint: BlueprintLike, creatorType: string, useCase: 
   };
 }
 
+
+
+function buildTrailerMonetizationPackages() {
+  return [
+    { segment: "studio", label: "Studios and production teams", packageName: "Studio Trailer Command Package", priceCents: 250000, primaryCTA: "Book studio trailer command review", distributionPath: "telegram_studio_producer_lane" },
+    { segment: "platform", label: "Creator platforms and marketplaces", packageName: "Platform Supply Activation Package", priceCents: 500000, primaryCTA: "Open platform supply activation", distributionPath: "telegram_platform_operator_lane" },
+    { segment: "distributor", label: "Distributors, labels, agencies, and channel owners", packageName: "Distribution Partner Revenue Package", priceCents: 350000, primaryCTA: "Request distribution revenue package", distributionPath: "telegram_distribution_partner_lane" },
+    { segment: "indie_creator", label: "Small independent creators", packageName: "Indie Creator Launch Package", priceCents: 9900, primaryCTA: "Start indie trailer launch", distributionPath: "telegram_indie_creator_lane" },
+    { segment: "solo_operator", label: "Solo operators and founder-creators", packageName: "Solo Operator Domination Package", priceCents: 19900, primaryCTA: "Launch solo operator trailer funnel", distributionPath: "telegram_solo_operator_lane" },
+    { segment: "creator_group", label: "Small creator groups and collectives", packageName: "Creator Group Expansion Package", priceCents: 29900, primaryCTA: "Package the creator group", distributionPath: "telegram_creator_group_lane" },
+  ];
+}
+
 function cropGuidance(platform: string, sourceFormat: string | undefined): string {
   if (["tiktok", "reels", "shorts", "story"].includes(platform)) return sourceFormat === "9:16" ? "native vertical frame" : "center-safe crop to 9:16 with face/text safe zones";
   if (platform === "hero_video_loop" || platform === "website_header_loop") return sourceFormat === "16:9" ? "native landscape frame" : "landscape crop/pad with brand-safe center composition";
@@ -151,6 +166,8 @@ export function buildAdaptiveTrailerPlan(blueprint: BlueprintLike, pacingPlan: P
   const retentionGoal = format === "9:16" ? "win thumb-stop inside 1.5 seconds and retain through CTA" : "sustain cinematic interest while preserving brand clarity";
   const structure = buildStructure(blueprint, creatorType, useCase);
   const platforms = ["tiktok", "reels", "shorts", "story", "telegram_promo", "whatsapp_teaser", "hero_video_loop", "website_header_loop"];
+  const trailerMonetizationPackages = buildTrailerMonetizationPackages();
+  const creatorVaultDeliverySystem = buildCreatorVaultDeliverySystemContract(trailerMonetizationPackages);
 
   return {
     version: "creatorvault.adaptive_trailer_planner.v1",
@@ -168,6 +185,18 @@ export function buildAdaptiveTrailerPlan(blueprint: BlueprintLike, pacingPlan: P
       sceneCount: blueprint.scenes?.length ?? 0,
       estimatedDurationSeconds: pacingPlan.totalDurationSeconds ?? blueprint.readiness?.estimatedDurationSeconds ?? 0,
       hooksProvided: blueprint.hooks?.length ?? 0,
+    },
+    trailerMonetizationPackages,
+    creatorVaultDeliverySystem,
+    creatorVaultOutputLaw: {
+      status: "generic_output_blocked",
+      rule: "Every trailer mutation, promo, flyer, Mini App route, and invoice must carry a CreatorVault mechanism, proof beat, exact deliverables, CTA route, and source-lineage status.",
+      requiredInjectionChecklist: creatorVaultDeliverySystem.outputInjectionChecklist,
+    },
+    creatorSegmentCoverage: {
+      enterprise: trailerMonetizationPackages.filter((pkg) => ["studio", "platform", "distributor"].includes(pkg.segment)).map((pkg) => pkg.segment),
+      independent: trailerMonetizationPackages.filter((pkg) => ["indie_creator", "solo_operator", "creator_group"].includes(pkg.segment)).map((pkg) => pkg.segment),
+      rule: "No trailer plan is complete unless it can be sold to enterprise partners and small independent creator segments without removing either side.",
     },
     platformMutations: platforms.map((platform) => {
       const target = mutationTarget(platform);
@@ -187,6 +216,13 @@ export function buildAdaptiveTrailerPlan(blueprint: BlueprintLike, pacingPlan: P
         pacingAdjustment: target.duration <= 15 ? "compress to hook plus one proof beat plus CTA" : "preserve full sequence with faster midpoint transitions",
         soundDesignBias: target.sound,
         selectedSourceAssetIds: selectedScenes.map((scene) => scene.sourceAssetId).filter(Boolean),
+        monetizationCTA: platform === "telegram_promo" ? "reply with the matching creator segment keyword and route to the priced VaultX package" : "drive to the selected CreatorVault/VaultX trailer package",
+        creatorVaultInjection: {
+          mechanism: "CreatorVault/VaultX is the visible fulfillment engine: proof-led trailer, brand-safe promo assets, Telegram route, payment payload, and validation gate.",
+          mandatoryOnScreenElements: ["CreatorVault/VaultX mechanism", "proof beat", "exact package deliverables", "CTA route", "tracking code"],
+          rejectIfGeneric: true,
+        },
+        packageRoutes: creatorVaultDeliverySystem.packages.map((pkg) => ({ segment: pkg.buyerSegment, packageName: pkg.packageName, priceCents: pkg.priceCents, miniAppRoute: pkg.telegramMiniAppRoute, starPaymentPayloadPrefix: pkg.starPaymentPayloadPrefix, deliveredFiles: pkg.deliveredFiles, requiredBuyerInputs: pkg.requiredBuyerInputs })),
         renderClaim: "mutation plan only; no platform-specific output URL is claimed until a real render job completes",
       };
     }),

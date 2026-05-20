@@ -16,15 +16,17 @@ import { toast } from "sonner";
 
 export default function CreatorEarnings() {
   const [payoutAmount, setPayoutAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cashapp" | "zelle" | "bank_transfer" | "paypal">("cashapp");
+  const [paymentMethod, setPaymentMethod] = useState<"cashapp" | "zelle" | "bank_transfer" | "paypal" | "telegram_stars" | "ton_wallet" | "wise" | "payoneer" | "manual_cash">("cashapp");
   const [paymentDetails, setPaymentDetails] = useState("");
+  const [requestedMode, setRequestedMode] = useState<"instant" | "standard">("instant");
 
   const { data: balance, refetch: refetchBalance } = trpc.payouts.getMyBalance.useQuery();
   const { data: payouts, refetch: refetchPayouts } = trpc.payouts.getMyPayouts.useQuery();
+  const { data: payoutRails } = trpc.payouts.getRails.useQuery();
   
   const requestPayoutMutation = trpc.payouts.requestPayout.useMutation({
     onSuccess: () => {
-      toast.success("Payout requested successfully");
+      toast.success("Payout requested successfully — instant rails move directly to processing when eligible");
       setPayoutAmount("");
       setPaymentDetails("");
       refetchBalance();
@@ -52,6 +54,7 @@ export default function CreatorEarnings() {
       amountInCents,
       paymentMethod,
       paymentDetails,
+      requestedMode,
     });
   };
 
@@ -123,7 +126,7 @@ export default function CreatorEarnings() {
         <CardHeader>
           <CardTitle>Request Payout</CardTitle>
           <CardDescription>
-            Minimum payout: $10.00 • Processing time: 1-3 business days
+            Minimum payout: $10.00 • Stripe is fallback only • Cash App, Zelle, TON, Wise, PayPal, and Stars rails are supported
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -148,20 +151,37 @@ export default function CreatorEarnings() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cashapp">Cash App</SelectItem>
-                  <SelectItem value="zelle">Zelle</SelectItem>
-                  <SelectItem value="paypal">PayPal</SelectItem>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="cashapp">Cash App — instant</SelectItem>
+                  <SelectItem value="zelle">Zelle — instant</SelectItem>
+                  <SelectItem value="ton_wallet">TON Wallet — near-instant</SelectItem>
+                  <SelectItem value="telegram_stars">Telegram Stars Credit</SelectItem>
+                  <SelectItem value="wise">Wise — same day/global</SelectItem>
+                  <SelectItem value="paypal">PayPal — same day</SelectItem>
+                  <SelectItem value="payoneer">Payoneer — global</SelectItem>
+                  <SelectItem value="manual_cash">Manual / Cash Settlement</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer — standard</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="mode">Payout Speed</Label>
+            <Select value={requestedMode} onValueChange={(v) => setRequestedMode(v as any)}>
+              <SelectTrigger id="mode"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="instant">Instant / fastest available rail</SelectItem>
+                <SelectItem value="standard">Standard queue</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Instant requests are moved to processing immediately and require operator/provider transfer proof before completion.</p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="details">Payment Details</Label>
             <Textarea
               id="details"
-              placeholder="Enter your $cashtag, Zelle email, PayPal email, or bank account details"
+              placeholder="Enter destination details: $cashtag, Zelle email/phone, TON wallet, Wise/PayPal/Payoneer email, Stars handle, or bank details"
               value={paymentDetails}
               onChange={(e) => setPaymentDetails(e.target.value)}
               rows={3}
@@ -178,6 +198,26 @@ export default function CreatorEarnings() {
         </CardContent>
       </Card>
 
+      {/* Non-Stripe Instant Rails */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Instant Payout Rails</CardTitle>
+          <CardDescription>Stripe stays available as a fallback only. These rails are designed for faster creator cash-out and proof-based reconciliation.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {(payoutRails?.allRails || balance?.rails?.allRails || []).map((rail: any) => (
+              <div key={rail.key} className="border rounded-lg p-3 space-y-1">
+                <div className="font-semibold">{rail.label}</div>
+                <div className="text-xs text-muted-foreground">{rail.expectedSpeed}</div>
+                <div className="text-xs text-green-600 font-medium">Stripe required: {rail.stripeRequired ? "Yes" : "No"}</div>
+                <div className="text-xs text-muted-foreground">Proof: {rail.proofRequired}</div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Payout History */}
       <Card>
         <CardHeader>
@@ -190,7 +230,6 @@ export default function CreatorEarnings() {
             </p>
           ) : (
             <div className="space-y-4">
-  // @ts-ignore
               {payouts.map((payout: any) => (
                 <div
                   key={payout.id}

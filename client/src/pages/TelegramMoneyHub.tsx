@@ -5,7 +5,7 @@ import { Link } from "wouter";
 import {
   Send, ChevronLeft, Bot, Users, MessageSquare, TrendingUp,
   Plus, Trash2, CheckCircle, XCircle, RefreshCw, Video,
-  Zap, Radio, Eye, Hash, Globe
+  Zap, Radio, Eye, Hash, Globe, Crown, WalletCards, Smartphone
 } from "lucide-react";
 
 function BotStatusDot({ online }: { online: boolean }) {
@@ -68,6 +68,34 @@ export function TelegramMoneyHub() {
 
   const removeChannel = trpc.telegramHub.removeChannel.useMutation({
     onSuccess: () => { toast({ title: "Channel removed" }); refetchChannels(); refetchOverview(); },
+  });
+
+  const activateAllSegments = trpc.telegramFunnel["acquisition.activateAllSegments"].useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: `Activated ${data.totalSegments} creator acquisition lanes`,
+        description: `Indie coverage: ${data.independentSegmentsCovered.join(", ")}`,
+      });
+      refetchOverview();
+    },
+    onError: (err) => toast({ title: "Acquisition activation failed", description: err.message, variant: "destructive" }),
+  });
+
+  const { data: miniAppRails, refetch: refetchMiniAppRails } = trpc.telegramFunnel["miniApp.packageRails"].useQuery({
+    baseUrl: typeof window !== "undefined" ? window.location.origin : undefined,
+  });
+
+  const createStarInvoice = trpc.telegramFunnel["stars.createPackageInvoice"].useMutation({
+    onSuccess: (data) => {
+      if (data.invoiceLink) window.open(data.invoiceLink, "_blank", "noopener,noreferrer");
+      toast({
+        title: data.success ? `${data.packageName} Stars invoice ready` : "Stars invoice needs bot configuration",
+        description: data.success ? `${data.starPrice} Stars · ${data.segment}` : (data.error || "Check Telegram monetization bot token / Stars setup."),
+        variant: data.success ? undefined : "destructive",
+      });
+      refetchMiniAppRails();
+    },
+    onError: (err) => toast({ title: "Stars invoice failed", description: err.message, variant: "destructive" }),
   });
 
   const handleBroadcast = () => {
@@ -144,6 +172,78 @@ export function TelegramMoneyHub() {
               <StatCard icon={MessageSquare} label="Total Messages" value={overview?.totalMessages || 0} color="#C9A84C" />
               <StatCard icon={Users} label="Total Leads" value={overview?.totalLeads || 0} color="#27AE60" />
               <StatCard icon={Bot} label="Active Bots" value={`${overview?.activeBots || 0}/4`} color="#9B59B6" />
+            </div>
+
+            {/* Domination Activation */}
+            <div style={{ background: "linear-gradient(135deg, #1a1203, #0f0f1a)", border: "1px solid #C9A84C55", borderRadius: 12, padding: 20, marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: "#C9A84C22", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #C9A84C55" }}>
+                  <Crown size={20} color="#C9A84C" />
+                </div>
+                <div style={{ flex: 1, minWidth: 280 }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "white" }}>All-Creator Acquisition Domination</div>
+                  <div style={{ fontSize: 12, color: "#bca76a", lineHeight: 1.5 }}>
+                    Creates tracked CreatorVault/VaultX Telegram campaigns and keyword funnels for studios, platforms, distributors, indie creators, solo operators, and small creator groups.
+                  </div>
+                </div>
+                <button onClick={() => activateAllSegments.mutate({ sendNow: false, refreshFunnels: true })} disabled={activateAllSegments.isPending}
+                  style={{ padding: "10px 16px", borderRadius: 10, border: "none", background: activateAllSegments.isPending ? "#2a2414" : "linear-gradient(135deg, #C9A84C, #F0D27A)", color: activateAllSegments.isPending ? "#777" : "#0a0a0a", cursor: activateAllSegments.isPending ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 900, display: "flex", alignItems: "center", gap: 7 }}>
+                  {activateAllSegments.isPending ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Activating...</> : <><Zap size={14} /> Activate Every Segment</>}
+                </button>
+              </div>
+              <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
+                {["Studios", "Platforms", "Distributors", "Indie Creators", "Solo Operators", "Small Groups"].map((item) => (
+                  <div key={item} style={{ padding: "8px 10px", background: "#0a0a1a", border: "1px solid #C9A84C22", borderRadius: 8, fontSize: 11, color: "#d8c57d", fontWeight: 700 }}>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Telegram Mini App + Stars Native Checkout */}
+            <div style={{ background: "linear-gradient(135deg, #051416, #0f0f1a)", border: "1px solid #00D9FF55", borderRadius: 12, padding: 20, marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: "#00D9FF22", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #00D9FF55" }}>
+                  <Smartphone size={20} color="#00D9FF" />
+                </div>
+                <div style={{ flex: 1, minWidth: 280 }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "white" }}>Telegram Mini App + Stars Checkout Rails</div>
+                  <div style={{ fontSize: 12, color: "#8fddea", lineHeight: 1.5 }}>
+                    Native Telegram package entry is wired for studios, platforms, distributors, indie creators, solo operators, and groups. Star invoices open instantly when the monetization bot is configured.
+                  </div>
+                </div>
+                <a href={miniAppRails?.miniAppEntry || "/vaultx?source=telegram_mini_app"} target="_blank" rel="noreferrer"
+                  style={{ padding: "10px 16px", borderRadius: 10, border: "1px solid #00D9FF55", background: "#00D9FF18", color: "#9ceeff", cursor: "pointer", fontSize: 13, fontWeight: 900, display: "flex", alignItems: "center", gap: 7, textDecoration: "none" }}>
+                  <Smartphone size={14} /> Open Mini App Path
+                </a>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+                {(miniAppRails?.packages || []).map((pkg: any) => (
+                  <div key={pkg.segment} style={{ padding: 12, background: "#0a0a1a", border: "1px solid #00D9FF22", borderRadius: 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "#dffbff", marginBottom: 4 }}>{pkg.packageName}</div>
+                    <div style={{ fontSize: 11, color: "#7fb8c2", marginBottom: 8 }}>{pkg.label} · {pkg.starPrice} Stars</div>
+                    {pkg.deliveryContract && (
+                      <div style={{ border: "1px solid #C9A84C33", background: "#1b160822", borderRadius: 8, padding: 8, marginBottom: 10 }}>
+                        <div style={{ fontSize: 10, color: "#f0d27a", fontWeight: 900, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>What gets delivered</div>
+                        <div style={{ fontSize: 11, color: "#e9faff", lineHeight: 1.45, marginBottom: 6 }}>{pkg.deliveryContract.saleClaim}</div>
+                        <div style={{ fontSize: 10, color: "#9bd5dd", lineHeight: 1.45 }}>
+                          {(pkg.deliveryContract.deliveredFiles || []).slice(0, 3).join(" · ")}
+                        </div>
+                        <div style={{ fontSize: 10, color: "#7fb8c2", marginTop: 6 }}>
+                          CTA: {pkg.deliveryContract.primaryCTA} · Proof required before render release
+                        </div>
+                      </div>
+                    )}
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <a href={pkg.miniAppUrl} target="_blank" rel="noreferrer" style={{ padding: "7px 9px", borderRadius: 8, background: "#00D9FF18", border: "1px solid #00D9FF33", color: "#9ceeff", fontSize: 11, fontWeight: 800, textDecoration: "none" }}>Mini App</a>
+                      <button onClick={() => createStarInvoice.mutate({ segment: pkg.segment, trackingCode: pkg.trackingCode, baseUrl: typeof window !== "undefined" ? window.location.origin : undefined })} disabled={createStarInvoice.isPending}
+                        style={{ padding: "7px 9px", borderRadius: 8, background: createStarInvoice.isPending ? "#182326" : "#C9A84C22", border: "1px solid #C9A84C44", color: createStarInvoice.isPending ? "#666" : "#f0d27a", fontSize: 11, fontWeight: 900, cursor: createStarInvoice.isPending ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                        <WalletCards size={11} /> Stars Invoice
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Bot Status */}

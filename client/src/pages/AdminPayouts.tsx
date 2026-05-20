@@ -14,14 +14,32 @@ import { toast } from "sonner";
 
 export default function AdminPayouts() {
   const [selectedPayout, setSelectedPayout] = useState<any>(null);
-  const [action, setAction] = useState<"approve" | "reject" | null>(null);
+  const [action, setAction] = useState<"complete" | "reject" | "process" | null>(null);
   const [notes, setNotes] = useState("");
+  const [transferProofId, setTransferProofId] = useState("");
+  const [externalTransferId, setExternalTransferId] = useState("");
 
-  const { data: payouts, refetch } = trpc.payouts.getAllPending.useQuery();
+  const { data: payoutQueue, refetch } = trpc.payouts.getActionable.useQuery();
+  const payouts = [...(payoutQueue?.processing || []), ...(payoutQueue?.pending || [])];
 
-  const approveMutation = trpc.payouts.approve.useMutation({
+  const completeMutation = trpc.payouts.completeWithProof.useMutation({
     onSuccess: () => {
-      toast.success("Payout approved");
+      toast.success("Payout completed with transfer proof");
+      setSelectedPayout(null);
+      setAction(null);
+      setNotes("");
+      setTransferProofId("");
+      setExternalTransferId("");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const processMutation = trpc.payouts.markProcessing.useMutation({
+    onSuccess: () => {
+      toast.success("Payout moved to instant processing lane");
       setSelectedPayout(null);
       setAction(null);
       setNotes("");
@@ -48,11 +66,19 @@ export default function AdminPayouts() {
   const handleConfirm = () => {
     if (!selectedPayout) return;
 
-    if (action === "approve") {
-      approveMutation.mutate({
+    if (action === "complete") {
+      if (!transferProofId.trim()) {
+        toast.error("Transfer proof ID is required before marking an instant payout completed");
+        return;
+      }
+      completeMutation.mutate({
         payoutId: selectedPayout.id,
+        transferProofId,
+        externalTransferId: externalTransferId || undefined,
         notes: notes || undefined,
       });
+    } else if (action === "process") {
+      processMutation.mutate({ payoutId: selectedPayout.id, notes: notes || undefined });
     } else if (action === "reject") {
       if (!notes.trim()) {
         toast.error("Please provide a reason for rejection");
@@ -79,14 +105,14 @@ export default function AdminPayouts() {
       <div>
         <h1 className="text-4xl font-bold">Admin: Payout Requests</h1>
         <p className="text-muted-foreground mt-2">
-          Approve or reject creator payout requests
+          Complete instant creator payouts with transfer proof, move pending requests into processing, or reject invalid requests
         </p>
       </div>
 
       {!payouts || payouts.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            No pending payout requests
+            No actionable payout requests
           </CardContent>
         </Card>
       ) : (
@@ -95,7 +121,7 @@ export default function AdminPayouts() {
             <Card key={payout.id}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>Payout Request #{payout.id}</span>
+                  <span>Payout Request #{payout.id} · {payout.status}</span>
                   <span className="text-2xl font-bold text-green-600">
                     {formatCurrency(payout.amountInCents)}
                   </span>
@@ -131,14 +157,25 @@ export default function AdminPayouts() {
                 )}
 
                 <div className="flex gap-3 pt-4">
+                  {payout.status === "pending" && (
+                    <Button
+                      onClick={() => {
+                        setSelectedPayout(payout);
+                        setAction("process");
+                      }}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    >
+                      Move to Instant Processing
+                    </Button>
+                  )}
                   <Button
                     onClick={() => {
                       setSelectedPayout(payout);
-                      setAction("approve");
+                      setAction("complete");
                     }}
                     className="flex-1 bg-green-600 hover:bg-green-700"
                   >
-                    ✓ Approve
+                    Complete With Proof
                   </Button>
                   <Button
                     onClick={() => {
@@ -166,11 +203,13 @@ export default function AdminPayouts() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {action === "approve" ? "Approve Payout" : "Reject Payout"}
+              {action === "complete" ? "Complete Payout With Proof" : action === "process" ? "Move to Instant Processing" : "Reject Payout"}
             </DialogTitle>
             <DialogDescription>
-              {action === "approve" 
-                ? `Approve payout of ${selectedPayout ? formatCurrency(selectedPayout.amountInCents) : ""} to creator #${selectedPayout?.creatorId}?`
+              {action === "complete"
+                ? `Complete payout of ${selectedPayout ? formatCurrency(selectedPayout.amountInCents) : ""} to creator #${selectedPayout?.creatorId}? Transfer proof is required.`
+                : action === "process"
+                ? `Move payout of ${selectedPayout ? formatCurrency(selectedPayout.amountInCents) : ""} for creator #${selectedPayout?.creatorId} into the instant processing lane?`
                 : `Reject payout of ${selectedPayout ? formatCurrency(selectedPayout.amountInCents) : ""} from creator #${selectedPayout?.creatorId}?`
               }
             </DialogDescription>
@@ -178,13 +217,25 @@ export default function AdminPayouts() {
 
           <div className="space-y-4">
             <div>
+              {action === "complete" && (
+                <div className="space-y-3 mb-3">
+                  <div>
+                    <label className="text-sm font-medium">Transfer Proof ID *</label>
+                    <Textarea value={transferProofId} onChange={(e) => setTransferProofId(e.target.value)} placeholder="Cash App/Zelle/TON/Wise/PayPal/Payoneer transfer reference, hash, or payment ID" rows={2} className="mt-2" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">External Transfer ID (optional)</label>
+                    <Textarea value={externalTransferId} onChange={(e) => setExternalTransferId(e.target.value)} placeholder="Provider transaction ID if different from proof ID" rows={2} className="mt-2" />
+                  </div>
+                </div>
+              )}
               <label className="text-sm font-medium">
-                {action === "approve" ? "Notes (optional)" : "Reason for rejection *"}
+                {action === "reject" ? "Reason for rejection *" : "Operator Notes (optional)"}
               </label>
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder={action === "approve" ? "Add any notes..." : "Explain why this payout is being rejected..."}
+                placeholder={action === "reject" ? "Explain why this payout is being rejected..." : "Add settlement context, compliance note, or rail confirmation..."}
                 rows={4}
                 className="mt-2"
               />
@@ -198,20 +249,24 @@ export default function AdminPayouts() {
                 setSelectedPayout(null);
                 setAction(null);
                 setNotes("");
+                setTransferProofId("");
+                setExternalTransferId("");
               }}
             >
               Cancel
             </Button>
             <Button
               onClick={handleConfirm}
-              disabled={approveMutation.isPending || rejectMutation.isPending}
-              className={action === "approve" ? "bg-green-600 hover:bg-green-700" : ""}
+              disabled={completeMutation.isPending || processMutation.isPending || rejectMutation.isPending}
+              className={action === "complete" ? "bg-green-600 hover:bg-green-700" : action === "process" ? "bg-blue-600 hover:bg-blue-700" : ""}
               variant={action === "reject" ? "destructive" : "default"}
             >
-              {approveMutation.isPending || rejectMutation.isPending
+              {completeMutation.isPending || processMutation.isPending || rejectMutation.isPending
                 ? "Processing..."
-                : action === "approve"
-                ? "Approve Payout"
+                : action === "complete"
+                ? "Complete With Proof"
+                : action === "process"
+                ? "Move to Processing"
                 : "Reject Payout"}
             </Button>
           </DialogFooter>
