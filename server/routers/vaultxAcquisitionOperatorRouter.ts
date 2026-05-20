@@ -36,6 +36,20 @@ const leadInput = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
+const ownerAutopilotPatch = z.object({
+  enabled: z.boolean().optional(),
+  approvedBy: z.string().max(120).optional(),
+  approvedAt: z.string().optional(),
+  policyVersion: z.string().max(120).optional(),
+  minScore: z.number().int().min(1).max(100).optional(),
+  dailySendLimit: z.number().int().min(1).max(500).optional(),
+  allowedChannels: z.array(z.string().min(1).max(80)).optional(),
+  allowedStages: z.array(z.enum(["first_touch", "follow_up_1", "follow_up_2", "follow_up_3", "final_cta", "handoff"])).optional(),
+  requireDirectDelivery: z.boolean().optional(),
+  stopOnRiskSignals: z.boolean().optional(),
+  plainEnglishSummary: z.string().max(1000).optional(),
+});
+
 const configPatch = z.object({
   enabled: z.boolean().optional(),
   tickIntervalMs: z.number().int().min(60_000).optional(),
@@ -61,6 +75,7 @@ const configPatch = z.object({
   discoverySubreddits: z.array(z.string().min(1).max(120)).optional(),
   sourceHttpEndpoints: z.array(z.string().url()).optional(),
   maxDiscoveryPerTick: z.number().int().min(1).max(1000).optional(),
+  ownerAutopilot: ownerAutopilotPatch.optional(),
 });
 
 export const vaultxAcquisitionOperatorRouter = router({
@@ -74,7 +89,7 @@ export const vaultxAcquisitionOperatorRouter = router({
   }),
 
   configure: protectedProcedure.input(configPatch).mutation(async ({ input }) => {
-    return { config: await updateVaultXAcquisitionConfig(input) };
+    return { config: await updateVaultXAcquisitionConfig(input as any) };
   }),
 
   ingestLead: protectedProcedure.input(leadInput).mutation(async ({ input }) => {

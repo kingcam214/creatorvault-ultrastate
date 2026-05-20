@@ -30,6 +30,20 @@ export interface VaultXLeadInput {
   metadata?: Record<string, unknown>;
 }
 
+export interface VaultXOwnerAutopilotPolicy {
+  enabled: boolean;
+  approvedBy?: string;
+  approvedAt?: string;
+  policyVersion: string;
+  minScore: number;
+  dailySendLimit: number;
+  allowedChannels: string[];
+  allowedStages: OutreachStage[];
+  requireDirectDelivery: boolean;
+  stopOnRiskSignals: boolean;
+  plainEnglishSummary: string;
+}
+
 export interface VaultXOperatorConfig {
   enabled: boolean;
   tickIntervalMs: number;
@@ -55,6 +69,7 @@ export interface VaultXOperatorConfig {
   discoverySubreddits: string[];
   sourceHttpEndpoints: string[];
   maxDiscoveryPerTick: number;
+  ownerAutopilot: VaultXOwnerAutopilotPolicy;
 }
 
 const DEFAULT_CONFIG: VaultXOperatorConfig = {
@@ -82,6 +97,19 @@ const DEFAULT_CONFIG: VaultXOperatorConfig = {
   discoverySubreddits: ["CreatorsAdvice", "onlyfansadvice", "Fansly_Advice", "bodypositive", "cosplaygirls", "fitnessgirls"],
   sourceHttpEndpoints: [],
   maxDiscoveryPerTick: 50,
+  ownerAutopilot: {
+    enabled: process.env.VAULTX_OWNER_AUTOPILOT_ENABLED === "true",
+    approvedBy: process.env.VAULTX_OWNER_AUTOPILOT_REVIEWER || undefined,
+    approvedAt: process.env.VAULTX_OWNER_AUTOPILOT_APPROVED_AT || undefined,
+    policyVersion: "vaultx-owner-autopilot-v1",
+    minScore: 85,
+    dailySendLimit: 50,
+    allowedChannels: ["telegram", "webhook"],
+    allowedStages: ["first_touch", "follow_up_1", "follow_up_2", "follow_up_3", "final_cta"],
+    requireDirectDelivery: true,
+    stopOnRiskSignals: true,
+    plainEnglishSummary: "Find hot creator leads, send approved VaultX outreach only through real delivery connections, follow up inside the daily cap, and interrupt the owner only for risk, missing delivery setup, failed sends, or ready-to-close replies.",
+  },
 };
 
 let cronHandle: NodeJS.Timeout | null = null;
@@ -120,21 +148,38 @@ function bandFor(score: number, config: VaultXOperatorConfig): LeadBand {
   return "cold";
 }
 
-function getVaultXAcquisitionLiveApproval() {
+function getVaultXAcquisitionLiveApproval(config?: VaultXOperatorConfig) {
   const enabled = process.env.VAULTX_ACQUISITION_LIVE_SENDS_ENABLED === "true";
   const outboundApproved = process.env.CREATORVAULT_OUTBOUND_APPROVED === "premium-reviewed";
   const proofId = process.env.CREATORVAULT_OUTBOUND_PROOF_ID?.trim();
   const reviewer = process.env.CREATORVAULT_OUTBOUND_REVIEWER?.trim();
-  const approved = Boolean(enabled && outboundApproved && proofId && reviewer);
+  const envApproved = Boolean(enabled && outboundApproved && proofId && reviewer);
+  const autopilot = config?.ownerAutopilot;
+  const ownerAutopilotApproved = Boolean(autopilot?.enabled && autopilot?.approvedBy && autopilot?.approvedAt);
+  const approved = envApproved || ownerAutopilotApproved;
   return {
     approved,
-    mode: approved ? "live-approved" : "dry-run-only",
+    envApproved,
+    ownerAutopilotApproved,
+    mode: envApproved ? "live-approved" : ownerAutopilotApproved ? "owner-autopilot" : "dry-run-only",
     enabled,
     outboundApproved,
     hasProofId: Boolean(proofId),
     hasReviewer: Boolean(reviewer),
     proofId: proofId || null,
     reviewer: reviewer || null,
+    ownerAutopilot: autopilot ? {
+      enabled: autopilot.enabled,
+      approvedBy: autopilot.approvedBy || null,
+      approvedAt: autopilot.approvedAt || null,
+      policyVersion: autopilot.policyVersion,
+      minScore: autopilot.minScore,
+      dailySendLimit: autopilot.dailySendLimit,
+      allowedChannels: autopilot.allowedChannels,
+      allowedStages: autopilot.allowedStages,
+      requireDirectDelivery: autopilot.requireDirectDelivery,
+      plainEnglishSummary: autopilot.plainEnglishSummary,
+    } : null,
   };
 }
 
@@ -326,12 +371,17 @@ export async function getVaultXAcquisitionConfig(): Promise<VaultXOperatorConfig
     return DEFAULT_CONFIG;
   }
   const stored = safeJson<Partial<VaultXOperatorConfig>>(rows[0].config_json, {});
-  return { ...DEFAULT_CONFIG, ...stored, priorityPlatforms: { ...DEFAULT_CONFIG.priorityPlatforms, ...(stored.priorityPlatforms || {}) } };
+  return {
+    ...DEFAULT_CONFIG,
+    ...stored,
+    priorityPlatforms: { ...DEFAULT_CONFIG.priorityPlatforms, ...(stored.priorityPlatforms || {}) },
+    ownerAutopilot: { ...DEFAULT_CONFIG.ownerAutopilot, ...(stored.ownerAutopilot || {}) },
+  };
 }
 
 export async function updateVaultXAcquisitionConfig(patch: Partial<VaultXOperatorConfig>) {
   const current = await getVaultXAcquisitionConfig();
-  const next = { ...current, ...patch, priorityPlatforms: { ...current.priorityPlatforms, ...(patch.priorityPlatforms || {}) } };
+  const next = { ...current, ...patch, priorityPlatforms: { ...current.priorityPlatforms, ...(patch.priorityPlatforms || {}) }, ownerAutopilot: { ...current.ownerAutopilot, ...(patch.ownerAutopilot || {}) } };
   await rawExec(`INSERT INTO vaultx_acquisition_config (config_key, config_json, enabled) VALUES ('default', ?, ?)
     ON DUPLICATE KEY UPDATE config_json=VALUES(config_json), enabled=VALUES(enabled)`, [serialize(next), next.enabled ? 1 : 0]);
   return next;
@@ -393,6 +443,67 @@ function chooseChannel(lead: any): string {
   if (lead.email) return "email_outbox";
   if (lead.telegram_username) return "telegram_username_outbox";
   return "platform_outbox";
+}
+
+function deliveryPathFor(action: any, lead: any, config: VaultXOperatorConfig) {
+  if (action.channel === "telegram" && lead.telegram_chat_id && config.telegramBotToken) return { kind: "direct_telegram", direct: true };
+  if (action.channel === "webhook" && lead.webhook_url && config.allowHttpWebhooks) return { kind: "direct_webhook", direct: true };
+  if (config.telegramOpsChatId && config.telegramBotToken) return { kind: "ops_relay", direct: false };
+  return { kind: "outbox_only", direct: false };
+}
+
+async function countAutopilotSendsToday() {
+  const rows = await rawQuery<{ cnt: number }>("SELECT COUNT(*) AS cnt FROM vaultx_outreach_actions WHERE status='sent' AND sent_at >= CURRENT_DATE");
+  return Number(rows[0]?.cnt || 0);
+}
+
+async function evaluateOwnerAutopilot(action: any, lead: any, config: VaultXOperatorConfig) {
+  const policy = config.ownerAutopilot;
+  const deliveryPath = deliveryPathFor(action, lead, config);
+  const scoreBreakdown = safeJson<Record<string, unknown>>(lead.score_breakdown, {});
+  const blockedTerms = Array.isArray(scoreBreakdown.blockedTerms) ? scoreBreakdown.blockedTerms : [];
+  const sentToday = await countAutopilotSendsToday();
+  const guardrails = {
+    policyEnabled: Boolean(policy.enabled),
+    standingApprovalPresent: Boolean(policy.approvedBy && policy.approvedAt),
+    score: Number(lead.score || 0),
+    minScore: policy.minScore,
+    channel: action.channel,
+    channelAllowed: policy.allowedChannels.includes(action.channel),
+    stage: action.stage,
+    stageAllowed: policy.allowedStages.includes(action.stage),
+    deliveryPath: deliveryPath.kind,
+    directDelivery: deliveryPath.direct,
+    dailySendLimit: policy.dailySendLimit,
+    sentToday,
+    blockedTerms,
+  };
+
+  let approved = true;
+  let reason = "inside_owner_approved_guardrails";
+  if (!policy.enabled) { approved = false; reason = "owner_autopilot_not_enabled"; }
+  else if (!policy.approvedBy || !policy.approvedAt) { approved = false; reason = "owner_standing_approval_missing"; }
+  else if (Number(lead.handoff_required || 0) === 1 || lead.handoff_required === true) { approved = false; reason = "lead_already_requires_escalation"; }
+  else if (Number(lead.score || 0) < policy.minScore) { approved = false; reason = "lead_score_below_owner_autopilot_threshold"; }
+  else if (policy.stopOnRiskSignals && blockedTerms.length) { approved = false; reason = "risk_signal_requires_escalation"; }
+  else if (!policy.allowedChannels.includes(action.channel)) { approved = false; reason = "channel_not_inside_owner_autopilot_rules"; }
+  else if (!policy.allowedStages.includes(action.stage)) { approved = false; reason = "stage_not_inside_owner_autopilot_rules"; }
+  else if (policy.requireDirectDelivery && !deliveryPath.direct) { approved = false; reason = "autopilot_delivery_setup_needed"; }
+  else if (sentToday >= policy.dailySendLimit) { approved = false; reason = "owner_autopilot_daily_send_cap_reached"; }
+
+  return {
+    approved,
+    reason,
+    deliveryPath: deliveryPath.kind,
+    guardrails,
+    policy: {
+      enabled: policy.enabled,
+      approvedBy: policy.approvedBy || null,
+      approvedAt: policy.approvedAt || null,
+      policyVersion: policy.policyVersion,
+      plainEnglishSummary: policy.plainEnglishSummary,
+    },
+  };
 }
 
 function generateMessage(lead: any, stage: OutreachStage) {
@@ -476,7 +587,7 @@ async function dispatchAction(action: any, config: VaultXOperatorConfig, runId: 
   const [lead] = await rawQuery<any>("SELECT * FROM vaultx_creator_leads WHERE id=? LIMIT 1", [action.lead_id]);
   if (!lead) throw new Error(`Lead ${action.lead_id} not found`);
   let externalId: string | null = null;
-  const liveApproval = getVaultXAcquisitionLiveApproval();
+  const liveApproval = getVaultXAcquisitionLiveApproval(config);
   const approvedMessage = qualityGate.check(action.message, {
     surface: action.channel === "telegram" || action.channel === "telegram_username_outbox" ? "telegram-dm" : "agent-public-output",
     context: "vaultx",
@@ -487,12 +598,24 @@ async function dispatchAction(action: any, config: VaultXOperatorConfig, runId: 
     requireMechanism: true,
     ctaAngle: action.stage === "first_touch" ? "automation-advantage" : "asset-conversion",
   });
-  const proof: Record<string, unknown> = { channel: action.channel, attemptedAt: new Date().toISOString(), liveApproval: { mode: liveApproval.mode, enabled: liveApproval.enabled, outboundApproved: liveApproval.outboundApproved, hasProofId: liveApproval.hasProofId, hasReviewer: liveApproval.hasReviewer, proofId: liveApproval.proofId, reviewer: liveApproval.reviewer }, dryRunOnly: mode === "test" || !liveApproval.approved };
+  const ownerAutopilot = await evaluateOwnerAutopilot(action, lead, config);
+  const liveSendAllowed = mode !== "test" && (liveApproval.envApproved || ownerAutopilot.approved);
+  const proof: Record<string, unknown> = {
+    channel: action.channel,
+    attemptedAt: new Date().toISOString(),
+    liveApproval: { mode: liveApproval.mode, enabled: liveApproval.enabled, outboundApproved: liveApproval.outboundApproved, envApproved: liveApproval.envApproved, ownerAutopilotApproved: liveApproval.ownerAutopilotApproved, hasProofId: liveApproval.hasProofId, hasReviewer: liveApproval.hasReviewer, proofId: liveApproval.proofId, reviewer: liveApproval.reviewer, ownerAutopilot: liveApproval.ownerAutopilot },
+    ownerAutopilot,
+    deliveryPath: ownerAutopilot.deliveryPath,
+    dryRunOnly: !liveSendAllowed,
+    plainEnglish: liveSendAllowed
+      ? "Autopilot is allowed to send this action because it fits the owner-approved rules."
+      : "The platform prepared the outreach but did not send it because it was outside the current owner-approved guardrails.",
+  };
 
-  if (mode === "test" || !liveApproval.approved) {
-    proof.reason = mode === "test" ? "test_mode_forces_dry_run" : "live_send_approval_state_missing";
+  if (!liveSendAllowed) {
+    proof.reason = mode === "test" ? "test_mode_forces_dry_run" : ownerAutopilot.reason || "live_send_approval_state_missing";
     proof.messagePreview = approvedMessage;
-    proof.manualHandoffCreated = true;
+    proof.autopilotHandoffCreated = true;
     const handoffContext = {
       actionId: action.id,
       stage: action.stage,
@@ -503,13 +626,15 @@ async function dispatchAction(action: any, config: VaultXOperatorConfig, runId: 
       leadPlatform: lead.platform || null,
       leadProfileUrl: lead.profile_url || null,
       approvalState: proof.liveApproval,
+      ownerAutopilot,
       dryRunOnly: proof.dryRunOnly,
       blockedReason: proof.reason,
+      plainEnglish: "This is not a normal manual-send task. It is the platform telling the owner exactly what setup or guardrail stopped full autopilot for this one action.",
     };
     await rawExec("UPDATE vaultx_outreach_actions SET status='skipped', proof=?, attempt_count=attempt_count+1 WHERE id=?", [serialize(proof), action.id]);
-    await createHandoff(lead.id, runId, "manual_send_required", "high", handoffContext);
-    await logTelemetry({ runId, leadId: lead.id, eventType: "outreach_dry_run", status: "success", score: lead.score, priorityBand: lead.priority_band, channel: action.channel, outcome: action.stage, metadata: proof });
-    return { actionId: action.id, leadId: lead.id, channel: action.channel, externalId: null, proof, dryRun: true, handoffCreated: true };
+    await createHandoff(lead.id, runId, String(proof.reason), proof.reason === "autopilot_delivery_setup_needed" ? "medium" : "high", handoffContext);
+    await logTelemetry({ runId, leadId: lead.id, eventType: "outreach_dry_run", status: "success", score: lead.score, priorityBand: lead.priority_band, channel: action.channel, outcome: String(proof.reason), metadata: proof });
+    return { actionId: action.id, leadId: lead.id, channel: action.channel, externalId: null, proof, dryRun: true, handoffCreated: true, autopilotBlocked: true };
   }
 
   if (action.channel === "telegram" && lead.telegram_chat_id && config.telegramBotToken) {
@@ -701,7 +826,7 @@ export async function runVaultXAcquisitionTick(options: { mode?: "auto" | "manua
 
     sent = execution.sent; failed = execution.failed; handoff = execution.handoff;
     const escalatedRows = await rawQuery<{ cnt: number }>("SELECT COUNT(*) AS cnt FROM vaultx_creator_leads WHERE status IN ('hot_reply','handoff')");
-          const proof = { runId, mode, liveApproval: getVaultXAcquisitionLiveApproval(), sourced, queued, sent, dryRun: execution.dryRun, failed, handoff, executedActions: execution.proofs, escalatedCount: Number(escalatedRows[0]?.cnt || 0) };
+          const proof = { runId, mode, liveApproval: getVaultXAcquisitionLiveApproval(config), ownerAutopilot: config.ownerAutopilot, platformCapability: config.ownerAutopilot?.enabled ? "Guarded autopilot can send safe creator outreach inside the owner-approved rules and only interrupts for risk, missing delivery setup, failures, or ready-to-close replies." : "Proof-only mode can scout, score, write, and queue outreach, but live sending waits until owner autopilot is enabled.", sourced, queued, sent, dryRun: execution.dryRun, failed, handoff, executedActions: execution.proofs, escalatedCount: Number(escalatedRows[0]?.cnt || 0) };
 
     await rawExec("UPDATE vaultx_operator_runs SET status='completed', finished_at=CURRENT_TIMESTAMP, sourced_count=?, queued_count=?, sent_count=?, failed_count=?, handoff_count=?, escalated_count=?, proof=? WHERE run_id=?", [sourced, queued, sent, failed, handoff, Number(escalatedRows[0]?.cnt || 0), serialize(proof), runId]);
           await logTelemetry({ runId, eventType: "operator_tick_completed", status: failed ? "warning" : "success", outcome: `sourced=${sourced}, queued=${queued}, sent=${sent}, dryRun=${execution.dryRun}, failed=${failed}`, metadata: proof });

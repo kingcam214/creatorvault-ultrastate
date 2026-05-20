@@ -57,6 +57,13 @@ export default function OutreachCommandCenter() {
       vaultxProofQuery.refetch();
     },
   });
+  const configureAcquisition = trpc.vaultxAcquisition.configure.useMutation({
+    onSuccess: () => {
+      vaultxConfigQuery.refetch();
+      vaultxBoardQuery.refetch();
+      vaultxProofQuery.refetch();
+    },
+  });
 
   const acquisitionConfig = ((vaultxConfigQuery.data as any)?.config ?? {}) as any;
   const acquisitionBoard = ((vaultxBoardQuery.data ?? {}) as any);
@@ -67,8 +74,12 @@ export default function OutreachCommandCenter() {
   const acquisitionRuns = ((acquisitionBoard.runs ?? []) as any[]);
   const acquisitionTelemetry = ((acquisitionProof.telemetry ?? []) as any[]);
   const acquisitionSummary = ((acquisitionProof.summary ?? {}) as any);
-  const acquisitionLiveEnabled = acquisitionConfig.liveSendsEnabled === true || acquisitionConfig.enabled === true;
-  const acquisitionBusy = bootstrapAcquisition.isPending || runAcquisitionNow.isPending;
+  const ownerAutopilot = acquisitionConfig.ownerAutopilot ?? {};
+  const ownerAutopilotApproved = ownerAutopilot.enabled === true && Boolean(ownerAutopilot.approvedBy && ownerAutopilot.approvedAt);
+  const acquisitionModeLabel = ownerAutopilotApproved ? "Guarded owner autopilot" : acquisitionConfig.enabled === true ? "Proof-only until standing approval" : "Operator paused";
+  const acquisitionModeColor = ownerAutopilotApproved ? "#00ff88" : acquisitionConfig.enabled === true ? "#ffcc00" : "#ff6b6b";
+  const acquisitionLiveEnabled = ownerAutopilotApproved || acquisitionConfig.liveSendsEnabled === true;
+  const acquisitionBusy = bootstrapAcquisition.isPending || runAcquisitionNow.isPending || configureAcquisition.isPending;
 
   const refreshAcquisitionWarRoom = () => {
     vaultxConfigQuery.refetch();
@@ -85,16 +96,41 @@ export default function OutreachCommandCenter() {
     }
   };
 
-  const handleRunAcquisition = async (mode: "test" | "manual") => {
+  const handleRunAcquisition = async (mode: "test" | "manual" | "auto") => {
     try {
       const result = await runAcquisitionNow.mutateAsync({ mode, sourceLimit: 80, outreachLimit: 50, followUpLimit: 50 });
       const proof = result as any;
+      const title = mode === "test" ? "Proof-only sweep complete" : mode === "auto" ? "Owner autopilot sweep complete" : "Guarded acquisition sweep complete";
       toast({
-        title: mode === "test" ? "Test acquisition sweep complete" : "Manual acquisition sweep complete",
-        description: `Sourced ${proof?.sourced ?? 0}, queued ${proof?.queued ?? 0}, sent ${proof?.sent ?? 0}, dry-run ${proof?.dryRun === false ? "off" : "on"}, failed ${proof?.failed ?? 0}.`,
+        title,
+        description: `Found ${proof?.sourced ?? 0}, queued ${proof?.queued ?? 0}, sent ${proof?.sent ?? 0}, held back ${proof?.handoff ?? 0}, failed ${proof?.failed ?? 0}. ${proof?.platformCapability || "The platform only counts real sent actions as contacted."}`,
       });
     } catch (e: any) {
       toast({ title: "Acquisition sweep failed", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleApproveOwnerAutopilot = async () => {
+    try {
+      await configureAcquisition.mutateAsync({
+        enabled: true,
+        ownerAutopilot: {
+          enabled: true,
+          approvedBy: "owner-command-center",
+          approvedAt: new Date().toISOString(),
+          policyVersion: ownerAutopilot.policyVersion ?? "vaultx-owner-autopilot-v1",
+          minScore: ownerAutopilot.minScore ?? 85,
+          dailySendLimit: ownerAutopilot.dailySendLimit ?? 50,
+          allowedChannels: ownerAutopilot.allowedChannels ?? ["telegram", "webhook"],
+          allowedStages: ownerAutopilot.allowedStages ?? ["first_touch", "follow_up_1", "follow_up_2", "follow_up_3", "final_cta"],
+          requireDirectDelivery: ownerAutopilot.requireDirectDelivery ?? true,
+          stopOnRiskSignals: ownerAutopilot.stopOnRiskSignals ?? true,
+          plainEnglishSummary: ownerAutopilot.plainEnglishSummary ?? "Find hot creator leads, send approved VaultX outreach only through real delivery connections, follow up inside the daily cap, and interrupt the owner only for risk, missing delivery setup, failed sends, or ready-to-close replies.",
+        },
+      });
+      toast({ title: "Owner autopilot approved", description: "VaultX can now run the approved acquisition strategy automatically, but it still stops for missing delivery setup, risk signals, daily caps, or ready-to-close exceptions." });
+    } catch (e: any) {
+      toast({ title: "Autopilot approval failed", description: e.message, variant: "destructive" });
     }
   };
 
@@ -304,11 +340,11 @@ export default function OutreachCommandCenter() {
             <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
               <div style={{ maxWidth: 860 }}>
                 <div style={{ fontSize: 12, color: acquisitionLiveEnabled ? "#ffcc00" : "#00ff88", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>
-                  {acquisitionLiveEnabled ? "Live-send capable: verify proof before claiming acquisition" : "Approval-gated: queued work is not counted as contacted"}
+                  {acquisitionModeLabel}
                 </div>
                 <h2 style={{ margin: 0, fontSize: 24, fontWeight: 850 }}>Same-Day Acquisition War Room</h2>
                 <p style={{ margin: "8px 0 0", color: "#aaa", lineHeight: 1.6, fontSize: 14 }}>
-                  This panel separates real acquisition from generated copy. A lead only counts as contacted when the proof ledger shows a delivery id, relay handoff, or manual-send confirmation tied to that lead and tracking link.
+                  This is the owner-side cheat-code view. The platform can scout creators, score who is worth chasing, write the outreach, send only inside owner-approved guardrails, and interrupt you only when risk, missing delivery setup, failed sends, or ready-to-close replies need attention.
                 </p>
               </div>
               <button
@@ -339,7 +375,7 @@ export default function OutreachCommandCenter() {
             <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 18 }}>
               <h3 style={{ margin: "0 0 10px", fontSize: 16, fontWeight: 800 }}>Today’s execution controls</h3>
               <p style={{ margin: "0 0 16px", color: "#999", fontSize: 13, lineHeight: 1.6 }}>
-                Run test mode first to source and queue without pretending messages were delivered. Manual mode still obeys backend approval gates and will surface handoffs when direct sending is unavailable.
+                Proof-only mode shows what would happen without sending. Guarded sweep obeys approval gates. Owner autopilot runs the approved strategy automatically: find, score, write, send when safe, follow up, and only stop when the action falls outside the rules.
               </p>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <button onClick={handleBootstrapAcquisition} disabled={acquisitionBusy} style={{ padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.06)", color: "#fff", cursor: acquisitionBusy ? "not-allowed" : "pointer", fontWeight: 750 }}>
@@ -349,7 +385,13 @@ export default function OutreachCommandCenter() {
                   Run test sweep
                 </button>
                 <button onClick={() => handleRunAcquisition("manual")} disabled={acquisitionBusy} style={{ padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(0,255,136,0.32)", background: acquisitionBusy ? "#333" : "rgba(0,255,136,0.10)", color: "#a7f3d0", cursor: acquisitionBusy ? "not-allowed" : "pointer", fontWeight: 750 }}>
-                  Run manual sweep
+                  Run guarded sweep
+                </button>
+                <button onClick={handleApproveOwnerAutopilot} disabled={acquisitionBusy || ownerAutopilotApproved} style={{ padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(255,204,0,0.35)", background: acquisitionBusy || ownerAutopilotApproved ? "#333" : "rgba(255,204,0,0.12)", color: acquisitionBusy || ownerAutopilotApproved ? "#777" : "#ffe08a", cursor: acquisitionBusy || ownerAutopilotApproved ? "not-allowed" : "pointer", fontWeight: 850 }}>
+                  Approve autopilot rules once
+                </button>
+                <button onClick={() => handleRunAcquisition("auto")} disabled={acquisitionBusy || !ownerAutopilotApproved} style={{ padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(0,255,136,0.42)", background: acquisitionBusy || !ownerAutopilotApproved ? "#333" : "linear-gradient(135deg, #00a86b, #00ff88)", color: acquisitionBusy || !ownerAutopilotApproved ? "#777" : "#04110a", cursor: acquisitionBusy || !ownerAutopilotApproved ? "not-allowed" : "pointer", fontWeight: 850 }}>
+                  Run owner autopilot
                 </button>
               </div>
             </div>
@@ -357,7 +399,9 @@ export default function OutreachCommandCenter() {
             <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 18 }}>
               <h3 style={{ margin: "0 0 10px", fontSize: 16, fontWeight: 800 }}>Proof state</h3>
               <div style={{ fontSize: 13, color: "#aaa", lineHeight: 1.7 }}>
-                <div>Mode: <strong style={{ color: acquisitionLiveEnabled ? "#ffcc00" : "#00ff88" }}>{acquisitionLiveEnabled ? "live capable" : "approval gated"}</strong></div>
+                <div>Mode: <strong style={{ color: acquisitionModeColor }}>{acquisitionModeLabel}</strong></div>
+                <div>Standing approval: <strong style={{ color: ownerAutopilotApproved ? "#00ff88" : "#ffcc00" }}>{ownerAutopilotApproved ? `approved by ${ownerAutopilot.approvedBy}` : "not active yet"}</strong></div>
+                <div>Autopilot rules: <strong style={{ color: "#fff" }}>score {ownerAutopilot.minScore ?? 85}+ · cap {ownerAutopilot.dailySendLimit ?? 50}/day · {(ownerAutopilot.allowedChannels ?? ["telegram", "webhook"]).join(", ")}</strong></div>
                 <div>Last run: <strong style={{ color: "#fff" }}>{acquisitionRuns[0]?.started_at || acquisitionTelemetry[0]?.created_at || "not recorded"}</strong></div>
                 <div>Proof events: <strong style={{ color: "#fff" }}>{acquisitionTelemetry.length}</strong></div>
                 <div>API status: <strong style={{ color: vaultxBoardQuery.error ? "#ff6b6b" : "#00ff88" }}>{vaultxBoardQuery.error ? vaultxBoardQuery.error.message : "responding"}</strong></div>
@@ -367,7 +411,7 @@ export default function OutreachCommandCenter() {
 
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.15fr) minmax(340px, 0.85fr)", gap: 16 }}>
             <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 18, overflow: "hidden" }}>
-              <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800 }}>Lead board: act today, count only proof</h3>
+              <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800 }}>Lead board: autopilot chases only safe, high-score creators</h3>
               <div style={{ display: "grid", gap: 10 }}>
                 {acquisitionLeads.slice(0, 12).map((lead) => (
                   <div key={lead.id || lead.uuid || `${lead.platform}-${lead.handle}`} style={{ display: "grid", gridTemplateColumns: "1.1fr 0.55fr 0.55fr 1fr", gap: 12, alignItems: "center", padding: "12px", borderRadius: 10, background: "rgba(0,0,0,0.18)", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -389,7 +433,7 @@ export default function OutreachCommandCenter() {
             </div>
 
             <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 18 }}>
-              <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800 }}>Recent outbound actions</h3>
+              <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800 }}>Recent outbound actions and autopilot holds</h3>
               <div style={{ display: "grid", gap: 10, maxHeight: 520, overflowY: "auto" }}>
                 {acquisitionActions.slice(0, 12).map((action) => (
                   <div key={action.id || action.uuid} style={{ padding: 12, borderRadius: 10, background: "rgba(0,0,0,0.18)", border: "1px solid rgba(255,255,255,0.06)" }}>
