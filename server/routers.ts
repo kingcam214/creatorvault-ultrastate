@@ -71,6 +71,7 @@ import { commandHubV2Router } from "./routers/commandHubV2Router";
 import { commentRouter } from "./routers/commentRouter";
 import { contentRepurposingRouter } from "./routers/contentRepurposing";
 import { mediaCoreRouter } from "./routers/mediaCoreRouter";
+import { mediaAssetsRouter } from "./routers/mediaAssets";
 import { creatorToolsRouter } from "./routers/creatorTools";
 import { crossVerticalMarketplaceRouter } from "./routers/crossVerticalMarketplace";
 import { culturalRouter } from "./routers/culturalRouter";
@@ -802,6 +803,7 @@ export const appRouter = router({
   comment: commentRouter,
   contentRepurposing: contentRepurposingRouter,
   mediaCore: mediaCoreRouter,
+  mediaAssets: mediaAssetsRouter,
   creatorAnalytics: analyticsRouter,
   creatorTools: creatorToolsRouter,
   crossVerticalMarketplace: crossVerticalMarketplaceRouter,
