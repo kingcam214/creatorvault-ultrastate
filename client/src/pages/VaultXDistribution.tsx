@@ -16,6 +16,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
+import { VaultXLogo } from "@/components/vaultx/VaultXBrand";
 import {
   Globe, Link2, Send, BarChart2, Plus, Trash2, CheckCircle2,
   XCircle, AlertCircle, Loader2, ExternalLink, Copy, RefreshCw,
@@ -899,14 +900,18 @@ export default function VaultXDistribution() {
       {/* Header */}
       <div className="bg-gray-950 border-b border-gray-900 px-4 py-4">
         <div className="max-w-2xl mx-auto">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-8 h-8 bg-rose-600 rounded-xl flex items-center justify-center">
-              <Radio className="w-4 h-4 text-white" />
-            </div>
+          <div className="flex items-center gap-3 mb-2">
+            <VaultXLogo size="sm" showTagline={false} />
             <div>
               <h1 className="text-white font-black text-lg">Distribution Hub</h1>
-              <p className="text-gray-500 text-xs">Channel identities · Connected accounts · Brand safety · Attribution</p>
+              <p className="text-gray-500 text-xs">Package, post, attribute, and audit every VaultX launch lane.</p>
             </div>
+          </div>
+          <div className="grid grid-cols-4 gap-1 rounded-2xl border border-white/10 bg-black/40 p-1 text-center text-[10px] font-black uppercase tracking-[.12em] text-gray-500">
+            <span className={activeTab === "channels" ? "rounded-xl bg-rose-500/15 py-2 text-rose-300" : "py-2"}>Channels</span>
+            <span className={activeTab === "accounts" ? "rounded-xl bg-rose-500/15 py-2 text-rose-300" : "py-2"}>Accounts</span>
+            <span className={activeTab === "compose" ? "rounded-xl bg-rose-500/15 py-2 text-rose-300" : "py-2"}>Compose</span>
+            <span className={activeTab === "jobs" ? "rounded-xl bg-rose-500/15 py-2 text-rose-300" : "py-2"}>Jobs</span>
           </div>
         </div>
       </div>

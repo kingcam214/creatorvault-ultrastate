@@ -18,6 +18,7 @@ import {
   MessageSquare, Video, Heart, Share2, Gift, Loader2,
   BarChart2, ChevronDown, ChevronUp, Play, Sparkles,
 } from "lucide-react";
+import { VaultXLogo } from "@/components/vaultx/VaultXBrand";
 
 // ─── Challenge definitions ────────────────────────────────────────────────────
 const CHALLENGES = [
@@ -212,20 +213,11 @@ export default function VaultXChallenges() {
   const { isAdult, accentColor, modeBadge } = useCreatorMode();
   const [activeChallenge, setActiveChallenge] = useState<"5k" | "15k">("5k");
   const [expandedPathway, setExpandedPathway] = useState<string | null>("subscriptions");
-  const [joinLoading, setJoinLoading] = useState(false);
-  const [joined, setJoined] = useState<string | null>(null);
 
   const { data: activeEmpireChallenge } = trpc.challengeAutomation.getActiveChallenge.useQuery();
 
   const challenge = CHALLENGES.find(c => c.id === activeChallenge)!;
   const ChallengeIcon = challenge.icon;
-
-  const handleJoin = async (challengeId: string) => {
-    setJoinLoading(true);
-    await new Promise(r => setTimeout(r, 500));
-    setJoined(challengeId);
-    setJoinLoading(false);
-  };
 
   // VaultX challenge progress is intentionally not sourced from empire_challenges.
   // The empire challenge ledger is shown only as a separate reference panel below.
@@ -243,13 +235,14 @@ export default function VaultXChallenges() {
 
         {/* Header */}
         <div className="text-center mb-10">
-          <div className="flex justify-end mb-4">
+          <div className="flex items-center justify-between mb-6">
+            <VaultXLogo size="md" />
             <CreatorModeSwitcher compact />
           </div>
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-bold mb-4"
             style={{ background: `${accentColor}15`, borderColor: `${accentColor}40`, color: accentColor }}>
             <Flame className="w-4 h-4" />
-            {isAdult ? "VaultX Revenue Challenges" : "Creator Revenue Challenges"}
+            {isAdult ? "VaultX Revenue Playbook" : "Creator Revenue Playbook"}
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-white mb-3 tracking-tight">
             {isAdult ? "Turn Your Vault Into" : "Turn Your Content Into"}
@@ -471,41 +464,25 @@ export default function VaultXChallenges() {
         </div>
 
 
-        {/* CTA */}
-        {joined !== activeChallenge ? (
-          <div className={`p-8 rounded-3xl bg-gradient-to-br ${challenge.gradient} text-center shadow-2xl ${challenge.glow}`}>
-            <ChallengeIcon className="w-12 h-12 text-white mx-auto mb-4" />
-            <h3 className="text-white font-black text-2xl mb-2">Ready to Start the {challenge.title}?</h3>
-            <p className="text-white/80 mb-6 max-w-lg mx-auto">
-This starts your VaultX playbook view. It does not credit the separate AI Agents + Platform Tools challenge ledger.
-            </p>
-            <button
-              onClick={() => handleJoin(activeChallenge)}
-              disabled={joinLoading}
-              className="px-10 py-4 rounded-2xl bg-white text-black font-black text-lg hover:bg-white/90 transition-all disabled:opacity-60 flex items-center gap-3 mx-auto shadow-xl"
-            >
-              {joinLoading ? (
-                <><Loader2 className="w-5 h-5 animate-spin" /> Activating...</>
-              ) : (
-                <><Zap className="w-5 h-5" /> Start VaultX Playbook</>
-              )}
-            </button>
+        {/* Production actions */}
+        <div className={`p-8 rounded-3xl bg-gradient-to-br ${challenge.gradient} text-center shadow-2xl ${challenge.glow}`}>
+          <ChallengeIcon className="w-12 h-12 text-white mx-auto mb-4" />
+          <h3 className="text-white font-black text-2xl mb-2">Run the {challenge.title} Through Real Tools</h3>
+          <p className="text-white/80 mb-6 max-w-lg mx-auto">
+            This playbook is a route map, not fake challenge activation. Use the live VaultX dashboard, studio, and distribution systems to publish, sell, and measure the work.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <a href="/vaultx" className="px-6 py-3 rounded-2xl bg-white text-black font-black text-sm hover:bg-white/90 transition-all flex items-center gap-2 shadow-xl">
+              <DollarSign className="w-4 h-4" /> Open VaultX Dashboard
+            </a>
+            <a href="/vault-x/studio" className="px-6 py-3 rounded-2xl bg-black/25 text-white font-black text-sm hover:bg-black/40 transition-all flex items-center gap-2 border border-white/20">
+              <Video className="w-4 h-4" /> Produce Drops
+            </a>
+            <a href="/vaultx/distribution" className="px-6 py-3 rounded-2xl bg-black/25 text-white font-black text-sm hover:bg-black/40 transition-all flex items-center gap-2 border border-white/20">
+              <Share2 className="w-4 h-4" /> Distribute
+            </a>
           </div>
-        ) : (
-          <div className="p-6 rounded-3xl bg-green-900/20 border border-green-500/30 text-center">
-            <CheckCircle2 className="w-10 h-10 text-green-400 mx-auto mb-3" />
-            <h3 className="text-white font-black text-xl mb-2">VaultX Playbook Active</h3>
-            <p className="text-gray-400 text-sm mb-4">Use the assigned VaultX and platform tools below. Verified Telegram drops remain limited to the two listed VaultX drop agents.</p>
-            <div className="flex flex-wrap gap-3 justify-center">
-              <a href="/social-hub" className="px-5 py-2.5 rounded-xl bg-purple-600 text-white font-bold text-sm hover:bg-purple-500 transition-all flex items-center gap-2">
-                <Share2 className="w-4 h-4" /> Open Social Hub
-              </a>
-              <a href="/vaultx" className="px-5 py-2.5 rounded-xl bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition-all flex items-center gap-2">
-                <DollarSign className="w-4 h-4" /> View VaultX Dashboard
-              </a>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

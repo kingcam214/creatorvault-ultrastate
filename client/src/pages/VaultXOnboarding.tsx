@@ -2,13 +2,14 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { CheckCircle, ArrowRight, ArrowLeft, DollarSign, Lock, Zap, Star } from "lucide-react";
+import { VaultXLogo, VaultXWorkflow } from "@/components/vaultx/VaultXBrand";
 
 const STEPS = [
-  { id: 1, title: "Welcome to VaultX", subtitle: "Your premium content monetization vault" },
-  { id: 2, title: "Creator Profile", subtitle: "Set up your creator identity" },
-  { id: 3, title: "Link Your Channel", subtitle: "Connect your Telegram channel" },
-  { id: 4, title: "Monetization Setup", subtitle: "Configure how you earn" },
-  { id: 5, title: "You're Ready!", subtitle: "Your vault is live" },
+  { id: 1, title: "Launch VaultX", subtitle: "Set the creator operating lane that turns drops into paid inventory." },
+  { id: 2, title: "Creator Profile", subtitle: "Create the storefront identity fans will trust before they pay." },
+  { id: 3, title: "Link Your Channel", subtitle: "Connect Telegram so paid access can be operational, not manual." },
+  { id: 4, title: "Monetization Setup", subtitle: "Choose subscriptions, PPV, and tips before your first launch." },
+  { id: 5, title: "Production Ready", subtitle: "Your vault is ready to receive content and route revenue." },
 ];
 
 const niches = ["lifestyle","fitness","music","comedy","education","cooking","travel","gaming","beauty","business"];
@@ -29,6 +30,12 @@ export default function VaultXOnboarding() {
 
   const updateProfile = trpc.vaultx.updateCreatorProfile.useMutation({ onSuccess: () => {} });
   const linkChannel = trpc.vaultx.linkChannel.useMutation({ onSuccess: () => {} });
+  const workflowSteps = [
+    { label: "Identity", detail: "Creator profile and niche positioning.", done: step > 2 || !!profile.displayName },
+    { label: "Access", detail: "Telegram or channel gate for paid members.", done: step > 3 || !!channel.channelId },
+    { label: "Revenue", detail: "PPV, subscription, and tip logic selected.", done: step > 4 },
+    { label: "Studio", detail: "Enter VaultX Studio to upload, package, and launch.", done: step === 5 },
+  ];
 
   const handleNext = () => {
     if (step === 2 && profile.displayName) {
@@ -44,6 +51,12 @@ export default function VaultXOnboarding() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-2xl mb-8">
+        <div className="mb-6 flex justify-center">
+          <VaultXLogo size="lg" />
+        </div>
+        <div className="mb-6">
+          <VaultXWorkflow steps={workflowSteps} activeStep={Math.min(step - 1, 3)} />
+        </div>
         <div className="flex items-center justify-between mb-2">
           {STEPS.map((s, i) => (
             <div key={s.id} className="flex items-center flex-1">
@@ -78,7 +91,7 @@ export default function VaultXOnboarding() {
             </div>
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
               <p className="text-yellow-400 font-semibold mb-1 flex items-center gap-2"><Star className="w-4 h-4" /> Why VaultX?</p>
-              <p className="text-gray-300 text-sm">Keep 85% of every dollar you earn. Upload once, monetize everywhere.</p>
+              <p className="text-gray-300 text-sm">Keep 85% of every dollar you earn. Build the profile, connect access, set monetization, then enter Studio with a real launch path.</p>
             </div>
           </div>
         )}

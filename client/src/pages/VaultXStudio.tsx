@@ -33,6 +33,7 @@ import {
   Crown, Send, Bot, Plus, Trash2, Edit2, Globe, X, CheckCircle,
   EyeOff, Search, MessageSquare, Clock,
 } from "lucide-react";
+import { VaultXActionCard, VaultXLogo, VaultXWorkflow } from "@/components/vaultx/VaultXBrand";
 
 // ============================================================================
 // TYPES
@@ -4034,6 +4035,12 @@ export default function VaultXStudio() {
 
   const liveOutputCount = history.length;
   const activeModeIndex = MODES.findIndex((m) => m.id === activeMode) + 1;
+  const productionWorkflowSteps = [
+    { label: "Select engine", detail: "Choose the exact output lane: final package, video generation, PPV, distribution, or analytics.", done: !!activeMode },
+    { label: "Feed source", detail: "Upload source media or provide the creator brief required by the selected engine.", done: liveOutputCount > 0 || ["ai-video-generator", "ai-sound-studio", "creator-tiers", "ai-chatter"].includes(activeMode) },
+    { label: "Generate output", detail: "Run the real model/API-powered action and persist produced assets into CreatorVault history.", done: liveOutputCount > 0 },
+    { label: "Distribute", detail: "Move finished assets into editor, platform vault, broadcast, or distribution lanes.", done: ["distribution-engine", "platform-vault", "mass-broadcast", "monetization-bundle"].includes(activeMode) },
+  ];
 
   // Group modes for sidebar sections
   const MODE_GROUPS = [
@@ -4064,13 +4071,11 @@ export default function VaultXStudio() {
         }}
       >
           <div className="flex items-center gap-3 px-4 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.07)", minHeight: 68 }}>
-          <div className="w-9 h-9 rounded-2xl flex-shrink-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, #00e5ff, #c9a84c)`, boxShadow: "0 0 34px rgba(0,229,255,.18)" }}>
-            <span className="text-black font-black text-sm">VX</span>
-          </div>
+          <VaultXLogo size="sm" showTagline={false} />
           {sidebarExpanded && (
             <div>
-              <p className="text-sm font-black text-white leading-none tracking-[-.02em]">VaultX Studio</p>
-              <p className="text-[9px] font-black uppercase tracking-[.22em] mt-1" style={{ color: "#00e5ff" }}>Creator production OS</p>
+              <p className="text-sm font-black text-white leading-none tracking-[-.02em]">Studio</p>
+              <p className="text-[9px] font-black uppercase tracking-[.22em] mt-1" style={{ color: "#ef4444" }}>Creator production OS</p>
             </div>
           )}
           <div className="flex-1" />
@@ -4226,12 +4231,22 @@ export default function VaultXStudio() {
             ))}
           </div>
 
-          {/* Nav links */}
+                    {/* Nav links */}
           <a href="/vault-x/editor" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "#00e5ff", border: "1px solid rgba(0,229,255,.22)", background: "rgba(0,229,255,.07)" }}>Open Editor</a>
+          <a href="/vaultx/distribution" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "#86efac", border: "1px solid rgba(16,185,129,.22)", background: "rgba(16,185,129,.07)" }}>Distribute</a>
           <a href="/vault-x/analytics" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "rgba(247,242,232,.62)", border: "1px solid rgba(255,255,255,.08)" }}>Analytics</a>
         </div>
-
-        {/* MODE CONTENT — full height, no padding, content owns the space */}
+        <div className="flex-shrink-0 border-b border-white/10 bg-black/70 px-4 py-3">
+          <div className="grid gap-3 xl:grid-cols-[1.15fr_.85fr]">
+            <VaultXWorkflow steps={productionWorkflowSteps} activeStep={liveOutputCount > 0 ? 2 : activeMode === "distribution-engine" || activeMode === "platform-vault" ? 3 : 1} />
+            <div className="hidden gap-3 xl:grid xl:grid-cols-3">
+              <VaultXActionCard title="Editor handoff" body="Open the timeline editor with the same production intent: ingest, analyze, package, export, publish." href="/vault-x/editor" icon={<Film className="h-5 w-5" />} cta="Open" />
+              <VaultXActionCard title="Distribution lane" body="Send finished clips, teasers, PPV copy, and platform variants into the launch pipeline." href="/vaultx/distribution" icon={<Globe className="h-5 w-5" />} cta="Route" />
+              <VaultXActionCard title="Revenue proof" body="Review outputs, analytics, and monetization choices instead of guessing what to sell next." href="/vault-x/analytics" icon={<TrendingUp className="h-5 w-5" />} cta="Review" />
+            </div>
+          </div>
+        </div>
+		{/* MODE CONTENT — full height, no padding, content owns the space */}
         <div className="flex-1 overflow-hidden">
           {renderMode()}
         </div>

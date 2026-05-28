@@ -15,6 +15,7 @@ import {
   Copy, Camera, Type,
   Lock, Clock, EyeOff, Crosshair, Layers2, Crop, Minus, ScanLine, Blend, Eraser, Paintbrush, Feather, Sparkle, Gauge, RotateCcw, Maximize2, Radio, Contrast, Sliders, Aperture, Droplets, Sun, Moon, Wind, AlignCenter, AlignLeft, AlignRight, Bold, Italic, Hash, Share2, Check, Settings, Info, Star, Shield, Zap, TrendingUp, Target, Move, Clapperboard, Mic, DollarSign, ArrowLeft, AlertTriangle
 } from "lucide-react";
+import { VaultXLogo, VaultXWorkflow } from "@/components/vaultx/VaultXBrand";
 
 // ─── VaultX Color System ──────────────────────────────────────────────────────
 const C = {
@@ -1527,6 +1528,13 @@ export default function VaultXEditor() {
     generateBodyCaptionsMut.isPending || createBodyCinemaCollectionMut.isPending || publishBodyCinemaCollectionMut.isPending ||
     publishToVaultXMut.isPending || generateContentCalendarMut.isPending;
 
+  const editorWorkflowSteps = [
+    { label: "Upload source", detail: "Bring in the video or photo set that will become the paid asset.", done: !!sourceUrl },
+    { label: "AI analyze", detail: "VaultX reads quality, hook potential, body-cinema direction, and paid-output readiness.", done: !!analysis },
+    { label: "Package outputs", detail: "Choose master, teaser, PPV, captions, thumbnail, calendar, and archive deliverables.", done: selectedOutputPackages.length >= 3 },
+    { label: "Export or publish", detail: "Render the sellable package and push it into VaultX or distribution workflows.", done: exportPresets.length > 0 },
+  ];
+
   return (
     <div className="flex flex-col relative" style={{ height: "100vh", background: "#050505", color: "#f7f2e8", fontFamily: "var(--kc-font-ui, Inter, sans-serif)", overflow: "hidden" }}>
       <div className="pointer-events-none absolute inset-0 z-0" style={{ background: "radial-gradient(circle at 14% 0%, rgba(0,229,255,.16), transparent 30%), radial-gradient(circle at 86% 8%, rgba(201,168,76,.16), transparent 32%)" }} />
@@ -1536,10 +1544,7 @@ export default function VaultXEditor() {
       <div className="relative z-10 flex items-center justify-between px-4 flex-shrink-0" style={{ height: 64, background: "linear-gradient(90deg, rgba(8,8,8,.94), rgba(0,229,255,.045), rgba(201,168,76,.035))", borderBottom: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(24px)" }}>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #00e5ff, #c9a84c)", boxShadow: "0 0 34px rgba(0,229,255,.18)" }}>
-              <Sparkles size={15} color="#050505" />
-            </div>
-            <span className="text-lg font-black tracking-[-.04em]" style={{ background: "linear-gradient(135deg, #00e5ff, #c9a84c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>VaultX</span>
+            <VaultXLogo size="sm" />
             <span className="text-lg font-black text-white tracking-[-.04em]">AI Editor</span>
             <span className="hidden xl:inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.18em]" style={{ background: "rgba(0,229,255,0.10)", color: "#00e5ff", border: "1px solid rgba(0,229,255,0.26)" }}>Body Intel · paid-output OS</span>
           </div>
@@ -1605,6 +1610,10 @@ export default function VaultXEditor() {
             <p className="text-[9px] leading-snug" style={{ color: "#6B7280" }}>{preset.desc}</p>
           </button>
         ))}
+      </div>
+
+      <div className="relative z-10 px-4 py-3 flex-shrink-0" style={{ background: "rgba(0,0,0,0.72)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        <VaultXWorkflow steps={editorWorkflowSteps} activeStep={!sourceUrl ? 0 : !analysis ? 1 : selectedOutputPackages.length < 3 ? 2 : 3} />
       </div>
 
       {/* ── MAIN ── */}

@@ -27,8 +27,9 @@ import {
   Camera, Video, FileText, Hash, AtSign, Link2, Bot,
   Layers, Radio, ShoppingBag, Wallet, ArrowUpRight,
   Inbox, Filter, Bookmark, ThumbsUp, Share2, MoreHorizontal,
-  ChevronDown, X as XIcon
+  ChevronDown, X as XIcon, Clapperboard, Package
 } from "lucide-react";
+import { VaultXActionCard, VaultXLogo, VaultXWorkflow } from "@/components/vaultx/VaultXBrand";
 
 // ============================================================================
 // TYPES
@@ -89,14 +90,9 @@ function AgeGate({ onVerified }: { onVerified: () => void }) {
       <div className="max-w-lg w-full">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-3 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#0a0a0a] from-red-500 to-orange-500 flex items-center justify-center">
-              <Flame className="w-8 h-8 text-white" />
-            </div>
-            <div className="text-left">
-              <div className="text-3xl font-black text-white tracking-tight">VaultX</div>
-              <div className="text-xs text-red-400 font-semibold uppercase tracking-widest">Uncensored Social Economy</div>
-            </div>
+          <div className="inline-flex flex-col items-center mb-4">
+            <VaultXLogo size="lg" />
+            <div className="text-xs text-red-400 font-semibold uppercase tracking-widest">Uncensored Social Economy</div>
           </div>
           <p className="text-gray-400 text-sm max-w-sm mx-auto">
             The first platform built exclusively for adult creators. No censorship. No shadowbans. Just revenue.
@@ -2244,7 +2240,7 @@ function VaultXPublicLanding() {
         <a href="/vault-x?offer=body-cinema" className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl flex items-center justify-center kc-animate-pulse-gold" style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)" }}><Flame className="w-5 h-5 text-black" /></div>
           <div>
-            <div className="font-black text-xl tracking-tight">VaultX</div>
+            <VaultXLogo size="sm" />
             <div className="text-[10px] uppercase tracking-[.28em] font-black" style={{ color: "#c9a84c" }}>Body Cinema</div>
           </div>
         </a>
@@ -2424,39 +2420,38 @@ export default function VaultX() {
     { id: "earnings", label: "Earnings", icon: DollarSign },
   ] as const;
 
+    const workflowSteps = [
+    { label: "Create the asset", detail: "Upload raw footage or open the editor for Body Cinema processing.", done: activeTab !== "discover" },
+    { label: "Package the drop", detail: "Use Studio to create master, teaser, PPV bundle, captions, sound, and platform exports.", done: ["feed", "messages", "earnings"].includes(activeTab) },
+    { label: "Launch to fans", detail: "Publish to VaultX, Telegram, X.com, and fan platforms with direct monetization paths.", done: ["telegram", "xcom", "earnings"].includes(activeTab) },
+    { label: "Collect revenue", detail: "Track subscriptions, PPV, tips, and creator earnings from real transactions.", done: activeTab === "earnings" },
+  ];
+
   return (
-    <div className="min-h-screen bg-black">
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-black/95 backdrop-blur border-b border-gray-900">
-        <div className="max-w-2xl mx-auto px-4">
-          {/* Top bar */}
-          <div className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#0a0a0a] from-red-500 to-orange-500 flex items-center justify-center">
-                <Flame className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-white font-black text-lg tracking-tight">VaultX</span>
-              <span className="bg-red-500/20 text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">18+</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-green-400 text-xs font-semibold">Verified</span>
+    <div className="min-h-screen bg-[#050505] text-white">
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute -top-28 right-0 h-72 w-72 rounded-full bg-red-600/20 blur-3xl" />
+        <div className="absolute top-1/2 -left-24 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl" />
+      </div>
+      <div className="sticky top-0 z-50 border-b border-white/10 bg-black/85 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <a href="/vault-x" className="flex items-center gap-2"><VaultXLogo size="sm" /><span className="rounded-full bg-red-500/15 px-2 py-1 text-[10px] font-black text-red-300">18+ VERIFIED</span></a>
+            <div className="hidden items-center gap-2 sm:flex">
+              <a href="/vault-x/editor" className="rounded-xl bg-red-500 px-4 py-2 text-xs font-black text-white hover:bg-red-600">Upload & Process</a>
+              <a href="/vault-x/studio" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-black text-white hover:border-red-400/50">Open Studio</a>
             </div>
           </div>
-
-          {/* Tabs */}
-          <div className="flex gap-1 pb-2 overflow-x-auto scrollbar-hide">
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
             {tabs.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold flex-shrink-0 transition-colors ${
-                  activeTab === id
-                    ? "bg-red-500 text-white"
-                    : "text-gray-500 hover:text-gray-300"
+                className={`flex flex-shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-black transition-colors ${
+                  activeTab === id ? "bg-red-500 text-white shadow-lg shadow-red-950/30" : "bg-white/[.045] text-zinc-400 hover:bg-white/[.08] hover:text-white"
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="h-3.5 w-3.5" />
                 {label}
               </button>
             ))}
@@ -2464,16 +2459,43 @@ export default function VaultX() {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        {activeTab === "discover" && <DiscoverTab />}
-        {activeTab === "feed" && <ContentFeedTab userId={user.id} />}
-        {activeTab === "messages" && <MessagingTab userId={user.id} />}
-        {activeTab === "profile" && <MyProfileTab userId={user.id} />}
-        {activeTab === "telegram" && <TelegramTab userId={user.id} />}
-        {activeTab === "xcom" && <XComTab userId={user.id} />}
-        {activeTab === "earnings" && <EarningsTab userId={user.id} />}
-      </div>
+      <main className="relative mx-auto max-w-7xl px-4 pb-24 pt-5 sm:px-6 lg:px-8">
+        <section className="mb-6 rounded-[2rem] border border-white/10 bg-white/[.035] p-5 shadow-2xl shadow-black/40 sm:p-7">
+          <div className="grid gap-6 lg:grid-cols-[1.1fr_.9fr] lg:items-end">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[.28em] text-red-300">Creator command center</p>
+              <h1 className="mt-2 text-3xl font-black tracking-[-.06em] sm:text-5xl">Build the clip, package the drop, launch the money route.</h1>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400 sm:text-base">VaultX now opens with the actual operating path: create or process content, package it into sellable video assets, distribute it, and track revenue. Every primary action points to a live production workflow.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <a href="/vault-x/editor" className="rounded-3xl bg-red-500 p-4 text-sm font-black text-white shadow-2xl shadow-red-950/30 hover:bg-red-600"><Video className="mb-4 h-5 w-5" />Upload & Process</a>
+              <a href="/vault-x/studio" className="rounded-3xl border border-white/10 bg-white/10 p-4 text-sm font-black text-white hover:border-red-400/50"><Clapperboard className="mb-4 h-5 w-5" />Launch Studio</a>
+              <a href="/vaultx/distribution" className="rounded-3xl border border-white/10 bg-white/10 p-4 text-sm font-black text-white hover:border-red-400/50"><Globe className="mb-4 h-5 w-5" />Distribute</a>
+              <button onClick={() => setActiveTab("earnings")} className="rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-left text-sm font-black text-emerald-100 hover:border-emerald-300/50"><DollarSign className="mb-4 h-5 w-5" />View Earnings</button>
+            </div>
+          </div>
+          <div className="mt-6"><VaultXWorkflow steps={workflowSteps} activeStep={activeTab === "discover" ? 0 : activeTab === "profile" ? 1 : activeTab === "telegram" || activeTab === "xcom" ? 2 : activeTab === "earnings" ? 3 : 1} /></div>
+        </section>
+
+        {activeTab === "discover" && (
+          <section className="mb-6 grid gap-3 md:grid-cols-4">
+            <VaultXActionCard href="/vault-x/editor" title="Process a new video" body="Start with a raw asset and generate Body Cinema outputs, AI analysis, export packages, and publish-ready assets." icon={<Video className="h-5 w-5" />} cta="Open Editor" />
+            <VaultXActionCard href="/vault-x/studio" title="Build a revenue bundle" body="Package master files, teasers, captions, sound, platform exports, PPV logic, and distribution assets." icon={<Package className="h-5 w-5" />} cta="Open Studio" />
+            <VaultXActionCard href="/vaultx/distribution" title="Push the launch" body="Move finished content into distribution paths for VaultX, Telegram, X.com, and external fan platforms." icon={<Globe className="h-5 w-5" />} cta="Open Distribution" />
+            <VaultXActionCard href="/god-mode-ai" title="Command God Mode" body="Use the AI command layer to turn a creator goal into concrete revenue actions and measurable proof." icon={<Sparkles className="h-5 w-5" />} cta="Open God Mode" />
+          </section>
+        )}
+
+        <section className="rounded-[2rem] border border-white/10 bg-black/35 p-4 shadow-2xl shadow-black/30 sm:p-6">
+          {activeTab === "discover" && <DiscoverTab />}
+          {activeTab === "feed" && <ContentFeedTab userId={user.id} />}
+          {activeTab === "messages" && <MessagingTab userId={user.id} />}
+          {activeTab === "profile" && <MyProfileTab userId={user.id} />}
+          {activeTab === "telegram" && <TelegramTab userId={user.id} />}
+          {activeTab === "xcom" && <XComTab userId={user.id} />}
+          {activeTab === "earnings" && <EarningsTab userId={user.id} />}
+        </section>
+      </main>
     </div>
   );
 }

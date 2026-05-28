@@ -10,6 +10,7 @@ import {
   ShoppingBag, Eye, Heart, Zap, ArrowUpRight, ArrowDownRight,
   FileText, RefreshCcw,
 } from "lucide-react";
+import { VaultXLogo } from "@/components/vaultx/VaultXBrand";
 
 // ============================================================================
 // HELPERS
@@ -174,15 +175,13 @@ export default function VaultXAnalytics() {
       <div className="sticky top-0 z-30 px-6 py-4" style={{ background: "rgba(0,0,0,0.92)", backdropFilter: "blur(24px)", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "relative", zIndex: 30 }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}>
-              <span className="text-white font-black text-sm">V</span>
-            </div>
+            <VaultXLogo size="sm" showTagline={false} />
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-black text-white">Analytics</h1>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(139,92,246,0.2)", color: "#A78BFA", border: "1px solid rgba(139,92,246,0.3)" }}>Command Center</span>
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(239,68,68,0.18)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.32)" }}>Revenue Command</span>
               </div>
-              <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>Real-time revenue, subscriber, and content intelligence</p>
+              <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>Track what sold, who paid, which fans are at risk, and what to ship next.</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

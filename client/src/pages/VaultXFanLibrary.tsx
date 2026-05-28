@@ -17,6 +17,7 @@ import { useState, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { VaultXLogo } from "@/components/vaultx/VaultXBrand";
 import {
   Crown, Lock, Unlock, Heart, DollarSign, X, Play,
   Star, ChevronRight, Loader2, Users, Zap, Eye,
@@ -411,9 +412,12 @@ export default function VaultXFanLibrary() {
       {/* Header */}
       <div className="sticky top-0 z-40 px-4 py-3 flex items-center justify-between"
         style={{ background: "rgba(10,10,18,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <div>
-          <p className="text-xs font-black uppercase tracking-widest" style={{ color: "#7C3AED" }}>VaultX</p>
-          <p className="text-white font-black text-lg leading-tight">My Library</p>
+        <div className="flex items-center gap-3">
+          <VaultXLogo size="sm" showTagline={false} />
+          <div>
+            <p className="text-white font-black text-lg leading-tight">My Library</p>
+            <p className="text-gray-500 text-xs font-bold">Watch purchased drops, manage subs, discover creators.</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setViewMode(v => v === "grid" ? "list" : "grid")}
