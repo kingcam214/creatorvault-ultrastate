@@ -370,18 +370,18 @@ async function executeAgent(agentSlug: string): Promise<{ outcome: string; reven
       // ── 10. KingCam Clone Agent ───────────────────────────────────────────────
       case "kingcam-clone-agent": {
         const output = await gptRun(
-          "You are the KingCam Clone Agent — an AI clone of KingCam that demos the platform, answers questions, and closes sales 24/7. Match KingCam's energy: confident, direct, results-focused.",
-          `Generate a platform demo script: a 5-minute voice demo of CreatorVault for a creator with 50K followers who wants to monetize. Include: platform overview, key features (Telegram bots, AI tools, marketplace), pricing, and a close. Write it as KingCam would say it.`,
+          "You are the KingCam Clone Agent — an AI operator trained to produce buyer-facing CreatorVault walkthroughs, objection handling, and closing scripts. Match KingCam's energy: confident, direct, results-focused.",
+          `Generate a production sales walkthrough: a 5-minute buyer-facing CreatorVault script for a creator with 50K followers who wants to monetize. Include: operational flow, key features (Telegram bots, AI tools, marketplace), pricing, proof requirements, and a clear close. Write it as KingCam would say it.`,
           600
         );
-        await saveAgentReport(agentSlug, "KingCam Clone Agent", "demo_script", output);
+        await saveAgentReport(agentSlug, "KingCam Clone Agent", "sales_walkthrough", output);
         const dropAction = await fireVaultXMoneyDrop({
           agentSlug,
           title: "KingCam Clone Agent",
           output,
           price: 49,
         });
-        return { outcome: `${output}\n\n${dropAction}`, revenue: 0, status: "success", action: `demo_script_generated + ${dropAction}` };
+        return { outcome: `${output}\n\n${dropAction}`, revenue: 0, status: "success", action: `sales_walkthrough_generated + ${dropAction}` };
       }
 
       // ── 11. Hollywood Show Agent ──────────────────────────────────────────────
@@ -990,7 +990,7 @@ const AGENT_META: Record<string, { name: string; category: string; taskType: str
   "auto-recruiter-agent": { name: "Auto-Recruiter Agent", category: "sales", taskType: "recruit_contacted" },
   "engagement-agent": { name: "Engagement Agent", category: "social", taskType: "engagement_report" },
   "money-follow-up-agent": { name: "Money Follow-Up Agent", category: "sales", taskType: "follow_up_sent" },
-  "kingcam-clone-agent": { name: "KingCam Clone Agent", category: "clone", taskType: "demo_generated" },
+  "kingcam-clone-agent": { name: "KingCam Clone Agent", category: "clone", taskType: "sales_walkthrough_generated" },
   "hollywood-show-agent": { name: "Hollywood Show Agent", category: "media", taskType: "production_report" },
   "content-repurposing-agent": { name: "Content Repurposing Agent", category: "media", taskType: "content_repurposed" },
   "brand-deal-agent": { name: "Brand Deal Agent", category: "sales", taskType: "brand_deal_pitched" },
@@ -1182,7 +1182,7 @@ async function getActiveChallengeForCheckout() {
 
 async function getPublicChallengeOfferState() {
   const result = await db.db.execute(sql`
-    SELECT id, title, target_revenue, current_revenue, status
+    SELECT id, title, target_revenue, status
     FROM empire_challenges
     WHERE status = 'active'
     ORDER BY week_number ASC
@@ -1191,21 +1191,45 @@ async function getPublicChallengeOfferState() {
   const rows = extractRows(result, "public AI Agent Challenge offer lookup");
   const challenge = rows[0] ?? null;
 
+  let verifiedRevenue = 0;
+  let transactionCount = 0;
+  let lastLedgerUpdate: string | null = null;
+
+  if (challenge?.id) {
+    const ledgerResult = await db.db.execute(sql`
+      SELECT
+        COALESCE(SUM(amount), 0) AS verified_revenue,
+        COUNT(*) AS transaction_count,
+        MAX(recorded_at) AS last_ledger_update
+      FROM empire_challenge_transactions
+      WHERE challenge_id = ${challenge.id}
+    `);
+    const ledger = extractRows(ledgerResult, "public AI Agent Challenge verified ledger lookup")[0] ?? {};
+    verifiedRevenue = Number(ledger.verified_revenue ?? 0);
+    transactionCount = Number(ledger.transaction_count ?? 0);
+    lastLedgerUpdate = ledger.last_ledger_update ? String(ledger.last_ledger_update) : null;
+  }
+
   return {
     challenge: challenge ? {
       id: Number(challenge.id),
       title: challenge.title,
       targetRevenue: Number(challenge.target_revenue ?? 5000),
-      currentRevenue: Number(challenge.current_revenue ?? 0),
+      currentRevenue: verifiedRevenue,
+      verifiedRevenue,
+      transactionCount,
+      lastLedgerUpdate,
       status: challenge.status,
     } : null,
+    transactionCount,
+    lastLedgerUpdate,
     offers: Object.entries(AI_CHALLENGE_OFFERS).map(([slug, offer]) => ({
       slug,
       name: offer.name,
       amountCents: offer.amountCents,
       description: offer.description,
     })),
-    moneyTruth: "Challenge revenue is credited only after a live Stripe webhook proves a completed payment with AI Agent Challenge metadata.",
+    moneyTruth: "Challenge revenue is displayed only from empire_challenge_transactions inserted by the live Stripe webhook. Agent reports, estimates, and manual totals are never counted as public revenue proof.",
   };
 }
 
@@ -1323,29 +1347,30 @@ export const challengeAutomationRouter = router({
       return { success: false, credited: false, amount: input.amount, challengeId, reason: "manual_revenue_requires_live_payment_proof" };
     }),
 
-  // Run a single agent — REAL execution
+  // Run a single agent — real execution, no public revenue crediting
   runAgent: protectedProcedure
-    .input(z.object({ agentSlug: z.string(), agentName: z.string(), creditToChallenge: z.boolean().default(true) }))
+    .input(z.object({ agentSlug: z.string(), agentName: z.string(), creditToChallenge: z.boolean().default(false) }))
     .mutation(async ({ input }) => {
       const { outcome, revenue, status, action } = await executeAgent(input.agentSlug);
       const meta = AGENT_META[input.agentSlug] ?? { name: input.agentName, category: "infra", taskType: "agent_run" };
       const eventId = await logTelemetry(input.agentSlug, meta.name, meta.category, meta.taskType, status, outcome, revenue);
 
-      if (input.creditToChallenge && revenue > 0) {
-        try {
-          await creditAgentRevenueToActiveChallenge(revenue, input.agentSlug, outcome.slice(0, 200));
-        } catch (challengeCreditError) {
-          throw new Error(`Challenge revenue credit failed for ${input.agentSlug}: ${challengeCreditError instanceof Error ? challengeCreditError.message : String(challengeCreditError)}`);
-        }
-      }
-
-      return { agentSlug: input.agentSlug, status, outcome, revenue, action, eventId };
+      return {
+        agentSlug: input.agentSlug,
+        status,
+        outcome,
+        revenue,
+        action,
+        eventId,
+        creditedToChallenge: false,
+        challengeCreditPolicy: "Agent output is logged as an operational estimate only. Public challenge revenue is credited exclusively by verified Stripe webhook transactions.",
+      };
     }),
 
-  // Run ALL agents — full real execution cycle
+  // Run ALL agents — full real execution cycle, no public revenue crediting
   runFullCycle: protectedProcedure
-    .input(z.object({ creditToChallenge: z.boolean().default(true) }))
-    .mutation(async ({ input }) => {
+    .input(z.object({ creditToChallenge: z.boolean().default(false) }))
+    .mutation(async () => {
       const allSlugs = Object.keys(AGENT_META);
       const results: Array<{ agentSlug: string; status: string; revenue: number; outcome: string; action: string }> = [];
       let totalRevenue = 0;
@@ -1358,17 +1383,11 @@ export const challengeAutomationRouter = router({
         totalRevenue += revenue;
       }
 
-      if (input.creditToChallenge && totalRevenue > 0) {
-        try {
-          await creditAgentRevenueToActiveChallenge(totalRevenue, 'agent_swarm', `Full execution cycle completed; ${allSlugs.length} agents ran`);
-        } catch (challengeCreditError) {
-          throw new Error(`Full-cycle challenge revenue credit failed: ${challengeCreditError instanceof Error ? challengeCreditError.message : String(challengeCreditError)}`);
-        }
-      }
-
       return {
         agentsRan: allSlugs.length,
         totalRevenue,
+        creditedToChallenge: false,
+        challengeCreditPolicy: "Agent cycle output is saved for operational review only. Challenge revenue moves only after Stripe webhook proof writes a transaction.",
         successCount: results.filter(r => r.status === "success").length,
         failedCount: results.filter(r => r.status === "failed").length,
         results,

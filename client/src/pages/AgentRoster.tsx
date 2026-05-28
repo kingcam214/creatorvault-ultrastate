@@ -30,12 +30,14 @@ export function AgentRoster() {
 
   const agentsQuery = trpc.empireAgents.getEmpireAgents.useQuery();
   const reportsQuery = trpc.empireAgents.getAgentReports.useQuery({ limit: 50 });
+  const challengeProgressQuery = trpc.empireAgents.getChallengeProgress.useQuery();
   const runAgentMut = trpc.challengeAutomation.runAgent.useMutation();
   const runAllMut = trpc.challengeAutomation.runFullCycle.useMutation();
 
   const agents = (agentsQuery.data ?? []) as any[];
   const reports = ((reportsQuery.data as any)?.reports ?? []) as any[];
-  const dataSourceError = agentsQuery.error?.message || reportsQuery.error?.message || null;
+  const challengeProgress = (challengeProgressQuery.data ?? []) as any[];
+  const dataSourceError = agentsQuery.error?.message || reportsQuery.error?.message || challengeProgressQuery.error?.message || null;
 
   const reportMap: Record<string, any> = {};
   for (const r of reports) {
@@ -50,7 +52,9 @@ export function AgentRoster() {
     return statusMatch && entityMatch;
   });
 
-  const totalRevenue = agents.reduce((s: number, a: any) => s + parseFloat(a.total_revenue_generated ?? '0'), 0);
+  const savedReportCount = reports.length;
+  const verifiedChallengeRevenue = challengeProgress.reduce((s: number, c: any) => s + parseFloat(c.verified_revenue ?? '0'), 0);
+  const verifiedTransactionCount = challengeProgress.reduce((s: number, c: any) => s + Number(c.transaction_count ?? 0), 0);
   const activeCount = agents.filter((a: any) => a.status === 'active').length;
   const forSaleCount = agents.filter((a: any) => a.is_for_sale).length;
   const ranCount = Object.keys(lastRunResult).length;
@@ -63,7 +67,7 @@ export function AgentRoster() {
       const result = await runAgentMut.mutateAsync({
         agentSlug: agent.slug,
         agentName: agent.name,
-        creditToChallenge: true,
+        creditToChallenge: false,
       });
       setLastRunResult(prev => ({
         ...prev,
@@ -85,7 +89,7 @@ export function AgentRoster() {
     setRunningAll(true);
     try {
       setCycleError(null);
-      const result = await runAllMut.mutateAsync({ creditToChallenge: true });
+      const result = await runAllMut.mutateAsync({ creditToChallenge: false });
       const newResults: Record<string, { outcome: string; status: string; action: string }> = {};
       for (const r of result.results) {
         newResults[r.agentSlug] = { outcome: r.outcome, status: r.status, action: r.action };
@@ -101,14 +105,14 @@ export function AgentRoster() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, color: T.text, padding: '24px 20px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="agent-roster-page" style={{ minHeight: '100vh', background: T.bg, color: T.text, padding: '24px 20px', maxWidth: 1400, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+      <div className="agent-roster-hero" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Bot size={28} color={T.gold} />
           <div>
-            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: '-0.5px' }}>AI Agents + Platform Tools Challenge Roster</h1>
-            <p style={{ margin: 0, fontSize: 12, color: T.muted }}>DB-backed agent inventory, saved reports, and live challenge execution. No synthetic telemetry.</p>
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: '-0.5px' }}>AI Agents Operations Console</h1>
+            <p style={{ margin: 0, fontSize: 12, color: T.muted }}>DB-backed tools, saved reports, and owner-run execution. Verified revenue below comes only from challenge payment transactions.</p>
           </div>
         </div>
         <button
@@ -122,19 +126,21 @@ export function AgentRoster() {
           }}
         >
           {runningAll
-            ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Running All Agents...</>
-            : <><Zap size={14} /> Run All {agents.length} Agents</>}
+            ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Running Operations...</>
+            : <><Zap size={14} /> Run Operations Cycle</>}
         </button>
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
+      <div className="agent-roster-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
         {[
           { label: 'Total Agents', value: agents.length, icon: <Users size={14} color={T.gold} />, color: T.gold },
           { label: 'Active', value: activeCount, icon: <CheckCircle size={14} color={T.success} />, color: T.success },
           { label: 'Ran This Session', value: ranCount, icon: <Play size={14} color={T.info} />, color: T.info },
-          { label: 'For Sale', value: forSaleCount, icon: <DollarSign size={14} color={T.purple} />, color: T.purple },
-          { label: 'Total Revenue', value: `$${totalRevenue.toFixed(0)}`, icon: <TrendingUp size={14} color={T.gold} />, color: T.gold },
+          { label: 'Monetized Tools', value: forSaleCount, icon: <DollarSign size={14} color={T.purple} />, color: T.purple },
+          { label: 'Verified Challenge Revenue', value: `$${verifiedChallengeRevenue.toFixed(0)}`, icon: <TrendingUp size={14} color={T.success} />, color: T.success },
+          { label: 'Verified Payments', value: verifiedTransactionCount, icon: <CheckCircle size={14} color={T.info} />, color: T.info },
+          { label: 'Saved Agent Reports', value: savedReportCount, icon: <FileText size={14} color={T.muted} />, color: T.muted },
         ].map((s, i) => (
           <div key={i} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>{s.icon}<span style={{ fontSize: 11, color: T.muted }}>{s.label}</span></div>
@@ -144,7 +150,7 @@ export function AgentRoster() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="agent-roster-filters" style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: 6 }}>
           {['all', 'active', 'inactive', 'paused', 'failed'].map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
@@ -190,7 +196,7 @@ export function AgentRoster() {
       )}
 
       {/* Agent Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
+      <div className="agent-roster-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
         {filtered.map((agent: any, i: number) => {
           const isRunning = runningAgent === agent.slug;
           const runResult = lastRunResult[agent.slug];
@@ -222,7 +228,7 @@ export function AgentRoster() {
                     )}
                     {agent.is_for_sale && (
                       <span style={{ background: T.goldDim, color: T.gold, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4 }}>
-                        FOR SALE ${((agent.base_price_cents ?? 0) / 100).toLocaleString()}
+                        LISTED TOOL ${((agent.base_price_cents ?? 0) / 100).toLocaleString()}
                       </span>
                     )}
                   </div>
@@ -240,11 +246,17 @@ export function AgentRoster() {
                 </div>
               )}
 
-              {/* Stats */}
-              <div style={{ display: 'flex', gap: 12, marginBottom: 10, fontSize: 11 }}>
-                <span style={{ color: T.muted }}>Win Rate: <span style={{ color: T.success, fontWeight: 600 }}>{agent.win_rate ?? 0}%</span></span>
-                <span style={{ color: T.muted }}>Revenue: <span style={{ color: T.gold, fontWeight: 600 }}>${parseFloat(agent.total_revenue_generated ?? '0').toFixed(0)}</span></span>
-                {agent.consecutive_failures > 0 && <span style={{ color: T.error, fontWeight: 600 }}>⚠ {agent.consecutive_failures} fails</span>}
+              {/* Operational truth */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10, fontSize: 11 }}>
+                <div style={{ background: T.surface2, border: `1px solid ${T.border}`, borderRadius: 8, padding: 8 }}>
+                  <div style={{ color: T.muted, marginBottom: 2 }}>Execution state</div>
+                  <div style={{ color: agent.status === 'active' ? T.success : T.muted, fontWeight: 700 }}>{agent.status === 'active' ? 'Ready to run' : agent.status}</div>
+                </div>
+                <div style={{ background: T.surface2, border: `1px solid ${T.border}`, borderRadius: 8, padding: 8 }}>
+                  <div style={{ color: T.muted, marginBottom: 2 }}>Saved proof</div>
+                  <div style={{ color: latestReport ? T.gold : T.muted, fontWeight: 700 }}>{latestReport ? 'Report on file' : 'Awaiting owner run'}</div>
+                </div>
+                {agent.consecutive_failures > 0 && <span style={{ color: T.error, fontWeight: 600, gridColumn: '1 / -1' }}>{agent.consecutive_failures} consecutive failures require owner review</span>}
               </div>
 
               {/* Run Result */}
@@ -255,7 +267,7 @@ export function AgentRoster() {
                   borderRadius: 8, padding: 10, marginBottom: 10,
                 }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: runResult.status === 'success' ? T.success : T.error, marginBottom: 4, textTransform: 'uppercase' }}>
-                    {runResult.status === 'success' ? '✓ Executed' : '✗ Failed'} — {runResult.action}
+                    {runResult.status === 'success' ? 'Executed' : 'Failed'} — {runResult.action}
                   </div>
                   <div style={{
                     fontSize: 11, color: T.text, lineHeight: 1.5, whiteSpace: 'pre-wrap',
@@ -267,7 +279,7 @@ export function AgentRoster() {
                     <button onClick={() => setExpandedAgent(isExpanded ? null : agent.slug)} style={{
                       background: 'none', border: 'none', color: T.info, fontSize: 11, cursor: 'pointer', padding: '4px 0 0', fontWeight: 600,
                     }}>
-                      {isExpanded ? '▲ Show less' : '▼ Show full output'}
+                      {isExpanded ? 'Show less' : 'Show full output'}
                     </button>
                   )}
                 </div>
@@ -300,10 +312,10 @@ export function AgentRoster() {
                 }}
               >
                 {isRunning
-                  ? '⟳ Running...'
+                  ? 'Running...'
                   : agent.status !== 'active'
-                    ? '— Inactive'
-                    : <><Play size={12} /> Run Agent</>}
+                    ? 'Inactive'
+                    : <><Play size={12} /> Run Tool + Save Report</>}
               </button>
             </div>
           );
@@ -321,13 +333,27 @@ export function AgentRoster() {
         <div style={{ position: 'fixed', bottom: 20, right: 20, background: T.surface, border: `1px solid ${T.gold}`, borderRadius: 12, padding: '14px 20px', zIndex: 1000, display: 'flex', alignItems: 'center', gap: 10 }}>
           <Zap size={16} color={T.gold} />
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: T.gold }}>Running All {agents.length} Agents...</div>
-            <div style={{ fontSize: 11, color: T.muted }}>This may take 2-3 minutes. Real execution in progress.</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.gold }}>Running operations cycle...</div>
+            <div style={{ fontSize: 11, color: T.muted }}>Reports will be saved; challenge revenue will not move unless Stripe payments prove it.</div>
           </div>
         </div>
       )}
 
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @media (max-width: 720px) {
+          .agent-roster-page { padding: 14px 12px 96px !important; }
+          .agent-roster-hero { align-items: flex-start !important; gap: 14px !important; }
+          .agent-roster-hero > div:first-child { align-items: flex-start !important; width: 100%; }
+          .agent-roster-hero h1 { font-size: 22px !important; line-height: 1.05 !important; }
+          .agent-roster-hero p { font-size: 12px !important; line-height: 1.45 !important; max-width: 100% !important; }
+          .agent-roster-hero button { width: 100% !important; justify-content: center !important; padding: 13px 16px !important; font-size: 13px !important; }
+          .agent-roster-stats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
+          .agent-roster-filters { overflow-x: auto !important; flex-wrap: nowrap !important; padding-bottom: 8px !important; -webkit-overflow-scrolling: touch; }
+          .agent-roster-filters > div { flex-wrap: nowrap !important; flex: 0 0 auto !important; }
+          .agent-roster-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+        }
+      `}</style>
     </div>
   );
 }

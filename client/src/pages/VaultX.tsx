@@ -1052,8 +1052,8 @@ function DiscoverTab() {
         <ForYouFeed />
       ) : (
       <>
-      {/* Hero — cinematic, full-bleed */}
-      <div className="relative rounded-3xl overflow-hidden p-10 mb-2" style={{
+      {/* Marketplace operating status — payment-ready inventory and next actions */}
+      <div className="relative rounded-3xl overflow-hidden p-5 sm:p-8 lg:p-10 mb-2" style={{
         background: "linear-gradient(135deg, rgba(220,38,38,0.15) 0%, rgba(147,51,234,0.10) 50%, rgba(0,0,0,0.8) 100%)",
         border: "1px solid rgba(220,38,38,0.2)",
         boxShadow: "0 0 80px rgba(220,38,38,0.15) inset",
@@ -1062,27 +1062,27 @@ function DiscoverTab() {
         <div className="relative">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#EF4444" }} />
-            <span className="text-xs font-black uppercase tracking-widest" style={{ color: "#EF4444" }}>The Uncensored Creator Economy</span>
+            <span className="text-xs font-black uppercase tracking-widest" style={{ color: "#EF4444" }}>Live marketplace status</span>
           </div>
           <h1 className="font-black text-white mb-3" style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
-            Where Creators<br />
+            Browse real creator storefronts.<br />
             <span style={{ background: "linear-gradient(135deg, #DC2626, #EC4899, #9333EA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Own Everything.
+              Buy, message, subscribe.
             </span>
           </h1>
           <p className="text-sm max-w-lg mb-6" style={{ color: "#9CA3AF", lineHeight: 1.7 }}>
-            The first platform where adult creators own their audience, set their prices, and keep <strong style={{ color: "white" }}>85% of every dollar</strong> — powered by the most powerful creator OS ever built.
+            This screen shows the creator supply currently available in the database. Fans should be able to search, open a real profile, subscribe, message, and buy content without guessing what to do next.
           </p>
-          <div className="flex items-center gap-8 flex-wrap">
+          <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center sm:gap-4 sm:flex-wrap">
             {[
-              { value: creators.length.toString(), label: "Creators" },
-              { value: "85%", label: "Revenue Share" },
-              { value: "0", label: "Censorship" },
-              { value: "∞", label: "Earning Potential" },
+              { value: creators.length.toString(), label: creators.length === 1 ? "Live Creator" : "Live Creators" },
+              { value: filtered.length.toString(), label: "Matching Results" },
+              { value: "Profile", label: "Next Step" },
+              { value: "Stripe", label: "Payment Rail" },
             ].map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-2xl font-black text-white">{stat.value}</div>
-                <div className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{stat.label}</div>
+              <div key={i} className="rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-left">
+                <div className="text-xl sm:text-2xl font-black text-white">{stat.value}</div>
+                <div className="text-[11px] mt-0.5 uppercase tracking-[.12em]" style={{ color: "#6B7280" }}>{stat.label}</div>
               </div>
             ))}
           </div>
@@ -1090,12 +1090,12 @@ function DiscoverTab() {
       </div>
 
       {/* Search + Filter */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-col sm:flex-row">
         <div className="flex-1 relative">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search creators..."
+            placeholder="Search live creator storefronts..."
             className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500 pl-10"
           />
           <Eye className="absolute left-3 top-3.5 w-4 h-4 text-gray-600" />
@@ -1139,16 +1139,16 @@ function DiscoverTab() {
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="w-4 h-4 text-red-400" />
           <span className="text-white font-bold text-sm">
-            {filtered.length === 0 ? "No creators yet" : `${filtered.length} Creators`}
+            {filtered.length === 0 ? "No live storefronts match" : `${filtered.length} live storefront${filtered.length === 1 ? "" : "s"}`}
           </span>
         </div>
         {filtered.length === 0 ? (
           <div className="text-center py-16 text-gray-600">
             <Flame className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <div className="font-semibold">Be the first creator on VaultX</div>
-            <div className="text-sm mt-1 mb-4">Set up your profile and start earning today</div>
-            <a href="/vaultx-onboarding" className="inline-block bg-[#0a0a0a] from-red-500 to-orange-500 text-white font-bold py-3 px-6 rounded-xl text-sm uppercase tracking-wider hover:opacity-90 transition-opacity">
-              Join VaultX as Creator →
+            <div className="font-semibold">No matching storefronts yet</div>
+            <div className="text-sm mt-1 mb-4">Create or complete a creator profile so this marketplace has real inventory to sell.</div>
+            <a href="/vaultx-onboarding" className="inline-block bg-red-500 text-white font-bold py-3 px-6 rounded-xl text-sm uppercase tracking-wider hover:bg-red-600 transition-colors">
+              Complete creator onboarding →
             </a>
           </div>
         ) : (
@@ -2280,7 +2280,7 @@ function VaultXPublicLanding() {
                 <a href="#body-cinema-kit" className="inline-flex justify-center items-center gap-2 rounded-2xl px-8 py-4 text-base font-bold border border-white/15 text-white hover:bg-white/5">See what you get <ChevronRight className="w-5 h-5" /></a>
               </div>
               <p className="text-sm leading-6 max-w-xl" style={{ color: "#888" }}>
-                No fake revenue claims. No pretend payment events. The purchase path is real Stripe Checkout, and any challenge ledger movement waits for the live payment webhook.
+                Revenue proof is limited to real Stripe Checkout events. Challenge ledger movement waits for the live payment webhook, so buyers and operators see payment-backed progress instead of manual claims.
               </p>
             </div>
 
@@ -2482,7 +2482,7 @@ export default function VaultX() {
             <VaultXActionCard href="/vault-x/editor" title="Process a new video" body="Start with a raw asset and generate Body Cinema outputs, AI analysis, export packages, and publish-ready assets." icon={<Video className="h-5 w-5" />} cta="Open Editor" />
             <VaultXActionCard href="/vault-x/studio" title="Build a revenue bundle" body="Package master files, teasers, captions, sound, platform exports, PPV logic, and distribution assets." icon={<Package className="h-5 w-5" />} cta="Open Studio" />
             <VaultXActionCard href="/vaultx/distribution" title="Push the launch" body="Move finished content into distribution paths for VaultX, Telegram, X.com, and external fan platforms." icon={<Globe className="h-5 w-5" />} cta="Open Distribution" />
-            <VaultXActionCard href="/god-mode-ai" title="Command God Mode" body="Use the AI command layer to turn a creator goal into concrete revenue actions and measurable proof." icon={<Sparkles className="h-5 w-5" />} cta="Open God Mode" />
+            <VaultXActionCard href="/god-mode" title="Command God Mode" body="Use the AI command layer to turn a creator goal into concrete revenue actions and measurable proof." icon={<Sparkles className="h-5 w-5" />} cta="Open God Mode" />
           </section>
         )}
 

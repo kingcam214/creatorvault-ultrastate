@@ -35,8 +35,8 @@ const CHALLENGES = [
     badge: "bg-purple-900/40 text-purple-300 border-purple-500/30",
     icon: Trophy,
     color: "text-purple-400",
-    description: "The entry-level empire builder. Hit $5K in 30 days using 7 proven revenue pathways. Every creator who completes this challenge unlocks the $15K tier.",
-    unlockReward: "Unlocks $15K Challenge + VaultX Elite badge",
+    description: "A 30-day operating plan for building the first $5K with real offers, daily publishing, tracked buyer links, and fulfilled purchases. Progress only matters when money is actually collected.",
+    unlockReward: "Operator milestone: graduate only after verified sales prove the system works",
   },
   {
     id: "15k",
@@ -51,8 +51,8 @@ const CHALLENGES = [
     badge: "bg-yellow-900/40 text-yellow-300 border-yellow-500/30",
     icon: Crown,
     color: "text-yellow-400",
-    description: "The elite tier. $15K in 90 days using all 7 pathways at full scale. AI agents handle distribution, outreach, and optimization automatically.",
-    unlockReward: "VaultX Crown status + 0% platform fee for 6 months",
+    description: "A 90-day scale plan for creators who already proved conversion. It expands the same verified offer lanes with stronger pricing, fulfillment rhythm, and distribution discipline.",
+    unlockReward: "Scale milestone: reviewed after verified revenue and fulfillment quality are proven",
     locked: false,
   },
 ];
@@ -231,11 +231,11 @@ export default function VaultXChallenges() {
         <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-yellow-900/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 py-8">
+      <div className="relative z-10 max-w-6xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
 
         {/* Header */}
-        <div className="text-center mb-10">
-          <div className="flex items-center justify-between mb-6">
+        <div className="text-center mb-7 sm:mb-10">
+          <div className="flex items-center justify-between gap-3 mb-5 sm:mb-6">
             <VaultXLogo size="md" />
             <CreatorModeSwitcher compact />
           </div>
@@ -244,21 +244,21 @@ export default function VaultXChallenges() {
             <Flame className="w-4 h-4" />
             {isAdult ? "VaultX Revenue Playbook" : "Creator Revenue Playbook"}
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-white mb-3 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-3 tracking-tight leading-[0.95]">
             {isAdult ? "Turn Your Vault Into" : "Turn Your Content Into"}
             <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent">
               {isAdult ? " Real Income" : " Real Money"}
             </span>
           </h1>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+          <p className="text-gray-400 text-sm sm:text-lg max-w-2xl mx-auto leading-relaxed">
             {isAdult
-              ? "Structured 30 and 90-day challenges built for adult creators. Hit your income targets using PPV drops, subscriptions, tips, custom requests, and live events. AI agents handle distribution and optimization automatically."
-              : "Structured 30 and 90-day challenges with proven revenue pathways. Hit your income targets using brand deals, sponsorships, digital products, and platform monetization. AI agents handle outreach and optimization automatically."}
+              ? "A real 30 and 90-day operating plan for adult creators: publish drops, route fans through VaultX links, fulfill purchases, and measure only verified money. Tools assist the work; they do not invent revenue."
+              : "A real 30 and 90-day operating plan for creators: package offers, route traffic, fulfill paid work, and measure only verified money. Tools assist the work; they do not invent revenue."}
           </p>
         </div>
 
         {/* Challenge selector */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {CHALLENGES.map(ch => {
             const ChIcon = ch.icon;
             const isActive = activeChallenge === ch.id;
@@ -266,7 +266,7 @@ export default function VaultXChallenges() {
               <button
                 key={ch.id}
                 onClick={() => setActiveChallenge(ch.id as "5k" | "15k")}
-                className={`relative p-6 rounded-3xl border text-left transition-all ${
+                className={`relative p-4 sm:p-6 rounded-3xl border text-left transition-all ${
                   isActive
                     ? `bg-gradient-to-br ${ch.gradient} border-transparent shadow-2xl ${ch.glow}`
                     : `bg-white/5 ${ch.border} hover:bg-white/8`
@@ -297,7 +297,7 @@ export default function VaultXChallenges() {
         </div>
 
         {/* Separation notice */}
-        <div className="p-6 rounded-3xl bg-white/5 border border-white/10 mb-8">
+        <div className="p-4 sm:p-6 rounded-3xl bg-white/5 border border-white/10 mb-6 sm:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h3 className="text-white font-black text-lg">VaultX Revenue Loop Challenge</h3>
@@ -314,7 +314,7 @@ export default function VaultXChallenges() {
         </div>
 
         {/* Verified VaultX drop agents */}
-        <div className="p-6 rounded-3xl bg-purple-950/20 border border-purple-500/20 mb-8">
+        <div className="p-4 sm:p-6 rounded-3xl bg-purple-950/20 border border-purple-500/20 mb-6 sm:mb-8">
           <h3 className="text-white font-black text-lg mb-2">Verified VaultX Drop Agents</h3>
           <p className="text-gray-400 text-sm mb-4">Only these challengeAutomation agents are assigned to the tracked VaultX Telegram drop path.</p>
           <div className="flex flex-wrap gap-2">
@@ -327,11 +327,11 @@ export default function VaultXChallenges() {
         </div>
 
         {/* Stats bar */}
-        <div className="grid grid-cols-3 gap-3 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 sm:mb-8">
           {[
             { label: "Daily Target", value: `$${challenge.dailyTarget}`, icon: Target, color: "text-purple-400" },
             { label: "Duration", value: `${challenge.days} Days`, icon: Clock, color: "text-blue-400" },
-            { label: "Revenue Paths", value: "7 Active", icon: TrendingUp, color: "text-green-400" },
+            { label: "Execution Lanes", value: "7 Tool Lanes", icon: TrendingUp, color: "text-green-400" },
           ].map((stat, i) => (
             <div key={i} className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
               <stat.icon className={`w-5 h-5 ${stat.color} mx-auto mb-2`} />
@@ -344,7 +344,7 @@ export default function VaultXChallenges() {
         {/* Revenue Pathways */}
         <div className="mb-8">
           <h2 className="text-white font-black text-2xl mb-2">7 Revenue Pathways</h2>
-          <p className="text-gray-500 text-sm mb-6">Each pathway has AI agents working automatically. You focus on creating — the platform handles the rest.</p>
+              <p className="text-gray-500 text-sm mb-6">Each pathway is an execution lane with a concrete daily action, assigned platform tool, and honest target math. Nothing on this page credits revenue until a real payment path proves it.</p>
 
           <div className="space-y-3">
             {PATHWAYS.map((pathway) => {
@@ -356,7 +356,7 @@ export default function VaultXChallenges() {
               return (
                 <div key={pathway.id} className={`rounded-2xl border ${pathway.bg} overflow-hidden transition-all`}>
                   <button
-                    className="w-full p-5 flex items-center gap-4 text-left"
+                    className="w-full p-4 sm:p-5 flex items-center gap-3 sm:gap-4 text-left"
                     onClick={() => setExpandedPathway(isExpanded ? null : pathway.id)}
                   >
                     <div className={`w-10 h-10 rounded-xl bg-black/30 flex items-center justify-center flex-shrink-0`}>
@@ -365,7 +365,7 @@ export default function VaultXChallenges() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-white font-bold">{pathway.label}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${pathway.color} bg-black/30`}>
+                        <span className={`hidden sm:inline-flex text-xs px-2 py-0.5 rounded-full font-bold ${pathway.color} bg-black/30`}>
                           ${revenue.toLocaleString()} target
                         </span>
                       </div>
@@ -374,7 +374,7 @@ export default function VaultXChallenges() {
                     <div className="flex items-center gap-3 flex-shrink-0">
                       <div className="text-right hidden sm:block">
                         <div className={`text-sm font-bold ${pathway.color}`}>${revenue.toLocaleString()}</div>
-                        <div className="text-gray-600 text-xs">potential</div>
+                        <div className="text-gray-600 text-xs">target lane</div>
                       </div>
                       {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                     </div>
@@ -432,10 +432,10 @@ export default function VaultXChallenges() {
         </div>
 
         {/* Revenue breakdown */}
-        <div className="p-6 rounded-3xl bg-white/5 border border-white/10 mb-8">
+        <div className="p-4 sm:p-6 rounded-3xl bg-white/5 border border-white/10 mb-8">
           <h3 className="text-white font-black text-lg mb-4 flex items-center gap-2">
             <BarChart2 className="w-5 h-5 text-green-400" />
-            Revenue Breakdown — How to Hit ${challenge.target.toLocaleString()}
+            Target Mix — Operator Math for ${challenge.target.toLocaleString()}
           </h3>
           <div className="space-y-3">
             {PATHWAYS.map(p => {
@@ -457,7 +457,7 @@ export default function VaultXChallenges() {
               );
             })}
             <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-              <span className="text-white font-black">Total Target</span>
+              <span className="text-white font-black">Planned Target Mix</span>
               <span className="text-white font-black text-xl">${challenge.target.toLocaleString()}</span>
             </div>
           </div>
@@ -465,13 +465,13 @@ export default function VaultXChallenges() {
 
 
         {/* Production actions */}
-        <div className={`p-8 rounded-3xl bg-gradient-to-br ${challenge.gradient} text-center shadow-2xl ${challenge.glow}`}>
+        <div className={`p-5 sm:p-8 rounded-3xl bg-gradient-to-br ${challenge.gradient} text-center shadow-2xl ${challenge.glow}`}>
           <ChallengeIcon className="w-12 h-12 text-white mx-auto mb-4" />
           <h3 className="text-white font-black text-2xl mb-2">Run the {challenge.title} Through Real Tools</h3>
           <p className="text-white/80 mb-6 max-w-lg mx-auto">
-            This playbook is a route map, not fake challenge activation. Use the live VaultX dashboard, studio, and distribution systems to publish, sell, and measure the work.
+            This playbook routes you into the live VaultX dashboard, studio, and distribution systems so the work can be published, sold, and measured through real operating screens.
           </p>
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center gap-3">
             <a href="/vaultx" className="px-6 py-3 rounded-2xl bg-white text-black font-black text-sm hover:bg-white/90 transition-all flex items-center gap-2 shadow-xl">
               <DollarSign className="w-4 h-4" /> Open VaultX Dashboard
             </a>

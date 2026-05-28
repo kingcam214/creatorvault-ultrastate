@@ -17,30 +17,30 @@ const OFFER_CARDS: Array<{
 }> = [
   {
     slug: "agent-challenge-entry",
-    name: "AI Agent Challenge Entry",
+    name: "Verified Challenge Entry",
     price: "$29",
-    promise: "Enter the public revenue challenge and follow the live proof path from attention to paid action.",
-    cta: "Enter Challenge",
-    bestFor: "Curious buyers who want the challenge access point and proof-feed context.",
-    contents: ["Challenge entry access", "Live proof-feed context", "Revenue sprint orientation"],
+    promise: "Buy the entry point for the live proof sprint. The public counter moves only after Stripe confirms payment through the webhook ledger.",
+    cta: "Enter Verified Sprint",
+    bestFor: "Buyers who want access to the challenge proof feed, orientation, and tracked checkout path.",
+    contents: ["Challenge entry access", "Webhook-proof ledger context", "Revenue sprint operating brief"],
   },
   {
     slug: "vaultx-agent-revenue-pack",
     name: "VaultX Agent Revenue Pack",
     price: "$49",
-    promise: "Buy the VaultX-aligned pack built around agent drops, buyer routing, and today’s revenue push.",
+    promise: "Buy the VaultX-aligned pack that explains the offer stack, distribution lanes, buyer routing, and proof requirements behind the sprint.",
     cta: "Buy Revenue Pack",
-    bestFor: "Creators and operators who want the VaultX offer tied directly to challenge momentum.",
-    contents: ["VaultX revenue offer context", "Agent-drop campaign angle", "Proof-based buyer routing"],
+    bestFor: "Creators and operators who want the actual campaign structure behind the public challenge.",
+    contents: ["VaultX offer-stack brief", "Distribution lane map", "Proof-based buyer routing"],
   },
   {
     slug: "operator-proof-sprint",
     name: "Operator Proof Sprint",
     price: "$97",
-    promise: "Unlock the premium sprint for buyers who want the operator-grade challenge workflow and proof layer.",
+    promise: "Unlock the premium operator sprint for buyers who want the clearest execution workflow, proof standards, and next-action map.",
     cta: "Start Proof Sprint",
-    bestFor: "Serious buyers who want the strongest challenge offer and premium proof positioning.",
-    contents: ["Premium challenge sprint", "Operator proof workflow", "Highest-intent revenue route"],
+    bestFor: "Serious buyers who want the strongest tracked offer and the most complete execution context.",
+    contents: ["Premium challenge sprint", "Operator proof workflow", "High-intent checkout route"],
   },
 ];
 
@@ -130,20 +130,20 @@ export function ChallengeStoryEngine() {
     },
     {
       icon: Bot,
-      title: "Agent-led revenue push",
-      body: "The challenge is positioned around automated attention, direct offers, checkout routing, and public accountability instead of vague motivational posting.",
+      title: "Agent reports do not equal revenue",
+      body: "Agents produce operational reports, campaign tasks, and routing recommendations. They do not add money to the public scoreboard; only verified checkout transactions do.",
     },
     {
       icon: BarChart2,
       title: "Visible challenge ledger",
-      body: "The buyer sees the target, the current proven revenue, and the gap. That creates urgency without pretending money moved before Stripe confirms it.",
+      body: "The buyer sees the target, verified revenue, paid entry count, and remaining gap. Nothing is inflated by estimates, seeded agent totals, or manual revenue edits.",
     },
   ];
 
   const pathSteps = [
-    { label: "Choose", body: "Pick the entry, VaultX revenue pack, or premium proof sprint based on how close you want to get to the operator workflow." },
-    { label: "Pay", body: "Stripe handles the checkout. A successful return is not counted as revenue until the webhook proves the payment." },
-    { label: "Prove", body: "The challenge ledger and campaign story move only from confirmed money, giving the public challenge a real accountability spine." },
+    { label: "Choose", body: "Pick the entry, VaultX revenue pack, or premium proof sprint based on the level of execution context the buyer needs." },
+    { label: "Pay", body: "Stripe handles the checkout and receipt. The browser success page alone does not count as challenge revenue." },
+    { label: "Prove", body: "The webhook writes the transaction to the challenge ledger, then the public counter updates from that verified database row." },
   ];
 
   return (
@@ -151,7 +151,7 @@ export function ChallengeStoryEngine() {
       <style>{`
         @keyframes acGlow{0%,100%{opacity:.48;transform:scale(1)}50%{opacity:.86;transform:scale(1.08)}}
         @keyframes acTicker{0%{transform:translateX(-35%);opacity:.35}50%{opacity:.95}100%{transform:translateX(135%);opacity:.2}}
-        .ac-shell{max-width:1180px;margin:0 auto;padding-left:20px;padding-right:20px}
+        .ac-shell{max-width:1180px;margin:0 auto;padding-left:20px;padding-right:20px}@media(max-width:640px){.ac-shell{padding-left:12px;padding-right:12px}.ac-mobile-stack{grid-template-columns:1fr!important}.ac-mobile-hero{font-size:clamp(2.35rem,16vw,3.75rem)!important;line-height:.9!important}.ac-mobile-offer-title{font-size:1.65rem!important;line-height:.95!important}.ac-mobile-proof-card{padding:16px!important}.ac-mobile-cta{width:100%!important}}
         .ac-glass{background:linear-gradient(180deg,rgba(20,20,20,.88),rgba(8,8,8,.78));border:1px solid rgba(201,168,76,.18);box-shadow:0 28px 90px rgba(0,0,0,.52);backdrop-filter:blur(18px)}
         .ac-card{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);transition:transform .22s ease,border-color .22s ease,background .22s ease}.ac-card:hover{transform:translateY(-4px);border-color:rgba(201,168,76,.34);background:rgba(255,255,255,.065)}
         .ac-gold{background:linear-gradient(135deg,#c9a84c,#f3d68b);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -162,16 +162,16 @@ export function ChallengeStoryEngine() {
       <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(circle at 18% 8%, rgba(201,168,76,.22), transparent 32%), radial-gradient(circle at 86% 20%, rgba(6,182,212,.13), transparent 30%), radial-gradient(circle at 45% 90%, rgba(245,158,11,.12), transparent 38%)" }} />
       <div className="absolute inset-0 pointer-events-none opacity-[.05]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
 
-      <nav className="ac-shell relative z-10 flex items-center justify-between py-5 md:py-7">
+      <nav className="ac-shell relative z-10 flex items-center justify-between gap-3 py-4 md:py-7">
         <div className="flex items-center gap-3">
           <Link href="/king"><button className="hidden sm:inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold border border-white/10 text-white/65 hover:text-white hover:bg-white/5"><ChevronLeft size={15} /> King Hub</button></Link>
           <div className="w-11 h-11 rounded-2xl flex items-center justify-center kc-animate-pulse-gold" style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)" }}><Trophy className="w-5 h-5 text-black" /></div>
           <div>
-            <div className="font-black text-xl tracking-tight">AI Agent Challenge</div>
+            <div className="font-black text-base sm:text-xl tracking-tight">Verified Revenue Challenge</div>
             <div className="text-[10px] uppercase tracking-[.25em] font-black" style={{ color: "#c9a84c" }}>Public revenue sprint</div>
           </div>
         </div>
-        <button onClick={startCheckout} disabled={checkout.isPending} className="ac-btn inline-flex items-center gap-2 px-4 md:px-6 py-3 rounded-2xl text-sm font-black">
+        <button onClick={startCheckout} disabled={checkout.isPending} className="ac-btn inline-flex items-center gap-2 px-3 md:px-6 py-3 rounded-2xl text-xs sm:text-sm font-black whitespace-nowrap">
           {checkout.isPending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />} {checkout.isPending ? "Opening..." : activeOffer.price}
         </button>
       </nav>
@@ -190,17 +190,17 @@ export function ChallengeStoryEngine() {
           </section>
         )}
 
-        <section className="ac-shell pt-8 md:pt-14 pb-16 md:pb-24">
-          <div className="grid lg:grid-cols-[.95fr_1.05fr] gap-10 lg:gap-14 items-center">
+        <section className="ac-shell pt-5 md:pt-14 pb-12 md:pb-24">
+          <div className="grid lg:grid-cols-[.95fr_1.05fr] gap-6 lg:gap-14 items-center">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-6" style={{ background: "rgba(201,168,76,.12)", border: "1px solid rgba(201,168,76,.28)", color: "#f3d68b" }}>
                 <Radio className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.18em]">Live counter · Stripe-proof money only</span>
               </div>
-              <h1 className="font-black leading-[.9] tracking-[-.055em] mb-6" style={{ fontSize: "clamp(3rem, 8vw, 7rem)" }}>
-                Watch the agents turn pressure into paid proof.
+              <h1 className="ac-mobile-hero font-black leading-[.9] tracking-[-.055em] mb-5 md:mb-6" style={{ fontSize: "clamp(3rem, 8vw, 7rem)" }}>
+                Turn public pressure into webhook-proof revenue.
               </h1>
-              <p className="text-lg md:text-2xl leading-8 md:leading-10 max-w-2xl mb-8" style={{ color: "#d8d8d3" }}>
-                The <strong>AI Agent Challenge</strong> is a public revenue sprint where every buyer enters through a real offer, every checkout routes through Stripe, and every dollar on the board has to be proven by the live payment webhook.
+              <p className="text-base md:text-2xl leading-7 md:leading-10 max-w-2xl mb-6 md:mb-8" style={{ color: "#d8d8d3" }}>
+                The <strong>Verified Revenue Challenge</strong> is a public offer sprint where every buyer enters through a real Stripe checkout and every dollar on the board must be proven by the live payment webhook before it appears in the counter.
               </p>
               <div className="rounded-[2rem] p-4 md:p-5 mb-8 relative overflow-hidden" style={{ background: "linear-gradient(135deg,rgba(16,185,129,.14),rgba(201,168,76,.12),rgba(6,182,212,.08))", border: "1px solid rgba(201,168,76,.24)", boxShadow: "0 28px 90px rgba(0,0,0,.32)" }}>
                 <div className="absolute top-0 bottom-0 w-24" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent)", animation: "acTicker 4.4s linear infinite" }} />
@@ -211,11 +211,11 @@ export function ChallengeStoryEngine() {
                   </div>
                   <div className="text-[10px] uppercase tracking-[.18em] font-black text-white/45">{lastLedgerUpdate ? `Last proof: ${new Date(lastLedgerUpdate).toLocaleString()}` : "Waiting on first webhook proof"}</div>
                 </div>
-                <div className="grid sm:grid-cols-3 gap-3 relative">
+                <div className="ac-mobile-stack grid sm:grid-cols-3 gap-3 relative">
                   {liveMetrics.map(({ label, value, sub, icon: Icon, color }) => (
                     <div key={label} className="rounded-2xl p-4" style={{ background: "rgba(0,0,0,.32)", border: `1px solid ${color}33` }}>
                       <div className="flex items-center justify-between gap-2 mb-3"><span className="text-[10px] font-black uppercase tracking-[.16em] text-white/45">{label}</span><Icon className="w-4 h-4" style={{ color }} /></div>
-                      <div className="text-3xl md:text-4xl font-black leading-none" style={{ color }}>{value}</div>
+                      <div className="text-2xl md:text-4xl font-black leading-none" style={{ color }}>{value}</div>
                       <div className="text-xs text-white/55 mt-2">{sub}</div>
                     </div>
                   ))}
@@ -229,13 +229,13 @@ export function ChallengeStoryEngine() {
               </div>
             </div>
 
-            <div className="ac-glass rounded-[2rem] p-5 md:p-7 relative">
+            <div className="ac-glass rounded-[2rem] p-4 md:p-7 relative">
               <div className="absolute -inset-6 rounded-full blur-3xl opacity-40" style={{ background: "radial-gradient(circle, rgba(201,168,76,.3), transparent 64%)", animation: "acGlow 4s ease-in-out infinite" }} />
               <div className="relative">
                 <div className="flex items-start justify-between gap-4 mb-5">
                   <div>
                     <div className="text-xs font-black uppercase tracking-[.2em] mb-2" style={{ color: "#c9a84c" }}>Selected offer</div>
-                    <h2 className="text-3xl md:text-4xl font-black leading-none">{activeOffer.name}</h2>
+                    <h2 className="ac-mobile-offer-title text-3xl md:text-4xl font-black leading-none">{activeOffer.name}</h2>
                   </div>
                   <div className="text-3xl font-black ac-gold whitespace-nowrap">{activeOffer.price}</div>
                 </div>
@@ -267,9 +267,9 @@ export function ChallengeStoryEngine() {
         </section>
 
         <section className="ac-shell pb-16 md:pb-24">
-          <div className="grid lg:grid-cols-3 gap-4">
+          <div className="grid lg:grid-cols-3 gap-3 sm:gap-4">
             {proofBlocks.map(({ icon: Icon, title, body }) => (
-              <div key={title} className="ac-card rounded-[1.7rem] p-6">
+              <div key={title} className="ac-card ac-mobile-proof-card rounded-[1.7rem] p-6">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5" style={{ background: "rgba(201,168,76,.14)", border: "1px solid rgba(201,168,76,.25)", color: "#f3d68b" }}><Icon className="w-6 h-6" /></div>
                 <h3 className="text-2xl font-black mb-3">{title}</h3>
                 <p className="text-sm leading-7" style={{ color: "#aaa" }}>{body}</p>
@@ -279,11 +279,11 @@ export function ChallengeStoryEngine() {
         </section>
 
         <section className="ac-shell pb-16 md:pb-24">
-          <div className="ac-glass rounded-[2rem] p-6 md:p-10 grid lg:grid-cols-[.75fr_1.25fr] gap-8 items-start">
+          <div className="ac-glass rounded-[2rem] p-4 sm:p-6 md:p-10 grid lg:grid-cols-[.75fr_1.25fr] gap-6 md:gap-8 items-start">
             <div>
               <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#c9a84c" }}>Challenge mechanics</div>
-              <h2 className="text-4xl md:text-5xl font-black tracking-[-.04em] leading-none mb-5">The story is simple: choose, pay, prove.</h2>
-              <p className="text-base leading-8" style={{ color: "#b8b8b8" }}>The public page now sells the offer first and uses the ledger as credibility. It no longer looks like an internal posting tool; it looks like a live revenue challenge with a checkout path.</p>
+              <h2 className="text-3xl md:text-5xl font-black tracking-[-.04em] leading-none mb-5">The workflow is simple: choose, pay, verify.</h2>
+              <p className="text-base leading-8" style={{ color: "#b8b8b8" }}>The page sells a real offer first, then uses the ledger as proof. It is not an internal leaderboard and it does not pretend an agent run created revenue before a buyer paid.</p>
             </div>
             <div className="grid gap-3">
               {pathSteps.map((step, index) => (
@@ -296,12 +296,12 @@ export function ChallengeStoryEngine() {
           </div>
         </section>
 
-        <section className="px-5 pb-20 md:pb-28">
-          <div className="max-w-5xl mx-auto text-center rounded-[2rem] p-7 md:p-12" style={{ background: "linear-gradient(135deg,rgba(201,168,76,.22),rgba(6,182,212,.10),rgba(245,158,11,.10))", border: "1px solid rgba(201,168,76,.25)" }}>
+        <section className="px-3 sm:px-5 pb-20 md:pb-28">
+          <div className="max-w-5xl mx-auto text-center rounded-[2rem] p-5 sm:p-7 md:p-12" style={{ background: "linear-gradient(135deg,rgba(201,168,76,.22),rgba(6,182,212,.10),rgba(245,158,11,.10))", border: "1px solid rgba(201,168,76,.25)" }}>
             <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-6" style={{ background: "rgba(0,0,0,.28)", border: "1px solid rgba(255,255,255,.12)" }}><Flame className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.16em]">Public offer destination</span></div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">Pick the offer and enter the live-money sprint.</h2>
-            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>This page is ready for Telegram drops, buyer DMs, and challenge traffic because the offer is visible, the price is clear, and the live counter only moves when Stripe proves real money.</p>
-            <button onClick={startCheckout} disabled={checkout.isPending} className="ac-btn inline-flex items-center justify-center gap-2 rounded-2xl px-9 py-4 font-black">
+            <h2 className="text-3xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">Pick the offer and enter the verified-money sprint.</h2>
+            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>This page is ready for Telegram drops, buyer DMs, and public challenge traffic because the offer is visible, the price is clear, and the counter only moves when Stripe proves real money.</p>
+            <button onClick={startCheckout} disabled={checkout.isPending} className="ac-btn ac-mobile-cta inline-flex items-center justify-center gap-2 rounded-2xl px-7 sm:px-9 py-4 font-black">
               {checkout.isPending ? <><RefreshCw className="w-5 h-5 animate-spin" /> Opening secure checkout...</> : <>{activeOffer.cta} <ArrowRight className="w-5 h-5" /></>}
             </button>
           </div>
