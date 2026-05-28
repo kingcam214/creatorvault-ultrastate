@@ -587,9 +587,9 @@ export async function runCreatorVaultRevenueTick(reason = "scheduled"): Promise<
     const conn = await getDb();
     try {
       const last = await lastPublicVideoDropAt(conn);
-      if (last && Date.now() - last < MIN_PUBLIC_POST_GAP_MS && reason !== "startup-force") {
+      if (last && Date.now() - last < MIN_PUBLIC_POST_GAP_MS && reason !== "manual-force") {
         const minutesLeft = Math.ceil((MIN_PUBLIC_POST_GAP_MS - (Date.now() - last)) / 60000);
-        console.log(`[CreatorVaultRevenue] anti-spam hold: next native video drop in ~${minutesLeft}m`);
+        console.log(`[CreatorVaultRevenue] anti-spam hold: next native video drop in ~${minutesLeft}m (reason=${reason})`);
         return;
       }
     } finally {
