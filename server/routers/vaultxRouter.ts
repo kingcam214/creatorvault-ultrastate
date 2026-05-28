@@ -3928,6 +3928,53 @@ Generate body-focused captions and return ONLY valid JSON:
       };
     }),
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROCEDURE: generateAIViralClips — Pollo.ai Kling video generation
+  // ═══════════════════════════════════════════════════════════════════════════
+  generateAIViralClips: protectedProcedure
+    .input(z.object({
+      projectId: z.number(),
+      sourceVideoUrl: z.string().url(),
+      momentDescriptions: z.array(z.string()).min(1).max(5),
+      model: z.enum(["kling-3.0", "kling-2.6", "seedance-2.0", "pollo-3.0"]).default("kling-3.0"),
+      duration: z.enum(["5", "10"]).default("5"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const creatorId = await getCreatorId(ctx.user.id);
+      const cid = creatorId || ctx.user.id;
+      const proj = await rawQuery("SELECT * FROM vaultx_editor_projects WHERE id = ? AND creator_id = ? LIMIT 1", [input.projectId, cid]);
+      if (!proj.length) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found." });
+
+      const { generateKingCamVideo } = await import("../services/kingcamAI");
+      const generatedClips: Array<{ url: string; moment: string; model: string }> = [];
+
+      try {
+        for (const moment of input.momentDescriptions) {
+          const result = await generateKingCamVideo({
+            prompt: `${moment}, viral short-form content, engaging hook, professional production`,
+            model: input.model as any,
+            duration: parseInt(input.duration) as 5 | 10,
+            aspectRatio: "9:16",
+            vertical: "clone_lab",
+          });
+          generatedClips.push({ url: result.url, moment, model: result.model });
+        }
+
+        // Store generated clips in project
+        const existingClips = input.projectId ? JSON.parse((proj[0] as any).generated_ai_clips || "[]") : [];
+        const allClips = [...existingClips, ...generatedClips];
+        await rawExec(
+          "UPDATE vaultx_editor_projects SET generated_ai_clips = ?, updated_at = NOW() WHERE id = ? AND creator_id = ?",
+          [JSON.stringify(allClips.slice(0, 50)), input.projectId, cid]
+        );
+
+        return { success: true, generatedClips, total: allClips.length };
+      } catch (err) {
+        console.error("[VaultX] AI viral clips generation failed:", err);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Video generation failed. Check API keys." });
+      }
+    }),
+
   // ─── PROCEDURE: getBodyCinemaCollections ───────────────────────────────────
   getBodyCinemaCollections: protectedProcedure
     .input(z.object({ projectId: z.number().optional(), limit: z.number().min(1).max(50).default(20) }))
