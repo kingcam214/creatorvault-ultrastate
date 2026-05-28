@@ -1235,6 +1235,7 @@ export default function VaultXEditor() {
   const selectedClipUrl: string = editorClips[0]?.fileUrl ?? editorClips[0]?.assetUrl ?? editorClips[0]?.src ?? sourceUrl ?? "";
   const [contentType, setContentType] = useState<"photo" | "video">("photo");
   const [analysis, setAnalysis] = useState<ContentAnalysis | null>(null);
+  const [analysisAttemptedForSource, setAnalysisAttemptedForSource] = useState<string | null>(null);
   const [bodyMap, setBodyMap] = useState<BodyMap | null>(null);
   const [variations, setVariations] = useState<Variation[]>([]);
   const [selectedVariation, setSelectedVariation] = useState(0);
@@ -1336,6 +1337,32 @@ export default function VaultXEditor() {
     return newId;
   }, [projectId, project, createProjectMut]);
 
+  const runVaultXAnalysis = useCallback(async (targetUrl?: string, targetType?: "photo" | "video", options?: { silent?: boolean }) => {
+    const url = targetUrl || sourceUrl;
+    const type = targetType || contentType;
+    if (!url || analyzeContentMut.isPending) return null;
+    const toastId = options?.silent ? undefined : toast.loading("VaultX AI is reading this asset...");
+    try {
+      const pid = await ensureProject();
+      const result = await analyzeContentMut.mutateAsync({ sourceUrl: url, projectType: type, projectId: pid });
+      setAnalysis(result.analysis as ContentAnalysis);
+      setAnalysisAttemptedForSource(url);
+      setToolStatus("VaultX AI locked the creator brief, hook logic, teaser direction, and paid-output readiness.");
+      if (!options?.silent) toast.success("VaultX AI analysis locked", { id: toastId });
+      return result.analysis as ContentAnalysis;
+    } catch (e: any) {
+      setAnalysisAttemptedForSource(url);
+      if (!options?.silent) toast.error("VaultX analysis failed: " + e.message, { id: toastId });
+      return null;
+    }
+  }, [sourceUrl, contentType, analyzeContentMut, ensureProject]);
+
+  useEffect(() => {
+    const url = sourceUrl || selectedClipUrl;
+    if (!url || analysis || analyzeContentMut.isPending || analysisAttemptedForSource === url) return;
+    void runVaultXAnalysis(url, contentType, { silent: true });
+  }, [sourceUrl, selectedClipUrl, contentType, analysis, analysisAttemptedForSource, analyzeContentMut.isPending, runVaultXAnalysis]);
+
   const handleFileUpload = useCallback(async (file: File) => {
     const toastId = toast.loading("Uploading 0%...");
     try {
@@ -1343,16 +1370,14 @@ export default function VaultXEditor() {
       setSourceUrl(uploaded.url);
       setCurrentSource(uploaded.url);
       setContentType(file.type.startsWith("video") ? "video" : "photo");
-      toast.success("Uploaded — analyzing...", { id: toastId });
-      const pid = await ensureProject();
-      const result = await analyzeContentMut.mutateAsync({ sourceUrl: uploaded.url, projectType: file.type.startsWith("video") ? "video" : "photo", projectId: pid });
-      setAnalysis(result.analysis as ContentAnalysis);
+      toast.success("Uploaded — VaultX AI analysis starting...", { id: toastId });
       if (file.type.startsWith("video")) {
         setEditorClips(prev => [{ id: Date.now().toString(), src: uploaded.url, assetUrl: uploaded.url, fileUrl: uploaded.url, duration: project.durationSeconds || 60, type: "video", name: uploaded.filename }, ...prev]);
       }
-      toast.success("Content analyzed and ready for real editor tools");
+      await runVaultXAnalysis(uploaded.url, file.type.startsWith("video") ? "video" : "photo", { silent: false });
+      toast.success("Content analyzed and ready for paid-output tools");
     } catch (e: any) { toast.error("Upload failed: " + e.message, { id: toastId }); }
-  }, [ensureProject, analyzeContentMut, project.durationSeconds]);
+  }, [runVaultXAnalysis, project.durationSeconds]);
 
   const handleEnhance = useCallback(async () => {
     if (!sourceUrl) { toast.error("Upload content first"); return; }
@@ -1526,7 +1551,7 @@ export default function VaultXEditor() {
         <div className="flex items-center gap-1 p-1 rounded-2xl max-w-[58vw] overflow-x-auto" style={{ background: "rgba(255,255,255,0.045)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "inset 0 0 0 1px rgba(0,229,255,.035)" }}>
           {[
             { id: "enhance", label: "ENHANCE",   icon: Sparkles,   color: "#8B5CF6" },
-            { id: "body",    label: "BODY INTEL", icon: Brain,      color: "#EC4899" },
+            { id: "body",    label: "BODY CINEMA", icon: Brain,      color: "#EC4899" },
             { id: "ppv",     label: "PPV",        icon: Crown,      color: "#F59E0B" },
             { id: "censor",  label: "CENSOR",     icon: ScanLine,   color: "#EC4899" },
             { id: "scene",   label: "SCENE",      icon: Crosshair,  color: "#8B5CF6" },
@@ -1620,6 +1645,14 @@ export default function VaultXEditor() {
             <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
               <div className="h-full rounded-full" style={{ width: `${outputReadiness}%`, background: outputReadiness >= 80 ? C.green : C.gold, transition: "width 0.25s" }} />
             </div>
+            <button
+              onClick={() => void runVaultXAnalysis()}
+              disabled={!sourceUrl || analyzeContentMut.isPending}
+              className="w-full py-2 rounded-xl text-[8px] font-black tracking-widest"
+              style={{ background: analysis ? C.greenDim : C.goldDim, color: analysis ? C.green : C.gold, border: `1px solid ${analysis ? "rgba(16,185,129,0.28)" : "rgba(201,168,76,0.28)"}`, opacity: !sourceUrl ? 0.45 : 1 }}
+            >
+              {analyzeContentMut.isPending ? "VAULTX AI READING ASSET..." : analysis ? "AI BRIEF LOCKED" : "RUN VAULTX AI"}
+            </button>
             <div className="grid grid-cols-2 gap-1">
               {(["9:16", "16:9", "1:1", "4:5"] as const).map(fmt => (
                 <button key={fmt} onClick={() => setTargetFormat(fmt)} className="py-1.5 rounded-lg text-[8px] font-black" style={{ background: targetFormat === fmt ? C.accentDim : "rgba(255,255,255,0.04)", color: targetFormat === fmt ? C.accent : C.mutedLo, border: `1px solid ${targetFormat === fmt ? "rgba(139,92,246,0.35)" : "rgba(255,255,255,0.06)"}` }}>{fmt}</button>
@@ -1788,7 +1821,7 @@ export default function VaultXEditor() {
                           <button onClick={handleGenerateCaptions} disabled={isAnyProcessing}
                             className="flex items-center gap-1 px-3 py-1 rounded-xl text-[9px] font-black"
                             style={{ background: "rgba(201,168,76,0.15)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.3)" }}>
-                            {generateBodyCaptionsMut.isPending ? <Loader2 size={9} className="animate-spin" /> : <Wand2 size={9} />}GENERATE
+                            {generateBodyCaptionsMut.isPending ? <Loader2 size={9} className="animate-spin" /> : <Wand2 size={9} />}WRITE COPY
                           </button>
                         </div>
                       </div>
@@ -1873,12 +1906,12 @@ export default function VaultXEditor() {
           {activeTab === "body" && (
             <div className="flex-1 flex overflow-hidden">
               <div className="flex flex-col items-center gap-4 p-4 flex-shrink-0" style={{ width: 190, borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-[9px] font-black tracking-widest self-start" style={{ color: "#EC4899" }}>BODY MAP</p>
+                <p className="text-[9px] font-black tracking-widest self-start" style={{ color: "#EC4899" }}>BODY CINEMA MAP</p>
                 <BodySilhouette bodyMap={bodyMap} activeRegion={activeRegion} onRegionClick={(region) => { setActiveRegion(region); if (sourceUrl) handleEnhanceRegion(region); }} />
                 <button onClick={handleDetectBody} disabled={!sourceUrl || isAnyProcessing}
                   className="w-full py-2 rounded-xl text-[9px] font-black"
                   style={{ background: (!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.04)" : "rgba(236,72,153,0.2)", color: (!sourceUrl || isAnyProcessing) ? "#374151" : "#EC4899", border: `1px solid ${(!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.06)" : "rgba(236,72,153,0.3)"}` }}>
-                  {detectBodyRegionsMut.isPending ? <><Loader2 size={9} className="animate-spin inline mr-1" />SCANNING...</> : "SCAN BODY REGIONS"}
+                  {detectBodyRegionsMut.isPending ? <><Loader2 size={9} className="animate-spin inline mr-1" />SCANNING...</> : "SCAN REVENUE ANGLES"}
                 </button>
                 {bodyMap && (
                   <div className="w-full flex flex-col gap-1.5">
@@ -1903,9 +1936,23 @@ export default function VaultXEditor() {
               </div>
 
               <div className="flex-1 flex flex-col overflow-y-auto p-4 gap-4">
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: "01 · SCAN", value: "Find the selling angles", tone: "#EC4899", copy: "Body Cinema reads the upload like a premium merch shelf: what to show, what to tease, what to lock behind pay." },
+                    { label: "02 · BUILD", value: "Make the paid preview", tone: "#C9A84C", copy: "Generate reveal, focus shots, cover, captions, and price logic without forcing creators through confusing editor menus." },
+                    { label: "03 · SELL", value: "Send it live", tone: "#10B981", copy: "Export for VaultX, fan platforms, Telegram, and public-safe channels with one finished drop package." },
+                  ].map(card => (
+                    <div key={card.label} className="p-3 rounded-2xl" style={{ background: `${card.tone}10`, border: `1px solid ${card.tone}2E`, boxShadow: `0 0 30px ${card.tone}10` }}>
+                      <p className="text-[8px] font-black tracking-widest" style={{ color: card.tone }}>{card.label}</p>
+                      <p className="text-xs font-black mt-1" style={{ color: "#FFFFFF" }}>{card.value}</p>
+                      <p className="text-[8px] leading-relaxed mt-1" style={{ color: "#9CA3AF" }}>{card.copy}</p>
+                    </div>
+                  ))}
+                </div>
+
                 {/* Region buttons */}
                 <div className="flex flex-col gap-2">
-                  <p className="text-[9px] font-black tracking-widest" style={{ color: "#6B7280" }}>TARGETED ENHANCEMENT</p>
+                  <p className="text-[9px] font-black tracking-widest" style={{ color: "#6B7280" }}>REVENUE ANGLE CONTROL</p>
                   <div className="grid grid-cols-4 gap-2">
                     {BODY_REGIONS.map(r => {
                       const isEnhancing = enhanceBodyRegionMut.isPending && activeRegion === r.id;
@@ -1924,13 +1971,13 @@ export default function VaultXEditor() {
                   </div>
                 </div>
 
-                {/* Kling video generation */}
+                {/* AI cinema motion generation */}
                 <div className="flex flex-col gap-2 p-3 rounded-2xl" style={{ background: "rgba(236,72,153,0.05)", border: "1px solid rgba(236,72,153,0.15)" }}>
-                  <p className="text-[9px] font-black tracking-widest" style={{ color: "#EC4899" }}>KLING 3.0 VIDEO GENERATION</p>
+                  <p className="text-[9px] font-black tracking-widest" style={{ color: "#EC4899" }}>AI CINEMA MOTION</p>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ background: "rgba(0,0,0,0.4)" }}>
                       <p className="text-[9px] font-black" style={{ color: "#EC4899" }}>CINEMATIC REVEAL</p>
-                      <p className="text-[8px]" style={{ color: "#6B7280" }}>Slow bottom-to-top reveal, 8s, 9:16</p>
+                      <p className="text-[8px]" style={{ color: "#6B7280" }}>Premium opening reveal built for 9:16 paid previews.</p>
                       {revealShotUrl ? (
                         <video src={revealShotUrl} className="w-full rounded-xl" style={{ maxHeight: 100, objectFit: "cover" }} muted loop autoPlay playsInline />
                       ) : (
@@ -1941,12 +1988,12 @@ export default function VaultXEditor() {
                       <button onClick={handleRevealShot} disabled={!sourceUrl || isAnyProcessing}
                         className="py-1.5 rounded-xl text-[9px] font-black"
                         style={{ background: "rgba(236,72,153,0.15)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.3)" }}>
-                        {generateRevealShotMut.isPending ? <><Loader2 size={9} className="animate-spin inline mr-1" />GENERATING...</> : "GENERATE REVEAL"}
+                        {generateRevealShotMut.isPending ? <><Loader2 size={9} className="animate-spin inline mr-1" />GENERATING...</> : "CREATE OPENING REVEAL"}
                       </button>
                     </div>
                     <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ background: "rgba(0,0,0,0.4)" }}>
-                      <p className="text-[9px] font-black" style={{ color: "#8B5CF6" }}>BODY FOCUS CLIPS</p>
-                      <p className="text-[8px]" style={{ color: "#6B7280" }}>5s close-up per region</p>
+                      <p className="text-[9px] font-black" style={{ color: "#8B5CF6" }}>MONEY ANGLE CLIPS</p>
+                      <p className="text-[8px]" style={{ color: "#6B7280" }}>Short premium focus shots for each selected selling angle.</p>
                       <div className="flex flex-col gap-1">
                         {(["bust", "abdomen", "glutes", "legs", "full"] as const).map(region => (
                           <button key={region} onClick={() => handleFocusClip(region)} disabled={!sourceUrl || isAnyProcessing}
@@ -1963,7 +2010,7 @@ export default function VaultXEditor() {
                     disabled={!revealShotUrl || isAnyProcessing}
                     className="w-full py-2 rounded-xl text-[9px] font-black flex items-center justify-center gap-2"
                     style={{ background: revealShotUrl ? "linear-gradient(135deg, rgba(236,72,153,0.2), rgba(139,92,246,0.2))" : "rgba(255,255,255,0.04)", color: revealShotUrl ? "#EC4899" : "#374151", border: `1px solid ${revealShotUrl ? "rgba(236,72,153,0.3)" : "rgba(255,255,255,0.06)"}` }}>
-                    {assembleHighlightReelMut.isPending ? <><Loader2 size={10} className="animate-spin" />ASSEMBLING...</> : <><Crown size={10} />ASSEMBLE HIGHLIGHT REEL</>}
+                    {assembleHighlightReelMut.isPending ? <><Loader2 size={10} className="animate-spin" />ASSEMBLING...</> : <><Crown size={10} />BUILD THE TEASER REEL</>}
                   </button>
                 </div>
 
@@ -1973,8 +2020,8 @@ export default function VaultXEditor() {
                 <div className="flex flex-col gap-3 p-3 rounded-2xl" style={{ background: "linear-gradient(135deg, rgba(201,168,76,0.08), rgba(236,72,153,0.06))", border: "1px solid rgba(201,168,76,0.18)" }}>
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-[9px] font-black tracking-widest" style={{ color: "#C9A84C" }}>BODY CINEMA COLLECTION</p>
-                      <p className="text-[8px] mt-1" style={{ color: "#6B7280" }}>Create a real FFmpeg-rendered Body Cinema master, teaser, thumbnail, and platform export package from the uploaded asset.</p>
+                      <p className="text-[9px] font-black tracking-widest" style={{ color: "#C9A84C" }}>BODY CINEMA DROP ENGINE</p>
+                      <p className="text-[8px] mt-1" style={{ color: "#9CA3AF" }}>Turn one upload into a finished premium drop: master video, public teaser, cover image, pricing, captions, and destination-ready exports.</p>
                     </div>
                     <div className="flex items-center gap-1 px-2 py-1 rounded-xl" style={{ background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.25)" }}>
                       <BodyCinemaStatusIcon size={10} style={{ color: bodyCinemaStatusColor }} />
@@ -1990,7 +2037,7 @@ export default function VaultXEditor() {
                       </div>
                       <span className="text-[8px] font-bold" style={{ color: "#6B7280" }}>{bodyCinemaReadyCount}/{bodyCinemaReadinessItems.length} real requirements met</span>
                     </div>
-                    <p className="text-[8px] leading-relaxed" style={{ color: "#9CA3AF" }}>{bodyCinemaRealRenderUrl ? "This package has real downloadable output and can be published as a finished Body Cinema asset." : "Create the collection to generate a real FFmpeg master, teaser, and thumbnail before publishing."}</p>
+                    <p className="text-[8px] leading-relaxed" style={{ color: "#9CA3AF" }}>{bodyCinemaRealRenderUrl ? "This is a finished, downloadable Body Cinema drop. Publish it when the price, teaser, and destinations are locked." : "Render the drop to create the master video, teaser, thumbnail, and sales package before publishing."}</p>
                     <div className="grid grid-cols-2 gap-1">
                       {bodyCinemaReadinessItems.map(item => (
                         <div key={item.label} className="flex items-start gap-1.5 rounded-lg px-2 py-1" style={{ background: item.ready ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.025)", border: `1px solid ${item.ready ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.06)"}` }}>
@@ -2006,18 +2053,18 @@ export default function VaultXEditor() {
 
                   <div className="grid grid-cols-3 gap-2">
                     <div className="col-span-2 flex flex-col gap-1.5">
-                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>COLLECTION NAME</span>
+                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>DROP NAME</span>
                       <input value={bodyCinemaName} onChange={e => setBodyCinemaName(e.target.value)} className="px-3 py-2 rounded-xl text-xs font-bold outline-none" style={{ background: "rgba(0,0,0,0.45)", color: "#FFFFFF", border: "1px solid rgba(255,255,255,0.08)" }} />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>PPV PRICE</span>
+                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>UNLOCK PRICE</span>
                       <input type="number" min={3} max={1000} value={ppvPrice} onChange={e => setPpvPrice(Number(e.target.value || 0))} className="px-3 py-2 rounded-xl text-xs font-bold outline-none" style={{ background: "rgba(0,0,0,0.45)", color: "#FFFFFF", border: "1px solid rgba(255,255,255,0.08)" }} />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-2">
-                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>CINEMA STYLE</span>
+                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>DROP MOOD</span>
                       <div className="grid grid-cols-3 gap-1">
                         {([
                           ["luxury", "LUX"], ["noir", "NOIR"], ["sunset", "HEAT"], ["penthouse", "VIP"], ["editorial", "COVER"], ["vip_tease", "TEASE"],
@@ -2027,7 +2074,7 @@ export default function VaultXEditor() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>REGIONS</span>
+                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>SELLING ANGLES</span>
                       <div className="grid grid-cols-5 gap-1">
                         {(["bust", "abdomen", "glutes", "legs", "full"] as const).map(region => (
                           <button key={region} onClick={() => toggleBodyCinemaRegion(region)} className="py-1.5 rounded-xl text-[8px] font-black" style={{ background: bodyCinemaRegions.includes(region) ? "rgba(236,72,153,0.18)" : "rgba(255,255,255,0.035)", color: bodyCinemaRegions.includes(region) ? "#EC4899" : "#4B5563", border: `1px solid ${bodyCinemaRegions.includes(region) ? "rgba(236,72,153,0.32)" : "rgba(255,255,255,0.06)"}` }}>{region.slice(0, 3).toUpperCase()}</button>
@@ -2037,7 +2084,7 @@ export default function VaultXEditor() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>EXPORT DESTINATIONS</span>
+                    <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>SELLING DESTINATIONS</span>
                     <div className="grid grid-cols-6 gap-1">
                       {(["vaultx", "onlyfans", "fansly", "telegram", "instagram_reel", "twitter"] as const).map(platform => (
                         <button key={platform} onClick={() => toggleBodyCinemaPlatform(platform)} className="py-1.5 rounded-xl text-[8px] font-black" style={{ background: bodyCinemaPlatforms.includes(platform) ? "rgba(16,185,129,0.16)" : "rgba(255,255,255,0.035)", color: bodyCinemaPlatforms.includes(platform) ? "#10B981" : "#4B5563", border: `1px solid ${bodyCinemaPlatforms.includes(platform) ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.06)"}` }}>{platform.replace("instagram_reel", "ig").toUpperCase()}</button>
@@ -2048,7 +2095,7 @@ export default function VaultXEditor() {
                   <button onClick={handleCreateBodyCinemaCollection} disabled={!sourceUrl || isAnyProcessing}
                     className="w-full py-2 rounded-xl text-[9px] font-black flex items-center justify-center gap-2"
                     style={{ background: (!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.04)" : "linear-gradient(135deg, rgba(201,168,76,0.32), rgba(236,72,153,0.24))", color: (!sourceUrl || isAnyProcessing) ? "#374151" : "#F7E7B4", border: `1px solid ${(!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.06)" : "rgba(201,168,76,0.35)"}` }}>
-                    {createBodyCinemaCollectionMut.isPending ? <><Loader2 size={10} className="animate-spin" />RENDERING OUTPUTS...</> : <><Crown size={10} />CREATE + RENDER BODY CINEMA</>}
+                    {createBodyCinemaCollectionMut.isPending ? <><Loader2 size={10} className="animate-spin" />RENDERING PAID DROP...</> : <><Crown size={10} />RENDER THE PAID DROP</>}
                   </button>
 
                   {bodyCinemaPlan && (
@@ -2060,8 +2107,8 @@ export default function VaultXEditor() {
                       </div>
                       {bodyCinemaRealRenderUrl && (
                         <div className="grid grid-cols-3 gap-2">
-                          <a href={bodyCinemaRealRenderUrl} target="_blank" rel="noreferrer" className="py-2 rounded-xl text-[8px] font-black text-center" style={{ background: "rgba(16,185,129,0.14)", color: "#86efac", border: "1px solid rgba(16,185,129,0.28)" }}>DOWNLOAD MASTER</a>
-                          <a href={bodyCinemaTeaserUrl || bodyCinemaRealRenderUrl} target="_blank" rel="noreferrer" className="py-2 rounded-xl text-[8px] font-black text-center" style={{ background: "rgba(236,72,153,0.12)", color: "#f0abfc", border: "1px solid rgba(236,72,153,0.26)" }}>DOWNLOAD TEASER</a>
+                          <a href={bodyCinemaRealRenderUrl} target="_blank" rel="noreferrer" className="py-2 rounded-xl text-[8px] font-black text-center" style={{ background: "rgba(16,185,129,0.14)", color: "#86efac", border: "1px solid rgba(16,185,129,0.28)" }}>GET MASTER</a>
+                          <a href={bodyCinemaTeaserUrl || bodyCinemaRealRenderUrl} target="_blank" rel="noreferrer" className="py-2 rounded-xl text-[8px] font-black text-center" style={{ background: "rgba(236,72,153,0.12)", color: "#f0abfc", border: "1px solid rgba(236,72,153,0.26)" }}>GET TEASER</a>
                           <a href={bodyCinemaThumbnailUrl || bodyCinemaRealRenderUrl} target="_blank" rel="noreferrer" className="py-2 rounded-xl text-[8px] font-black text-center" style={{ background: "rgba(201,168,76,0.14)", color: "#F7E7B4", border: "1px solid rgba(201,168,76,0.28)" }}>THUMBNAIL</a>
                         </div>
                       )}
@@ -2070,7 +2117,7 @@ export default function VaultXEditor() {
 
                   {(bodyCinemaCollectionsQ.data?.collections?.length ?? 0) > 0 && (
                     <div className="flex flex-col gap-2">
-                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>RECENT COLLECTIONS</span>
+                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>RECENT BODY CINEMA DROPS</span>
                       {bodyCinemaCollectionsQ.data?.collections?.slice(0, 3).map((collection: any) => {
                         const plan = collection.production_plan || {};
                         const renderedUrl = plan.renderedOutputUrl || plan.finalVideoUrl || plan.renderedVideoUrl || collection.rendered_output_url || null;
@@ -2080,7 +2127,7 @@ export default function VaultXEditor() {
                             <div className="min-w-0"><p className="text-[9px] font-black truncate" style={{ color: "#FFFFFF" }}>{collection.collection_name}</p><p className="text-[8px]" style={{ color: "#6B7280" }}>{collection.cinematic_style} · ${Number(collection.ppv_price_cents || 0) / 100} · {collection.status} · {canPublishFinished ? "final render" : "plan only"}</p></div>
                             <div className="flex items-center gap-1">
                               {renderedUrl && <a href={renderedUrl} target="_blank" rel="noreferrer" className="px-2 py-1 rounded-lg text-[8px] font-black" style={{ background: "rgba(59,130,246,0.14)", color: "#93c5fd", border: "1px solid rgba(59,130,246,0.28)" }}>OPEN</a>}
-                              <button onClick={() => handlePublishBodyCinemaCollection(collection.id, collection.collection_name, canPublishFinished)} disabled={collection.status === "published" || isAnyProcessing || !canPublishFinished} className="px-3 py-1 rounded-lg text-[8px] font-black" style={{ background: collection.status === "published" ? "rgba(16,185,129,0.12)" : canPublishFinished ? "rgba(16,185,129,0.18)" : "rgba(245,158,11,0.1)", color: collection.status === "published" ? "#10B981" : canPublishFinished ? "#FFFFFF" : "#F59E0B", border: `1px solid ${canPublishFinished ? "rgba(16,185,129,0.28)" : "rgba(245,158,11,0.25)"}` }}>{collection.status === "published" ? "LIVE" : canPublishFinished ? "PUBLISH" : "NEEDS RENDER"}</button>
+                              <button onClick={() => handlePublishBodyCinemaCollection(collection.id, collection.collection_name, canPublishFinished)} disabled={collection.status === "published" || isAnyProcessing || !canPublishFinished} className="px-3 py-1 rounded-lg text-[8px] font-black" style={{ background: collection.status === "published" ? "rgba(16,185,129,0.12)" : canPublishFinished ? "rgba(16,185,129,0.18)" : "rgba(245,158,11,0.1)", color: collection.status === "published" ? "#10B981" : canPublishFinished ? "#FFFFFF" : "#F59E0B", border: `1px solid ${canPublishFinished ? "rgba(16,185,129,0.28)" : "rgba(245,158,11,0.25)"}` }}>{collection.status === "published" ? "LIVE" : canPublishFinished ? "SEND LIVE" : "RENDER FIRST"}</button>
                             </div>
                           </div>
                         );
@@ -2092,11 +2139,11 @@ export default function VaultXEditor() {
                 {/* Body captions */}
                 <div className="flex flex-col gap-2 p-3 rounded-2xl" style={{ background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.15)" }}>
                   <div className="flex items-center justify-between">
-                    <p className="text-[9px] font-black tracking-widest" style={{ color: "#C9A84C" }}>BODY-FOCUSED CAPTIONS</p>
+                    <p className="text-[9px] font-black tracking-widest" style={{ color: "#C9A84C" }}>SALES CAPTIONS</p>
                     <button onClick={handleGenerateCaptions} disabled={isAnyProcessing}
                       className="flex items-center gap-1 px-3 py-1 rounded-xl text-[9px] font-black"
                       style={{ background: "rgba(201,168,76,0.15)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.3)" }}>
-                      {generateBodyCaptionsMut.isPending ? <Loader2 size={9} className="animate-spin" /> : <Wand2 size={9} />}GENERATE
+                      {generateBodyCaptionsMut.isPending ? <Loader2 size={9} className="animate-spin" /> : <Wand2 size={9} />}WRITE COPY
                     </button>
                   </div>
                   {captions && (

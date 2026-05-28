@@ -60,6 +60,8 @@ const DEFAULT_VERSION =
   process.env.REPLICATE_CLONE_VERSION ||
   "e8074c4eeec195ad8ab617bf1502cd0c297db7f2c1cf5d9a665fad4710468727";
 const TRIGGER_WORD = process.env.REPLICATE_CLONE_TRIGGER_WORD || "fluxdevCam";
+const POLLO_API_KEY = process.env.POLLO_API_KEY || "";
+const POLLO_BASE_URL = "https://pollo.ai/api/platform";
 
 // ─── Replicate Helpers ────────────────────────────────────────────────────────
 async function replicatePost(endpoint: string, body: object): Promise<any> {
@@ -89,6 +91,15 @@ async function replicateGet(predictionId: string): Promise<any> {
     throw new Error(`Replicate poll error: ${resp.status}`);
   }
   return resp.json();
+}
+
+function normalisePolloStatus(raw: string | undefined | null): "waiting" | "processing" | "succeed" | "failed" {
+  if (!raw) return "waiting";
+  const status = raw.toLowerCase();
+  if (["succeed", "succeeded", "success", "complete", "completed"].includes(status)) return "succeed";
+  if (["failed", "fail", "error", "canceled", "cancelled"].includes(status)) return "failed";
+  if (["processing", "running", "in_progress"].includes(status)) return "processing";
+  return "waiting";
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────────
@@ -227,8 +238,133 @@ export const cloneCommandRouter = router({
       };
     }),
 
+
   /**
-   * 3. getGenerationHistory — Paginated list of all generations
+   * 3. generateCloneVideo — Turn a selected clone image into a short motion asset.
+   * Uses the existing Pollo image-to-video production path and stores jobs in pollo_generations.
+   */
+  generateCloneVideo: protectedProcedure
+    .input(
+      z.object({
+        imageUrl: z.string().url(),
+        prompt: z.string().max(1500).optional(),
+        resolution: z.enum(["480p", "720p", "1080p"]).default("720p"),
+        length: z.enum(["5s", "10s"]).default("5s"),
+        mode: z.enum(["basic", "pro"]).default("pro"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      ownerGuard(ctx.user.id);
+      if (!POLLO_API_KEY) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "POLLO_API_KEY is not configured." });
+      }
+
+      const durationSeconds = input.length === "10s" ? 10 : 5;
+      const finalPrompt = input.prompt?.trim() ||
+        "Create a premium cinematic clone motion teaser with subtle camera movement, luxury lighting, sharp face consistency, and high-end creator-brand energy.";
+
+      const response = await fetch(`${POLLO_BASE_URL}/generation/pollo/pollo-v1-6`, {
+        method: "POST",
+        headers: {
+          "x-api-key": POLLO_API_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          input: {
+            image: input.imageUrl,
+            prompt: finalPrompt,
+            resolution: input.resolution,
+            length: durationSeconds,
+            mode: input.mode,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Pollo clone video error: ${response.status} ${text}`);
+      }
+
+      const payload = await response.json();
+      if (payload?.code !== "SUCCESS" || !payload?.data?.taskId) {
+        throw new Error(`Pollo did not return a usable clone video task: ${JSON.stringify(payload)}`);
+      }
+
+      const taskId = payload.data.taskId as string;
+      const status = normalisePolloStatus(payload.data.status);
+      const conn = await getDb();
+      try {
+        const [insertResult] = await conn.execute(
+          `INSERT INTO pollo_generations
+           (userId, taskId, imageUrl, prompt, resolution, length, mode, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [ctx.user.id, taskId, input.imageUrl, finalPrompt, input.resolution, input.length, input.mode, status],
+        );
+        return {
+          success: true,
+          taskId,
+          status,
+          generationId: (insertResult as any).insertId,
+          prompt: finalPrompt,
+        };
+      } finally {
+        await conn.end();
+      }
+    }),
+
+  /**
+   * 4. getCloneVideoStatus — Poll and persist Clone Command video status.
+   */
+  getCloneVideoStatus: protectedProcedure
+    .input(z.object({ taskId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      ownerGuard(ctx.user.id);
+      if (!POLLO_API_KEY) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "POLLO_API_KEY is not configured." });
+      }
+
+      const response = await fetch(`${POLLO_BASE_URL}/generation/${input.taskId}/status`, {
+        method: "GET",
+        headers: { "x-api-key": POLLO_API_KEY },
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Pollo clone video status error: ${response.status} ${text}`);
+      }
+
+      const payload = await response.json();
+      const generation = payload?.data?.generations?.[0];
+      const status = normalisePolloStatus(generation?.status ?? payload?.data?.status);
+      const videoUrl = generation?.url && generation.url.length > 0 ? generation.url : null;
+
+      const conn = await getDb();
+      try {
+        await conn.execute(
+          `UPDATE pollo_generations
+           SET status = ?, videoUrl = ?, updatedAt = CURRENT_TIMESTAMP
+           WHERE taskId = ? AND userId = ?`,
+          [status, videoUrl, input.taskId, ctx.user.id],
+        );
+        const rows = extractRows(
+          await conn.execute(
+            `SELECT * FROM pollo_generations WHERE taskId = ? AND userId = ?`,
+            [input.taskId, ctx.user.id],
+          ),
+        );
+        return {
+          success: true,
+          taskId: input.taskId,
+          status,
+          videoUrl,
+          generation: rows[0] || null,
+        };
+      } finally {
+        await conn.end();
+      }
+    }),
+
+  /**
+   * 5. getGenerationHistory — Paginated list of all generations
    */
   getGenerationHistory: protectedProcedure
     .input(
@@ -283,7 +419,7 @@ export const cloneCommandRouter = router({
     }),
 
   /**
-   * 4. saveToVault — Mark generation as saved
+   * 6. saveToVault — Mark generation as saved
    */
   saveToVault: protectedProcedure
     .input(
@@ -308,7 +444,7 @@ export const cloneCommandRouter = router({
     }),
 
   /**
-   * 5. getAvailableModels — List active clone models
+   * 7. getAvailableModels — List active clone models
    */
   getAvailableModels: protectedProcedure.query(async ({ ctx }) => {
     ownerGuard(ctx.user.id);
@@ -336,7 +472,7 @@ export const cloneCommandRouter = router({
   }),
 
   /**
-   * 6. setHeroImage — Update the platform hero image URL
+   * 8. setHeroImage — Update the platform hero image URL
    */
   setHeroImage: protectedProcedure
     .input(z.object({ imageUrl: z.string().url() }))
@@ -358,7 +494,7 @@ export const cloneCommandRouter = router({
     }),
 
   /**
-   * 7. getHeroImage — Public endpoint to read the hero image URL
+   * 9. getHeroImage — Public endpoint to read the hero image URL
    */
   getHeroImage: publicProcedure.query(async () => {
     const conn = await getDb();

@@ -52,6 +52,13 @@ export default function CloneCommand() {
   const [genStatus, setGenStatus] = useState<string>("");
   const [genError, setGenError] = useState<string>("");
   const [genMetrics, setGenMetrics] = useState<any>(null);
+  const [videoPrompt, setVideoPrompt] = useState("Premium motion teaser: slow luxury camera move, cinematic lighting, face consistency, confident creator-brand energy.");
+  const [videoLength, setVideoLength] = useState<"5s" | "10s">("5s");
+  const [videoResolution, setVideoResolution] = useState<"480p" | "720p" | "1080p">("720p");
+  const [videoGenerating, setVideoGenerating] = useState(false);
+  const [videoTaskId, setVideoTaskId] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoStatus, setVideoStatus] = useState<string>("");
 
   // ─── State: Vault ───────────────────────────────────────────────────
   const [vaultPage, setVaultPage] = useState(0);
@@ -64,6 +71,8 @@ export default function CloneCommand() {
   const saveToVaultMutation = trpc.cloneCommand.saveToVault.useMutation();
   // @ts-ignore
   const setHeroMutation = trpc.cloneCommand.setHeroImage.useMutation();
+  // @ts-ignore
+  const generateVideoMutation = trpc.cloneCommand.generateCloneVideo.useMutation();
 
   // @ts-ignore
   const historyQuery = trpc.cloneCommand.getGenerationHistory.useQuery(
@@ -75,6 +84,12 @@ export default function CloneCommand() {
   const statusQuery = trpc.cloneCommand.getPredictionStatus.useQuery(
     { predictionId: activePredictionId! },
     { enabled: !!activePredictionId && generating, refetchInterval: 2000 },
+  );
+
+  // @ts-ignore
+  const videoStatusQuery = trpc.cloneCommand.getCloneVideoStatus.useQuery(
+    { taskId: videoTaskId! },
+    { enabled: !!videoTaskId && videoGenerating, refetchInterval: 2500 },
   );
 
   // ─── Poll status effect ────────────────────────────────────────────
@@ -98,6 +113,22 @@ export default function CloneCommand() {
       setActivePredictionId(null);
     }
   }, [statusQuery.data]);
+
+  useEffect(() => {
+    if (!videoStatusQuery.data) return;
+    const { status, videoUrl: readyUrl } = videoStatusQuery.data;
+    setVideoStatus(status);
+    if (status === "succeed" && readyUrl) {
+      setVideoUrl(readyUrl);
+      setVideoGenerating(false);
+      setVideoTaskId(null);
+      toast({ title: "Clone video ready", description: "Your motion clone teaser is ready." });
+    } else if (status === "failed") {
+      setVideoGenerating(false);
+      setVideoTaskId(null);
+      toast({ title: "Clone video failed", variant: "destructive" });
+    }
+  }, [videoStatusQuery.data]);
 
   // ─── Generate handler ──────────────────────────────────────────────
   const handleGenerate = useCallback(async () => {
@@ -129,6 +160,32 @@ export default function CloneCommand() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
   }, [prompt, negativePrompt, preset, numOutputs, guidanceScale, steps]);
+
+  const handleGenerateVideo = useCallback(async () => {
+    const imageUrl = outputImages[selectedOutput];
+    if (!imageUrl) {
+      toast({ title: "Generate an image first", description: "Clone video starts from the selected clone image.", variant: "destructive" });
+      return;
+    }
+    setVideoGenerating(true);
+    setVideoUrl(null);
+    setVideoStatus("waiting");
+    try {
+      const result = await generateVideoMutation.mutateAsync({
+        imageUrl,
+        prompt: videoPrompt.trim() || undefined,
+        resolution: videoResolution,
+        length: videoLength,
+        mode: "pro",
+      });
+      setVideoTaskId(result.taskId);
+      setVideoStatus(result.status || "waiting");
+      toast({ title: "Clone video started", description: "Motion job submitted." });
+    } catch (err: any) {
+      setVideoGenerating(false);
+      toast({ title: "Video error", description: err.message, variant: "destructive" });
+    }
+  }, [outputImages, selectedOutput, videoPrompt, videoResolution, videoLength]);
 
   // ─── Save to vault handler ─────────────────────────────────────────
   const handleSaveToVault = useCallback(
@@ -363,6 +420,30 @@ export default function CloneCommand() {
             </div>
           </div>
 
+          {/* Clone Video Controls */}
+          <div style={{ padding: 14, background: "linear-gradient(135deg, rgba(0,217,255,0.10), rgba(255,255,255,0.03))", borderRadius: 12, border: `1px solid ${CYAN}22`, display: "flex", flexDirection: "column", gap: 10 }}>
+            <label style={{ ...labelStyle, color: CYAN }}>CLONE VIDEO CONTROLS</label>
+            <textarea
+              value={videoPrompt}
+              onChange={(e) => setVideoPrompt(e.target.value)}
+              rows={3}
+              placeholder="Describe the motion, camera move, lighting, and creator-brand energy..."
+              style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit", minHeight: 76 }}
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <select value={videoResolution} onChange={(e) => setVideoResolution(e.target.value as any)} style={inputStyle}>
+                <option value="480p">480p Fast</option>
+                <option value="720p">720p Premium</option>
+                <option value="1080p">1080p Hero</option>
+              </select>
+              <select value={videoLength} onChange={(e) => setVideoLength(e.target.value as any)} style={inputStyle}>
+                <option value="5s">5s Teaser</option>
+                <option value="10s">10s Hero Clip</option>
+              </select>
+            </div>
+            <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>Generate the clone image first, then turn the selected image into a motion teaser without leaving Clone Command.</div>
+          </div>
+
           {/* Advanced Toggle */}
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
@@ -533,6 +614,19 @@ export default function CloneCommand() {
                 />
               </div>
 
+              {videoUrl && (
+                <div style={{ width: "min(520px, 100%)", border: `1px solid ${CYAN}33`, borderRadius: 12, padding: 10, background: `${CYAN}08` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ color: CYAN, fontSize: 11, fontWeight: 800, letterSpacing: "0.08em" }}>CLONE VIDEO READY</span>
+                    <a href={videoUrl} target="_blank" rel="noreferrer" style={{ color: CYAN, fontSize: 11, fontWeight: 700 }}>OPEN VIDEO</a>
+                  </div>
+                  <video src={videoUrl} controls playsInline style={{ width: "100%", maxHeight: 260, borderRadius: 10, background: "#000" }} />
+                </div>
+              )}
+              {videoGenerating && (
+                <div style={{ color: CYAN, fontSize: 12, fontWeight: 700 }}>Clone video status: {videoStatus || "waiting"}</div>
+              )}
+
               {/* Thumbnails if multiple */}
               {outputImages.length > 1 && (
                 <div style={{ display: "flex", gap: 8 }}>
@@ -574,6 +668,13 @@ export default function CloneCommand() {
                   style={{ ...actionBtnStyle, borderColor: "#FFD70044", color: "#FFD700" }}
                 >
                   👑 SET AS HERO
+                </button>
+                <button
+                  onClick={handleGenerateVideo}
+                  disabled={videoGenerating}
+                  style={{ ...actionBtnStyle, borderColor: `${CYAN}55`, color: CYAN }}
+                >
+                  {videoGenerating ? "◌ MAKING VIDEO" : "🎬 CREATE CLONE VIDEO"}
                 </button>
                 <a
                   href={outputImages[selectedOutput]}

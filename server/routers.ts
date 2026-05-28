@@ -20,7 +20,9 @@ import { courseVideoRouter } from "./routers/courseVideoRouter";
 import { adminRouter } from "./routers/adminRouter";
 import { adultSalesBotRouter } from "./routers/adultSalesBot";
 import { cloneLabRouter } from "./routers/cloneLabRouter";
+import { cloneCommandRouter } from "./routers/cloneCommandRouter";
 import { cloneTrainingLabRouter } from "./routers/cloneTrainingLabRouter";
+import { godModeRouter } from "./routers/godModeRouter";
 import { agentTrackerRouter } from "./routers/agentTracker";
 import { aiAffiliateOptimizerRouter } from "./routers/aiAffiliateOptimizer";
 import { aiAudienceCloneRouter } from "./routers/aiAudienceClone";
@@ -949,7 +951,9 @@ export const appRouter = router({
   kingcamImport: kingcamImportRouter,
   kingcamBrain: kingcamBrainRouter,
   cloneLab: cloneLabRouter,
+  cloneCommand: cloneCommandRouter,
   cloneTrainingLab: cloneTrainingLabRouter,
+  godMode: godModeRouter,
   chuuchMembers: chuuchMembersRouter,
   empireAgents: empireAgentsRouter,
   kingLife: kingLifeRouter,

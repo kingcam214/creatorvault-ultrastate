@@ -84,6 +84,7 @@ import EmmaNetwork from "./pages/EmmaNetwork";
 // import JoinVaultLive from "./pages/JoinVaultLive";
 // import ControlRoom from "./pages/ControlRoom";
 import LaunchTrailerStudio from "./pages/LaunchTrailerStudio";
+import GodModeAI from "./pages/GodModeAI";
 // import KingCamClone from "./pages/KingCamClone";
 // import KingCamShowcase from "./pages/KingCamShowcase";
 // import KingCamImport from "./pages/king/KingCamImport";
@@ -622,6 +623,8 @@ function Router() {
       <Route path={"/podcast-studio"} component={PodcastStudio} />
       <Route path={"/podcasting"} component={Podcasting} />
       <Route path={"/launch-trailer-studio"} component={LaunchTrailerStudio} />
+      <Route path={"/god-mode"} component={GodModeAI} />
+      <Route path={"/king/god-mode"} component={GodModeAI} />
       <Route path={"/shows/:slug/episodes/:episodeId"} component={EpisodeDetailPage} />
       <Route path={"/shows/:slug"} component={ShowPage} />
       {/* /social-audit merged into SocialHub */}

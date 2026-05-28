@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { Trophy, ChevronLeft, Zap, RefreshCw, CheckCircle, CreditCard, ShieldCheck, Megaphone, Crown, BarChart2, Bot, Lock, ArrowRight, Flame } from "lucide-react";
+import { Trophy, ChevronLeft, Zap, RefreshCw, CheckCircle, CreditCard, ShieldCheck, Megaphone, Crown, BarChart2, Bot, Lock, ArrowRight, Flame, Radio, TrendingUp, DollarSign } from "lucide-react";
 
 type OfferSlug = "agent-challenge-entry" | "vaultx-agent-revenue-pack" | "operator-proof-sprint";
 
@@ -64,7 +64,7 @@ export function ChallengeStoryEngine() {
   const source = getQueryValue("source") || "public_challenge_offer";
   const sessionId = getQueryValue("session_id");
 
-  const { data: publicOfferState } = (trpc.challengeAutomation as any)?.getPublicChallengeOfferState?.useQuery?.() || { data: null };
+  const { data: publicOfferState, isFetching: isLedgerRefreshing } = (trpc.challengeAutomation as any)?.getPublicChallengeOfferState?.useQuery?.(undefined, { refetchInterval: 5000, refetchOnWindowFocus: true }) || { data: null, isFetching: false };
   const challenge = publicOfferState?.challenge ?? null;
 
   const checkout = (trpc.challengeAutomation as any)?.createChallengeCheckout?.useMutation?.({
@@ -85,7 +85,33 @@ export function ChallengeStoryEngine() {
 
   const currentRevenue = parseFloat(String(challenge?.currentRevenue || 0));
   const targetRevenue = parseFloat(String(challenge?.targetRevenue || 5000));
+  const transactionCount = Number(challenge?.transactionCount || challenge?.completedTransactionCount || publicOfferState?.transactionCount || 0);
+  const lastLedgerUpdate = challenge?.updatedAt || publicOfferState?.lastLedgerUpdate || publicOfferState?.snapshotDate || null;
   const progress = targetRevenue > 0 ? (currentRevenue / targetRevenue) * 100 : 0;
+  const revenueGap = Math.max(0, targetRevenue - currentRevenue);
+  const [displayRevenue, setDisplayRevenue] = useState(currentRevenue);
+
+  useEffect(() => {
+    const start = displayRevenue;
+    const delta = currentRevenue - start;
+    if (Math.abs(delta) < 0.01) return;
+    const startedAt = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const pct = Math.min(1, (now - startedAt) / 900);
+      const eased = 1 - Math.pow(1 - pct, 3);
+      setDisplayRevenue(start + delta * eased);
+      if (pct < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [currentRevenue]);
+
+  const liveMetrics = [
+    { label: "Live Stripe proof", value: `$${displayRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, sub: "webhook-confirmed revenue", icon: DollarSign, color: "#10b981" },
+    { label: "Gap to win", value: `$${revenueGap.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, sub: "left before target lock", icon: TrendingUp, color: "#f3d68b" },
+    { label: "Paid entries", value: transactionCount.toLocaleString(), sub: "confirmed challenge payments", icon: CreditCard, color: "#06b6d4" },
+  ];
 
   const startCheckout = () => {
     checkout.mutate({
@@ -124,6 +150,7 @@ export function ChallengeStoryEngine() {
     <div className="min-h-screen text-white relative overflow-hidden" style={{ background: "#070707", fontFamily: "var(--kc-font-ui)" }}>
       <style>{`
         @keyframes acGlow{0%,100%{opacity:.48;transform:scale(1)}50%{opacity:.86;transform:scale(1.08)}}
+        @keyframes acTicker{0%{transform:translateX(-35%);opacity:.35}50%{opacity:.95}100%{transform:translateX(135%);opacity:.2}}
         .ac-shell{max-width:1180px;margin:0 auto;padding-left:20px;padding-right:20px}
         .ac-glass{background:linear-gradient(180deg,rgba(20,20,20,.88),rgba(8,8,8,.78));border:1px solid rgba(201,168,76,.18);box-shadow:0 28px 90px rgba(0,0,0,.52);backdrop-filter:blur(18px)}
         .ac-card{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);transition:transform .22s ease,border-color .22s ease,background .22s ease}.ac-card:hover{transform:translateY(-4px);border-color:rgba(201,168,76,.34);background:rgba(255,255,255,.065)}
@@ -167,7 +194,7 @@ export function ChallengeStoryEngine() {
           <div className="grid lg:grid-cols-[.95fr_1.05fr] gap-10 lg:gap-14 items-center">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-6" style={{ background: "rgba(201,168,76,.12)", border: "1px solid rgba(201,168,76,.28)", color: "#f3d68b" }}>
-                <Megaphone className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.18em]">Live public offer · real Stripe checkout</span>
+                <Radio className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.18em]">Live counter · Stripe-proof money only</span>
               </div>
               <h1 className="font-black leading-[.9] tracking-[-.055em] mb-6" style={{ fontSize: "clamp(3rem, 8vw, 7rem)" }}>
                 Watch the agents turn pressure into paid proof.
@@ -175,13 +202,30 @@ export function ChallengeStoryEngine() {
               <p className="text-lg md:text-2xl leading-8 md:leading-10 max-w-2xl mb-8" style={{ color: "#d8d8d3" }}>
                 The <strong>AI Agent Challenge</strong> is a public revenue sprint where every buyer enters through a real offer, every checkout routes through Stripe, and every dollar on the board has to be proven by the live payment webhook.
               </p>
-              <div className="grid sm:grid-cols-3 gap-3 max-w-2xl mb-8">
-                <div className="ac-card rounded-2xl p-4"><div className="text-2xl font-black ac-gold">${currentRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div><div className="text-xs text-white/55 mt-1">proven revenue</div></div>
-                <div className="ac-card rounded-2xl p-4"><div className="text-2xl font-black ac-gold">${targetRevenue.toLocaleString()}</div><div className="text-xs text-white/55 mt-1">challenge target</div></div>
-                <div className="ac-card rounded-2xl p-4"><div className="text-2xl font-black ac-gold">{Math.min(progress, 100).toFixed(1)}%</div><div className="text-xs text-white/55 mt-1">complete</div></div>
-              </div>
-              <div className="h-2 rounded-full mb-8" style={{ background: "rgba(255,255,255,.08)" }}>
-                <div className="h-full rounded-full" style={{ width: `${Math.min(progress, 100)}%`, background: "linear-gradient(90deg,#c9a84c,#f3d68b)", transition: "width .5s ease" }} />
+              <div className="rounded-[2rem] p-4 md:p-5 mb-8 relative overflow-hidden" style={{ background: "linear-gradient(135deg,rgba(16,185,129,.14),rgba(201,168,76,.12),rgba(6,182,212,.08))", border: "1px solid rgba(201,168,76,.24)", boxShadow: "0 28px 90px rgba(0,0,0,.32)" }}>
+                <div className="absolute top-0 bottom-0 w-24" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent)", animation: "acTicker 4.4s linear infinite" }} />
+                <div className="relative flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div className="inline-flex items-center gap-2 rounded-full px-3 py-1.5" style={{ background: "rgba(16,185,129,.12)", border: "1px solid rgba(16,185,129,.28)", color: "#bbf7d0" }}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: isLedgerRefreshing ? "#f3d68b" : "#10b981", boxShadow: "0 0 18px currentColor" }} />
+                    <span className="text-[10px] font-black uppercase tracking-[.18em]">{isLedgerRefreshing ? "Refreshing ledger" : "Live ledger connected"}</span>
+                  </div>
+                  <div className="text-[10px] uppercase tracking-[.18em] font-black text-white/45">{lastLedgerUpdate ? `Last proof: ${new Date(lastLedgerUpdate).toLocaleString()}` : "Waiting on first webhook proof"}</div>
+                </div>
+                <div className="grid sm:grid-cols-3 gap-3 relative">
+                  {liveMetrics.map(({ label, value, sub, icon: Icon, color }) => (
+                    <div key={label} className="rounded-2xl p-4" style={{ background: "rgba(0,0,0,.32)", border: `1px solid ${color}33` }}>
+                      <div className="flex items-center justify-between gap-2 mb-3"><span className="text-[10px] font-black uppercase tracking-[.16em] text-white/45">{label}</span><Icon className="w-4 h-4" style={{ color }} /></div>
+                      <div className="text-3xl md:text-4xl font-black leading-none" style={{ color }}>{value}</div>
+                      <div className="text-xs text-white/55 mt-2">{sub}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  <div className="flex justify-between text-[10px] uppercase tracking-[.16em] font-black text-white/45 mb-2"><span>Challenge target</span><span>${targetRevenue.toLocaleString()} · {Math.min(progress, 100).toFixed(1)}%</span></div>
+                  <div className="h-2 rounded-full" style={{ background: "rgba(255,255,255,.08)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${Math.min(progress, 100)}%`, background: "linear-gradient(90deg,#10b981,#c9a84c,#f3d68b)", transition: "width .5s ease", boxShadow: "0 0 28px rgba(201,168,76,.35)" }} />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -256,7 +300,7 @@ export function ChallengeStoryEngine() {
           <div className="max-w-5xl mx-auto text-center rounded-[2rem] p-7 md:p-12" style={{ background: "linear-gradient(135deg,rgba(201,168,76,.22),rgba(6,182,212,.10),rgba(245,158,11,.10))", border: "1px solid rgba(201,168,76,.25)" }}>
             <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-6" style={{ background: "rgba(0,0,0,.28)", border: "1px solid rgba(255,255,255,.12)" }}><Flame className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.16em]">Public offer destination</span></div>
             <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">Pick the offer and enter the live-money sprint.</h2>
-            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>This page is ready for Telegram drops, buyer DMs, and challenge traffic because the offer is visible, the price is clear, and Stripe is the only path that can move revenue.</p>
+            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>This page is ready for Telegram drops, buyer DMs, and challenge traffic because the offer is visible, the price is clear, and the live counter only moves when Stripe proves real money.</p>
             <button onClick={startCheckout} disabled={checkout.isPending} className="ac-btn inline-flex items-center justify-center gap-2 rounded-2xl px-9 py-4 font-black">
               {checkout.isPending ? <><RefreshCw className="w-5 h-5 animate-spin" /> Opening secure checkout...</> : <>{activeOffer.cta} <ArrowRight className="w-5 h-5" /></>}
             </button>
