@@ -1503,25 +1503,27 @@ export default function VaultXEditor() {
     publishToVaultXMut.isPending || generateContentCalendarMut.isPending;
 
   return (
-    <div className="flex flex-col" style={{ height: "100vh", background: "#000000", color: "#FFFFFF", fontFamily: "'Inter', sans-serif", overflow: "hidden" }}>
+    <div className="flex flex-col relative" style={{ height: "100vh", background: "#050505", color: "#f7f2e8", fontFamily: "var(--kc-font-ui, Inter, sans-serif)", overflow: "hidden" }}>
+      <div className="pointer-events-none absolute inset-0 z-0" style={{ background: "radial-gradient(circle at 14% 0%, rgba(0,229,255,.16), transparent 30%), radial-gradient(circle at 86% 8%, rgba(201,168,76,.16), transparent 32%)" }} />
+      <div className="pointer-events-none absolute inset-0 z-0 opacity-[.05]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
 
       {/* ── TOP BAR ── */}
-      <div className="flex items-center justify-between px-4 flex-shrink-0" style={{ height: 52, background: "rgba(0,0,0,0.95)", borderBottom: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(20px)" }}>
+      <div className="relative z-10 flex items-center justify-between px-4 flex-shrink-0" style={{ height: 64, background: "linear-gradient(90deg, rgba(8,8,8,.94), rgba(0,229,255,.045), rgba(201,168,76,.035))", borderBottom: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(24px)" }}>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}>
-              <Sparkles size={14} color="#fff" />
+            <div className="w-9 h-9 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #00e5ff, #c9a84c)", boxShadow: "0 0 34px rgba(0,229,255,.18)" }}>
+              <Sparkles size={15} color="#050505" />
             </div>
-            <span className="text-sm font-black" style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>VaultX</span>
-            <span className="text-sm font-black text-white">AI Editor</span>
-            <span className="hidden xl:inline-flex px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.14em]" style={{ background: "rgba(236,72,153,0.12)", color: "#f0abfc", border: "1px solid rgba(236,72,153,0.24)" }}>Adult creator output OS</span>
+            <span className="text-lg font-black tracking-[-.04em]" style={{ background: "linear-gradient(135deg, #00e5ff, #c9a84c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>VaultX</span>
+            <span className="text-lg font-black text-white tracking-[-.04em]">AI Editor</span>
+            <span className="hidden xl:inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.18em]" style={{ background: "rgba(0,229,255,0.10)", color: "#00e5ff", border: "1px solid rgba(0,229,255,0.26)" }}>Body Intel · paid-output OS</span>
           </div>
           <div className="w-px h-4" style={{ background: "rgba(255,255,255,0.1)" }} />
           <button onClick={() => setShowProjectList(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)" }}>
             <Film size={11} />{project.title}<ChevronDown size={10} />
           </button>
         </div>
-        <div className="flex items-center gap-1 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="flex items-center gap-1 p-1 rounded-2xl max-w-[58vw] overflow-x-auto" style={{ background: "rgba(255,255,255,0.045)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "inset 0 0 0 1px rgba(0,229,255,.035)" }}>
           {[
             { id: "enhance", label: "ENHANCE",   icon: Sparkles,   color: "#8B5CF6" },
             { id: "body",    label: "BODY INTEL", icon: Brain,      color: "#EC4899" },
@@ -1549,10 +1551,10 @@ export default function VaultXEditor() {
           })}
         </div>
         <div className="flex items-center gap-2">
-          {isAnyProcessing && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl" style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)" }}>
-              <Loader2 size={10} className="animate-spin" style={{ color: "#8B5CF6" }} />
-              <span className="text-[9px] font-black" style={{ color: "#8B5CF6" }}>AI RUNNING</span>
+              {isAnyProcessing && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl" style={{ background: "rgba(0,229,255,0.12)", border: "1px solid rgba(0,229,255,0.28)" }}>
+              <Loader2 size={10} className="animate-spin" style={{ color: "#00e5ff" }} />
+              <span className="text-[9px] font-black" style={{ color: "#00e5ff" }}>AI RUNNING</span>
             </div>
           )}
           <a href="/vaultx/distribution" className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black" style={{ background: "rgba(16,185,129,0.12)", color: "#86efac", border: "1px solid rgba(16,185,129,0.24)" }}>
@@ -1568,7 +1570,7 @@ export default function VaultXEditor() {
       </div>
 
       {/* ── WORLD-CLASS COMMAND STRIP ── */}
-      <div className="hidden lg:grid grid-cols-4 gap-2 px-4 py-2 flex-shrink-0" style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.10), rgba(236,72,153,0.08), rgba(16,185,129,0.07))", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="relative z-10 hidden lg:grid grid-cols-4 gap-2 px-4 py-3 flex-shrink-0" style={{ background: "linear-gradient(90deg, rgba(0,229,255,0.10), rgba(201,168,76,0.07), rgba(16,185,129,0.06))", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         {PRODUCTION_PRESETS.map(preset => (
           <button key={preset.id} onClick={() => applyProductionPreset(preset.id)} className="text-left p-3 rounded-2xl transition-all" style={{ background: productionPreset === preset.id ? `${preset.color}18` : "rgba(0,0,0,0.28)", border: `1px solid ${productionPreset === preset.id ? preset.color + "55" : "rgba(255,255,255,0.06)"}` }}>
             <div className="flex items-center justify-between gap-2 mb-1">
@@ -1581,7 +1583,7 @@ export default function VaultXEditor() {
       </div>
 
       {/* ── MAIN ── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="relative z-10 flex flex-1 overflow-hidden">
 
         {/* ── LEFT PANEL ── */}
         <div className="flex flex-col gap-3 p-3 overflow-y-auto flex-shrink-0" style={{ width: 210, background: "rgba(0,0,0,0.6)", borderRight: "1px solid rgba(255,255,255,0.06)" }}>

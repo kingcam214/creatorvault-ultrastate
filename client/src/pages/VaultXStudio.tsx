@@ -4032,6 +4032,9 @@ export default function VaultXStudio() {
     }
   };
 
+  const liveOutputCount = history.length;
+  const activeModeIndex = MODES.findIndex((m) => m.id === activeMode) + 1;
+
   // Group modes for sidebar sections
   const MODE_GROUPS = [
     { label: "Production", ids: ["final-output-engine", "ai-video-generator", "velvet-suite", "desire-grade", "scene-architect", "scene-enhancement"] },
@@ -4042,32 +4045,32 @@ export default function VaultXStudio() {
   ];
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#000000", fontFamily: "'Inter', sans-serif" }}>
-      {/* ── AMBIENT GLOW ── */}
+    <div className="flex h-screen overflow-hidden" style={{ background: "#050505", fontFamily: "var(--kc-font-ui, Inter, sans-serif)", color: "#f7f2e8" }}>
       <div className="pointer-events-none fixed inset-0 z-0" style={{
-        background: `radial-gradient(ellipse 80% 60% at 50% -10%, ${activeData.color}18 0%, transparent 70%)`,
+        background: `radial-gradient(ellipse 80% 56% at 48% -10%, ${activeData.color}22 0%, transparent 70%), radial-gradient(circle at 92% 8%, rgba(0,229,255,.16), transparent 30%), radial-gradient(circle at 20% 92%, rgba(201,168,76,.12), transparent 38%)`,
         transition: "background 0.8s ease",
       }} />
+      <div className="pointer-events-none fixed inset-0 z-0 opacity-[.05]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
 
       {/* ── LEFT SIDEBAR ── */}
       <div
         className="relative flex-shrink-0 flex flex-col z-10 transition-all duration-300"
         style={{
           width: sidebarExpanded ? 220 : 64,
-          borderRight: "1px solid rgba(255,255,255,0.06)",
-          background: "rgba(0,0,0,0.95)",
-          backdropFilter: "blur(20px)",
+          borderRight: "1px solid rgba(0,229,255,0.12)",
+          background: "linear-gradient(180deg, rgba(10,10,10,.96), rgba(0,0,0,.9))",
+          backdropFilter: "blur(24px)",
+          boxShadow: "18px 0 70px rgba(0,0,0,.36)",
         }}
       >
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-4 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)", minHeight: 60 }}>
-          <div className="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, #DC2626, #9333EA)` }}>
-            <span className="text-white font-black text-sm">V</span>
+          <div className="flex items-center gap-3 px-4 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.07)", minHeight: 68 }}>
+          <div className="w-9 h-9 rounded-2xl flex-shrink-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, #00e5ff, #c9a84c)`, boxShadow: "0 0 34px rgba(0,229,255,.18)" }}>
+            <span className="text-black font-black text-sm">VX</span>
           </div>
           {sidebarExpanded && (
             <div>
-              <p className="text-sm font-black text-white leading-none">VaultX</p>
-              <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5" style={{ color: "#DC2626" }}>Studio</p>
+              <p className="text-sm font-black text-white leading-none tracking-[-.02em]">VaultX Studio</p>
+              <p className="text-[9px] font-black uppercase tracking-[.22em] mt-1" style={{ color: "#00e5ff" }}>Creator production OS</p>
             </div>
           )}
           <div className="flex-1" />
@@ -4087,9 +4090,9 @@ export default function VaultXStudio() {
             if (groupModes.length === 0) return null;
             return (
               <div key={group.label} className="mb-1">
-                {sidebarExpanded && (
-                  <p className="px-4 py-1 text-[9px] font-black uppercase tracking-widest" style={{ color: "#374151" }}>{group.label}</p>
-                )}
+                    {sidebarExpanded && (
+                      <p className="px-4 py-1.5 text-[9px] font-black uppercase tracking-[.22em]" style={{ color: "rgba(247,242,232,.32)" }}>{group.label}</p>
+                    )}
                 {groupModes.map(m => {
                   const active = activeMode === m.id;
                   return (
@@ -4101,7 +4104,7 @@ export default function VaultXStudio() {
                       style={{
                         padding: sidebarExpanded ? "8px 16px" : "8px",
                         justifyContent: sidebarExpanded ? "flex-start" : "center",
-                        background: active ? `${m.color}15` : "transparent",
+                        background: active ? `linear-gradient(90deg, ${m.color}1f, rgba(255,255,255,.035))` : "transparent",
                         borderLeft: active ? `2px solid ${m.color}` : "2px solid transparent",
                       }}
                     >
@@ -4115,9 +4118,9 @@ export default function VaultXStudio() {
                         <span style={{ color: active ? m.color : "#6B7280", display: "flex" }}>{m.icon}</span>
                       </div>
                       {sidebarExpanded && (
-                        <span
-                          className="text-xs font-bold truncate"
-                          style={{ color: active ? "white" : "#9CA3AF" }}
+                          <span
+                          className="text-xs font-black truncate"
+                          style={{ color: active ? "#f7f2e8" : "rgba(247,242,232,.58)" }}
                         >
                           {m.label}
                         </span>
@@ -4137,25 +4140,26 @@ export default function VaultXStudio() {
         </div>
 
         {/* Bottom: History toggle */}
-        <div className="border-t p-3" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          <div className="border-t p-3" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
           <button
             onClick={() => setShowHistory(h => !h)}
-            className="w-full flex items-center gap-3 py-2 px-3 rounded-xl transition-all hover:bg-white/05"
+            className="w-full flex items-center gap-3 py-2.5 px-3 rounded-2xl transition-all hover:bg-white/05"
             style={{
               justifyContent: sidebarExpanded ? "flex-start" : "center",
-              background: showHistory ? "rgba(255,255,255,0.06)" : "transparent",
-              color: showHistory ? "white" : "#4B5563",
+              background: showHistory ? "rgba(0,229,255,0.12)" : "rgba(255,255,255,0.035)",
+              border: showHistory ? "1px solid rgba(0,229,255,.34)" : "1px solid rgba(255,255,255,.07)",
+              color: showHistory ? "#00e5ff" : "rgba(247,242,232,.55)",
             }}
           >
             <Activity size={16} />
-            {sidebarExpanded && <span className="text-xs font-bold">History</span>}
+            {sidebarExpanded && <span className="text-xs font-black">Output History · {liveOutputCount}</span>}
           </button>
         </div>
       </div>
 
       {/* ── HISTORY PANEL ── */}
       {showHistory && (
-        <div className="flex-shrink-0 flex flex-col overflow-hidden z-10" style={{ width: 220, borderRight: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.9)" }}>
+        <div className="flex-shrink-0 flex flex-col overflow-hidden z-10" style={{ width: 250, borderRight: "1px solid rgba(0,229,255,0.12)", background: "linear-gradient(180deg, rgba(9,9,9,.94), rgba(0,0,0,.88))", backdropFilter: "blur(22px)" }}>
           <div className="p-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
             <p className="text-xs font-black uppercase tracking-widest text-white">Session History</p>
             <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>{history.length} outputs</p>
@@ -4183,13 +4187,13 @@ export default function VaultXStudio() {
       {/* ── MAIN CONTENT AREA ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
         {/* TOP BAR — Pollo AI style */}
-        <div
-          className="flex-shrink-0 flex items-center gap-4 px-6 py-3"
+          <div
+          className="flex-shrink-0 flex items-center gap-4 px-6 py-4"
           style={{
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
-            background: "rgba(0,0,0,0.8)",
-            backdropFilter: "blur(20px)",
-            minHeight: 60,
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            background: "linear-gradient(90deg, rgba(8,8,8,.88), rgba(0,229,255,.045), rgba(201,168,76,.035))",
+            backdropFilter: "blur(24px)",
+            minHeight: 76,
           }}
         >
           {/* Active mode info */}
@@ -4201,22 +4205,30 @@ export default function VaultXStudio() {
               <span style={{ color: activeData.color, display: "flex" }}>{activeData.icon}</span>
             </div>
             <div>
-              <p className="text-sm font-black text-white leading-none">{activeData.label}</p>
-              <p className="text-[10px] mt-0.5 max-w-xs truncate" style={{ color: "#6B7280" }}>{activeData.desc}</p>
+              <p className="text-xl font-black text-white leading-none tracking-[-.04em]">{activeData.label}</p>
+              <p className="text-[10px] mt-1 max-w-md truncate font-bold" style={{ color: "rgba(247,242,232,.55)" }}>{activeData.desc}</p>
             </div>
           </div>
 
           <div className="flex-1" />
 
           {/* Status pill */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: activeData.color }} />
-            <span className="text-[10px] font-bold" style={{ color: "#9CA3AF" }}>VaultX Studio</span>
+          <div className="hidden lg:grid grid-cols-3 gap-2">
+            {[
+              { label: "Mode", value: `${activeModeIndex}/${MODES.length}` },
+              { label: "Outputs", value: `${liveOutputCount}` },
+              { label: "Runtime", value: "Live" },
+            ].map((item) => (
+              <div key={item.label} className="rounded-2xl px-3 py-2 min-w-24" style={{ background: "rgba(255,255,255,.045)", border: "1px solid rgba(255,255,255,.08)" }}>
+                <div className="text-[8px] font-black uppercase tracking-[.18em]" style={{ color: "rgba(247,242,232,.38)" }}>{item.label}</div>
+                <div className="text-sm font-black mt-0.5" style={{ color: item.label === "Runtime" ? "#10b981" : "#f7f2e8" }}>{item.value}</div>
+              </div>
+            ))}
           </div>
 
           {/* Nav links */}
-          <a href="/vault-x/editor" className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:bg-white/10" style={{ color: "#6B7280" }}>Editor</a>
-          <a href="/vault-x/analytics" className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:bg-white/10" style={{ color: "#6B7280" }}>Analytics</a>
+          <a href="/vault-x/editor" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "#00e5ff", border: "1px solid rgba(0,229,255,.22)", background: "rgba(0,229,255,.07)" }}>Open Editor</a>
+          <a href="/vault-x/analytics" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "rgba(247,242,232,.62)", border: "1px solid rgba(255,255,255,.08)" }}>Analytics</a>
         </div>
 
         {/* MODE CONTENT — full height, no padding, content owns the space */}

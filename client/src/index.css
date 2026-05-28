@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -47,11 +48,23 @@
 :root {
   color-scheme: dark;
 
-  /* Bible V2.0 Canonical Tokens */
-  --bg-primary: #0a0a0a;
-  --bg-surface: #141414;
-  --text-primary: #f5f0e8;
-  --accent-gold: #c9a84c;
+  /* CreatorVault Visual DNA Tokens — black/cyan cinematic law */
+  --bg-void: #0A0A0A;
+  --bg-primary: #0A0A0A;
+  --bg-surface: #1A1A1A;
+  --bg-elevated: #2A2A2A;
+  --bg-glass: rgba(255,255,255,0.04);
+  --accent-cyan: #00D9FF;
+  --accent-cyan-dim: rgba(0,217,255,0.15);
+  --accent-gold: #F5C842;
+  --accent-gold-dim: rgba(245,200,66,0.15);
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255,255,255,0.6);
+  --text-muted: rgba(255,255,255,0.3);
+  --border-subtle: rgba(255,255,255,0.08);
+  --border-accent: rgba(0,217,255,0.3);
+  --danger: #FF3B3B;
+  --success: #00FF94;
 
   /* ── KingCam Brand Palette ── */
   --kc-black:        #0a0a0a;
@@ -90,9 +103,9 @@
   --kc-orange:       #F59E0B;
 
   /* ── Typography ── */
-  --kc-font-display: 'Playfair Display', serif;
-  --kc-font-ui:      'Inter', system-ui, sans-serif;
-  --kc-font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+  --kc-font-display: 'Bebas Neue', 'Arial Narrow', sans-serif;
+  --kc-font-ui:      'DM Sans', system-ui, sans-serif;
+  --kc-font-mono:    'Space Mono', 'JetBrains Mono', 'Fira Code', monospace;
 
   /* ── Spacing ── */
   --kc-space-xs:  4px;
@@ -123,8 +136,8 @@
   --card-foreground:       var(--kc-bone);
   --popover:               var(--kc-surface-2);
   --popover-foreground:    var(--kc-bone);
-  --primary:               var(--accent-gold);
-  --primary-foreground:    var(--kc-black);
+  --primary:               var(--accent-cyan);
+  --primary-foreground:    var(--bg-void);
   --secondary:             var(--kc-surface-3);
   --secondary-foreground:  var(--kc-smoke);
   --muted:                 var(--kc-surface-2);
@@ -135,7 +148,7 @@
   --destructive-foreground: var(--kc-bone);
   --border:                var(--kc-border);
   --input:                 var(--kc-surface-3);
-  --ring:                  var(--accent-gold);
+  --ring:                  var(--accent-cyan);
   --sidebar:               var(--kc-charcoal);
   --sidebar-foreground:    var(--kc-bone);
   --sidebar-primary:       var(--kc-gold);
@@ -168,7 +181,8 @@ body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse 80% 50% at 20% 10%, rgba(201,168,76,0.04) 0%, transparent 60%);
+  background: radial-gradient(ellipse 80% 50% at 20% 10%, rgba(0,217,255,0.045) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 90% 20%, rgba(245,200,66,0.025) 0%, transparent 60%);
   pointer-events: none;
   z-index: 0;
 }
@@ -182,8 +196,46 @@ body::before {
 /* ── Typography Scale ─────────────────────────────────────────────────────── */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--kc-font-display);
-  color: var(--kc-bone);
-  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+@keyframes pulse-cyan {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,217,255,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(0,217,255,0); }
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes data-flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.4; }
+  94% { opacity: 1; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cv-spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-fade-up { animation: fade-up 0.4s ease forwards; }
+.live-stat { animation: data-flicker 4s infinite; }
+.cta-pulse { animation: pulse-cyan 2s infinite; }
+.cv-spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,0.12);
+  border-top-color: var(--accent-cyan);
+  animation: cv-spin 0.8s linear infinite;
 }
 
 /* ── Glass Card ───────────────────────────────────────────────────────────── */
