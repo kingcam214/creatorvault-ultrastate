@@ -7,6 +7,11 @@ const LIVE_SENDS_ENABLED = process.env.TELEGRAM_LIVE_SENDS_ENABLED === "true";
 const PREMIUM_APPROVAL = process.env.CREATORVAULT_OUTBOUND_APPROVED === "premium-reviewed";
 const PROOF_ID = process.env.CREATORVAULT_OUTBOUND_PROOF_ID || "";
 const REVIEWER = process.env.CREATORVAULT_OUTBOUND_REVIEWER || "";
+const OWNER_NOTIFICATION_CHAT_IDS = new Set(
+  [process.env.TELEGRAM_OWNER_CHAT_ID, process.env.TELEGRAM_KINGCAM_CHAT_ID, process.env.CREATORVAULT_OWNER_TELEGRAM_ID]
+    .filter((value): value is string => Boolean(value && value.trim()))
+    .map((value) => value.trim())
+);
 const MIN_INTERVAL_MS = Math.max(Number(process.env.TELEGRAM_MIN_SEND_INTERVAL_MS || 15 * 60 * 1000), 15 * 60 * 1000);
 
 const WRITE_METHODS = new Set([
@@ -164,6 +169,11 @@ function uppercaseRatio(text: string): number {
   return upper / letters.length;
 }
 
+function isOwnerNotificationTarget(init?: RequestInit): boolean {
+  const chatId = chatIdFromBody(init?.body);
+  return chatId !== undefined && OWNER_NOTIFICATION_CHAT_IDS.has(String(chatId).trim());
+}
+
 function hasApprovalState(): boolean {
   return LIVE_SENDS_ENABLED && PREMIUM_APPROVAL && /^proof-[a-z0-9-]{8,}$/i.test(PROOF_ID) && REVIEWER.trim().length >= 3;
 }
@@ -222,6 +232,7 @@ function installTelegramOutboundFirewall() {
 
     const method = parseTelegramMethod(telegramUrl);
     if (!method || !WRITE_METHODS.has(method)) return ORIGINAL_FETCH(input, init);
+    if (isOwnerNotificationTarget(init)) return ORIGINAL_FETCH(input, init);
 
     if (!hasApprovalState()) {
       console.warn(`[TelegramFirewall] blocked ${method}: live sends require enable flag, premium approval, reviewer, and dry-run proof id.`);
