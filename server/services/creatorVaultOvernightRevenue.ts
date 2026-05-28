@@ -5,8 +5,9 @@ import { notifyOwner } from "../_core/notification.js";
 
 const DB_URL = process.env.DATABASE_URL || "mysql://creatorvault:KingCam214CreatorVault@127.0.0.1:3306/creatorvault";
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
-const DEFAULT_FREE_CHAT_ID = process.env.TELEGRAM_FREE_CHANNEL_CHAT_ID || "-1003749459281";
-const DEFAULT_VIP_CHAT_ID = process.env.TELEGRAM_VIP_CHANNEL_CHAT_ID || "-1003817770263";
+const DEFAULT_FREE_CHAT_ID = process.env.TELEGRAM_FREE_CHANNEL_CHAT_ID || process.env.TELEGRAM_FREE_CHANNEL_ID || "-1003749459281";
+const DEFAULT_VIP_CHAT_ID = process.env.TELEGRAM_VIP_CHANNEL_CHAT_ID || process.env.TELEGRAM_VIP_CHANNEL_ID || "-1003817770263";
+const OWNER_NOTIFY_CHAT_ID = process.env.TELEGRAM_OWNER_CHAT_ID || process.env.TELEGRAM_KINGCAM_CHAT_ID || process.env.CREATORVAULT_OWNER_TELEGRAM_ID || "";
 const BASE_URL = (process.env.APP_URL || process.env.PUBLIC_APP_URL || "https://creatorvault.live").replace(/\/$/, "");
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_API_KEY || "";
 const OWNER_USER_ID = Number(process.env.CREATORVAULT_OWNER_USER_ID || process.env.DEFAULT_CREATOR_ID || 1);
@@ -338,7 +339,7 @@ async function lastPublicVideoDropAt(conn: mysql.Connection): Promise<number> {
   try {
     const [rows] = await conn.execute(
       `SELECT created_at FROM telegram_message_events
-       WHERE direction='outbound' AND message_type='cv_video_drop'
+       WHERE direction='outbound' AND message_type='video' AND tracking_code LIKE 'cv_video_%'
        ORDER BY created_at DESC LIMIT 1`
     ) as any;
     const value = rows?.[0]?.created_at ? new Date(rows[0].created_at).getTime() : 0;
@@ -441,8 +442,9 @@ async function publishNativeVideoDrop(offer: RevenueOffer, generated: FactoryRes
   try {
     await logEvent(conn, {
       telegramId: channelChatId,
-      messageType: "cv_video_drop",
+      messageType: "video",
       text: `${offer.slug} | ${caption}`,
+      trackingCode: `cv_video_${offer.slug.slice(0, 12)}`,
     });
     await createDistributionJob(conn, offer, nativeVideo.videoUrl, checkoutUrl, caption, sent.result?.message_id || null);
   } finally {
@@ -558,10 +560,23 @@ export async function fulfillCreatorVaultVideoOfferPurchase(sessionLike: { id?: 
 }
 
 async function notifyStatus(title: string, content: string): Promise<void> {
+  let delivered = false;
   try {
-    await notifyOwner({ title, content });
+    delivered = await notifyOwner({ title, content });
   } catch (err: any) {
     console.warn("[CreatorVaultRevenue] owner notification failed:", err.message);
+  }
+
+  if (!delivered && OWNER_NOTIFY_CHAT_ID && BOT_TOKEN) {
+    const fallback = await tgPost("sendMessage", {
+      chat_id: OWNER_NOTIFY_CHAT_ID,
+      text: [`<b>${title}</b>`, "", content].join("\n"),
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+    });
+    if (!fallback.ok) {
+      console.warn("[CreatorVaultRevenue] Telegram owner notification fallback failed:", fallback.description);
+    }
   }
 }
 

@@ -68,7 +68,7 @@ async function startServer() {
   } else {
     console.log("[TelegramLockdown] challenge-agent loop disabled by default");
   }
-  if (process.env.CREATORVAULT_VIDEO_REVENUE_AUTORUN === "true") {
+  if (process.env.CREATORVAULT_VIDEO_REVENUE_AUTORUN === "true" || process.env.CV_REVENUE_LOOP === "true") {
     startCreatorVaultOvernightRevenueCron();
   } else {
     console.log("[CreatorVaultRevenue] native video revenue loop disabled by default");
@@ -323,7 +323,7 @@ async function startServer() {
             });
             // Log outbound message
             await conn.execute(
-              "INSERT INTO telegram_message_events (telegram_id, direction, message_type, message_text) VALUES (?, 'outbound', 'reengagement', 'Re-engagement message sent')",
+              "INSERT INTO telegram_message_events (telegram_id, direction, message_type, message_text, tracking_code) VALUES (?, 'outbound', 'text', 'Re-engagement message sent', 'reengagement')",
               [sub.telegram_id]
             );
           } catch { /* non-blocking */ }
