@@ -262,11 +262,10 @@ export default function MediaPicker({
                 display: "grid", placeItems: "center", fontSize: 36,
               }}>🎬</div>
               <h3 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.text }}>
-                Your media vault is empty
+                God Mode needs your first visual source
               </h3>
-              <p style={{ margin: 0, fontSize: 14, color: T.muted, maxWidth: 380, lineHeight: 1.6 }}>
-                Upload your first video or image to start building cinematic trailers.
-                Your content library will appear here as a visual gallery.
+              <p style={{ margin: 0, fontSize: 14, color: T.muted, maxWidth: 420, lineHeight: 1.6 }}>
+                Drop in a clip, image, teaser frame, or campaign asset. VaultX will turn it into a visual-first trailer plan, teaser stack, captions, PPV package, and launch-ready distribution map.
               </p>
               <div style={{
                 marginTop: 8, padding: "10px 20px", borderRadius: 10,

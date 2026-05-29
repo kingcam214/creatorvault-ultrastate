@@ -501,7 +501,7 @@ function PPVPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddAudi
   const [blurEnd, setBlurEnd] = React.useState(true);
   const [blurIntensity, setBlurIntensity] = React.useState(20);
   const [addWatermark, setAddWatermark] = React.useState(false);
-  const [watermarkText, setWatermarkText] = React.useState("@YourHandle");
+  const [watermarkText, setWatermarkText] = React.useState("@VaultXCreator");
   const [price, setPrice] = React.useState("$9.99");
   const [busy, setBusy] = React.useState(false);
   const createAsset = trpc.creatorVideoEditor.createAsset.useMutation();
@@ -613,7 +613,7 @@ function PPVPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddAudi
               <input value={watermarkText} onChange={e => setWatermarkText(e.target.value)}
                 className="w-full px-2 py-1.5 rounded-lg text-xs"
                 style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text }}
-                placeholder="@YourHandle" />
+                placeholder="@VaultXCreator" />
             )}
           </>
         )}
@@ -1269,7 +1269,7 @@ export default function VaultXEditor() {
   const [productionPreset, setProductionPreset] = useState("premium_ppv");
   const [selectedOutputPackages, setSelectedOutputPackages] = useState<string[]>(["master", "sfw_teaser", "ppv_drop", "caption_pack"]);
   const [complianceMode, setComplianceMode] = useState<"platform_safe" | "subscriber" | "vip" | "archive">("platform_safe");
-  const [watermarkIdentity, setWatermarkIdentity] = useState("@YourHandle");
+  const [watermarkIdentity, setWatermarkIdentity] = useState("@VaultXCreator");
   const [targetFormat, setTargetFormat] = useState<"9:16" | "16:9" | "1:1" | "4:5">("9:16");
   const selectedCompliance = COMPLIANCE_MODES[complianceMode];
   const SelectedComplianceIcon = selectedCompliance.icon;
@@ -1303,7 +1303,7 @@ export default function VaultXEditor() {
     { label: "Focus clips", ready: generatedFocusClipCount > 0, detail: `${generatedFocusClipCount}/${bodyCinemaRegions.length} selected regions have generated clips.` },
     { label: "Captions", ready: Boolean(captions), detail: "Teaser, subscriber, PPV, and message copy exists." },
     { label: "Export plan", ready: bodyCinemaPlatforms.length > 0 && ppvPrice >= 3, detail: `${bodyCinemaPlatforms.length} destinations selected at $${ppvPrice}.` },
-    { label: "Final render", ready: Boolean(bodyCinemaRealRenderUrl), detail: bodyCinemaRealRenderUrl ? "FFmpeg produced a downloadable master video, teaser, and thumbnail." : "Create the collection to render real FFmpeg output." },
+    { label: "Final render", ready: Boolean(bodyCinemaRealRenderUrl), detail: bodyCinemaRealRenderUrl ? "The production renderer produced a downloadable master video, teaser, and thumbnail." : "Create the collection to produce real downloadable output." },
   ];
   const bodyCinemaReadyCount = bodyCinemaReadinessItems.filter(item => item.ready).length;
   const bodyCinemaReadinessScore = Math.round((bodyCinemaReadyCount / bodyCinemaReadinessItems.length) * 100);
@@ -1318,7 +1318,7 @@ export default function VaultXEditor() {
     setComplianceMode(preset.compliance as typeof complianceMode);
     setTargetFormat(preset.format as typeof targetFormat);
     setExportPresets([...preset.platforms]);
-    if (preset.watermark && watermarkIdentity === "@YourHandle") setWatermarkIdentity("@VaultXCreator");
+    if (preset.watermark && !watermarkIdentity.trim()) setWatermarkIdentity("@VaultXCreator");
     setToolStatus(`${preset.label} loaded: ${preset.outputs.length} deliverables, ${preset.platforms.length} export targets.`);
   }, [complianceMode, targetFormat, watermarkIdentity]);
 
@@ -2424,7 +2424,18 @@ export default function VaultXEditor() {
               {myProjectsQ.isLoading ? (
                 <div className="flex items-center justify-center py-8"><Loader2 size={20} className="animate-spin" style={{ color: "#6B7280" }} /></div>
               ) : (myProjectsQ.data as any)?.projects?.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 gap-2"><Film size={24} style={{ color: "#1F2937" }} /><p className="text-sm" style={{ color: "#374151" }}>No projects yet</p></div>
+                <div className="p-4 rounded-2xl" style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.12),rgba(236,72,153,0.08))", border: "1px solid rgba(201,168,76,0.35)" }}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "rgba(201,168,76,0.16)", border: "1px solid rgba(201,168,76,0.35)" }}><Film size={20} style={{ color: "#C9A84C" }} /></div>
+                    <div><p className="text-sm font-black text-white">God Mode workspace is empty, not dead.</p><p className="text-xs" style={{ color: "#9CA3AF" }}>Upload or paste a source asset and VaultX will build the analysis, body-cinema plan, teaser logic, PPV pack, and publish route.</p></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-black">
+                    <button onClick={() => { setShowProjectList(false); setActiveTab("enhance"); }} className="rounded-xl px-3 py-2" style={{ background: "rgba(201,168,76,0.14)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.35)" }}>Analyze Source</button>
+                    <button onClick={() => { setShowProjectList(false); setActiveTab("body"); }} className="rounded-xl px-3 py-2" style={{ background: "rgba(236,72,153,0.14)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.35)" }}>Build Body Cinema</button>
+                    <button onClick={() => { setShowProjectList(false); setActiveTab("ppv"); }} className="rounded-xl px-3 py-2" style={{ background: "rgba(139,92,246,0.14)", color: "#A78BFA", border: "1px solid rgba(139,92,246,0.35)" }}>Package PPV</button>
+                    <button onClick={() => { setShowProjectList(false); setActiveTab("publish"); }} className="rounded-xl px-3 py-2" style={{ background: "rgba(34,197,94,0.14)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.35)" }}>Publish Drops</button>
+                  </div>
+                </div>
               ) : (myProjectsQ.data as any)?.projects?.map((p: any) => (
                 <button key={p.id} onClick={() => { setProjectId(p.id); setProject({ title: p.title, projectType: p.project_type, aspectRatio: p.aspect_ratio || "9:16", durationSeconds: p.duration_seconds || 60 }); if (p.source_url) setSourceUrl(p.source_url); if (p.output_url) setCurrentSource(p.output_url); setShowProjectList(false); toast.success(`Loaded: ${p.title}`); }}
                   className="flex items-center gap-3 p-3 rounded-xl text-left" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>

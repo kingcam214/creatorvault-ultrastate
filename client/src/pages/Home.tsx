@@ -184,35 +184,34 @@ export default function Home() {
     { value: "dancer", label: "Dancer / Performer" },
   ];
 
-  // Platform-wide proof reel — KingCam is the operator, not the only visual story.
-  // These slots are ready to be replaced by Polla AI renders while retaining verified fallbacks.
+  // Platform-wide proof reel — every slot points to an owned production asset.
   const commandCenterReels = [
-    { label: "AI Video Lab Trailer", badge: "POLLA AI · HERO", category: "VIDEO-FIRST", src: "/videos/reel-cinematic-trailer.mp4", videoSrc: "/videos/reel-cinematic-trailer.mp4", poster: "/images/reel/reel-cinematic-trailer.png" },
-    { label: "Music Campaign Visual", badge: "POLLA AI", category: "MUSIC", src: "/videos/reel-music-video.mp4", videoSrc: "/videos/reel-music-video.mp4", poster: "/images/reel/reel-music-video.png" },
-    { label: "Product Drop Render", badge: "KLING AI", category: "COMMERCE", src: "/videos/reel-product-drop.mp4", videoSrc: "/videos/reel-product-drop.mp4", poster: "/images/reel/reel-product-drop.png" },
-    { label: "Apparel Drop Simulation", badge: "REPLICATE", category: "APPAREL", src: "/videos/reel-apparel-drop.mp4", videoSrc: "/videos/reel-apparel-drop.mp4", poster: "/images/reel/reel-apparel-drop.png" },
-    { label: "Creator Promo System", badge: "OPENART AI", category: "PROMO", videoSrc: "/videos/reel-creator-promo.mp4", poster: "/images/reel/reel-creator-promo.png" },
-    { label: "AI Portrait Campaign", badge: "OPENART AI", category: "BRAND", videoSrc: "/videos/reel-ai-portrait.mp4", poster: "/images/reel/reel-ai-portrait.png" },
-    { label: "KingCam Operator Proof", badge: "KINGCAM · POLLO", category: "FOUNDER", videoSrc: "/videos/kingcam-hero-cam.mp4", poster: "/assets/kingcam-hero.jpg" },
-    { label: "Clone Ambassador", badge: "FLUX LORA", category: "CLONE LAB", videoSrc: "/videos/kingcam-clone-1.mp4", poster: "/assets/kingcam-hero.jpg" },
-    { label: "Empire Brand Story", badge: "KLING AI", category: "PLATFORM", videoSrc: "/videos/reel-brand-story.mp4", poster: "/images/reel/reel-cinematic-trailer.png" },
-    { label: "VaultX Premium Flow", badge: "CREATORVAULT", category: "MONETIZE", videoSrc: "/videos/vaultx-cinematic-trailer.mp4", poster: "/images/reel/reel-product-drop.png" },
+    { label: "AI Video Lab Trailer", badge: "GOD MODE · HERO", category: "VIDEO-FIRST", src: "/videos/vaultx-cinematic-trailer.mp4", videoSrc: "/videos/vaultx-cinematic-trailer.mp4", poster: "/images/reel/reel-cinematic-trailer.png" },
+    { label: "Music Campaign Visual", badge: "OWNED MOTION", category: "MUSIC", src: "/videos/openart-showcase.mp4", videoSrc: "/videos/openart-showcase.mp4", poster: "/images/reel/reel-music-video.png" },
+    { label: "Product Drop Render", badge: "CAMPAIGN BUILD", category: "COMMERCE", src: "/videos/hero-cam.mp4", videoSrc: "/videos/hero-cam.mp4", poster: "/images/reel/reel-product-drop.png" },
+    { label: "Apparel Drop Simulation", badge: "VISUAL PACK", category: "APPAREL", src: "/videos/kingcam-clone-2.mp4", videoSrc: "/videos/kingcam-clone-2.mp4", poster: "/images/reel/reel-apparel-drop.png" },
+    { label: "Creator Promo System", badge: "PROMO ENGINE", category: "PROMO", videoSrc: "/videos/openart-showcase.mp4", poster: "/images/reel/reel-creator-promo.png" },
+    { label: "AI Portrait Campaign", badge: "CLONE LAB", category: "BRAND", videoSrc: "/videos/kingcam-clone-1.mp4", poster: "/images/reel/reel-ai-portrait.png" },
+    { label: "KingCam Operator Proof", badge: "KINGCAM · LIVE", category: "FOUNDER", videoSrc: "/videos/kingcam-hero-cam.mp4", poster: "/assets/kingcam-hero.jpg" },
+    { label: "Clone Ambassador", badge: "AVATAR STACK", category: "CLONE LAB", videoSrc: "/videos/kingcam-clone-1.mp4", poster: "/images/clone-ambassador.webp" },
+    { label: "Empire Brand Story", badge: "VISUAL OS", category: "PLATFORM", videoSrc: "/videos/hero-cam.mp4", poster: "/images/reel/reel-cinematic-trailer.png" },
+    { label: "VaultX Premium Flow", badge: "CREATORVAULT", category: "MONETIZE", videoSrc: "/videos/vaultx-cinematic-trailer.mp4", poster: "/videos/vaultx-cinematic-trailer-poster.png" },
   ];
 
   const commandCards = [
-    { title: "Prompt", body: "Type the concept: product drop, music promo, apparel campaign, VIP funnel, creator trailer.", color: "#38bdf8" },
-    { title: "Generate", body: "Polla AI, OpenArt, Kling, Runway, Replicate, ElevenLabs, Sync.so, Soundverse, and FFmpeg turn it into motion.", color: "#c9a84c" },
-    { title: "Package", body: "The system formats hooks, captions, reels, stories, shorts, thumbnails, offer pages, and premium assets.", color: "#4ade80" },
+    { title: "Prompt", body: "Type the concept: product drop, music promo, VIP funnel, creator trailer, or premium VaultX drop.", color: "#38bdf8" },
+    { title: "Generate", body: "AI video, clone visuals, voice, captions, scene logic, and motion assets are assembled into production-ready campaign packages.", color: "#c9a84c" },
+    { title: "Package", body: "The system formats hooks, reels, stories, shorts, thumbnails, offer pages, Telegram drops, and premium unlock assets.", color: "#4ade80" },
     { title: "Monetize", body: "Subscriptions, tips, marketplace, VaultX, NFC cards, and funnels convert attention into owned revenue.", color: "#fb923c" },
   ];
 
   const platformUniverse = [
-    { title: "AI Video Lab", tag: "Prompt → MP4", videoSrc: "/videos/reel-cinematic-trailer.mp4", poster: "/images/reel/reel-cinematic-trailer.png", tone: "#38bdf8" },
-    { title: "Music Drops", tag: "Visualizers · promos", videoSrc: "/videos/reel-music-video.mp4", poster: "/images/reel/reel-music-video.png", tone: "#c9a84c" },
-    { title: "Commerce", tag: "Products · funnels", videoSrc: "/videos/reel-product-drop.mp4", poster: "/images/reel/reel-product-drop.png", tone: "#4ade80" },
-    { title: "Apparel", tag: "Mockups · lookbooks", videoSrc: "/videos/reel-apparel-drop.mp4", poster: "/images/reel/reel-apparel-drop.png", tone: "#fb923c" },
-    { title: "Creator Promo", tag: "Campaign machine", videoSrc: "/videos/reel-creator-promo.mp4", poster: "/images/reel/reel-creator-promo.png", tone: "#38bdf8" },
-    { title: "VaultX", tag: "Premium monetization", videoSrc: "/videos/vaultx-cinematic-trailer.mp4", poster: "/images/reel/reel-product-drop.png", tone: "#c9a84c" },
+    { title: "AI Video Lab", tag: "Prompt → motion campaign", videoSrc: "/videos/vaultx-cinematic-trailer.mp4", poster: "/images/reel/reel-cinematic-trailer.png", tone: "#38bdf8" },
+    { title: "Music Drops", tag: "Visualizers · promos", videoSrc: "/videos/openart-showcase.mp4", poster: "/images/reel/reel-music-video.png", tone: "#c9a84c" },
+    { title: "Commerce", tag: "Products · funnels", videoSrc: "/videos/hero-cam.mp4", poster: "/images/reel/reel-product-drop.png", tone: "#4ade80" },
+    { title: "Apparel", tag: "Mockups · lookbooks", videoSrc: "/videos/kingcam-clone-2.mp4", poster: "/images/reel/reel-apparel-drop.png", tone: "#fb923c" },
+    { title: "Creator Promo", tag: "Campaign machine", videoSrc: "/videos/openart-showcase.mp4", poster: "/images/reel/reel-creator-promo.png", tone: "#38bdf8" },
+    { title: "VaultX", tag: "Premium monetization", videoSrc: "/videos/vaultx-cinematic-trailer.mp4", poster: "/videos/vaultx-cinematic-trailer-poster.png", tone: "#c9a84c" },
   ];
 
   const distributionSteps = ["Vertical Reel", "Story Cut", "Shorts Export", "Caption Pack", "Landing Page", "Telegram Drop", "VIP Funnel", "Analytics Loop"];
@@ -414,13 +413,13 @@ export default function Home() {
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.2fr) minmax(280px,0.8fr)", gap: 18, alignItems: "stretch" }}>
             <div className={`reveal-up d1 ${commandRef.visible ? "visible" : ""}`} style={{ position: "relative", minHeight: 390, borderRadius: 24, border: "1px solid rgba(255,255,255,0.10)", background: "linear-gradient(145deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))", overflow: "hidden", boxShadow: "0 30px 80px rgba(0,0,0,0.45)" }}>
               <video autoPlay muted loop playsInline preload="metadata" poster="/images/reel/reel-cinematic-trailer.png" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.36 }}>
-                <source src="/videos/reel-cinematic-trailer.mp4" type="video/mp4" />
+                <source src="/videos/vaultx-cinematic-trailer.mp4" type="video/mp4" />
               </video>
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(5,5,8,0.38),rgba(5,5,8,0.96)),radial-gradient(circle at 55% 38%,rgba(56,189,248,0.18),transparent 34%)" }} />
               <div style={{ position: "absolute", top: 0, bottom: 0, width: "38%", background: "linear-gradient(90deg,transparent,rgba(56,189,248,0.18),transparent)", animation: "glow-scan 5.6s ease-in-out infinite" }} />
               <div style={{ position: "relative", zIndex: 2, padding: 22, height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {["Polla AI", "OpenArt", "Kling", "Runway", "Replicate", "ElevenLabs", "Sync.so", "Soundverse"].map((tool, i) => (
+                  {["AI Video", "OpenArt", "Cinematic", "Motion Lab", "Clone Lab", "ElevenLabs", "Sync.so", "Sound Studio"].map((tool, i) => (
                     <span key={i} style={{ fontSize: 10, color: i === 0 ? "#050508" : "rgba(255,255,255,0.72)", background: i === 0 ? "#38bdf8" : "rgba(255,255,255,0.075)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "6px 10px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>{tool}</span>
                   ))}
                 </div>
@@ -517,7 +516,7 @@ export default function Home() {
             <ArsenalCard icon="👑" badge="REPLICATE · FLUX" badgeColor="#c9a84c" title="Clone Command" subtitle="Your AI twin, on autopilot." subtitleColor="#c9a84c" description="Train your custom LoRA. Generate on-brand images and videos of yourself in any scene — crimson suit to beach shoot — without a camera." cta="Open Clone Lab →" href="/clone-lab" />
           </div>
           <div className={`reveal-up d1 ${arsenalRef.visible ? "visible" : ""}`}>
-            <ArsenalCard icon="🎬" badge="EPISODE PIPELINE" badgeColor="#38bdf8" title="Hollywood Replacement" subtitle="5-scene episodes. FFmpeg stitch. Download ready." subtitleColor="#38bdf8" description="Write a concept. AI writes the script. Polla renders each scene. FFmpeg stitches with music and transitions. You get a finished MP4 — not 5 raw clips." cta="Open Hollywood →" href="/hollywood-replacement" />
+            <ArsenalCard icon="🎬" badge="EPISODE PIPELINE" badgeColor="#38bdf8" title="Hollywood Replacement" subtitle="5-scene episodes. AI assembly. Download ready." subtitleColor="#38bdf8" description="Write a concept. AI writes the script. The AI scene engine renders each beat, then assembles music, pacing, and transitions. You get a finished MP4 — not 5 raw clips." cta="Open Hollywood →" href="/hollywood-replacement" />
           </div>
           <div className={`reveal-up d2 ${arsenalRef.visible ? "visible" : ""}`}>
             <ArsenalCard icon="👗" badge="12 MODES" badgeColor="#4ade80" title="Apparel Lab" subtitle="Design. Simulate. Cost. Drop." subtitleColor="#4ade80" description="12 production modes: AI garment generation, fabric physics simulation, pattern studio, cost engine, tech pack PDF export, POD integration." cta="Open Apparel Lab →" href="/apparel-lab" />
@@ -616,7 +615,7 @@ export default function Home() {
             { icon: "🚀", label: "Distribution", desc: "20+ platforms · TikTok · Reels · Shorts · Stories · YouTube", color: "#4ade80" },
             { icon: "💎", label: "Monetization", desc: "Subscriptions · Tips · Marketplace · NFC Cards · VaultX", color: "#c9a84c" },
             { icon: "🏥", label: "DayShift Doctor", desc: "In-club studio · VIP autopilot · Nurse guidance · Shift genius", color: "#fb923c" },
-            { icon: "🎵", label: "Audio Stack", desc: "ElevenLabs TTS · Sync.so lip-sync · Soundverse scores · FFmpeg", color: "#38bdf8" },
+            { icon: "🎵", label: "Audio Stack", desc: "ElevenLabs TTS · Sync.so lip-sync · Sound Studio scores · AI mixdown", color: "#38bdf8" },
           ].map((item, i) => (
             <div key={i} className={`reveal-up ${mapRef.visible ? "visible" : ""}`} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "20px 18px", transitionDelay: `${i * 0.07}s` }}>
               <div style={{ fontSize: 24, marginBottom: 10 }}>{item.icon}</div>

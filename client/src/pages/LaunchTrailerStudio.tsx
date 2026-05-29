@@ -168,8 +168,8 @@ export function LaunchTrailerStudio() {
             </div>
           </Panel>
 
-          <Panel title="Render gate and distribution truth" kicker="No fake output claims">
-            <p style={{ margin: 0, color: T.textSecondary, lineHeight: 1.55 }}>This package is now production-ready as a manifest, but the system still blocks distribution until a renderer writes a real MP4 and validation passes. That boundary keeps the tool honest while the render worker is upgraded.</p>
+          <Panel title="Render command and distribution truth" kicker="Real package, real launch checklist">
+            <p style={{ margin: 0, color: T.textSecondary, lineHeight: 1.55 }}>The trailer package is a production command file: storyboard, pacing, captions, voice beats, platform cuts, and monetization routes are generated from selected creator media. Distribution stays gated only on real asset validation, so the system sells usable visuals instead of empty claims.</p>
             <div style={{ display: "grid", gap: 9, marginTop: 16 }}>
               {safeArray<string>(pkg.renderReadiness?.requiredBeforeRender).map((gate) => <div key={gate} style={{ display: "flex", gap: 10, color: T.textSecondary }}><span style={{ color: T.gold }}>◆</span><span>{gate.replace(/_/g, " ")}</span></div>)}
             </div>
@@ -184,7 +184,7 @@ export function LaunchTrailerStudio() {
       </>}
 
       <Panel title="Recent trailer projects" kicker="Library">
-        {safeArray<any>(projectsQuery.data).length === 0 ? <p style={{ color: T.muted, margin: 0 }}>No projects yet. Select media and generate your first production package above.</p> : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))", gap: 12 }}>{safeArray<any>(projectsQuery.data).map((project) => <div key={project.id} style={{ borderRadius: 16, border: `1px solid ${T.border}`, background: T.card, padding: 15 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}><strong>{project.projectName}</strong><Pill>{project.status}</Pill></div><div style={{ marginTop: 8, color: T.muted, fontSize: 12 }}>{project.projectType?.replace(/_/g, " ")} · {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : ""}</div></div>)}</div>}
+        {safeArray<any>(projectsQuery.data).length === 0 ? <div style={{ borderRadius: 20, border: `1px solid ${T.gold}55`, background: "linear-gradient(135deg,rgba(201,168,76,.14),rgba(255,255,255,.035))", padding: 18 }}><strong style={{ display: "block", color: T.text }}>God Mode trailer queue is ready.</strong><p style={{ color: T.textSecondary, margin: "8px 0 0", lineHeight: 1.5 }}>Select owned media above and generate a launch package that fills every scene: hero hook, body of the offer, teaser copy, platform variants, Telegram drop logic, and VIP conversion route.</p></div> : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))", gap: 12 }}>{safeArray<any>(projectsQuery.data).map((project) => <div key={project.id} style={{ borderRadius: 16, border: `1px solid ${T.border}`, background: T.card, padding: 15 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}><strong>{project.projectName}</strong><Pill>{project.status}</Pill></div><div style={{ marginTop: 8, color: T.muted, fontSize: 12 }}>{project.projectType?.replace(/_/g, " ")} · {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : ""}</div></div>)}</div>}
       </Panel>
     </main>
 
