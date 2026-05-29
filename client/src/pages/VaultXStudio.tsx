@@ -3636,7 +3636,7 @@ function PPVProgressPanel({ bundleId, accent = "#A855F7" }: { bundleId: string; 
 function MonetizationBundleMode({ onOutput }: { onOutput: (url: string, label: string) => void }) {
   const accent = "#10B981";
   const [videoFile, setVideoFile] = useState<VideoFile | null>(null);
-  const [activeTab, setActiveTab] = useState<"ppv"|"tip-unlock"|"price">("ppv");
+  const [activeTab, setActiveTab] = useState<"package"|"ppv"|"tip-unlock"|"price">("package");
   const [desireScore, setDesireScore] = useState(7);
   const [tipAmount, setTipAmount] = useState(500);
   const [revealStyle, setRevealStyle] = useState<"progressive"|"instant"|"timed">("progressive");
@@ -3644,6 +3644,19 @@ function MonetizationBundleMode({ onOutput }: { onOutput: (url: string, label: s
   const [result, setResult] = useState<any>(null);
   const [priceResult, setPriceResult] = useState<any>(null);
   const [ppvBundleId, setPpvBundleId] = useState<string | null>(null);
+  const [packageId, setPackageId] = useState<number | null>(null);
+  const [packageJobId, setPackageJobId] = useState<string | null>(null);
+  const [packageInput, setPackageInput] = useState({
+    title: "VIP unlock route",
+    contentType: "video" as "photo" | "video" | "audio",
+    sourceMediaUrl: "",
+    teaserDescription: "A premium creator-safe teaser designed to move attention into a paid VaultX unlock, tracked follow-up path, and VIP upgrade route.",
+    priceCents: 1900,
+    vipPriceCents: 4900,
+    telegramMode: "BOOST" as "FAST" | "BOOST" | "FULL",
+    adultContentFlag: true,
+    consentConfirmed: false,
+  });
 
   const ppvMutation = trpc.vaultx.buildPpvBundle.useMutation({
     onSuccess: (data) => {
@@ -3660,8 +3673,39 @@ function MonetizationBundleMode({ onOutput }: { onOutput: (url: string, label: s
     onError: (e) => toast.error(e.message),
   });
   const priceQuery = trpc.vaultx.suggestPrice.useQuery(priceInput, { enabled: false });
+  const createPackageMutation = trpc.vaultx.createRevenuePackage.useMutation({
+    onSuccess: (data) => {
+      setPackageId(data.packageId);
+      setResult({ packageId: data.packageId, publicTeaserCopy: data.publicTeaserCopy, stage: "created" });
+      toast.success("VaultX revenue package created");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const generatePackageMutation = trpc.vaultx.generatePackageAsset.useMutation({
+    onSuccess: (data) => {
+      setPackageJobId(data.jobId);
+      setResult((prev: any) => ({ ...(prev || {}), jobId: data.jobId, assetStatus: data.status, stage: "asset_generating" }));
+      toast.success("Pollo VaultX asset render started");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const checkoutPackageMutation = trpc.vaultx.attachPackageCheckout.useMutation({
+    onSuccess: (data) => {
+      setResult((prev: any) => ({ ...(prev || {}), checkoutUrl: data.checkoutUrl, checkoutSessionId: data.checkoutSessionId, stage: "checkout_attached" }));
+      toast.success("Stripe checkout route attached");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const publishPackageMutation = trpc.vaultx.publishPackageTelegramRoute.useMutation({
+    onSuccess: (data) => {
+      setResult((prev: any) => ({ ...(prev || {}), campaignId: data.campaignId, trackingCode: data.trackingCode, trackedUrl: data.trackedUrl, stage: "telegram_published" }));
+      toast.success("Telegram conversion route published");
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const TABS = [
+    { id: "package" as const, label: "VaultX Package", color: "#00D9FF" },
     { id: "ppv" as const, label: "PPV Bundle", color: "#A855F7" },
     { id: "tip-unlock" as const, label: "Tip Unlock", color: "#F59E0B" },
     { id: "price" as const, label: "Price AI", color: "#10B981" },
@@ -3680,12 +3724,72 @@ function MonetizationBundleMode({ onOutput }: { onOutput: (url: string, label: s
             ))}
           </div>
 
-          {activeTab !== "price" && (
+          {activeTab !== "price" && activeTab !== "package" && (
             videoFile ? (
               <CanvasVideoPlayer src={videoFile.url} label={videoFile.name} accent={accent} onReplace={() => { setVideoFile(null); setResult(null); }} />
             ) : (
               <CanvasDropZone onFile={setVideoFile} accent={accent} label="Drop your video to build a monetization bundle" />
             )
+          )}
+
+          {activeTab === "package" && (
+            <div className="flex flex-col gap-3">
+              <div className="p-3 rounded-xl" style={{ background: "rgba(0,217,255,0.07)", border: "1px solid rgba(0,217,255,0.22)" }}>
+                <p className="text-xs font-black text-white mb-1">Adult Creator Revenue Package</p>
+                <p className="text-[10px] text-gray-400">Creates one canonical VaultX object: consent, teaser copy, pricing, Pollo render prompt, Stripe checkout route, Telegram conversion mode, and VIP path.</p>
+              </div>
+              <input value={packageInput.title} onChange={e => setPackageInput(p => ({ ...p, title: e.target.value }))} placeholder="Package title"
+                className="w-full px-3 py-2 rounded-xl text-xs text-white bg-transparent outline-none" style={{ border: "1px solid rgba(255,255,255,0.1)" }} />
+              <textarea value={packageInput.teaserDescription} onChange={e => setPackageInput(p => ({ ...p, teaserDescription: e.target.value }))} rows={4} placeholder="Creator-safe teaser description"
+                className="w-full px-3 py-2 rounded-xl text-xs text-white bg-transparent outline-none resize-none" style={{ border: "1px solid rgba(255,255,255,0.1)" }} />
+              <input value={packageInput.sourceMediaUrl} onChange={e => setPackageInput(p => ({ ...p, sourceMediaUrl: e.target.value }))} placeholder="https:// public source media URL for Pollo / preview validation"
+                className="w-full px-3 py-2 rounded-xl text-xs text-white bg-transparent outline-none" style={{ border: "1px solid rgba(255,255,255,0.1)" }} />
+              <div className="grid grid-cols-3 gap-2">
+                {(["photo", "video", "audio"] as const).map(kind => (
+                  <button key={kind} onClick={() => setPackageInput(p => ({ ...p, contentType: kind }))} className="py-2 rounded-xl text-[10px] font-black capitalize"
+                    style={{ background: packageInput.contentType === kind ? "rgba(0,217,255,0.16)" : "rgba(255,255,255,0.04)", border: `1px solid ${packageInput.contentType === kind ? "#00D9FF" : "rgba(255,255,255,0.08)"}`, color: packageInput.contentType === kind ? "#00D9FF" : "#6B7280" }}>
+                    {kind}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {(["FAST", "BOOST", "FULL"] as const).map(mode => (
+                  <button key={mode} onClick={() => setPackageInput(p => ({ ...p, telegramMode: mode }))} className="py-2 rounded-xl text-[10px] font-black"
+                    style={{ background: packageInput.telegramMode === mode ? "rgba(201,168,76,0.18)" : "rgba(255,255,255,0.04)", border: `1px solid ${packageInput.telegramMode === mode ? "#C9A84C" : "rgba(255,255,255,0.08)"}`, color: packageInput.telegramMode === mode ? "#C9A84C" : "#6B7280" }}>
+                    {mode}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-[10px] text-gray-400 font-bold">Unlock Price
+                  <input type="number" value={packageInput.priceCents / 100} min={1} step={1} onChange={e => setPackageInput(p => ({ ...p, priceCents: Math.round(Number(e.target.value || 0) * 100) }))}
+                    className="mt-1 w-full px-3 py-2 rounded-xl text-xs text-white bg-transparent outline-none" style={{ border: "1px solid rgba(255,255,255,0.1)" }} />
+                </label>
+                <label className="text-[10px] text-gray-400 font-bold">VIP Price
+                  <input type="number" value={packageInput.vipPriceCents / 100} min={1} step={1} onChange={e => setPackageInput(p => ({ ...p, vipPriceCents: Math.round(Number(e.target.value || 0) * 100) }))}
+                    className="mt-1 w-full px-3 py-2 rounded-xl text-xs text-white bg-transparent outline-none" style={{ border: "1px solid rgba(255,255,255,0.1)" }} />
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex items-center gap-2 p-2 rounded-xl text-[10px] font-bold text-gray-300" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <input type="checkbox" checked={packageInput.adultContentFlag} onChange={e => setPackageInput(p => ({ ...p, adultContentFlag: e.target.checked }))} /> Adult creator content
+                </label>
+                <label className="flex items-center gap-2 p-2 rounded-xl text-[10px] font-bold text-gray-300" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <input type="checkbox" checked={packageInput.consentConfirmed} onChange={e => setPackageInput(p => ({ ...p, consentConfirmed: e.target.checked }))} /> Consent confirmed
+                </label>
+              </div>
+              <button onClick={() => createPackageMutation.mutate({ ...packageInput, sourceMediaUrl: packageInput.sourceMediaUrl || undefined })}
+                disabled={!packageInput.consentConfirmed || createPackageMutation.isPending}
+                className="w-full py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2"
+                style={{ background: packageInput.consentConfirmed ? "linear-gradient(135deg, #00D9FF, #2563EB)" : "rgba(255,255,255,0.05)", color: packageInput.consentConfirmed ? "white" : "#4B5563" }}>
+                {createPackageMutation.isPending ? <><Loader2 size={14} className="animate-spin" /> Creating package...</> : <><Package size={14} /> Create Real VaultX Package</>}
+              </button>
+              <div className="grid grid-cols-3 gap-2">
+                <button onClick={() => packageId && generatePackageMutation.mutate({ packageId, sourceMediaUrl: packageInput.sourceMediaUrl || undefined })} disabled={!packageId || !packageInput.sourceMediaUrl || generatePackageMutation.isPending} className="py-2 rounded-xl text-[10px] font-black" style={{ background: packageId && packageInput.sourceMediaUrl ? "rgba(0,217,255,0.12)" : "rgba(255,255,255,0.04)", color: packageId && packageInput.sourceMediaUrl ? "#00D9FF" : "#4B5563" }}>Render</button>
+                <button onClick={() => packageId && checkoutPackageMutation.mutate({ packageId })} disabled={!packageId || checkoutPackageMutation.isPending} className="py-2 rounded-xl text-[10px] font-black" style={{ background: packageId ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.04)", color: packageId ? "#10B981" : "#4B5563" }}>Checkout</button>
+                <button onClick={() => packageId && publishPackageMutation.mutate({ packageId })} disabled={!packageId || publishPackageMutation.isPending} className="py-2 rounded-xl text-[10px] font-black" style={{ background: packageId ? "rgba(201,168,76,0.14)" : "rgba(255,255,255,0.04)", color: packageId ? "#C9A84C" : "#4B5563" }}>Publish</button>
+              </div>
+            </div>
           )}
 
           {activeTab === "ppv" && (
@@ -3782,10 +3886,33 @@ function MonetizationBundleMode({ onOutput }: { onOutput: (url: string, label: s
       }
       right={
         <div className="flex flex-col gap-4">
-          <EngineBadge engine="Monetization Bundle Builder" status={(ppvMutation.isPending || tipMutation.isPending) ? "processing" : result ? "complete" : "ready"} />
+          <EngineBadge engine="Monetization Bundle Builder" status={(ppvMutation.isPending || tipMutation.isPending || createPackageMutation.isPending || generatePackageMutation.isPending || checkoutPackageMutation.isPending || publishPackageMutation.isPending) ? "processing" : result ? "complete" : "ready"} />
+          {activeTab === "package" && (createPackageMutation.isPending || generatePackageMutation.isPending || checkoutPackageMutation.isPending || publishPackageMutation.isPending) && <ProcessingBar label="Moving VaultX package through create, render, route, and publish states..." accent="#00D9FF" />}
           {ppvMutation.isPending && ppvBundleId && <PPVProgressPanel bundleId={ppvBundleId} accent="#A855F7" />}
           {ppvMutation.isPending && !ppvBundleId && <ProcessingBar label="Building PPV Bundle..." accent="#A855F7" />}
           {tipMutation.isPending && <ProcessingBar label="Creating tip unlock..." accent={accent} />}
+          {result && activeTab === "package" && (
+            <div className="flex flex-col gap-3">
+              <div className="p-3 rounded-xl" style={{ background: "rgba(0,217,255,0.07)", border: "1px solid rgba(0,217,255,0.2)" }}>
+                <p className="text-xs font-black text-white mb-2">VaultX Package Live Object</p>
+                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <div><span className="text-gray-500">Package</span><p className="font-black text-white">#{result.packageId || packageId}</p></div>
+                  <div><span className="text-gray-500">Stage</span><p className="font-black" style={{ color: "#00D9FF" }}>{result.stage || "created"}</p></div>
+                  <div><span className="text-gray-500">Pollo Job</span><p className="font-bold text-white truncate">{result.jobId || packageJobId || "not started"}</p></div>
+                  <div><span className="text-gray-500">Telegram</span><p className="font-bold text-white truncate">{result.trackingCode || "not published"}</p></div>
+                </div>
+              </div>
+              {result.publicTeaserCopy && (
+                <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <p className="text-[10px] font-black text-white mb-1">Quality-Gated Public Copy</p>
+                  <p className="text-[10px] text-gray-400">{result.publicTeaserCopy}</p>
+                </div>
+              )}
+              {result.checkoutUrl && <a href={result.checkoutUrl} target="_blank" rel="noreferrer" className="w-full py-2 rounded-xl text-center text-[10px] font-black" style={{ background: "rgba(16,185,129,0.12)", color: "#10B981" }}>Open Stripe Checkout Route</a>}
+              {result.trackedUrl && <a href={result.trackedUrl} target="_blank" rel="noreferrer" className="w-full py-2 rounded-xl text-center text-[10px] font-black" style={{ background: "rgba(201,168,76,0.14)", color: "#C9A84C" }}>Open Telegram Tracked Route</a>}
+            </div>
+          )}
+
           {result && activeTab === "ppv" && (
             <div className="flex flex-col gap-3">
               <div className="p-3 rounded-xl" style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)" }}>

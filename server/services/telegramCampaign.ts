@@ -20,6 +20,7 @@
 
 import mysql from "mysql2/promise";
 import OpenAI from "openai";
+import { qualityGate } from "./qualityGate";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -112,16 +113,23 @@ async function generateAICopy(
   const enginesUsed: string[] = ["openai:gpt-4.1-mini"];
   let costEstimateCents = 2; // ~$0.02 for FAST mode
 
-  const systemPrompt = `You are an elite adult content marketing copywriter for VaultX — a premium creator platform.
-Your job is to write Telegram channel copy that converts lurkers into buyers.
+  const modeLaw = mode === "FAST"
+    ? "FAST mode: one sharp hook, one direct paid-unlock CTA, no extra funnel language."
+    : mode === "BOOST"
+      ? "BOOST mode: one sharp hook, a censored-preview asset angle, a tracked-link CTA, and stronger conversion framing."
+      : "FULL mode: one sharp hook, censored-preview framing, paid unlock, follow-up, and VIP escalation language without becoming long.";
+
+  const systemPrompt = `You write premium VaultX Telegram conversion copy for creator monetization routes.
+Your job is to turn one creator asset into teaser → paid unlock → tracked click → follow-up → VIP route.
 Rules:
-- Be bold, direct, and create urgency
-- Use body-positive, empowering language
-- Never be crude or vulgar — be seductive and aspirational
+- ${modeLaw}
+- Be direct, premium, and creator-income focused
+- Never be crude, vulgar, explicit, corporate, desperate, or generic
 - Keep hooks under 2 lines
-- Keep captions under 6 lines
+- Keep captions under 4 sentences
 - CTAs must be action-oriented
-- All copy must feel exclusive and premium`;
+- Mention VaultX or CreatorVault naturally
+- All copy must include a concrete paid-unlock, tracked-click, follow-up, VIP-route, or revenue mechanism`;
 
   const userPrompt = `Write a complete Telegram PPV drop campaign for this content:
 
@@ -268,19 +276,30 @@ export async function createAIDrop(input: CreateAIDropInput): Promise<CreateAIDr
     // 6. Register assets
     const assetList: Array<{ type: string; url: string; source: string }> = [];
 
-    if (content.thumbnail_url) {
+    const modeAssetPlan = campaignMode === "FAST"
+      ? [{ type: "thumbnail", url: content.thumbnail_url, primary: 1 }]
+      : campaignMode === "BOOST"
+        ? [
+            { type: "thumbnail", url: content.thumbnail_url, primary: 0 },
+            { type: "censored_preview", url: content.censored_url || content.thumbnail_url, primary: 1 },
+          ]
+        : [
+            { type: "thumbnail", url: content.thumbnail_url, primary: 0 },
+            { type: "censored_preview", url: content.censored_url || content.thumbnail_url, primary: 1 },
+            { type: "vip_route_preview", url: content.censored_url || content.thumbnail_url, primary: 0 },
+          ];
+
+    for (const asset of modeAssetPlan) {
+      if (!asset.url) continue;
+      qualityGate.checkVisual(asset.url, {
+        prompt: `${campaignMode} VaultX Telegram asset for teaser to paid unlock to tracked click to follow-up to VIP route; dark luxury cinematic premium creator money moment.`,
+        publicPost: true,
+      });
       await db.execute(
-        `INSERT INTO telegram_campaign_assets (campaign_id, asset_type, asset_url, source, is_primary) VALUES (?, 'thumbnail', ?, 'original', 1)`,
-        [campaignId, content.thumbnail_url]
+        `INSERT INTO telegram_campaign_assets (campaign_id, asset_type, asset_url, source, is_primary) VALUES (?, ?, ?, 'original', ?)`,
+        [campaignId, asset.type, asset.url, asset.primary]
       );
-      assetList.push({ type: "thumbnail", url: content.thumbnail_url, source: "original" });
-    }
-    if (content.censored_url) {
-      await db.execute(
-        `INSERT INTO telegram_campaign_assets (campaign_id, asset_type, asset_url, source, is_primary) VALUES (?, 'censored_preview', ?, 'original', 0)`,
-        [campaignId, content.censored_url]
-      );
-      assetList.push({ type: "censored_preview", url: content.censored_url, source: "original" });
+      assetList.push({ type: asset.type, url: asset.url, source: "original" });
     }
 
     // 7. Log to ai_agent_actions

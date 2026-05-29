@@ -1347,6 +1347,90 @@ export const challengeAutomationRouter = router({
       return { success: false, credited: false, amount: input.amount, challengeId, reason: "manual_revenue_requires_live_payment_proof" };
     }),
 
+  scoreChallengeOnRealEvents: protectedProcedure.query(async () => {
+    const activeChallengeResult = await db.db.execute(sql`SELECT * FROM empire_challenges WHERE status = 'active' ORDER BY week_number ASC LIMIT 1`);
+    const activeChallenge = extractRows(activeChallengeResult, "active challenge scoring lookup")[0] ?? null;
+
+    const transactionResult = activeChallenge?.id
+      ? await db.db.execute(sql`
+          SELECT COUNT(*) AS event_count, COALESCE(SUM(amount), 0) AS verified_revenue, MAX(recorded_at) AS last_revenue_event
+          FROM empire_challenge_transactions
+          WHERE challenge_id = ${activeChallenge.id}
+        `)
+      : await db.db.execute(sql`SELECT 0 AS event_count, 0 AS verified_revenue, NULL AS last_revenue_event`);
+    const transactionStats = extractRows(transactionResult, "challenge revenue event scoring")[0] ?? {};
+
+    const packageTableResult = await db.db.execute(sql`
+      SELECT COUNT(*) AS table_count
+      FROM information_schema.tables
+      WHERE table_schema = DATABASE() AND table_name = 'vaultx_revenue_packages'
+    `);
+    const hasPackageTable = Number(extractRows(packageTableResult, "vaultx package table existence")[0]?.table_count ?? 0) > 0;
+
+    let packageStats: any = { package_count: 0, real_asset_count: 0, checkout_route_count: 0, telegram_route_count: 0, published_route_count: 0 };
+    let recentPackages: any[] = [];
+    if (hasPackageTable) {
+      const packageStatsResult = await db.db.execute(sql`
+        SELECT
+          COUNT(*) AS package_count,
+          SUM(CASE WHEN (source_media_url IS NOT NULL AND source_media_url <> '') OR (asset_url IS NOT NULL AND asset_url <> '') THEN 1 ELSE 0 END) AS real_asset_count,
+          SUM(CASE WHEN checkout_url IS NOT NULL AND checkout_url <> '' THEN 1 ELSE 0 END) AS checkout_route_count,
+          SUM(CASE WHEN telegram_campaign_id IS NOT NULL OR (telegram_tracking_code IS NOT NULL AND telegram_tracking_code <> '') THEN 1 ELSE 0 END) AS telegram_route_count,
+          SUM(CASE WHEN status IN ('telegram_published', 'complete', 'published') THEN 1 ELSE 0 END) AS published_route_count
+        FROM vaultx_revenue_packages
+      `);
+      packageStats = extractRows(packageStatsResult, "vaultx package scoring")[0] ?? packageStats;
+      const recentPackageResult = await db.db.execute(sql`
+        SELECT id, title, status, asset_status, checkout_url, telegram_campaign_id, telegram_tracking_code, created_at
+        FROM vaultx_revenue_packages
+        ORDER BY created_at DESC
+        LIMIT 10
+      `);
+      recentPackages = extractRows(recentPackageResult, "recent vaultx package scoring");
+    }
+
+    const telegramStatsResult = await db.db.execute(sql`
+      SELECT COUNT(*) AS live_drop_count,
+             SUM(CASE WHEN tracking_code IS NOT NULL AND tracking_code <> '' THEN 1 ELSE 0 END) AS tracked_drop_count,
+             SUM(CASE WHEN price_cents > 0 THEN 1 ELSE 0 END) AS paid_drop_count
+      FROM telegram_drops
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    `);
+    const telegramStats = extractRows(telegramStatsResult, "telegram route scoring")[0] ?? {};
+
+    const realAssets = Number(packageStats.real_asset_count ?? 0);
+    const realRoutes = Number(packageStats.checkout_route_count ?? 0) + Number(packageStats.telegram_route_count ?? 0) + Number(telegramStats.tracked_drop_count ?? 0);
+    const verifiedRevenueEvents = Number(transactionStats.event_count ?? 0);
+    const verifiedRevenue = Number(transactionStats.verified_revenue ?? 0);
+    const score = Math.min(100,
+      (realAssets > 0 ? 25 : 0) +
+      Math.min(25, realAssets * 5) +
+      Math.min(25, realRoutes * 5) +
+      Math.min(25, verifiedRevenueEvents * 10)
+    );
+
+    const content = {
+      score,
+      activeChallengeId: activeChallenge?.id ?? null,
+      targetRevenue: Number(activeChallenge?.target_revenue ?? 0),
+      verifiedRevenue,
+      verifiedRevenueEvents,
+      realAssets,
+      realRoutes,
+      packageStats,
+      telegramStats,
+      recentPackages,
+      scoringLaw: "Assets count only when a real VaultX package references source/generated media. Routes count only from checkout URLs, Telegram campaign IDs, tracking codes, or live Telegram drops. Revenue counts only from empire_challenge_transactions written by the live proof gate.",
+    };
+
+    await db.db.execute(sql`
+      INSERT INTO empire_agent_reports (agent_slug, agent_name, report_type, content, revenue_impact, created_at)
+      VALUES ('ai-agent-challenge-scorer', 'AI Agent Challenge Scorer', 'real_asset_route_revenue_score', ${JSON.stringify(content).slice(0, 12000)}, ${verifiedRevenue}, NOW())
+    `);
+
+    return content;
+  }),
+
   // Run a single agent — real execution, no public revenue crediting
   runAgent: protectedProcedure
     .input(z.object({ agentSlug: z.string(), agentName: z.string(), creditToChallenge: z.boolean().default(false) }))

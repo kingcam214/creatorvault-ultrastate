@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
+import Stripe from "stripe";
 import { db } from "../db";
 import { users } from "../../drizzle/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -21,11 +22,110 @@ import { enhanceSceneByScene } from "../services/sceneEnhancementService";
 import { buildPpvBundle, createTipUnlockContent, suggestContentPrice, getPpvProgress } from "../services/monetizationBundleService";
 import { generateRecutSuggestions, generateAbThumbnails, analyzeHookStrength } from "../services/analyticsEditingService";
 import { qualityGate } from "../services/qualityGate";
+import { createAIDrop, sendDropToChannel } from "../services/telegramCampaign";
 
 const OWNER_IDS = [6, 33];
 const PLATFORM_FEE = 0.15;
 const UPLOAD_DIR = "/root/creatorvault/dist/public/uploads/vaultx";
 const PUBLIC_UPLOADS_DIR = path.resolve(process.cwd(), "..", "uploads");
+const FRONTEND_BASE_URL = (process.env.VITE_FRONTEND_FORGE_API_URL || process.env.FRONTEND_URL || "https://creatorvault.live/api").replace(/\/api$/, "");
+const POLLO_API_KEY = process.env.POLLO_API_KEY || "";
+const POLLO_API_URL = "https://pollo.ai/api/platform/generation/pollo/pollo-v1-6";
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" })
+  : null;
+
+type VaultxPackageMode = "FAST" | "BOOST" | "FULL";
+type VaultxPackageContentType = "photo" | "video" | "audio";
+
+function normalisePolloStatus(status: string | undefined | null): "waiting" | "processing" | "succeed" | "failed" {
+  const value = String(status || "").toLowerCase();
+  if (["succeed", "success", "completed", "complete", "done"].includes(value)) return "succeed";
+  if (["failed", "error", "cancelled", "canceled"].includes(value)) return "failed";
+  if (["processing", "running", "generating", "in_progress"].includes(value)) return "processing";
+  return "waiting";
+}
+
+async function ensureVaultxRevenuePackageSchema(): Promise<void> {
+  await rawExec(`CREATE TABLE IF NOT EXISTS vaultx_revenue_packages (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    creator_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    content_type VARCHAR(32) NOT NULL,
+    adult_content_flag TINYINT(1) NOT NULL DEFAULT 0,
+    consent_confirmed TINYINT(1) NOT NULL DEFAULT 0,
+    teaser_description TEXT NOT NULL,
+    public_teaser_copy TEXT NOT NULL,
+    price_cents INT NOT NULL,
+    vip_price_cents INT DEFAULT NULL,
+    platform_fee_bps INT NOT NULL DEFAULT 1500,
+    creator_keep_bps INT NOT NULL DEFAULT 8500,
+    telegram_mode VARCHAR(16) NOT NULL DEFAULT 'FAST',
+    source_media_url TEXT DEFAULT NULL,
+    asset_prompt TEXT DEFAULT NULL,
+    pollo_job_id VARCHAR(255) DEFAULT NULL,
+    asset_status VARCHAR(32) DEFAULT NULL,
+    asset_url TEXT DEFAULT NULL,
+    asset_quality_passed TINYINT(1) NOT NULL DEFAULT 0,
+    checkout_url TEXT DEFAULT NULL,
+    stripe_checkout_session_id VARCHAR(255) DEFAULT NULL,
+    telegram_campaign_id BIGINT DEFAULT NULL,
+    telegram_tracking_code VARCHAR(255) DEFAULT NULL,
+    vaultx_content_id BIGINT DEFAULT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'created',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_vaultx_revenue_creator (creator_id),
+    INDEX idx_vaultx_revenue_user (user_id),
+    INDEX idx_vaultx_revenue_pollo (pollo_job_id),
+    INDEX idx_vaultx_revenue_campaign (telegram_campaign_id)
+  )`);
+}
+
+function buildVaultxPackagePublicCopy(input: {
+  title: string;
+  teaserDescription: string;
+  priceCents: number;
+  vipPriceCents?: number | null;
+  telegramMode: VaultxPackageMode;
+}): string {
+  const price = (input.priceCents / 100).toFixed(2);
+  const vip = input.vipPriceCents ? ` VIP route opens at $${(input.vipPriceCents / 100).toFixed(2)} after the first unlock.` : "";
+  const modeMechanic = input.telegramMode === "FAST"
+    ? "fast teaser to paid unlock"
+    : input.telegramMode === "BOOST"
+      ? "boosted preview to tracked paid unlock"
+      : "full teaser, paid unlock, follow-up, and VIP escalation route";
+  return `VaultX turns this creator asset into a ${modeMechanic}: ${input.title}. ${input.teaserDescription} Unlock at $${price}; every click is tracked through the paid route.${vip} Tap the VaultX route when it opens.`;
+}
+
+function buildVaultxPackagePolloPrompt(pkg: any): string {
+  const modeLine = pkg.telegram_mode === "FULL"
+    ? "Build a cinematic 8-second premium promo clip with a clear teaser beat, unlock tension, and VIP-route finish."
+    : pkg.telegram_mode === "BOOST"
+      ? "Build a cinematic 6-second boosted teaser clip with one premium preview beat and a clean paid-unlock finish."
+      : "Build a cinematic 5-second fast teaser clip that turns attention into one paid unlock action.";
+  return [
+    modeLine,
+    `VaultX package title: ${pkg.title}.`,
+    `Creator-safe teaser: ${pkg.teaser_description}.`,
+    "Visual law: dark luxury, near black #0A0A0A energy, electric cyan #00D9FF, muted gold #C9A84C, dramatic rim lighting, premium editorial motion, no explicit nudity, no crude framing.",
+    "Mechanism: teaser to paid unlock to tracked click to follow-up to VIP route.",
+    "Output should feel like a branded VaultX revenue asset, not a generic social clip."
+  ].join(" ");
+}
+
+async function assertPackageOwner(packageId: number, userId: number): Promise<any> {
+  await ensureVaultxRevenuePackageSchema();
+  const rows = await rawQuery("SELECT * FROM vaultx_revenue_packages WHERE id = ? LIMIT 1", [packageId]);
+  const pkg = rows[0];
+  if (!pkg) throw new TRPCError({ code: "NOT_FOUND", message: "VaultX revenue package not found." });
+  if (!isCreatorOrOwner(userId, Number(pkg.user_id))) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "You do not own this VaultX revenue package." });
+  }
+  return pkg;
+}
 
 // Raw MySQL2 connection for tables not in Drizzle schema
 async function rawQuery(query: string, params: any[] = []): Promise<any[]> {
@@ -971,6 +1071,238 @@ export const vaultxRouter = router({
       );
       await rawExec("UPDATE vaultx_creators SET total_subscribers = total_subscribers + 1 WHERE id = ?", [input.creatorId]);
       return { subscriptionId: (result as any).insertId, success: true };
+    }),
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CANONICAL VAULTX REVENUE PACKAGE — creator input → asset → route → checkout
+  // ═══════════════════════════════════════════════════════════════════════════
+  createRevenuePackage: protectedProcedure
+    .input(z.object({
+      title: z.string().min(3).max(255),
+      contentType: z.enum(["photo", "video", "audio"]),
+      adultContentFlag: z.boolean(),
+      consentConfirmed: z.boolean(),
+      teaserDescription: z.string().min(30).max(1600),
+      priceCents: z.number().int().min(100).max(250000),
+      vipPriceCents: z.number().int().min(100).max(500000).optional(),
+      telegramMode: z.enum(["FAST", "BOOST", "FULL"]).default("FAST"),
+      sourceMediaUrl: z.string().url().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (!input.adultContentFlag || !input.consentConfirmed) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "VaultX revenue packages require explicit adult-content opt-in and creator consent confirmation." });
+      }
+      await ensureVaultxRevenuePackageSchema();
+      const creatorId = await getCreatorId(ctx.user.id);
+      const cid = creatorId || ctx.user.id;
+      const publicTeaserCopy = qualityGate.check(buildVaultxPackagePublicCopy(input), {
+        surface: "vaultx-drop",
+        context: "vaultx",
+        recipientKey: `vaultx-package-${ctx.user.id}`,
+        hasActionElement: true,
+        requireMessagingDna: true,
+        requireMechanism: true,
+        requireCreatorVaultPositioning: true,
+        ctaAngle: "asset-conversion",
+      });
+      if (input.sourceMediaUrl) {
+        qualityGate.checkVisual(input.sourceMediaUrl, {
+          prompt: "VaultX creator source asset for teaser to paid unlock to tracked click to follow-up to VIP route; dark luxury cinematic premium style.",
+          publicPost: true,
+        });
+      }
+      const result = await rawExec(
+        `INSERT INTO vaultx_revenue_packages
+         (creator_id, user_id, title, content_type, adult_content_flag, consent_confirmed, teaser_description, public_teaser_copy, price_cents, vip_price_cents, platform_fee_bps, creator_keep_bps, telegram_mode, source_media_url, status)
+         VALUES (?, ?, ?, ?, 1, 1, ?, ?, ?, ?, 1500, 8500, ?, ?, 'created')`,
+        [cid, ctx.user.id, input.title.trim(), input.contentType, input.teaserDescription.trim(), publicTeaserCopy, input.priceCents, input.vipPriceCents || null, input.telegramMode, input.sourceMediaUrl || null]
+      );
+      return {
+        packageId: (result as any).insertId,
+        platformFeePercent: 15,
+        creatorKeepPercent: 85,
+        publicTeaserCopy,
+        success: true,
+      };
+    }),
+
+  generatePackageAsset: protectedProcedure
+    .input(z.object({
+      packageId: z.number().int().positive(),
+      sourceMediaUrl: z.string().url().optional(),
+      resolution: z.enum(["540p", "720p", "1080p"]).default("720p"),
+      length: z.enum(["5", "6", "8", "10"]).default("6"),
+      mode: z.enum(["std", "pro"]).default("std"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (!POLLO_API_KEY) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "POLLO_API_KEY is not configured for VaultX media generation." });
+      const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
+      const sourceMediaUrl = input.sourceMediaUrl || pkg.source_media_url;
+      if (!sourceMediaUrl) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "A real creator source media URL is required before Pollo can generate a VaultX promo asset." });
+      }
+      qualityGate.checkVisual(sourceMediaUrl, {
+        prompt: "VaultX creator source asset for teaser to paid unlock to tracked click to follow-up to VIP route; dark luxury cinematic premium style.",
+        publicPost: true,
+      });
+      const prompt = buildVaultxPackagePolloPrompt(pkg);
+      qualityGate.checkVisual(sourceMediaUrl, { prompt, publicPost: true });
+      const response = await fetch(POLLO_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${POLLO_API_KEY}`,
+        },
+        body: JSON.stringify({
+          input: {
+            image: sourceMediaUrl,
+            prompt,
+            resolution: input.resolution,
+            length: input.length,
+            mode: input.mode,
+          },
+        }),
+      });
+      const data = await response.json() as any;
+      if (!response.ok) {
+        throw new TRPCError({ code: "BAD_GATEWAY", message: data?.message || data?.error || "Pollo generation failed to start." });
+      }
+      const taskId = data?.data?.taskId || data?.taskId || data?.id;
+      if (!taskId) throw new TRPCError({ code: "BAD_GATEWAY", message: "Pollo did not return a task id." });
+      const status = normalisePolloStatus(data?.data?.status || data?.status);
+      await rawExec(
+        `INSERT INTO pollo_generations (userId, taskId, imageUrl, prompt, resolution, length, mode, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [ctx.user.id, taskId, sourceMediaUrl, prompt, input.resolution, input.length, input.mode, status]
+      );
+      await rawExec(
+        `UPDATE vaultx_revenue_packages
+         SET source_media_url = ?, asset_prompt = ?, pollo_job_id = ?, asset_status = ?, status = 'asset_generating'
+         WHERE id = ?`,
+        [sourceMediaUrl, prompt, taskId, status, input.packageId]
+      );
+      return { jobId: taskId, status, packageId: input.packageId, success: true };
+    }),
+
+  getPackageAssetStatus: protectedProcedure
+    .input(z.object({ packageId: z.number().int().positive(), jobId: z.string().min(3).optional() }))
+    .query(async ({ ctx, input }) => {
+      const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
+      const jobId = input.jobId || pkg.pollo_job_id;
+      if (!jobId) return { status: pkg.asset_status || "waiting", videoUrl: pkg.asset_url || null, qualityPassed: Boolean(pkg.asset_quality_passed) };
+      let rows = await rawQuery("SELECT * FROM pollo_generations WHERE taskId = ? ORDER BY id DESC LIMIT 1", [jobId]);
+      let row = rows[0];
+      if (POLLO_API_KEY && (!row || !["succeed", "failed"].includes(String(row.status)))) {
+        const response = await fetch(`https://pollo.ai/api/platform/generation/${jobId}/status`, {
+          headers: { Authorization: `Bearer ${POLLO_API_KEY}` },
+        });
+        const data = await response.json() as any;
+        if (response.ok) {
+          const status = normalisePolloStatus(data?.data?.status || data?.status);
+          const videoUrl = data?.data?.videoUrl || data?.data?.url || data?.videoUrl || data?.url || null;
+          await rawExec("UPDATE pollo_generations SET status = ?, videoUrl = COALESCE(?, videoUrl) WHERE taskId = ?", [status, videoUrl, jobId]);
+          if (videoUrl) {
+            qualityGate.checkVisual(videoUrl, { prompt: pkg.asset_prompt || buildVaultxPackagePolloPrompt(pkg), publicPost: true });
+          }
+          await rawExec(
+            `UPDATE vaultx_revenue_packages
+             SET asset_status = ?, asset_url = COALESCE(?, asset_url), asset_quality_passed = CASE WHEN ? IS NULL THEN asset_quality_passed ELSE 1 END, status = CASE WHEN ? IS NULL THEN status ELSE 'asset_ready' END
+             WHERE id = ?`,
+            [status, videoUrl, videoUrl, videoUrl, input.packageId]
+          );
+        }
+        rows = await rawQuery("SELECT * FROM pollo_generations WHERE taskId = ? ORDER BY id DESC LIMIT 1", [jobId]);
+        row = rows[0];
+      }
+      return {
+        jobId,
+        status: row?.status || pkg.asset_status || "waiting",
+        videoUrl: row?.videoUrl || pkg.asset_url || null,
+        qualityPassed: Boolean(pkg.asset_quality_passed || row?.videoUrl),
+      };
+    }),
+
+  attachPackageCheckout: protectedProcedure
+    .input(z.object({ packageId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
+      if (!stripe) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe checkout is not configured for VaultX package unlocks." });
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: [{
+          price_data: {
+            currency: "usd",
+            product_data: { name: `VaultX Unlock: ${pkg.title}` },
+            unit_amount: Number(pkg.price_cents),
+          },
+          quantity: 1,
+        }],
+        success_url: `${FRONTEND_BASE_URL}/vaultx?package=${pkg.id}&checkout=success`,
+        cancel_url: `${FRONTEND_BASE_URL}/vaultx?package=${pkg.id}&checkout=cancelled`,
+        metadata: {
+          vaultxPackageId: String(pkg.id),
+          creatorId: String(pkg.creator_id),
+          platformFeePercent: "15",
+          creatorKeepPercent: "85",
+        },
+      });
+      await rawExec(
+        `UPDATE vaultx_revenue_packages
+         SET checkout_url = ?, stripe_checkout_session_id = ?, status = 'checkout_attached'
+         WHERE id = ?`,
+        [session.url, session.id, input.packageId]
+      );
+      return { checkoutUrl: session.url, checkoutSessionId: session.id, success: true };
+    }),
+
+  publishPackageTelegramRoute: protectedProcedure
+    .input(z.object({ packageId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
+      if (!pkg.checkout_url) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Attach a real checkout before publishing a VaultX Telegram route." });
+      const publicCopy = qualityGate.check(pkg.public_teaser_copy || buildVaultxPackagePublicCopy({
+        title: pkg.title,
+        teaserDescription: pkg.teaser_description,
+        priceCents: Number(pkg.price_cents),
+        vipPriceCents: pkg.vip_price_cents ? Number(pkg.vip_price_cents) : null,
+        telegramMode: pkg.telegram_mode,
+      }), {
+        surface: "vaultx-drop",
+        context: "vaultx",
+        recipientKey: `vaultx-package-publish-${pkg.id}`,
+        hasActionElement: true,
+        requireMessagingDna: true,
+        requireMechanism: true,
+        requireCreatorVaultPositioning: true,
+        ctaAngle: "proof-unlock",
+      });
+      let contentId = pkg.vaultx_content_id;
+      if (!contentId) {
+        const contentResult = await rawExec(
+          `INSERT INTO vaultx_content
+           (creator_id, title, description, content_type, thumbnail_url, censored_url, uncensored_url, is_ppv, ppv_price, status, access_tier)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 'active', 'basic')`,
+          [pkg.creator_id, pkg.title, publicCopy, pkg.content_type, pkg.source_media_url || pkg.asset_url || null, pkg.asset_url || pkg.source_media_url || null, pkg.asset_url || pkg.source_media_url || null, Number(pkg.price_cents) / 100]
+        );
+        contentId = (contentResult as any).insertId;
+        await rawExec("UPDATE vaultx_revenue_packages SET vaultx_content_id = ? WHERE id = ?", [contentId, pkg.id]);
+      }
+      const campaign = await createAIDrop({
+        contentId: Number(contentId),
+        creatorId: Number(pkg.creator_id),
+        campaignMode: pkg.telegram_mode as VaultxPackageMode,
+        campaignType: "PPV_DROP",
+        overridePrice: Number(pkg.price_cents) / 100,
+      });
+      const sent = await sendDropToChannel(campaign.campaignId);
+      await rawExec(
+        `UPDATE vaultx_revenue_packages
+         SET telegram_campaign_id = ?, telegram_tracking_code = ?, status = ?
+         WHERE id = ?`,
+        [campaign.campaignId, campaign.trackingCode, sent.success ? "telegram_published" : "telegram_failed", pkg.id]
+      );
+      if (!sent.success) throw new TRPCError({ code: "BAD_GATEWAY", message: sent.error || "Telegram publish failed." });
+      return { campaignId: campaign.campaignId, trackingCode: campaign.trackingCode, trackedUrl: sent.trackedUrl, success: true };
     }),
 
   // ═══════════════════════════════════════════════════════════════════════════

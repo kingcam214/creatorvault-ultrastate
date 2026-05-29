@@ -229,24 +229,52 @@ function buildValidationReport(blueprint: any): ValidationReport {
 
 function buildRenderManifest(blueprint: any): RenderManifest {
   const renderHandoff = blueprint?.renderHandoff ?? {};
+  const polloJobId = asString(renderHandoff?.polloJobId ?? renderHandoff?.taskId ?? blueprint?.polloJobId, "");
+  const outputUrl = asString(renderHandoff?.outputUrl ?? renderHandoff?.output_url ?? blueprint?.outputUrl, "");
+  const qualityPassed = Boolean(renderHandoff?.qualityPassed ?? renderHandoff?.validationPassed ?? blueprint?.qualityPassed);
+  const rawStatus = asString(renderHandoff?.status ?? blueprint?.renderStatus, "").toLowerCase();
+  const status = qualityPassed && outputUrl
+    ? "complete"
+    : outputUrl
+      ? "validating"
+      : polloJobId || ["queued", "waiting", "processing", "rendering", "running", "generating"].includes(rawStatus)
+        ? "rendering"
+        : "handoff_prepared";
   return {
     contract: "RenderManifest",
-    status: "handoff_prepared",
+    status,
     recommendedNextEngine: renderHandoff?.recommendedNextEngine ? String(renderHandoff.recommendedNextEngine) : "remotion_provider_render_queue_with_optional_pollo_scene_extension",
-    renderClaim: asString(blueprint?.cinematicOS?.renderClaim ?? renderHandoff?.status, "Manifest only; no rendered video output is claimed until a real render job writes output_url."),
+    renderClaim: outputUrl
+      ? `Real render output exists at ${outputUrl}; validation must pass before distribution is complete.`
+      : asString(blueprint?.cinematicOS?.renderClaim ?? renderHandoff?.status, "Manifest only; no rendered video output is claimed until a real render job writes output_url."),
     requiredBeforeRender: asArray<string>(renderHandoff?.requiredBeforeRender),
     consumesValidatedManifestOnly: true,
     warnings: collectWarnings("renderHandoff", renderHandoff?.warnings),
   };
 }
 
-function buildDistributionManifest(): DistributionManifest {
+function buildDistributionManifest(blueprint: any, render?: RenderManifest, validation?: ValidationReport): DistributionManifest {
+  const distribution = blueprint?.distributionHandoff ?? blueprint?.distribution ?? {};
+  const telegramCampaignId = asString(distribution?.telegramCampaignId ?? distribution?.campaignId ?? blueprint?.telegramCampaignId, "");
+  const telegramTrackingCode = asString(distribution?.telegramTrackingCode ?? distribution?.trackingCode ?? blueprint?.telegramTrackingCode, "");
+  const sent = Boolean(distribution?.sent ?? distribution?.telegramSent ?? distribution?.publishedAt ?? blueprint?.telegramSent);
+  const renderComplete = render?.status === "complete";
+  const validationComplete = validation?.status === "complete" || Boolean(distribution?.validationPassed ?? blueprint?.validationPassed);
+  const status = sent && telegramTrackingCode
+    ? "complete"
+    : telegramCampaignId || telegramTrackingCode || distribution?.status === "publishing"
+      ? "publishing"
+      : renderComplete && validationComplete
+        ? "publishing"
+        : "blocked";
   return {
     contract: "DistributionManifest",
-    status: "blocked",
-    readyWhen: "real_render_output_url_exists_and_validation_passes",
-    destinations: ["creatorvault_project_library", "future_platform_distribution_manifest"],
-    warnings: [normalizeWarning("distribution", "Distribution remains blocked until render completion and validation proof exist.", "info")],
+    status,
+    readyWhen: status === "blocked" ? "real_render_output_url_exists_and_validation_passes" : "telegram_route_creation_or_send_in_progress",
+    destinations: ["creatorvault_project_library", "telegram_vaultx_route", "future_platform_distribution_manifest"],
+    warnings: status === "blocked"
+      ? [normalizeWarning("distribution", "Distribution remains blocked until render completion and validation proof exist.", "info")]
+      : collectWarnings("distribution", distribution?.warnings),
   };
 }
 
@@ -406,7 +434,7 @@ export function buildTrailerMediaOSManifest(blueprint: any): MediaOSManifestEnve
   const timeline = buildTimelineManifest(blueprint, scenes);
   const validation = buildValidationReport(blueprint);
   const render = buildRenderManifest(blueprint);
-  const distribution = buildDistributionManifest();
+  const distribution = buildDistributionManifest(blueprint, render, validation);
   const studioGradeTrailerPackages = buildStudioGradeTrailerPackages(blueprint);
   const creatorVaultDeliverySystem = buildCreatorVaultDeliverySystemContract(studioGradeTrailerPackages);
   const brollPackaging = buildBrollPackagingManifest(blueprint, scenes);

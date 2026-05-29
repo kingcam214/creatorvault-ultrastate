@@ -10,7 +10,7 @@ export type MediaOSContractName =
   | "RenderManifest"
   | "DistributionManifest";
 
-export type MediaOSStageStatus = "complete" | "planned" | "handoff_prepared" | "blocked" | "warning";
+export type MediaOSStageStatus = "complete" | "planned" | "handoff_prepared" | "blocked" | "warning" | "rendering" | "validating" | "publishing";
 
 export type MediaOSStageName =
   | "grounding"
