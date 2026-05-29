@@ -1151,8 +1151,8 @@ export const vaultxRouter = router({
       const response = await fetch(POLLO_API_URL, {
         method: "POST",
         headers: {
+          "x-api-key": POLLO_API_KEY,
           "Content-Type": "application/json",
-          Authorization: `Bearer ${POLLO_API_KEY}`,
         },
         body: JSON.stringify({
           input: {
