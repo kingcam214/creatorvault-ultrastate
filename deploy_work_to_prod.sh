@@ -54,10 +54,18 @@ pm2 jlist | APP_NAME="$APP_NAME" node -e "let data='';process.stdin.on('data',d=
 
 if command -v curl >/dev/null 2>&1; then
   log "health probe http://127.0.0.1:${APP_PORT}${HEALTH_PATH}"
-  if curl -fsS --max-time 8 "http://127.0.0.1:${APP_PORT}${HEALTH_PATH}" >/tmp/creatorvault-health.txt 2>/tmp/creatorvault-health.err; then
+  HEALTH_OK=0
+  for attempt in $(seq 1 20); do
+    if curl -fsS --max-time 8 "http://127.0.0.1:${APP_PORT}${HEALTH_PATH}" >/tmp/creatorvault-health.txt 2>/tmp/creatorvault-health.err; then
+      HEALTH_OK=1
+      break
+    fi
+    sleep 1
+  done
+  if [ "$HEALTH_OK" = "1" ]; then
     log "health probe passed"
   else
-    log "health probe did not pass; showing recent pm2 logs and continuing only if process is online"
+    log "health probe did not pass after retries; showing recent pm2 logs and continuing only if process is online"
     cat /tmp/creatorvault-health.err >&2 || true
     pm2 logs "$APP_NAME" --lines 40 --nostream || true
   fi
