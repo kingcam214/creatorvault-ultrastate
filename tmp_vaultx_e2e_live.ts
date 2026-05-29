@@ -1,9 +1,9 @@
 import dotenv from "dotenv";
 dotenv.config({ path: "/root/creatorvault/.env" });
 import mysql from "mysql2/promise";
-import { appRouter } from "./server/routers";
 
 async function main() {
+  const { appRouter } = await import("./server/routers");
   const now = Date.now();
   const sourceMediaUrl = "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg";
   const user = { id: 6, openId: "prod-vaultx-verification", name: "Cameron White", email: "c_white_24@hotmail.com", role: "king", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() } as any;
@@ -25,10 +25,10 @@ async function main() {
     });
     const generated = await caller.vaultx.generatePackageAsset({ packageId: created.packageId, sourceMediaUrl, resolution: "720p", length: "5", mode: "std" });
     let status:any = null;
-    for (let i = 0; i < 24; i++) {
+    for (let i = 0; i < 36; i++) {
       status = await caller.vaultx.getPackageAssetStatus({ packageId: created.packageId, jobId: generated.jobId });
       if (status?.videoUrl || ["succeed", "failed"].includes(String(status?.status))) break;
-      await sleep(15000);
+      await sleep(10000);
     }
     const checkout = await caller.vaultx.attachPackageCheckout({ packageId: created.packageId });
     let telegram:any = null;
