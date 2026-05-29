@@ -1389,14 +1389,24 @@ export const challengeAutomationRouter = router({
       recentPackages = extractRows(recentPackageResult, "recent vaultx package scoring");
     }
 
-    const telegramStatsResult = await db.db.execute(sql`
-      SELECT COUNT(*) AS live_drop_count,
-             SUM(CASE WHEN tracking_code IS NOT NULL AND tracking_code <> '' THEN 1 ELSE 0 END) AS tracked_drop_count,
-             SUM(CASE WHEN price_cents > 0 THEN 1 ELSE 0 END) AS paid_drop_count
-      FROM telegram_drops
-      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    const telegramDropsTableResult = await db.db.execute(sql`
+      SELECT COUNT(*) AS table_count
+      FROM information_schema.tables
+      WHERE table_schema = DATABASE() AND table_name = 'telegram_drops'
     `);
-    const telegramStats = extractRows(telegramStatsResult, "telegram route scoring")[0] ?? {};
+    const hasTelegramDropsTable = Number(extractRows(telegramDropsTableResult, "telegram drops table existence")[0]?.table_count ?? 0) > 0;
+
+    let telegramStats: any = { live_drop_count: 0, tracked_drop_count: 0, paid_drop_count: 0 };
+    if (hasTelegramDropsTable) {
+      const telegramStatsResult = await db.db.execute(sql`
+        SELECT COUNT(*) AS live_drop_count,
+               SUM(CASE WHEN tracking_code IS NOT NULL AND tracking_code <> '' THEN 1 ELSE 0 END) AS tracked_drop_count,
+               SUM(CASE WHEN price_cents > 0 THEN 1 ELSE 0 END) AS paid_drop_count
+        FROM telegram_drops
+        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      `);
+      telegramStats = extractRows(telegramStatsResult, "telegram route scoring")[0] ?? telegramStats;
+    }
 
     const realAssets = Number(packageStats.real_asset_count ?? 0);
     const realRoutes = Number(packageStats.checkout_route_count ?? 0) + Number(packageStats.telegram_route_count ?? 0) + Number(telegramStats.tracked_drop_count ?? 0);
