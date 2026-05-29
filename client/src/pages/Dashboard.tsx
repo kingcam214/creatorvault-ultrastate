@@ -252,8 +252,8 @@ export default function Dashboard() {
 }
 
 function QuickStats() {
-  const { data: cards } = trpc.businessCards.getMyCards.useQuery({ limit: 3, offset: 0 }, { staleTime: 60 * 1000 });
-  const { data: jobs } = trpc.animatedFlyer.getMyJobs.useQuery({ limit: 3, offset: 0 }, { staleTime: 60 * 1000 });
+  const { data: cards } = trpc.businessCards.getMyCards.useQuery(undefined, { staleTime: 60 * 1000 });
+  const { data: jobs } = trpc.animatedFlyer.getMyJobs.useQuery(undefined, { staleTime: 60 * 1000 });
 
   const hasCards = Boolean(cards && cards.length > 0);
   const hasJobs = Boolean(jobs && jobs.length > 0);

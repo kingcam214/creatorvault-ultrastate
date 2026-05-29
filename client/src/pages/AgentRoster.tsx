@@ -19,7 +19,13 @@ const ROLE_COLORS: Record<string, string> = {
   analyst: '#a855f7',
 };
 
+
+function ShieldCheckIcon() {
+  return <CheckCircle size={15} color={T.success} />;
+}
+
 export function AgentRoster() {
+
   const [filter, setFilter] = useState('all');
   const [entityFilter, setEntityFilter] = useState('all');
   const [runningAgent, setRunningAgent] = useState<string | null>(null);
@@ -129,6 +135,16 @@ export function AgentRoster() {
             ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Running Operations...</>
             : <><Zap size={14} /> Run Operations Cycle</>}
         </button>
+      </div>
+
+      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <ShieldCheckIcon />
+          <div style={{ fontSize: 13, fontWeight: 900, color: T.gold }}>Production proof rules</div>
+        </div>
+        <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.65 }}>
+          This console shows DB-backed agents from <code>empire_agents</code>, saved run reports from <code>empire_agent_reports</code>, and verified challenge money only from <code>empire_challenge_transactions</code>. Agent lifetime numbers and listed-tool prices are not used as public challenge revenue.
+        </div>
       </div>
 
       {/* Stats */}
@@ -254,7 +270,7 @@ export function AgentRoster() {
                 </div>
                 <div style={{ background: T.surface2, border: `1px solid ${T.border}`, borderRadius: 8, padding: 8 }}>
                   <div style={{ color: T.muted, marginBottom: 2 }}>Saved proof</div>
-                  <div style={{ color: latestReport ? T.gold : T.muted, fontWeight: 700 }}>{latestReport ? 'Report on file' : 'Awaiting owner run'}</div>
+                  <div style={{ color: latestReport ? T.gold : T.muted, fontWeight: 700 }}>{latestReport ? `Report ${new Date(latestReport.created_at).toLocaleDateString()}` : 'Awaiting owner run'}</div>
                 </div>
                 {agent.consecutive_failures > 0 && <span style={{ color: T.error, fontWeight: 600, gridColumn: '1 / -1' }}>{agent.consecutive_failures} consecutive failures require owner review</span>}
               </div>
@@ -287,11 +303,11 @@ export function AgentRoster() {
 
               {/* Latest Saved Report (when no run result yet) */}
               {!runResult && latestReport && (
-                <div style={{ background: T.surface2, borderRadius: 8, padding: 10, marginBottom: 10 }}>
-                  <div style={{ fontSize: 10, color: T.muted, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <FileText size={10} /> {latestReport.report_type} — {new Date(latestReport.created_at).toLocaleDateString()}
+                <div style={{ background: T.surface2, border: `1px solid ${T.gold}22`, borderRadius: 8, padding: 10, marginBottom: 10 }}>
+                  <div style={{ fontSize: 10, color: T.gold, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 800 }}>
+                    <FileText size={10} /> persisted report · {latestReport.report_type} · {new Date(latestReport.created_at).toLocaleString()}
                   </div>
-                  <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {latestReport.content}
                   </div>
                 </div>

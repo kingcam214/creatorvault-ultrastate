@@ -296,6 +296,20 @@ export default function VaultXChallenges() {
           })}
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          {[
+            { label: "Money source", value: "Stripe + VaultX checkout", body: "Progress requires paid transactions or fulfilled buyer orders. Strategy copy never counts as revenue." },
+            { label: "Verified drop agents", value: verifiedVaultXAgents.length.toString(), body: verifiedVaultXAgents.join(" and ") + " are the tracked VaultX money-drop lanes." },
+            { label: "Creator win condition", value: `$${challenge.target.toLocaleString()}`, body: `${challenge.days} days of published offers, buyer routing, fulfillment, and verified payment proof.` },
+          ].map((item) => (
+            <div key={item.label} className="rounded-3xl bg-white/5 border border-white/10 p-4 sm:p-5">
+              <div className="text-[10px] uppercase tracking-[.18em] text-gray-500 font-black mb-2">{item.label}</div>
+              <div className="text-2xl font-black text-white mb-2">{item.value}</div>
+              <div className="text-xs leading-5 text-gray-400">{item.body}</div>
+            </div>
+          ))}
+        </div>
+
         {/* Separation notice */}
         <div className="p-4 sm:p-6 rounded-3xl bg-white/5 border border-white/10 mb-6 sm:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

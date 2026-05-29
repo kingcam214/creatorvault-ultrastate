@@ -210,10 +210,10 @@ export const profileRouter = router({
       const conn = await getConnection();
       try {
         const sets = Object.keys(allowed).map((key) => `${key} = ?`).join(", ");
-        await conn.execute(`UPDATE users SET ${sets}, updatedAt = NOW() WHERE id = ?`, [
+        await conn.execute({ sql: `UPDATE users SET ${sets}, updatedAt = NOW() WHERE id = ?`, values: [
           ...Object.values(allowed),
           ctx.user.id,
-        ]);
+        ] });
         return { updated: true };
       } finally {
         await conn.end();

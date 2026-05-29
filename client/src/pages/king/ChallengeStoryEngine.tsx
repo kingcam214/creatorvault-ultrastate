@@ -107,10 +107,18 @@ export function ChallengeStoryEngine() {
     return () => cancelAnimationFrame(frame);
   }, [currentRevenue]);
 
+  const ledgerHasRevenue = currentRevenue > 0;
+  const ledgerHasRows = transactionCount > 0;
+  const ledgerState = ledgerHasRows
+    ? "verified ledger rows present"
+    : ledgerHasRevenue
+      ? "revenue sum present · row count unavailable"
+      : "waiting on first verified checkout";
+
   const liveMetrics = [
-    { label: "Live Stripe proof", value: `$${displayRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, sub: "webhook-confirmed revenue", icon: DollarSign, color: "#10b981" },
-    { label: "Gap to win", value: `$${revenueGap.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, sub: "left before target lock", icon: TrendingUp, color: "#f3d68b" },
-    { label: "Paid entries", value: transactionCount.toLocaleString(), sub: "confirmed challenge payments", icon: CreditCard, color: "#06b6d4" },
+    { label: "Verified ledger revenue", value: `$${displayRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, sub: "sum of Stripe-webhook transaction rows", icon: DollarSign, color: "#10b981" },
+    { label: "Gap to target", value: `$${revenueGap.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, sub: "target requirement, not a guarantee", icon: TrendingUp, color: "#f3d68b" },
+    { label: "Verified ledger rows", value: ledgerHasRows ? transactionCount.toLocaleString() : "0", sub: ledgerState, icon: CreditCard, color: "#06b6d4" },
   ];
 
   const startCheckout = () => {
@@ -210,6 +218,9 @@ export function ChallengeStoryEngine() {
                     <span className="text-[10px] font-black uppercase tracking-[.18em]">{isLedgerRefreshing ? "Refreshing ledger" : "Live ledger connected"}</span>
                   </div>
                   <div className="text-[10px] uppercase tracking-[.18em] font-black text-white/45">{lastLedgerUpdate ? `Last proof: ${new Date(lastLedgerUpdate).toLocaleString()}` : "Waiting on first webhook proof"}</div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/25 p-3 mb-3 text-xs leading-5 text-white/60">
+                  Public progress is calculated from the live challenge ledger only. If paid entries are zero, the page is not claiming buyer volume; it is waiting for verified Stripe webhook rows before showing proof.
                 </div>
                 <div className="ac-mobile-stack grid sm:grid-cols-3 gap-3 relative">
                   {liveMetrics.map(({ label, value, sub, icon: Icon, color }) => (

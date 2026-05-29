@@ -1013,6 +1013,10 @@ function DiscoverTab() {
   );
 
   const creators = (networkData as any)?.creators || [];
+  const paymentReadyCreators = creators.filter((c: any) => Number(c.base_subscription_price ?? 0) > 0 || c.ppv_enabled || c.tips_enabled || c.custom_requests_enabled);
+  const messageReadyCreators = creators.filter((c: any) => c.custom_requests_enabled || c.tips_enabled);
+  const featuredCreators = creators.filter((c: any) => c.is_featured);
+  const creatorReadiness = creators.length > 0 ? Math.round((paymentReadyCreators.length / creators.length) * 100) : 0;
 
   const categories = ["all", "fitness", "cosplay", "dance", "lifestyle", "art", "gaming", "music", "custom"];
 
@@ -1070,19 +1074,31 @@ function DiscoverTab() {
               Buy, message, subscribe.
             </span>
           </h1>
-          <p className="text-sm max-w-lg mb-6" style={{ color: "#9CA3AF", lineHeight: 1.7 }}>
-            This screen shows the creator supply currently available in the database. Fans should be able to search, open a real profile, subscribe, message, and buy content without guessing what to do next.
+          <p className="text-sm max-w-2xl mb-6" style={{ color: "#9CA3AF", lineHeight: 1.7 }}>
+            This screen is now an operating surface, not a static shell. Every number below comes from the live VaultX creator database: searchable storefronts, payment-ready profiles, message-ready creators, and the exact next action a buyer can take.
           </p>
           <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center sm:gap-4 sm:flex-wrap">
             {[
               { value: creators.length.toString(), label: creators.length === 1 ? "Live Creator" : "Live Creators" },
-              { value: filtered.length.toString(), label: "Matching Results" },
-              { value: "Profile", label: "Next Step" },
-              { value: "Stripe", label: "Payment Rail" },
+              { value: paymentReadyCreators.length.toString(), label: "Payment-Ready" },
+              { value: messageReadyCreators.length.toString(), label: "Message/Tip Ready" },
+              { value: `${creatorReadiness}%`, label: "Storefront Readiness" },
             ].map((stat, i) => (
               <div key={i} className="rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-left">
                 <div className="text-xl sm:text-2xl font-black text-white">{stat.value}</div>
                 <div className="text-[11px] mt-0.5 uppercase tracking-[.12em]" style={{ color: "#6B7280" }}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+          <div className="relative mt-5 grid gap-3 md:grid-cols-3">
+            {[
+              { title: "1. Open a real profile", body: filtered.length > 0 ? "Tap any live storefront to review subscription price, PPV, tips, custom requests, and creator proof." : "No storefront matches this filter yet; complete onboarding before selling." },
+              { title: "2. Choose the money path", body: paymentReadyCreators.length > 0 ? "Subscribe, buy PPV, tip, or request custom work only where the creator has enabled that lane." : "Payment lanes are not ready until a creator sets pricing or enables paid features." },
+              { title: "3. Verify before scaling", body: "Revenue should move through Stripe-backed purchase flows and verified ledgers, not inflated static counters." },
+            ].map((step) => (
+              <div key={step.title} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                <div className="text-xs font-black uppercase tracking-[.16em] text-red-300 mb-2">{step.title}</div>
+                <div className="text-xs leading-5 text-gray-400">{step.body}</div>
               </div>
             ))}
           </div>
