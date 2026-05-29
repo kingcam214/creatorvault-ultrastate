@@ -111,3 +111,10 @@ client/public/videos/
 *.mp4
 *.mov
 *.webm
+tmp-*.cjs
+tmp-*.js
+tmp-*.ts
+tmp_*.cjs
+tmp_*.js
+tmp_*.ts
+*.local-e2e.*
