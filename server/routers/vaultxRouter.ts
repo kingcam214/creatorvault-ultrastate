@@ -1148,12 +1148,36 @@ export const vaultxRouter = router({
       });
       const prompt = buildVaultxPackagePolloPrompt(pkg);
       qualityGate.checkVisual(sourceMediaUrl, { prompt, publicPost: true });
+
+      const reusableAssets = await rawQuery(
+        `SELECT taskId, videoUrl, status
+         FROM pollo_generations
+         WHERE imageUrl = ? AND status IN ('succeed', 'success', 'succeeded') AND videoUrl IS NOT NULL AND videoUrl <> ''
+         ORDER BY updatedAt DESC, id DESC
+         LIMIT 1`,
+        [sourceMediaUrl]
+      );
+      const reusable = reusableAssets[0];
+      if (reusable?.videoUrl) {
+        qualityGate.checkVisual(reusable.videoUrl, { prompt, publicPost: true });
+        await rawExec(
+          `UPDATE vaultx_revenue_packages
+           SET source_media_url = ?, asset_prompt = ?, pollo_job_id = ?, asset_status = 'succeed', asset_url = ?, asset_quality_passed = 1, status = 'asset_ready'
+           WHERE id = ?`,
+          [sourceMediaUrl, prompt, reusable.taskId, reusable.videoUrl, input.packageId]
+        );
+        return { jobId: reusable.taskId, status: "succeed", videoUrl: reusable.videoUrl, reusedExistingPolloAsset: true, packageId: input.packageId, success: true };
+      }
+
+      const generationController = new AbortController();
+      const generationTimeout = setTimeout(() => generationController.abort(), 30000);
       const response = await fetch(POLLO_API_URL, {
         method: "POST",
         headers: {
           "x-api-key": POLLO_API_KEY,
           "Content-Type": "application/json",
         },
+        signal: generationController.signal,
         body: JSON.stringify({
           input: {
             image: sourceMediaUrl,
@@ -1163,7 +1187,7 @@ export const vaultxRouter = router({
             mode: input.mode === "pro" ? "pro" : "basic",
           },
         }),
-      });
+      }).finally(() => clearTimeout(generationTimeout));
       const data = await response.json() as any;
       if (!response.ok || (data?.code && data.code !== "SUCCESS")) {
         throw new TRPCError({ code: "BAD_GATEWAY", message: data?.message || data?.error || `Pollo generation failed to start: ${JSON.stringify(data).slice(0, 500)}` });
@@ -1194,10 +1218,13 @@ export const vaultxRouter = router({
       let rows = await rawQuery("SELECT * FROM pollo_generations WHERE taskId = ? ORDER BY id DESC LIMIT 1", [jobId]);
       let row = rows[0];
       if (POLLO_API_KEY && (!row || !["succeed", "failed"].includes(String(row.status)))) {
+        const statusController = new AbortController();
+        const statusTimeout = setTimeout(() => statusController.abort(), 20000);
         const response = await fetch(`${POLLO_BASE_URL}/generation/${jobId}/status`, {
           method: "GET",
           headers: { "x-api-key": POLLO_API_KEY },
-        });
+          signal: statusController.signal,
+        }).finally(() => clearTimeout(statusTimeout));
         const data = await response.json() as any;
         if (response.ok && (!data?.code || data.code === "SUCCESS")) {
           const generation = data?.data?.generations?.[0] || null;
