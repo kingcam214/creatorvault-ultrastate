@@ -1400,8 +1400,8 @@ export const challengeAutomationRouter = router({
     if (hasTelegramDropsTable) {
       const telegramStatsResult = await db.db.execute(sql`
         SELECT COUNT(*) AS live_drop_count,
-               SUM(CASE WHEN tracking_code IS NOT NULL AND tracking_code <> '' THEN 1 ELSE 0 END) AS tracked_drop_count,
-               SUM(CASE WHEN price_cents > 0 THEN 1 ELSE 0 END) AS paid_drop_count
+               SUM(CASE WHEN has_cta = 1 OR cta_type IS NOT NULL THEN 1 ELSE 0 END) AS tracked_drop_count,
+               SUM(CASE WHEN offer_price > 0 THEN 1 ELSE 0 END) AS paid_drop_count
         FROM telegram_drops
         WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
       `);
