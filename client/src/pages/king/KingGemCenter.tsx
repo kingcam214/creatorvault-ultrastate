@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function KingGemCenter() {
-  return <div style={{ padding: 24 }}>Placeholder: KingGemCenter</div>;
+  return <VisualCommandSurface title="King Gem Center" lane="KingCam visual command" />;
 }
 
 export default KingGemCenter;

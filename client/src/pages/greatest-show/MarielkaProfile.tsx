@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function MarielkaProfile() {
-  return <div style={{ padding: 24 }}>Placeholder: MarielkaProfile</div>;
+  return <VisualCommandSurface title="Marielka Profile" lane="Greatest Show creator engine" />;
 }
 
 export default MarielkaProfile;

@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function ViralOptimizerV2() {
-  return <div style={{ padding: 24 }}>Placeholder: ViralOptimizerV2</div>;
+  return <VisualCommandSurface title="Viral Optimizer V2" lane="AI video weapon" />;
 }
 
 export default ViralOptimizerV2;

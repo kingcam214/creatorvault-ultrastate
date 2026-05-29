@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function VideoEditor() {
-  return <div style={{ padding: 24 }}>Placeholder: VideoEditor</div>;
+  return <VisualCommandSurface title="Video Editor" lane="AI video weapon" />;
 }
 
 export default VideoEditor;
