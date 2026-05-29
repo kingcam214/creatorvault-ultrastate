@@ -6,7 +6,7 @@ set -euo pipefail
 
 APP_NAME="${CREATORVAULT_PM2_APP:-creatorvault}"
 APP_ENTRY="${CREATORVAULT_APP_ENTRY:-dist/index.js}"
-APP_PORT="${PORT:-5000}"
+APP_PORT="${PORT:-3000}"
 HEALTH_PATH="${CREATORVAULT_HEALTH_PATH:-/api/health}"
 RELEASE_FILE="public/release.json"
 
