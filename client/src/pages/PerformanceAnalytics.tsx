@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function PerformanceAnalytics() {
-  return <div style={{ padding: 24 }}>Placeholder: PerformanceAnalytics</div>;
+  return <VisualCommandSurface title="Performance Analytics" lane="CreatorVault God Mode" />;
 }
 
 export default PerformanceAnalytics;

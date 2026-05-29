@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function FontLibrary() {
-  return <div style={{ padding: 24 }}>Placeholder: FontLibrary</div>;
+  return <VisualCommandSurface title="Font Library" lane="CreatorVault God Mode" />;
 }
 
 export default FontLibrary;

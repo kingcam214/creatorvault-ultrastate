@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function MonetizationPipeline() {
-  return <div style={{ padding: 24 }}>Placeholder: MonetizationPipeline</div>;
+  return <VisualCommandSurface title="Monetization Pipeline" lane="CreatorVault God Mode" />;
 }
 
 export default MonetizationPipeline;

@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function Register() {
-  return <div style={{ padding: 24 }}>Placeholder: Register</div>;
+  return <VisualCommandSurface title="Register" lane="CreatorVault God Mode" />;
 }
 
 export default Register;

@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function FollowListPage() {
-  return <div style={{ padding: 24 }}>Placeholder: FollowListPage</div>;
+  return <VisualCommandSurface title="Follow List" lane="CreatorVault God Mode" />;
 }
 
 export default FollowListPage;

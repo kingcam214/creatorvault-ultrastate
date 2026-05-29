@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function CreatorVaultAyiti() {
-  return <div style={{ padding: 24 }}>Placeholder: CreatorVaultAyiti</div>;
+  return <VisualCommandSurface title="Creator Vault Ayiti" lane="VaultX revenue system" />;
 }
 
 export default CreatorVaultAyiti;

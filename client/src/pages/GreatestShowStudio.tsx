@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function GreatestShowStudio() {
-  return <div style={{ padding: 24 }}>Placeholder: GreatestShowStudio</div>;
+  return <VisualCommandSurface title="Greatest Show Studio" lane="CreatorVault God Mode" />;
 }
 
 export default GreatestShowStudio;

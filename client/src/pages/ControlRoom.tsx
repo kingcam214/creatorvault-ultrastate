@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function ControlRoom() {
-  return <div style={{ padding: 24 }}>Placeholder: ControlRoom</div>;
+  return <VisualCommandSurface title="Control Room" lane="Empire command center" />;
 }
 
 export default ControlRoom;

@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function DelbaniaPanel() {
-  return <div style={{ padding: 24 }}>Placeholder: DelbaniaPanel</div>;
+  return <VisualCommandSurface title="Delbania Panel" lane="CreatorVault God Mode" />;
 }
 
 export default DelbaniaPanel;

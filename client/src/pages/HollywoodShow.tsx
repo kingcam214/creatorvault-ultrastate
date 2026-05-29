@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function HollywoodShow() {
-  return <div style={{ padding: 24 }}>Placeholder: HollywoodShow</div>;
+  return <VisualCommandSurface title="Hollywood Show" lane="CreatorVault God Mode" />;
 }
 
 export default HollywoodShow;

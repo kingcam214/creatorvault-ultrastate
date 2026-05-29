@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function ImageLab() {
-  return <div style={{ padding: 24 }}>Placeholder: ImageLab</div>;
+  return <VisualCommandSurface title="Image Lab" lane="Design and visual lab" />;
 }
 
 export default ImageLab;

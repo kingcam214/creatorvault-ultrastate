@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function CardEditor() {
-  return <div style={{ padding: 24 }}>Placeholder: CardEditor</div>;
+  return <VisualCommandSurface title="Card Editor" lane="Design and visual lab" />;
 }
 
 export default CardEditor;

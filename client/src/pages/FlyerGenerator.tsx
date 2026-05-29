@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function FlyerGenerator() {
-  return <div style={{ padding: 24 }}>Placeholder: FlyerGenerator</div>;
+  return <VisualCommandSurface title="Flyer Generator" lane="Design and visual lab" />;
 }
 
 export default FlyerGenerator;

@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function Explore() {
-  return <div style={{ padding: 24 }}>Placeholder: Explore</div>;
+  return <VisualCommandSurface title="Explore" lane="CreatorVault God Mode" />;
 }
 
 export default Explore;

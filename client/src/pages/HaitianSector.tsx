@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function HaitianSector() {
-  return <div style={{ padding: 24 }}>Placeholder: HaitianSector</div>;
+  return <VisualCommandSurface title="Haitian Sector" lane="Culture channel system" />;
 }
 
 export default HaitianSector;

@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function RealEstateEmpire() {
-  return <div style={{ padding: 24 }}>Placeholder: RealEstateEmpire</div>;
+  return <VisualCommandSurface title="Real Estate Empire" lane="Empire command center" />;
 }
 
 export default RealEstateEmpire;

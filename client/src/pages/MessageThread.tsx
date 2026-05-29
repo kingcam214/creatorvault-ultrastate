@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function MessageThread() {
-  return <div style={{ padding: 24 }}>Placeholder: MessageThread</div>;
+  return <VisualCommandSurface title="Message Thread" lane="CreatorVault God Mode" />;
 }
 
 export default MessageThread;

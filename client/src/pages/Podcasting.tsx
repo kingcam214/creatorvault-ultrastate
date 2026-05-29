@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function Podcasting() {
-  return <div style={{ padding: 24 }}>Placeholder: Podcasting</div>;
+  return <VisualCommandSurface title="Podcasting" lane="Music and audio weapon" />;
 }
 
 export default Podcasting;

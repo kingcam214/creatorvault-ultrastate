@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function AlbumCoverDesigner() {
-  return <div style={{ padding: 24 }}>Placeholder: AlbumCoverDesigner</div>;
+  return <VisualCommandSurface title="Album Cover Designer" lane="Music and audio weapon" />;
 }
 
 export default AlbumCoverDesigner;

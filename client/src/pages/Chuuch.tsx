@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function Chuuch() {
-  return <div style={{ padding: 24 }}>Placeholder: Chuuch</div>;
+  return <VisualCommandSurface title="Chuuch" lane="Culture channel system" />;
 }
 
 export default Chuuch;

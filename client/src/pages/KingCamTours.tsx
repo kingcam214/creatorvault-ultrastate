@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function KingCamTours() {
-  return <div style={{ padding: 24 }}>Placeholder: KingCamTours</div>;
+  return <VisualCommandSurface title="King Cam Tours" lane="KingCam visual command" />;
 }
 
 export default KingCamTours;

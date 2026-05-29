@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function EmmaSimpleView() {
-  return <div style={{ padding: 24 }}>Placeholder: EmmaSimpleView</div>;
+  return <VisualCommandSurface title="Emma Simple View" lane="CreatorVault God Mode" />;
 }
 
 export default EmmaSimpleView;

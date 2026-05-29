@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function EspionageDashboard() {
-  return <div style={{ padding: 24 }}>Placeholder: EspionageDashboard</div>;
+  return <VisualCommandSurface title="Espionage Dashboard" lane="Empire command center" />;
 }
 
 export default EspionageDashboard;

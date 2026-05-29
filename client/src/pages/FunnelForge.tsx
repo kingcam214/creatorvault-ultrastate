@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function FunnelForge() {
-  return <div style={{ padding: 24 }}>Placeholder: FunnelForge</div>;
+  return <VisualCommandSurface title="Funnel Forge" lane="CreatorVault God Mode" />;
 }
 
 export default FunnelForge;

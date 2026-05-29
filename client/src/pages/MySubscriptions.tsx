@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function MySubscriptions() {
-  return <div style={{ padding: 24 }}>Placeholder: MySubscriptions</div>;
+  return <VisualCommandSurface title="My Subscriptions" lane="CreatorVault God Mode" />;
 }
 
 export default MySubscriptions;

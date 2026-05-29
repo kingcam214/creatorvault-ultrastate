@@ -4,27 +4,10 @@ interface VisualCommandSurfaceProps {
 }
 
 const visualAssets = [
-  {
-    kind: 'video',
-    src: '/videos/vaultx-cinematic-trailer.mp4',
-    poster: '/videos/vaultx-cinematic-trailer-poster.png',
-    label: 'Cinematic trailer engine',
-  },
-  {
-    kind: 'image',
-    src: '/images/reel/reel-creator-promo.png',
-    label: 'Creator promo rail',
-  },
-  {
-    kind: 'image',
-    src: '/images/reel/reel-product-drop.png',
-    label: 'Product drop visual',
-  },
-  {
-    kind: 'image',
-    src: '/images/vaultx/vaultx-business-presenter-hero.png',
-    label: 'VaultX presenter proof',
-  },
+  { kind: 'video', src: '/videos/vaultx-cinematic-trailer.mp4', poster: '/videos/vaultx-cinematic-trailer-poster.png', label: 'Cinematic trailer engine' },
+  { kind: 'image', src: '/images/reel/reel-creator-promo.png', label: 'Creator promo rail' },
+  { kind: 'image', src: '/images/reel/reel-product-drop.png', label: 'Product drop visual' },
+  { kind: 'image', src: '/images/vaultx/vaultx-business-presenter-hero.png', label: 'VaultX presenter proof' },
 ];
 
 const playbook = [
@@ -59,15 +42,7 @@ export function VisualCommandSurface({ title, lane = 'CreatorVault God Mode' }: 
             </div>
           </div>
           <div className="rounded-[2rem] border border-yellow-400/30 bg-black/60 p-3 shadow-[0_0_80px_rgba(250,204,21,0.16)]">
-            <video
-              className="aspect-video w-full rounded-[1.5rem] object-cover"
-              src="/videos/vaultx-cinematic-trailer.mp4"
-              poster="/videos/vaultx-cinematic-trailer-poster.png"
-              autoPlay
-              muted
-              loop
-              playsInline
-            />
+            <video className="aspect-video w-full rounded-[1.5rem] object-cover" src="/videos/vaultx-cinematic-trailer.mp4" poster="/videos/vaultx-cinematic-trailer-poster.png" autoPlay muted loop playsInline />
           </div>
         </div>
       </section>

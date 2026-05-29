@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function VaultPass() {
-  return <div style={{ padding: 24 }}>Placeholder: VaultPass</div>;
+  return <VisualCommandSurface title="Vault Pass" lane="VaultX revenue system" />;
 }
 
 export default VaultPass;

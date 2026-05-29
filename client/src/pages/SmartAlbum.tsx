@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function SmartAlbum() {
-  return <div style={{ padding: 24 }}>Placeholder: SmartAlbum</div>;
+  return <VisualCommandSurface title="Smart Album" lane="Music and audio weapon" />;
 }
 
 export default SmartAlbum;

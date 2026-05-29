@@ -1,8 +1,7 @@
-import React from "react";
+import { VisualCommandSurface } from '../components/VisualCommandSurface';
 
-// Auto-generated placeholder to satisfy route restoration build.
 export function KingBackOffice() {
-  return <div style={{ padding: 24 }}>Placeholder: KingBackOffice</div>;
+  return <VisualCommandSurface title="King Back Office" lane="KingCam visual command" />;
 }
 
 export default KingBackOffice;
