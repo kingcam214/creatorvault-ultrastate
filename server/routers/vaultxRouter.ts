@@ -31,6 +31,7 @@ const PUBLIC_UPLOADS_DIR = path.resolve(process.cwd(), "..", "uploads");
 const FRONTEND_BASE_URL = (process.env.VITE_FRONTEND_FORGE_API_URL || process.env.FRONTEND_URL || "https://creatorvault.live/api").replace(/\/api$/, "");
 const POLLO_API_KEY = process.env.POLLO_API_KEY || "";
 const POLLO_API_URL = "https://pollo.ai/api/platform/generation/pollo/pollo-v1-6";
+const POLLO_BASE_URL = "https://pollo.ai/api/platform";
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" })
   : null;
@@ -1158,14 +1159,14 @@ export const vaultxRouter = router({
             image: sourceMediaUrl,
             prompt,
             resolution: input.resolution,
-            length: input.length,
-            mode: input.mode,
+            length: Number(input.length),
+            mode: input.mode === "pro" ? "pro" : "basic",
           },
         }),
       });
       const data = await response.json() as any;
-      if (!response.ok) {
-        throw new TRPCError({ code: "BAD_GATEWAY", message: data?.message || data?.error || "Pollo generation failed to start." });
+      if (!response.ok || (data?.code && data.code !== "SUCCESS")) {
+        throw new TRPCError({ code: "BAD_GATEWAY", message: data?.message || data?.error || `Pollo generation failed to start: ${JSON.stringify(data).slice(0, 500)}` });
       }
       const taskId = data?.data?.taskId || data?.taskId || data?.id;
       if (!taskId) throw new TRPCError({ code: "BAD_GATEWAY", message: "Pollo did not return a task id." });
@@ -1193,14 +1194,16 @@ export const vaultxRouter = router({
       let rows = await rawQuery("SELECT * FROM pollo_generations WHERE taskId = ? ORDER BY id DESC LIMIT 1", [jobId]);
       let row = rows[0];
       if (POLLO_API_KEY && (!row || !["succeed", "failed"].includes(String(row.status)))) {
-        const response = await fetch(`https://pollo.ai/api/platform/generation/${jobId}/status`, {
-          headers: { Authorization: `Bearer ${POLLO_API_KEY}` },
+        const response = await fetch(`${POLLO_BASE_URL}/generation/${jobId}/status`, {
+          method: "GET",
+          headers: { "x-api-key": POLLO_API_KEY },
         });
         const data = await response.json() as any;
-        if (response.ok) {
-          const status = normalisePolloStatus(data?.data?.status || data?.status);
-          const videoUrl = data?.data?.videoUrl || data?.data?.url || data?.videoUrl || data?.url || null;
-          await rawExec("UPDATE pollo_generations SET status = ?, videoUrl = COALESCE(?, videoUrl) WHERE taskId = ?", [status, videoUrl, jobId]);
+        if (response.ok && (!data?.code || data.code === "SUCCESS")) {
+          const generation = data?.data?.generations?.[0] || null;
+          const status = normalisePolloStatus(generation?.status || data?.data?.status || data?.status);
+          const videoUrl = generation?.url || data?.data?.videoUrl || data?.data?.url || data?.videoUrl || data?.url || null;
+          await rawExec("UPDATE pollo_generations SET status = ?, videoUrl = COALESCE(?, videoUrl), updatedAt = CURRENT_TIMESTAMP WHERE taskId = ?", [status, videoUrl, jobId]);
           if (videoUrl) {
             qualityGate.checkVisual(videoUrl, { prompt: pkg.asset_prompt || buildVaultxPackagePolloPrompt(pkg), publicPost: true });
           }
@@ -1294,12 +1297,18 @@ export const vaultxRouter = router({
         campaignType: "PPV_DROP",
         overridePrice: Number(pkg.price_cents) / 100,
       });
+      await rawExec(
+        `UPDATE vaultx_revenue_packages
+         SET telegram_campaign_id = ?, telegram_tracking_code = ?, status = 'telegram_route_created'
+         WHERE id = ?`,
+        [campaign.campaignId, campaign.trackingCode, pkg.id]
+      );
       const sent = await sendDropToChannel(campaign.campaignId);
       await rawExec(
         `UPDATE vaultx_revenue_packages
-         SET telegram_campaign_id = ?, telegram_tracking_code = ?, status = ?
+         SET status = ?
          WHERE id = ?`,
-        [campaign.campaignId, campaign.trackingCode, sent.success ? "telegram_published" : "telegram_failed", pkg.id]
+        [sent.success ? "telegram_published" : "telegram_failed", pkg.id]
       );
       if (!sent.success) throw new TRPCError({ code: "BAD_GATEWAY", message: sent.error || "Telegram publish failed." });
       return { campaignId: campaign.campaignId, trackingCode: campaign.trackingCode, trackedUrl: sent.trackedUrl, success: true };
