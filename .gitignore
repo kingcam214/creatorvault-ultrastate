@@ -118,3 +118,10 @@ tmp_*.cjs
 tmp_*.js
 tmp_*.ts
 *.local-e2e.*
+
+# Local patch backups
+*.bak
+*.bak_*
+*.bak.*
+*.backup
+*.orig
