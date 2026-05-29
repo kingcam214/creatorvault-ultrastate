@@ -125,3 +125,6 @@ tmp_*.ts
 *.bak.*
 *.backup
 *.orig
+
+# Deployment transfer temp files
+*.uploading.*
