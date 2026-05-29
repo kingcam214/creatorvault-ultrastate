@@ -286,7 +286,7 @@ export async function createAIDrop(input: CreateAIDropInput): Promise<CreateAIDr
         : [
             { type: "thumbnail", url: content.thumbnail_url, primary: 0 },
             { type: "censored_preview", url: content.censored_url || content.thumbnail_url, primary: 1 },
-            { type: "vip_route_preview", url: content.censored_url || content.thumbnail_url, primary: 0 },
+            { type: "full_locked", url: content.censored_url || content.thumbnail_url, primary: 0 },
           ];
 
     for (const asset of modeAssetPlan) {
