@@ -234,12 +234,33 @@ interface BodyRegionData {
   confidence: number;
   enhancement_recommended: boolean;
 }
+interface BodyCinemaEnginePayload {
+  heatScore?: number;
+  primaryRegion?: string;
+  secondaryRegion?: string;
+  mediaProfile?: any;
+  topRegions?: any[];
+  scoredRegions?: any[];
+  engineLanes?: any[];
+  dynamicCutBlueprint?: any[];
+  moneyPacks?: any[];
+  reframeSuggestions?: any[];
+  platformLaunchPlan?: any[];
+  teaserGate?: any;
+  scenePositioning?: string;
+  complianceGuardrails?: string[];
+}
 interface BodyMap {
   regions_detected: Record<string, BodyRegionData>;
   strongest_assets: string[];
   body_type: string;
   pose: string;
   monetization_potential: number;
+  body_cinema?: BodyCinemaEnginePayload;
+  dynamic_cut_blueprint?: any[];
+  money_packs?: any[];
+  reframe_suggestions?: any[];
+  region_scores?: Record<string, any>;
 }
 interface ContentAnalysis {
   content_type: string;
@@ -249,6 +270,11 @@ interface ContentAnalysis {
   pricing_recommendation: number;
   skin_tone_detected: string;
   monetization_potential: number;
+  body_cinema?: BodyCinemaEnginePayload;
+  body_cinema_heat_score?: number;
+  dynamic_cut_blueprint?: any[];
+  money_packs?: any[];
+  reframe_suggestions?: any[];
 }
 interface Variation {
   variation: string;
@@ -1346,6 +1372,47 @@ export default function VaultXEditor() {
   const bodyCinemaRealRenderUrl = bodyCinemaPlan?.renderedOutputUrl || bodyCinemaPlan?.finalVideoUrl || bodyCinemaPlan?.renderedVideoUrl || null;
   const bodyCinemaTeaserUrl = bodyCinemaPlan?.teaserUrl || bodyCinemaPlan?.platformExports?.find?.((item: any) => item?.url && String(item.platform || "").includes("telegram"))?.url || null;
   const bodyCinemaThumbnailUrl = bodyCinemaPlan?.thumbnailUrl || bodyCinemaPlan?.heroAsset || null;
+  const liveBodyCinemaEngine: BodyCinemaEnginePayload | null = bodyCinemaPlan?.bodyCinemaAnalysis || bodyMap?.body_cinema || analysis?.body_cinema || null;
+  const liveBodyCinemaHeat = Number(liveBodyCinemaEngine?.heatScore ?? analysis?.body_cinema_heat_score);
+  const liveBodyCinemaTopRegions = Array.isArray(liveBodyCinemaEngine?.topRegions) ? liveBodyCinemaEngine.topRegions : [];
+  const bodyCinemaPrimaryRegion = liveBodyCinemaEngine?.primaryRegion || liveBodyCinemaTopRegions[0]?.region || bodyCinemaRegions[0] || "full";
+  const bodyCinemaSecondaryRegion = liveBodyCinemaEngine?.secondaryRegion || liveBodyCinemaTopRegions[1]?.region || bodyCinemaRegions[1] || "full";
+  const bodyCinemaEngineLanePresentation: Record<string, { icon: any; color: string }> = {
+    revenue_read: { icon: Target, color: C.pink },
+    angle_director: { icon: Crosshair, color: C.accent },
+    tease_gate: { icon: Lock, color: C.green },
+    money_pack: { icon: DollarSign, color: C.gold },
+  };
+  const bodyCinemaLiveEngineLanes = Array.isArray(liveBodyCinemaEngine?.engineLanes) && liveBodyCinemaEngine.engineLanes.length
+    ? liveBodyCinemaEngine.engineLanes.map((lane: any) => ({
+      ...lane,
+      icon: bodyCinemaEngineLanePresentation[lane.id]?.icon || Brain,
+      color: bodyCinemaEngineLanePresentation[lane.id]?.color || C.pink,
+    }))
+    : BODY_CINEMA_ENGINE_LANES;
+  const bodyCinemaLiveCutBlueprint = Array.isArray(liveBodyCinemaEngine?.dynamicCutBlueprint) && liveBodyCinemaEngine.dynamicCutBlueprint.length
+    ? liveBodyCinemaEngine.dynamicCutBlueprint
+    : Array.isArray(bodyMap?.dynamic_cut_blueprint) && bodyMap.dynamic_cut_blueprint.length
+      ? bodyMap.dynamic_cut_blueprint
+      : Array.isArray(analysis?.dynamic_cut_blueprint) && analysis.dynamic_cut_blueprint.length
+        ? analysis.dynamic_cut_blueprint
+        : BODY_CINEMA_CUT_BLUEPRINT;
+  const bodyCinemaLiveMoneyPacks = Array.isArray(liveBodyCinemaEngine?.moneyPacks) && liveBodyCinemaEngine.moneyPacks.length
+    ? liveBodyCinemaEngine.moneyPacks.map((pack: any) => ({
+      label: pack.label,
+      output: pack.output,
+      price: typeof pack.priceCents === "number" && pack.priceCents > 0 ? `$${Math.round(pack.priceCents / 100)}` : (pack.tier === "free" ? "Funnel" : "Launch asset"),
+      detail: pack.detail,
+    }))
+    : Array.isArray(bodyMap?.money_packs) && bodyMap.money_packs.length
+      ? bodyMap.money_packs
+      : Array.isArray(analysis?.money_packs) && analysis.money_packs.length
+        ? analysis.money_packs
+        : BODY_CINEMA_MONEY_PACKS;
+  const bodyCinemaReframeSuggestions = Array.isArray(liveBodyCinemaEngine?.reframeSuggestions) ? liveBodyCinemaEngine.reframeSuggestions : [];
+  const bodyCinemaPlatformLaunchPlan = Array.isArray(bodyCinemaPlan?.platformLaunchPlan) && bodyCinemaPlan.platformLaunchPlan.length
+    ? bodyCinemaPlan.platformLaunchPlan
+    : Array.isArray(liveBodyCinemaEngine?.platformLaunchPlan) ? liveBodyCinemaEngine.platformLaunchPlan : [];
   const bodyCinemaReadinessItems = [
     { label: "Source asset", ready: Boolean(sourceUrl || variations[selectedVariation]?.url), detail: "Upload or enhancement file exists." },
     { label: "Body map", ready: Boolean(bodyMap), detail: "Scan has identified the usable visual regions." },
@@ -1366,8 +1433,9 @@ export default function VaultXEditor() {
   const rawMonetizationSignal = Number(bodyMap?.monetization_potential ?? analysis?.monetization_potential ?? 0);
   const normalizedMonetizationSignal = Math.max(0, Math.min(100, rawMonetizationSignal > 1 ? rawMonetizationSignal : rawMonetizationSignal * 100));
   const qualitySignal = Math.max(0, Math.min(100, Math.round((((analysis?.lighting_quality ?? 0) + (analysis?.image_quality ?? 0)) / 2) || 0)));
-  const bodyCinemaHeatScore = Math.max(0, Math.min(100, Math.round((normalizedMonetizationSignal * 0.38) + (bodyCinemaReadinessScore * 0.34) + (qualitySignal * 0.18) + (Math.min(generatedFocusClipCount, 4) * 2.5))));
-  const bodyCinemaAngleStack = detectedBodyRegionNames.length ? detectedBodyRegionNames.join(" / ") : bodyCinemaRegions.map(region => region.toUpperCase()).join(" / ");
+  const computedBodyCinemaHeatScore = Math.max(0, Math.min(100, Math.round((normalizedMonetizationSignal * 0.38) + (bodyCinemaReadinessScore * 0.34) + (qualitySignal * 0.18) + (Math.min(generatedFocusClipCount, 4) * 2.5))));
+  const bodyCinemaHeatScore = Number.isFinite(liveBodyCinemaHeat) && liveBodyCinemaHeat > 0 ? Math.max(0, Math.min(100, Math.round(liveBodyCinemaHeat))) : computedBodyCinemaHeatScore;
+  const bodyCinemaAngleStack = liveBodyCinemaTopRegions.length ? liveBodyCinemaTopRegions.slice(0, 4).map((region: any) => String(region.region || region.label || "angle").toUpperCase()).join(" / ") : detectedBodyRegionNames.length ? detectedBodyRegionNames.join(" / ") : bodyCinemaRegions.map(region => region.toUpperCase()).join(" / ");
   const bodyCinemaCutDirectorNotes = [
     { label: "Opening hook", value: sourceUrl ? "Trim dead setup and start on the first body-value frame." : "Upload a clip to let VaultX choose the first money frame.", icon: Scissors, color: C.pink },
     { label: "Crop path", value: `${targetFormat} body-first reframing with ${bodyCinemaAngleStack || "FULL"} priority.`, icon: Crop, color: C.accent },
@@ -1376,7 +1444,7 @@ export default function VaultXEditor() {
   ];
   const bodyCinemaSignalCards = [
     { label: "Heat Score", value: `${bodyCinemaHeatScore}%`, detail: bodyCinemaHeatScore >= 75 ? "High-value drop candidate" : bodyCinemaHeatScore >= 45 ? "Needs Body Cinema pass" : "Needs scan + stronger cut", color: C.pink },
-    { label: "Detected Angles", value: `${detectedBodyRegionNames.length || bodyCinemaRegions.length}`, detail: detectedBodyRegionNames.length ? detectedBodyRegionNames.join(", ") : "Waiting on body scan", color: C.accent },
+    { label: "Detected Angles", value: `${liveBodyCinemaTopRegions.length || detectedBodyRegionNames.length || bodyCinemaRegions.length}`, detail: liveBodyCinemaTopRegions.length ? liveBodyCinemaTopRegions.slice(0, 3).map((region: any) => `${String(region.region || "angle").toUpperCase()} ${region.score || ""}`.trim()).join(" / ") : detectedBodyRegionNames.length ? detectedBodyRegionNames.join(", ") : "Waiting on body scan", color: C.accent },
     { label: "Money Outputs", value: `${selectedOutputPackages.length || BODY_CINEMA_MONEY_PACKS.length}`, detail: "Master, teaser, clips, cover, copy, and launch assets", color: C.gold },
     { label: "Destinations", value: `${bodyCinemaPlatforms.length}`, detail: bodyCinemaPlatforms.map(p => p.replace("_", " ")).join(" / "), color: C.green },
   ];
@@ -2041,7 +2109,7 @@ export default function VaultXEditor() {
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        {BODY_CINEMA_ENGINE_LANES.map(lane => {
+                        {bodyCinemaLiveEngineLanes.map(lane => {
                           const Icon = lane.icon;
                           return (
                             <div key={lane.id} className="p-3 rounded-2xl" style={{ background: `${lane.color}0F`, border: `1px solid ${lane.color}24` }}>
@@ -2072,8 +2140,8 @@ export default function VaultXEditor() {
                   <div className="p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     <div className="flex items-center justify-between"><p className="text-[9px] font-black tracking-widest" style={{ color: "#EC4899" }}>CUT BLUEPRINT</p><span className="text-[8px] font-bold" style={{ color: "#6B7280" }}>raw clip → premium scene</span></div>
                     <div className="grid grid-cols-2 gap-2 mt-2">
-                      {BODY_CINEMA_CUT_BLUEPRINT.map(step => (
-                        <div key={step.time} className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.38)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      {bodyCinemaLiveCutBlueprint.map((step: any) => (
+                        <div key={step.id || step.time} className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.38)", border: "1px solid rgba(255,255,255,0.06)" }}>
                           <p className="text-[7px] font-black tracking-widest" style={{ color: "#C9A84C" }}>{step.time} · {step.label.toUpperCase()}</p>
                           <p className="text-[8px] leading-relaxed mt-1" style={{ color: "#A1A1AA" }}>{step.directive}</p>
                           <p className="text-[7px] font-black mt-1" style={{ color: "#10B981" }}>{step.monetization}</p>
@@ -2084,7 +2152,7 @@ export default function VaultXEditor() {
                   <div className="p-3 rounded-2xl" style={{ background: "rgba(201,168,76,0.045)", border: "1px solid rgba(201,168,76,0.16)" }}>
                     <div className="flex items-center justify-between"><p className="text-[9px] font-black tracking-widest" style={{ color: "#C9A84C" }}>MONEY PACKS</p><span className="text-[8px] font-bold" style={{ color: "#6B7280" }}>subscriber value outputs</span></div>
                     <div className="grid grid-cols-2 gap-2 mt-2">
-                      {BODY_CINEMA_MONEY_PACKS.map(pack => (
+                      {bodyCinemaLiveMoneyPacks.map((pack: any) => (
                         <div key={pack.label} className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.38)", border: "1px solid rgba(201,168,76,0.12)" }}>
                           <div className="flex items-center justify-between gap-2"><p className="text-[8px] font-black" style={{ color: "#FFFFFF" }}>{pack.label}</p><span className="text-[7px] font-black" style={{ color: "#C9A84C" }}>{pack.price}</span></div>
                           <p className="text-[7px] font-black mt-1" style={{ color: "#EC4899" }}>{pack.output}</p>
@@ -2094,6 +2162,35 @@ export default function VaultXEditor() {
                     </div>
                   </div>
                 </div>
+
+                {(bodyCinemaReframeSuggestions.length > 0 || bodyCinemaPlatformLaunchPlan.length > 0 || liveBodyCinemaEngine?.scenePositioning) && (
+                  <div className="grid grid-cols-[1fr_1fr] gap-3">
+                    <div className="p-3 rounded-2xl" style={{ background: "rgba(139,92,246,0.045)", border: "1px solid rgba(139,92,246,0.16)" }}>
+                      <div className="flex items-center justify-between"><p className="text-[9px] font-black tracking-widest" style={{ color: C.accent }}>REFRAME INTELLIGENCE</p><span className="text-[8px] font-bold" style={{ color: C.muted }}>body-safe crops</span></div>
+                      {liveBodyCinemaEngine?.scenePositioning && <p className="text-[9px] leading-relaxed mt-2" style={{ color: "#C4B5FD" }}>{liveBodyCinemaEngine.scenePositioning}</p>}
+                      <div className="grid grid-cols-1 gap-2 mt-2">
+                        {bodyCinemaReframeSuggestions.slice(0, 3).map((item: any) => (
+                          <div key={item.target || item.purpose} className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.38)", border: "1px solid rgba(139,92,246,0.14)" }}>
+                            <div className="flex items-center justify-between"><p className="text-[8px] font-black" style={{ color: "#FFFFFF" }}>{item.target} · {item.purpose}</p><span className="text-[7px] font-black" style={{ color: C.accent }}>{(item.cropPriority || []).slice(0, 2).join(" → ")}</span></div>
+                            <p className="text-[8px] leading-relaxed mt-1" style={{ color: "#9CA3AF" }}>{item.instruction}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-2xl" style={{ background: "rgba(16,185,129,0.045)", border: "1px solid rgba(16,185,129,0.16)" }}>
+                      <div className="flex items-center justify-between"><p className="text-[9px] font-black tracking-widest" style={{ color: C.green }}>PLATFORM LAUNCH LOGIC</p><span className="text-[8px] font-bold" style={{ color: C.muted }}>teaser → unlock</span></div>
+                      <div className="grid grid-cols-1 gap-2 mt-2">
+                        {bodyCinemaPlatformLaunchPlan.slice(0, 4).map((item: any) => (
+                          <div key={item.platform} className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.38)", border: "1px solid rgba(16,185,129,0.14)" }}>
+                            <div className="flex items-center justify-between"><p className="text-[8px] font-black" style={{ color: "#FFFFFF" }}>{String(item.platform || "vaultx").replace("_", " ").toUpperCase()}</p><span className="text-[7px] font-black" style={{ color: C.green }}>{item.gate}</span></div>
+                            <p className="text-[8px] leading-relaxed mt-1" style={{ color: "#9CA3AF" }}>{item.copyAngle} · {item.readiness}</p>
+                          </div>
+                        ))}
+                        {!bodyCinemaPlatformLaunchPlan.length && <p className="text-[8px] leading-relaxed" style={{ color: C.muted }}>Run analysis or create the collection to generate platform-specific launch logic.</p>}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Region buttons */}
                 <div className="flex flex-col gap-2">
