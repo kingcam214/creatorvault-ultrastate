@@ -212,10 +212,10 @@ export default function AppHeader() {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href="/vault-x/studio">
+                        <Link href="/vault-x/studio?mode=ai-video-generator#pollo">
                           <a className="w-full flex items-center gap-2">
                             <Zap className="h-4 w-4" style={{ color: accentColor }} />
-                            VaultX Studio
+                            Generate with Pollo AI — Image to Video
                           </a>
                         </Link>
                       </DropdownMenuItem>
@@ -361,8 +361,8 @@ export default function AppHeader() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/vault-x/studio">
-                    <a className="w-full">VaultX Studio</a>
+                  <Link href="/vault-x/studio?mode=ai-video-generator#pollo">
+                    <a className="w-full">Pollo AI Video Generator</a>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -406,8 +406,8 @@ export default function AppHeader() {
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href="/vault-x/studio">
-                            <a className="w-full" style={{ color: accentColor }}>VaultX Studio</a>
+                          <Link href="/vault-x/studio?mode=ai-video-generator#pollo">
+                            <a className="w-full" style={{ color: accentColor }}>Generate with Pollo AI</a>
                           </Link>
                         </DropdownMenuItem>
                       </>

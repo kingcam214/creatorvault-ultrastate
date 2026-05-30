@@ -1270,1447 +1270,343 @@ function FormatPanel({ clipUrl, duration, onStatus, projectId, onAddClip, onAddA
 
 
 export default function VaultXEditor() {
-  // ── Existing procedures ──
-  const myProjectsQ = trpc.vaultx.getMyEditorProjects.useQuery();
+  const utils = trpc.useUtils();
+  const projectsQ = trpc.vaultx.getMyEditorProjects.useQuery(undefined, { retry: false });
   const createProjectMut = trpc.vaultx.createEditorProject.useMutation();
-  const processVideoMut = trpc.vaultx.processVideoEdit.useMutation();
-  const exportMut = trpc.vaultx.exportProject.useMutation();
-  const directorMut = trpc.vaultx.automatedDirectorExport.useMutation();
-
-  // ── New AI Editor procedures ──
-  const analyzeContentMut = trpc.vaultx.analyzeContent.useMutation();
+  const analyzeMut = trpc.vaultx.analyzeContent.useMutation();
   const enhancePhotoMut = trpc.vaultx.enhancePhoto.useMutation();
   const enhanceVideoMut = trpc.vaultx.enhanceVideo.useMutation();
-  const generateVariationsMut = trpc.vaultx.generateVariations.useMutation();
-  const generateCaptionMut = trpc.vaultx.generateCaption.useMutation();
-  const exportForPlatformsMut = trpc.vaultx.exportForPlatforms.useMutation();
-  const publishToVaultXMut = trpc.vaultx.publishToVaultX.useMutation();
-  const generateContentCalendarMut = trpc.vaultx.generateContentCalendar.useMutation();
+  const captionMut = trpc.vaultx.generateCaption.useMutation();
+  const exportMut = trpc.vaultx.exportForPlatforms.useMutation();
+  const publishMut = trpc.vaultx.publishToVaultX.useMutation();
+  const bodyCinemaMut = trpc.vaultx.createBodyCinemaCollection.useMutation();
 
-  // ── Body Intelligence Engine ──
-  const detectBodyRegionsMut = trpc.vaultx.detectBodyRegions.useMutation();
-  const enhanceBodyRegionMut = trpc.vaultx.enhanceBodyRegion.useMutation();
-  const generateRevealShotMut = trpc.vaultx.generateRevealShot.useMutation();
-  const generateBodyFocusClipMut = trpc.vaultx.generateBodyFocusClip.useMutation();
-  const assembleHighlightReelMut = trpc.vaultx.assembleHighlightReel.useMutation();
-  const generateBodyCaptionsMut = trpc.vaultx.generateBodyCaptions.useMutation();
-  const createBodyCinemaCollectionMut = trpc.vaultx.createBodyCinemaCollection.useMutation();
-  const publishBodyCinemaCollectionMut = trpc.vaultx.publishBodyCinemaCollection.useMutation();
-  const utils = trpc.useUtils();
-
-  // ── State ──
-  const [activeTab, setActiveTab] = useState<"enhance" | "body" | "ppv" | "censor" | "scene" | "motion" | "color" | "text" | "audio" | "format" | "timeline" | "publish" | "calendar">("enhance");
-  const [toolStatus, setToolStatus] = React.useState<string | null>(null);
-  const [editorClips, setEditorClips] = React.useState<any[]>([]);
-  const [editorAudioTracks, setEditorAudioTracks] = React.useState<any[]>([]);
-  const selectedClipDuration: number = editorClips[0]?.duration ?? 30;
-  const handleAddClip = (clip: any) => setEditorClips(prev => [clip, ...prev]);
-  const handleAddAudioTrack = (track: any) => setEditorAudioTracks(prev => [track, ...prev]);
   const [projectId, setProjectId] = useState<number | null>(null);
-  const [sourceUrl, setSourceUrl] = useState("");
-  const editorProjectId: string = projectId ? String(projectId) : "default";
-  const selectedClipUrl: string = editorClips[0]?.fileUrl ?? editorClips[0]?.assetUrl ?? editorClips[0]?.src ?? sourceUrl ?? "";
-  const [contentType, setContentType] = useState<"photo" | "video">("photo");
-  const [analysis, setAnalysis] = useState<ContentAnalysis | null>(null);
-  const [analysisAttemptedForSource, setAnalysisAttemptedForSource] = useState<string | null>(null);
-  const [bodyMap, setBodyMap] = useState<BodyMap | null>(null);
-  const [variations, setVariations] = useState<Variation[]>([]);
-  const [selectedVariation, setSelectedVariation] = useState(0);
-  const [activeRegion, setActiveRegion] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState('VIP Friday Drop');
+  const [assetKind, setAssetKind] = useState<'photo' | 'video' | 'reel' | 'photo_set'>('photo');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [intensity, setIntensity] = useState<'subtle' | 'natural' | 'enhanced' | 'cinematic'>('cinematic');
+  const [captionStyle, setCaptionStyle] = useState<'teaser' | 'explicit' | 'romantic' | 'dominant' | 'playful'>('teaser');
+  const [backgroundStyle, setBackgroundStyle] = useState<'keep' | 'penthouse' | 'yacht' | 'rose_bed' | 'dark_studio' | 'miami_villa' | 'private_jet'>('keep');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Array<'onlyfans' | 'telegram_teaser' | 'instagram_sfw' | 'tiktok' | 'twitter' | 'master'>>(['master', 'onlyfans', 'telegram_teaser']);
+  const [selectedRegions, setSelectedRegions] = useState<Array<'bust' | 'abdomen' | 'glutes' | 'legs' | 'full'>>(['full']);
+  const [ppvPrice, setPpvPrice] = useState(24);
+  const [publishTitle, setPublishTitle] = useState('VIP Friday Drop');
+  const [analysis, setAnalysis] = useState<any>(null);
+  const [enhancement, setEnhancement] = useState<any>(null);
   const [captions, setCaptions] = useState<any>(null);
-  const [contentCalendar, setContentCalendar] = useState<any[]>([]);
-  const [revealShotUrl, setRevealShotUrl] = useState<string | null>(null);
-  const [focusClips, setFocusClips] = useState<Record<string, string>>({});
-  const [bodyCinemaName, setBodyCinemaName] = useState("VIP Body Cinema Collection");
-  const [bodyCinemaStyle, setBodyCinemaStyle] = useState<"luxury" | "noir" | "sunset" | "penthouse" | "editorial" | "vip_tease">("luxury");
-  const [bodyCinemaRegions, setBodyCinemaRegions] = useState<Array<"bust" | "abdomen" | "glutes" | "legs" | "full">>(["full"]);
-  const [bodyCinemaPlatforms, setBodyCinemaPlatforms] = useState<Array<"vaultx" | "onlyfans" | "fansly" | "telegram" | "instagram_reel" | "twitter">>(["vaultx", "onlyfans", "telegram"]);
-  const [bodyCinemaPlan, setBodyCinemaPlan] = useState<any>(null);
-  const [showProjectList, setShowProjectList] = useState(false);
-  const [project, setProject] = useState<EditorProject>({ title: "New VaultX Project", projectType: "video", aspectRatio: "9:16", durationSeconds: 60 });
-  const [clips, setClips] = useState<TimelineClip[]>([]);
-  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
-  const [playhead, setPlayhead] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [totalDuration, setTotalDuration] = useState(60);
-  const [pixelsPerSecond] = useState(12);
-  const [currentSource, setCurrentSource] = useState("");
-  const [enhancementIntensity, setEnhancementIntensity] = useState<"subtle" | "natural" | "enhanced" | "cinematic">("enhanced");
-  const [backgroundStyle, setBackgroundStyle] = useState<"keep" | "penthouse" | "yacht" | "rose_bed" | "dark_studio" | "miami_villa" | "private_jet">("keep");
-  const [captionStyle, setCaptionStyle] = useState<"teaser" | "direct" | "romantic" | "luxury" | "playful">("teaser");
-  const [publishTier, setPublishTier] = useState<"free" | "basic" | "premium" | "vip" | "ppv">("premium");
-  const [ppvPrice, setPpvPrice] = useState(15);
-  const [publishTitle, setPublishTitle] = useState("");
-  const [exportPresets, setExportPresets] = useState<string[]>(["onlyfans"]);
-  const [productionPreset, setProductionPreset] = useState("premium_ppv");
-  const [selectedOutputPackages, setSelectedOutputPackages] = useState<string[]>(["master", "sfw_teaser", "ppv_drop", "caption_pack"]);
-  const [complianceMode, setComplianceMode] = useState<"platform_safe" | "subscriber" | "vip" | "archive">("platform_safe");
-  const [watermarkIdentity, setWatermarkIdentity] = useState("@VaultXCreator");
-  const [targetFormat, setTargetFormat] = useState<"9:16" | "16:9" | "1:1" | "4:5">("9:16");
-  const selectedCompliance = COMPLIANCE_MODES[complianceMode];
-  const SelectedComplianceIcon = selectedCompliance.icon;
-  const selectedPreset = PRODUCTION_PRESETS.find(p => p.id === productionPreset) ?? PRODUCTION_PRESETS[0];
-  const selectedOutputLabels = selectedOutputPackages.map(id => OUTPUT_LANE_COPY[id] ?? id.replace("_", " "));
-  const outputReadiness = Math.round(([
-    Boolean(sourceUrl),
-    Boolean(analysis),
-    selectedOutputPackages.length >= 3,
-    exportPresets.length > 0,
-    Boolean(watermarkIdentity.trim()),
-  ].filter(Boolean).length / 5) * 100);
-  const creatorIntelligence = CREATOR_INTELLIGENCE_RULES.map(rule => ({
-    ...rule,
-    action: rule.label === "Hook Shot"
-      ? (analysis ? `Lead with ${analysis.strongest_assets?.[0] ?? "the highest-retention frame"}; cut anything slow before the hook.` : "Upload and analyze first so VaultX can pick the strongest lead moment.")
-      : rule.label === "Angle Stack"
-        ? `Build ${targetFormat} pacing for ${selectedPreset.label}: establish, move, close detail, reaction, CTA.`
-        : rule.label === "Teaser Logic"
-          ? (complianceMode === "platform_safe" ? "Use blur/crop/censor tools before exporting public teaser cuts." : "Create a public teaser plus a subscriber or VIP unlock version, not one generic file.")
-          : `Package ${selectedOutputLabels.join(" · ") || "master · teaser · cover · copy"} with watermark ${watermarkIdentity || "set before export"}.`,
-  }));
-  const generatedFocusClipCount = bodyCinemaRegions.filter(region => Boolean(focusClips[region])).length;
-  const bodyCinemaRealRenderUrl = bodyCinemaPlan?.renderedOutputUrl || bodyCinemaPlan?.finalVideoUrl || bodyCinemaPlan?.renderedVideoUrl || null;
-  const bodyCinemaTeaserUrl = bodyCinemaPlan?.teaserUrl || bodyCinemaPlan?.platformExports?.find?.((item: any) => item?.url && String(item.platform || "").includes("telegram"))?.url || null;
-  const bodyCinemaThumbnailUrl = bodyCinemaPlan?.thumbnailUrl || bodyCinemaPlan?.heroAsset || null;
-  const liveBodyCinemaEngine: BodyCinemaEnginePayload | null = bodyCinemaPlan?.bodyCinemaAnalysis || bodyMap?.body_cinema || analysis?.body_cinema || null;
-  const liveBodyCinemaHeat = Number(liveBodyCinemaEngine?.heatScore ?? analysis?.body_cinema_heat_score);
-  const liveBodyCinemaTopRegions = Array.isArray(liveBodyCinemaEngine?.topRegions) ? liveBodyCinemaEngine.topRegions : [];
-  const bodyCinemaPrimaryRegion = liveBodyCinemaEngine?.primaryRegion || liveBodyCinemaTopRegions[0]?.region || bodyCinemaRegions[0] || "full";
-  const bodyCinemaSecondaryRegion = liveBodyCinemaEngine?.secondaryRegion || liveBodyCinemaTopRegions[1]?.region || bodyCinemaRegions[1] || "full";
-  const bodyCinemaEngineLanePresentation: Record<string, { icon: any; color: string }> = {
-    revenue_read: { icon: Target, color: C.pink },
-    angle_director: { icon: Crosshair, color: C.accent },
-    tease_gate: { icon: Lock, color: C.green },
-    money_pack: { icon: DollarSign, color: C.gold },
-  };
-  const bodyCinemaLiveEngineLanes = Array.isArray(liveBodyCinemaEngine?.engineLanes) && liveBodyCinemaEngine.engineLanes.length
-    ? liveBodyCinemaEngine.engineLanes.map((lane: any) => ({
-      ...lane,
-      icon: bodyCinemaEngineLanePresentation[lane.id]?.icon || Brain,
-      color: bodyCinemaEngineLanePresentation[lane.id]?.color || C.pink,
-    }))
-    : BODY_CINEMA_ENGINE_LANES;
-  const bodyCinemaLiveCutBlueprint = Array.isArray(liveBodyCinemaEngine?.dynamicCutBlueprint) && liveBodyCinemaEngine.dynamicCutBlueprint.length
-    ? liveBodyCinemaEngine.dynamicCutBlueprint
-    : Array.isArray(bodyMap?.dynamic_cut_blueprint) && bodyMap.dynamic_cut_blueprint.length
-      ? bodyMap.dynamic_cut_blueprint
-      : Array.isArray(analysis?.dynamic_cut_blueprint) && analysis.dynamic_cut_blueprint.length
-        ? analysis.dynamic_cut_blueprint
-        : BODY_CINEMA_CUT_BLUEPRINT;
-  const bodyCinemaLiveMoneyPacks = Array.isArray(liveBodyCinemaEngine?.moneyPacks) && liveBodyCinemaEngine.moneyPacks.length
-    ? liveBodyCinemaEngine.moneyPacks.map((pack: any) => ({
-      label: pack.label,
-      output: pack.output,
-      price: typeof pack.priceCents === "number" && pack.priceCents > 0 ? `$${Math.round(pack.priceCents / 100)}` : (pack.tier === "free" ? "Funnel" : "Launch asset"),
-      detail: pack.detail,
-    }))
-    : Array.isArray(bodyMap?.money_packs) && bodyMap.money_packs.length
-      ? bodyMap.money_packs
-      : Array.isArray(analysis?.money_packs) && analysis.money_packs.length
-        ? analysis.money_packs
-        : BODY_CINEMA_MONEY_PACKS;
-  const bodyCinemaReframeSuggestions = Array.isArray(liveBodyCinemaEngine?.reframeSuggestions) ? liveBodyCinemaEngine.reframeSuggestions : [];
-  const bodyCinemaPlatformLaunchPlan = Array.isArray(bodyCinemaPlan?.platformLaunchPlan) && bodyCinemaPlan.platformLaunchPlan.length
-    ? bodyCinemaPlan.platformLaunchPlan
-    : Array.isArray(liveBodyCinemaEngine?.platformLaunchPlan) ? liveBodyCinemaEngine.platformLaunchPlan : [];
-  const bodyCinemaReadinessItems = [
-    { label: "Source asset", ready: Boolean(sourceUrl || variations[selectedVariation]?.url), detail: "Upload or enhancement file exists." },
-    { label: "Body map", ready: Boolean(bodyMap), detail: "Scan has identified the usable visual regions." },
-    { label: "Reveal shot", ready: Boolean(revealShotUrl), detail: "Provider-generated reveal clip exists." },
-    { label: "Focus clips", ready: generatedFocusClipCount > 0, detail: `${generatedFocusClipCount}/${bodyCinemaRegions.length} selected regions have generated clips.` },
-    { label: "Captions", ready: Boolean(captions), detail: "Teaser, subscriber, PPV, and message copy exists." },
-    { label: "Export plan", ready: bodyCinemaPlatforms.length > 0 && ppvPrice >= 3, detail: `${bodyCinemaPlatforms.length} destinations selected at $${ppvPrice}.` },
-    { label: "Final render", ready: Boolean(bodyCinemaRealRenderUrl), detail: bodyCinemaRealRenderUrl ? "The production renderer produced a downloadable master video, teaser, and thumbnail." : "Create the collection to produce real downloadable output." },
-  ];
-  const bodyCinemaReadyCount = bodyCinemaReadinessItems.filter(item => item.ready).length;
-  const bodyCinemaReadinessScore = Math.round((bodyCinemaReadyCount / bodyCinemaReadinessItems.length) * 100);
-  const BodyCinemaStatusIcon = bodyCinemaRealRenderUrl ? CheckCircle : bodyCinemaPlan ? AlertTriangle : Info;
-  const bodyCinemaStatusLabel = bodyCinemaRealRenderUrl ? "RENDER READY" : bodyCinemaPlan ? "PLAN ONLY" : "NOT READY";
-  const bodyCinemaStatusColor = bodyCinemaRealRenderUrl ? "#10B981" : bodyCinemaPlan ? "#F59E0B" : "#6B7280";
-  const detectedBodyRegionNames = BODY_REGIONS
-    .filter(region => bodyMap?.regions_detected?.[region.id]?.detected)
-    .map(region => region.label);
-  const rawMonetizationSignal = Number(bodyMap?.monetization_potential ?? analysis?.monetization_potential ?? 0);
-  const normalizedMonetizationSignal = Math.max(0, Math.min(100, rawMonetizationSignal > 1 ? rawMonetizationSignal : rawMonetizationSignal * 100));
-  const qualitySignal = Math.max(0, Math.min(100, Math.round((((analysis?.lighting_quality ?? 0) + (analysis?.image_quality ?? 0)) / 2) || 0)));
-  const computedBodyCinemaHeatScore = Math.max(0, Math.min(100, Math.round((normalizedMonetizationSignal * 0.38) + (bodyCinemaReadinessScore * 0.34) + (qualitySignal * 0.18) + (Math.min(generatedFocusClipCount, 4) * 2.5))));
-  const bodyCinemaHeatScore = Number.isFinite(liveBodyCinemaHeat) && liveBodyCinemaHeat > 0 ? Math.max(0, Math.min(100, Math.round(liveBodyCinemaHeat))) : computedBodyCinemaHeatScore;
-  const bodyCinemaAngleStack = liveBodyCinemaTopRegions.length ? liveBodyCinemaTopRegions.slice(0, 4).map((region: any) => String(region.region || region.label || "angle").toUpperCase()).join(" / ") : detectedBodyRegionNames.length ? detectedBodyRegionNames.join(" / ") : bodyCinemaRegions.map(region => region.toUpperCase()).join(" / ");
-  const bodyCinemaCutDirectorNotes = [
-    { label: "Opening hook", value: sourceUrl ? "Trim dead setup and start on the first body-value frame." : "Upload a clip to let VaultX choose the first money frame.", icon: Scissors, color: C.pink },
-    { label: "Crop path", value: `${targetFormat} body-first reframing with ${bodyCinemaAngleStack || "FULL"} priority.`, icon: Crop, color: C.accent },
-    { label: "Pacing", value: contentType === "video" ? "Build moving zooms, hold beats, slow push-ins, and teaser cuts around the best motion." : "Animate stills into premium reveal, focus, and cover sequences.", icon: Gauge, color: "#3B82F6" },
-    { label: "Revenue gate", value: `Keep the strongest payoff inside the $${ppvPrice || 0} unlock package and use the preview as the sales hook.`, icon: Crown, color: C.gold },
-  ];
-  const bodyCinemaSignalCards = [
-    { label: "Heat Score", value: `${bodyCinemaHeatScore}%`, detail: bodyCinemaHeatScore >= 75 ? "High-value drop candidate" : bodyCinemaHeatScore >= 45 ? "Needs Body Cinema pass" : "Needs scan + stronger cut", color: C.pink },
-    { label: "Detected Angles", value: `${liveBodyCinemaTopRegions.length || detectedBodyRegionNames.length || bodyCinemaRegions.length}`, detail: liveBodyCinemaTopRegions.length ? liveBodyCinemaTopRegions.slice(0, 3).map((region: any) => `${String(region.region || "angle").toUpperCase()} ${region.score || ""}`.trim()).join(" / ") : detectedBodyRegionNames.length ? detectedBodyRegionNames.join(", ") : "Waiting on body scan", color: C.accent },
-    { label: "Money Outputs", value: `${selectedOutputPackages.length || BODY_CINEMA_MONEY_PACKS.length}`, detail: "Master, teaser, clips, cover, copy, and launch assets", color: C.gold },
-    { label: "Destinations", value: `${bodyCinemaPlatforms.length}`, detail: bodyCinemaPlatforms.map(p => p.replace("_", " ")).join(" / "), color: C.green },
+  const [exports, setExports] = useState<any>(null);
+  const [bodyCinema, setBodyCinema] = useState<any>(null);
+  const [published, setPublished] = useState<any>(null);
+  const [activeStep, setActiveStep] = useState<'ingest' | 'enhance' | 'package' | 'publish'>('ingest');
+
+  const sourceIsReady = /^https?:\/\/.+\..+/.test(sourceUrl.trim());
+  const currentProjectId = projectId;
+  const isBusy = createProjectMut.isPending || analyzeMut.isPending || enhancePhotoMut.isPending || enhanceVideoMut.isPending || captionMut.isPending || exportMut.isPending || publishMut.isPending || bodyCinemaMut.isPending;
+
+  const platformOptions: Array<{ id: 'onlyfans' | 'telegram_teaser' | 'instagram_sfw' | 'tiktok' | 'twitter' | 'master'; label: string; detail: string }> = [
+    { id: 'master', label: 'Master', detail: 'archive quality' },
+    { id: 'onlyfans', label: 'OnlyFans', detail: 'paid post / PPV' },
+    { id: 'telegram_teaser', label: 'Telegram', detail: 'teaser funnel' },
+    { id: 'instagram_sfw', label: 'Instagram', detail: 'platform-safe' },
+    { id: 'tiktok', label: 'TikTok', detail: 'vertical hook' },
+    { id: 'twitter', label: 'X / Twitter', detail: 'traffic post' },
   ];
 
-  const applyProductionPreset = useCallback((presetId: string) => {
-    const preset = PRODUCTION_PRESETS.find(p => p.id === presetId) ?? PRODUCTION_PRESETS[0];
-    setProductionPreset(preset.id);
-    setSelectedOutputPackages([...preset.outputs]);
-    setComplianceMode(preset.compliance as typeof complianceMode);
-    setTargetFormat(preset.format as typeof targetFormat);
-    setExportPresets([...preset.platforms]);
-    if (preset.watermark && !watermarkIdentity.trim()) setWatermarkIdentity("@VaultXCreator");
-    setToolStatus(`${preset.label} loaded: ${preset.outputs.length} deliverables, ${preset.platforms.length} export targets.`);
-  }, [complianceMode, targetFormat, watermarkIdentity]);
+  const readiness = [
+    { label: 'Project', ready: !!currentProjectId, detail: currentProjectId ? `#${currentProjectId}` : 'create or select' },
+    { label: 'Source asset', ready: sourceIsReady, detail: sourceIsReady ? 'valid URL' : 'paste direct media URL' },
+    { label: 'Analysis', ready: !!analysis, detail: analysis ? `${analysis.image_quality || analysis.overall_score || 'AI'} score` : 'run Vision scan' },
+    { label: 'Enhancement', ready: !!enhancement, detail: enhancement ? 'pipeline queued' : 'choose polish level' },
+    { label: 'Captions', ready: !!captions, detail: captions ? 'sales copy ready' : 'generate hook set' },
+    { label: 'Exports', ready: !!exports, detail: exports ? `${Object.keys(exports.exportUrls || exports.exports || {}).length || selectedPlatforms.length} lanes` : 'package outputs' },
+  ];
+  const readyCount = readiness.filter(item => item.ready).length;
+  const readinessPct = Math.round((readyCount / readiness.length) * 100);
 
-  const bodyCinemaCollectionsQ = trpc.vaultx.getBodyCinemaCollections.useQuery(
-    { projectId: projectId ?? undefined, limit: 12 },
-    { enabled: !!projectId }
-  );
+  const recentProjects = ((projectsQ.data as any)?.projects || []).slice(0, 6);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const ensureProject = useCallback(async () => {
+  const ensureProject = async () => {
     if (projectId) return projectId;
-    const result = await createProjectMut.mutateAsync({ projectName: project.title, projectType: project.projectType as any });
-    const newId = result.projectId;
-    setProjectId(newId);
-    return newId;
-  }, [projectId, project, createProjectMut]);
+    const projectType = assetKind === 'photo' ? 'photo_set' : assetKind;
+    const result = await createProjectMut.mutateAsync({
+      projectName: projectName.trim() || 'VaultX Revenue Drop',
+      projectType: projectType as 'video' | 'photo_set' | 'reel',
+      sourceFiles: sourceUrl.trim() ? [sourceUrl.trim()] : [],
+    });
+    const id = Number((result as any).projectId);
+    setProjectId(id);
+    await utils.vaultx.getMyEditorProjects.invalidate();
+    toast.success('VaultX project created');
+    return id;
+  };
 
-  const runVaultXAnalysis = useCallback(async (targetUrl?: string, targetType?: "photo" | "video", options?: { silent?: boolean }) => {
-    const url = targetUrl || sourceUrl;
-    const type = targetType || contentType;
-    if (!url || analyzeContentMut.isPending) return null;
-    const toastId = options?.silent ? undefined : toast.loading("VaultX AI is reading this asset...");
+  const runAnalysis = async () => {
+    if (!sourceIsReady) return toast.error('Paste a direct image or video URL first.');
     try {
-      const pid = await ensureProject();
-      const result = await analyzeContentMut.mutateAsync({ sourceUrl: url, projectType: type, projectId: pid });
-      setAnalysis(result.analysis as ContentAnalysis);
-      setAnalysisAttemptedForSource(url);
-      setToolStatus("VaultX AI locked the creator brief, hook logic, teaser direction, and paid-output readiness.");
-      if (!options?.silent) toast.success("VaultX AI analysis locked", { id: toastId });
-      return result.analysis as ContentAnalysis;
-    } catch (e: any) {
-      setAnalysisAttemptedForSource(url);
-      if (!options?.silent) toast.error("VaultX analysis failed: " + e.message, { id: toastId });
-      return null;
+      const id = await ensureProject();
+      const result = await analyzeMut.mutateAsync({ sourceUrl: sourceUrl.trim(), projectType: assetKind, projectId: id });
+      setAnalysis((result as any).analysis || result);
+      setActiveStep('enhance');
+      toast.success('Asset analysis complete');
+    } catch (error: any) {
+      toast.error(error?.message || 'Analysis failed');
     }
-  }, [sourceUrl, contentType, analyzeContentMut, ensureProject]);
+  };
 
-  useEffect(() => {
-    const url = sourceUrl || selectedClipUrl;
-    if (!url || analysis || analyzeContentMut.isPending || analysisAttemptedForSource === url) return;
-    void runVaultXAnalysis(url, contentType, { silent: true });
-  }, [sourceUrl, selectedClipUrl, contentType, analysis, analysisAttemptedForSource, analyzeContentMut.isPending, runVaultXAnalysis]);
-
-  const handleFileUpload = useCallback(async (file: File) => {
-    const toastId = toast.loading("Uploading 0%...");
+  const runEnhancement = async () => {
+    if (!sourceIsReady) return toast.error('Paste a direct image or video URL first.');
     try {
-      const uploaded = await uploadVaultXFile(file, progress => toast.loading(`Uploading ${progress}%...`, { id: toastId }));
-      setSourceUrl(uploaded.url);
-      setCurrentSource(uploaded.url);
-      setContentType(file.type.startsWith("video") ? "video" : "photo");
-      toast.success("Uploaded — VaultX AI analysis starting...", { id: toastId });
-      if (file.type.startsWith("video")) {
-        setEditorClips(prev => [{ id: Date.now().toString(), src: uploaded.url, assetUrl: uploaded.url, fileUrl: uploaded.url, duration: project.durationSeconds || 60, type: "video", name: uploaded.filename }, ...prev]);
-      }
-      await runVaultXAnalysis(uploaded.url, file.type.startsWith("video") ? "video" : "photo", { silent: false });
-      toast.success("Content analyzed and ready for paid-output tools");
-    } catch (e: any) { toast.error("Upload failed: " + e.message, { id: toastId }); }
-  }, [runVaultXAnalysis, project.durationSeconds]);
-
-  const handleEnhance = useCallback(async () => {
-    if (!sourceUrl) { toast.error("Upload content first"); return; }
-    const pid = await ensureProject();
-    try {
-      if (contentType === "photo") {
-        const result = await enhancePhotoMut.mutateAsync({ projectId: pid, sourceUrl, enhancementIntensity, backgroundStyle, skinTone: (analysis?.skin_tone_detected as any) || "medium" });
-        setVariations(result.enhancedUrls as Variation[]);
-        toast.success(`Enhancement pipeline started — ${result.enginesUsed.length} AI models`);
-      } else {
-        await enhanceVideoMut.mutateAsync({ projectId: pid, sourceUrl, enhancementIntensity, enableSlowMotion: true, enableAudio: true, audioMood: "sensual" });
-        toast.success("Video enhancement started — Kling 3.0 + ElevenLabs");
-      }
-    } catch (e: any) { toast.error("Enhancement failed: " + e.message); }
-  }, [sourceUrl, contentType, enhancementIntensity, backgroundStyle, analysis, ensureProject, enhancePhotoMut, enhanceVideoMut]);
-
-  const handleGenerateVariations = useCallback(async () => {
-    if (!sourceUrl) { toast.error("Upload content first"); return; }
-    const pid = await ensureProject();
-    try {
-      const result = await generateVariationsMut.mutateAsync({ projectId: pid, sourceUrl });
-      setVariations(result.variations as Variation[]);
-      toast.success("3 variations generated");
-    } catch (e: any) { toast.error("Failed: " + e.message); }
-  }, [sourceUrl, ensureProject, generateVariationsMut]);
-
-  const handleDetectBody = useCallback(async () => {
-    if (!sourceUrl) { toast.error("Upload content first"); return; }
-    const pid = await ensureProject();
-    try {
-      const result = await detectBodyRegionsMut.mutateAsync({ projectId: pid, sourceUrl });
-      setBodyMap(result.bodyMap as BodyMap);
-      toast.success("Body regions detected — tap any region to enhance");
-    } catch (e: any) { toast.error("Detection failed: " + e.message); }
-  }, [sourceUrl, ensureProject, detectBodyRegionsMut]);
-
-  const handleEnhanceRegion = useCallback(async (region: string) => {
-    if (!sourceUrl) { toast.error("Upload content first"); return; }
-    const pid = await ensureProject();
-    setActiveRegion(region);
-    try {
-      await enhanceBodyRegionMut.mutateAsync({ projectId: pid, sourceUrl, region: region as any, intensity: enhancementIntensity === "cinematic" ? "enhanced" : enhancementIntensity as any });
-      toast.success(`${region.toUpperCase()} enhancement started`);
-    } catch (e: any) { toast.error(`${region} failed: ` + e.message); }
-  }, [sourceUrl, enhancementIntensity, ensureProject, enhanceBodyRegionMut]);
-
-  const handleRevealShot = useCallback(async () => {
-    if (!sourceUrl) { toast.error("Upload content first"); return; }
-    const pid = await ensureProject();
-    const enhancedUrl = variations[selectedVariation]?.url || sourceUrl;
-    try {
-      const result = await generateRevealShotMut.mutateAsync({ projectId: pid, enhancedImageUrl: enhancedUrl, bodyType: bodyMap?.body_type || "beautiful woman" });
-      setRevealShotUrl(result.revealShotUrl);
-      toast.success("Reveal shot generated — Kling 3.0");
-    } catch (e: any) { toast.error("Reveal shot failed: " + e.message); }
-  }, [sourceUrl, variations, selectedVariation, bodyMap, ensureProject, generateRevealShotMut]);
-
-  const handleFocusClip = useCallback(async (region: string) => {
-    if (!sourceUrl) { toast.error("Upload content first"); return; }
-    const pid = await ensureProject();
-    const enhancedUrl = variations[selectedVariation]?.url || sourceUrl;
-    try {
-      const result = await generateBodyFocusClipMut.mutateAsync({ projectId: pid, region: region as any, enhancedImageUrl: enhancedUrl });
-      setFocusClips(prev => ({ ...prev, [region]: result.clipUrl }));
-      toast.success(`${region.toUpperCase()} focus clip generated`);
-    } catch (e: any) { toast.error(`Focus clip failed: ` + e.message); }
-  }, [sourceUrl, variations, selectedVariation, ensureProject, generateBodyFocusClipMut]);
-
-  const handleGenerateCaptions = useCallback(async () => {
-    const pid = await ensureProject();
-    try {
-      const result = await generateBodyCaptionsMut.mutateAsync({ projectId: pid, captionStyle: captionStyle as any });
-      setCaptions(result.captions);
-      toast.success("Captions generated");
-    } catch (e: any) { toast.error("Caption generation failed: " + e.message); }
-  }, [captionStyle, ensureProject, generateBodyCaptionsMut]);
-
-  const toggleBodyCinemaRegion = useCallback((region: "bust" | "abdomen" | "glutes" | "legs" | "full") => {
-    setBodyCinemaRegions(prev => prev.includes(region) ? (prev.length === 1 ? prev : prev.filter(r => r !== region)) : [...prev, region]);
-  }, []);
-
-  const toggleBodyCinemaPlatform = useCallback((platform: "vaultx" | "onlyfans" | "fansly" | "telegram" | "instagram_reel" | "twitter") => {
-    setBodyCinemaPlatforms(prev => prev.includes(platform) ? (prev.length === 1 ? prev : prev.filter(p => p !== platform)) : [...prev, platform]);
-  }, []);
-
-  const handleCreateBodyCinemaCollection = useCallback(async () => {
-    if (!sourceUrl && !variations[selectedVariation]?.url) { toast.error("Upload or enhance content first"); return; }
-    const pid = await ensureProject();
-    try {
-      const enhancedUrl = variations[selectedVariation]?.url || sourceUrl;
-      const result = await createBodyCinemaCollectionMut.mutateAsync({
-        projectId: pid,
-        collectionName: bodyCinemaName || "VIP Body Cinema Collection",
-        sourceAssetUrl: sourceUrl || enhancedUrl,
-        enhancedImageUrl: enhancedUrl,
-        selectedRegions: bodyCinemaRegions,
-        cinematicStyle: bodyCinemaStyle,
-        platforms: bodyCinemaPlatforms,
-        ppvPriceCents: Math.round(ppvPrice * 100),
-      });
-      setBodyCinemaPlan(result.productionPlan);
-      if (result.productionPlan?.renderedOutputUrl || result.productionPlan?.finalVideoUrl) {
-        setEditorClips(prev => [{ id: Date.now().toString(), src: result.productionPlan.renderedOutputUrl || result.productionPlan.finalVideoUrl, assetUrl: result.productionPlan.renderedOutputUrl || result.productionPlan.finalVideoUrl, fileUrl: result.productionPlan.renderedOutputUrl || result.productionPlan.finalVideoUrl, duration: result.productionPlan.renderMeta?.durationSeconds || result.productionPlan.remotionComposition?.totalDuration || 24, type: "video", name: `${bodyCinemaName || "Body Cinema"} master render` }, ...prev]);
-      }
-      await utils.vaultx.getBodyCinemaCollections.invalidate();
-      toast.success("Body Cinema rendered: master video, teaser, thumbnail, and platform outputs are ready.");
-    } catch (e: any) { toast.error("Body Cinema packaging failed: " + e.message); }
-  }, [sourceUrl, variations, selectedVariation, ensureProject, createBodyCinemaCollectionMut, bodyCinemaName, bodyCinemaRegions, bodyCinemaStyle, bodyCinemaPlatforms, ppvPrice, utils]);
-
-  const handlePublishBodyCinemaCollection = useCallback(async (collectionId: string, collectionName: string, hasRenderedOutput = false) => {
-    if (!hasRenderedOutput) {
-      toast.error("This Body Cinema collection is still a production plan. Render a final video before publishing it as a finished drop.");
-      return;
+      const id = await ensureProject();
+      const result = assetKind === 'video' || assetKind === 'reel'
+        ? await enhanceVideoMut.mutateAsync({ projectId: id, sourceUrl: sourceUrl.trim(), enhancementIntensity: intensity, enableSlowMotion: true, enableAudio: false, audioMood: 'sensual' })
+        : await enhancePhotoMut.mutateAsync({ projectId: id, sourceUrl: sourceUrl.trim(), enhancementIntensity: intensity, backgroundStyle, skinTone: 'medium' });
+      setEnhancement(result);
+      setActiveStep('package');
+      toast.success('Enhancement pipeline started');
+    } catch (error: any) {
+      toast.error(error?.message || 'Enhancement failed');
     }
+  };
+
+  const runCaptionPack = async () => {
     try {
-      const result = await publishBodyCinemaCollectionMut.mutateAsync({
-        collectionId,
-        title: collectionName,
-        description: "Body Cinema final render produced in VaultX Editor with reveal, focus clips, platform exports, and PPV monetization.",
-        accessTier: "ppv",
+      const id = await ensureProject();
+      const result = await captionMut.mutateAsync({ projectId: id, captionStyle });
+      setCaptions((result as any).captions || result);
+      toast.success('Caption pack generated');
+    } catch (error: any) {
+      toast.error(error?.message || 'Caption generation failed');
+    }
+  };
+
+  const runExports = async () => {
+    try {
+      const id = await ensureProject();
+      const result = await exportMut.mutateAsync({ projectId: id, platforms: selectedPlatforms, selectedVariation: 1 });
+      setExports(result);
+      setActiveStep('publish');
+      toast.success('Export package queued');
+    } catch (error: any) {
+      toast.error(error?.message || 'Export packaging failed');
+    }
+  };
+
+  const runBodyCinema = async () => {
+    if (!sourceIsReady) return toast.error('Paste a direct media URL first.');
+    try {
+      const id = await ensureProject();
+      const result = await bodyCinemaMut.mutateAsync({
+        projectId: id,
+        collectionName: projectName.trim() || 'VaultX Body Cinema Drop',
+        sourceAssetUrl: sourceUrl.trim(),
+        selectedRegions,
+        cinematicStyle: backgroundStyle === 'dark_studio' ? 'noir' : backgroundStyle === 'penthouse' ? 'penthouse' : 'luxury',
+        platforms: ['vaultx', 'onlyfans', 'telegram'],
+        ppvPriceCents: Math.max(3, ppvPrice) * 100,
       });
-      await utils.vaultx.getBodyCinemaCollections.invalidate();
-      toast.success(`Body Cinema published — Content ID: ${result.contentId}`);
-    } catch (e: any) { toast.error("Body Cinema publish failed: " + e.message); }
-  }, [publishBodyCinemaCollectionMut, utils]);
+      setBodyCinema(result);
+      toast.success('Body Cinema sales package created');
+    } catch (error: any) {
+      toast.error(error?.message || 'Body Cinema packaging failed');
+    }
+  };
 
-  const handlePublish = useCallback(async () => {
-    if (!sourceUrl) { toast.error("Upload content first"); return; }
-    const pid = await ensureProject();
+  const runPublish = async () => {
     try {
-      const result = await publishToVaultXMut.mutateAsync({ projectId: pid, selectedVariation: selectedVariation + 1, accessTier: publishTier, ppvPrice: publishTier === "ppv" ? ppvPrice : undefined, title: publishTitle || project.title });
-      toast.success(`Published! Content ID: ${result.contentId}`);
-    } catch (e: any) { toast.error("Publish failed: " + e.message); }
-  }, [sourceUrl, selectedVariation, publishTier, ppvPrice, publishTitle, project, ensureProject, publishToVaultXMut]);
+      const id = await ensureProject();
+      const result = await publishMut.mutateAsync({
+        projectId: id,
+        selectedVariation: 1,
+        accessTier: 'ppv',
+        ppvPrice,
+        title: publishTitle.trim() || projectName.trim() || 'VaultX PPV Drop',
+        description: 'Packaged in VaultX with teaser, caption, paid unlock, and platform export lanes.',
+        tags: ['vaultx', 'ppv', 'vip', 'creator-drop'],
+      });
+      setPublished(result);
+      toast.success('Published to VaultX');
+    } catch (error: any) {
+      toast.error(error?.message || 'Publish failed');
+    }
+  };
 
-  const handleGenerateCalendar = useCallback(async () => {
-    try {
-      const result = await generateContentCalendarMut.mutateAsync({ weeks: 2 });
-      setContentCalendar(result.calendar);
-      toast.success(`${result.totalDays}-day calendar generated`);
-    } catch (e: any) { toast.error("Calendar failed: " + e.message); }
-  }, [generateContentCalendarMut]);
+  const togglePlatform = (platform: typeof selectedPlatforms[number]) => {
+    setSelectedPlatforms(current => current.includes(platform) ? current.filter(item => item !== platform) : [...current, platform]);
+  };
 
-  const isAnyProcessing = analyzeContentMut.isPending || enhancePhotoMut.isPending || enhanceVideoMut.isPending ||
-    generateVariationsMut.isPending || detectBodyRegionsMut.isPending || enhanceBodyRegionMut.isPending ||
-    generateRevealShotMut.isPending || generateBodyFocusClipMut.isPending || assembleHighlightReelMut.isPending ||
-    generateBodyCaptionsMut.isPending || createBodyCinemaCollectionMut.isPending || publishBodyCinemaCollectionMut.isPending ||
-    publishToVaultXMut.isPending || generateContentCalendarMut.isPending;
+  const toggleRegion = (region: typeof selectedRegions[number]) => {
+    setSelectedRegions(current => current.includes(region) ? current.filter(item => item !== region) : [...current, region]);
+  };
 
-  const editorWorkflowSteps = [
-    { label: "Upload source", detail: "Bring in the video or photo set that will become the paid asset.", done: !!sourceUrl },
-    { label: "AI analyze", detail: "VaultX reads quality, hook potential, body-cinema direction, and paid-output readiness.", done: !!analysis },
-    { label: "Package outputs", detail: "Choose master, teaser, PPV, captions, thumbnail, calendar, and archive deliverables.", done: selectedOutputPackages.length >= 3 },
-    { label: "Export or publish", detail: "Render the sellable package and push it into VaultX or distribution workflows.", done: exportPresets.length > 0 },
-  ];
+  const analysisHighlights = analysis ? [
+    { label: 'Content type', value: analysis.content_type || assetKind },
+    { label: 'Image quality', value: analysis.image_quality ? `${analysis.image_quality}/10` : 'pending' },
+    { label: 'Lighting', value: analysis.lighting_quality ? `${analysis.lighting_quality}/10` : 'pending' },
+    { label: 'Best asset', value: (analysis.strongest_assets || analysis.detected_regions || ['not ranked'])[0] },
+  ] : [];
 
   return (
-    <div className="flex flex-col relative" style={{ height: "100vh", background: "#050505", color: "#f7f2e8", fontFamily: "var(--kc-font-ui, Inter, sans-serif)", overflow: "hidden" }}>
-      <div className="pointer-events-none absolute inset-0 z-0" style={{ background: "radial-gradient(circle at 14% 0%, rgba(0,229,255,.16), transparent 30%), radial-gradient(circle at 86% 8%, rgba(201,168,76,.16), transparent 32%)" }} />
-      <div className="pointer-events-none absolute inset-0 z-0 opacity-[.05]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
-
-      {/* ── TOP BAR ── */}
-      <div className="relative z-10 flex items-center justify-between px-4 flex-shrink-0" style={{ height: 64, background: "linear-gradient(90deg, rgba(8,8,8,.94), rgba(0,229,255,.045), rgba(201,168,76,.035))", borderBottom: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(24px)" }}>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <VaultXLogo size="sm" />
-            <span className="text-lg font-black text-white tracking-[-.04em]">VaultX Launch Cockpit</span>
-            <span className="hidden xl:inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.18em]" style={{ background: "rgba(0,229,255,0.10)", color: "#00e5ff", border: "1px solid rgba(0,229,255,0.26)" }}>First polished vertical · alive interface</span>
-          </div>
-          <div className="w-px h-4" style={{ background: "rgba(255,255,255,0.1)" }} />
-          <button onClick={() => setShowProjectList(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <Film size={11} />{project.title}<ChevronDown size={10} />
-          </button>
-        </div>
-        <div className="flex items-center gap-1 p-1 rounded-2xl max-w-[58vw] overflow-x-auto" style={{ background: "rgba(255,255,255,0.045)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "inset 0 0 0 1px rgba(0,229,255,.035)" }}>
-          {[
-            { id: "enhance", label: "ENHANCE",   icon: Sparkles,   color: "#8B5CF6" },
-            { id: "body",    label: "BODY CINEMA", icon: Brain,      color: "#EC4899" },
-            { id: "ppv",     label: "PPV",        icon: Crown,      color: "#F59E0B" },
-            { id: "censor",  label: "CENSOR",     icon: ScanLine,   color: "#EC4899" },
-            { id: "scene",   label: "SCENE",      icon: Crosshair,  color: "#8B5CF6" },
-            { id: "motion",  label: "MOTION",     icon: Gauge,      color: "#3B82F6" },
-            { id: "color",   label: "COLOR",      icon: Droplets,   color: "#F59E0B" },
-            { id: "text",    label: "TEXT",        icon: Hash,       color: "#10B981" },
-            { id: "audio",   label: "AUDIO",      icon: Volume2,    color: "#3B82F6" },
-            { id: "format",  label: "FORMAT",     icon: Download,   color: "#10B981" },
-            { id: "timeline",label: "TIMELINE",   icon: Layers,     color: "#3B82F6" },
-            { id: "publish", label: "PUBLISH",    icon: Send,       color: "#10B981" },
-            { id: "calendar",label: "CALENDAR",   icon: Calendar,   color: "#F59E0B" },
-          ].map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black"
-                style={{ background: isActive ? `${tab.color}20` : "transparent", color: isActive ? tab.color : "#4B5563", border: isActive ? `1px solid ${tab.color}40` : "1px solid transparent", transition: "all 0.15s" }}>
-                <Icon size={10} />{tab.label}
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex items-center gap-2">
-              {isAnyProcessing && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl" style={{ background: "rgba(0,229,255,0.12)", border: "1px solid rgba(0,229,255,0.28)" }}>
-              <Loader2 size={10} className="animate-spin" style={{ color: "#00e5ff" }} />
-              <span className="text-[9px] font-black" style={{ color: "#00e5ff" }}>AI RUNNING</span>
+    <div className="min-h-screen pt-24 pb-20 px-4" style={{ background: C.bg, color: C.text }}>
+      <div className="fixed inset-0 pointer-events-none opacity-70" style={{ background: `radial-gradient(circle at 20% 10%, ${C.accentDim}, transparent 34%), radial-gradient(circle at 80% 0%, ${C.pinkDim}, transparent 30%), radial-gradient(circle at 50% 100%, rgba(245,158,11,0.12), transparent 36%)` }} />
+      <div className="relative z-10 mx-auto max-w-7xl space-y-8">
+        <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] items-stretch">
+          <div className="rounded-[2rem] p-6 md:p-8" style={{ background: 'linear-gradient(145deg, rgba(17,17,17,0.96), rgba(5,5,5,0.98))', border: `1px solid ${C.borderHi}`, boxShadow: '0 30px 120px rgba(0,0,0,0.6)' }}>
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <VaultXLogo size="md" />
+              <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-[0.28em] uppercase" style={{ background: C.goldDim, border: '1px solid rgba(245,158,11,0.28)', color: C.gold }}>Creator Output Cockpit</span>
+              <a href="/vault-x/studio" className="px-3 py-1 rounded-full text-[10px] font-black tracking-[0.24em] uppercase" style={{ background: C.accentDim, border: '1px solid rgba(139,92,246,0.28)', color: '#C4B5FD' }}>Open Pollo Studio</a>
             </div>
-          )}
-          <a href="/vaultx/distribution" className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black" style={{ background: "rgba(16,185,129,0.12)", color: "#86efac", border: "1px solid rgba(16,185,129,0.24)" }}>
-            <Share2 size={10} />Distribution
-          </a>
-          <a href="/vault-x/studio" className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black" style={{ background: "rgba(236,72,153,0.12)", color: "#f0abfc", border: "1px solid rgba(236,72,153,0.24)" }}>
-            <Sparkles size={10} />Studio
-          </a>
-          <button onClick={() => setShowProjectList(true)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <Save size={10} />Projects
-          </button>
-        </div>
-      </div>
-
-      {/* ── VAULTX LAUNCH PRESETS ── */}
-      <div className="relative z-10 hidden lg:grid grid-cols-4 gap-2 px-4 py-3 flex-shrink-0" style={{ background: "linear-gradient(90deg, rgba(0,229,255,0.10), rgba(201,168,76,0.07), rgba(16,185,129,0.06))", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-        {PRODUCTION_PRESETS.map(preset => (
-          <button key={preset.id} onClick={() => applyProductionPreset(preset.id)} className="text-left p-3 rounded-2xl transition-all" style={{ background: productionPreset === preset.id ? `${preset.color}18` : "rgba(0,0,0,0.28)", border: `1px solid ${productionPreset === preset.id ? preset.color + "55" : "rgba(255,255,255,0.06)"}` }}>
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <span className="text-[10px] font-black tracking-wide" style={{ color: productionPreset === preset.id ? preset.color : "#9CA3AF" }}>{preset.label}</span>
-              {productionPreset === preset.id && <CheckCircle size={12} style={{ color: preset.color }} />}
-            </div>
-            <p className="text-[9px] leading-snug" style={{ color: "#6B7280" }}>{preset.desc}</p>
-          </button>
-        ))}
-      </div>
-
-      <div className="relative z-10 px-4 py-3 flex-shrink-0" style={{ background: "rgba(0,0,0,0.72)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-        <VaultXWorkflow steps={editorWorkflowSteps} activeStep={!sourceUrl ? 0 : !analysis ? 1 : selectedOutputPackages.length < 3 ? 2 : 3} />
-      </div>
-
-      {/* ── SOFT-LAUNCH COCKPIT ── */}
-      <div className="relative z-10 hidden xl:grid grid-cols-4 gap-3 px-4 py-3 flex-shrink-0" style={{ background: "linear-gradient(90deg, rgba(236,72,153,0.08), rgba(201,168,76,0.08), rgba(0,229,255,0.06))", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-        {[
-          { label: "Launch Heat", value: `${Math.max(outputReadiness, bodyCinemaHeatScore)}%`, detail: sourceUrl ? "asset is inside the room" : "waiting on first creator asset", color: Math.max(outputReadiness, bodyCinemaHeatScore) >= 80 ? C.green : C.gold, icon: Radio },
-          { label: "Vertical", value: "VaultX", detail: "premium video, PPV, VIP, and private fan movement", color: C.pink, icon: Crown },
-          { label: "Preset", value: selectedPreset.label, detail: selectedOutputLabels.join(" · ") || "master · teaser · sales kit", color: selectedPreset.color, icon: Clapperboard },
-          { label: "Revenue Gate", value: complianceMode === "vip" ? `PPV $${ppvPrice}` : selectedCompliance.label, detail: `${exportPresets.length || 0} routed destinations · ${targetFormat}`, color: selectedCompliance.color, icon: DollarSign },
-        ].map(card => {
-          const Icon = card.icon as any;
-          return (
-            <div key={card.label} className="relative overflow-hidden rounded-2xl p-3" style={{ background: "rgba(0,0,0,0.38)", border: `1px solid ${card.color}33`, boxShadow: `inset 0 0 28px ${card.color}0d` }}>
-              <div className="absolute inset-y-0 left-0 w-1" style={{ background: card.color, boxShadow: `0 0 18px ${card.color}` }} />
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: "#6B7280" }}>{card.label}</p>
-                  <p className="text-sm font-black mt-1 truncate" style={{ color: card.color }}>{card.value}</p>
-                  <p className="text-[9px] leading-snug mt-1 line-clamp-2" style={{ color: "rgba(255,255,255,0.46)" }}>{card.detail}</p>
-                </div>
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${card.color}18`, border: `1px solid ${card.color}30` }}>
-                  <Icon size={14} style={{ color: card.color }} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── MAIN ── */}
-      <div className="relative z-10 flex flex-1 overflow-hidden">
-
-        {/* ── LEFT PANEL ── */}
-        <div className="flex flex-col gap-3 p-3 overflow-y-auto flex-shrink-0" style={{ width: 210, background: "rgba(0,0,0,0.6)", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-          {/* Upload zone */}
-          <div onClick={() => fileInputRef.current?.click()}
-            className="relative flex flex-col items-center justify-center rounded-2xl cursor-pointer"
-            style={{ aspectRatio: "9/16", background: sourceUrl ? "transparent" : "rgba(255,255,255,0.02)", border: `2px dashed ${sourceUrl ? "rgba(139,92,246,0.4)" : "rgba(255,255,255,0.1)"}`, overflow: "hidden" }}
-            onDragOver={e => e.preventDefault()}
-            onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFileUpload(f); }}>
-            {sourceUrl ? (
-              contentType === "photo" ? <img src={sourceUrl} alt="Source" className="w-full h-full object-cover" /> : <video src={sourceUrl} className="w-full h-full object-cover" muted loop autoPlay playsInline />
-            ) : (
-              <div className="flex flex-col items-center gap-2 p-4">
-                <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)" }}>
-                  <Upload size={18} style={{ color: "#8B5CF6" }} />
-                </div>
-                <p className="text-[10px] font-black text-center" style={{ color: "#6B7280" }}>DROP VAULTX ASSET</p>
-              </div>
-            )}
-            {analyzeContentMut.isPending && (
-              <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.7)" }}>
-                <div className="flex flex-col items-center gap-2"><Loader2 size={20} className="animate-spin" style={{ color: "#8B5CF6" }} /><span className="text-[9px] font-black" style={{ color: "#8B5CF6" }}>ANALYZING...</span></div>
-              </div>
-            )}
-          </div>
-          <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }} />
-
-          {/* Creator business brief */}
-          <div className="flex flex-col gap-2 p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <div className="flex items-center justify-between">
-              <p className="text-[9px] font-black tracking-widest" style={{ color: C.gold }}>VAULTX LIVE BRIEF</p>
-              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md" style={{ background: outputReadiness >= 80 ? C.greenDim : C.goldDim, color: outputReadiness >= 80 ? C.green : C.gold }}>{outputReadiness}% READY</span>
-            </div>
-            <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-              <div className="h-full rounded-full" style={{ width: `${outputReadiness}%`, background: outputReadiness >= 80 ? C.green : C.gold, transition: "width 0.25s" }} />
-            </div>
-            <button
-              onClick={() => void runVaultXAnalysis()}
-              disabled={!sourceUrl || analyzeContentMut.isPending}
-              className="w-full py-2 rounded-xl text-[8px] font-black tracking-widest"
-              style={{ background: analysis ? C.greenDim : C.goldDim, color: analysis ? C.green : C.gold, border: `1px solid ${analysis ? "rgba(16,185,129,0.28)" : "rgba(201,168,76,0.28)"}`, opacity: !sourceUrl ? 0.45 : 1 }}
-            >
-              {analyzeContentMut.isPending ? "VAULTX AI READING ASSET..." : analysis ? "AI BRIEF LOCKED" : "RUN VAULTX AI"}
-            </button>
-            <div className="grid grid-cols-2 gap-1">
-              {(["9:16", "16:9", "1:1", "4:5"] as const).map(fmt => (
-                <button key={fmt} onClick={() => setTargetFormat(fmt)} className="py-1.5 rounded-lg text-[8px] font-black" style={{ background: targetFormat === fmt ? C.accentDim : "rgba(255,255,255,0.04)", color: targetFormat === fmt ? C.accent : C.mutedLo, border: `1px solid ${targetFormat === fmt ? "rgba(139,92,246,0.35)" : "rgba(255,255,255,0.06)"}` }}>{fmt}</button>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-1">
-              {(["platform_safe", "subscriber", "vip", "archive"] as const).map(mode => (
-                <button key={mode} onClick={() => setComplianceMode(mode)} className="py-1.5 px-1 rounded-lg text-[7px] font-black" style={{ background: complianceMode === mode ? C.greenDim : "rgba(255,255,255,0.04)", color: complianceMode === mode ? C.green : C.mutedLo, border: `1px solid ${complianceMode === mode ? "rgba(16,185,129,0.35)" : "rgba(255,255,255,0.06)"}` }}>{mode.replace("_", " ").toUpperCase()}</button>
-              ))}
-            </div>
-            <input value={watermarkIdentity} onChange={e => setWatermarkIdentity(e.target.value)} className="px-2 py-1.5 rounded-lg text-[9px] font-bold" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.08)", color: C.text, outline: "none" }} placeholder="@Creator watermark" />
-            <div className="p-2 rounded-xl" style={{ background: `${selectedCompliance.color}12`, border: `1px solid ${selectedCompliance.color}33` }}>
-              <div className="flex items-center gap-1.5 mb-1">
-                <SelectedComplianceIcon size={10} style={{ color: selectedCompliance.color }} />
-                <span className="text-[8px] font-black" style={{ color: selectedCompliance.color }}>{selectedCompliance.label.toUpperCase()}</span>
-              </div>
-              <p className="text-[8px] leading-snug" style={{ color: C.muted }}>{selectedCompliance.desc}</p>
-            </div>
-            <div className="p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[8px] font-black mb-1" style={{ color: C.muted }}>SELECTED OUTPUTS</p>
-              <p className="text-[8px] leading-snug capitalize" style={{ color: C.text }}>{selectedOutputLabels.length ? selectedOutputLabels.join(" · ") : "Choose deliverables"}</p>
-            </div>
-            <div className="flex flex-col gap-1">
-              {[
-                { label: "Source", ok: !!sourceUrl },
-                { label: "Analyze", ok: !!analysis },
-                { label: "Output Pack", ok: selectedOutputPackages.length >= 3 },
-                { label: "Platform", ok: exportPresets.length > 0 },
-              ].map(item => (
-                <div key={item.label} className="flex items-center justify-between text-[8px]">
-                  <span style={{ color: C.muted }}>{item.label}</span>
-                  <span className="font-black" style={{ color: item.ok ? C.green : C.mutedLo }}>{item.ok ? "LOCKED" : "PENDING"}</span>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[0.95] max-w-4xl">
+              Turn one creator asset into a paid drop, teaser funnel, caption pack, and export bundle.
+            </h1>
+            <p className="mt-5 max-w-3xl text-base md:text-lg leading-relaxed" style={{ color: '#B8B8C6' }}>
+              VaultX Editor is the operating surface for content that has to sell. Add the source, let the system inspect quality and selling angles, queue AI polish, create platform-safe and paid output lanes, then package everything for subscriber revenue.
+            </p>
+            <div className="mt-8 grid gap-3 sm:grid-cols-4">
+              {[['01', 'Ingest', 'URL + brief'], ['02', 'Analyze', 'quality + angles'], ['03', 'Package', 'captions + exports'], ['04', 'Launch', 'VaultX + funnels']].map(([num, label, detail]) => (
+                <div key={label} className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <p className="text-[10px] font-black tracking-[0.22em]" style={{ color: C.gold }}>{num}</p>
+                  <p className="mt-2 text-sm font-black text-white">{label}</p>
+                  <p className="text-xs" style={{ color: C.muted }}>{detail}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Creator intelligence */}
-          <div className="flex flex-col gap-2 p-3 rounded-2xl" style={{ background: "linear-gradient(180deg, rgba(236,72,153,0.08), rgba(139,92,246,0.05))", border: "1px solid rgba(236,72,153,0.16)" }}>
-            <div className="flex items-center justify-between">
-              <p className="text-[9px] font-black tracking-widest" style={{ color: C.pink }}>CREATOR INTELLIGENCE</p>
-              <span className="text-[7px] font-black px-1.5 py-0.5 rounded-md" style={{ background: C.pinkDim, color: C.pink }}>SHOT → TEASER → PAID</span>
-            </div>
-            <p className="text-[8px] leading-snug" style={{ color: C.muted }}>This is the living direction layer: VaultX tells the creator what to do with the footage, how to tease it, and where the money sits.</p>
-            <div className="flex flex-col gap-1.5">
-              {creatorIntelligence.map(item => {
-                const Icon = item.icon as any;
-                return (
-                  <div key={item.label} className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.32)", border: `1px solid ${item.color}26` }}>
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Icon size={10} style={{ color: item.color }} />
-                      <span className="text-[8px] font-black" style={{ color: item.color }}>{item.label.toUpperCase()}</span>
+          <div className="rounded-[2rem] p-6 flex flex-col justify-between" style={{ background: 'rgba(10,10,10,0.9)', border: `1px solid ${C.borderHi}` }}>
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs font-black tracking-[0.25em] uppercase" style={{ color: C.muted }}>Drop readiness</p>
+                <span className="text-3xl font-black" style={{ color: readinessPct >= 70 ? C.green : C.gold }}>{readinessPct}%</span>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                <div className="h-full rounded-full" style={{ width: `${readinessPct}%`, background: `linear-gradient(90deg, ${C.accent}, ${C.pink}, ${C.gold})` }} />
+              </div>
+              <div className="mt-5 grid gap-2">
+                {readiness.map(item => (
+                  <div key={item.label} className="flex items-center justify-between rounded-2xl px-3 py-3" style={{ background: item.ready ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${item.ready ? 'rgba(16,185,129,0.22)' : 'rgba(255,255,255,0.07)'}` }}>
+                    <div className="flex items-center gap-3">
+                      {item.ready ? <CheckCircle size={15} style={{ color: C.green }} /> : <Clock size={15} style={{ color: C.muted }} />}
+                      <div><p className="text-sm font-bold text-white">{item.label}</p><p className="text-[11px]" style={{ color: C.muted }}>{item.detail}</p></div>
                     </div>
-                    <p className="text-[8px] leading-snug mb-1" style={{ color: C.text }}>{item.action}</p>
-                    <p className="text-[7px] leading-snug" style={{ color: C.muted }}>{item.detail}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Analysis summary */}
-          {analysis && (
-            <div className="flex flex-col gap-1.5 p-2.5 rounded-2xl" style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>
-              <p className="text-[9px] font-black tracking-widest" style={{ color: "#8B5CF6" }}>ANALYSIS</p>
-              <div className="grid grid-cols-2 gap-1">
-                {[
-                  { label: "Quality", value: `${analysis.image_quality}/10`, color: "#22C55E" },
-                  { label: "Potential", value: `${analysis.monetization_potential}/10`, color: "#C9A84C" },
-                  { label: "Lighting", value: `${analysis.lighting_quality}/10`, color: "#3B82F6" },
-                  { label: "Suggest $", value: `$${analysis.pricing_recommendation}`, color: "#10B981" },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="flex flex-col p-1.5 rounded-xl" style={{ background: "rgba(0,0,0,0.3)" }}>
-                    <span className="text-[7px]" style={{ color: "#6B7280" }}>{label}</span>
-                    <span className="text-xs font-black" style={{ color }}>{value}</span>
                   </div>
                 ))}
               </div>
-              <div className="flex flex-wrap gap-1 mt-0.5">
-                {analysis.strongest_assets?.slice(0, 3).map(a => (
-                  <span key={a} className="px-1.5 py-0.5 rounded-md text-[7px] font-black" style={{ background: "rgba(201,168,76,0.2)", color: "#C9A84C" }}>{a.toUpperCase()}</span>
-                ))}
+            </div>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <a href="/vault-x/studio" className="rounded-2xl px-4 py-3 text-center text-xs font-black" style={{ background: C.accentDim, border: '1px solid rgba(139,92,246,0.28)', color: '#DDD6FE' }}>Pollo AI Studio</a>
+              <a href="/flyer-generator" className="rounded-2xl px-4 py-3 text-center text-xs font-black" style={{ background: C.goldDim, border: '1px solid rgba(245,158,11,0.28)', color: '#FDE68A' }}>Flyer Outputs</a>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
+          <div className="space-y-6">
+            <div className="rounded-[1.75rem] p-5" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+              <div className="flex items-center gap-3 mb-5"><Upload size={18} style={{ color: C.accent }} /><h2 className="text-lg font-black">1. Source and brief</h2></div>
+              <div className="space-y-4">
+                <label className="block"><span className="text-[11px] font-black tracking-[0.2em] uppercase" style={{ color: C.muted }}>Drop name</span><input value={projectName} onChange={e => { setProjectName(e.target.value); setPublishTitle(e.target.value); }} className="mt-2 w-full rounded-2xl px-4 py-3 bg-black text-white outline-none" style={{ border: `1px solid ${C.borderHi}` }} /></label>
+                <label className="block"><span className="text-[11px] font-black tracking-[0.2em] uppercase" style={{ color: C.muted }}>Direct image/video URL</span><input value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} placeholder="https://..." className="mt-2 w-full rounded-2xl px-4 py-3 bg-black text-white outline-none" style={{ border: `1px solid ${sourceIsReady ? 'rgba(16,185,129,0.35)' : C.borderHi}` }} /></label>
+                <div className="grid grid-cols-4 gap-2">
+                  {(['photo', 'video', 'reel', 'photo_set'] as const).map(kind => <button key={kind} onClick={() => setAssetKind(kind)} className="rounded-2xl py-3 text-xs font-black" style={{ background: assetKind === kind ? C.accentDim : 'rgba(255,255,255,0.035)', border: `1px solid ${assetKind === kind ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)'}`, color: assetKind === kind ? '#DDD6FE' : C.muted }}>{kind.replace('_', ' ').toUpperCase()}</button>)}
+                </div>
+                <button onClick={runAnalysis} disabled={!sourceIsReady || isBusy} className="w-full rounded-2xl py-4 text-sm font-black flex items-center justify-center gap-2 disabled:opacity-45" style={{ background: `linear-gradient(135deg, ${C.accent}, ${C.pink})`, color: 'white' }}>{analyzeMut.isPending ? <Loader2 className="animate-spin" size={16} /> : <Brain size={16} />} Analyze asset</button>
               </div>
             </div>
-          )}
 
-          {/* Intensity */}
-          <div className="flex flex-col gap-1.5">
-            <p className="text-[9px] font-black tracking-widest" style={{ color: "#6B7280" }}>INTENSITY</p>
-            <div className="grid grid-cols-2 gap-1">
-              {(["subtle", "natural", "enhanced", "cinematic"] as const).map(i => (
-                <button key={i} onClick={() => setEnhancementIntensity(i)}
-                  className="py-1.5 rounded-xl text-[9px] font-black"
-                  style={{ background: enhancementIntensity === i ? "rgba(139,92,246,0.2)" : "rgba(255,255,255,0.04)", color: enhancementIntensity === i ? "#8B5CF6" : "#4B5563", border: `1px solid ${enhancementIntensity === i ? "rgba(139,92,246,0.4)" : "rgba(255,255,255,0.06)"}` }}>
-                  {i.toUpperCase()}
-                </button>
+            <div className="rounded-[1.75rem] p-5" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+              <div className="flex items-center gap-3 mb-5"><Sparkles size={18} style={{ color: C.pink }} /><h2 className="text-lg font-black">2. AI polish lane</h2></div>
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {(['subtle', 'natural', 'enhanced', 'cinematic'] as const).map(item => <button key={item} onClick={() => setIntensity(item)} className="rounded-2xl py-3 text-xs font-black" style={{ background: intensity === item ? C.pinkDim : 'rgba(255,255,255,0.035)', border: `1px solid ${intensity === item ? 'rgba(236,72,153,0.35)' : 'rgba(255,255,255,0.08)'}`, color: intensity === item ? '#FBCFE8' : C.muted }}>{item.toUpperCase()}</button>)}
+              </div>
+              <select value={backgroundStyle} onChange={e => setBackgroundStyle(e.target.value as any)} className="w-full rounded-2xl px-4 py-3 bg-black text-white outline-none mb-4" style={{ border: `1px solid ${C.borderHi}` }}>
+                {['keep', 'penthouse', 'yacht', 'rose_bed', 'dark_studio', 'miami_villa', 'private_jet'].map(style => <option key={style} value={style}>{style.replace('_', ' ').toUpperCase()}</option>)}
+              </select>
+              <button onClick={runEnhancement} disabled={!sourceIsReady || isBusy} className="w-full rounded-2xl py-4 text-sm font-black flex items-center justify-center gap-2 disabled:opacity-45" style={{ background: C.pinkDim, border: '1px solid rgba(236,72,153,0.35)', color: '#FBCFE8' }}>{enhancePhotoMut.isPending || enhanceVideoMut.isPending ? <Loader2 className="animate-spin" size={16} /> : <Wand2 size={16} />} Queue enhancement</button>
+            </div>
+          </div>
+
+          <div className="rounded-[1.75rem] p-5" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+              <div><p className="text-[11px] font-black tracking-[0.25em] uppercase" style={{ color: C.gold }}>Output builder</p><h2 className="text-2xl font-black">Package the money outputs</h2></div>
+              <div className="flex gap-2">{(['ingest', 'enhance', 'package', 'publish'] as const).map(step => <button key={step} onClick={() => setActiveStep(step)} className="px-3 py-2 rounded-xl text-[10px] font-black" style={{ background: activeStep === step ? C.goldDim : 'rgba(255,255,255,0.035)', color: activeStep === step ? '#FDE68A' : C.muted, border: `1px solid ${activeStep === step ? 'rgba(245,158,11,0.32)' : 'rgba(255,255,255,0.07)'}` }}>{step.toUpperCase()}</button>)}</div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl p-4" style={{ background: 'rgba(0,0,0,0.38)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <p className="text-sm font-black mb-3">Analysis board</p>
+                {analysisHighlights.length ? <div className="grid gap-2">{analysisHighlights.map(item => <div key={item.label} className="flex justify-between gap-3 text-sm"><span style={{ color: C.muted }}>{item.label}</span><span className="font-bold text-white text-right">{String(item.value)}</span></div>)}</div> : <p className="text-sm leading-relaxed" style={{ color: C.muted }}>Run analysis to see quality, strongest selling angles, caption direction, and suggested export plan.</p>}
+                {analysis?.enhancement_recommendations?.length ? <div className="mt-4 space-y-2">{analysis.enhancement_recommendations.slice(0, 4).map((rec: string, i: number) => <div key={i} className="rounded-xl px-3 py-2 text-xs" style={{ background: 'rgba(139,92,246,0.08)', color: '#DDD6FE' }}>{rec}</div>)}</div> : null}
+              </div>
+
+              <div className="rounded-2xl p-4" style={{ background: 'rgba(0,0,0,0.38)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <p className="text-sm font-black mb-3">Visual preview</p>
+                <div className="aspect-[4/5] rounded-2xl overflow-hidden flex items-center justify-center" style={{ background: 'linear-gradient(145deg, rgba(139,92,246,0.12), rgba(236,72,153,0.10))', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  {sourceIsReady ? assetKind === 'video' || assetKind === 'reel' ? <video src={sourceUrl} className="w-full h-full object-cover" controls muted /> : <img src={sourceUrl} className="w-full h-full object-cover" alt="VaultX source preview" /> : <div className="text-center p-6"><Camera size={30} className="mx-auto mb-3" style={{ color: C.muted }} /><p className="text-sm" style={{ color: C.muted }}>Paste a direct asset URL to preview it here.</p></div>}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              <div className="rounded-2xl p-4" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.18)' }}>
+                <p className="text-sm font-black mb-3" style={{ color: '#FDE68A' }}>Captions</p>
+                <select value={captionStyle} onChange={e => setCaptionStyle(e.target.value as any)} className="w-full rounded-xl px-3 py-2 bg-black text-white outline-none mb-3" style={{ border: `1px solid ${C.borderHi}` }}>
+                  {['teaser', 'explicit', 'romantic', 'dominant', 'playful'].map(style => <option key={style} value={style}>{style.toUpperCase()}</option>)}
+                </select>
+                <button onClick={runCaptionPack} disabled={!currentProjectId && !sourceIsReady || isBusy} className="w-full rounded-xl py-3 text-xs font-black disabled:opacity-45" style={{ background: C.goldDim, color: '#FDE68A', border: '1px solid rgba(245,158,11,0.26)' }}>{captionMut.isPending ? 'GENERATING...' : 'Generate copy pack'}</button>
+                {captions ? <div className="mt-3 text-xs leading-relaxed" style={{ color: '#FDE68A' }}>{String(captions.teaser || captions.subscriber || captions.ppv_pitch || 'Caption package generated.').slice(0, 180)}</div> : null}
+              </div>
+
+              <div className="rounded-2xl p-4" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.18)' }}>
+                <p className="text-sm font-black mb-3" style={{ color: '#BBF7D0' }}>Exports</p>
+                <div className="grid grid-cols-2 gap-2 mb-3">{platformOptions.map(option => <button key={option.id} onClick={() => togglePlatform(option.id)} className="rounded-xl p-2 text-left" style={{ background: selectedPlatforms.includes(option.id) ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.035)', border: `1px solid ${selectedPlatforms.includes(option.id) ? 'rgba(16,185,129,0.32)' : 'rgba(255,255,255,0.07)'}` }}><span className="block text-[10px] font-black" style={{ color: selectedPlatforms.includes(option.id) ? '#BBF7D0' : C.muted }}>{option.label}</span><span className="block text-[9px]" style={{ color: C.muted }}>{option.detail}</span></button>)}</div>
+                <button onClick={runExports} disabled={!currentProjectId && !sourceIsReady || isBusy || !selectedPlatforms.length} className="w-full rounded-xl py-3 text-xs font-black disabled:opacity-45" style={{ background: C.greenDim, color: '#BBF7D0', border: '1px solid rgba(16,185,129,0.26)' }}>{exportMut.isPending ? 'PACKAGING...' : 'Package exports'}</button>
+              </div>
+
+              <div className="rounded-2xl p-4" style={{ background: 'rgba(236,72,153,0.06)', border: '1px solid rgba(236,72,153,0.18)' }}>
+                <p className="text-sm font-black mb-3" style={{ color: '#FBCFE8' }}>Body Cinema package</p>
+                <div className="grid grid-cols-5 gap-1 mb-3">{(['bust', 'abdomen', 'glutes', 'legs', 'full'] as const).map(region => <button key={region} onClick={() => toggleRegion(region)} className="rounded-lg py-2 text-[9px] font-black" style={{ background: selectedRegions.includes(region) ? C.pinkDim : 'rgba(255,255,255,0.035)', color: selectedRegions.includes(region) ? '#FBCFE8' : C.muted, border: `1px solid ${selectedRegions.includes(region) ? 'rgba(236,72,153,0.32)' : 'rgba(255,255,255,0.07)'}` }}>{region.slice(0, 3).toUpperCase()}</button>)}</div>
+                <label className="block mb-3"><span className="text-[10px] font-black" style={{ color: C.muted }}>PPV price</span><input type="number" min={3} max={500} value={ppvPrice} onChange={e => setPpvPrice(Number(e.target.value || 3))} className="mt-1 w-full rounded-xl px-3 py-2 bg-black text-white outline-none" style={{ border: `1px solid ${C.borderHi}` }} /></label>
+                <button onClick={runBodyCinema} disabled={!sourceIsReady || isBusy || !selectedRegions.length} className="w-full rounded-xl py-3 text-xs font-black disabled:opacity-45" style={{ background: C.pinkDim, color: '#FBCFE8', border: '1px solid rgba(236,72,153,0.26)' }}>{bodyCinemaMut.isPending ? 'BUILDING...' : 'Build sales package'}</button>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="flex flex-col md:flex-row gap-3 md:items-end">
+                <label className="flex-1"><span className="text-[11px] font-black tracking-[0.2em] uppercase" style={{ color: C.muted }}>Publish title</span><input value={publishTitle} onChange={e => setPublishTitle(e.target.value)} className="mt-2 w-full rounded-2xl px-4 py-3 bg-black text-white outline-none" style={{ border: `1px solid ${C.borderHi}` }} /></label>
+                <button onClick={runPublish} disabled={!currentProjectId || isBusy} className="rounded-2xl px-8 py-4 text-sm font-black flex items-center justify-center gap-2 disabled:opacity-45" style={{ background: `linear-gradient(135deg, ${C.gold}, ${C.pink})`, color: 'white' }}>{publishMut.isPending ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />} Publish to VaultX</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-3">
+          <div className="rounded-[1.75rem] p-5 lg:col-span-2" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+            <div className="flex items-center justify-between mb-4"><h2 className="text-lg font-black">Output receipts</h2><span className="text-xs" style={{ color: C.muted }}>Shows what each backend call returned.</span></div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {[{ label: 'Enhancement', data: enhancement }, { label: 'Captions', data: captions }, { label: 'Exports', data: exports }, { label: 'Body Cinema', data: bodyCinema }, { label: 'Published', data: published }].map(item => (
+                <div key={item.label} className="rounded-2xl p-4 min-h-[120px]" style={{ background: 'rgba(0,0,0,0.38)', border: `1px solid ${item.data ? 'rgba(16,185,129,0.22)' : 'rgba(255,255,255,0.07)'}` }}>
+                  <p className="text-sm font-black mb-2">{item.label}</p>
+                  <pre className="text-[10px] leading-relaxed whitespace-pre-wrap overflow-hidden" style={{ color: item.data ? '#BBF7D0' : C.muted }}>{item.data ? JSON.stringify(item.data, null, 2).slice(0, 650) : 'Not generated yet.'}</pre>
+                </div>
               ))}
             </div>
           </div>
 
-          {/* Background */}
-          <div className="flex flex-col gap-1.5">
-            <p className="text-[9px] font-black tracking-widest" style={{ color: "#6B7280" }}>BACKGROUND</p>
-            <div className="flex flex-col gap-1">
-              {(["keep", "penthouse", "yacht", "rose_bed", "dark_studio", "miami_villa", "private_jet"] as const).map(bg => (
-                <button key={bg} onClick={() => setBackgroundStyle(bg)}
-                  className="py-1.5 px-2 rounded-xl text-[9px] font-bold text-left"
-                  style={{ background: backgroundStyle === bg ? "rgba(201,168,76,0.15)" : "rgba(255,255,255,0.03)", color: backgroundStyle === bg ? "#C9A84C" : "#4B5563", border: `1px solid ${backgroundStyle === bg ? "rgba(201,168,76,0.3)" : "rgba(255,255,255,0.05)"}` }}>
-                  {bg.replace("_", " ").toUpperCase()}
+          <div className="rounded-[1.75rem] p-5" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+            <div className="flex items-center justify-between mb-4"><h2 className="text-lg font-black">Recent VaultX projects</h2>{projectsQ.isFetching ? <Loader2 size={14} className="animate-spin" style={{ color: C.muted }} /> : null}</div>
+            <div className="space-y-2">
+              {recentProjects.length ? recentProjects.map((project: any) => (
+                <button key={project.id} onClick={() => { setProjectId(Number(project.id)); setProjectName(project.project_name || project.title || 'VaultX project'); setPublishTitle(project.project_name || project.title || 'VaultX project'); }} className="w-full rounded-2xl p-3 text-left" style={{ background: Number(project.id) === projectId ? C.accentDim : 'rgba(255,255,255,0.035)', border: `1px solid ${Number(project.id) === projectId ? 'rgba(139,92,246,0.32)' : 'rgba(255,255,255,0.07)'}` }}>
+                  <p className="text-sm font-bold text-white truncate">{project.project_name || project.title || `Project #${project.id}`}</p>
+                  <p className="text-[11px]" style={{ color: C.muted }}>{project.project_type || 'vaultx'} · {project.status || 'draft'}</p>
                 </button>
-              ))}
+              )) : <p className="text-sm leading-relaxed" style={{ color: C.muted }}>Create your first project above. Existing projects will appear here after login.</p>}
             </div>
           </div>
-        </div>
-
-        {/* ── CENTER ── */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-
-          {/* ENHANCE TAB */}
-          {activeTab === "enhance" && (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                <button onClick={handleEnhance} disabled={!sourceUrl || isAnyProcessing}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black"
-                  style={{ background: (!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.04)" : "linear-gradient(135deg, #8B5CF6, #EC4899)", color: (!sourceUrl || isAnyProcessing) ? "#374151" : "#fff" }}>
-                  {enhancePhotoMut.isPending || enhanceVideoMut.isPending ? <><Loader2 size={12} className="animate-spin" />ENHANCING...</> : <><Sparkles size={12} />ENHANCE NOW</>}
-                </button>
-                <button onClick={handleGenerateVariations} disabled={!sourceUrl || isAnyProcessing}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black"
-                  style={{ background: "rgba(139,92,246,0.15)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.3)" }}>
-                  {generateVariationsMut.isPending ? <><Loader2 size={12} className="animate-spin" />GENERATING...</> : <><RefreshCw size={12} />3 VARIATIONS</>}
-                </button>
-                <div className="flex-1" />
-                <button onClick={() => setActiveTab("publish")}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black"
-                  style={{ background: "rgba(16,185,129,0.15)", color: "#10B981", border: "1px solid rgba(16,185,129,0.3)" }}>
-                  <Send size={12} />PUBLISH
-                </button>
-              </div>
-              {toolStatus && (
-                <div className="mx-4 mt-3 px-3 py-2 rounded-2xl text-[10px] font-bold flex items-center gap-2" style={{ background: "rgba(139,92,246,0.10)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.24)" }}>
-                  <Info size={12} />{toolStatus}
-                </div>
-              )}
-              <div className="flex-1 overflow-y-auto p-4">
-                {variations.length > 0 ? (
-                  <div className="flex flex-col gap-4">
-                    <p className="text-xs font-black tracking-widest" style={{ color: "#6B7280" }}>AI VARIATIONS — SELECT YOUR BEST</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      {variations.map((v, i) => <VariationCard key={v.variation} variation={v} isSelected={selectedVariation === i} onSelect={() => setSelectedVariation(i)} />)}
-                    </div>
-                    {/* Captions */}
-                    <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-black tracking-widest" style={{ color: "#6B7280" }}>CAPTIONS & COPY</p>
-                        <div className="flex items-center gap-2">
-                          <div className="flex gap-1">
-                            {(["teaser", "direct", "romantic", "luxury", "playful"] as const).map(s => (
-                              <button key={s} onClick={() => setCaptionStyle(s)}
-                                className="px-2 py-1 rounded-lg text-[8px] font-black"
-                                style={{ background: captionStyle === s ? "rgba(201,168,76,0.2)" : "rgba(255,255,255,0.04)", color: captionStyle === s ? "#C9A84C" : "#4B5563", border: `1px solid ${captionStyle === s ? "rgba(201,168,76,0.3)" : "rgba(255,255,255,0.06)"}` }}>
-                                {s.toUpperCase()}
-                              </button>
-                            ))}
-                          </div>
-                          <button onClick={handleGenerateCaptions} disabled={isAnyProcessing}
-                            className="flex items-center gap-1 px-3 py-1 rounded-xl text-[9px] font-black"
-                            style={{ background: "rgba(201,168,76,0.15)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.3)" }}>
-                            {generateBodyCaptionsMut.isPending ? <Loader2 size={9} className="animate-spin" /> : <Wand2 size={9} />}WRITE COPY
-                          </button>
-                        </div>
-                      </div>
-                      {captions && (
-                        <div className="grid grid-cols-2 gap-2">
-                          {[
-                            { key: "teaser_caption", label: "TEASER", color: "#3B82F6" },
-                            { key: "subscriber_caption", label: "SUBSCRIBERS", color: "#8B5CF6" },
-                            { key: "ppv_pitch", label: "PPV PITCH", color: "#C9A84C" },
-                            { key: "mass_message_template", label: "MASS MESSAGE", color: "#EC4899" },
-                          ].map(({ key, label, color }) => (
-                            <div key={key} className="flex flex-col gap-1 p-2.5 rounded-xl" style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${color}20` }}>
-                              <div className="flex items-center justify-between">
-                                <span className="text-[8px] font-black" style={{ color }}>{label}</span>
-                                <button onClick={() => { navigator.clipboard.writeText(captions[key] || ""); toast.success("Copied!"); }}
-                                  className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: `${color}15` }}>
-                                  <Copy size={8} style={{ color }} />
-                                </button>
-                              </div>
-                              <p className="text-[9px] leading-relaxed" style={{ color: "#9CA3AF" }}>{captions[key]}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="min-h-full grid xl:grid-cols-[1.05fr_0.95fr] gap-4 items-stretch">
-                    <div className="flex flex-col justify-between gap-5 p-6 rounded-3xl" style={{ background: "radial-gradient(circle at 20% 0%, rgba(139,92,246,0.25), transparent 34%), radial-gradient(circle at 90% 20%, rgba(236,72,153,0.16), transparent 30%), rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                      <div className="space-y-3">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full" style={{ background: C.goldDim, color: C.gold, border: "1px solid rgba(245,158,11,0.28)" }}>
-                          <Zap size={12} /><span className="text-[10px] font-black tracking-[0.18em]">WORLD-CLASS EXPORT OS</span>
-                        </div>
-                        <div>
-                          <h1 className="text-3xl xl:text-5xl font-black leading-[0.92] tracking-tight text-white">Turn one raw asset into a complete adult-creator launch package.</h1>
-                          <p className="mt-3 max-w-xl text-sm leading-relaxed" style={{ color: C.muted }}>Upload once, then leave with a polished master, platform-safe teaser, paid PPV drop, subscriber copy, social cutdowns, thumbnail, launch calendar, and vault archive without mixing VaultX with the clean CreatorVault lane.</p>
-                        </div>
-                      </div>
-                      <div className="grid md:grid-cols-4 gap-2">
-                        {WORKFLOW_STEPS.map(step => {
-                          const Icon = step.icon as any;
-                          return (
-                            <div key={step.step} className="p-3 rounded-2xl" style={{ background: "rgba(0,0,0,0.34)", border: `1px solid ${step.color}33` }}>
-                              <div className="flex items-center justify-between mb-2"><span className="text-[9px] font-black" style={{ color: step.color }}>{step.step}</span><Icon size={13} style={{ color: step.color }} /></div>
-                              <p className="text-[11px] font-black text-white">{step.label}</p>
-                              <p className="text-[9px] leading-snug mt-1" style={{ color: C.muted }}>{step.detail}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                      <div className="grid grid-cols-2 gap-2">
-                        {WORLD_CLASS_OUTPUTS.map(output => {
-                          const Icon = output.icon as any;
-                          const selected = selectedOutputPackages.includes(output.id);
-                          return (
-                            <button key={output.id} onClick={() => setSelectedOutputPackages(prev => selected ? prev.filter(id => id !== output.id) : [...prev, output.id])} className="text-left p-3 rounded-2xl transition-all" style={{ background: selected ? `${output.color}17` : "rgba(255,255,255,0.025)", border: `1px solid ${selected ? output.color + "4D" : "rgba(255,255,255,0.06)"}` }}>
-                              <div className="flex items-center justify-between mb-1"><Icon size={13} style={{ color: selected ? output.color : C.mutedLo }} />{selected && <Check size={12} style={{ color: output.color }} />}</div>
-                              <p className="text-[10px] font-black" style={{ color: selected ? output.color : C.text }}>{output.label}</p>
-                              <p className="text-[8px] leading-snug mt-1" style={{ color: C.muted }}>{output.desc}</p>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className="p-3 rounded-2xl" style={{ background: `${selectedPreset.color}10`, border: `1px solid ${selectedPreset.color}33` }}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[9px] font-black tracking-widest" style={{ color: selectedPreset.color }}>CURRENT BUILD</span>
-                          <span className="text-[9px] font-black" style={{ color: C.text }}>{selectedPreset.label}</span>
-                        </div>
-                        <p className="text-[10px] leading-relaxed" style={{ color: C.muted }}>{selectedOutputLabels.join(" · ")} for {targetFormat} in {selectedCompliance.label} mode.</p>
-                      </div>
-                      <button onClick={() => fileInputRef.current?.click()} className="w-full py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2" style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)", color: "#fff" }}><Upload size={15} />UPLOAD AND BUILD OUTPUT PACKAGE</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* BODY INTEL TAB */}
-          {activeTab === "body" && (
-            <div className="flex-1 flex overflow-hidden">
-              <div className="flex flex-col items-center gap-4 p-4 flex-shrink-0" style={{ width: 190, borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-[9px] font-black tracking-widest self-start" style={{ color: "#EC4899" }}>BODY CINEMA MAP</p>
-                <BodySilhouette bodyMap={bodyMap} activeRegion={activeRegion} onRegionClick={(region) => { setActiveRegion(region); if (sourceUrl) handleEnhanceRegion(region); }} />
-                <button onClick={handleDetectBody} disabled={!sourceUrl || isAnyProcessing}
-                  className="w-full py-2 rounded-xl text-[9px] font-black"
-                  style={{ background: (!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.04)" : "rgba(236,72,153,0.2)", color: (!sourceUrl || isAnyProcessing) ? "#374151" : "#EC4899", border: `1px solid ${(!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.06)" : "rgba(236,72,153,0.3)"}` }}>
-                  {detectBodyRegionsMut.isPending ? <><Loader2 size={9} className="animate-spin inline mr-1" />SCANNING...</> : "SCAN REVENUE ANGLES"}
-                </button>
-                {bodyMap && (
-                  <div className="w-full flex flex-col gap-1.5">
-                    <p className="text-[8px] font-black tracking-widest" style={{ color: "#6B7280" }}>DETECTED</p>
-                    {BODY_REGIONS.map(r => {
-                      const detected = bodyMap.regions_detected[r.id]?.detected;
-                      const confidence = bodyMap.regions_detected[r.id]?.confidence || 0;
-                      return (
-                        <div key={r.id} className="flex items-center justify-between">
-                          <span className="text-[8px] font-bold" style={{ color: detected ? r.color : "#374151" }}>{r.label}</span>
-                          <div className="flex items-center gap-1">
-                            <div className="w-14 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                              <div className="h-full rounded-full" style={{ width: `${confidence * 100}%`, background: detected ? r.color : "#374151" }} />
-                            </div>
-                            <span className="text-[7px]" style={{ color: "#4B5563" }}>{Math.round(confidence * 100)}%</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 flex flex-col overflow-y-auto p-4 gap-4">
-                <div className="grid grid-cols-4 gap-3">
-                  {bodyCinemaSignalCards.map(card => (
-                    <div key={card.label} className="p-3 rounded-2xl" style={{ background: `${card.color}10`, border: `1px solid ${card.color}30`, boxShadow: `0 0 30px ${card.color}10` }}>
-                      <p className="text-[8px] font-black tracking-widest" style={{ color: card.color }}>{card.label.toUpperCase()}</p>
-                      <p className="text-lg font-black mt-1" style={{ color: "#FFFFFF" }}>{card.value}</p>
-                      <p className="text-[8px] leading-relaxed mt-1" style={{ color: "#9CA3AF" }}>{card.detail}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="p-4 rounded-3xl overflow-hidden relative" style={{ background: "radial-gradient(circle at 12% 0%, rgba(236,72,153,0.18), transparent 34%), linear-gradient(135deg, rgba(12,12,18,0.96), rgba(0,0,0,0.82))", border: "1px solid rgba(236,72,153,0.22)", boxShadow: "0 28px 80px rgba(0,0,0,0.35)" }}>
-                  <div className="pointer-events-none absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
-                  <div className="relative z-10 grid grid-cols-[1.05fr_.95fr] gap-4">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-[9px] font-black tracking-[0.26em]" style={{ color: "#EC4899" }}>BODY CINEMA REVENUE BRAIN</p>
-                          <h2 className="text-xl font-black tracking-[-0.04em] mt-1" style={{ color: "#FFFFFF" }}>Turn raw adult-creator footage into a body-directed paid scene.</h2>
-                          <p className="text-[10px] leading-relaxed mt-2 max-w-xl" style={{ color: "#A1A1AA" }}>This is not a normal editor. VaultX treats consenting adult footage like a revenue asset: it finds the selling angles, designs the crop path, separates tease from payoff, and builds the PPV launch package around the strongest subscriber-value moments.</p>
-                        </div>
-                        <div className="shrink-0 px-3 py-2 rounded-2xl text-right" style={{ background: "rgba(236,72,153,0.12)", border: "1px solid rgba(236,72,153,0.25)" }}>
-                          <p className="text-[8px] font-black tracking-widest" style={{ color: "#F9A8D4" }}>SCENE HEAT</p>
-                          <p className="text-2xl font-black leading-none" style={{ color: "#FFFFFF" }}>{bodyCinemaHeatScore}%</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {bodyCinemaLiveEngineLanes.map(lane => {
-                          const Icon = lane.icon;
-                          return (
-                            <div key={lane.id} className="p-3 rounded-2xl" style={{ background: `${lane.color}0F`, border: `1px solid ${lane.color}24` }}>
-                              <div className="flex items-center gap-2"><Icon size={13} style={{ color: lane.color }} /><p className="text-[8px] font-black tracking-widest" style={{ color: lane.color }}>{lane.label.toUpperCase()}</p></div>
-                              <p className="text-xs font-black mt-1" style={{ color: "#FFFFFF" }}>{lane.value}</p>
-                              <p className="text-[8px] leading-relaxed mt-1" style={{ color: "#8B8B95" }}>{lane.copy}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <p className="text-[8px] font-black tracking-widest" style={{ color: "#C9A84C" }}>DYNAMIC CUT DIRECTOR</p>
-                      {bodyCinemaCutDirectorNotes.map(note => {
-                        const Icon = note.icon;
-                        return (
-                          <div key={note.label} className="flex items-start gap-2 p-2.5 rounded-2xl" style={{ background: "rgba(0,0,0,0.42)", border: `1px solid ${note.color}24` }}>
-                            <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${note.color}18`, border: `1px solid ${note.color}2C` }}><Icon size={12} style={{ color: note.color }} /></div>
-                            <div className="min-w-0"><p className="text-[9px] font-black" style={{ color: "#FFFFFF" }}>{note.label}</p><p className="text-[8px] leading-relaxed" style={{ color: "#9CA3AF" }}>{note.value}</p></div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-[1fr_1fr] gap-3">
-                  <div className="p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <div className="flex items-center justify-between"><p className="text-[9px] font-black tracking-widest" style={{ color: "#EC4899" }}>CUT BLUEPRINT</p><span className="text-[8px] font-bold" style={{ color: "#6B7280" }}>raw clip → premium scene</span></div>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      {bodyCinemaLiveCutBlueprint.map((step: any) => (
-                        <div key={step.id || step.time} className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.38)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                          <p className="text-[7px] font-black tracking-widest" style={{ color: "#C9A84C" }}>{step.time} · {step.label.toUpperCase()}</p>
-                          <p className="text-[8px] leading-relaxed mt-1" style={{ color: "#A1A1AA" }}>{step.directive}</p>
-                          <p className="text-[7px] font-black mt-1" style={{ color: "#10B981" }}>{step.monetization}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-2xl" style={{ background: "rgba(201,168,76,0.045)", border: "1px solid rgba(201,168,76,0.16)" }}>
-                    <div className="flex items-center justify-between"><p className="text-[9px] font-black tracking-widest" style={{ color: "#C9A84C" }}>MONEY PACKS</p><span className="text-[8px] font-bold" style={{ color: "#6B7280" }}>subscriber value outputs</span></div>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      {bodyCinemaLiveMoneyPacks.map((pack: any) => (
-                        <div key={pack.label} className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.38)", border: "1px solid rgba(201,168,76,0.12)" }}>
-                          <div className="flex items-center justify-between gap-2"><p className="text-[8px] font-black" style={{ color: "#FFFFFF" }}>{pack.label}</p><span className="text-[7px] font-black" style={{ color: "#C9A84C" }}>{pack.price}</span></div>
-                          <p className="text-[7px] font-black mt-1" style={{ color: "#EC4899" }}>{pack.output}</p>
-                          <p className="text-[8px] leading-relaxed mt-1" style={{ color: "#9CA3AF" }}>{pack.detail}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {(bodyCinemaReframeSuggestions.length > 0 || bodyCinemaPlatformLaunchPlan.length > 0 || liveBodyCinemaEngine?.scenePositioning) && (
-                  <div className="grid grid-cols-[1fr_1fr] gap-3">
-                    <div className="p-3 rounded-2xl" style={{ background: "rgba(139,92,246,0.045)", border: "1px solid rgba(139,92,246,0.16)" }}>
-                      <div className="flex items-center justify-between"><p className="text-[9px] font-black tracking-widest" style={{ color: C.accent }}>REFRAME INTELLIGENCE</p><span className="text-[8px] font-bold" style={{ color: C.muted }}>body-safe crops</span></div>
-                      {liveBodyCinemaEngine?.scenePositioning && <p className="text-[9px] leading-relaxed mt-2" style={{ color: "#C4B5FD" }}>{liveBodyCinemaEngine.scenePositioning}</p>}
-                      <div className="grid grid-cols-1 gap-2 mt-2">
-                        {bodyCinemaReframeSuggestions.slice(0, 3).map((item: any) => (
-                          <div key={item.target || item.purpose} className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.38)", border: "1px solid rgba(139,92,246,0.14)" }}>
-                            <div className="flex items-center justify-between"><p className="text-[8px] font-black" style={{ color: "#FFFFFF" }}>{item.target} · {item.purpose}</p><span className="text-[7px] font-black" style={{ color: C.accent }}>{(item.cropPriority || []).slice(0, 2).join(" → ")}</span></div>
-                            <p className="text-[8px] leading-relaxed mt-1" style={{ color: "#9CA3AF" }}>{item.instruction}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-2xl" style={{ background: "rgba(16,185,129,0.045)", border: "1px solid rgba(16,185,129,0.16)" }}>
-                      <div className="flex items-center justify-between"><p className="text-[9px] font-black tracking-widest" style={{ color: C.green }}>PLATFORM LAUNCH LOGIC</p><span className="text-[8px] font-bold" style={{ color: C.muted }}>teaser → unlock</span></div>
-                      <div className="grid grid-cols-1 gap-2 mt-2">
-                        {bodyCinemaPlatformLaunchPlan.slice(0, 4).map((item: any) => (
-                          <div key={item.platform} className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.38)", border: "1px solid rgba(16,185,129,0.14)" }}>
-                            <div className="flex items-center justify-between"><p className="text-[8px] font-black" style={{ color: "#FFFFFF" }}>{String(item.platform || "vaultx").replace("_", " ").toUpperCase()}</p><span className="text-[7px] font-black" style={{ color: C.green }}>{item.gate}</span></div>
-                            <p className="text-[8px] leading-relaxed mt-1" style={{ color: "#9CA3AF" }}>{item.copyAngle} · {item.readiness}</p>
-                          </div>
-                        ))}
-                        {!bodyCinemaPlatformLaunchPlan.length && <p className="text-[8px] leading-relaxed" style={{ color: C.muted }}>Run analysis or create the collection to generate platform-specific launch logic.</p>}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Region buttons */}
-                <div className="flex flex-col gap-2">
-                  <p className="text-[9px] font-black tracking-widest" style={{ color: "#6B7280" }}>REVENUE ANGLE CONTROL</p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {BODY_REGIONS.map(r => {
-                      const isEnhancing = enhanceBodyRegionMut.isPending && activeRegion === r.id;
-                      const isDetected = bodyMap?.regions_detected[r.id]?.detected;
-                      return (
-                        <button key={r.id} onClick={() => { setActiveRegion(r.id); if (sourceUrl) handleEnhanceRegion(r.id); }} disabled={!sourceUrl || isAnyProcessing}
-                          className="flex flex-col items-center gap-1.5 p-3 rounded-2xl"
-                          style={{ background: activeRegion === r.id ? `${r.color}20` : "rgba(255,255,255,0.03)", border: `2px solid ${activeRegion === r.id ? r.color : isDetected ? r.color + "40" : "rgba(255,255,255,0.06)"}`, transition: "all 0.15s" }}>
-                          <span className="text-lg">{r.icon}</span>
-                          <span className="text-[9px] font-black" style={{ color: activeRegion === r.id ? r.color : isDetected ? r.color + "CC" : "#374151" }}>{r.label}</span>
-                          {isEnhancing && <Loader2 size={10} className="animate-spin" style={{ color: r.color }} />}
-                          {isDetected && !isEnhancing && <div className="w-1.5 h-1.5 rounded-full" style={{ background: r.color }} />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* AI cinema motion generation */}
-                <div className="flex flex-col gap-2 p-3 rounded-2xl" style={{ background: "rgba(236,72,153,0.05)", border: "1px solid rgba(236,72,153,0.15)" }}>
-                  <p className="text-[9px] font-black tracking-widest" style={{ color: "#EC4899" }}>BODY CINEMA MOTION DIRECTOR</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ background: "rgba(0,0,0,0.4)" }}>
-                      <p className="text-[9px] font-black" style={{ color: "#EC4899" }}>CINEMATIC REVEAL</p>
-                      <p className="text-[8px]" style={{ color: "#6B7280" }}>Directed opener that starts on the strongest subscriber-value frame, not dead raw footage.</p>
-                      {revealShotUrl ? (
-                        <video src={revealShotUrl} className="w-full rounded-xl" style={{ maxHeight: 100, objectFit: "cover" }} muted loop autoPlay playsInline />
-                      ) : (
-                        <div className="flex items-center justify-center rounded-xl" style={{ height: 60, background: "rgba(236,72,153,0.05)", border: "1px dashed rgba(236,72,153,0.2)" }}>
-                          <Film size={16} style={{ color: "#374151" }} />
-                        </div>
-                      )}
-                      <button onClick={handleRevealShot} disabled={!sourceUrl || isAnyProcessing}
-                        className="py-1.5 rounded-xl text-[9px] font-black"
-                        style={{ background: "rgba(236,72,153,0.15)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.3)" }}>
-                        {generateRevealShotMut.isPending ? <><Loader2 size={9} className="animate-spin inline mr-1" />GENERATING...</> : "CREATE OPENING REVEAL"}
-                      </button>
-                    </div>
-                    <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ background: "rgba(0,0,0,0.4)" }}>
-                      <p className="text-[9px] font-black" style={{ color: "#8B5CF6" }}>MONEY ANGLE CLIPS</p>
-                      <p className="text-[8px]" style={{ color: "#6B7280" }}>Body-zone focus clips for upsells, bundles, Telegram drops, and VIP followups.</p>
-                      <div className="flex flex-col gap-1">
-                        {(["bust", "abdomen", "glutes", "legs", "full"] as const).map(region => (
-                          <button key={region} onClick={() => handleFocusClip(region)} disabled={!sourceUrl || isAnyProcessing}
-                            className="flex items-center justify-between px-2 py-1.5 rounded-xl"
-                            style={{ background: focusClips[region] ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.03)", border: `1px solid ${focusClips[region] ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.06)"}` }}>
-                            <span className="text-[8px] font-black" style={{ color: focusClips[region] ? "#8B5CF6" : "#4B5563" }}>{region.toUpperCase()}</span>
-                            {focusClips[region] ? <CheckCircle size={9} style={{ color: "#22C55E" }} /> : <Plus size={9} style={{ color: "#374151" }} />}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <button onClick={async () => { const pid = await ensureProject(); try { await assembleHighlightReelMut.mutateAsync({ projectId: pid }); toast.success("Highlight reel assembled"); } catch (e: any) { toast.error(e.message); } }}
-                    disabled={!revealShotUrl || isAnyProcessing}
-                    className="w-full py-2 rounded-xl text-[9px] font-black flex items-center justify-center gap-2"
-                    style={{ background: revealShotUrl ? "linear-gradient(135deg, rgba(236,72,153,0.2), rgba(139,92,246,0.2))" : "rgba(255,255,255,0.04)", color: revealShotUrl ? "#EC4899" : "#374151", border: `1px solid ${revealShotUrl ? "rgba(236,72,153,0.3)" : "rgba(255,255,255,0.06)"}` }}>
-                    {assembleHighlightReelMut.isPending ? <><Loader2 size={10} className="animate-spin" />ASSEMBLING...</> : <><Crown size={10} />BUILD THE TEASER REEL</>}
-                  </button>
-                </div>
-
-
-
-                {/* Body Cinema Collection */}
-                <div className="flex flex-col gap-3 p-3 rounded-2xl" style={{ background: "linear-gradient(135deg, rgba(201,168,76,0.08), rgba(236,72,153,0.06))", border: "1px solid rgba(201,168,76,0.18)" }}>
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[9px] font-black tracking-widest" style={{ color: "#C9A84C" }}>BODY CINEMA DROP ENGINE</p>
-                      <p className="text-[8px] mt-1" style={{ color: "#9CA3AF" }}>Turn one consenting adult creator upload into a finished paid scene: body-directed master, public-safe teaser, cover image, unlock price, captions, distribution copy, and destination-ready exports.</p>
-                    </div>
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-xl" style={{ background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.25)" }}>
-                      <BodyCinemaStatusIcon size={10} style={{ color: bodyCinemaStatusColor }} />
-                      <span className="text-[8px] font-black" style={{ color: bodyCinemaStatusColor }}>{bodyCinemaStatusLabel}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: `1px solid ${bodyCinemaRealRenderUrl ? "rgba(16,185,129,0.22)" : "rgba(245,158,11,0.2)"}` }}>
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <BodyCinemaStatusIcon size={12} style={{ color: bodyCinemaStatusColor }} />
-                        <span className="text-[8px] font-black tracking-widest" style={{ color: bodyCinemaStatusColor }}>READINESS {bodyCinemaReadinessScore}%</span>
-                      </div>
-                      <span className="text-[8px] font-bold" style={{ color: "#6B7280" }}>{bodyCinemaReadyCount}/{bodyCinemaReadinessItems.length} real requirements met</span>
-                    </div>
-                    <p className="text-[8px] leading-relaxed" style={{ color: "#9CA3AF" }}>{bodyCinemaRealRenderUrl ? "This is a finished, downloadable Body Cinema drop. Publish it when the price, teaser, and destinations are locked." : "Render the drop to create the master video, teaser, thumbnail, and sales package before publishing."}</p>
-                    <div className="grid grid-cols-2 gap-1">
-                      {bodyCinemaReadinessItems.map(item => (
-                        <div key={item.label} className="flex items-start gap-1.5 rounded-lg px-2 py-1" style={{ background: item.ready ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.025)", border: `1px solid ${item.ready ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.06)"}` }}>
-                          {item.ready ? <CheckCircle size={9} style={{ color: "#10B981", marginTop: 1 }} /> : <Clock size={9} style={{ color: "#6B7280", marginTop: 1 }} />}
-                          <div className="min-w-0">
-                            <p className="text-[7px] font-black" style={{ color: item.ready ? "#10B981" : "#6B7280" }}>{item.label.toUpperCase()}</p>
-                            <p className="text-[7px] leading-tight" style={{ color: "#6B7280" }}>{item.detail}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="col-span-2 flex flex-col gap-1.5">
-                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>DROP NAME</span>
-                      <input value={bodyCinemaName} onChange={e => setBodyCinemaName(e.target.value)} className="px-3 py-2 rounded-xl text-xs font-bold outline-none" style={{ background: "rgba(0,0,0,0.45)", color: "#FFFFFF", border: "1px solid rgba(255,255,255,0.08)" }} />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>UNLOCK PRICE</span>
-                      <input type="number" min={3} max={1000} value={ppvPrice} onChange={e => setPpvPrice(Number(e.target.value || 0))} className="px-3 py-2 rounded-xl text-xs font-bold outline-none" style={{ background: "rgba(0,0,0,0.45)", color: "#FFFFFF", border: "1px solid rgba(255,255,255,0.08)" }} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>DROP MOOD</span>
-                      <div className="grid grid-cols-3 gap-1">
-                        {([
-                          ["luxury", "LUX"], ["noir", "NOIR"], ["sunset", "HEAT"], ["penthouse", "VIP"], ["editorial", "COVER"], ["vip_tease", "TEASE"],
-                        ] as const).map(([style, label]) => (
-                          <button key={style} onClick={() => setBodyCinemaStyle(style)} className="py-1.5 rounded-xl text-[8px] font-black" style={{ background: bodyCinemaStyle === style ? "rgba(201,168,76,0.2)" : "rgba(255,255,255,0.035)", color: bodyCinemaStyle === style ? "#C9A84C" : "#4B5563", border: `1px solid ${bodyCinemaStyle === style ? "rgba(201,168,76,0.35)" : "rgba(255,255,255,0.06)"}` }}>{label}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>SELLING ANGLES</span>
-                      <div className="grid grid-cols-5 gap-1">
-                        {(["bust", "abdomen", "glutes", "legs", "full"] as const).map(region => (
-                          <button key={region} onClick={() => toggleBodyCinemaRegion(region)} className="py-1.5 rounded-xl text-[8px] font-black" style={{ background: bodyCinemaRegions.includes(region) ? "rgba(236,72,153,0.18)" : "rgba(255,255,255,0.035)", color: bodyCinemaRegions.includes(region) ? "#EC4899" : "#4B5563", border: `1px solid ${bodyCinemaRegions.includes(region) ? "rgba(236,72,153,0.32)" : "rgba(255,255,255,0.06)"}` }}>{region.slice(0, 3).toUpperCase()}</button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>SELLING DESTINATIONS</span>
-                    <div className="grid grid-cols-6 gap-1">
-                      {(["vaultx", "onlyfans", "fansly", "telegram", "instagram_reel", "twitter"] as const).map(platform => (
-                        <button key={platform} onClick={() => toggleBodyCinemaPlatform(platform)} className="py-1.5 rounded-xl text-[8px] font-black" style={{ background: bodyCinemaPlatforms.includes(platform) ? "rgba(16,185,129,0.16)" : "rgba(255,255,255,0.035)", color: bodyCinemaPlatforms.includes(platform) ? "#10B981" : "#4B5563", border: `1px solid ${bodyCinemaPlatforms.includes(platform) ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.06)"}` }}>{platform.replace("instagram_reel", "ig").toUpperCase()}</button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <button onClick={handleCreateBodyCinemaCollection} disabled={!sourceUrl || isAnyProcessing}
-                    className="w-full py-2 rounded-xl text-[9px] font-black flex items-center justify-center gap-2"
-                    style={{ background: (!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.04)" : "linear-gradient(135deg, rgba(201,168,76,0.32), rgba(236,72,153,0.24))", color: (!sourceUrl || isAnyProcessing) ? "#374151" : "#F7E7B4", border: `1px solid ${(!sourceUrl || isAnyProcessing) ? "rgba(255,255,255,0.06)" : "rgba(201,168,76,0.35)"}` }}>
-                    {createBodyCinemaCollectionMut.isPending ? <><Loader2 size={10} className="animate-spin" />RENDERING PAID DROP...</> : <><Crown size={10} />RENDER THE PAID DROP</>}
-                  </button>
-
-                  {bodyCinemaPlan && (
-                    <div className="flex flex-col gap-2">
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(201,168,76,0.15)" }}><p className="text-[7px] font-black" style={{ color: "#6B7280" }}>DURATION</p><p className="text-xs font-black" style={{ color: "#C9A84C" }}>{bodyCinemaPlan.renderMeta?.durationSeconds || bodyCinemaPlan.remotionComposition?.totalDuration || 0}s</p></div>
-                        <div className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(201,168,76,0.15)" }}><p className="text-[7px] font-black" style={{ color: "#6B7280" }}>ENGINE</p><p className="text-xs font-black" style={{ color: "#C9A84C" }}>{(bodyCinemaPlan.renderMeta?.engine || "ffmpeg").toUpperCase()}</p></div>
-                        <div className="p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(201,168,76,0.15)" }}><p className="text-[7px] font-black" style={{ color: "#6B7280" }}>EXPORTS</p><p className="text-xs font-black" style={{ color: "#C9A84C" }}>{bodyCinemaPlan.platformExports?.length || 0}</p></div>
-                      </div>
-                      {bodyCinemaRealRenderUrl && (
-                        <div className="grid grid-cols-3 gap-2">
-                          <a href={bodyCinemaRealRenderUrl} target="_blank" rel="noreferrer" className="py-2 rounded-xl text-[8px] font-black text-center" style={{ background: "rgba(16,185,129,0.14)", color: "#86efac", border: "1px solid rgba(16,185,129,0.28)" }}>GET MASTER</a>
-                          <a href={bodyCinemaTeaserUrl || bodyCinemaRealRenderUrl} target="_blank" rel="noreferrer" className="py-2 rounded-xl text-[8px] font-black text-center" style={{ background: "rgba(236,72,153,0.12)", color: "#f0abfc", border: "1px solid rgba(236,72,153,0.26)" }}>GET TEASER</a>
-                          <a href={bodyCinemaThumbnailUrl || bodyCinemaRealRenderUrl} target="_blank" rel="noreferrer" className="py-2 rounded-xl text-[8px] font-black text-center" style={{ background: "rgba(201,168,76,0.14)", color: "#F7E7B4", border: "1px solid rgba(201,168,76,0.28)" }}>THUMBNAIL</a>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {(bodyCinemaCollectionsQ.data?.collections?.length ?? 0) > 0 && (
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[8px] font-black" style={{ color: "#6B7280" }}>RECENT BODY CINEMA DROPS</span>
-                      {bodyCinemaCollectionsQ.data?.collections?.slice(0, 3).map((collection: any) => {
-                        const plan = collection.production_plan || {};
-                        const renderedUrl = plan.renderedOutputUrl || plan.finalVideoUrl || plan.renderedVideoUrl || collection.rendered_output_url || null;
-                        const canPublishFinished = Boolean(renderedUrl);
-                        return (
-                          <div key={collection.id} className="flex items-center justify-between gap-2 p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                            <div className="min-w-0"><p className="text-[9px] font-black truncate" style={{ color: "#FFFFFF" }}>{collection.collection_name}</p><p className="text-[8px]" style={{ color: "#6B7280" }}>{collection.cinematic_style} · ${Number(collection.ppv_price_cents || 0) / 100} · {collection.status} · {canPublishFinished ? "final render" : "plan only"}</p></div>
-                            <div className="flex items-center gap-1">
-                              {renderedUrl && <a href={renderedUrl} target="_blank" rel="noreferrer" className="px-2 py-1 rounded-lg text-[8px] font-black" style={{ background: "rgba(59,130,246,0.14)", color: "#93c5fd", border: "1px solid rgba(59,130,246,0.28)" }}>OPEN</a>}
-                              <button onClick={() => handlePublishBodyCinemaCollection(collection.id, collection.collection_name, canPublishFinished)} disabled={collection.status === "published" || isAnyProcessing || !canPublishFinished} className="px-3 py-1 rounded-lg text-[8px] font-black" style={{ background: collection.status === "published" ? "rgba(16,185,129,0.12)" : canPublishFinished ? "rgba(16,185,129,0.18)" : "rgba(245,158,11,0.1)", color: collection.status === "published" ? "#10B981" : canPublishFinished ? "#FFFFFF" : "#F59E0B", border: `1px solid ${canPublishFinished ? "rgba(16,185,129,0.28)" : "rgba(245,158,11,0.25)"}` }}>{collection.status === "published" ? "LIVE" : canPublishFinished ? "SEND LIVE" : "RENDER FIRST"}</button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Body captions */}
-                <div className="flex flex-col gap-2 p-3 rounded-2xl" style={{ background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.15)" }}>
-                  <div className="flex items-center justify-between">
-                    <p className="text-[9px] font-black tracking-widest" style={{ color: "#C9A84C" }}>SALES CAPTIONS</p>
-                    <button onClick={handleGenerateCaptions} disabled={isAnyProcessing}
-                      className="flex items-center gap-1 px-3 py-1 rounded-xl text-[9px] font-black"
-                      style={{ background: "rgba(201,168,76,0.15)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.3)" }}>
-                      {generateBodyCaptionsMut.isPending ? <Loader2 size={9} className="animate-spin" /> : <Wand2 size={9} />}WRITE COPY
-                    </button>
-                  </div>
-                  {captions && (
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { key: "teaser_caption", label: "TEASER" },
-                        { key: "ppv_pitch", label: "PPV PITCH" },
-                        { key: "subscriber_caption", label: "SUBSCRIBERS" },
-                        { key: "mass_message_template", label: "MASS MESSAGE" },
-                      ].map(({ key, label }) => (
-                        <div key={key} className="flex flex-col gap-1 p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(201,168,76,0.15)" }}>
-                          <div className="flex items-center justify-between">
-                            <span className="text-[8px] font-black" style={{ color: "#C9A84C" }}>{label}</span>
-                            <button onClick={() => { navigator.clipboard.writeText(captions[key] || ""); toast.success("Copied!"); }}
-                              className="w-4 h-4 rounded flex items-center justify-center" style={{ background: "rgba(201,168,76,0.15)" }}>
-                              <Copy size={7} style={{ color: "#C9A84C" }} />
-                            </button>
-                          </div>
-                          <p className="text-[8px] leading-relaxed" style={{ color: "#9CA3AF" }}>{captions[key]}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* PPV TAB */}
-          {activeTab === "ppv" && (
-            <div className="p-3 overflow-y-auto flex-1">
-              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
-              <PPVPanel clipUrl={selectedClipUrl} duration={selectedClipDuration} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
-            </div>
-          )}
-          {/* CENSOR TAB */}
-          {activeTab === "censor" && (
-            <div className="p-3 overflow-y-auto flex-1">
-              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
-              <CensorPanel clipUrl={selectedClipUrl} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
-            </div>
-          )}
-          {/* SCENE TAB */}
-          {activeTab === "scene" && (
-            <div className="p-3 overflow-y-auto flex-1">
-              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
-              <ScenePanel clipUrl={selectedClipUrl} onStatus={setToolStatus} />
-            </div>
-          )}
-          {/* MOTION TAB */}
-          {activeTab === "motion" && (
-            <div className="p-3 overflow-y-auto flex-1">
-              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
-              <MotionPanel clipUrl={selectedClipUrl} duration={selectedClipDuration} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
-            </div>
-          )}
-          {/* COLOR TAB */}
-          {activeTab === "color" && (
-            <div className="p-3 overflow-y-auto flex-1">
-              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
-              <ColorPanel clipUrl={selectedClipUrl} duration={selectedClipDuration} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
-            </div>
-          )}
-          {/* TEXT TAB */}
-          {activeTab === "text" && (
-            <div className="p-3 overflow-y-auto flex-1">
-              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
-              <TextPanel clipUrl={selectedClipUrl} duration={selectedClipDuration} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
-            </div>
-          )}
-          {/* AUDIO TAB */}
-          {activeTab === "audio" && (
-            <div className="p-3 overflow-y-auto flex-1">
-              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
-              <AudioPanel clipUrl={selectedClipUrl} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
-            </div>
-          )}
-          {/* FORMAT TAB */}
-          {activeTab === "format" && (
-            <div className="p-3 overflow-y-auto flex-1">
-              {toolStatus && <div className="mb-2 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: C.greenDim, color: C.green, border: `1px solid ${C.green}` }}>{toolStatus}</div>}
-              <FormatPanel clipUrl={selectedClipUrl} duration={selectedClipDuration} onStatus={setToolStatus} projectId={editorProjectId} onAddClip={handleAddClip} onAddAudioTrack={handleAddAudioTrack} />
-            </div>
-          )}
-
-          {/* TIMELINE TAB */}
-          {activeTab === "timeline" && (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex items-center justify-center flex-shrink-0 p-4" style={{ background: "#000", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                <div className="relative" style={{ width: "100%", maxWidth: 320, aspectRatio: "9/16", background: "#0A0A0A", borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  {currentSource ? (
-                    currentSource.match(/\.(mp4|mov|webm)$/i) ? <video ref={videoRef} src={currentSource} className="w-full h-full object-cover" /> : <img src={currentSource} alt="Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center"><Film size={32} style={{ color: "#1F2937" }} /></div>
-                  )}
-                  <div className="absolute bottom-0 left-0 right-0 p-3 flex items-center gap-2" style={{ background: "linear-gradient(transparent, rgba(0,0,0,0.8))" }}>
-                    <button onClick={() => setPlayhead(0)} className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.1)" }}><SkipBack size={10} color="#fff" /></button>
-                    <button onClick={() => setIsPlaying(!isPlaying)} className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)" }}>{isPlaying ? <Pause size={12} color="#fff" /> : <Play size={12} color="#fff" />}</button>
-                    <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.2)" }}>
-                      <div className="h-full rounded-full" style={{ width: `${(playhead / totalDuration) * 100}%`, background: "#8B5CF6" }} />
-                    </div>
-                    <span className="text-[9px] font-mono" style={{ color: "#9CA3AF" }}>{Math.floor(playhead)}s</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex-1 overflow-auto p-3">
-                <div className="flex flex-col gap-1">
-                  {[0, 1, 2, 3].map(trackIndex => (
-                    <div key={trackIndex} className="flex items-center gap-2">
-                      <div className="flex-shrink-0 text-[9px] font-bold w-10" style={{ color: "#4B5563" }}>T{trackIndex + 1}</div>
-                      <div className="flex-1 overflow-x-auto">
-                        <TimelineTrack trackIndex={trackIndex} clips={clips} totalDuration={totalDuration} pixelsPerSecond={pixelsPerSecond} selectedClipId={selectedClipId} onSelectClip={setSelectedClipId} onDeleteClip={id => setClips(prev => prev.filter(c => c.id !== id))} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* PUBLISH TAB */}
-          {activeTab === "publish" && (
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-              <div className="flex items-start justify-between gap-4 p-4 rounded-3xl" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.10), rgba(139,92,246,0.10))", border: "1px solid rgba(255,255,255,0.08)" }}>
-                <div>
-                  <p className="text-xs font-black tracking-widest" style={{ color: "#10B981" }}>OUTPUT COMMAND CENTER</p>
-                  <h2 className="text-2xl font-black mt-1 text-white">Package every deliverable before launch.</h2>
-                  <p className="text-xs mt-1 max-w-2xl" style={{ color: C.muted }}>Select the exact revenue package VaultX should prepare: master file, safe preview, PPV drop, social cutdowns, copy pack, thumbnail, calendar, and archive metadata.</p>
-                </div>
-                <div className="hidden md:flex flex-col items-end gap-1 text-[9px] font-black" style={{ color: C.muted }}>
-                  <span>FORMAT: <b style={{ color: C.accent }}>{targetFormat}</b></span>
-                  <span>MODE: <b style={{ color: C.green }}>{complianceMode.replace("_", " ").toUpperCase()}</b></span>
-                  <span>WATERMARK: <b style={{ color: C.gold }}>{watermarkIdentity}</b></span>
-                </div>
-              </div>
-              <div className="grid md:grid-cols-4 gap-2">
-                {WORLD_CLASS_OUTPUTS.map(output => {
-                  const Icon = output.icon as any;
-                  const selected = selectedOutputPackages.includes(output.id);
-                  return (
-                    <button key={output.id} onClick={() => setSelectedOutputPackages(prev => selected ? prev.filter(id => id !== output.id) : [...prev, output.id])} className="p-3 rounded-2xl text-left" style={{ background: selected ? `${output.color}16` : "rgba(255,255,255,0.025)", border: `1px solid ${selected ? output.color + "55" : "rgba(255,255,255,0.06)"}` }}>
-                      <div className="flex items-center justify-between mb-2"><Icon size={14} style={{ color: selected ? output.color : C.mutedLo }} />{selected && <CheckCircle size={13} style={{ color: output.color }} />}</div>
-                      <p className="text-[10px] font-black" style={{ color: selected ? output.color : C.text }}>{output.label}</p>
-                      <p className="text-[8px] leading-snug mt-1" style={{ color: C.muted }}>{output.desc}</p>
-                    </button>
-                  );
-                })}
-              </div>
-              {variations.length > 0 && (
-                <div className="flex gap-3 overflow-x-auto pb-2">
-                  {variations.map((v, i) => (
-                    <div key={v.variation} onClick={() => setSelectedVariation(i)} className="flex-shrink-0 flex flex-col gap-1 cursor-pointer" style={{ width: 72 }}>
-                      <div className="rounded-xl overflow-hidden" style={{ aspectRatio: "9/16", background: "#0A0A0A", border: `2px solid ${selectedVariation === i ? "#10B981" : "rgba(255,255,255,0.06)"}` }}>
-                        {v.url && <img src={v.url} alt={v.label} className="w-full h-full object-cover" />}
-                      </div>
-                      <p className="text-[8px] font-black text-center" style={{ color: selectedVariation === i ? "#10B981" : "#4B5563" }}>{v.label}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.15)" }}>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-black tracking-widest" style={{ color: "#6B7280" }}>TITLE</label>
-                  <input value={publishTitle} onChange={e => setPublishTitle(e.target.value)} placeholder={project.title}
-                    className="px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-black tracking-widest" style={{ color: "#6B7280" }}>ACCESS TIER</label>
-                  <div className="grid grid-cols-5 gap-1">
-                    {(["free", "basic", "premium", "vip", "ppv"] as const).map(tier => (
-                      <button key={tier} onClick={() => setPublishTier(tier)}
-                        className="py-2 rounded-xl text-[9px] font-black"
-                        style={{ background: publishTier === tier ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.04)", color: publishTier === tier ? "#10B981" : "#4B5563", border: `1px solid ${publishTier === tier ? "rgba(16,185,129,0.4)" : "rgba(255,255,255,0.06)"}` }}>
-                        {tier.toUpperCase()}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {publishTier === "ppv" && (
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[9px] font-black tracking-widest" style={{ color: "#6B7280" }}>PPV PRICE ($)</label>
-                    <input type="number" value={ppvPrice} onChange={e => setPpvPrice(Number(e.target.value))} min={1} max={500}
-                      className="px-3 py-2 rounded-xl text-sm text-white w-28" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
-                  </div>
-                )}
-                <button onClick={handlePublish} disabled={!sourceUrl || publishToVaultXMut.isPending}
-                  className="py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2"
-                  style={{ background: (!sourceUrl || publishToVaultXMut.isPending) ? "rgba(255,255,255,0.04)" : "linear-gradient(135deg, #10B981, #059669)", color: (!sourceUrl || publishToVaultXMut.isPending) ? "#374151" : "#fff" }}>
-                  {publishToVaultXMut.isPending ? <><Loader2 size={14} className="animate-spin" />PUBLISHING...</> : <><Send size={14} />PUBLISH REVENUE PACKAGE</>}
-                </button>
-              </div>
-              <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-[9px] font-black tracking-widest" style={{ color: "#6B7280" }}>EXPORT FOR PLATFORMS</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {EXPORT_PRESETS.map(preset => (
-                    <button key={preset.id} onClick={() => setExportPresets(prev => prev.includes(preset.id) ? prev.filter(p => p !== preset.id) : [...prev, preset.id])}
-                      className="flex items-center gap-2 p-2.5 rounded-xl text-left"
-                      style={{ background: exportPresets.includes(preset.id) ? `${preset.color}15` : "rgba(255,255,255,0.03)", border: `1px solid ${exportPresets.includes(preset.id) ? preset.color + "40" : "rgba(255,255,255,0.06)"}` }}>
-                      <div className="w-2 h-2 rounded-full" style={{ background: exportPresets.includes(preset.id) ? preset.color : "#374151" }} />
-                      <div>
-                        <p className="text-[9px] font-black" style={{ color: exportPresets.includes(preset.id) ? preset.color : "#4B5563" }}>{preset.label}</p>
-                        <p className="text-[7px]" style={{ color: "#374151" }}>{preset.desc}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-                <button onClick={async () => { const pid = await ensureProject(); const result = await exportForPlatformsMut.mutateAsync({ projectId: pid, platforms: exportPresets as any, selectedVariation: selectedVariation + 1 }); toast.success(`Export queued for ${result.platforms.length} platforms`); }}
-                  disabled={exportPresets.length === 0 || exportForPlatformsMut.isPending}
-                  className="py-2.5 rounded-xl text-[10px] font-black flex items-center justify-center gap-2"
-                  style={{ background: "rgba(139,92,246,0.2)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.3)" }}>
-                  {exportForPlatformsMut.isPending ? <><Loader2 size={11} className="animate-spin" />EXPORTING...</> : <><Download size={11} />BUILD {selectedOutputPackages.length} OUTPUTS · EXPORT {exportPresets.length} PLATFORMS</>}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* CALENDAR TAB */}
-          {activeTab === "calendar" && (
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-black tracking-widest" style={{ color: "#F59E0B" }}>CONTENT CALENDAR</p>
-                <button onClick={handleGenerateCalendar} disabled={generateContentCalendarMut.isPending}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black"
-                  style={{ background: "rgba(245,158,11,0.15)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.3)" }}>
-                  {generateContentCalendarMut.isPending ? <><Loader2 size={10} className="animate-spin" />GENERATING...</> : <><Calendar size={10} />GENERATE 2-WEEK PLAN</>}
-                </button>
-              </div>
-              {contentCalendar.length > 0 ? (
-                <div className="grid grid-cols-1 gap-2">
-                  {contentCalendar.map((day: any, i: number) => (
-                    <div key={i} className="flex gap-3 p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                      <div className="flex flex-col items-center justify-center flex-shrink-0 rounded-xl px-3" style={{ background: day.monetization_strategy === "ppv" ? "rgba(201,168,76,0.15)" : "rgba(139,92,246,0.1)", border: `1px solid ${day.monetization_strategy === "ppv" ? "rgba(201,168,76,0.3)" : "rgba(139,92,246,0.2)"}`, minWidth: 56 }}>
-                        <span className="text-[8px] font-black" style={{ color: day.monetization_strategy === "ppv" ? "#C9A84C" : "#8B5CF6" }}>{day.day?.split(" ")[0]?.toUpperCase()}</span>
-                        <span className="text-[7px]" style={{ color: "#6B7280" }}>{day.day?.split(" ").slice(1).join(" ")}</span>
-                      </div>
-                      <div className="flex-1 flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-white">{day.theme}</span>
-                          <span className="px-1.5 py-0.5 rounded-md text-[7px] font-black" style={{ background: day.content_type === "video" ? "rgba(236,72,153,0.2)" : "rgba(59,130,246,0.2)", color: day.content_type === "video" ? "#EC4899" : "#3B82F6" }}>{day.content_type?.toUpperCase()}</span>
-                          {day.monetization_strategy === "ppv" && <span className="px-1.5 py-0.5 rounded-md text-[7px] font-black" style={{ background: "rgba(201,168,76,0.2)", color: "#C9A84C" }}>PPV ${day.suggested_ppv_price}</span>}
-                        </div>
-                        <p className="text-[8px]" style={{ color: "#6B7280" }}>{day.suggested_caption}</p>
-                        <p className="text-[7px]" style={{ color: "#374151" }}>Post at {day.posting_time}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-64 gap-3">
-                  <Calendar size={32} style={{ color: "#1F2937" }} />
-                  <p className="text-sm font-black" style={{ color: "#374151" }}>Generate Your Content Calendar</p>
-                  <p className="text-xs text-center" style={{ color: "#374151", maxWidth: 300 }}>GPT-4 creates a 2-week posting strategy with themes, captions, and monetization recommendations</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        </section>
       </div>
-
-      {/* PROJECT LIST OVERLAY */}
-      {showProjectList && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)" }}>
-          <div className="flex flex-col overflow-hidden rounded-2xl" style={{ width: 460, maxHeight: "70vh", background: "#0A0A0A", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div className="flex items-center justify-between p-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-sm font-black text-white">My Projects</p>
-              <button onClick={() => setShowProjectList(false)} className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF" }}><X size={12} /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-              {myProjectsQ.isLoading ? (
-                <div className="flex items-center justify-center py-8"><Loader2 size={20} className="animate-spin" style={{ color: "#6B7280" }} /></div>
-              ) : (myProjectsQ.data as any)?.projects?.length === 0 ? (
-                <div className="p-4 rounded-2xl" style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.12),rgba(236,72,153,0.08))", border: "1px solid rgba(201,168,76,0.35)" }}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "rgba(201,168,76,0.16)", border: "1px solid rgba(201,168,76,0.35)" }}><Film size={20} style={{ color: "#C9A84C" }} /></div>
-                    <div><p className="text-sm font-black text-white">God Mode workspace is empty, not dead.</p><p className="text-xs" style={{ color: "#9CA3AF" }}>Upload or paste a source asset and VaultX will build the analysis, body-cinema plan, teaser logic, PPV pack, and publish route.</p></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-[10px] font-black">
-                    <button onClick={() => { setShowProjectList(false); setActiveTab("enhance"); }} className="rounded-xl px-3 py-2" style={{ background: "rgba(201,168,76,0.14)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.35)" }}>Analyze Source</button>
-                    <button onClick={() => { setShowProjectList(false); setActiveTab("body"); }} className="rounded-xl px-3 py-2" style={{ background: "rgba(236,72,153,0.14)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.35)" }}>Build Body Cinema</button>
-                    <button onClick={() => { setShowProjectList(false); setActiveTab("ppv"); }} className="rounded-xl px-3 py-2" style={{ background: "rgba(139,92,246,0.14)", color: "#A78BFA", border: "1px solid rgba(139,92,246,0.35)" }}>Package PPV</button>
-                    <button onClick={() => { setShowProjectList(false); setActiveTab("publish"); }} className="rounded-xl px-3 py-2" style={{ background: "rgba(34,197,94,0.14)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.35)" }}>Publish Drops</button>
-                  </div>
-                </div>
-              ) : (myProjectsQ.data as any)?.projects?.map((p: any) => (
-                <button key={p.id} onClick={() => { setProjectId(p.id); setProject({ title: p.title, projectType: p.project_type, aspectRatio: p.aspect_ratio || "9:16", durationSeconds: p.duration_seconds || 60 }); if (p.source_url) setSourceUrl(p.source_url); if (p.output_url) setCurrentSource(p.output_url); setShowProjectList(false); toast.success(`Loaded: ${p.title}`); }}
-                  className="flex items-center gap-3 p-3 rounded-xl text-left" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)" }}><Film size={18} style={{ color: "#8B5CF6" }} /></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white truncate">{p.title}</p>
-                    <p className="text-xs" style={{ color: "#6B7280" }}>{p.project_type} · {new Date(p.created_at).toLocaleDateString()}</p>
-                  </div>
-                  {p.output_url && <CheckCircle size={14} style={{ color: "#22C55E" }} />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

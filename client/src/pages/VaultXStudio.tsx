@@ -79,8 +79,8 @@ interface HistoryItem {
 // CONSTANTS
 // ============================================================================
 const MODES: { id: ModeId; label: string; icon: React.ReactNode; desc: string; color: string; accent: string }[] = [
+  { id: "ai-video-generator",  label: "Pollo AI Video",     icon: <Film size={18}/>,        desc: "Pollo AI / Kling image → video generator with motion prompts, polling, and export history",   color: "#EF4444", accent: "rgba(239,68,68,0.15)"  },
   { id: "final-output-engine", label: "Final Output Engine", icon: <Package size={18}/>,    desc: "One click → Premium + Teaser + Clips + AI Video",  color: "#F59E0B", accent: "rgba(245,158,11,0.15)" },
-  { id: "ai-video-generator",  label: "AI Video Generator",  icon: <Film size={18}/>,        desc: "MiniMax · SVD · Zeroscope — text/image to video",   color: "#EF4444", accent: "rgba(239,68,68,0.15)"  },
   { id: "velvet-suite",        label: "Velvet Suite",         icon: <Sparkles size={18}/>,   desc: "Skin smoothing, warmth & body definition — Replicate PuLID beauty layer",  color: "#EC4899", accent: "rgba(236,72,153,0.15)"  },
   { id: "desire-grade",        label: "Desire Grade",         icon: <Palette size={18}/>,    desc: "22 adult cinematic color grades",                   color: "#F97316", accent: "rgba(249,115,22,0.15)"  },
   { id: "scene-architect",     label: "Scene Architect",      icon: <Scissors size={18}/>,   desc: "Trim, cut, speed, audio + AI scene detection",      color: "#EAB308", accent: "rgba(234,179,8,0.15)"   },
@@ -147,6 +147,34 @@ const SLOW_MO_PRESETS = [
 ];
 
 const CHUNK_SIZE = 5 * 1024 * 1024;
+
+const MODE_ALIASES: Record<string, ModeId> = {
+  pollo: "ai-video-generator",
+  "pollo-ai": "ai-video-generator",
+  video: "ai-video-generator",
+  studio: "ai-video-generator",
+  output: "final-output-engine",
+  editor: "final-output-engine",
+};
+
+function getStudioModeFromLocation(): ModeId {
+  if (typeof window === "undefined") return "ai-video-generator";
+  const params = new URLSearchParams(window.location.search);
+  const rawMode = (params.get("mode") || window.location.hash.replace("#", "") || "").trim();
+  if (!rawMode) return "ai-video-generator";
+  const normalized = rawMode.toLowerCase();
+  const modeIds = MODES.map((m) => m.id);
+  if (modeIds.includes(normalized as ModeId)) return normalized as ModeId;
+  return MODE_ALIASES[normalized] ?? "ai-video-generator";
+}
+
+function setStudioModeInUrl(mode: ModeId) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  url.searchParams.set("mode", mode);
+  url.hash = mode === "ai-video-generator" ? "pollo" : "";
+  window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+}
 
 // ============================================================================
 // HELPERS
@@ -1857,9 +1885,12 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
   const [activeModel, setActiveModel] = useState<"kling-3.0"|"kling-2.6"|"kling-o1"|"seedance-2.0"|"seedance-1.5-pro"|"wan-2.6"|"vidu-q3-pro"|"pollo-3.0"|"pollo-2.0"|"minimax"|"svd"|"zeroscope">("kling-3.0");
   const [modelProvider, setModelProvider] = useState<"pollo"|"replicate">("pollo");
   const [polloTaskId, setPolloTaskId] = useState<string | null>(null);
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState("cinematic soft-launch teaser, controlled camera push-in, realistic body-safe motion, premium creator studio lighting");
   const [videoStyle, setVideoStyle] = useState<"sensual"|"boudoir"|"intimate"|"artistic"|"cinematic"|"fantasy">("cinematic");
   const [imageFile, setImageFile] = useState<{ url: string; file: File } | null>(null);
+  const [polloResolution, setPolloResolution] = useState<"480p"|"720p"|"1080p">("720p");
+  const [polloLength, setPolloLength] = useState<"5s"|"10s">("5s");
+  const [polloMode, setPolloMode] = useState<"basic"|"pro">("basic");
   const [motionBucket, setMotionBucket] = useState(127);
   const [fps, setFps] = useState(24);
   const [predictionId, setPredictionId] = useState<string | null>(null);
@@ -1948,9 +1979,9 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
         await polloGenerateMut.mutateAsync({
           imageUrl: imageFile.url,
           prompt: prompt || undefined,
-          resolution: "720p",
-          length: "5s",
-          mode: "basic",
+          resolution: polloResolution,
+          length: polloLength,
+          mode: polloMode,
         });
       } catch (e: any) { setIsGenerating(false); toast.error(e.message); }
       return;
@@ -1997,8 +2028,8 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
   const left = (
     <>
       <div>
-        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#EF4444" }}>AI Video Generator</p>
-        <p className="text-xs" style={{ color: "#6B7280" }}>Real AI video generation — Replicate models</p>
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#EF4444" }}>Pollo AI Video Output</p>
+        <p className="text-xs" style={{ color: "#6B7280" }}>Upload a source image, describe the motion, and generate a real Pollo / Kling video receipt.</p>
       </div>
       {/* Provider tabs */}
       <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -2022,12 +2053,12 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
           </button>
         ))}
       </div>
-      {(activeModel === "minimax" || activeModel === "zeroscope") && (
+      {(modelProvider === "pollo" || activeModel === "minimax" || activeModel === "zeroscope") && (
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-bold text-white">Prompt</label>
-          <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={4} placeholder="Describe the video you want to generate..." className="w-full px-3 py-2 rounded-xl text-sm text-white resize-none" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
+          <label className="text-xs font-bold text-white">{modelProvider === "pollo" ? "Motion Prompt (optional, recommended)" : "Prompt"}</label>
+          <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={4} placeholder={modelProvider === "pollo" ? "Describe camera motion, expression, lighting, and safe cinematic movement for the uploaded image..." : "Describe the video you want to generate..."} className="w-full px-3 py-2 rounded-xl text-sm text-white resize-none" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
           <button
-            onClick={() => enhancePromptMut.mutate({ rawPrompt: prompt || "sensual intimate scene", style: videoStyle, model: (activeModel as string) === "minimax" ? "minimax" : (activeModel as string) === "svd" ? "stable-video" : "zeroscope" })}
+            onClick={() => enhancePromptMut.mutate({ rawPrompt: prompt || "cinematic creator teaser motion", style: videoStyle, model: modelProvider === "pollo" || (activeModel as string) === "minimax" ? "minimax" : (activeModel as string) === "svd" ? "stable-video" : "zeroscope" })}
             disabled={enhancePromptMut.isPending}
             className="w-full py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 mt-1"
             style={{ background: enhancePromptMut.isPending ? "rgba(139,92,246,0.15)" : "rgba(139,92,246,0.12)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.35)", cursor: enhancePromptMut.isPending ? "not-allowed" : "pointer" }}
@@ -2043,9 +2074,35 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
           </div>
         </div>
       )}
+      {modelProvider === "pollo" && (
+        <div className="grid grid-cols-3 gap-2 rounded-2xl p-3" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.18)" }}>
+          <div>
+            <label className="mb-1 block text-[10px] font-black uppercase tracking-widest" style={{ color: "#EF4444" }}>Resolution</label>
+            <select value={polloResolution} onChange={e => setPolloResolution(e.target.value as any)} className="w-full rounded-xl px-2 py-2 text-xs font-bold text-white" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <option value="480p">480p</option>
+              <option value="720p">720p</option>
+              <option value="1080p">1080p</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-[10px] font-black uppercase tracking-widest" style={{ color: "#EF4444" }}>Length</label>
+            <select value={polloLength} onChange={e => setPolloLength(e.target.value as any)} className="w-full rounded-xl px-2 py-2 text-xs font-bold text-white" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <option value="5s">5 sec</option>
+              <option value="10s">10 sec</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-[10px] font-black uppercase tracking-widest" style={{ color: "#EF4444" }}>Mode</label>
+            <select value={polloMode} onChange={e => setPolloMode(e.target.value as any)} className="w-full rounded-xl px-2 py-2 text-xs font-bold text-white" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <option value="basic">Basic</option>
+              <option value="pro">Pro</option>
+            </select>
+          </div>
+        </div>
+      )}
       {(modelProvider === "pollo" || activeModel === "minimax" || activeModel === "svd") && (
         <div>
-          <p className="text-xs font-bold text-white mb-2">{modelProvider === "pollo" ? "Source Image (required — Pollo AI)" : activeModel === "svd" ? "Source Image (required)" : "First Frame Image (optional)"}</p>
+          <p className="text-xs font-bold text-white mb-2">{modelProvider === "pollo" ? "Source Image (required — Pollo AI image → video)" : activeModel === "svd" ? "Source Image (required)" : "First Frame Image (optional)"}</p>
           {imageFile ? (
             <div className="relative rounded-2xl overflow-hidden">
               <img src={imageFile.url} alt="source" className="w-full rounded-2xl" style={{ maxHeight: 160, objectFit: "cover" }} />
@@ -2064,7 +2121,7 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
         </div>
       )}
       <button onClick={generate} disabled={isGenerating || (modelProvider === "pollo" && !imageFile) || (modelProvider === "replicate" && !prompt && activeModel !== "svd") || (activeModel === "svd" && !imageFile)} className="w-full py-4 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2" style={{ background: isGenerating ? "rgba(239,68,68,0.3)" : "linear-gradient(135deg, #EF4444, #DC2626)", cursor: isGenerating ? "not-allowed" : "pointer", boxShadow: isGenerating ? "none" : "0 0 24px rgba(239,68,68,0.3)" }}>
-        {isGenerating ? <><Loader2 size={18} className="animate-spin" /> {statusMsg || "Generating..."}</> : <><Film size={18} /> Generate Video</>}
+        {isGenerating ? <><Loader2 size={18} className="animate-spin" /> {statusMsg || "Generating..."}</> : <><Film size={18} /> {modelProvider === "pollo" ? "Generate with Pollo AI" : "Generate Video"}</>}
       </button>
       {isGenerating && <ProcessingBar label={statusMsg || "AI generating video (2–5 min)..."} accent="#EF4444" />}
       {outputUrl && (
@@ -2078,9 +2135,13 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
 
   const right = outputUrl ? (
     <CanvasVideoPlayer src={outputUrl} label={`AI Generated — ${MODELS.find(m => m.id === activeModel)?.label}`} accent="#EF4444" />
-  ) : imageFile && activeModel === "svd" ? (
+  ) : imageFile && (modelProvider === "pollo" || activeModel === "svd") ? (
     <div className="flex-1 flex flex-col items-center justify-center gap-4 rounded-3xl" style={{ background: "#000", minHeight: 400 }}>
       <img src={imageFile.url} alt="source" className="max-w-full max-h-80 rounded-2xl object-contain" />
+      <div className="rounded-2xl px-4 py-2 text-center" style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)" }}>
+        <p className="text-xs font-black uppercase tracking-widest" style={{ color: "#EF4444" }}>{modelProvider === "pollo" ? "Pollo source locked" : "Source locked"}</p>
+        <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>{modelProvider === "pollo" ? "Ready for image-to-video generation. Add or refine the motion prompt, then run Pollo AI." : "Ready to animate with Stable Video Diffusion."}</p>
+      </div>
       {isGenerating && <div className="flex items-center gap-2"><div className="w-5 h-5 rounded-full border-2 border-red-500 border-t-transparent animate-spin" /><p className="text-sm text-white font-semibold">{statusMsg}</p></div>}
     </div>
   ) : (
@@ -2089,8 +2150,8 @@ function AIVideoGeneratorMode({ onOutput }: { onOutput: (url: string, label: str
         <Film size={36} color="#EF4444" />
       </div>
       <div className="text-center">
-        <p className="text-white font-black text-xl">AI Video Generation</p>
-        <p className="text-sm mt-2" style={{ color: "#6B7280" }}>Enter a prompt or upload an image to generate video with AI</p>
+        <p className="text-white font-black text-xl">Pollo AI Image-to-Video</p>
+        <p className="text-sm mt-2 max-w-sm" style={{ color: "#6B7280" }}>Drop a creator-safe source image, add a motion prompt, and export a real video into VaultX history.</p>
       </div>
     </div>
   );
@@ -4112,11 +4173,25 @@ function AnalyticsEditingMode({ onOutput }: { onOutput: (url: string, label: str
 // MAIN VAULTX STUDIO COMPONENT
 // ============================================================================
 export default function VaultXStudio() {
-  const [activeMode, setActiveMode] = useState<ModeId>("final-output-engine");
+  const [activeMode, setActiveMode] = useState<ModeId>(() => getStudioModeFromLocation());
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const persistAsset = trpc.creatorVideoEditor.createAsset.useMutation();
+
+  useEffect(() => {
+    const applyRequestedMode = () => setActiveMode(getStudioModeFromLocation());
+    window.addEventListener("hashchange", applyRequestedMode);
+    window.addEventListener("popstate", applyRequestedMode);
+    return () => {
+      window.removeEventListener("hashchange", applyRequestedMode);
+      window.removeEventListener("popstate", applyRequestedMode);
+    };
+  }, []);
+
+  useEffect(() => {
+    setStudioModeInUrl(activeMode);
+  }, [activeMode]);
 
   const addToHistory = useCallback((url: string, label: string) => {
     const mode = activeMode;
@@ -4163,7 +4238,7 @@ export default function VaultXStudio() {
   const liveOutputCount = history.length;
   const activeModeIndex = MODES.findIndex((m) => m.id === activeMode) + 1;
   const productionWorkflowSteps = [
-    { label: "Select engine", detail: "Choose the exact output lane: final package, video generation, PPV, distribution, or analytics.", done: !!activeMode },
+    { label: "Select engine", detail: "Choose the exact output lane: Pollo AI video, final package, PPV, distribution, or analytics.", done: !!activeMode },
     { label: "Feed source", detail: "Upload source media or provide the creator brief required by the selected engine.", done: liveOutputCount > 0 || ["ai-video-generator", "ai-sound-studio", "creator-tiers", "ai-chatter"].includes(activeMode) },
     { label: "Generate output", detail: "Run the real model/API-powered action and persist produced assets into CreatorVault history.", done: liveOutputCount > 0 },
     { label: "Distribute", detail: "Move finished assets into editor, platform vault, broadcast, or distribution lanes.", done: ["distribution-engine", "platform-vault", "mass-broadcast", "monetization-bundle"].includes(activeMode) },
@@ -4171,7 +4246,7 @@ export default function VaultXStudio() {
 
   // Group modes for sidebar sections
   const MODE_GROUPS = [
-    { label: "Production", ids: ["final-output-engine", "ai-video-generator", "velvet-suite", "desire-grade", "scene-architect", "scene-enhancement"] },
+    { label: "Production", ids: ["ai-video-generator", "final-output-engine", "velvet-suite", "desire-grade", "scene-architect", "scene-enhancement"] },
     { label: "AI Tools", ids: ["ai-enhance", "face-studio", "ai-sound-studio", "caption-studio"] },
     { label: "Monetize", ids: ["ppv-engine", "monetization-bundle", "distribution-engine", "platform-vault"] },
     { label: "Audience", ids: ["creator-tiers", "mass-broadcast", "ai-chatter", "analytics-editing"] },
@@ -4359,6 +4434,7 @@ export default function VaultXStudio() {
           </div>
 
                     {/* Nav links */}
+          <a href="/vault-x/studio?mode=ai-video-generator#pollo" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "#fca5a5", border: "1px solid rgba(239,68,68,.28)", background: "rgba(239,68,68,.10)" }}>Pollo AI</a>
           <a href="/vault-x/editor" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "#00e5ff", border: "1px solid rgba(0,229,255,.22)", background: "rgba(0,229,255,.07)" }}>Open Editor</a>
           <a href="/vaultx/distribution" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "#86efac", border: "1px solid rgba(16,185,129,.22)", background: "rgba(16,185,129,.07)" }}>Distribute</a>
           <a href="/vault-x/analytics" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "rgba(247,242,232,.62)", border: "1px solid rgba(255,255,255,.08)" }}>Analytics</a>
@@ -4367,7 +4443,7 @@ export default function VaultXStudio() {
           <div className="grid gap-3 xl:grid-cols-[1.15fr_.85fr]">
             <VaultXWorkflow steps={productionWorkflowSteps} activeStep={liveOutputCount > 0 ? 2 : activeMode === "distribution-engine" || activeMode === "platform-vault" ? 3 : 1} />
             <div className="hidden gap-3 xl:grid xl:grid-cols-3">
-              <VaultXActionCard title="Editor handoff" body="Open the timeline editor with the same production intent: ingest, analyze, package, export, publish." href="/vault-x/editor" icon={<Film className="h-5 w-5" />} cta="Open" />
+              <VaultXActionCard title="Pollo AI generator" body="Upload a source image, write motion direction, generate with Pollo/Kling, then save the finished clip to VaultX history." href="/vault-x/studio?mode=ai-video-generator#pollo" icon={<Film className="h-5 w-5" />} cta="Generate" />
               <VaultXActionCard title="Distribution lane" body="Send finished clips, teasers, PPV copy, and platform variants into the launch pipeline." href="/vaultx/distribution" icon={<Globe className="h-5 w-5" />} cta="Route" />
               <VaultXActionCard title="Revenue proof" body="Review outputs, analytics, and monetization choices instead of guessing what to sell next." href="/vault-x/analytics" icon={<TrendingUp className="h-5 w-5" />} cta="Review" />
             </div>

@@ -41,7 +41,7 @@ type ToolCard = {
 
 const FEATURE_CARDS: ToolCard[] = [
   { title: "VaultX Editor", description: "Command revenue-safe output packages, creator briefs, Body Intel, and premium drops.", href: "/vault-x/editor", icon: Rocket, badge: "CORE" },
-  { title: "VaultX Studio", description: "Production suite for final output bundles, distribution systems, analytics, and broadcasts.", href: "/vault-x/studio", icon: Video, badge: "PRO" },
+  { title: "Pollo AI Video", description: "Upload a source image, write motion direction, generate a Pollo/Kling video, and save it into VaultX output history.", href: "/vault-x/studio?mode=ai-video-generator#pollo", icon: Video, badge: "POLLO" },
   { title: "Image Lab", description: "Remove backgrounds, enhance lighting, upscale, and resize creator assets.", href: "/image-lab", icon: Image, badge: "NEW" },
   { title: "Flyer Composer", description: "Blend your photo into campaign flyers with polished creative control.", href: "/flyer-composer", icon: Layers, badge: "NEW" },
   { title: "Flyer Generator", description: "AI-powered professional event flyers for rapid promo launches.", href: "/flyer-generator", icon: FileText },
@@ -232,8 +232,8 @@ export default function Dashboard() {
             <Link href="/vault-x/editor">
               <div className="cta-pulse flex h-12 items-center justify-center rounded-xl bg-[var(--accent-cyan)] font-['Bebas_Neue'] text-base tracking-[0.1em] text-[var(--bg-void)]">Open VaultX Editor</div>
             </Link>
-            <Link href="/king/challenge">
-              <div className="flex h-12 items-center justify-center rounded-xl bg-[var(--accent-gold)] font-['Bebas_Neue'] text-base tracking-[0.1em] text-[var(--bg-void)]">Empire Challenge</div>
+            <Link href="/vault-x/studio?mode=ai-video-generator#pollo">
+              <div className="flex h-12 items-center justify-center rounded-xl bg-[var(--accent-gold)] font-['Bebas_Neue'] text-base tracking-[0.1em] text-[var(--bg-void)]">Generate with Pollo AI</div>
             </Link>
           </div>
         </div>

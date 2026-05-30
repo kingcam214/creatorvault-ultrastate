@@ -9,7 +9,7 @@ export default function CreatorHome() {
 
   const tools = [
     { label: "VaultX Editor", href: "/vault-x/editor", icon: "🎬", desc: "CapCut-style editor for creators" },
-    { label: "VaultX Studio", href: "/vault-x/studio", icon: "⚡", desc: "AI production suite" },
+    { label: "Pollo AI Video", href: "/vault-x/studio?mode=ai-video-generator#pollo", icon: "⚡", desc: "Image-to-video generator with Pollo/Kling output" },
     { label: "Script Writer", href: "/king/script-writer", icon: "✍️", desc: "AI-powered scripts" },
     { label: "Telegram Hub", href: "/king/telegram-hub", icon: "📱", desc: "Broadcast to fans" },
     { label: "Empire Agents", href: "/king/empire", icon: "🤖", desc: "49 AI agents working" },
@@ -85,13 +85,13 @@ export default function CreatorHome() {
               <ArrowRight className="w-5 h-5 text-purple-300" />
             </div>
           </Link>
-          <Link href="/king/challenge-story">
-            <div className="bg-gradient-to-r from-green-500/20 to-green-600/10 border border-green-500/30 rounded-xl p-5 cursor-pointer hover:border-green-500/60 transition-all flex items-center justify-between">
+          <Link href="/vault-x/studio?mode=ai-video-generator#pollo">
+            <div className="bg-gradient-to-r from-red-500/20 to-yellow-500/10 border border-red-500/30 rounded-xl p-5 cursor-pointer hover:border-red-500/60 transition-all flex items-center justify-between">
               <div>
-                <p className="font-bold text-green-400">💰 Empire Challenge</p>
-                <p className="text-gray-400 text-sm mt-1">Track your $5k goal</p>
+                <p className="font-bold text-red-300">Generate with Pollo AI</p>
+                <p className="text-gray-400 text-sm mt-1">Upload an image, direct the motion, and export a real video</p>
               </div>
-              <ArrowRight className="w-5 h-5 text-green-400" />
+              <ArrowRight className="w-5 h-5 text-red-300" />
             </div>
           </Link>
         </div>
