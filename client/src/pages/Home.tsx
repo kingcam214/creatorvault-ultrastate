@@ -229,143 +229,181 @@ export default function Home() {
         @keyframes float-card { 0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)} }
         @keyframes rail-scroll { 0%{transform:translateX(0)}100%{transform:translateX(-50%)} }
         @keyframes glow-scan { 0%{left:-40%;opacity:0}20%{opacity:.7}100%{left:120%;opacity:0} }
+        @keyframes vaultx-orbit { 0%{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.04)}100%{transform:rotate(360deg) scale(1)} }
+        @keyframes vaultx-breathe { 0%,100%{opacity:.36;filter:blur(0px)}50%{opacity:.9;filter:blur(1px)} }
+        @keyframes vaultx-rise { 0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)} }
+        @keyframes vaultx-pulse-line { 0%{transform:translateX(-100%);opacity:0}15%{opacity:.75}100%{transform:translateX(100%);opacity:0} }
         .reveal-up{opacity:0;transform:translateY(36px);transition:opacity 0.65s ease,transform 0.65s ease}
         .reveal-up.visible{opacity:1;transform:translateY(0)}
         .reveal-up.d1{transition-delay:0.1s}.reveal-up.d2{transition-delay:0.2s}.reveal-up.d3{transition-delay:0.3s}
         .reel-track{display:flex;gap:12px;animation:reel-scroll 42s linear infinite}
         .reel-track:hover{animation-play-state:paused}
+        .vaultx-hero-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(340px,.95fr);gap:34px;align-items:center;width:100%;max-width:1180px;margin:0 auto;padding:42px 20px 72px}
+        .vaultx-signal-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:24px}
+        .vaultx-command-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:22px}
+        .vaultx-live-card{position:relative;overflow:hidden;border-radius:26px;background:linear-gradient(150deg,rgba(255,255,255,.09),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.12);box-shadow:0 34px 110px rgba(0,0,0,.52)}
+        .vaultx-live-card:before{content:"";position:absolute;inset:-40%;background:conic-gradient(from 90deg,transparent,rgba(201,168,76,.14),transparent,rgba(56,189,248,.12),transparent);animation:vaultx-orbit 18s linear infinite;z-index:0}
+        .vaultx-live-inner{position:relative;z-index:1;margin:1px;border-radius:25px;overflow:hidden;background:rgba(5,5,8,.82);min-height:520px}
         input:focus,select:focus{outline:none;border-color:rgba(201,168,76,0.6)!important;box-shadow:0 0 0 3px rgba(201,168,76,0.12)!important}
+        @media (max-width: 900px){.vaultx-hero-grid{grid-template-columns:1fr;padding:22px 18px 54px}.vaultx-signal-grid,.vaultx-command-grid{grid-template-columns:1fr 1fr}.vaultx-live-inner{min-height:430px}}
+        @media (max-width: 560px){.vaultx-signal-grid,.vaultx-command-grid{grid-template-columns:1fr}.vaultx-hero-grid{padding-top:10px}}
       `}</style>
 
-      {/* ── HERO — KingCam full-bleed with video background ── */}
-      <div style={{ position: "relative", minHeight: "100svh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* KingCam looping video background */}
+      {/* ── HERO — VaultX soft-launch vertical ── */}
+      <div style={{ position: "relative", minHeight: "100svh", display: "flex", flexDirection: "column", overflow: "hidden", background: "#030305" }}>
         <video
           autoPlay
           muted
           loop
           playsInline
           preload="auto"
-          style={{
-            position: "absolute", inset: 0, width: "100%", height: "100%",
-            objectFit: "cover", objectPosition: "center 15%",
-            zIndex: 0, opacity: 0.55,
-          }}
+          poster="/videos/vaultx-cinematic-trailer-poster.png"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", zIndex: 0, opacity: 0.5 }}
         >
-          <source src="/videos/kingcam-hero-cam.mp4" type="video/mp4" />
-          {/* Fallback: static KingCam image if video fails */}
-          <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/assets/kingcam-hero.jpg')", backgroundSize: "cover", backgroundPosition: "center 15%" }} />
+          <source src="/videos/vaultx-cinematic-trailer.mp4" type="video/mp4" />
         </video>
-        {/* Cinematic dark overlay */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(5,5,8,0.25) 0%,rgba(5,5,8,0.5) 50%,rgba(5,5,8,0.97) 100%)", zIndex: 1 }} />
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center,transparent 30%,rgba(5,5,8,0.55) 100%)", zIndex: 1 }} />
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 72% 18%,rgba(201,168,76,0.28),transparent 30%),radial-gradient(circle at 18% 15%,rgba(56,189,248,0.20),transparent 34%),linear-gradient(180deg,rgba(3,3,5,0.42) 0%,rgba(3,3,5,0.68) 45%,#050508 100%)", zIndex: 1 }} />
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px)", backgroundSize: "56px 56px", maskImage: "linear-gradient(180deg,rgba(0,0,0,.9),transparent)", zIndex: 1 }} />
+        <div style={{ position: "absolute", left: "8%", top: "22%", width: 220, height: 220, borderRadius: "50%", background: "rgba(56,189,248,.12)", filter: "blur(46px)", animation: "vaultx-breathe 5s ease-in-out infinite", zIndex: 1 }} />
+        <div style={{ position: "absolute", right: "8%", bottom: "16%", width: 260, height: 260, borderRadius: "50%", background: "rgba(201,168,76,.13)", filter: "blur(54px)", animation: "vaultx-breathe 6s ease-in-out infinite .8s", zIndex: 1 }} />
 
         {/* Nav */}
         <div style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px" }}>
-          <img src="/logo-white.png" alt="CreatorVault" style={{ height: 28, objectFit: "contain" }} />
-          <Link href="/login">
-            <button style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Log In</button>
+          <Link href="/">
+            <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+              <img src="/logo-white.png" alt="CreatorVault" style={{ height: 28, objectFit: "contain" }} />
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 999, border: "1px solid rgba(201,168,76,.24)", background: "rgba(201,168,76,.08)", color: "#c9a84c", fontSize: 10, fontWeight: 900, letterSpacing: ".14em", textTransform: "uppercase" }}>VaultX Launch</span>
+            </div>
           </Link>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Link href="/vault-x"><button style={{ background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.32)", color: "#c9a84c", borderRadius: 9, padding: "8px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>Explore VaultX</button></Link>
+            <Link href="/login"><button style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: 9, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Log In</button></Link>
+          </div>
         </div>
 
-        {/* Hero content — pushed to bottom so KingCam shows above */}
-        <div style={{ position: "relative", zIndex: 10, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "0 20px 40px", marginTop: "auto", width: "100%", maxWidth: 640, alignSelf: "center" }}>
-          {/* Invite badge */}
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.35)", borderRadius: 100, padding: "5px 14px", marginBottom: 18, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.6s ease" }}>
-            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#c9a84c", animation: "shimmer 2s ease-in-out infinite" }} />
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#c9a84c" }}>✦ INVITE-ONLY · EARLY ACCESS 2026</span>
+        <div className="vaultx-hero-grid" style={{ position: "relative", zIndex: 5, flex: 1 }}>
+          <div style={{ maxWidth: 650 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(201,168,76,0.13)", border: "1px solid rgba(201,168,76,0.38)", borderRadius: 999, padding: "7px 14px", marginBottom: 20, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.6s ease" }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#c9a84c", boxShadow: "0 0 20px rgba(201,168,76,.85)", animation: "shimmer 1.8s ease-in-out infinite" }} />
+              <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.18em", textTransform: "uppercase", color: "#f4d37c" }}>Invite-only soft launch · first polished vertical</span>
+            </div>
+            <h1 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(44px,8vw,92px)", fontWeight: 900, color: "#fff", lineHeight: .92, marginBottom: 20, letterSpacing: "-0.055em", opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease 0.12s,transform 0.7s ease 0.12s" }}>
+              VaultX feels <span style={{ color: "#c9a84c", textShadow: "0 0 32px rgba(201,168,76,.34)" }}>alive</span> the second creators enter.
+            </h1>
+            <p style={{ fontSize: "clamp(16px,2.2vw,21px)", color: "rgba(255,255,255,0.74)", lineHeight: 1.62, marginBottom: 14, maxWidth: 610, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.7s ease 0.28s" }}>
+              The private creator operating system for premium video, paid drops, teaser funnels, body-cinema packaging, fan routing, and owned revenue. Not another link-in-bio. A living command center built to make creators want in.
+            </p>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.48)", lineHeight: 1.7, marginBottom: 28, maxWidth: 560, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.7s ease 0.36s" }}>
+              Launching with VaultX first gives CreatorVault a sharp, premium beachhead: immersive, adult-safe, video-first, and monetization-focused from the first scroll.
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", marginBottom: 18, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.7s ease 0.46s" }}>
+              <a href="#waitlist" style={{ textDecoration: "none" }}><button style={{ background: "linear-gradient(135deg,#f7d67a,#c9a84c 48%,#9b7425)", color: "#050508", border: "none", borderRadius: 10, padding: "15px 30px", fontSize: 13, fontWeight: 950, letterSpacing: "0.08em", cursor: "pointer", animation: "pulse-gold 3s ease-in-out infinite", textTransform: "uppercase", boxShadow: "0 18px 44px rgba(201,168,76,.24)" }}>Request VaultX Access</button></a>
+              <Link href="/vault-x"><button style={{ background: "rgba(255,255,255,0.075)", color: "#fff", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 10, padding: "15px 22px", fontSize: 13, fontWeight: 850, cursor: "pointer" }}>See the vertical →</button></Link>
+              <Link href="/login"><button style={{ background: "transparent", color: "rgba(255,255,255,.62)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, padding: "15px 18px", fontSize: 13, fontWeight: 750, cursor: "pointer" }}>Have an invite?</button></Link>
+            </div>
+            <div className="vaultx-signal-grid" style={{ opacity: heroLoaded ? 1 : 0, transition: "opacity .8s ease .58s" }}>
+              {[
+                { val: "85%", label: "creator revenue share", color: "#c9a84c" },
+                { val: "18+", label: "premium-safe positioning", color: "#f472b6" },
+                { val: "4", label: "upload → package → launch steps", color: "#38bdf8" },
+                { val: "LIVE", label: "Stripe + creator workflows", color: "#4ade80" },
+              ].map((s) => (
+                <div key={s.label} style={{ padding: "13px 12px", borderRadius: 15, background: "rgba(255,255,255,0.055)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(12px)" }}>
+                  <div style={{ fontSize: 18, lineHeight: 1, fontWeight: 950, color: s.color }}>{s.val}</div>
+                  <div style={{ fontSize: 9, color: "rgba(255,255,255,0.44)", letterSpacing: "0.10em", textTransform: "uppercase", marginTop: 7, lineHeight: 1.35 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Headline */}
-          <h1 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(34px,9vw,64px)", fontWeight: 800, color: "#fff", lineHeight: 1.08, marginBottom: 14, letterSpacing: "-0.02em", opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease 0.15s,transform 0.7s ease 0.15s" }}>
-            Your <span style={{ color: "#38bdf8" }}>Creator Empire</span> OS
-          </h1>
-
-          {/* Sub */}
-          <p style={{ fontSize: "clamp(13px,3.5vw,16px)", color: "rgba(255,255,255,0.7)", lineHeight: 1.6, marginBottom: 6, maxWidth: 480, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.7s ease 0.3s" }}>
-            AI Video Lab. Hollywood production pipeline. In-club content studio. Social autopilot. Marketplace. All in one platform.
-          </p>
-          <p style={{ fontSize: "clamp(12px,3vw,14px)", color: "rgba(255,255,255,0.48)", marginBottom: 26, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.7s ease 0.4s" }}>
-            Keep <span style={{ color: "#c9a84c", fontWeight: 700 }}>85%</span> of every dollar you earn. No middlemen. No ceiling.
-          </p>
-
-          {/* CTAs */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", marginBottom: 18, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.7s ease 0.5s" }}>
-            <a href="#waitlist" style={{ textDecoration: "none" }}>
-              <button style={{ background: "#c9a84c", color: "#050508", border: "none", borderRadius: 8, padding: "14px 30px", fontSize: 14, fontWeight: 700, letterSpacing: "0.06em", cursor: "pointer", animation: "pulse-gold 3s ease-in-out infinite", textTransform: "uppercase" }}>
-                JOIN THE WAITLIST
-              </button>
-            </a>
-            <Link href="/login">
-              <button style={{ background: "rgba(255,255,255,0.07)", color: "#fff", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 8, padding: "14px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-                Log In → Enter
-              </button>
-            </Link>
-          </div>
-
-          {/* Secondary links */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 18, justifyContent: "center", marginBottom: 28 }}>
-            <Link href="/login"><span style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", cursor: "pointer", textDecoration: "underline", textDecorationColor: "rgba(255,255,255,0.18)" }}>Already have an invite? Log in</span></Link>
-            <Link href="/vault-x"><span style={{ fontSize: 12, color: "rgba(201,168,76,0.6)", cursor: "pointer", textDecoration: "underline", textDecorationColor: "rgba(201,168,76,0.28)" }}>18+ creator? Learn about VaultX</span></Link>
-          </div>
-
-          {/* Live stats strip */}
-          <div style={{ display: "flex", gap: 0, width: "100%", maxWidth: 480, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, overflow: "hidden", opacity: heroLoaded ? 1 : 0, transition: "opacity 0.8s ease 0.7s" }}>
-            {[
-              { val: "301", label: "ROUTES", color: "#38bdf8" },
-              { val: "979", label: "TRPC PROCEDURES", color: "#38bdf8" },
-              { val: "408+", label: "DATABASE TABLES", color: "#38bdf8" },
-              { val: "LIVE", label: "STRIPE", color: "#c9a84c" },
-            ].map((s, i) => (
-              <div key={i} style={{ flex: 1, padding: "10px 4px", textAlign: "center", borderRight: i < 3 ? "1px solid rgba(255,255,255,0.07)" : "none" }}>
-                <div style={{ fontSize: "clamp(11px,3vw,14px)", fontWeight: 700, color: s.color }}>{s.val}</div>
-                <div style={{ fontSize: 8, color: "rgba(255,255,255,0.32)", letterSpacing: "0.08em", textTransform: "uppercase", marginTop: 2 }}>{s.label}</div>
+          <div className="vaultx-live-card" style={{ opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? "translateY(0)" : "translateY(26px)", transition: "opacity .8s ease .34s, transform .8s ease .34s" }}>
+            <div className="vaultx-live-inner">
+              <video autoPlay muted loop playsInline preload="metadata" poster="/videos/vaultx-cinematic-trailer-poster.png" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .42 }}>
+                <source src="/videos/vaultx-cinematic-trailer.mp4" type="video/mp4" />
+              </video>
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(0,0,0,.18),rgba(3,3,5,.92) 74%),radial-gradient(circle at 50% 20%,rgba(201,168,76,.2),transparent 34%)" }} />
+              <div style={{ position: "absolute", left: 18, right: 18, top: 18, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontSize: 9, color: "rgba(255,255,255,.44)", fontWeight: 900, letterSpacing: ".22em", textTransform: "uppercase" }}>VaultX Command Center</div>
+                  <div style={{ color: "#fff", fontSize: 20, fontFamily: "Playfair Display, serif", fontWeight: 850, marginTop: 3 }}>Drop Builder Live</div>
+                </div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 10px", borderRadius: 999, background: "rgba(16,185,129,.12)", border: "1px solid rgba(16,185,129,.28)", color: "#86efac", fontSize: 9, fontWeight: 950, letterSpacing: ".12em" }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981", boxShadow: "0 0 16px #10B981" }} />READY</div>
               </div>
-            ))}
+              <div style={{ position: "absolute", left: 18, right: 18, bottom: 18, display: "grid", gap: 12 }}>
+                {[
+                  { title: "AI reads the asset", meta: "hook, crop, motion, heat score", color: "#38bdf8", pct: 92 },
+                  { title: "Packages the monetization", meta: "teaser, PPV, cover, DM copy", color: "#c9a84c", pct: 86 },
+                  { title: "Routes the launch", meta: "VaultX, Telegram, OF/Fansly, archive", color: "#4ade80", pct: 78 },
+                ].map((item, i) => (
+                  <div key={item.title} style={{ padding: 14, borderRadius: 17, background: "rgba(0,0,0,.46)", border: "1px solid rgba(255,255,255,.10)", backdropFilter: "blur(14px)", animation: `vaultx-rise ${5 + i}s ease-in-out infinite ${i * .25}s` }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+                      <div>
+                        <div style={{ color: "#fff", fontSize: 13, fontWeight: 900 }}>{item.title}</div>
+                        <div style={{ color: "rgba(255,255,255,.42)", fontSize: 10, marginTop: 3 }}>{item.meta}</div>
+                      </div>
+                      <div style={{ color: item.color, fontSize: 12, fontWeight: 950 }}>{item.pct}%</div>
+                    </div>
+                    <div style={{ height: 4, borderRadius: 999, background: "rgba(255,255,255,.08)", overflow: "hidden" }}><div style={{ height: "100%", width: `${item.pct}%`, background: item.color, boxShadow: `0 0 18px ${item.color}` }} /></div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Scroll indicator */}
-        <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, opacity: 0.32, zIndex: 10 }}>
-          <span style={{ fontSize: 9, letterSpacing: "0.25em", textTransform: "uppercase", color: "#fff" }}>SCROLL</span>
+        <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, opacity: 0.34, zIndex: 10 }}>
+          <span style={{ fontSize: 9, letterSpacing: "0.25em", textTransform: "uppercase", color: "#fff" }}>ENTER VAULTX</span>
           <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.4)" }} />
         </div>
       </div>
 
-      {/* ── VAULTX HERO / SOCIAL PROOF / BODY CINEMA ── */}
-      <section style={{ position: "relative", zIndex: 1, padding: "76px 20px 62px", borderTop: "1px solid rgba(201,168,76,0.18)", overflow: "hidden", background: "linear-gradient(180deg,#050508 0%,#09070b 100%)" }}>
-        <video autoPlay muted loop playsInline preload="metadata" poster="/images/reel/reel-product-drop.png" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.22 }}>
+      {/* ── VAULTX ANTICIPATION ENGINE ── */}
+      <section style={{ position: "relative", zIndex: 1, padding: "78px 20px 68px", borderTop: "1px solid rgba(201,168,76,0.18)", overflow: "hidden", background: "linear-gradient(180deg,#050508 0%,#09070b 100%)" }}>
+        <video autoPlay muted loop playsInline preload="metadata" poster="/images/reel/reel-product-drop.png" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.18 }}>
           <source src="/videos/vaultx-cinematic-trailer.mp4" type="video/mp4" />
         </video>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 18% 20%,rgba(201,168,76,0.18),transparent 30%),linear-gradient(180deg,rgba(5,5,8,0.74),#050508 88%)" }} />
-        <div style={{ position: "relative", maxWidth: 1120, margin: "0 auto", display: "grid", gridTemplateColumns: "1.05fr .95fr", gap: 34, alignItems: "center" }}>
-          <div>
-            <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.28em", textTransform: "uppercase", color: "#c9a84c", marginBottom: 12 }}>VAULTX — THE PRIVATE MONETIZATION LAYER</p>
-            <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(30px,7vw,58px)", lineHeight: 1.02, fontWeight: 850, color: "#fff", marginBottom: 16 }}>Premium creators need a revenue engine, not another link-in-bio.</h2>
-            <p style={{ fontSize: 15, lineHeight: 1.75, color: "rgba(255,255,255,0.64)", maxWidth: 620 }}>VaultX packages adult-safe premium content workflows into tracked drops, private unlocks, fan movement, and creator-owned monetization. The pitch is not shock value. The pitch is control: proof, privacy, payment flow, and repeatable demand.</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 24 }}>
-              <Link href="/vault-x"><button style={{ background: "#c9a84c", color: "#050508", border: "none", borderRadius: 9, padding: "13px 22px", fontWeight: 900, letterSpacing: "0.06em", cursor: "pointer", textTransform: "uppercase" }}>Open VaultX →</button></Link>
-              <a href="#waitlist" style={{ textDecoration: "none" }}><button style={{ background: "rgba(255,255,255,0.07)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 9, padding: "13px 22px", fontWeight: 800, cursor: "pointer" }}>Request access</button></a>
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 18% 20%,rgba(201,168,76,0.18),transparent 30%),radial-gradient(circle at 82% 35%,rgba(236,72,153,0.12),transparent 34%),linear-gradient(180deg,rgba(5,5,8,0.78),#050508 88%)" }} />
+        <div style={{ position: "relative", maxWidth: 1120, margin: "0 auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(300px,.8fr)", gap: 30, alignItems: "end" }}>
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.30em", textTransform: "uppercase", color: "#c9a84c", marginBottom: 12 }}>THE FIRST POLISHED VERTICAL</p>
+              <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(32px,7vw,64px)", lineHeight: .98, fontWeight: 900, color: "#fff", marginBottom: 16, letterSpacing: "-.04em" }}>A premium creator launch room that moves like a living product.</h2>
+              <p style={{ fontSize: 16, lineHeight: 1.75, color: "rgba(255,255,255,0.64)", maxWidth: 680 }}>VaultX should make creators feel the future before they read a feature list. The surface sells momentum: upload a raw asset, watch the system read it, package the paid drop, generate the teaser logic, and route the launch into revenue channels.</p>
+            </div>
+            <div style={{ display: "grid", gap: 10 }}>
+              {[
+                { k: "Immersive", v: "cinematic background motion, live status cards, and product panels that feel in motion" },
+                { k: "Adult-safe", v: "premium language and suggestive energy without cheap or explicit positioning" },
+                { k: "Revenue-native", v: "PPV, VIP, Telegram, Stripe, creator-owned data, and repeatable drops" },
+              ].map((item) => (
+                <div key={item.k} style={{ padding: 16, borderRadius: 16, background: "rgba(255,255,255,0.055)", border: "1px solid rgba(255,255,255,0.11)", backdropFilter: "blur(12px)" }}>
+                  <div style={{ color: "#c9a84c", fontSize: 13, fontWeight: 950, marginBottom: 5 }}>{item.k}</div>
+                  <div style={{ color: "rgba(255,255,255,0.56)", fontSize: 13, lineHeight: 1.55 }}>{item.v}</div>
+                </div>
+              ))}
             </div>
           </div>
-          <div style={{ display: "grid", gap: 14 }}>
+          <div className="vaultx-command-grid">
             {[
-              { k: "Stripe-ready", v: "paid unlock surfaces and attribution paths" },
-              { k: "Telegram-ready", v: "tracked drops, fan routing, and VIP movement" },
-              { k: "Creator-safe", v: "age-gated positioning without cheap language" },
-              { k: "Challenge-linked", v: "verified transactions feed revenue goals" },
+              { step: "01", title: "Read the footage", body: "AI scores hook, lighting, body-cinema potential, safe teaser gates, and premium crop logic.", color: "#38bdf8" },
+              { step: "02", title: "Build the drop", body: "Master, teaser, PPV cover, caption pack, DM pitch, thumbnail, and archive metadata move together.", color: "#c9a84c" },
+              { step: "03", title: "Launch the funnel", body: "Route to VaultX, Telegram, VIP channels, public-safe socials, and paid unlocks with creator-first economics.", color: "#4ade80" },
             ].map((item) => (
-              <div key={item.k} style={{ padding: 18, borderRadius: 16, background: "rgba(255,255,255,0.055)", border: "1px solid rgba(255,255,255,0.11)", backdropFilter: "blur(12px)" }}>
-                <div style={{ color: "#c9a84c", fontSize: 13, fontWeight: 900, marginBottom: 5 }}>{item.k}</div>
-                <div style={{ color: "rgba(255,255,255,0.56)", fontSize: 13 }}>{item.v}</div>
+              <div key={item.step} style={{ position: "relative", overflow: "hidden", minHeight: 178, padding: 20, borderRadius: 20, background: "linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025))", border: `1px solid ${item.color}30` }}>
+                <div style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg,transparent,${item.color}22,transparent)`, animation: "vaultx-pulse-line 5s ease-in-out infinite" }} />
+                <div style={{ position: "relative" }}>
+                  <div style={{ color: item.color, fontSize: 11, fontWeight: 950, letterSpacing: ".18em", marginBottom: 18 }}>{item.step}</div>
+                  <h3 style={{ fontFamily: "Playfair Display, serif", color: "#fff", fontSize: 24, lineHeight: 1.1, marginBottom: 10 }}>{item.title}</h3>
+                  <p style={{ color: "rgba(255,255,255,.52)", fontSize: 13, lineHeight: 1.65 }}>{item.body}</p>
+                </div>
               </div>
             ))}
           </div>
-        </div>
-        <div style={{ position: "relative", maxWidth: 1120, margin: "32px auto 0", display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 10 }}>
-          {["Private unlocks", "Premium drops", "Creator-owned data", "Body Cinema campaigns"].map((label) => (
-            <div key={label} style={{ padding: "14px 12px", textAlign: "center", borderRadius: 14, background: "rgba(201,168,76,0.09)", border: "1px solid rgba(201,168,76,0.2)", color: "rgba(255,255,255,0.72)", fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</div>
-          ))}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 26 }}>
+            <Link href="/vault-x"><button style={{ background: "#c9a84c", color: "#050508", border: "none", borderRadius: 10, padding: "14px 24px", fontWeight: 950, letterSpacing: "0.06em", cursor: "pointer", textTransform: "uppercase" }}>Open VaultX →</button></Link>
+            <Link href="/vault-x/editor"><button style={{ background: "rgba(255,255,255,0.07)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 10, padding: "14px 24px", fontWeight: 850, cursor: "pointer" }}>Preview the editor</button></Link>
+            <a href="#waitlist" style={{ textDecoration: "none" }}><button style={{ background: "rgba(201,168,76,0.10)", color: "#f4d37c", border: "1px solid rgba(201,168,76,0.26)", borderRadius: 10, padding: "14px 24px", fontWeight: 850, cursor: "pointer" }}>Join early access</button></a>
+          </div>
         </div>
       </section>
 
@@ -377,7 +415,7 @@ export default function Home() {
             REAL AI. GENERATED ON THIS PLATFORM.
           </h2>
           <p style={{ fontSize: 14, color: "rgba(255,255,255,0.43)", maxWidth: 560, margin: "0 auto" }}>
-            A platform-wide reel wall for AI Video Lab, music campaigns, product drops, apparel, creator promos, Clone Lab, and monetization flows. KingCam runs the system, but CreatorVault sells the whole creator empire.
+            A platform-wide motion wall led by VaultX: premium creator funnels, AI Video Lab, music campaigns, product drops, Clone Lab, social exports, and monetization flows. The first vertical feels alive, while CreatorVault shows the full empire behind it.
           </p>
         </div>
         <div style={{ overflow: "hidden", padding: "4px 0" }}>
@@ -396,17 +434,17 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── LIVE GENERATION COMMAND CENTER ── */}
+      {/* ── LIVE VAULTX COMMAND CENTER ── */}
       <div ref={commandRef.ref} style={{ position: "relative", zIndex: 1, padding: "78px 20px 72px", borderTop: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 20% 10%,rgba(56,189,248,0.12),transparent 34%),radial-gradient(circle at 80% 40%,rgba(201,168,76,0.10),transparent 34%)", pointerEvents: "none" }} />
         <div style={{ position: "relative", maxWidth: 1060, margin: "0 auto" }}>
           <div className={`reveal-up ${commandRef.visible ? "visible" : ""}`} style={{ maxWidth: 720, marginBottom: 34 }}>
             <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "#c9a84c", marginBottom: 10 }}>LIVE GENERATION COMMAND CENTER</p>
             <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(28px,7vw,54px)", fontWeight: 800, color: "#fff", lineHeight: 1.05, marginBottom: 14 }}>
-              Not a landing page. <span style={{ color: "#38bdf8" }}>A content factory</span> you can feel.
+              Not a static homepage. <span style={{ color: "#38bdf8" }}>A living revenue room</span> you can feel.
             </h2>
             <p style={{ fontSize: 15, color: "rgba(255,255,255,0.58)", lineHeight: 1.75 }}>
-              CreatorVault makes visitors understand the power immediately: one command can become a cinematic video, a product drop, a music visual, an apparel campaign, a premium funnel, and a distribution package. The homepage shows the machine, not just the founder.
+              VaultX makes premium creators understand the power immediately: one raw asset can become a cinematic teaser, paid drop, cover frame, caption pack, distribution package, and reusable archive. The homepage should feel like the machine is already running.
             </p>
           </div>
 
@@ -631,14 +669,14 @@ export default function Home() {
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
           <div className={`reveal-up ${waitlistRef.visible ? "visible" : ""}`} style={{ textAlign: "center", marginBottom: 36 }}>
             <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "#c9a84c", marginBottom: 10 }}>EARLY ACCESS</p>
-            <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(26px,6vw,38px)", fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 12 }}>Claim your spot in the empire.</h2>
-            <p style={{ fontSize: 15, color: "rgba(255,255,255,0.48)", lineHeight: 1.6 }}>Invite-only. First 500 creators get lifetime founder pricing and direct access to the full platform.</p>
+            <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(26px,6vw,38px)", fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 12 }}>Claim your VaultX invite before the room opens.</h2>
+            <p style={{ fontSize: 15, color: "rgba(255,255,255,0.48)", lineHeight: 1.6 }}>Invite-only soft launch. Early creators get priority access to the premium vertical, founder pricing, and direct input on the creator revenue operating system.</p>
           </div>
           <div className={`reveal-up d1 ${waitlistRef.visible ? "visible" : ""}`} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: 28 }}>
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(255,255,255,0.42)", marginBottom: 7 }}>Email</label>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@empire.com" style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "11px 14px", fontSize: 14, color: "#fff", boxSizing: "border-box" }} />
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@vaultx.com" style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "11px 14px", fontSize: 14, color: "#fff", boxSizing: "border-box" }} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
@@ -660,7 +698,7 @@ export default function Home() {
               <button type="submit" disabled={signupMutation.isPending} style={{ background: signupMutation.isPending ? "rgba(201,168,76,0.5)" : "#c9a84c", color: "#050508", border: "none", borderRadius: 8, padding: "13px 28px", fontSize: 14, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", cursor: signupMutation.isPending ? "not-allowed" : "pointer", marginTop: 4 }}>
                 {signupMutation.isPending ? "SECURING YOUR SPOT..." : "REQUEST EARLY ACCESS"}
               </button>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.26)", textAlign: "center" }}>No spam. No BS. Just your empire OS.</p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.26)", textAlign: "center" }}>No spam. No noise. Just your private invite path into VaultX.</p>
             </form>
           </div>
         </div>

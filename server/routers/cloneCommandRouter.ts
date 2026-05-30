@@ -102,6 +102,17 @@ function normalisePolloStatus(raw: string | undefined | null): "waiting" | "proc
   return "waiting";
 }
 
+function buildCloneMotionPrompt(input: { prompt?: string; motionStyle?: "vaultx_teaser" | "vip_invite" | "ppv_cover" | "brand_loop" }) {
+  if (input.prompt?.trim()) return input.prompt.trim();
+  const presets = {
+    vaultx_teaser: "Create a premium VaultX clone motion teaser with subtle camera push, stable face identity, luxury low-key lighting, confident adult-safe sensual energy, and a polished vertical launch feel.",
+    vip_invite: "Create an invite-only VIP clone motion asset with warm private-lounge lighting, controlled eye-line presence, discreet premium energy, stable likeness, and a final beat suitable for Telegram or VIP funnel routing.",
+    ppv_cover: "Create a PPV cover-motion loop with glossy editorial lighting, clean subject preservation, slow reveal movement, strong paid-unlock tension, and no explicit public-facing content.",
+    brand_loop: "Create a creator-brand profile loop with subtle head movement, crisp face consistency, clean background depth, premium social hero energy, and platform-safe styling.",
+  } as const;
+  return presets[input.motionStyle || "vaultx_teaser"];
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 export const cloneCommandRouter = router({
   /**
@@ -248,6 +259,7 @@ export const cloneCommandRouter = router({
       z.object({
         imageUrl: z.string().url(),
         prompt: z.string().max(1500).optional(),
+        motionStyle: z.enum(["vaultx_teaser", "vip_invite", "ppv_cover", "brand_loop"]).default("vaultx_teaser"),
         resolution: z.enum(["480p", "720p", "1080p"]).default("720p"),
         length: z.enum(["5s", "10s"]).default("5s"),
         mode: z.enum(["basic", "pro"]).default("pro"),
@@ -260,8 +272,7 @@ export const cloneCommandRouter = router({
       }
 
       const durationSeconds = input.length === "10s" ? 10 : 5;
-      const finalPrompt = input.prompt?.trim() ||
-        "Create a premium cinematic clone motion teaser with subtle camera movement, luxury lighting, sharp face consistency, and high-end creator-brand energy.";
+      const finalPrompt = buildCloneMotionPrompt(input);
 
       const response = await fetch(`${POLLO_BASE_URL}/generation/pollo/pollo-v1-6`, {
         method: "POST",
@@ -306,6 +317,14 @@ export const cloneCommandRouter = router({
           status,
           generationId: (insertResult as any).insertId,
           prompt: finalPrompt,
+          directorBrief: {
+            vertical: "VaultX",
+            motionStyle: input.motionStyle,
+            provider: "Pollo image-to-video",
+            model: "pollo-v1-6",
+            outputs: ["clone teaser", "VIP invite loop", "PPV cover motion", "profile hero crop"],
+            safetyRule: "adult-safe public teaser language; preserve likeness; avoid explicit public-facing output",
+          },
         };
       } finally {
         await conn.end();

@@ -90,7 +90,7 @@ async function applyMotionEffects(imageUrl: string, prompt: string): Promise<str
     "minimax/video-01:5aa835260ff7f40f4069c41185f72036accf99e29957bb4a3b3a911f3b6c1912",
     {
       first_frame_image: imageUrl,
-      prompt: prompt || "Cinematic slow motion, soft bokeh, golden hour lighting, body-positive celebration, professional film look",
+      prompt: prompt || "VaultX premium creator teaser: subtle parallax camera glide, luxury low-key lighting, confident adult-safe sensual energy, crisp subject preservation, cinematic depth, platform-ready vertical motion",
       prompt_optimizer: true,
     }
   );
@@ -149,6 +149,76 @@ async function applyEnhancement(imageUrl: string, enhanceType: "face" | "texture
     throw new Error(`Enhance model failed: ${result.error}`);
   }
   return Array.isArray(result.output) ? result.output[0] : result.output;
+}
+
+type VaultXReleaseMode = "premium_teaser" | "ppv_drop" | "vip_funnel" | "clone_motion" | "motion_flyer";
+
+type VaultXDistributionTarget = "vaultx" | "telegram" | "fansly" | "onlyfans" | "tiktok" | "instagram" | "x" | "archive";
+
+function buildVaultXDirectorBrief(input: {
+  releaseMode?: VaultXReleaseMode;
+  brandLane?: string;
+  revenueIntent?: string;
+  distributionTargets?: VaultXDistributionTarget[];
+  style?: string;
+  outputType?: "video" | "image";
+  motionPrompt?: string;
+}) {
+  const mode = input.releaseMode || "premium_teaser";
+  const targets = input.distributionTargets?.length ? input.distributionTargets : ["vaultx", "telegram", "archive"];
+  const lane = input.brandLane?.trim() || "premium adult-safe creator launch";
+  const revenueIntent = input.revenueIntent?.trim() || "turn curiosity into a paid unlock without exposing explicit content publicly";
+  const preset: Record<VaultXReleaseMode, { headline: string; motion: string; derivatives: string[]; safety: string }> = {
+    premium_teaser: {
+      headline: "Premium teaser that creates anticipation before the paid unlock",
+      motion: "slow cinematic push-in, controlled breathing motion, luxury shadows, crisp subject preservation, seductive but public-safe teaser energy",
+      derivatives: ["9:16 teaser reel", "story-safe cut", "cover frame", "caption hook", "VIP DM opener"],
+      safety: "public-safe; imply value and atmosphere without nudity or explicit claims",
+    },
+    ppv_drop: {
+      headline: "Paid drop package with clear conversion path",
+      motion: "premium product reveal pacing, soft flashes, confident editorial framing, strong final lockup for PPV cover and unlock CTA",
+      derivatives: ["PPV cover", "unlock teaser", "sales caption", "Telegram preview", "archive metadata"],
+      safety: "separate public teaser language from paid-content metadata",
+    },
+    vip_funnel: {
+      headline: "VIP funnel asset that moves fans into a private lane",
+      motion: "invitation-only lounge atmosphere, warm highlights, close-up detail movement, exclusive-room tension, clear CTA beat",
+      derivatives: ["VIP invite reel", "Telegram card", "story sequence", "DM script", "retargeting hook"],
+      safety: "premium, discreet, and adult-safe; no platform-risk wording",
+    },
+    clone_motion: {
+      headline: "Clone motion asset with identity consistency and brand control",
+      motion: "subtle head and camera movement, stable face identity, luxury lighting, confident creator-brand energy, no uncanny motion",
+      derivatives: ["clone teaser", "avatar intro", "short loop", "profile hero", "caption pack"],
+      safety: "keep likeness stable and avoid explicit generated-content claims in public copy",
+    },
+    motion_flyer: {
+      headline: "Motion flyer that sells the drop before the viewer scrolls",
+      motion: "kinetic typography, glossy light sweeps, vertical trailer rhythm, premium event-poster depth, strong CTA lockup",
+      derivatives: ["animated flyer", "static cover", "story export", "square promo", "caption pack"],
+      safety: "commercial and polished; suggestive allowed, explicit avoided",
+    },
+  };
+  const selected = preset[mode];
+  const motionPrompt = input.motionPrompt?.trim() || `VaultX ${selected.headline}. ${selected.motion}. Brand lane: ${lane}. Revenue goal: ${revenueIntent}. Target destinations: ${targets.join(", ")}. ${selected.safety}. Output must feel premium, alive, vertical-first, and ready for paid creator monetization.`;
+
+  return {
+    mode,
+    brandLane: lane,
+    revenueIntent,
+    distributionTargets: targets,
+    headline: selected.headline,
+    motionPrompt,
+    safetyRule: selected.safety,
+    derivatives: selected.derivatives,
+    providerPlan: [
+      { step: "enhance", provider: "Replicate", model: "GFPGAN / Real-ESRGAN", reason: "stabilize face, texture, and perceived production value before stylizing" },
+      { step: "style", provider: "Replicate", model: "Flux 1.1 Pro", reason: `apply ${input.style || "desire"} grade while preserving composition` },
+      { step: "motion", provider: "Replicate Minimax or Pollo handoff", model: "image-to-video", reason: "turn the finished visual into a premium vertical motion asset" },
+      { step: "package", provider: "CreatorVault Media OS", model: "release metadata", reason: "return teaser, paid, social, and archive instructions together" },
+    ],
+  };
 }
 
 // ── Router ────────────────────────────────────────────────────────────────────
@@ -247,8 +317,13 @@ export const automatedDirectorRouter = router({
       enhanceType: z.enum(["face", "texture", "full"]).default("full"),
       motionPrompt: z.string().optional(),
       outputType: z.enum(["video", "image"]).default("video"),
+      releaseMode: z.enum(["premium_teaser", "ppv_drop", "vip_funnel", "clone_motion", "motion_flyer"]).default("premium_teaser"),
+      brandLane: z.string().max(240).optional(),
+      revenueIntent: z.string().max(320).optional(),
+      distributionTargets: z.array(z.enum(["vaultx", "telegram", "fansly", "onlyfans", "tiktok", "instagram", "x", "archive"])).default(["vaultx", "telegram", "archive"]),
     }))
     .mutation(async ({ input }) => {
+      const directorBrief = buildVaultXDirectorBrief(input);
       const pipeline: Array<{ step: string; status: string; outputUrl?: string }> = [];
       let currentUrl = input.imageUrl;
 
@@ -270,7 +345,7 @@ export const automatedDirectorRouter = router({
         pipeline.push({ step: "motion", status: "running" });
         const video = await applyMotionEffects(
           currentUrl,
-          input.motionPrompt || "Cinematic slow motion, professional quality, body-positive aesthetic"
+          directorBrief.motionPrompt
         );
         finalUrl = video;
         pipeline[2] = { step: "motion", status: "complete", outputUrl: video };
@@ -282,6 +357,44 @@ export const automatedDirectorRouter = router({
         creatorId: input.creatorId,
         inputUrl: input.imageUrl,
         outputType: input.outputType,
+        directorBrief,
+        releasePackage: {
+          primaryOutput: finalUrl,
+          mode: directorBrief.mode,
+          headline: directorBrief.headline,
+          derivatives: directorBrief.derivatives.map((name, index) => ({
+            name,
+            status: index === 0 ? "ready_from_primary" : "planned",
+            target: directorBrief.distributionTargets[index % directorBrief.distributionTargets.length],
+          })),
+          safetyRule: directorBrief.safetyRule,
+        },
+        timestamp: new Date().toISOString(),
+      };
+    }),
+
+  // VaultX release planner: returns the exact provider/package plan without spending credits.
+  createVaultXReleasePlan: protectedProcedure
+    .input(z.object({
+      releaseMode: z.enum(["premium_teaser", "ppv_drop", "vip_funnel", "clone_motion", "motion_flyer"]).default("premium_teaser"),
+      brandLane: z.string().max(240).optional(),
+      revenueIntent: z.string().max(320).optional(),
+      style: z.enum(["desire", "velvet", "sunrise", "midnight", "natural"]).default("desire"),
+      outputType: z.enum(["video", "image"]).default("video"),
+      distributionTargets: z.array(z.enum(["vaultx", "telegram", "fansly", "onlyfans", "tiktok", "instagram", "x", "archive"])).default(["vaultx", "telegram", "archive"]),
+    }))
+    .mutation(async ({ input }) => {
+      const directorBrief = buildVaultXDirectorBrief(input);
+      return {
+        success: true,
+        directorBrief,
+        releasePackage: {
+          mode: directorBrief.mode,
+          headline: directorBrief.headline,
+          plannedOutputs: directorBrief.derivatives,
+          providerPlan: directorBrief.providerPlan,
+          safetyRule: directorBrief.safetyRule,
+        },
         timestamp: new Date().toISOString(),
       };
     }),

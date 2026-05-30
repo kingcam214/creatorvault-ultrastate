@@ -178,8 +178,6 @@ import BrandDeals from "./pages/BrandDeals";
 import BusinessCardDesigner from "./pages/BusinessCardDesigner";
 import CardEditor from "./pages/CardEditor";
 import ChicaCockpit from "./pages/ChicaCockpit";
-  // @ts-ignore
-import ChicaLoyaltyCommand from "./pages/ChicaLoyaltyCommand";
 import ChicasEmpire from "./pages/ChicasEmpire";
 import Chuuch from "./pages/Chuuch";
 import ChuuchArchive from "./pages/ChuuchArchive";
@@ -283,8 +281,6 @@ import MonetizationPipeline from "./pages/MonetizationPipeline";
 // import { MultiPlatformPosting } from "./pages/MultiPlatformPosting"; // MERGED into SocialHub
 import MusicAI from "./pages/MusicAI";
 import MusicLibrary from "./pages/MusicLibrary";
-  // @ts-ignore
-import MyLoyaltyPortal from "./pages/MyLoyaltyPortal";
 import MySubscriptions from "./pages/MySubscriptions";
 import NFCCards from "./pages/NFCCards";
 import Notifications from "./pages/Notifications";

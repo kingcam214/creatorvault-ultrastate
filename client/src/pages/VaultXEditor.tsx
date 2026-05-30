@@ -1683,8 +1683,8 @@ export default function VaultXEditor() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <VaultXLogo size="sm" />
-            <span className="text-lg font-black text-white tracking-[-.04em]">AI Editor</span>
-            <span className="hidden xl:inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.18em]" style={{ background: "rgba(0,229,255,0.10)", color: "#00e5ff", border: "1px solid rgba(0,229,255,0.26)" }}>Body Intel · paid-output OS</span>
+            <span className="text-lg font-black text-white tracking-[-.04em]">VaultX Launch Cockpit</span>
+            <span className="hidden xl:inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.18em]" style={{ background: "rgba(0,229,255,0.10)", color: "#00e5ff", border: "1px solid rgba(0,229,255,0.26)" }}>First polished vertical · alive interface</span>
           </div>
           <div className="w-px h-4" style={{ background: "rgba(255,255,255,0.1)" }} />
           <button onClick={() => setShowProjectList(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -1737,7 +1737,7 @@ export default function VaultXEditor() {
         </div>
       </div>
 
-      {/* ── WORLD-CLASS COMMAND STRIP ── */}
+      {/* ── VAULTX LAUNCH PRESETS ── */}
       <div className="relative z-10 hidden lg:grid grid-cols-4 gap-2 px-4 py-3 flex-shrink-0" style={{ background: "linear-gradient(90deg, rgba(0,229,255,0.10), rgba(201,168,76,0.07), rgba(16,185,129,0.06))", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         {PRODUCTION_PRESETS.map(preset => (
           <button key={preset.id} onClick={() => applyProductionPreset(preset.id)} className="text-left p-3 rounded-2xl transition-all" style={{ background: productionPreset === preset.id ? `${preset.color}18` : "rgba(0,0,0,0.28)", border: `1px solid ${productionPreset === preset.id ? preset.color + "55" : "rgba(255,255,255,0.06)"}` }}>
@@ -1752,6 +1752,33 @@ export default function VaultXEditor() {
 
       <div className="relative z-10 px-4 py-3 flex-shrink-0" style={{ background: "rgba(0,0,0,0.72)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <VaultXWorkflow steps={editorWorkflowSteps} activeStep={!sourceUrl ? 0 : !analysis ? 1 : selectedOutputPackages.length < 3 ? 2 : 3} />
+      </div>
+
+      {/* ── SOFT-LAUNCH COCKPIT ── */}
+      <div className="relative z-10 hidden xl:grid grid-cols-4 gap-3 px-4 py-3 flex-shrink-0" style={{ background: "linear-gradient(90deg, rgba(236,72,153,0.08), rgba(201,168,76,0.08), rgba(0,229,255,0.06))", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        {[
+          { label: "Launch Heat", value: `${Math.max(outputReadiness, bodyCinemaHeatScore)}%`, detail: sourceUrl ? "asset is inside the room" : "waiting on first creator asset", color: Math.max(outputReadiness, bodyCinemaHeatScore) >= 80 ? C.green : C.gold, icon: Radio },
+          { label: "Vertical", value: "VaultX", detail: "premium video, PPV, VIP, and private fan movement", color: C.pink, icon: Crown },
+          { label: "Preset", value: selectedPreset.label, detail: selectedOutputLabels.join(" · ") || "master · teaser · sales kit", color: selectedPreset.color, icon: Clapperboard },
+          { label: "Revenue Gate", value: complianceMode === "vip" ? `PPV $${ppvPrice}` : selectedCompliance.label, detail: `${exportPresets.length || 0} routed destinations · ${targetFormat}`, color: selectedCompliance.color, icon: DollarSign },
+        ].map(card => {
+          const Icon = card.icon as any;
+          return (
+            <div key={card.label} className="relative overflow-hidden rounded-2xl p-3" style={{ background: "rgba(0,0,0,0.38)", border: `1px solid ${card.color}33`, boxShadow: `inset 0 0 28px ${card.color}0d` }}>
+              <div className="absolute inset-y-0 left-0 w-1" style={{ background: card.color, boxShadow: `0 0 18px ${card.color}` }} />
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: "#6B7280" }}>{card.label}</p>
+                  <p className="text-sm font-black mt-1 truncate" style={{ color: card.color }}>{card.value}</p>
+                  <p className="text-[9px] leading-snug mt-1 line-clamp-2" style={{ color: "rgba(255,255,255,0.46)" }}>{card.detail}</p>
+                </div>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${card.color}18`, border: `1px solid ${card.color}30` }}>
+                  <Icon size={14} style={{ color: card.color }} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* ── MAIN ── */}
@@ -1772,7 +1799,7 @@ export default function VaultXEditor() {
                 <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)" }}>
                   <Upload size={18} style={{ color: "#8B5CF6" }} />
                 </div>
-                <p className="text-[10px] font-black text-center" style={{ color: "#6B7280" }}>DROP PHOTO OR VIDEO</p>
+                <p className="text-[10px] font-black text-center" style={{ color: "#6B7280" }}>DROP VAULTX ASSET</p>
               </div>
             )}
             {analyzeContentMut.isPending && (
@@ -1786,7 +1813,7 @@ export default function VaultXEditor() {
           {/* Creator business brief */}
           <div className="flex flex-col gap-2 p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="flex items-center justify-between">
-              <p className="text-[9px] font-black tracking-widest" style={{ color: C.gold }}>CREATOR BRIEF</p>
+              <p className="text-[9px] font-black tracking-widest" style={{ color: C.gold }}>VAULTX LIVE BRIEF</p>
               <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md" style={{ background: outputReadiness >= 80 ? C.greenDim : C.goldDim, color: outputReadiness >= 80 ? C.green : C.gold }}>{outputReadiness}% READY</span>
             </div>
             <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
@@ -1843,7 +1870,7 @@ export default function VaultXEditor() {
               <p className="text-[9px] font-black tracking-widest" style={{ color: C.pink }}>CREATOR INTELLIGENCE</p>
               <span className="text-[7px] font-black px-1.5 py-0.5 rounded-md" style={{ background: C.pinkDim, color: C.pink }}>SHOT → TEASER → PAID</span>
             </div>
-            <p className="text-[8px] leading-snug" style={{ color: C.muted }}>This is the part that tells the creator what to do with the footage, not just which button to click.</p>
+            <p className="text-[8px] leading-snug" style={{ color: C.muted }}>This is the living direction layer: VaultX tells the creator what to do with the footage, how to tease it, and where the money sits.</p>
             <div className="flex flex-col gap-1.5">
               {creatorIntelligence.map(item => {
                 const Icon = item.icon as any;
