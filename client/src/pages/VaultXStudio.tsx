@@ -39,6 +39,7 @@ import { VaultXActionCard, VaultXLogo, VaultXWorkflow } from "@/components/vault
 // TYPES
 // ============================================================================
 type ModeId =
+  | "clone-tour-factory"
   | "velvet-suite"
   | "desire-grade"
   | "scene-architect"
@@ -79,6 +80,7 @@ interface HistoryItem {
 // CONSTANTS
 // ============================================================================
 const MODES: { id: ModeId; label: string; icon: React.ReactNode; desc: string; color: string; accent: string }[] = [
+  { id: "clone-tour-factory", label: "Clone Tour Factory", icon: <Crown size={18}/>,       desc: "KingCam clone-led platform tours: viewer profile, velvet wardrobe, ElevenLabs voice, B-roll, Pollo scenes, editor assembly", color: "#C9A84C", accent: "rgba(201,168,76,0.16)" },
   { id: "ai-video-generator",  label: "Pollo AI Video",     icon: <Film size={18}/>,        desc: "Pollo AI / Kling image → video generator with motion prompts, polling, and export history",   color: "#EF4444", accent: "rgba(239,68,68,0.15)"  },
   { id: "final-output-engine", label: "Final Output Engine", icon: <Package size={18}/>,    desc: "One click → Premium + Teaser + Clips + AI Video",  color: "#F59E0B", accent: "rgba(245,158,11,0.15)" },
   { id: "velvet-suite",        label: "Velvet Suite",         icon: <Sparkles size={18}/>,   desc: "Skin smoothing, warmth & body definition — Replicate PuLID beauty layer",  color: "#EC4899", accent: "rgba(236,72,153,0.15)"  },
@@ -148,31 +150,73 @@ const SLOW_MO_PRESETS = [
 
 const CHUNK_SIZE = 5 * 1024 * 1024;
 
+const VELVET_SUIT_WARDROBE = [
+  { id: "burgundy", label: "Burgundy Velvet", tone: "Signature royal host", prompt: "burgundy velvet suit, white-gold trim, gold crown, luxury lounge lighting", swatch: "#7F1D1D" },
+  { id: "black", label: "Black Velvet", tone: "Executive authority", prompt: "black velvet suit, gold accents, crown optional, premium founder walkthrough", swatch: "#09090B" },
+  { id: "royal-blue", label: "Royal Blue Velvet", tone: "Trust + product demo", prompt: "royal blue velvet suit, polished gold trim, clean SaaS platform tour energy", swatch: "#1D4ED8" },
+  { id: "emerald", label: "Emerald Velvet", tone: "Money + growth", prompt: "emerald green velvet suit, gold accessories, creator revenue dashboard lighting", swatch: "#047857" },
+  { id: "ivory", label: "Ivory Velvet", tone: "Luxury onboarding", prompt: "ivory velvet suit, champagne gold trim, bright premium welcome-video set", swatch: "#F8EFE0" },
+  { id: "champagne-gold", label: "Champagne Gold Velvet", tone: "Launch celebration", prompt: "champagne gold velvet suit, crown, cinematic launch announcement atmosphere", swatch: "#D6A84F" },
+  { id: "deep-purple", label: "Deep Purple Velvet", tone: "Mystery + nightlife", prompt: "deep purple velvet suit, gold crown, moody nightlife creator-economy lighting", swatch: "#581C87" },
+  { id: "charcoal", label: "Charcoal Velvet", tone: "Tech founder clean", prompt: "charcoal velvet suit, minimal gold detail, modern product walkthrough studio", swatch: "#374151" },
+  { id: "chocolate", label: "Chocolate Velvet", tone: "Warm personal invite", prompt: "chocolate brown velvet suit, warm lounge lighting, personal invitation demo", swatch: "#5C3317" },
+  { id: "crimson", label: "Crimson Velvet", tone: "Bold CTA + urgency", prompt: "crimson red velvet suit, white-gold trim, high-energy offer-deadline promo", swatch: "#991B1B" },
+] as const;
+
+type VelvetSuitId = typeof VELVET_SUIT_WARDROBE[number]["id"];
+
+const CLONE_TOUR_OBJECTIVES = [
+  { id: "sell-vaultx", label: "Sell VaultX", detail: "Show why the viewer should use the platform now." },
+  { id: "pollo-demo", label: "Demo Pollo AI", detail: "Walk through source image, motion prompt, generation, and export." },
+  { id: "creator-onboarding", label: "Creator onboarding", detail: "Teach a creator how to turn media into finished revenue assets." },
+  { id: "partnership-pitch", label: "Partnership pitch", detail: "Make the viewer feel like the platform was built around their lane." },
+] as const;
+
+const CLONE_TOUR_LENGTHS = [
+  { id: "short", label: "60–90 sec", detail: "Punchy personalized sales demo." },
+  { id: "standard", label: "3–5 min", detail: "Full feature walkthrough with proof moments." },
+  { id: "long", label: "8–12 min", detail: "Long-form platform tour with B-roll, voice, and CTA." },
+] as const;
+
+const CLONE_FACTORY_STAGES = [
+  { title: "Viewer profile", detail: "Name, business, creator lane, pain point, desired outcome." },
+  { title: "KingCam script", detail: "Hook, personalized diagnosis, screen-by-screen walkthrough, CTA." },
+  { title: "Velvet wardrobe", detail: "Choose the suit color that matches the message and audience." },
+  { title: "ElevenLabs voice", detail: "Turn the script into the KingCam clone narration track." },
+  { title: "Pollo scenes", detail: "Generate motion clips and B-roll for the strongest moments." },
+  { title: "Editor assembly", detail: "Stitch clone host, screen tour, B-roll, captions, music, and export." },
+] as const;
+
 const MODE_ALIASES: Record<string, ModeId> = {
+  factory: "clone-tour-factory",
+  clone: "clone-tour-factory",
+  "clone-tour": "clone-tour-factory",
+  "tour-factory": "clone-tour-factory",
+  host: "clone-tour-factory",
   pollo: "ai-video-generator",
   "pollo-ai": "ai-video-generator",
   video: "ai-video-generator",
-  studio: "ai-video-generator",
+  studio: "clone-tour-factory",
   output: "final-output-engine",
   editor: "final-output-engine",
 };
 
 function getStudioModeFromLocation(): ModeId {
-  if (typeof window === "undefined") return "ai-video-generator";
+  if (typeof window === "undefined") return "clone-tour-factory";
   const params = new URLSearchParams(window.location.search);
   const rawMode = (params.get("mode") || window.location.hash.replace("#", "") || "").trim();
-  if (!rawMode) return "ai-video-generator";
+  if (!rawMode) return "clone-tour-factory";
   const normalized = rawMode.toLowerCase();
   const modeIds = MODES.map((m) => m.id);
   if (modeIds.includes(normalized as ModeId)) return normalized as ModeId;
-  return MODE_ALIASES[normalized] ?? "ai-video-generator";
+  return MODE_ALIASES[normalized] ?? "clone-tour-factory";
 }
 
 function setStudioModeInUrl(mode: ModeId) {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
   url.searchParams.set("mode", mode);
-  url.hash = mode === "ai-video-generator" ? "pollo" : "";
+  url.hash = mode === "ai-video-generator" ? "pollo" : mode === "clone-tour-factory" ? "factory" : "";
   window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
@@ -1873,6 +1917,178 @@ function ContentVaultMode({ onOutput }: { onOutput: (url: string, label: string)
     <CanvasVideoPlayer src={videoFile.url} label="Preview" accent="#9333EA" onReplace={() => setVideoFile(null)} />
   ) : (
     <CanvasDropZone onFile={setVideoFile} accent="#9333EA" label="Drop your video to add to the vault" />
+  );
+
+  return <Workspace left={left} right={right} />;
+}
+
+// ============================================================================
+// MODE: CLONE TOUR FACTORY
+// ============================================================================
+function CloneTourFactoryMode() {
+  const [viewerName, setViewerName] = useState("Magic");
+  const [viewerLane, setViewerLane] = useState("performer, pole dancer, and creator brand");
+  const [viewerPain, setViewerPain] = useState("needs a factory that turns raw looks, scenes, voice, and platform demos into finished content fast");
+  const [desiredOutcome, setDesiredOutcome] = useState("book premium attention, launch more assets, and understand VaultX without a generic demo");
+  const [objective, setObjective] = useState<(typeof CLONE_TOUR_OBJECTIVES)[number]["id"]>("sell-vaultx");
+  const [tourLength, setTourLength] = useState<(typeof CLONE_TOUR_LENGTHS)[number]["id"]>("standard");
+  const [suitId, setSuitId] = useState<VelvetSuitId>("burgundy");
+  const [cta, setCta] = useState("Book a VaultX build session and let the clone walk you through the whole content factory.");
+
+  const selectedSuit = VELVET_SUIT_WARDROBE.find((s) => s.id === suitId) ?? VELVET_SUIT_WARDROBE[0];
+  const selectedObjective = CLONE_TOUR_OBJECTIVES.find((o) => o.id === objective) ?? CLONE_TOUR_OBJECTIVES[0];
+  const selectedLength = CLONE_TOUR_LENGTHS.find((l) => l.id === tourLength) ?? CLONE_TOUR_LENGTHS[1];
+
+  const factoryBrief = `KingCam Clone Tour Factory brief\n\nViewer: ${viewerName || "specific viewer"}\nLane: ${viewerLane || "creator / buyer / lead"}\nPain: ${viewerPain || "needs a personalized platform walkthrough"}\nOutcome: ${desiredOutcome || "clear next step"}\nObjective: ${selectedObjective.label}\nLength: ${selectedLength.label}\nWardrobe: ${selectedSuit.label} — ${selectedSuit.prompt}\nCTA: ${cta || "Start now"}\n\nRequired timeline:\n1. Cold open: speak directly to ${viewerName || "the viewer"} and name their lane.\n2. Diagnosis: explain the bottleneck in plain KingCam language.\n3. VaultX homepage: show the promise and positioning.\n4. VaultX Studio: show Clone Tour Factory, Pollo AI video, ElevenLabs voice, B-roll, and final output assembly.\n5. VaultX Editor: stitch scenes, captions, soundtrack, and platform-safe exports.\n6. Proof moment: explain why the clone can make demos at factory volume.\n7. CTA: ${cta || "tell the viewer exactly what to do next"}`;
+
+  const copyBrief = async () => {
+    try {
+      await navigator.clipboard.writeText(factoryBrief);
+      toast.success("Clone Tour Factory brief copied.");
+    } catch {
+      toast.error("Could not copy brief.");
+    }
+  };
+
+  const left = (
+    <>
+      <div>
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#C9A84C" }}>Clone Tour Factory</p>
+        <p className="text-xs" style={{ color: "#8A8172" }}>One guided route: profile → script → ElevenLabs → Pollo → editor → publish.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-white">Viewer / lead name</label>
+            <input value={viewerName} onChange={e => setViewerName(e.target.value)} className="w-full px-3 py-2.5 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-white">Tour length</label>
+            <select value={tourLength} onChange={e => setTourLength(e.target.value as typeof tourLength)} className="w-full px-3 py-2.5 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+              {CLONE_TOUR_LENGTHS.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-bold text-white">Viewer lane</label>
+          <input value={viewerLane} onChange={e => setViewerLane(e.target.value)} placeholder="creator type, business, buyer role, or performer lane" className="w-full px-3 py-2.5 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-bold text-white">Pain / bottleneck to call out</label>
+          <textarea value={viewerPain} onChange={e => setViewerPain(e.target.value)} rows={2} className="w-full px-3 py-2.5 rounded-xl text-sm text-white resize-none" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-bold text-white">Desired outcome</label>
+          <textarea value={desiredOutcome} onChange={e => setDesiredOutcome(e.target.value)} rows={2} className="w-full px-3 py-2.5 rounded-xl text-sm text-white resize-none" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-xs font-bold text-white">Tour objective</label>
+        <div className="grid grid-cols-2 gap-2">
+          {CLONE_TOUR_OBJECTIVES.map(o => (
+            <button key={o.id} onClick={() => setObjective(o.id)} className="p-3 rounded-xl text-left transition-all" style={{ background: objective === o.id ? "rgba(201,168,76,.14)" : "rgba(255,255,255,.035)", border: `1.5px solid ${objective === o.id ? "rgba(201,168,76,.62)" : "rgba(255,255,255,.08)"}` }}>
+              <p className="text-xs font-black" style={{ color: objective === o.id ? "#FDE68A" : "#F7F2E8" }}>{o.label}</p>
+              <p className="text-[10px] mt-1 leading-snug" style={{ color: "rgba(247,242,232,.48)" }}>{o.detail}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-xs font-bold text-white">Final call-to-action</label>
+        <textarea value={cta} onChange={e => setCta(e.target.value)} rows={2} className="w-full px-3 py-2.5 rounded-xl text-sm text-white resize-none" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <a href={`/vault-x/studio?mode=ai-sound-studio#voice`} className="flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black" style={{ background: "rgba(236,72,153,.12)", color: "#F9A8D4", border: "1px solid rgba(236,72,153,.24)" }}><Mic size={14}/> Voice</a>
+        <a href={`/vault-x/studio?mode=ai-video-generator#pollo`} className="flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black" style={{ background: "rgba(239,68,68,.12)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,.24)" }}><Film size={14}/> Pollo</a>
+        <a href="/vault-x/editor" className="flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black" style={{ background: "rgba(0,229,255,.10)", color: "#67E8F9", border: "1px solid rgba(0,229,255,.22)" }}><Scissors size={14}/> Editor</a>
+      </div>
+
+      <button onClick={copyBrief} className="w-full py-4 rounded-2xl font-black text-black text-sm flex items-center justify-center gap-2" style={{ background: "linear-gradient(135deg, #FDE68A, #C9A84C)" }}>
+        <Copy size={18} /> Copy Complete Tour Brief
+      </button>
+    </>
+  );
+
+  const right = (
+    <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+      <div className="rounded-3xl p-5" style={{ background: "linear-gradient(135deg, rgba(201,168,76,.18), rgba(255,255,255,.035))", border: "1px solid rgba(201,168,76,.30)" }}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[.25em]" style={{ color: "#FDE68A" }}>KingCam clone host</p>
+            <h2 className="text-2xl font-black text-white mt-2 tracking-[-.04em]">Personalized demo for {viewerName || "the viewer"}</h2>
+            <p className="text-sm mt-2 leading-relaxed" style={{ color: "rgba(247,242,232,.68)" }}>The factory turns one profile into a clone-led platform tour with your velvet-suit host, ElevenLabs narration, Pollo motion scenes, B-roll, captions, and editor assembly instructions.</p>
+          </div>
+          <div className="w-20 h-20 rounded-3xl flex items-center justify-center shrink-0" style={{ background: selectedSuit.swatch, border: "1px solid rgba(255,255,255,.24)", boxShadow: `0 0 42px ${selectedSuit.swatch}66` }}>
+            <Crown size={34} color={selectedSuit.id === "black" || selectedSuit.id === "charcoal" || selectedSuit.id === "deep-purple" ? "#FDE68A" : "#111827"} />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div className="rounded-3xl p-4" style={{ background: "rgba(255,255,255,.035)", border: "1px solid rgba(255,255,255,.08)" }}>
+          <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: "#C9A84C" }}>Velvet Suit Wardrobe</p>
+          <div className="grid grid-cols-2 gap-2">
+            {VELVET_SUIT_WARDROBE.map(s => (
+              <button key={s.id} onClick={() => setSuitId(s.id)} className="p-3 rounded-2xl text-left transition-all" style={{ background: suitId === s.id ? "rgba(201,168,76,.13)" : "rgba(255,255,255,.028)", border: `1.5px solid ${suitId === s.id ? "rgba(201,168,76,.65)" : "rgba(255,255,255,.075)"}` }}>
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded-full border border-white/30" style={{ background: s.swatch }} />
+                  <span className="text-xs font-black text-white truncate">{s.label}</span>
+                </div>
+                <p className="text-[10px] mt-1" style={{ color: "rgba(247,242,232,.48)" }}>{s.tone}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-3xl p-4" style={{ background: "rgba(255,255,255,.035)", border: "1px solid rgba(255,255,255,.08)" }}>
+          <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: "#67E8F9" }}>Factory Manifest</p>
+          <div className="space-y-2">
+            {[
+              ["Objective", selectedObjective.label],
+              ["Length", `${selectedLength.label} — ${selectedLength.detail}`],
+              ["Voice", "ElevenLabs KingCam clone narration"],
+              ["Video", "Pollo/Kling source-image motion + platform screen tour"],
+              ["Edit", "VaultX Editor timeline, captions, music, proof CTA"],
+            ].map(([label, value]) => (
+              <div key={label} className="flex gap-3 rounded-2xl p-3" style={{ background: "rgba(0,0,0,.20)", border: "1px solid rgba(255,255,255,.06)" }}>
+                <span className="text-[10px] font-black uppercase tracking-widest w-20 shrink-0" style={{ color: "rgba(247,242,232,.38)" }}>{label}</span>
+                <span className="text-xs font-bold" style={{ color: "rgba(247,242,232,.78)" }}>{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-3xl p-4" style={{ background: "rgba(255,255,255,.035)", border: "1px solid rgba(255,255,255,.08)" }}>
+        <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: "#FCA5A5" }}>Scene-by-scene workflow</p>
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {CLONE_FACTORY_STAGES.map((stage, index) => (
+            <div key={stage.title} className="p-3 rounded-2xl" style={{ background: "rgba(0,0,0,.22)", border: "1px solid rgba(255,255,255,.07)" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black" style={{ background: "rgba(201,168,76,.18)", color: "#FDE68A" }}>{index + 1}</span>
+                <p className="text-xs font-black text-white">{stage.title}</p>
+              </div>
+              <p className="text-[11px] leading-snug" style={{ color: "rgba(247,242,232,.52)" }}>{stage.detail}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-3xl p-4" style={{ background: "rgba(0,0,0,.28)", border: "1px solid rgba(201,168,76,.22)" }}>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <p className="text-xs font-black uppercase tracking-widest" style={{ color: "#FDE68A" }}>Ready-to-run brief</p>
+          <button onClick={copyBrief} className="px-3 py-2 rounded-xl text-xs font-black" style={{ background: "rgba(201,168,76,.16)", color: "#FDE68A", border: "1px solid rgba(201,168,76,.28)" }}>Copy</button>
+        </div>
+        <pre className="whitespace-pre-wrap text-xs leading-relaxed max-h-64 overflow-y-auto rounded-2xl p-4" style={{ background: "rgba(255,255,255,.035)", color: "rgba(247,242,232,.72)", border: "1px solid rgba(255,255,255,.07)" }}>{factoryBrief}</pre>
+      </div>
+    </div>
   );
 
   return <Workspace left={left} right={right} />;
@@ -4212,6 +4428,7 @@ export default function VaultXStudio() {
   const renderMode = () => {
     const props = { onOutput: addToHistory };
     switch (activeMode) {
+      case "clone-tour-factory": return <CloneTourFactoryMode />;
       case "velvet-suite":        return <VelvetSuiteMode {...props} />;
       case "desire-grade":        return <DesireGradeMode {...props} />;
       case "scene-architect":     return <SceneArchitectMode {...props} />;
@@ -4238,18 +4455,18 @@ export default function VaultXStudio() {
   const liveOutputCount = history.length;
   const activeModeIndex = MODES.findIndex((m) => m.id === activeMode) + 1;
   const productionWorkflowSteps = [
-    { label: "Select engine", detail: "Choose the exact output lane: Pollo AI video, final package, PPV, distribution, or analytics.", done: !!activeMode },
-    { label: "Feed source", detail: "Upload source media or provide the creator brief required by the selected engine.", done: liveOutputCount > 0 || ["ai-video-generator", "ai-sound-studio", "creator-tiers", "ai-chatter"].includes(activeMode) },
-    { label: "Generate output", detail: "Run the real model/API-powered action and persist produced assets into CreatorVault history.", done: liveOutputCount > 0 },
-    { label: "Distribute", detail: "Move finished assets into editor, platform vault, broadcast, or distribution lanes.", done: ["distribution-engine", "platform-vault", "mass-broadcast", "monetization-bundle"].includes(activeMode) },
+    { label: "Plan tour", detail: "Start with Clone Tour Factory: viewer, objective, suit color, voice, B-roll, and CTA.", done: !!activeMode },
+    { label: "Generate scenes", detail: "Use Pollo AI, ElevenLabs, Face Studio, and AI Sound as supporting lanes for the planned tour.", done: liveOutputCount > 0 || ["clone-tour-factory", "ai-video-generator", "ai-sound-studio", "face-studio"].includes(activeMode) },
+    { label: "Assemble editor", detail: "Move clips, narration, captions, music, and proof moments into one VaultX Editor timeline.", done: liveOutputCount > 0 || ["scene-architect", "final-output-engine"].includes(activeMode) },
+    { label: "Publish", detail: "Package the finished asset for platform vault, distribution, PPV, broadcast, and analytics.", done: ["distribution-engine", "platform-vault", "mass-broadcast", "monetization-bundle", "analytics-editing"].includes(activeMode) },
   ];
 
-  // Group modes for sidebar sections
+  // Group modes by actual production workflow instead of exposing a flat pile of similar tools.
   const MODE_GROUPS = [
-    { label: "Production", ids: ["ai-video-generator", "final-output-engine", "velvet-suite", "desire-grade", "scene-architect", "scene-enhancement"] },
-    { label: "AI Tools", ids: ["ai-enhance", "face-studio", "ai-sound-studio", "caption-studio"] },
-    { label: "Monetize", ids: ["ppv-engine", "monetization-bundle", "distribution-engine", "platform-vault"] },
-    { label: "Audience", ids: ["creator-tiers", "mass-broadcast", "ai-chatter", "analytics-editing"] },
+    { label: "Guided Factory", ids: ["clone-tour-factory", "ai-video-generator", "ai-sound-studio", "face-studio", "final-output-engine"] },
+    { label: "Edit + Polish", ids: ["scene-architect", "ai-enhance", "caption-studio", "velvet-suite", "desire-grade", "scene-enhancement"] },
+    { label: "Package + Monetize", ids: ["ppv-engine", "monetization-bundle", "distribution-engine", "platform-vault"] },
+    { label: "Audience Ops", ids: ["creator-tiers", "mass-broadcast", "ai-chatter", "analytics-editing"] },
     { label: "Library", ids: ["content-vault"] },
   ];
 
@@ -4434,18 +4651,18 @@ export default function VaultXStudio() {
           </div>
 
                     {/* Nav links */}
-          <a href="/vault-x/studio?mode=ai-video-generator#pollo" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "#fca5a5", border: "1px solid rgba(239,68,68,.28)", background: "rgba(239,68,68,.10)" }}>Pollo AI</a>
-          <a href="/vault-x/editor" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "#00e5ff", border: "1px solid rgba(0,229,255,.22)", background: "rgba(0,229,255,.07)" }}>Open Editor</a>
-          <a href="/vaultx/distribution" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "#86efac", border: "1px solid rgba(16,185,129,.22)", background: "rgba(16,185,129,.07)" }}>Distribute</a>
-          <a href="/vault-x/analytics" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "rgba(247,242,232,.62)", border: "1px solid rgba(255,255,255,.08)" }}>Analytics</a>
+          <a href="/vault-x/studio?mode=clone-tour-factory#factory" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "#fde68a", border: "1px solid rgba(201,168,76,.35)", background: "rgba(201,168,76,.12)" }}>Clone Factory</a>
+          <a href="/vault-x/studio?mode=ai-video-generator#pollo" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "#fca5a5", border: "1px solid rgba(239,68,68,.28)", background: "rgba(239,68,68,.10)" }}>Pollo Scenes</a>
+          <a href="/vault-x/editor" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "#00e5ff", border: "1px solid rgba(0,229,255,.22)", background: "rgba(0,229,255,.07)" }}>Editor Timeline</a>
+          <a href="/vaultx/distribution" className="px-4 py-2 rounded-2xl text-xs font-black transition-all hover:bg-white/10" style={{ color: "#86efac", border: "1px solid rgba(16,185,129,.22)", background: "rgba(16,185,129,.07)" }}>Publish</a>
         </div>
         <div className="flex-shrink-0 border-b border-white/10 bg-black/70 px-4 py-3">
           <div className="grid gap-3 xl:grid-cols-[1.15fr_.85fr]">
             <VaultXWorkflow steps={productionWorkflowSteps} activeStep={liveOutputCount > 0 ? 2 : activeMode === "distribution-engine" || activeMode === "platform-vault" ? 3 : 1} />
             <div className="hidden gap-3 xl:grid xl:grid-cols-3">
-              <VaultXActionCard title="Pollo AI generator" body="Upload a source image, write motion direction, generate with Pollo/Kling, then save the finished clip to VaultX history." href="/vault-x/studio?mode=ai-video-generator#pollo" icon={<Film className="h-5 w-5" />} cta="Generate" />
-              <VaultXActionCard title="Distribution lane" body="Send finished clips, teasers, PPV copy, and platform variants into the launch pipeline." href="/vaultx/distribution" icon={<Globe className="h-5 w-5" />} cta="Route" />
-              <VaultXActionCard title="Revenue proof" body="Review outputs, analytics, and monetization choices instead of guessing what to sell next." href="/vault-x/analytics" icon={<TrendingUp className="h-5 w-5" />} cta="Review" />
+              <VaultXActionCard title="Clone Tour Factory" body="Build the viewer profile, script, suit color, voice, B-roll, Pollo scenes, and CTA before touching individual tools." href="/vault-x/studio?mode=clone-tour-factory#factory" icon={<Crown className="h-5 w-5" />} cta="Plan" />
+              <VaultXActionCard title="Pollo scene lane" body="Turn source images into motion clips only after the factory brief defines the exact scene purpose." href="/vault-x/studio?mode=ai-video-generator#pollo" icon={<Film className="h-5 w-5" />} cta="Generate" />
+              <VaultXActionCard title="Editor timeline" body="Stitch clone host, voice, platform screens, B-roll, captions, music, and platform exports in one place." href="/vault-x/editor" icon={<Scissors className="h-5 w-5" />} cta="Assemble" />
             </div>
           </div>
         </div>
