@@ -109,6 +109,7 @@ function VisualPhone({ label, caption, accent, poster }: { label: string; captio
 
 export default function Home() {
   const [heroLoaded, setHeroLoaded] = useState(false);
+  const [heroVideoFailed, setHeroVideoFailed] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -183,23 +184,30 @@ export default function Home() {
         @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,.34)} 50%{box-shadow:0 0 0 12px rgba(201,168,76,0)} }
         @keyframes rail { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
         @keyframes orbit { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+        @keyframes stage-glow { 0%,100%{filter:saturate(1) brightness(1)} 50%{filter:saturate(1.25) brightness(1.08)} }
+        @keyframes signal-rise { 0%{transform:translateY(16px);opacity:.35} 50%{opacity:1} 100%{transform:translateY(-16px);opacity:.35} }
+        @keyframes world-pulse { 0%,100%{transform:scale(1);opacity:.68} 50%{transform:scale(1.035);opacity:1} }
         .vx-reveal{opacity:0;transform:translateY(30px);transition:opacity .65s ease,transform .65s ease}.vx-reveal.visible{opacity:1;transform:translateY(0)}
         .vx-shell{max-width:1180px;margin:0 auto;padding:0 20px}.vx-kicker{font-size:10px;font-weight:950;letter-spacing:.26em;text-transform:uppercase;color:#c9a84c;margin-bottom:12px}.vx-title{font-family:'Playfair Display',serif;font-size:clamp(34px,7vw,66px);line-height:.98;font-weight:900;letter-spacing:-.045em;color:#fff}.vx-copy{font-size:15px;line-height:1.75;color:rgba(255,255,255,.58)}
         .vx-card{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.10);border-radius:22px;background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.025));padding:22px;min-height:218px;box-shadow:0 24px 70px rgba(0,0,0,.28)}
         .vx-card-scan{position:absolute;top:0;bottom:0;width:45%;animation:scan 6s ease-in-out infinite;pointer-events:none}.vx-card>*:not(.vx-card-scan){position:relative;z-index:1}
-        .vx-hero{position:relative;min-height:100svh;overflow:hidden;background:#030305;display:flex;flex-direction:column}.vx-hero-grid{position:relative;z-index:4;display:grid;grid-template-columns:minmax(0,1.03fr) minmax(360px,.97fr);gap:38px;align-items:center;flex:1;padding:36px 20px 74px;max-width:1200px;margin:0 auto;width:100%}
-        .vx-nav{position:relative;z-index:8;display:flex;align-items:center;justify-content:space-between;padding:18px 22px}.vx-nav-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.vx-hero-panel{position:relative;border-radius:30px;overflow:hidden;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);box-shadow:0 40px 120px rgba(0,0,0,.56);min-height:560px}.vx-hero-panel:before{content:'';position:absolute;inset:-45%;background:conic-gradient(from 90deg,transparent,rgba(201,168,76,.14),transparent,rgba(56,189,248,.12),transparent);animation:orbit 22s linear infinite}.vx-hero-inner{position:absolute;inset:1px;border-radius:29px;overflow:hidden;background:rgba(5,5,8,.86)}
-        .vx-phone-grid{position:absolute;left:18px;right:18px;bottom:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.vx-phone{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.14);border-radius:20px;min-height:190px;background:linear-gradient(160deg,#14141c,#060608);animation:float 6s ease-in-out infinite}.vx-phone:nth-child(2){animation-delay:.3s}.vx-phone:nth-child(3){animation-delay:.6s}.vx-phone img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.62}.vx-phone-gradient{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.1),rgba(0,0,0,.86))}.vx-phone-content{position:absolute;left:10px;right:10px;bottom:10px}.vx-phone-content span{display:inline-flex;border:1px solid;border-radius:999px;padding:4px 7px;font-size:8px;font-weight:950;letter-spacing:.12em;text-transform:uppercase;background:rgba(0,0,0,.45);margin-bottom:7px}.vx-phone-content strong{display:block;color:#fff;font-size:12px;line-height:1.2}
+        .vx-hero{position:relative;min-height:100svh;overflow:hidden;background:#030305;display:flex;flex-direction:column}.vx-hero-grid{position:relative;z-index:4;display:grid;grid-template-columns:minmax(0,1.01fr) minmax(390px,.99fr);gap:40px;align-items:center;flex:1;padding:34px 20px 76px;max-width:1240px;margin:0 auto;width:100%}
+        .vx-nav{position:relative;z-index:8;display:flex;align-items:center;justify-content:space-between;padding:18px 22px}.vx-nav-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.vx-hero-panel{position:relative;border-radius:34px;overflow:hidden;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);box-shadow:0 46px 140px rgba(0,0,0,.62);min-height:600px}.vx-hero-panel:before{content:'';position:absolute;inset:-45%;background:conic-gradient(from 90deg,transparent,rgba(201,168,76,.18),transparent,rgba(56,189,248,.16),transparent,rgba(244,114,182,.14),transparent);animation:orbit 20s linear infinite}.vx-hero-inner{position:absolute;inset:1px;border-radius:33px;overflow:hidden;background:rgba(5,5,8,.90)}.vx-main-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.78;animation:stage-glow 7s ease-in-out infinite}.vx-video-sheen{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.36) 48%,rgba(5,5,8,.92) 100%),radial-gradient(circle at 50% 18%,rgba(201,168,76,.18),transparent 34%)}.vx-broadcast-card{position:absolute;left:20px;right:20px;bottom:20px;border-radius:24px;border:1px solid rgba(255,255,255,.14);background:rgba(2,2,6,.72);backdrop-filter:blur(18px);padding:18px;box-shadow:0 24px 70px rgba(0,0,0,.42)}.vx-signal{height:34px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.03));overflow:hidden;display:flex;align-items:end;gap:4px;padding:6px}.vx-signal i{display:block;flex:1;border-radius:999px;background:linear-gradient(180deg,#f7d67a,#38bdf8);animation:signal-rise 1.8s ease-in-out infinite}.vx-signal i:nth-child(2n){animation-delay:.2s}.vx-signal i:nth-child(3n){animation-delay:.4s}.vx-world-node{animation:world-pulse 4s ease-in-out infinite}
+        .vx-phone-grid{position:absolute;left:18px;right:18px;bottom:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.vx-phone{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.14);border-radius:20px;min-height:190px;background:linear-gradient(160deg,#14141c,#060608);animation:float 6s ease-in-out infinite}.vx-phone:nth-child(2){animation-delay:.3s}.vx-phone:nth-child(3){animation-delay:.6s}.vx-phone img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.70}.vx-phone-gradient{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.06),rgba(0,0,0,.88))}.vx-phone-content{position:absolute;left:10px;right:10px;bottom:10px}.vx-phone-content span{display:inline-flex;border:1px solid;border-radius:999px;padding:4px 7px;font-size:8px;font-weight:950;letter-spacing:.12em;text-transform:uppercase;background:rgba(0,0,0,.45);margin-bottom:7px}.vx-phone-content strong{display:block;color:#fff;font-size:12px;line-height:1.2}
         .vx-output-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.vx-process-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.vx-two-col{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:26px;align-items:center}.vx-metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0}.vx-rail{display:flex;gap:12px;animation:rail 34s linear infinite;width:max-content}.vx-rail:hover{animation-play-state:paused}
         input:focus,select:focus{outline:none;border-color:rgba(201,168,76,0.6)!important;box-shadow:0 0 0 3px rgba(201,168,76,0.12)!important}
-        @media(max-width:960px){.vx-hero-grid,.vx-two-col{grid-template-columns:1fr}.vx-output-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.vx-process-grid,.vx-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.vx-hero-panel{min-height:500px}.vx-nav{align-items:flex-start;gap:14px}.vx-nav-actions{justify-content:flex-end}}
+        @media(max-width:960px){.vx-hero-grid,.vx-two-col{grid-template-columns:1fr}.vx-output-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.vx-process-grid,.vx-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.vx-hero-panel{min-height:560px}.vx-nav{align-items:flex-start;gap:14px}.vx-nav-actions{justify-content:flex-end}}
         @media(max-width:620px){.vx-output-grid,.vx-process-grid,.vx-metric-grid{grid-template-columns:1fr}.vx-phone-grid{grid-template-columns:1fr;position:relative;left:auto;right:auto;bottom:auto;margin:190px 16px 16px}.vx-phone{min-height:150px}.vx-hero-panel{min-height:auto}.vx-nav{flex-direction:column}.vx-nav-actions{justify-content:flex-start}.vx-shell{padding:0 16px}}
       `}</style>
 
       <section className="vx-hero">
-        <video autoPlay muted loop playsInline preload="metadata" poster="/videos/vaultx-cinematic-trailer-poster.png" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .42 }}>
-          <source src="/videos/vaultx-cinematic-trailer.mp4" type="video/mp4" />
-        </video>
+        {!heroVideoFailed && (
+          <video autoPlay muted loop playsInline preload="metadata" poster="/videos/vaultx-creator-economy-hero-poster.png" onError={() => setHeroVideoFailed(true)} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .54 }}>
+            <source src="/videos/vaultx-creator-economy-hero.mp4" type="video/mp4" />
+            <source src="/videos/vaultx-cinematic-trailer.mp4" type="video/mp4" />
+          </video>
+        )}
+        {heroVideoFailed && <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 68% 24%,rgba(201,168,76,.32),transparent 30%),radial-gradient(circle at 22% 22%,rgba(56,189,248,.24),transparent 32%),linear-gradient(135deg,#030305,#100b16 45%,#050508)" }} />}
         <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 74% 20%,rgba(201,168,76,.28),transparent 28%),radial-gradient(circle at 20% 18%,rgba(56,189,248,.20),transparent 30%),linear-gradient(180deg,rgba(3,3,5,.50),rgba(3,3,5,.78) 52%,#050508 100%)" }} />
         <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px)", backgroundSize: "54px 54px", maskImage: "linear-gradient(180deg,rgba(0,0,0,.88),transparent)" }} />
 
@@ -219,15 +227,15 @@ export default function Home() {
 
         <div className="vx-hero-grid">
           <div style={{ opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? "translateY(0)" : "translateY(24px)", transition: "opacity .7s ease, transform .7s ease" }}>
-            <p className="vx-kicker">Premium creator revenue OS</p>
-            <h1 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(46px,8.5vw,96px)", lineHeight: .9, fontWeight: 950, letterSpacing: "-.06em", marginBottom: 22 }}>
-              One asset becomes a complete paid content drop.
+            <p className="vx-kicker">VaultX · creator-economy command system</p>
+            <h1 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(46px,8.5vw,98px)", lineHeight: .88, fontWeight: 950, letterSpacing: "-.065em", marginBottom: 22 }}>
+              Turn one creator into a content factory the world can feel.
             </h1>
-            <p style={{ fontSize: "clamp(17px,2.2vw,22px)", lineHeight: 1.58, color: "rgba(255,255,255,.76)", maxWidth: 650, marginBottom: 16 }}>
-              VaultX is the CreatorVault vertical for premium video creators. Upload a clip, build the teaser, generate AI motion through Studio, package the PPV offer, write the captions, and route the release without rebuilding the same campaign five different ways.
+            <p style={{ fontSize: "clamp(17px,2.2vw,22px)", lineHeight: 1.58, color: "rgba(255,255,255,.78)", maxWidth: 682, marginBottom: 16 }}>
+              VaultX is the production engine for the next creator economy: your clone hosts the tour, Pollo builds the motion scenes, ElevenLabs carries the voice, the editor stitches the story, and the platform packages the drop for paid access, social reach, and repeatable revenue.
             </p>
-            <p style={{ fontSize: 14, lineHeight: 1.72, color: "rgba(255,255,255,.52)", maxWidth: 610, marginBottom: 28 }}>
-              This is not a mood-board landing page. It is a monetization workflow: public-safe promotion outside, paid unlock inside, organized output history underneath, and clear next actions for creators who need to publish faster.
+            <p style={{ fontSize: 14, lineHeight: 1.72, color: "rgba(255,255,255,.54)", maxWidth: 650, marginBottom: 28 }}>
+              The payoff is bigger than another tool page. It gives independent creators, models, agencies, brands, and operators their own automated media department, turning raw assets into personalized demos, launch campaigns, and global distribution without waiting on a studio.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 22 }}>
               <ActionButton href="#waitlist">Request access</ActionButton>
@@ -236,10 +244,10 @@ export default function Home() {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(135px,1fr))", gap: 10, maxWidth: 650 }}>
               {[
-                ["Input", "Raw clip, image, or idea"],
-                ["Outputs", "Teaser, PPV, cover, captions"],
-                ["AI", "Pollo video generation route"],
-                ["Launch", "VaultX, socials, VIP channels"],
+                ["Clone", "Personal host demos"],
+                ["Scenes", "Pollo motion + B-roll"],
+                ["Editor", "Timeline, captions, voice"],
+                ["Payoff", "Paid drops at scale"],
               ].map(([k, v]) => (
                 <div key={k} style={{ padding: "14px 13px", borderRadius: 16, border: "1px solid rgba(255,255,255,.11)", background: "rgba(255,255,255,.055)", backdropFilter: "blur(14px)" }}>
                   <strong style={{ display: "block", color: "#c9a84c", fontSize: 17, lineHeight: 1 }}>{k}</strong>
@@ -251,33 +259,58 @@ export default function Home() {
 
           <div className="vx-hero-panel" style={{ opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? "translateY(0)" : "translateY(26px)", transition: "opacity .8s ease .18s, transform .8s ease .18s" }}>
             <div className="vx-hero-inner">
-              <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 20%,rgba(201,168,76,.20),transparent 34%),linear-gradient(180deg,rgba(255,255,255,.05),rgba(5,5,8,.95))" }} />
-              <div style={{ position: "absolute", left: 18, right: 18, top: 18, display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+              {!heroVideoFailed && (
+                <video className="vx-main-video" autoPlay muted loop playsInline preload="metadata" poster="/videos/vaultx-creator-economy-hero-poster.png" onError={() => setHeroVideoFailed(true)}>
+                  <source src="/videos/vaultx-creator-economy-hero.mp4" type="video/mp4" />
+                  <source src="/videos/vaultx-cinematic-trailer.mp4" type="video/mp4" />
+                </video>
+              )}
+              {heroVideoFailed && <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 48% 18%,rgba(201,168,76,.27),transparent 32%),radial-gradient(circle at 74% 24%,rgba(244,114,182,.16),transparent 34%),linear-gradient(160deg,#111018,#040407)" }} />}
+              <div className="vx-video-sheen" />
+              <div style={{ position: "absolute", left: 22, right: 22, top: 20, display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
                 <div>
-                  <p style={{ fontSize: 9, color: "rgba(255,255,255,.46)", letterSpacing: ".20em", textTransform: "uppercase", fontWeight: 950 }}>VaultX output builder</p>
-                  <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: 29, lineHeight: 1.02, marginTop: 4 }}>Paid-drop package</h2>
+                  <p style={{ fontSize: 9, color: "rgba(255,255,255,.58)", letterSpacing: ".20em", textTransform: "uppercase", fontWeight: 950 }}>Hero video restored</p>
+                  <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: 31, lineHeight: 1.02, marginTop: 4 }}>Creator world engine</h2>
                 </div>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "7px 10px", borderRadius: 999, border: "1px solid rgba(16,185,129,.34)", background: "rgba(16,185,129,.12)", color: "#86efac", fontSize: 9, fontWeight: 950, letterSpacing: ".12em" }}><i style={{ width: 7, height: 7, borderRadius: "50%", background: "#10B981", boxShadow: "0 0 14px #10B981" }} />READY</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 11px", borderRadius: 999, border: "1px solid rgba(16,185,129,.40)", background: "rgba(16,185,129,.15)", color: "#a7f3d0", fontSize: 9, fontWeight: 950, letterSpacing: ".12em", textTransform: "uppercase" }}><i style={{ width: 7, height: 7, borderRadius: "50%", background: "#10B981", boxShadow: "0 0 14px #10B981" }} />Factory live</span>
               </div>
-              <div style={{ position: "absolute", left: 18, right: 18, top: 100, display: "grid", gap: 10 }}>
+
+              <div style={{ position: "absolute", left: 24, top: 104, width: 182, display: "grid", gap: 10 }}>
                 {[
-                  ["01", "Hook and crop", "Find the first three seconds, safe preview frame, and vertical/social crop."],
-                  ["02", "Pollo motion variant", "Generate a motion teaser or visual concept from the same campaign prompt."],
-                  ["03", "Offer pack", "PPV title, cover copy, price note, DM opener, and VIP call-to-action."],
-                ].map(([num, title, detail], i) => (
-                  <div key={num} style={{ display: "grid", gridTemplateColumns: "42px 1fr", gap: 12, padding: 14, borderRadius: 18, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.42)", backdropFilter: "blur(14px)", animation: `float ${5.5 + i * .45}s ease-in-out infinite ${i * .2}s` }}>
-                    <div style={{ width: 42, height: 42, borderRadius: 14, display: "grid", placeItems: "center", background: i === 1 ? "rgba(244,114,182,.14)" : "rgba(201,168,76,.13)", color: i === 1 ? "#f9a8d4" : "#f4d37c", fontWeight: 950 }}>{num}</div>
-                    <div>
-                      <strong style={{ display: "block", fontSize: 14, color: "#fff", marginBottom: 4 }}>{title}</strong>
-                      <span style={{ display: "block", fontSize: 11, color: "rgba(255,255,255,.46)", lineHeight: 1.45 }}>{detail}</span>
-                    </div>
+                  ["Clone", "Tours every lead"],
+                  ["Voice", "ElevenLabs ready"],
+                  ["Motion", "Pollo scenes"],
+                ].map(([label, detail], i) => (
+                  <div key={label} className="vx-world-node" style={{ animationDelay: `${i * .22}s`, padding: "12px 13px", borderRadius: 18, border: "1px solid rgba(255,255,255,.14)", background: "rgba(0,0,0,.46)", backdropFilter: "blur(14px)" }}>
+                    <strong style={{ display: "block", color: i === 1 ? "#f4d37c" : i === 2 ? "#f9a8d4" : "#7dd3fc", fontSize: 13, marginBottom: 4 }}>{label}</strong>
+                    <span style={{ display: "block", color: "rgba(255,255,255,.56)", fontSize: 10, lineHeight: 1.35, textTransform: "uppercase", letterSpacing: ".08em" }}>{detail}</span>
                   </div>
                 ))}
               </div>
-              <div className="vx-phone-grid">
-                <VisualPhone label="Teaser" caption="Public-safe preview" accent="#38bdf8" poster="/images/reel/reel-cinematic-trailer.png" />
-                <VisualPhone label="PPV" caption="Premium unlock cover" accent="#c9a84c" poster="/images/reel/reel-product-drop.png" />
-                <VisualPhone label="AI" caption="Pollo motion cut" accent="#f472b6" poster="/images/reel/reel-creator-promo.png" />
+
+              <div className="vx-broadcast-card">
+                <div style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 14, alignItems: "center" }}>
+                  <div>
+                    <p style={{ color: "#c9a84c", fontSize: 10, fontWeight: 950, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 8 }}>One command → full campaign</p>
+                    <h3 style={{ fontFamily: "Playfair Display, serif", fontSize: 31, lineHeight: 1.04, color: "#fff", marginBottom: 10 }}>Personal demo, AI scenes, paid offer, and launch pack.</h3>
+                    <p style={{ color: "rgba(255,255,255,.56)", fontSize: 12, lineHeight: 1.6 }}>VaultX shows the future payoff: every creator gets a media department that can explain, edit, package, and publish while they keep creating.</p>
+                  </div>
+                  <div style={{ display: "grid", gap: 10 }}>
+                    <div className="vx-signal" aria-hidden="true">
+                      {[18, 28, 14, 32, 23, 30, 16, 34, 22, 28].map((height, i) => <i key={i} style={{ height }} />)}
+                    </div>
+                    {[
+                      ["01", "Clone host tour", "#38bdf8"],
+                      ["02", "Editor timeline", "#c9a84c"],
+                      ["03", "Paid drop export", "#4ade80"],
+                    ].map(([num, label, color]) => (
+                      <div key={num} style={{ display: "grid", gridTemplateColumns: "34px 1fr", gap: 9, alignItems: "center", padding: 10, borderRadius: 15, border: `1px solid ${color}33`, background: "rgba(255,255,255,.045)" }}>
+                        <span style={{ width: 34, height: 34, borderRadius: 12, display: "grid", placeItems: "center", color, background: `${color}16`, fontWeight: 950, fontSize: 11 }}>{num}</span>
+                        <strong style={{ color: "rgba(255,255,255,.82)", fontSize: 12 }}>{label}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -290,7 +323,7 @@ export default function Home() {
           <div className={`vx-reveal ${outputsRef.visible ? "visible" : ""}`} style={{ maxWidth: 760, marginBottom: 34 }}>
             <p className="vx-kicker">What VaultX actually creates</p>
             <h2 className="vx-title" style={{ marginBottom: 16 }}>Concrete outputs, not vague platform promises.</h2>
-            <p className="vx-copy">Creators should immediately understand what they get back after using VaultX. The page now shows the content products: teaser, PPV cover, Pollo AI motion variant, DM funnel, distribution exports, and saved campaign memory.</p>
+            <p className="vx-copy">Creators should immediately understand the payoff: VaultX turns one moment of content into a full economic system around that creator, including public teasers, paid unlocks, AI video variants, personalized clone demos, DM funnels, distribution exports, and saved campaign memory.</p>
           </div>
           <div className="vx-output-grid">
             {outputCards.map((card, i) => (
@@ -364,8 +397,8 @@ export default function Home() {
         <div className="vx-shell">
           <div className={`vx-reveal ${moneyRef.visible ? "visible" : ""}`} style={{ maxWidth: 800, marginBottom: 28 }}>
             <p className="vx-kicker">Why creators care</p>
-            <h2 className="vx-title" style={{ marginBottom: 16 }}>VaultX protects the paid content while selling the preview.</h2>
-            <p className="vx-copy">The value is not “AI tools.” The value is a cleaner way to make money from content that already exists: public preview outside the paywall, premium drop behind it, copy and routing around it, and a reusable archive after it ships.</p>
+            <h2 className="vx-title" style={{ marginBottom: 16 }}>VaultX gives creators leverage that used to belong to studios.</h2>
+            <p className="vx-copy">The value is not “AI tools.” The value is a cleaner way to make money from content that already exists: the clone explains it, the preview sells it, the premium drop monetizes it, the editor packages it, and the archive makes the next launch smarter.</p>
           </div>
           <div style={{ overflow: "hidden", padding: "6px 0" }}>
             <div className="vx-rail">
