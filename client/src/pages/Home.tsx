@@ -229,18 +229,18 @@ export default function Home() {
           <div style={{ opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? "translateY(0)" : "translateY(24px)", transition: "opacity .7s ease, transform .7s ease" }}>
             <p className="vx-kicker">VaultX · creator-economy command system</p>
             <h1 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(46px,8.5vw,98px)", lineHeight: .88, fontWeight: 950, letterSpacing: "-.065em", marginBottom: 22 }}>
-              Turn one creator into a content factory the world can feel.
+              Turn one clip into a launch-ready content factory in 60 seconds.
             </h1>
             <p style={{ fontSize: "clamp(17px,2.2vw,22px)", lineHeight: 1.58, color: "rgba(255,255,255,.78)", maxWidth: 682, marginBottom: 16 }}>
-              VaultX is the production engine for the next creator economy: your clone hosts the tour, Pollo builds the motion scenes, ElevenLabs carries the voice, the editor stitches the story, and the platform packages the drop for paid access, social reach, and repeatable revenue.
+              VaultX has one soft-launch promise now: one creator asset goes in, then the system builds a usable teaser, paid-drop pitch, caption pack, platform exports, and a clone-host demo path around it. The deeper AI stack still matters, but the creator sees one clear output first.
             </p>
             <p style={{ fontSize: 14, lineHeight: 1.72, color: "rgba(255,255,255,.54)", maxWidth: 650, marginBottom: 28 }}>
-              The payoff is bigger than another tool page. It gives independent creators, models, agencies, brands, and operators their own automated media department, turning raw assets into personalized demos, launch campaigns, and global distribution without waiting on a studio.
+              The larger mission is still creator-economy infrastructure, but the first battle is simple: make a creator feel the result immediately enough to share, sell, and repeat it before a competitor gets another head start.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 22 }}>
               <ActionButton href="#waitlist">Request access</ActionButton>
-              <ActionButton href="/vault-x/studio" variant="dark">Generate with Pollo AI</ActionButton>
-              <ActionButton href="/vault-x/editor" variant="ghost">Open the editor</ActionButton>
+              <ActionButton href="/vault-x/editor" variant="dark">Build one output</ActionButton>
+              <ActionButton href="/vault-x/editor" variant="ghost">Open launch editor</ActionButton>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(135px,1fr))", gap: 10, maxWidth: 650 }}>
               {[
@@ -291,9 +291,9 @@ export default function Home() {
               <div className="vx-broadcast-card">
                 <div style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 14, alignItems: "center" }}>
                   <div>
-                    <p style={{ color: "#c9a84c", fontSize: 10, fontWeight: 950, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 8 }}>One command → full campaign</p>
-                    <h3 style={{ fontFamily: "Playfair Display, serif", fontSize: 31, lineHeight: 1.04, color: "#fff", marginBottom: 10 }}>Personal demo, AI scenes, paid offer, and launch pack.</h3>
-                    <p style={{ color: "rgba(255,255,255,.56)", fontSize: 12, lineHeight: 1.6 }}>VaultX shows the future payoff: every creator gets a media department that can explain, edit, package, and publish while they keep creating.</p>
+                    <p style={{ color: "#c9a84c", fontSize: 10, fontWeight: 950, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 8 }}>One command → one usable output</p>
+                    <h3 style={{ fontFamily: "Playfair Display, serif", fontSize: 31, lineHeight: 1.04, color: "#fff", marginBottom: 10 }}>Teaser, copy pack, paid-drop pitch, and export bundle.</h3>
+                    <p style={{ color: "rgba(255,255,255,.56)", fontSize: 12, lineHeight: 1.6 }}>The homepage now points to the shortest visible proof: launch editor first, Pollo scenes second, clone tours once the output lane is real.</p>
                   </div>
                   <div style={{ display: "grid", gap: 10 }}>
                     <div className="vx-signal" aria-hidden="true">
