@@ -2516,7 +2516,7 @@ export const vaultxRouter = router({
           "UPDATE vaultx_editor_exports SET output_url = ?, file_size_bytes = ?, processing_time_seconds = ?, status = 'completed' WHERE id = ?",
           [outputUrl, stat.size, elapsed, exportId]
         );
-        await rawExec("UPDATE vaultx_editor_projects SET output_url = ?, export_artifact_id = ?, status = 'export_ready', updated_at = NOW() WHERE id = ? AND creator_id = ?", [outputUrl, artifact.id, input.projectId, cid]);
+        await rawExec("UPDATE vaultx_editor_projects SET output_url = ?, export_artifact_id = ?, status = 'completed', readiness_state = 'export_ready', updated_at = NOW() WHERE id = ? AND creator_id = ?", [outputUrl, artifact.id, input.projectId, cid]);
         await recordVaultxArtifactEvent({ artifactId: artifact.id, creatorId: cid, projectId: input.projectId, eventType: "export.completed", status: "ready", payload: { exportId, exportFormat: input.exportFormat, exportPreset: input.exportPreset } });
         return { outputUrl, artifact: publicArtifactPayload(artifact), fileSizeBytes: stat.size, processingTimeSeconds: elapsed, success: true };
       } catch (err: any) {
