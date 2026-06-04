@@ -242,6 +242,7 @@ export default function Home() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 22 }}>
               <ActionButton href="#waitlist">Request access</ActionButton>
               <ActionButton href="/vault-x/studio" variant="dark">Open VaultX Studio</ActionButton>
+              <ActionButton href="/vault-x/editor" variant="ghost">Build a campaign package</ActionButton>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(135px,1fr))", gap: 10, maxWidth: 650 }}>
               {[
@@ -345,7 +346,7 @@ export default function Home() {
             <p className="vx-copy" style={{ marginBottom: 28 }}>The workflow is simple: describe the campaign, choose the output, generate the asset, and reuse the finished result in the paid offer, fan funnel, or distribution plan.</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
               <ActionButton href="/vault-x/studio">Open VaultX Studio</ActionButton>
-              <ActionButton href="#waitlist" variant="dark">Request studio access</ActionButton>
+              <ActionButton href="/vault-x/editor" variant="dark">Build campaign package</ActionButton>
             </div>
           </div>
           <div className={`vx-reveal ${polloRef.visible ? "visible" : ""}`} style={{ display: "grid", gap: 12 }}>
