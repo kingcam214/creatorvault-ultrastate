@@ -19,8 +19,6 @@ const T = {
 
 const CATEGORIES = ["all", "courses", "ebooks", "templates", "audio", "software", "services", "other"] as const;
 
-const PUBLIC_TEST_ARTIFACT_PATTERN = /\b(test|testing|audit|botevents|end-to-end|debug|qa)\b/i;
-
 type SortBy = "newest" | "popular" | "price-low" | "price-high";
 
 const VERIFIED_MARKETPLACE_MEDIA: Record<string, string> = {
@@ -40,26 +38,16 @@ export default function Marketplace() {
 
   const { data: products, isLoading } = trpc.marketplace.getProducts.useQuery();
 
-  const publicProducts = useMemo(() => {
-    return (products ?? []).filter((p: any) => {
-      const status = String(p.status ?? "").toLowerCase();
-      const title = String(p.title ?? "");
-      const shortDescription = String(p.short_description ?? p.shortDescription ?? "");
-      const description = String(p.description ?? "");
-      const publicText = `${title} ${shortDescription} ${description}`;
-      return status === "active" && !PUBLIC_TEST_ARTIFACT_PATTERN.test(publicText);
-    });
-  }, [products]);
-
   const filteredProducts = useMemo(() => {
-    const normalized = publicProducts.filter((p: any) => {
+    const normalized = (products ?? []).filter((p: any) => {
       const title = (p.title ?? "").toLowerCase();
       const shortDescription = (p.short_description ?? p.shortDescription ?? "").toLowerCase();
       const category = (p.category ?? "other").toLowerCase();
+      const status = (p.status ?? "").toLowerCase();
       const query = searchQuery.trim().toLowerCase();
       const matchesSearch = !query || title.includes(query) || shortDescription.includes(query);
       const matchesCategory = categoryFilter === "all" || category.includes(categoryFilter) || (!p.category && categoryFilter === "other");
-      return matchesSearch && matchesCategory;
+      return matchesSearch && matchesCategory && status === "active";
     });
 
     return normalized.sort((a: any, b: any) => {
@@ -74,10 +62,10 @@ export default function Marketplace() {
       if (sortBy === "price-high") return priceB - priceA;
       return dateB - dateA;
     });
-  }, [publicProducts, searchQuery, categoryFilter, sortBy]);
+  }, [products, searchQuery, categoryFilter, sortBy]);
 
   const catalogValue = filteredProducts.reduce((sum: number, p: any) => sum + (p.sale_price ?? p.salePrice ?? p.price_amount ?? p.priceAmount ?? 0), 0);
-  const activeCount = publicProducts.length;
+  const activeCount = (products ?? []).filter((p: any) => String(p.status ?? "").toLowerCase() === "active").length;
 
   return (
     <div className="min-h-screen text-white overflow-hidden relative" style={{ background: T.bg, fontFamily: "var(--kc-font-ui, Inter, sans-serif)" }}>
@@ -92,7 +80,7 @@ export default function Marketplace() {
               <span className="text-xs font-black uppercase tracking-[.2em]">CreatorVault Commerce OS</span>
             </div>
             <h1 className="text-5xl md:text-7xl font-black tracking-[-.06em] leading-[.9] max-w-4xl">Premium drops that feel curated, scarce, and ready to buy.</h1>
-            <p className="mt-5 max-w-2xl text-base md:text-lg leading-8" style={{ color: T.muted }}>Browse creator playbooks, premium templates, digital assets, and operator products presented with clear pricing, strong visuals, and a direct path to purchase.</p>
+            <p className="mt-5 max-w-2xl text-base md:text-lg leading-8" style={{ color: T.muted }}>Browse conversion-grade templates, creator playbooks, digital assets, and operator products with a storefront hierarchy built for trust, clarity, and quick purchase intent.</p>
             <div className="grid sm:grid-cols-3 gap-3 mt-7 max-w-3xl">
               {[
                 { icon: Boxes, label: "Active inventory", value: `${activeCount}`, color: T.cyan },
@@ -112,7 +100,7 @@ export default function Marketplace() {
             <div>
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5" style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)", color: "#070707" }}><Crown className="w-6 h-6" /></div>
               <h2 className="text-3xl font-black tracking-[-.04em] leading-none">Signal over shelf clutter.</h2>
-              <p className="mt-4 text-sm leading-7" style={{ color: T.muted }}>Every drop shows what it is, what it costs, why it matters, and how to take the next step without making buyers hunt for the offer.</p>
+              <p className="mt-4 text-sm leading-7" style={{ color: T.muted }}>Every card now presents product type, price, discount state, buyer momentum, and a clear acquire path without raw debug artifacts or collapsed visual hierarchy.</p>
             </div>
             <div className="mt-6 rounded-2xl p-4" style={{ background: "rgba(0,0,0,.28)", border: `1px solid ${T.border}` }}>
               <div className="text-xs uppercase tracking-[.2em] font-black" style={{ color: T.gold }}>Current view</div>
@@ -151,8 +139,8 @@ export default function Marketplace() {
         ) : filteredProducts.length === 0 ? (
           <div className="py-24 text-center rounded-[2rem]" style={{ background: T.panel, border: `1px solid ${T.border}` }}>
             <ShoppingBag className="w-12 h-12 mx-auto mb-4" style={{ color: T.faint }} />
-            <p className="text-3xl font-black mb-2 tracking-[-.04em]">No products match this search.</p>
-            <p className="text-sm" style={{ color: T.muted }}>Try another search, category, or sort option.</p>
+            <p className="text-3xl font-black mb-2 tracking-[-.04em]">No products match this command.</p>
+            <p className="text-sm" style={{ color: T.muted }}>Try another search, category, or sort signal.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
