@@ -247,7 +247,7 @@ export default function Home() {
               {[
                 ["Guide", "Personal fan journeys"],
                 ["Scenes", "Pollo motion + B-roll"],
-                ["Package", "Captions, offer, export"],
+                ["Editor", "Timeline, captions, voice"],
                 ["Payoff", "Paid drops at scale"],
               ].map(([k, v]) => (
                 <div key={k} style={{ padding: "14px 13px", borderRadius: 16, border: "1px solid rgba(255,255,255,.11)", background: "rgba(255,255,255,.055)", backdropFilter: "blur(14px)" }}>
@@ -369,7 +369,7 @@ export default function Home() {
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(5,5,8,.84),#050508 88%)" }} />
         <div className="vx-shell" style={{ position: "relative" }}>
           <div className={`vx-reveal ${cockpitRef.visible ? "visible" : ""}`} style={{ textAlign: "center", maxWidth: 780, margin: "0 auto 36px" }}>
-            <p className="vx-kicker">Campaign workflow</p>
+            <p className="vx-kicker">Editor workflow</p>
             <h2 className="vx-title" style={{ marginBottom: 16 }}>From raw content to paid campaign in four clear moves.</h2>
             <p className="vx-copy">Start with content, shape the offer, package the assets, and publish the campaign where the audience already is.</p>
           </div>
@@ -388,7 +388,7 @@ export default function Home() {
             ))}
           </div>
           <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", marginTop: 30 }}>
-            <ActionButton href="#waitlist">Request workflow access</ActionButton>
+            <ActionButton href="/vault-x/editor">Open Creator Studio</ActionButton>
             <ActionButton href="/vault-x/distribution" variant="dark">View Distribution</ActionButton>
           </div>
         </div>
@@ -399,7 +399,7 @@ export default function Home() {
           <div className={`vx-reveal ${moneyRef.visible ? "visible" : ""}`} style={{ maxWidth: 800, marginBottom: 28 }}>
             <p className="vx-kicker">Why creators care</p>
             <h2 className="vx-title" style={{ marginBottom: 16 }}>VaultX gives creators leverage that used to belong to studios.</h2>
-            <p className="vx-copy">The value is not “AI tools.” The value is a cleaner way to make money from content that already exists: the guide explains it, the preview sells it, the premium drop monetizes it, the package organizes it, and the archive makes the next launch smarter.</p>
+            <p className="vx-copy">The value is not “AI tools.” The value is a cleaner way to make money from content that already exists: the clone explains it, the preview sells it, the premium drop monetizes it, the editor packages it, and the archive makes the next launch smarter.</p>
           </div>
           <div style={{ overflow: "hidden", padding: "6px 0" }}>
             <div className="vx-rail">
@@ -433,7 +433,7 @@ export default function Home() {
           <div className={`vx-reveal ${waitlistRef.visible ? "visible" : ""}`} style={{ textAlign: "center", marginBottom: 34 }}>
             <p className="vx-kicker">Early access</p>
             <h2 className="vx-title" style={{ fontSize: "clamp(30px,6vw,46px)", marginBottom: 14 }}>Get the VaultX invite path.</h2>
-            <p className="vx-copy">Join if you want the creator workflow that turns raw content into a monetizable launch bundle with AI Studio assets, campaign packaging, and distribution routes in one place.</p>
+            <p className="vx-copy">Join if you want the creator workflow that turns raw content into a monetizable launch bundle with Pollo Studio, editor packaging, and distribution routes in one place.</p>
           </div>
           <div className={`vx-reveal ${waitlistRef.visible ? "visible" : ""}`} style={{ borderRadius: 24, border: "1px solid rgba(255,255,255,.10)", background: "linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.025))", padding: 28, boxShadow: "0 28px 80px rgba(0,0,0,.34)" }}>
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
