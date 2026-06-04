@@ -331,12 +331,23 @@ export async function persistLocalReadyVaultxArtifact(input: Omit<ReadyArtifactI
   const ext = extForMime(mimeType);
   const key = ["vaultx", String(input.creatorId), input.projectId ? `project-${input.projectId}` : input.packageId ? `package-${input.packageId}` : "standalone", `${input.stage}-${Date.now()}-${randomUUID()}.${ext}`].join("/");
   const probe = await probeStoredBuffer(buffer, mimeType, ext);
-  const stored = await storagePut(key, buffer, mimeType);
+  let stored: { key: string; url: string };
+  let storageFallbackError: string | null = null;
+  try {
+    stored = await storagePut(key, buffer, mimeType);
+  } catch (err: any) {
+    const localPublicUrl = String((input.metadata as any)?.localPublicUrl || "");
+    if (!localPublicUrl.startsWith("/uploads/") && !localPublicUrl.startsWith("https://")) {
+      throw err;
+    }
+    storageFallbackError = err?.message || String(err);
+    stored = { key: `local:${key}`, url: localPublicUrl };
+  }
   const result: any = await rawExec(
     `INSERT INTO vaultx_artifacts
      (creator_id, project_id, package_id, kind, stage, provider, provider_job_id, source_url, output_url, storage_key, mime_type, byte_size, width, height, duration_seconds, status, quality_score, metadata, ready_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?, ?, NOW())`,
-    [input.creatorId, input.projectId ?? null, input.packageId ?? null, input.kind, input.stage, input.provider ?? null, input.providerJobId ?? null, input.sourceUrl ?? null, stored.url, stored.key, mimeType, buffer.length, probe.width ?? null, probe.height ?? null, probe.durationSeconds ?? null, input.qualityScore ?? null, jsonSafe({ ...(input.metadata ?? {}), localPath: input.localPath })]
+    [input.creatorId, input.projectId ?? null, input.packageId ?? null, input.kind, input.stage, input.provider ?? null, input.providerJobId ?? null, input.sourceUrl ?? null, stored.url, stored.key, mimeType, buffer.length, probe.width ?? null, probe.height ?? null, probe.durationSeconds ?? null, input.qualityScore ?? null, jsonSafe({ ...(input.metadata ?? {}), localPath: input.localPath, storageFallbackError })]
   );
   const id = Number(result?.insertId || 0);
   await recordVaultxArtifactEvent({ artifactId: id, creatorId: input.creatorId, projectId: input.projectId ?? null, packageId: input.packageId ?? null, eventType: `${input.stage}.ready`, status: "ready", payload: { outputUrl: stored.url, mimeType, byteSize: buffer.length, ...probe } });
