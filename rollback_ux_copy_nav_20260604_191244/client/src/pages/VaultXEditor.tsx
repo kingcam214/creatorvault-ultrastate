@@ -1439,7 +1439,7 @@ export default function VaultXEditor() {
       ? `${window.location.origin}/videos/vaultx-cinematic-trailer.mp4`
       : '/videos/vaultx-cinematic-trailer.mp4';
     const finalSourceUrl = sourceIsReady ? sourceUrl.trim() : demoSourceUrl;
-    const finalProjectName = projectName.trim() || 'VaultX Campaign Package';
+    const finalProjectName = projectName.trim() || 'VaultX 60 Second Soft Launch Demo';
     const finalTitle = publishTitle.trim() || finalProjectName;
     const launchPlatforms: Array<'master' | 'instagram_sfw' | 'tiktok' | 'twitter' | 'telegram_teaser' | 'onlyfans'> = ['master', 'instagram_sfw', 'tiktok', 'twitter', 'telegram_teaser', 'onlyfans'];
 
@@ -1464,7 +1464,7 @@ export default function VaultXEditor() {
       setProjectId(created);
       await utils.vaultx.getMyEditorProjects.invalidate();
 
-      toast.message('Campaign package started', { description: 'Preparing analysis, polish, captions, exports, and paid-drop details from the selected asset.' });
+      toast.message('Soft-launch sprint started', { description: 'Building one demo output path: analysis, polish, captions, exports, and VaultX launch record.' });
 
       const analysisResult = await analyzeMut.mutateAsync({ sourceUrl: finalSourceUrl, projectType: 'reel', projectId: created });
       setAnalysis((analysisResult as any).analysis || analysisResult);
@@ -1493,16 +1493,16 @@ export default function VaultXEditor() {
         accessTier: 'ppv',
         ppvPrice,
         title: finalTitle,
-        description: 'VaultX campaign package: one creator asset organized into a teaser, paid-drop offer, caption pack, and multi-platform export bundle.',
-        tags: ['vaultx', 'creator-campaign', 'paid-drop', 'export-bundle'],
+        description: 'Emergency VaultX soft-launch output: one creator asset converted into a teaser, paid-drop pitch, caption pack, and multi-platform export bundle.',
+        tags: ['vaultx', 'soft-launch', 'creator-output', 'demo'],
       });
       setPublished(publishResult);
       setActiveStep('publish');
       setSoftLaunchSummary({ projectId: created, sourceUrl: finalSourceUrl, platforms: launchPlatforms, exports: exportResult, published: publishResult });
-      toast.success('Campaign package built');
+      toast.success('Soft-launch output built');
     } catch (error: any) {
-      toast.error(error?.message || 'Campaign package failed');
-      setSoftLaunchSummary({ error: error?.message || 'Campaign package failed', sourceUrl: finalSourceUrl });
+      toast.error(error?.message || 'Soft-launch sprint failed');
+      setSoftLaunchSummary({ error: error?.message || 'Soft-launch sprint failed', sourceUrl: finalSourceUrl });
     } finally {
       setSoftLaunchRunning(false);
     }
@@ -1531,30 +1531,30 @@ export default function VaultXEditor() {
           <div className="rounded-[2rem] p-6 md:p-8" style={{ background: 'linear-gradient(145deg, rgba(17,17,17,0.96), rgba(5,5,5,0.98))', border: `1px solid ${C.borderHi}`, boxShadow: '0 30px 120px rgba(0,0,0,0.6)' }}>
             <div className="flex flex-wrap items-center gap-3 mb-6">
               <VaultXLogo size="md" />
-              <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-[0.28em] uppercase" style={{ background: C.goldDim, border: '1px solid rgba(245,158,11,0.28)', color: C.gold }}>Campaign package builder</span>
-              <a href="/vault-x/studio?mode=clone-tour-factory" className="px-3 py-1 rounded-full text-[10px] font-black tracking-[0.24em] uppercase" style={{ background: C.accentDim, border: '1px solid rgba(139,92,246,0.28)', color: '#C4B5FD' }}>Fan Journey Studio</a>
+              <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-[0.28em] uppercase" style={{ background: C.goldDim, border: '1px solid rgba(245,158,11,0.28)', color: C.gold }}>60-second launch output</span>
+              <a href="/vault-x/studio?mode=clone-tour-factory" className="px-3 py-1 rounded-full text-[10px] font-black tracking-[0.24em] uppercase" style={{ background: C.accentDim, border: '1px solid rgba(139,92,246,0.28)', color: '#C4B5FD' }}>Clone Factory</a>
             </div>
             <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[0.95] max-w-4xl">
-              Package one creator asset into a ready-to-sell campaign.
+              One creator asset in. One launch-ready teaser, paid drop, and export bundle out.
             </h1>
             <p className="mt-5 max-w-3xl text-base md:text-lg leading-relaxed" style={{ color: '#B8B8C6' }}>
-              Add a clip or image, choose the campaign style, then VaultX helps prepare the teaser, captions, paid unlock details, and export lanes in one guided workflow.
+              This is the soft-launch lane: paste one direct clip or run the built-in demo asset, then VaultX analyzes the hook, queues cinematic polish, writes the sales copy, packages social exports, and creates a VaultX launch record. No tool maze. No theory. One output path.
             </p>
             <div className="mt-6 grid gap-3 md:grid-cols-[1fr_auto]">
               <button onClick={runSoftLaunchSprint} disabled={isBusy} className="rounded-2xl px-5 py-4 text-sm font-black flex items-center justify-center gap-2 disabled:opacity-45" style={{ background: `linear-gradient(135deg, ${C.gold}, ${C.pink})`, color: '#12060B', boxShadow: '0 18px 50px rgba(245,158,11,0.22)' }}>
                 {softLaunchRunning ? <Loader2 className="animate-spin" size={17} /> : <Zap size={17} />}
-                {softLaunchRunning ? 'Building campaign package...' : 'Build campaign package'}
+                {softLaunchRunning ? 'Building soft-launch output...' : 'Build the soft-launch demo output'}
               </button>
               <a href="/vault-x/studio?mode=ai-video-generator#pollo" className="rounded-2xl px-5 py-4 text-center text-sm font-black" style={{ background: C.accentDim, border: '1px solid rgba(139,92,246,0.28)', color: '#DDD6FE' }}>Pollo scene generator</a>
             </div>
             {softLaunchSummary ? (
               <div className="mt-4 rounded-2xl p-4 text-sm" style={{ background: softLaunchSummary.error ? C.redDim : C.greenDim, border: `1px solid ${softLaunchSummary.error ? 'rgba(239,68,68,0.28)' : 'rgba(16,185,129,0.28)'}`, color: softLaunchSummary.error ? '#FECACA' : '#BBF7D0' }}>
-                <p className="font-black">{softLaunchSummary.error ? 'Campaign needs attention' : `Campaign package ready for project #${softLaunchSummary.projectId}`}</p>
-                <p className="mt-1 opacity-80">{softLaunchSummary.error || 'Prepared analysis, cinematic polish, captions, export package, and paid-drop details from the selected source.'}</p>
+                <p className="font-black">{softLaunchSummary.error ? 'Sprint needs attention' : `Soft-launch output ready for project #${softLaunchSummary.projectId}`}</p>
+                <p className="mt-1 opacity-80">{softLaunchSummary.error || 'Generated analysis, cinematic polish task, copy pack, export package, and VaultX publish record from the selected source.'}</p>
               </div>
             ) : null}
             <div className="mt-8 grid gap-3 sm:grid-cols-4">
-              {[['01', 'Import', 'asset + brief'], ['02', 'Analyze', 'quality + angles'], ['03', 'Package', 'captions + exports'], ['04', 'Publish', 'VaultX + funnels']].map(([num, label, detail]) => (
+              {[['01', 'Ingest', 'URL + brief'], ['02', 'Analyze', 'quality + angles'], ['03', 'Package', 'captions + exports'], ['04', 'Launch', 'VaultX + funnels']].map(([num, label, detail]) => (
                 <div key={label} className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <p className="text-[10px] font-black tracking-[0.22em]" style={{ color: C.gold }}>{num}</p>
                   <p className="mt-2 text-sm font-black text-white">{label}</p>
@@ -1586,7 +1586,7 @@ export default function VaultXEditor() {
             </div>
             <div className="mt-6 grid grid-cols-1 gap-3">
               <button onClick={runSoftLaunchSprint} disabled={isBusy} className="rounded-2xl px-4 py-3 text-center text-xs font-black flex items-center justify-center gap-2 disabled:opacity-45" style={{ background: C.goldDim, border: '1px solid rgba(245,158,11,0.28)', color: '#FDE68A' }}>{softLaunchRunning ? <Loader2 className="animate-spin" size={14} /> : <Zap size={14} />} Build one output now</button>
-              <a href="/vault-x/studio?mode=clone-tour-factory" className="rounded-2xl px-4 py-3 text-center text-xs font-black" style={{ background: C.accentDim, border: '1px solid rgba(139,92,246,0.28)', color: '#DDD6FE' }}>Build fan journey</a>
+              <a href="/vault-x/studio?mode=clone-tour-factory" className="rounded-2xl px-4 py-3 text-center text-xs font-black" style={{ background: C.accentDim, border: '1px solid rgba(139,92,246,0.28)', color: '#DDD6FE' }}>Plan clone-host demo</a>
             </div>
           </div>
         </section>
@@ -1633,7 +1633,7 @@ export default function VaultXEditor() {
               <div className="rounded-2xl p-4" style={{ background: 'rgba(0,0,0,0.38)', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <p className="text-sm font-black mb-3">Visual preview</p>
                 <div className="aspect-[4/5] rounded-2xl overflow-hidden flex items-center justify-center" style={{ background: 'linear-gradient(145deg, rgba(139,92,246,0.12), rgba(236,72,153,0.10))', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  {sourceIsReady ? assetKind === 'video' || assetKind === 'reel' ? <video src={sourceUrl} className="w-full h-full object-cover" controls muted /> : <img src={sourceUrl} className="w-full h-full object-cover" alt="VaultX source preview" /> : <div className="text-center p-6"><Camera size={30} className="mx-auto mb-3" style={{ color: C.muted }} /><p className="text-sm" style={{ color: C.muted }}>A campaign-ready asset is loaded; paste a different direct image or video URL to replace it.</p></div>}
+                  {sourceIsReady ? assetKind === 'video' || assetKind === 'reel' ? <video src={sourceUrl} className="w-full h-full object-cover" controls muted /> : <img src={sourceUrl} className="w-full h-full object-cover" alt="VaultX source preview" /> : <div className="text-center p-6"><Camera size={30} className="mx-auto mb-3" style={{ color: C.muted }} /><p className="text-sm" style={{ color: C.muted }}>Verified production PPV asset preview is loaded; paste a different direct asset URL to replace it.</p></div>}
                 </div>
               </div>
             </div>

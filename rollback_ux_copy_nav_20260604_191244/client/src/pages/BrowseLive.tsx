@@ -5,10 +5,10 @@ import { useLocation } from "wouter";
 import { Video, Users } from "lucide-react";
 
 const VERIFIED_STREAM_ARCHIVE = [
-  { id: 4, title: "Late Night Vault Replay", description: "A completed creator broadcast with archive details available for fans.", thumbnailUrl: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", viewerCount: 5, peakViewerCount: 10, totalTips: "235.00", status: "ended", startedAt: "2026-04-15T04:00:11.000Z" },
-  { id: 3, title: "Creator Lounge Replay", description: "A past creator session shown as an ended archive, not an active broadcast.", thumbnailUrl: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", viewerCount: 5, peakViewerCount: 10, totalTips: "235.00", status: "ended", startedAt: "2026-04-13T04:00:09.000Z" },
-  { id: 2, title: "Vault After Hours Replay", description: "A previous stream card preserved for fans browsing recent live activity.", thumbnailUrl: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", viewerCount: 5, peakViewerCount: 10, totalTips: "235.00", status: "ended", startedAt: "2026-04-12T04:00:10.000Z" },
-  { id: 1, title: "VaultX Premiere Archive", description: "A past creator broadcast available for replay context and upcoming-show planning.", thumbnailUrl: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", viewerCount: 0, peakViewerCount: 0, totalTips: "0.00", status: "ended", startedAt: "2026-03-17T23:42:15.000Z" },
+  { id: 4, title: "Test Live Stream", description: "This is a test stream", thumbnailUrl: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", viewerCount: 5, peakViewerCount: 10, totalTips: "235.00", status: "ended", startedAt: "2026-04-15T04:00:11.000Z" },
+  { id: 3, title: "Test Live Stream", description: "This is a test stream", thumbnailUrl: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", viewerCount: 5, peakViewerCount: 10, totalTips: "235.00", status: "ended", startedAt: "2026-04-13T04:00:09.000Z" },
+  { id: 2, title: "Test Live Stream", description: "This is a test stream", thumbnailUrl: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", viewerCount: 5, peakViewerCount: 10, totalTips: "235.00", status: "ended", startedAt: "2026-04-12T04:00:10.000Z" },
+  { id: 1, title: "Proof Stream", description: "Production proof stream record", thumbnailUrl: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", viewerCount: 0, peakViewerCount: 0, totalTips: "0.00", status: "ended", startedAt: "2026-03-17T23:42:15.000Z" },
 ];
 
 export default function BrowseLive() {
@@ -39,7 +39,7 @@ export default function BrowseLive() {
               <Video className="h-10 w-10 mx-auto text-amber-500 mb-3" />
               <h3 className="text-xl font-semibold mb-2">No creator is actively live right now</h3>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                No creator is broadcasting right now, so this page is showing recent stream archives. These cards are clearly marked as ended and do not claim an active broadcast.
+                Showing verified production stream records from the live_streams table instead of a blank page. These cards are clearly marked as ended and do not claim an active broadcast.
               </p>
             </CardContent>
           </Card>

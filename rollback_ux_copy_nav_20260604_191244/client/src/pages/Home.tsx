@@ -163,17 +163,17 @@ export default function Home() {
   const outputCards = [
     { eyebrow: "Teaser", title: "Scroll-stopping preview cut", body: "Turn one raw clip into a public-safe teaser with hook text, crop direction, motion notes, and a clean call-to-action for paid access.", accent: "#38bdf8" },
     { eyebrow: "Paid drop", title: "PPV cover and unlock package", body: "Package the premium version with cover frame, title, description, price suggestion, unlock language, and archive metadata.", accent: "#c9a84c" },
-    { eyebrow: "AI Studio", title: "Motion promos and visual variants", body: "Create campaign-safe video variations, motion flyers, cover options, and short-form assets that help one drop travel farther.", accent: "#f472b6" },
+    { eyebrow: "Pollo AI", title: "AI motion and visual variants", body: "Use the Studio route to send creator-safe prompts through the configured AI video pipeline, track task status, and bring finished clips back into the bundle.", accent: "#f472b6" },
     { eyebrow: "DM funnel", title: "Captions, scripts, and follow-ups", body: "Generate DM openers, fan replies, Telegram copy, story captions, and a short sales sequence that matches the drop.", accent: "#4ade80" },
     { eyebrow: "Distribution", title: "Export once, route everywhere", body: "Prepare the same campaign for VaultX, public socials, VIP channels, Telegram, paid fan platforms, and future reposts without rebuilding it manually.", accent: "#fb923c" },
-    { eyebrow: "Vault", title: "Reusable campaign memory", body: "Keep the asset, captions, offer, price, publishing history, and results together so the next drop starts stronger.", accent: "#a78bfa" },
+    { eyebrow: "Vault", title: "Reusable content memory", body: "Keep the asset, captions, prompt, price, output history, and launch notes together so the next drop starts smarter.", accent: "#a78bfa" },
   ];
 
   const studioSteps = [
     { label: "Upload", detail: "Clip, image, reference frame, or campaign concept." },
     { label: "Choose output", detail: "Teaser, AI video, PPV cover, clone loop, story pack, or launch bundle." },
-    { label: "Create", detail: "Generate video variants, motion promos, covers, and campaign visuals." },
-    { label: "Publish", detail: "Prepare the finished assets for VaultX, socials, VIP channels, and future reposts." },
+    { label: "Generate", detail: "Pollo-powered tasks run asynchronously with status tracking and output links." },
+    { label: "Launch", detail: "Move the finished assets into editor, funnel copy, distribution, and archive." },
   ];
 
   return (
@@ -230,24 +230,24 @@ export default function Home() {
 
         <div className="vx-hero-grid">
           <div style={{ opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? "translateY(0)" : "translateY(24px)", transition: "opacity .7s ease, transform .7s ease" }}>
-            <p className="vx-kicker">VaultX · premium creator business system</p>
+            <p className="vx-kicker">VaultX · creator-economy command system</p>
             <h1 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(46px,8.5vw,98px)", lineHeight: .88, fontWeight: 950, letterSpacing: "-.065em", marginBottom: 22 }}>
-              Turn every strong clip into a premium content business.
+              Turn one clip into a launch-ready content factory in 60 seconds.
             </h1>
             <p style={{ fontSize: "clamp(17px,2.2vw,22px)", lineHeight: 1.58, color: "rgba(255,255,255,.78)", maxWidth: 682, marginBottom: 16 }}>
-              VaultX helps creators package one asset into a public teaser, paid unlock, caption set, fan message sequence, and distribution plan without rebuilding the campaign from scratch.
+              VaultX has one soft-launch promise now: one creator asset goes in, then the system builds a usable teaser, paid-drop pitch, caption pack, platform exports, and a clone-host demo path around it. The deeper AI stack still matters, but the creator sees one clear output first.
             </p>
             <p style={{ fontSize: 14, lineHeight: 1.72, color: "rgba(255,255,255,.54)", maxWidth: 650, marginBottom: 28 }}>
-              Creators can move from idea to offer faster: preview the content, shape the sales angle, prepare safe public assets, and keep every campaign ready for the next paid drop.
+              The larger mission is still creator-economy infrastructure, but the first battle is simple: make a creator feel the result immediately enough to share, sell, and repeat it before a competitor gets another head start.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 22 }}>
               <ActionButton href="#waitlist">Request access</ActionButton>
-              <ActionButton href="/vault-x/studio" variant="dark">Open VaultX Studio</ActionButton>
-              <ActionButton href="/vault-x/editor" variant="ghost">Build a campaign package</ActionButton>
+              <ActionButton href="/vault-x/editor" variant="dark">Build one output</ActionButton>
+              <ActionButton href="/vault-x/editor" variant="ghost">Open launch editor</ActionButton>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(135px,1fr))", gap: 10, maxWidth: 650 }}>
               {[
-                ["Guide", "Personal fan journeys"],
+                ["Clone", "Personal host demos"],
                 ["Scenes", "Pollo motion + B-roll"],
                 ["Editor", "Timeline, captions, voice"],
                 ["Payoff", "Paid drops at scale"],
@@ -272,17 +272,17 @@ export default function Home() {
               <div className="vx-video-sheen" />
               <div style={{ position: "absolute", left: 22, right: 22, top: 20, display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
                 <div>
-                  <p style={{ fontSize: 9, color: "rgba(255,255,255,.58)", letterSpacing: ".20em", textTransform: "uppercase", fontWeight: 950 }}>Premium content system</p>
-                  <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: 31, lineHeight: 1.02, marginTop: 4 }}>Creator growth engine</h2>
+                  <p style={{ fontSize: 9, color: "rgba(255,255,255,.58)", letterSpacing: ".20em", textTransform: "uppercase", fontWeight: 950 }}>Hero video restored</p>
+                  <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: 31, lineHeight: 1.02, marginTop: 4 }}>Creator world engine</h2>
                 </div>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 11px", borderRadius: 999, border: "1px solid rgba(16,185,129,.40)", background: "rgba(16,185,129,.15)", color: "#a7f3d0", fontSize: 9, fontWeight: 950, letterSpacing: ".12em", textTransform: "uppercase" }}><i style={{ width: 7, height: 7, borderRadius: "50%", background: "#10B981", boxShadow: "0 0 14px #10B981" }} />Ready to publish</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 11px", borderRadius: 999, border: "1px solid rgba(16,185,129,.40)", background: "rgba(16,185,129,.15)", color: "#a7f3d0", fontSize: 9, fontWeight: 950, letterSpacing: ".12em", textTransform: "uppercase" }}><i style={{ width: 7, height: 7, borderRadius: "50%", background: "#10B981", boxShadow: "0 0 14px #10B981" }} />Factory live</span>
               </div>
 
               <div style={{ position: "absolute", left: 24, top: 104, width: 182, display: "grid", gap: 10 }}>
                 {[
-                  ["Guide", "Warms every lead"],
-                  ["Voice", "Branded replies"],
-                  ["Motion", "AI promos"],
+                  ["Clone", "Tours every lead"],
+                  ["Voice", "ElevenLabs ready"],
+                  ["Motion", "Pollo scenes"],
                 ].map(([label, detail], i) => (
                   <div key={label} className="vx-world-node" style={{ animationDelay: `${i * .22}s`, padding: "12px 13px", borderRadius: 18, border: "1px solid rgba(255,255,255,.14)", background: "rgba(0,0,0,.46)", backdropFilter: "blur(14px)" }}>
                     <strong style={{ display: "block", color: i === 1 ? "#f4d37c" : i === 2 ? "#f9a8d4" : "#7dd3fc", fontSize: 13, marginBottom: 4 }}>{label}</strong>
@@ -294,18 +294,18 @@ export default function Home() {
               <div className="vx-broadcast-card">
                 <div style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 14, alignItems: "center" }}>
                   <div>
-                    <p style={{ color: "#c9a84c", fontSize: 10, fontWeight: 950, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 8 }}>One workflow → one sellable campaign</p>
-                    <h3 style={{ fontFamily: "Playfair Display, serif", fontSize: 31, lineHeight: 1.04, color: "#fff", marginBottom: 10 }}>Teaser, fan copy, paid offer, and export plan.</h3>
-                    <p style={{ color: "rgba(255,255,255,.56)", fontSize: 12, lineHeight: 1.6 }}>Build the preview, paid offer, fan copy, and export plan from one organized workflow.</p>
+                    <p style={{ color: "#c9a84c", fontSize: 10, fontWeight: 950, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 8 }}>One command → one usable output</p>
+                    <h3 style={{ fontFamily: "Playfair Display, serif", fontSize: 31, lineHeight: 1.04, color: "#fff", marginBottom: 10 }}>Teaser, copy pack, paid-drop pitch, and export bundle.</h3>
+                    <p style={{ color: "rgba(255,255,255,.56)", fontSize: 12, lineHeight: 1.6 }}>The homepage now points to the shortest visible proof: launch editor first, Pollo scenes second, clone tours once the output lane is real.</p>
                   </div>
                   <div style={{ display: "grid", gap: 10 }}>
                     <div className="vx-signal" aria-hidden="true">
                       {[18, 28, 14, 32, 23, 30, 16, 34, 22, 28].map((height, i) => <i key={i} style={{ height }} />)}
                     </div>
                     {[
-                      ["01", "Fan journey", "#38bdf8"],
-                      ["02", "Creator package", "#c9a84c"],
-                      ["03", "Paid drop", "#4ade80"],
+                      ["01", "Clone host tour", "#38bdf8"],
+                      ["02", "Editor timeline", "#c9a84c"],
+                      ["03", "Paid drop export", "#4ade80"],
                     ].map(([num, label, color]) => (
                       <div key={num} style={{ display: "grid", gridTemplateColumns: "34px 1fr", gap: 9, alignItems: "center", padding: 10, borderRadius: 15, border: `1px solid ${color}33`, background: "rgba(255,255,255,.045)" }}>
                         <span style={{ width: 34, height: 34, borderRadius: 12, display: "grid", placeItems: "center", color, background: `${color}16`, fontWeight: 950, fontSize: 11 }}>{num}</span>
@@ -326,7 +326,7 @@ export default function Home() {
           <div className={`vx-reveal ${outputsRef.visible ? "visible" : ""}`} style={{ maxWidth: 760, marginBottom: 34 }}>
             <p className="vx-kicker">What VaultX actually creates</p>
             <h2 className="vx-title" style={{ marginBottom: 16 }}>Concrete outputs, not vague platform promises.</h2>
-            <p className="vx-copy">VaultX turns one piece of content into the assets a creator needs to promote, sell, deliver, and reuse a premium drop across every audience channel.</p>
+            <p className="vx-copy">Creators should immediately understand the payoff: VaultX turns one moment of content into a full economic system around that creator, including public teasers, paid unlocks, AI video variants, personalized clone demos, DM funnels, distribution exports, and saved campaign memory.</p>
           </div>
           <div className="vx-output-grid">
             {outputCards.map((card, i) => (
@@ -341,13 +341,13 @@ export default function Home() {
       <section ref={polloRef.ref} style={{ position: "relative", padding: "82px 0", borderTop: "1px solid rgba(255,255,255,.06)", background: "linear-gradient(180deg,#050508,#08070d)" }}>
         <div className="vx-shell vx-two-col">
           <div className={`vx-reveal ${polloRef.visible ? "visible" : ""}`}>
-            <p className="vx-kicker">AI content studio</p>
-            <h2 className="vx-title" style={{ marginBottom: 18 }}>Generate campaign visuals without leaving VaultX.</h2>
-            <p className="vx-copy" style={{ marginBottom: 18 }}>VaultX Studio is where creators build video variants, motion promos, covers, and campaign visuals that make a paid drop feel bigger than one upload.</p>
-            <p className="vx-copy" style={{ marginBottom: 28 }}>The workflow is simple: describe the campaign, choose the output, generate the asset, and reuse the finished result in the paid offer, fan funnel, or distribution plan.</p>
+            <p className="vx-kicker">Pollo AI content output</p>
+            <h2 className="vx-title" style={{ marginBottom: 18 }}>The Studio page is the AI generation room.</h2>
+            <p className="vx-copy" style={{ marginBottom: 18 }}>VaultX Studio is now presented as a primary path, not a hidden utility. It is where creators create AI video variants, motion flyers, clone loops, and campaign visuals using the connected provider pipeline.</p>
+            <p className="vx-copy" style={{ marginBottom: 28 }}>The workflow is simple: describe the drop, choose the output lane, send the task, track status, and reuse the finished result inside the editor or distribution package.</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-              <ActionButton href="/vault-x/studio">Open VaultX Studio</ActionButton>
-              <ActionButton href="/vault-x/editor" variant="dark">Build campaign package</ActionButton>
+              <ActionButton href="/vault-x/studio">Open Pollo Studio</ActionButton>
+              <ActionButton href="/vault-x/editor" variant="dark">Send to editor</ActionButton>
             </div>
           </div>
           <div className={`vx-reveal ${polloRef.visible ? "visible" : ""}`} style={{ display: "grid", gap: 12 }}>
@@ -372,8 +372,8 @@ export default function Home() {
         <div className="vx-shell" style={{ position: "relative" }}>
           <div className={`vx-reveal ${cockpitRef.visible ? "visible" : ""}`} style={{ textAlign: "center", maxWidth: 780, margin: "0 auto 36px" }}>
             <p className="vx-kicker">Editor workflow</p>
-            <h2 className="vx-title" style={{ marginBottom: 16 }}>From raw content to paid campaign in four clear moves.</h2>
-            <p className="vx-copy">Start with content, shape the offer, package the assets, and publish the campaign where the audience already is.</p>
+            <h2 className="vx-title" style={{ marginBottom: 16 }}>From clip to campaign in four operational moves.</h2>
+            <p className="vx-copy">The editor has to feel like a production desk, not a text-heavy demo. The homepage now previews the actual flow a creator expects to complete.</p>
           </div>
           <div className="vx-process-grid">
             {[
@@ -390,7 +390,7 @@ export default function Home() {
             ))}
           </div>
           <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", marginTop: 30 }}>
-            <ActionButton href="/vault-x/editor">Open Creator Studio</ActionButton>
+            <ActionButton href="/vault-x/editor">Open VaultX Editor</ActionButton>
             <ActionButton href="/vault-x/distribution" variant="dark">View Distribution</ActionButton>
           </div>
         </div>

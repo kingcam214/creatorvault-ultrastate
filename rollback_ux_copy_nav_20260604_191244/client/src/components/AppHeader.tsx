@@ -169,6 +169,12 @@ export default function AppHeader() {
                 VaultX
               </Link>
             </Button>
+            <Button size="sm" asChild className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 shadow-lg shadow-purple-900/20">
+              <Link href="/vault-x/editor">
+                VaultX Editor
+              </Link>
+            </Button>
+
             {/* Creator Tools Dropdown */}
             {user && (
               <DropdownMenu>
@@ -201,7 +207,7 @@ export default function AppHeader() {
                         <Link href="/vault-x/editor">
                           <a className="w-full flex items-center gap-2">
                             <Zap className="h-4 w-4" style={{ color: accentColor }} />
-                            Creator Studio
+                            VaultX Editor — CapCut for Creators
                           </a>
                         </Link>
                       </DropdownMenuItem>
@@ -209,7 +215,7 @@ export default function AppHeader() {
                         <Link href="/vault-x/studio?mode=ai-video-generator#pollo">
                           <a className="w-full flex items-center gap-2">
                             <Zap className="h-4 w-4" style={{ color: accentColor }} />
-                            VaultX Studio — AI Video
+                            Generate with Pollo AI — Image to Video
                           </a>
                         </Link>
                       </DropdownMenuItem>
@@ -350,18 +356,18 @@ export default function AppHeader() {
               <DropdownMenuContent align="end" className="w-72 bg-slate-900 border-white/10 max-h-[85vh] overflow-y-auto">
                 <DropdownMenuLabel className="text-purple-300">VaultX</DropdownMenuLabel>
                 <DropdownMenuItem asChild>
-                  <Link href="/vault-x">
-                    <a className="w-full font-bold" style={{ color: "#f0abfc" }}>VaultX Home</a>
+                  <Link href="/vault-x/editor">
+                    <a className="w-full font-bold" style={{ color: "#f0abfc" }}>VaultX Editor — CapCut for Creators</a>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/vault-x/studio?mode=ai-video-generator#pollo">
-                    <a className="w-full">VaultX Studio</a>
+                    <a className="w-full">Pollo AI Video Generator</a>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/vault-x/editor">
-                    <a className="w-full">Creator Studio</a>
+                  <Link href="/vault-x">
+                    <a className="w-full">VaultX Home</a>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/10" />
@@ -396,12 +402,12 @@ export default function AppHeader() {
                       <>
                         <DropdownMenuItem asChild>
                           <Link href="/vault-x/editor">
-                            <a className="w-full font-bold" style={{ color: accentColor }}>Creator Studio</a>
+                            <a className="w-full font-bold" style={{ color: accentColor }}>VaultX Editor — CapCut for Creators</a>
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link href="/vault-x/studio?mode=ai-video-generator#pollo">
-                            <a className="w-full" style={{ color: accentColor }}>VaultX Studio</a>
+                            <a className="w-full" style={{ color: accentColor }}>Generate with Pollo AI</a>
                           </Link>
                         </DropdownMenuItem>
                       </>
