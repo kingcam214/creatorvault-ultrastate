@@ -222,7 +222,8 @@ export default function Home() {
             </div>
           </Link>
           <div className="vx-nav-actions">
-            <ActionButton href="/vault-x/studio" variant="dark">Open Studio</ActionButton>
+            <ActionButton href="/vault-x/studio" variant="dark">Pollo Studio</ActionButton>
+            <ActionButton href="/vault-x/editor" variant="dark">Editor</ActionButton>
             <ActionButton href="/login" variant="ghost">Log in</ActionButton>
           </div>
         </nav>
