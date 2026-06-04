@@ -305,7 +305,6 @@ const BODY_REGIONS = [
 ] as const;
 
 const TRACK_COLORS = ["#8B5CF6", "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#EC4899"];
-const VERIFIED_VAULTX_SOURCE_URL = "https://creatorvault.live/uploads/ppv_1778107488797/full_video.mp4";
 
 async function parseVideoStudioUrl(response: Response, operation: string): Promise<string> {
   const data = await response.json().catch(() => null);
@@ -1284,8 +1283,8 @@ export default function VaultXEditor() {
 
   const [projectId, setProjectId] = useState<number | null>(null);
   const [projectName, setProjectName] = useState('VIP Friday Drop');
-  const [assetKind, setAssetKind] = useState<'photo' | 'video' | 'reel' | 'photo_set'>('video');
-  const [sourceUrl, setSourceUrl] = useState(VERIFIED_VAULTX_SOURCE_URL);
+  const [assetKind, setAssetKind] = useState<'photo' | 'video' | 'reel' | 'photo_set'>('photo');
+  const [sourceUrl, setSourceUrl] = useState('');
   const [intensity, setIntensity] = useState<'subtle' | 'natural' | 'enhanced' | 'cinematic'>('cinematic');
   const [captionStyle, setCaptionStyle] = useState<'teaser' | 'explicit' | 'romantic' | 'dominant' | 'playful'>('teaser');
   const [backgroundStyle, setBackgroundStyle] = useState<'keep' | 'penthouse' | 'yacht' | 'rose_bed' | 'dark_studio' | 'miami_villa' | 'private_jet'>('keep');
@@ -1633,7 +1632,7 @@ export default function VaultXEditor() {
               <div className="rounded-2xl p-4" style={{ background: 'rgba(0,0,0,0.38)', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <p className="text-sm font-black mb-3">Visual preview</p>
                 <div className="aspect-[4/5] rounded-2xl overflow-hidden flex items-center justify-center" style={{ background: 'linear-gradient(145deg, rgba(139,92,246,0.12), rgba(236,72,153,0.10))', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  {sourceIsReady ? assetKind === 'video' || assetKind === 'reel' ? <video src={sourceUrl} className="w-full h-full object-cover" controls muted /> : <img src={sourceUrl} className="w-full h-full object-cover" alt="VaultX source preview" /> : <div className="text-center p-6"><Camera size={30} className="mx-auto mb-3" style={{ color: C.muted }} /><p className="text-sm" style={{ color: C.muted }}>Verified production PPV asset preview is loaded; paste a different direct asset URL to replace it.</p></div>}
+                  {sourceIsReady ? assetKind === 'video' || assetKind === 'reel' ? <video src={sourceUrl} className="w-full h-full object-cover" controls muted /> : <img src={sourceUrl} className="w-full h-full object-cover" alt="VaultX source preview" /> : <div className="text-center p-6"><Camera size={30} className="mx-auto mb-3" style={{ color: C.muted }} /><p className="text-sm" style={{ color: C.muted }}>Paste a direct asset URL to preview it here.</p></div>}
                 </div>
               </div>
             </div>

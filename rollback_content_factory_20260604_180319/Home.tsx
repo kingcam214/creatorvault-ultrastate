@@ -107,9 +107,6 @@ function VisualPhone({ label, caption, accent, poster }: { label: string; captio
   );
 }
 
-const VERIFIED_VAULTX_VIDEO = "https://creatorvault.live/uploads/ppv_1778107488797/full_video.mp4";
-const VERIFIED_VAULTX_THUMB = "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg";
-
 export default function Home() {
   const [heroLoaded, setHeroLoaded] = useState(false);
   const [heroVideoFailed, setHeroVideoFailed] = useState(false);
@@ -205,8 +202,8 @@ export default function Home() {
 
       <section className="vx-hero">
         {!heroVideoFailed && (
-          <video autoPlay muted loop playsInline preload="metadata" poster={VERIFIED_VAULTX_THUMB} onError={() => setHeroVideoFailed(true)} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .54 }}>
-            <source src={VERIFIED_VAULTX_VIDEO} type="video/mp4" />
+          <video autoPlay muted loop playsInline preload="metadata" poster="/videos/vaultx-creator-economy-hero-poster.png" onError={() => setHeroVideoFailed(true)} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .54 }}>
+            <source src="/videos/vaultx-creator-economy-hero.mp4" type="video/mp4" />
             <source src="/videos/vaultx-cinematic-trailer.mp4" type="video/mp4" />
           </video>
         )}
@@ -263,8 +260,8 @@ export default function Home() {
           <div className="vx-hero-panel" style={{ opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? "translateY(0)" : "translateY(26px)", transition: "opacity .8s ease .18s, transform .8s ease .18s" }}>
             <div className="vx-hero-inner">
               {!heroVideoFailed && (
-                <video className="vx-main-video" autoPlay muted loop playsInline preload="metadata" poster={VERIFIED_VAULTX_THUMB} onError={() => setHeroVideoFailed(true)}>
-                  <source src={VERIFIED_VAULTX_VIDEO} type="video/mp4" />
+                <video className="vx-main-video" autoPlay muted loop playsInline preload="metadata" poster="/videos/vaultx-creator-economy-hero-poster.png" onError={() => setHeroVideoFailed(true)}>
+                  <source src="/videos/vaultx-creator-economy-hero.mp4" type="video/mp4" />
                   <source src="/videos/vaultx-cinematic-trailer.mp4" type="video/mp4" />
                 </video>
               )}
@@ -365,8 +362,8 @@ export default function Home() {
       </section>
 
       <section ref={cockpitRef.ref} style={{ position: "relative", padding: "82px 0", borderTop: "1px solid rgba(255,255,255,.06)", overflow: "hidden" }}>
-        <video autoPlay muted loop playsInline preload="metadata" poster={VERIFIED_VAULTX_THUMB} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .16 }}>
-          <source src={VERIFIED_VAULTX_VIDEO} type="video/mp4" />
+        <video autoPlay muted loop playsInline preload="metadata" poster="/images/reel/reel-product-drop.png" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .16 }}>
+          <source src="/videos/vaultx-cinematic-trailer.mp4" type="video/mp4" />
         </video>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(5,5,8,.84),#050508 88%)" }} />
         <div className="vx-shell" style={{ position: "relative" }}>

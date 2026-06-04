@@ -21,11 +21,6 @@ const CATEGORIES = ["all", "courses", "ebooks", "templates", "audio", "software"
 
 type SortBy = "newest" | "popular" | "price-low" | "price-high";
 
-const VERIFIED_MARKETPLACE_MEDIA: Record<string, string> = {
-  "e7ffb4be-0455-11f1-a4a7-ee2cd6ad3437": "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg",
-  "c49f1146-c9fd-4cbd-9ec8-3d0490194621": "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg",
-};
-
 function money(cents: number) {
   return `$${(Math.max(0, cents) / 100).toFixed(2)}`;
 }
@@ -145,12 +140,11 @@ export default function Marketplace() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredProducts.map((product: any) => {
-              const mainImage = product.main_image ?? product.mainImage ?? VERIFIED_MARKETPLACE_MEDIA[String(product.id)] ?? "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg";
+              const mainImage = product.main_image ?? product.mainImage;
               const rawPrice = product.sale_price ?? product.salePrice ?? product.price_amount ?? product.priceAmount ?? 0;
               const basePrice = product.price_amount ?? product.priceAmount ?? rawPrice;
               const salesCount = product.sales_count ?? product.salesCount ?? 0;
               const productType = product.type ?? "digital";
-              const description = product.short_description ?? product.shortDescription ?? product.description ?? "Verified production marketplace product";
               const hasDiscount = rawPrice < basePrice;
               return (
                 <article key={product.id} className="group cursor-pointer rounded-[1.75rem] overflow-hidden transition-all hover:-translate-y-1" onClick={() => navigate(`/marketplace/${product.id}`)} style={{ background: "linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.026))", border: `1px solid ${T.border}`, boxShadow: "0 24px 80px rgba(0,0,0,.34)" }}>
@@ -169,7 +163,7 @@ export default function Marketplace() {
                   </div>
                   <div className="p-5">
                     <h3 className="text-xl font-black tracking-[-.03em] line-clamp-1" style={{ color: T.text }}>{product.title ?? "Premium creator drop"}</h3>
-                    <p className="mt-2 text-sm leading-6 line-clamp-2" style={{ color: T.muted }}>{description}</p>
+                    <p className="mt-2 text-sm leading-6 line-clamp-2" style={{ color: T.muted }}>{product.short_description ?? product.shortDescription ?? product.description ?? "Premium creator drop"}</p>
                     <div className="mt-5 flex items-center justify-between">
                       <span className="text-[11px] uppercase tracking-[.18em] font-black" style={{ color: T.faint }}>{product.category ?? "digital"}</span>
                       <span className="inline-flex items-center gap-1 text-sm font-black" style={{ color: T.cyan }}>View drop <ArrowRight className="w-4 h-4" /></span>

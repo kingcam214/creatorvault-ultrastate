@@ -78,18 +78,6 @@ interface Creator {
   latest_view_count: number | null;
 }
 
-const VERIFIED_VAULTX_CONTENT: FeedItem[] = [
-  { id: 11, title: "VaultX Live E2E FULL 2026-05-29T03-36-42-970Z", description: "Verified production VaultX paid-unlock route.", content_type: "photo", thumbnail_url: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", censored_thumbnail_url: null, is_ppv: true, ppv_price: 99, is_free_preview: false, free_preview_seconds: 15, access_tier: "basic", view_count: 0, created_at: "2026-05-29T03:36:48.000Z", hasAccess: false, locked: true, uncensored_url: "https://videocdn.pollo.ai/web-cdn/video/mp4/cmnhv3xrn0882uer223udkmzx/video-a17ce750-dba1-488d-8e91-b73f3de31d5b.mp4" },
-  { id: 10, title: "VaultX Live E2E BOOST 2026-05-29T03-36-42-970Z", description: "Verified production boosted preview route.", content_type: "photo", thumbnail_url: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", censored_thumbnail_url: null, is_ppv: true, ppv_price: 49, is_free_preview: false, free_preview_seconds: 15, access_tier: "basic", view_count: 0, created_at: "2026-05-29T03:36:46.000Z", hasAccess: false, locked: true, uncensored_url: "https://videocdn.pollo.ai/web-cdn/video/mp4/cmnhv3xrn0882uer223udkmzx/video-a17ce750-dba1-488d-8e91-b73f3de31d5b.mp4" },
-  { id: 5, title: "Phase5 Final PPV Bundle", description: "Surgical proof test", content_type: "video", thumbnail_url: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", censored_thumbnail_url: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", is_ppv: true, ppv_price: 18.5, is_free_preview: false, free_preview_seconds: 15, access_tier: "ppv", view_count: 1, created_at: "2026-05-06T22:59:16.000Z", hasAccess: false, locked: true, uncensored_url: "https://creatorvault.live/uploads/ppv_1778107488797/full_video.mp4" },
-  { id: 3, title: "Creator Lifestyle Vlog", description: "A day in my life as a body-positive creator.", content_type: "video", thumbnail_url: "https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?w=400", censored_thumbnail_url: null, is_ppv: false, ppv_price: 0, is_free_preview: true, free_preview_seconds: 15, access_tier: "basic", view_count: 3422, created_at: "2026-05-06T19:29:44.000Z", hasAccess: true, locked: false, uncensored_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" },
-];
-
-const VERIFIED_DISCOVER_CREATORS: Creator[] = [
-  { id: 1, display_name: "KingCam", bio: "CreatorVault Founder - Building the dopest creator platform", profile_image_url: "https://via.placeholder.com/150", cover_image_url: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", subscription_price_basic: 9.99, subscription_price_premium: 29.99, subscription_price_vip: 99, total_subscribers: 50000, language_primary: "en", username: "telegram_7806541061_c4ca", latest_censored_thumb: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", latest_video_url: "https://creatorvault.live/uploads/ppv_1778107488797/full_video.mp4", latest_content_title: "Phase5 Final PPV Bundle", latest_like_count: 23, latest_view_count: 3422 },
-  { id: 2, display_name: "VideoMaster", bio: "Professional video editor and cinematographer", profile_image_url: "https://via.placeholder.com/150", cover_image_url: null, subscription_price_basic: 9.99, subscription_price_premium: 29.99, subscription_price_vip: 99, total_subscribers: 25000, language_primary: "en", username: "manualtest_c81e", latest_censored_thumb: "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg", latest_video_url: null, latest_content_title: "Command Hub Test Product", latest_like_count: 0, latest_view_count: 1 },
-];
-
 // ─── Tier badge ───────────────────────────────────────────────────────────────
 function TierBadge({ tier }: { tier: string }) {
   const map: Record<string, { label: string; color: string; bg: string }> = {
@@ -416,9 +404,7 @@ export default function VaultXFanLibrary() {
   // ── Subscriptions list for feed selector ─────────────────────────────────
   const subs: Subscription[] = (subsQ.data?.subscriptions as Subscription[]) || [];
   const feedItems: FeedItem[] = (feedQ.data?.items as FeedItem[]) || [];
-  const displayedFeedItems: FeedItem[] = feedItems.length > 0 ? feedItems : (feedCreatorId !== null ? VERIFIED_VAULTX_CONTENT : []);
   const discoverCreators: Creator[] = (discoverQ.data?.creators as Creator[]) || [];
-  const displayedDiscoverCreators: Creator[] = discoverCreators.length > 0 ? discoverCreators : VERIFIED_DISCOVER_CREATORS;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -492,18 +478,15 @@ export default function VaultXFanLibrary() {
 
             {/* No subscriptions */}
             {subs.length === 0 && !subsQ.isLoading && (
-              <div className="flex flex-col gap-4 py-4">
-                <div className="flex flex-col items-center gap-3 py-8"><Crown size={40} style={{ color: "#7C3AED", opacity: 0.5 }} />
+              <div className="flex flex-col items-center gap-3 py-16">
+                <Crown size={40} style={{ color: "#7C3AED", opacity: 0.5 }} />
                 <p className="text-white font-black text-lg">No subscriptions yet</p>
-                <p className="text-sm text-center" style={{ color: "#6B7280" }}>Showing verified VaultX production drops below so the library is not empty while subscription state is clean.</p>
+                <p className="text-sm text-center" style={{ color: "#6B7280" }}>Discover creators and subscribe to see their content here.</p>
                 <button onClick={() => setActiveTab("discover")}
                   className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm"
                   style={{ background: "linear-gradient(135deg,#7C3AED,#A855F7)", color: "#fff" }}>
                   <Search size={14} /> Discover Creators
-                </button></div>
-                <div className={viewMode === "grid" ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}>
-                  {VERIFIED_VAULTX_CONTENT.map(item => <ContentCard key={item.id} item={item} onUnlock={handleUnlock} unlocking={unlocking} />)}
-                </div>
+                </button>
               </div>
             )}
 
@@ -523,12 +506,12 @@ export default function VaultXFanLibrary() {
             )}
 
             {/* Content grid */}
-            {feedCreatorId !== null && !feedQ.isLoading && displayedFeedItems.length > 0 && (
+            {feedCreatorId !== null && !feedQ.isLoading && feedItems.length > 0 && (
               <>
                 <div className={viewMode === "grid"
                   ? "grid grid-cols-2 gap-3"
                   : "flex flex-col gap-3"}>
-                  {displayedFeedItems.map(item => (
+                  {feedItems.map(item => (
                     <ContentCard
                       key={item.id}
                       item={item}
@@ -558,7 +541,7 @@ export default function VaultXFanLibrary() {
             )}
 
             {/* Empty feed */}
-            {false && feedCreatorId !== null && !feedQ.isLoading && feedItems.length === 0 && (
+            {feedCreatorId !== null && !feedQ.isLoading && feedItems.length === 0 && (
               <div className="flex flex-col items-center gap-3 py-12">
                 <AlertCircle size={32} style={{ color: "#6B7280" }} />
                 <p className="text-white font-bold">No content yet</p>
@@ -650,16 +633,16 @@ export default function VaultXFanLibrary() {
               </div>
             )}
 
-            {false && !discoverQ.isLoading && discoverCreators.length === 0 && (
+            {!discoverQ.isLoading && discoverCreators.length === 0 && (
               <div className="flex flex-col items-center gap-3 py-16">
                 <Search size={36} style={{ color: "#6B7280" }} />
                 <p className="text-white font-bold">No creators found</p>
               </div>
             )}
 
-            {displayedDiscoverCreators.length > 0 && (
+            {discoverCreators.length > 0 && (
               <div className="grid grid-cols-2 gap-3">
-                {displayedDiscoverCreators.map(creator => (
+                {discoverCreators.map(creator => (
                   <DiscoverCard
                     key={creator.id}
                     creator={creator}
