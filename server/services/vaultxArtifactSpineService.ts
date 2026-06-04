@@ -396,7 +396,7 @@ export async function syncProjectArtifactReadiness(creatorId: number, projectId:
   await ensureVaultxArtifactSchema();
   const artifacts = await listVaultxProjectArtifacts(creatorId, projectId);
   const exportReady = artifacts.find((item) => item.status === "ready" && item.kind === "export");
-  const mediaReady = artifacts.find((item) => item.status === "ready" && ["video", "photo", "audio"].includes(item.kind));
+  const mediaReady = artifacts.find((item) => item.status === "ready" && ["video", "photo", "audio", "source"].includes(item.kind));
   const hasFailed = artifacts.some((item) => item.status === "failed");
   const hasProcessing = artifacts.some((item) => item.status === "queued" || item.status === "processing");
   const state: ReadinessState = explicitState || (exportReady ? "export_ready" : mediaReady ? "ready_for_export" : hasFailed && !hasProcessing ? "failed" : hasProcessing ? "processing" : "needs_source");
