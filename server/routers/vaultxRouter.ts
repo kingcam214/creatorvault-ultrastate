@@ -23,6 +23,24 @@ import { buildPpvBundle, createTipUnlockContent, suggestContentPrice, getPpvProg
 import { generateRecutSuggestions, generateAbThumbnails, analyzeHookStrength } from "../services/analyticsEditingService";
 import { qualityGate } from "../services/qualityGate";
 import { createAIDrop, sendDropToChannel } from "../services/telegramCampaign";
+import {
+  assertReadyVaultxPackageArtifact,
+  assertReadyVaultxProjectArtifact,
+  createVaultxArtifact,
+  ensureVaultxArtifactSchema,
+  failProjectReadiness,
+  getLatestReadyProjectArtifact,
+  listVaultxPackageArtifacts,
+  listVaultxProjectArtifacts,
+  persistLocalReadyVaultxArtifact,
+  persistReadyVaultxArtifact,
+  pollAndPersistProviderArtifact,
+  publicArtifactPayload,
+  recordVaultxArtifactEvent,
+  syncProjectArtifactReadiness,
+  updateVaultxArtifactStatus,
+  VaultxArtifactNotReadyError,
+} from "../services/vaultxArtifactSpineService";
 
 const OWNER_IDS = [6, 33];
 const PLATFORM_FEE = 0.15;
@@ -209,6 +227,37 @@ function runFFmpeg(args: string[]): Promise<void> {
 
 function publicUploadUrl(...parts: string[]): string {
   return `/uploads/${parts.map((part) => encodeURIComponent(part)).join("/")}`;
+}
+
+function mimeForOutputPath(filePathOrUrl: string, fallback = "video/mp4"): string {
+  const clean = filePathOrUrl.split("?")[0].toLowerCase();
+  if (clean.endsWith(".jpg") || clean.endsWith(".jpeg")) return "image/jpeg";
+  if (clean.endsWith(".png")) return "image/png";
+  if (clean.endsWith(".webp")) return "image/webp";
+  if (clean.endsWith(".gif")) return "image/gif";
+  if (clean.endsWith(".mp3")) return "audio/mpeg";
+  if (clean.endsWith(".wav")) return "audio/wav";
+  if (clean.endsWith(".mov")) return "video/quicktime";
+  if (clean.endsWith(".mp4")) return "video/mp4";
+  return fallback;
+}
+
+function readinessGateError(error: any): TRPCError {
+  if (error instanceof VaultxArtifactNotReadyError) {
+    return new TRPCError({ code: "PRECONDITION_FAILED", message: error.message, cause: error.details });
+  }
+  return error;
+}
+
+function safeParseArray(value: any): any[] {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(String(value));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 function safeFileStem(value: string): string {
@@ -1397,13 +1446,24 @@ export const vaultxRouter = router({
       const reusable = reusableAssets[0];
       if (reusable?.videoUrl) {
         qualityGate.checkVisual(reusable.videoUrl, { prompt, publicPost: true });
+        const artifact = await persistReadyVaultxArtifact({
+          creatorId: Number(pkg.creator_id),
+          packageId: input.packageId,
+          kind: "package",
+          stage: "package_asset_reuse",
+          provider: "pollo",
+          providerJobId: reusable.taskId,
+          sourceUrl: sourceMediaUrl,
+          finalUrl: reusable.videoUrl,
+          metadata: { prompt, resolution: input.resolution, length: input.length, mode: input.mode, reusedExistingPolloAsset: true },
+        });
         await rawExec(
           `UPDATE vaultx_revenue_packages
            SET source_media_url = ?, asset_prompt = ?, pollo_job_id = ?, asset_status = 'succeed', asset_url = ?, asset_quality_passed = 1, status = 'asset_ready'
            WHERE id = ?`,
-          [sourceMediaUrl, prompt, reusable.taskId, reusable.videoUrl, input.packageId]
+          [sourceMediaUrl, prompt, reusable.taskId, artifact.output_url || reusable.videoUrl, input.packageId]
         );
-        return { jobId: reusable.taskId, status: "succeed", videoUrl: reusable.videoUrl, reusedExistingPolloAsset: true, packageId: input.packageId, success: true };
+        return { jobId: reusable.taskId, status: "succeed", videoUrl: artifact.output_url || reusable.videoUrl, artifact: publicArtifactPayload(artifact), reusedExistingPolloAsset: true, packageId: input.packageId, success: true };
       }
 
       const generationController = new AbortController();
@@ -1437,13 +1497,24 @@ export const vaultxRouter = router({
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [ctx.user.id, taskId, sourceMediaUrl, prompt, input.resolution, input.length, input.mode, status]
       );
+      const artifact = await createVaultxArtifact({
+        creatorId: Number(pkg.creator_id),
+        packageId: input.packageId,
+        kind: "package",
+        stage: "package_asset_generation",
+        provider: "pollo",
+        providerJobId: taskId,
+        sourceUrl: sourceMediaUrl,
+        status: status === "succeed" ? "processing" : status === "failed" ? "failed" : "queued",
+        metadata: { prompt, resolution: input.resolution, length: input.length, mode: input.mode, polloResponse: data },
+      });
       await rawExec(
         `UPDATE vaultx_revenue_packages
          SET source_media_url = ?, asset_prompt = ?, pollo_job_id = ?, asset_status = ?, status = 'asset_generating'
          WHERE id = ?`,
         [sourceMediaUrl, prompt, taskId, status, input.packageId]
       );
-      return { jobId: taskId, status, packageId: input.packageId, success: true };
+      return { jobId: taskId, status, packageId: input.packageId, artifact: publicArtifactPayload(artifact), success: true };
     }),
 
   getPackageAssetStatus: protectedProcedure
@@ -1451,7 +1522,21 @@ export const vaultxRouter = router({
     .query(async ({ ctx, input }) => {
       const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
       const jobId = input.jobId || pkg.pollo_job_id;
-      if (!jobId) return { status: pkg.asset_status || "waiting", videoUrl: pkg.asset_url || null, qualityPassed: Boolean(pkg.asset_quality_passed) };
+      if (!jobId) {
+        const artifacts = await listVaultxPackageArtifacts(Number(pkg.creator_id), input.packageId);
+        return { status: pkg.asset_status || "waiting", videoUrl: pkg.asset_url || null, qualityPassed: Boolean(pkg.asset_quality_passed), artifacts: artifacts.map(publicArtifactPayload) };
+      }
+      const packageArtifacts = await listVaultxPackageArtifacts(Number(pkg.creator_id), input.packageId);
+      const pendingArtifact = packageArtifacts.find((item) => item.provider === "pollo" && item.provider_job_id === jobId && item.status !== "ready" && item.status !== "failed");
+      let readyArtifact = packageArtifacts.find((item) => item.provider === "pollo" && item.provider_job_id === jobId && item.status === "ready");
+      if (pendingArtifact) {
+        try {
+          const polledArtifact = await pollAndPersistProviderArtifact({ artifactId: Number(pendingArtifact.id), creatorId: Number(pkg.creator_id), packageId: input.packageId, kind: "package", stage: "package_asset_generation", provider: "pollo" });
+          if (polledArtifact.status === "ready") readyArtifact = polledArtifact;
+        } catch (err: any) {
+          await updateVaultxArtifactStatus(Number(pendingArtifact.id), { creatorId: Number(pkg.creator_id), status: "failed", failureReason: err.message, metadata: { pollError: true } }).catch(() => undefined);
+        }
+      }
       let rows = await rawQuery("SELECT * FROM pollo_generations WHERE taskId = ? ORDER BY id DESC LIMIT 1", [jobId]);
       let row = rows[0];
       if (POLLO_API_KEY && (!row || !["succeed", "failed"].includes(String(row.status)))) {
@@ -1471,21 +1556,38 @@ export const vaultxRouter = router({
           if (videoUrl) {
             qualityGate.checkVisual(videoUrl, { prompt: pkg.asset_prompt || buildVaultxPackagePolloPrompt(pkg), publicPost: true });
           }
+          if (videoUrl && !readyArtifact) {
+            readyArtifact = await persistReadyVaultxArtifact({
+              creatorId: Number(pkg.creator_id),
+              packageId: input.packageId,
+              kind: "package",
+              stage: "package_asset_generation",
+              provider: "pollo",
+              providerJobId: jobId,
+              sourceUrl: pkg.source_media_url,
+              finalUrl: videoUrl,
+              metadata: { prompt: pkg.asset_prompt || buildVaultxPackagePolloPrompt(pkg), polloStatusResponse: data },
+            });
+          }
           await rawExec(
             `UPDATE vaultx_revenue_packages
              SET asset_status = ?, asset_url = COALESCE(?, asset_url), asset_quality_passed = CASE WHEN ? IS NULL THEN asset_quality_passed ELSE 1 END, status = CASE WHEN ? IS NULL THEN status ELSE 'asset_ready' END
              WHERE id = ?`,
-            [status, videoUrl, videoUrl, videoUrl, input.packageId]
+            [status, readyArtifact?.output_url || videoUrl, readyArtifact?.output_url || videoUrl, readyArtifact?.output_url || videoUrl, input.packageId]
           );
         }
         rows = await rawQuery("SELECT * FROM pollo_generations WHERE taskId = ? ORDER BY id DESC LIMIT 1", [jobId]);
         row = rows[0];
       }
+      const refreshedArtifacts = await listVaultxPackageArtifacts(Number(pkg.creator_id), input.packageId);
+      readyArtifact = refreshedArtifacts.find((item) => item.provider === "pollo" && item.provider_job_id === jobId && item.status === "ready") || readyArtifact;
       return {
         jobId,
-        status: row?.status || pkg.asset_status || "waiting",
-        videoUrl: row?.videoUrl || pkg.asset_url || null,
-        qualityPassed: Boolean(pkg.asset_quality_passed || row?.videoUrl),
+        status: readyArtifact ? "succeed" : row?.status || pkg.asset_status || "waiting",
+        videoUrl: readyArtifact?.output_url || row?.videoUrl || pkg.asset_url || null,
+        artifact: publicArtifactPayload(readyArtifact),
+        artifacts: refreshedArtifacts.map(publicArtifactPayload),
+        qualityPassed: Boolean(pkg.asset_quality_passed || readyArtifact || row?.videoUrl),
       };
     }),
 
@@ -1493,6 +1595,12 @@ export const vaultxRouter = router({
     .input(z.object({ packageId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
+      let readyArtifact;
+      try {
+        readyArtifact = await assertReadyVaultxPackageArtifact(Number(pkg.creator_id), input.packageId);
+      } catch (err: any) {
+        throw readinessGateError(err);
+      }
       if (!stripe) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe checkout is not configured for VaultX package unlocks." });
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
@@ -1511,6 +1619,7 @@ export const vaultxRouter = router({
           creatorId: String(pkg.creator_id),
           platformFeePercent: "15",
           creatorKeepPercent: "85",
+          vaultxArtifactId: String(readyArtifact.id),
         },
       });
       await rawExec(
@@ -1519,13 +1628,20 @@ export const vaultxRouter = router({
          WHERE id = ?`,
         [session.url, session.id, input.packageId]
       );
-      return { checkoutUrl: session.url, checkoutSessionId: session.id, success: true };
+      await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId: Number(pkg.creator_id), packageId: input.packageId, eventType: "checkout.attached", status: "ready", payload: { checkoutSessionId: session.id, checkoutUrl: session.url } });
+      return { checkoutUrl: session.url, checkoutSessionId: session.id, artifact: publicArtifactPayload(readyArtifact), success: true };
     }),
 
   publishPackageTelegramRoute: protectedProcedure
     .input(z.object({ packageId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
+      let readyArtifact;
+      try {
+        readyArtifact = await assertReadyVaultxPackageArtifact(Number(pkg.creator_id), input.packageId);
+      } catch (err: any) {
+        throw readinessGateError(err);
+      }
       if (!pkg.checkout_url) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Attach a real checkout before publishing a VaultX Telegram route." });
       const publicCopy = qualityGate.check(pkg.public_teaser_copy || buildVaultxPackagePublicCopy({
         title: pkg.title,
@@ -1549,7 +1665,7 @@ export const vaultxRouter = router({
           `INSERT INTO vaultx_content
            (creator_id, title, description, content_type, thumbnail_url, censored_url, uncensored_url, is_ppv, ppv_price, status, access_tier)
            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 'active', 'basic')`,
-          [pkg.creator_id, pkg.title, publicCopy, pkg.content_type, pkg.source_media_url || pkg.asset_url || null, pkg.asset_url || pkg.source_media_url || null, pkg.asset_url || pkg.source_media_url || null, Number(pkg.price_cents) / 100]
+          [pkg.creator_id, pkg.title, publicCopy, pkg.content_type, pkg.source_media_url || readyArtifact.output_url || null, readyArtifact.output_url, readyArtifact.output_url, Number(pkg.price_cents) / 100]
         );
         contentId = (contentResult as any).insertId;
         await rawExec("UPDATE vaultx_revenue_packages SET vaultx_content_id = ? WHERE id = ?", [contentId, pkg.id]);
@@ -1567,6 +1683,7 @@ export const vaultxRouter = router({
          WHERE id = ?`,
         [campaign.campaignId, campaign.trackingCode, pkg.id]
       );
+      await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId: Number(pkg.creator_id), packageId: pkg.id, eventType: "telegram.route_created", status: "ready", payload: { campaignId: campaign.campaignId, trackingCode: campaign.trackingCode } });
       const sent = await sendDropToChannel(campaign.campaignId);
       await rawExec(
         `UPDATE vaultx_revenue_packages
@@ -1575,7 +1692,8 @@ export const vaultxRouter = router({
         [sent.success ? "telegram_published" : "telegram_failed", pkg.id]
       );
       if (!sent.success) throw new TRPCError({ code: "BAD_GATEWAY", message: sent.error || "Telegram publish failed." });
-      return { campaignId: campaign.campaignId, trackingCode: campaign.trackingCode, trackedUrl: sent.trackedUrl, success: true };
+      await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId: Number(pkg.creator_id), packageId: pkg.id, eventType: "telegram.published", status: "ready", payload: { campaignId: campaign.campaignId, trackedUrl: sent.trackedUrl } });
+      return { campaignId: campaign.campaignId, trackingCode: campaign.trackingCode, trackedUrl: sent.trackedUrl, artifact: publicArtifactPayload(readyArtifact), success: true };
     }),
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1607,12 +1725,58 @@ export const vaultxRouter = router({
   }),
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // PROCEDURE 29 — purchasePpv
+  // PROCEDURE 29 — createPpvCheckout / purchasePpv
   // ═══════════════════════════════════════════════════════════════════════════
+  createPpvCheckout: protectedProcedure
+    .input(z.object({
+      contentId: z.number().int().positive(),
+      buyerTelegramId: z.number().optional(),
+      trackingCode: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const content = await rawQuery("SELECT * FROM vaultx_content WHERE id = ? AND is_ppv = 1 LIMIT 1", [input.contentId]);
+      if (!content.length) throw new TRPCError({ code: "NOT_FOUND", message: "PPV content not found." });
+      const existing = await rawQuery(
+        "SELECT id FROM vaultx_ppv_purchases WHERE fan_id = ? AND content_id = ? AND status = 'completed' LIMIT 1",
+        [ctx.user.id, input.contentId]
+      );
+      if (existing.length) return { success: true, alreadyPurchased: true, checkoutUrl: null, checkoutSessionId: null };
+      if (!stripe) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe checkout is not configured for VaultX PPV unlocks." });
+
+      const priceCents = Math.round(Number(content[0].ppv_price || 0) * 100);
+      if (priceCents <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: "PPV content has no valid unlock price." });
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: [{
+          price_data: {
+            currency: "usd",
+            product_data: { name: `VaultX PPV Unlock: ${content[0].title || `Content ${input.contentId}`}` },
+            unit_amount: priceCents,
+          },
+          quantity: 1,
+        }],
+        success_url: `${FRONTEND_BASE_URL}/vaultx?content=${input.contentId}&checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${FRONTEND_BASE_URL}/vaultx?content=${input.contentId}&checkout=cancelled`,
+        metadata: {
+          type: "vaultx_ppv",
+          vaultxContentId: String(input.contentId),
+          creatorId: String(content[0].creator_id),
+          fanId: String(ctx.user.id),
+          trackingCode: input.trackingCode || "",
+          buyerTelegramId: input.buyerTelegramId ? String(input.buyerTelegramId) : "",
+          platformFeeBps: "1500",
+          creatorKeepBps: "8500",
+        },
+      });
+
+      return { success: true, alreadyPurchased: false, checkoutUrl: session.url, checkoutSessionId: session.id };
+    }),
+
   purchasePpv: protectedProcedure
     .input(z.object({
       contentId: z.number(),
-      paymentIntentId: z.string().optional(),
+      paymentIntentId: z.string().min(1, "A completed Stripe payment intent is required."),
       buyerTelegramId: z.number().optional(),
       trackingCode: z.string().optional(),
     }))
@@ -1624,17 +1788,60 @@ export const vaultxRouter = router({
         [ctx.user.id, input.contentId]
       );
       if (existing.length) return { success: true, alreadyPurchased: true };
+      if (!stripe) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe is not configured; PPV purchases cannot be completed safely." });
+      }
+      const paymentIntent = await stripe.paymentIntents.retrieve(input.paymentIntentId);
+      if (paymentIntent.status !== "succeeded") {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: `Payment has not succeeded. Current status: ${paymentIntent.status}` });
+      }
+      const expectedCents = Math.round(Number(content[0].ppv_price) * 100);
+      if ((paymentIntent.amount_received || 0) < expectedCents) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Stripe payment amount is lower than the PPV unlock price." });
+      }
+      const duplicatePayment = await rawQuery(
+        "SELECT id FROM vaultx_ppv_purchases WHERE stripe_payment_intent_id = ? AND status = 'completed' LIMIT 1",
+        [input.paymentIntentId]
+      );
+      if (duplicatePayment.length) {
+        throw new TRPCError({ code: "CONFLICT", message: "This Stripe payment intent has already been used for a completed VaultX purchase." });
+      }
       const result = await rawExec(
         `INSERT INTO vaultx_ppv_purchases
          (fan_id, creator_id, content_id, amount_paid, stripe_payment_intent_id, status)
          VALUES (?, ?, ?, ?, ?, 'completed')`,
-        [ctx.user.id, content[0].creator_id, input.contentId, content[0].ppv_price, input.paymentIntentId || null]
+        [ctx.user.id, content[0].creator_id, input.contentId, content[0].ppv_price, input.paymentIntentId]
       );
       await rawExec(
         "UPDATE vaultx_content SET purchase_count = purchase_count + 1, revenue_generated = revenue_generated + ? WHERE id = ?",
         [content[0].ppv_price, input.contentId]
       );
       const purchaseId = (result as any).insertId;
+      const platformFeeCents = Math.round(expectedCents * PLATFORM_FEE);
+      const creatorShareCents = Math.max(0, expectedCents - platformFeeCents);
+      await rawExec(
+        "UPDATE vaultx_ppv_purchases SET platform_fee_cents = ?, creator_revenue_cents = ? WHERE id = ?",
+        [platformFeeCents, creatorShareCents, purchaseId]
+      );
+      await rawExec(
+        "UPDATE vaultx_creators SET total_revenue = total_revenue + ? WHERE id = ?",
+        [creatorShareCents / 100, content[0].creator_id]
+      );
+      await rawExec(
+        `INSERT INTO transactions
+         (fan_id, creator_id, amount_in_cents, creator_share_in_cents, platform_share_in_cents, stripe_payment_intent_id, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'completed')`,
+        [ctx.user.id, content[0].creator_id, expectedCents, creatorShareCents, platformFeeCents, input.paymentIntentId]
+      );
+      await rawExec(
+        `INSERT INTO creator_balances (creator_id, available_balance_in_cents, pending_balance_in_cents, lifetime_earnings_in_cents)
+         VALUES (?, ?, 0, ?)
+         ON DUPLICATE KEY UPDATE
+           available_balance_in_cents = available_balance_in_cents + VALUES(available_balance_in_cents),
+           lifetime_earnings_in_cents = lifetime_earnings_in_cents + VALUES(lifetime_earnings_in_cents),
+           updated_at = NOW()`,
+        [content[0].creator_id, creatorShareCents, creatorShareCents]
+      );
 
       // ── Post-purchase: attribution + VIP upsell (non-blocking) ──────────────
       setImmediate(async () => {
@@ -1957,13 +2164,28 @@ export const vaultxRouter = router({
     .mutation(async ({ ctx, input }) => {
       const creatorId = await getCreatorId(ctx.user.id);
       const cid = creatorId || ctx.user.id;
+      await ensureVaultxArtifactSchema();
       const result = await rawExec(
         `INSERT INTO vaultx_editor_projects
          (creator_id, project_name, project_type, source_files, status)
          VALUES (?, ?, ?, ?, 'draft')`,
         [cid, input.projectName, input.projectType, JSON.stringify(input.sourceFiles || [])]
       );
-      return { projectId: (result as any).insertId, success: true };
+      const projectId = Number((result as any).insertId);
+      for (const sourceUrl of input.sourceFiles || []) {
+        await createVaultxArtifact({
+          creatorId: cid,
+          projectId,
+          kind: input.projectType === "audio" ? "audio" : input.projectType === "photo_set" ? "photo" : "source",
+          stage: "creator_upload",
+          sourceUrl,
+          outputUrl: sourceUrl,
+          status: "ready",
+          metadata: { projectType: input.projectType, uploadedAt: new Date().toISOString() },
+        });
+      }
+      await syncProjectArtifactReadiness(cid, projectId, (input.sourceFiles || []).length ? "ready_for_export" : "needs_source");
+      return { projectId, success: true };
     }),
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2003,7 +2225,36 @@ export const vaultxRouter = router({
         "SELECT * FROM vaultx_editor_exports WHERE project_id = ? ORDER BY created_at DESC",
         [input.projectId]
       );
-      return { project: rows[0], exports };
+      const readiness = await syncProjectArtifactReadiness(cid, input.projectId);
+      return { project: { ...rows[0], artifact_manifest: readiness.artifacts }, exports, artifacts: readiness.artifacts.map(publicArtifactPayload), readinessState: readiness.state, readyArtifactId: readiness.readyArtifactId };
+    }),
+
+  getEditorProjectArtifactStatus: protectedProcedure
+    .input(z.object({ projectId: z.number(), artifactId: z.number().optional() }))
+    .query(async ({ ctx, input }) => {
+      const creatorId = await getCreatorId(ctx.user.id);
+      const cid = creatorId || ctx.user.id;
+      const rows = await rawQuery("SELECT id FROM vaultx_editor_projects WHERE id = ? AND creator_id = ? LIMIT 1", [input.projectId, cid]);
+      if (!rows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found." });
+      let artifacts = await listVaultxProjectArtifacts(cid, input.projectId);
+      const pending = artifacts.filter((item) => (!input.artifactId || Number(item.id) === input.artifactId) && item.provider_job_id && item.status !== "ready" && item.status !== "failed" && (item.provider === "replicate" || item.provider === "pollo"));
+      for (const item of pending) {
+        try {
+          await pollAndPersistProviderArtifact({
+            artifactId: Number(item.id),
+            creatorId: cid,
+            projectId: input.projectId,
+            kind: item.kind as any,
+            stage: item.stage,
+            provider: item.provider as any,
+          });
+        } catch (err: any) {
+          await updateVaultxArtifactStatus(Number(item.id), { creatorId: cid, status: "failed", failureReason: err.message, metadata: { pollError: true } }).catch(() => undefined);
+        }
+      }
+      const readiness = await syncProjectArtifactReadiness(cid, input.projectId);
+      artifacts = readiness.artifacts;
+      return { projectId: input.projectId, status: readiness.state, readyArtifactId: readiness.readyArtifactId, artifacts: artifacts.map(publicArtifactPayload) };
     }),
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2178,14 +2429,25 @@ export const vaultxRouter = router({
           if (tmp !== outPath && fs.existsSync(tmp)) fs.unlinkSync(tmp);
         }
         const outputUrl = `/uploads/vaultx/${cid}/${outName}`;
+        const artifact = await persistLocalReadyVaultxArtifact({
+          creatorId: cid,
+          projectId: input.projectId,
+          kind: "video",
+          stage: "editor_processing",
+          sourceUrl: sourceFiles[0],
+          localPath: outPath,
+          mimeType: "video/mp4",
+          metadata: { operations: input.operations, localPublicUrl: outputUrl },
+        });
         const elapsed = Math.round((Date.now() - startTime) / 1000);
         await rawExec(
-          "UPDATE vaultx_editor_projects SET output_url = ?, status = 'completed', updated_at = NOW() WHERE id = ?",
-          [outputUrl, input.projectId]
+          "UPDATE vaultx_editor_projects SET output_url = ?, status = 'completed', ready_artifact_id = ?, updated_at = NOW() WHERE id = ?",
+          [artifact.output_url || outputUrl, artifact.id, input.projectId]
         );
-        return { outputUrl, processingTimeSeconds: elapsed, success: true };
+        return { outputUrl: artifact.output_url || outputUrl, artifact: publicArtifactPayload(artifact), processingTimeSeconds: elapsed, success: true };
       } catch (err: any) {
         await rawExec("UPDATE vaultx_editor_projects SET status = 'failed' WHERE id = ?", [input.projectId]);
+        await failProjectReadiness(cid, input.projectId, `Processing failed: ${err.message}`, { operations: input.operations }).catch(() => undefined);
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Processing failed: ${err.message}` });
       }
     }),
@@ -2204,12 +2466,17 @@ export const vaultxRouter = router({
       const cid = creatorId || ctx.user.id;
       const proj = await rawQuery("SELECT * FROM vaultx_editor_projects WHERE id = ? AND creator_id = ? LIMIT 1", [input.projectId, cid]);
       if (!proj.length) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found." });
-      if (!proj[0].output_url) throw new TRPCError({ code: "BAD_REQUEST", message: "Process the project first before exporting." });
+      let readySource;
+      try {
+        readySource = await assertReadyVaultxProjectArtifact(cid, input.projectId, ["video", "photo", "source"] as any);
+      } catch (err: any) {
+        throw readinessGateError(err);
+      }
       const dir = await ensureUploadDir(cid);
       const ext = input.exportFormat === "mp3" ? "mp3" : input.exportFormat === "gif" ? "gif" : "mp4";
       const outName = `export-${input.exportPreset}-${randomUUID()}.${ext}`;
       const outPath = path.join(dir, outName);
-      const sourceUrl = `/root/creatorvault/dist/public${proj[0].output_url}`;
+      const sourceUrl = normalizeLocalUploadPath(String(readySource.output_url || "")) || String(readySource.output_url || "");
       const startTime = Date.now();
       const exportResult = await rawExec(
         `INSERT INTO vaultx_editor_exports
@@ -2233,14 +2500,28 @@ export const vaultxRouter = router({
         await runFFmpeg(["-i", sourceUrl, ...args, outPath]);
         const stat = fs.statSync(outPath);
         const elapsed = Math.round((Date.now() - startTime) / 1000);
-        const outputUrl = `/uploads/vaultx/${cid}/${outName}`;
+        const localOutputUrl = `/uploads/vaultx/${cid}/${outName}`;
+        const artifact = await persistLocalReadyVaultxArtifact({
+          creatorId: cid,
+          projectId: input.projectId,
+          kind: "export",
+          stage: `export_${input.exportPreset}`,
+          sourceUrl: readySource.output_url,
+          localPath: outPath,
+          mimeType: mimeForOutputPath(outPath, input.exportFormat === "mp3" ? "audio/mpeg" : input.exportFormat === "gif" ? "image/gif" : "video/mp4"),
+          metadata: { exportId, exportFormat: input.exportFormat, exportPreset: input.exportPreset, localPublicUrl: localOutputUrl, sourceArtifactId: readySource.id },
+        });
+        const outputUrl = artifact.output_url || localOutputUrl;
         await rawExec(
           "UPDATE vaultx_editor_exports SET output_url = ?, file_size_bytes = ?, processing_time_seconds = ?, status = 'completed' WHERE id = ?",
           [outputUrl, stat.size, elapsed, exportId]
         );
-        return { outputUrl, fileSizeBytes: stat.size, processingTimeSeconds: elapsed, success: true };
+        await rawExec("UPDATE vaultx_editor_projects SET output_url = ?, export_artifact_id = ?, status = 'export_ready', updated_at = NOW() WHERE id = ? AND creator_id = ?", [outputUrl, artifact.id, input.projectId, cid]);
+        await recordVaultxArtifactEvent({ artifactId: artifact.id, creatorId: cid, projectId: input.projectId, eventType: "export.completed", status: "ready", payload: { exportId, exportFormat: input.exportFormat, exportPreset: input.exportPreset } });
+        return { outputUrl, artifact: publicArtifactPayload(artifact), fileSizeBytes: stat.size, processingTimeSeconds: elapsed, success: true };
       } catch (err: any) {
         await rawExec("UPDATE vaultx_editor_exports SET status = 'failed', error_message = ? WHERE id = ?", [err.message, exportId]);
+        await failProjectReadiness(cid, input.projectId, `Export failed: ${err.message}`, { exportId, exportFormat: input.exportFormat, exportPreset: input.exportPreset }).catch(() => undefined);
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Export failed: ${err.message}` });
       }
     }),
@@ -3309,6 +3590,10 @@ Return JSON:
       skinTone: z.enum(["fair", "medium", "olive", "deep", "ebony"]).default("medium"),
     }))
     .mutation(async ({ ctx, input }) => {
+      const creatorId = await getCreatorId(ctx.user.id);
+      const cid = creatorId || ctx.user.id;
+      const projectRows = await rawQuery("SELECT id FROM vaultx_editor_projects WHERE id = ? AND creator_id = ? LIMIT 1", [input.projectId, cid]);
+      if (!projectRows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found." });
       const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN || "";
       if (!REPLICATE_TOKEN) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "REPLICATE_API_TOKEN not configured" });
 
@@ -3317,7 +3602,7 @@ Return JSON:
 
       const enginesUsed: string[] = [];
       const processingLog: any[] = [];
-      const enhancedUrls: { variation: string; url: string; label: string; qualityScore: number }[] = [];
+      const enhancedUrls: { variation: string; url: string | null; label: string; qualityScore: number; artifactId?: number; providerJobId?: string; status?: string }[] = [];
 
       // Intensity → strength mapping
       const strengthMap: Record<string, number> = { subtle: 0.2, natural: 0.35, enhanced: 0.5, cinematic: 0.65 };
@@ -3394,12 +3679,25 @@ Return JSON:
         enginesUsed.push("stability-ai/sdxl");
         processingLog.push({ phase: "B", model: "stability-ai/sdxl", predictionId: sdxlPred.id, status: "queued" });
 
-        // Variation 1 — Natural (subtle)
+        const artifact = await createVaultxArtifact({
+          creatorId: cid,
+          projectId: input.projectId,
+          kind: "photo",
+          stage: "photo_enhance_natural",
+          provider: "replicate",
+          providerJobId: sdxlPred.id,
+          sourceUrl: workingUrl,
+          status: sdxlPred.id ? "queued" : "failed",
+          metadata: { variation: "natural", label: "NATURAL", qualityScore: 7, model: "stability-ai/sdxl", replicatePrediction: sdxlPred },
+        });
         enhancedUrls.push({
           variation: "natural",
-          url: sdxlPred.id ? `https://api.replicate.com/v1/predictions/${sdxlPred.id}` : workingUrl,
+          url: null,
           label: "NATURAL",
           qualityScore: 7,
+          artifactId: artifact.id,
+          providerJobId: sdxlPred.id,
+          status: artifact.status,
         });
       } catch (e: any) {
         processingLog.push({ phase: "B", status: "failed", error: e.message });
@@ -3420,12 +3718,25 @@ Return JSON:
         enginesUsed.push("cjwbw/real-esrgan");
         processingLog.push({ phase: "C", model: "cjwbw/real-esrgan", predictionId: upscalePred.id, status: "queued" });
 
-        // Variation 2 — Enhanced (upscaled)
+        const artifact = await createVaultxArtifact({
+          creatorId: cid,
+          projectId: input.projectId,
+          kind: "photo",
+          stage: "photo_upscale_enhanced",
+          provider: "replicate",
+          providerJobId: upscalePred.id,
+          sourceUrl: workingUrl,
+          status: upscalePred.id ? "queued" : "failed",
+          metadata: { variation: "enhanced", label: "ENHANCED", qualityScore: 9, model: "cjwbw/real-esrgan", replicatePrediction: upscalePred },
+        });
         enhancedUrls.push({
           variation: "enhanced",
-          url: upscalePred.id ? `https://api.replicate.com/v1/predictions/${upscalePred.id}` : workingUrl,
+          url: null,
           label: "ENHANCED",
           qualityScore: 9,
+          artifactId: artifact.id,
+          providerJobId: upscalePred.id,
+          status: artifact.status,
         });
       } catch (e: any) {
         processingLog.push({ phase: "C", status: "failed", error: e.message });
@@ -3454,26 +3765,41 @@ Return JSON:
         enginesUsed.push("black-forest-labs/flux-dev");
         processingLog.push({ phase: "D", model: "flux-dev", predictionId: fluxPred.id, status: "queued" });
 
-        // Variation 3 — Cinematic
+        const artifact = await createVaultxArtifact({
+          creatorId: cid,
+          projectId: input.projectId,
+          kind: "photo",
+          stage: "photo_cinematic_flux",
+          provider: "replicate",
+          providerJobId: fluxPred.id,
+          sourceUrl: workingUrl,
+          status: fluxPred.id ? "queued" : "failed",
+          metadata: { variation: "cinematic", label: "CINEMATIC", qualityScore: 10, model: "black-forest-labs/flux-dev", replicatePrediction: fluxPred },
+        });
         enhancedUrls.push({
           variation: "cinematic",
-          url: fluxPred.id ? `https://api.replicate.com/v1/predictions/${fluxPred.id}` : workingUrl,
+          url: null,
           label: "CINEMATIC",
           qualityScore: 10,
+          artifactId: artifact.id,
+          providerJobId: fluxPred.id,
+          status: artifact.status,
         });
       } catch (e: any) {
         processingLog.push({ phase: "D", status: "failed", error: e.message });
       }
 
-      // Save to project
+      const readiness = await syncProjectArtifactReadiness(cid, input.projectId, "processing");
       await rawQuery(
         "UPDATE vaultx_editor_projects SET enhanced_urls = ?, ai_models_used = ?, processing_log = ?, status = 'processing', updated_at = NOW() WHERE id = ? AND creator_id = ?",
-        [JSON.stringify(enhancedUrls), JSON.stringify(enginesUsed), JSON.stringify(processingLog), input.projectId, ctx.user.id]
+        [JSON.stringify(enhancedUrls), JSON.stringify(enginesUsed), JSON.stringify(processingLog), input.projectId, cid]
       );
 
       return {
         projectId: input.projectId,
         enhancedUrls,
+        artifacts: readiness.artifacts.map(publicArtifactPayload),
+        readinessState: readiness.state,
         enginesUsed,
         processingLog,
         status: "processing",
@@ -3493,6 +3819,10 @@ Return JSON:
       audioMood: z.enum(["sensual", "romantic", "dominant", "playful", "luxury"]).default("sensual"),
     }))
     .mutation(async ({ ctx, input }) => {
+      const creatorId = await getCreatorId(ctx.user.id);
+      const cid = creatorId || ctx.user.id;
+      const projectRows = await rawQuery("SELECT id FROM vaultx_editor_projects WHERE id = ? AND creator_id = ? LIMIT 1", [input.projectId, cid]);
+      if (!projectRows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found." });
       const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN || "";
       const POLLO_KEY = process.env.POLLO_API_KEY || "";
       const enginesUsed: string[] = [];
@@ -3525,7 +3855,18 @@ Return JSON:
             injectDNA: false,
           });
           enginesUsed.push("Kling 3.0 via Pollo AI");
-          processingLog.push({ phase: "C", model: "kling-3.0", status: "complete", url: videoResult.url });
+          const readyVideoArtifact = await persistReadyVaultxArtifact({
+            creatorId: cid,
+            projectId: input.projectId,
+            kind: "video",
+            stage: "video_kling_enhanced",
+            provider: "pollo",
+            sourceUrl: thumbnailUrl,
+            finalUrl: videoResult.url,
+            qualityScore: 9,
+            metadata: { enhancementIntensity: input.enhancementIntensity, prompt: promptMap[input.enhancementIntensity], providerResult: videoResult },
+          });
+          processingLog.push({ phase: "C", model: "kling-3.0", status: "complete", artifactId: readyVideoArtifact.id, url: readyVideoArtifact.output_url });
 
           // Phase D — Slow motion variant
           if (input.enableSlowMotion && REPLICATE_TOKEN) {
@@ -3539,7 +3880,18 @@ Return JSON:
             });
             const slowPred = await slowMoResp.json();
             enginesUsed.push("RIFE slow motion");
-            processingLog.push({ phase: "D", model: "RIFE", predictionId: slowPred.id, status: "queued" });
+            const slowArtifact = await createVaultxArtifact({
+              creatorId: cid,
+              projectId: input.projectId,
+              kind: "video",
+              stage: "video_slow_motion_rife",
+              provider: "replicate",
+              providerJobId: slowPred.id,
+              sourceUrl: readyVideoArtifact.output_url,
+              status: slowPred.id ? "queued" : "failed",
+              metadata: { model: "RIFE", slowMotionFactor: 2, replicatePrediction: slowPred },
+            });
+            processingLog.push({ phase: "D", model: "RIFE", artifactId: slowArtifact.id, predictionId: slowPred.id, status: slowArtifact.status });
           }
 
           // Phase E — ElevenLabs ambient audio
@@ -3555,25 +3907,28 @@ Return JSON:
             enginesUsed.push("ElevenLabs ambient audio");
           }
 
-          // Save enhanced video
+          const readiness = await syncProjectArtifactReadiness(cid, input.projectId, input.enableSlowMotion && REPLICATE_TOKEN ? "processing" : undefined);
           await rawQuery(
-            "UPDATE vaultx_editor_projects SET enhanced_urls = ?, ai_models_used = ?, processing_log = ?, status = 'processing', updated_at = NOW() WHERE id = ? AND creator_id = ?",
+            "UPDATE vaultx_editor_projects SET enhanced_urls = ?, ai_models_used = ?, processing_log = ?, status = ?, updated_at = NOW() WHERE id = ? AND creator_id = ?",
             [
-              JSON.stringify([{ variation: "enhanced", url: videoResult.url, label: "ENHANCED", qualityScore: 9 }]),
+              JSON.stringify([{ variation: "enhanced", url: readyVideoArtifact.output_url, label: "ENHANCED", qualityScore: 9, artifactId: readyVideoArtifact.id, status: "ready" }]),
               JSON.stringify(enginesUsed),
               JSON.stringify(processingLog),
+              readiness.state === "processing" ? "processing" : "ready",
               input.projectId,
-              ctx.user.id,
+              cid,
             ]
           );
 
-          return { projectId: input.projectId, videoUrl: videoResult.url, enginesUsed, processingLog, status: "processing" };
+          return { projectId: input.projectId, videoUrl: readyVideoArtifact.output_url, artifact: publicArtifactPayload(readyVideoArtifact), artifacts: readiness.artifacts.map(publicArtifactPayload), readinessState: readiness.state, enginesUsed, processingLog, status: readiness.state === "processing" ? "processing" : "ready" };
         } catch (e: any) {
           processingLog.push({ phase: "C", status: "failed", error: e.message });
+          await failProjectReadiness(cid, input.projectId, e.message, { procedure: "enhanceVideo", phase: "kling_pollo" }).catch(() => undefined);
         }
       }
 
-      return { projectId: input.projectId, enginesUsed, processingLog, status: "queued", message: "Video enhancement pipeline queued" };
+      const readiness = await syncProjectArtifactReadiness(cid, input.projectId);
+      return { projectId: input.projectId, artifacts: readiness.artifacts.map(publicArtifactPayload), readinessState: readiness.state, enginesUsed, processingLog, status: readiness.state, message: POLLO_KEY ? "Video enhancement pipeline queued" : "POLLO_API_KEY is not configured, so no video job was started." };
     }),
 
   // ─── PROCEDURE: generateVariations ───────────────────────────────────────
@@ -3584,6 +3939,10 @@ Return JSON:
       sourceUrl: z.string().url(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const creatorId = await getCreatorId(ctx.user.id);
+      const cid = creatorId || ctx.user.id;
+      const projectRows = await rawQuery("SELECT id FROM vaultx_editor_projects WHERE id = ? AND creator_id = ? LIMIT 1", [input.projectId, cid]);
+      if (!projectRows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
       const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN || "";
       if (!REPLICATE_TOKEN) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "REPLICATE_API_TOKEN not configured" });
 
@@ -3632,18 +3991,30 @@ Return JSON:
             }),
           });
           const pred = await resp.json();
-          results.push({ ...v, predictionId: pred.id, status: "processing" });
+          const artifact = await createVaultxArtifact({
+            creatorId: cid,
+            projectId: input.projectId,
+            kind: "photo",
+            stage: `variation_${v.id}`,
+            provider: "replicate",
+            providerJobId: pred.id,
+            sourceUrl: input.sourceUrl,
+            status: pred.id ? "queued" : "failed",
+            metadata: { variation: v, replicatePrediction: pred },
+          });
+          results.push({ ...v, predictionId: pred.id, artifactId: artifact.id, status: artifact.status });
         } catch (e: any) {
           results.push({ ...v, status: "failed", error: e.message });
         }
       }
 
+      const readiness = await syncProjectArtifactReadiness(cid, input.projectId, "processing");
       await rawQuery(
         "UPDATE vaultx_editor_projects SET enhanced_urls = ?, status = 'processing', updated_at = NOW() WHERE id = ? AND creator_id = ?",
-        [JSON.stringify(results), input.projectId, ctx.user.id]
+        [JSON.stringify(results), input.projectId, cid]
       );
 
-      return { projectId: input.projectId, variations: results };
+      return { projectId: input.projectId, variations: results, artifacts: readiness.artifacts.map(publicArtifactPayload), readinessState: readiness.state };
     }),
 
   // ─── PROCEDURE: generateRemotionReel ─────────────────────────────────────
