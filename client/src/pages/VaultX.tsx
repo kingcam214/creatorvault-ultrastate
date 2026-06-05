@@ -1075,7 +1075,7 @@ function DiscoverTab() {
             </span>
           </h1>
           <p className="text-sm max-w-2xl mb-6" style={{ color: "#9CA3AF", lineHeight: 1.7 }}>
-            This screen is now an operating surface, not a static shell. Every number below comes from the live VaultX creator database: searchable storefronts, payment-ready profiles, message-ready creators, and the exact next action a buyer can take.
+            Browse real VaultX storefronts with creator profiles, payment-ready offers, messaging paths, and clear next steps for buying or subscribing.
           </p>
           <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center sm:gap-4 sm:flex-wrap">
             {[
@@ -1092,9 +1092,9 @@ function DiscoverTab() {
           </div>
           <div className="relative mt-5 grid gap-3 md:grid-cols-3">
             {[
-              { title: "1. Open a real profile", body: filtered.length > 0 ? "Tap any live storefront to review subscription price, PPV, tips, custom requests, and creator proof." : "No storefront matches this filter yet; complete onboarding before selling." },
+              { title: "1. Open a real profile", body: filtered.length > 0 ? "Tap any live storefront to review subscription price, PPV, tips, custom requests, and creator credibility." : "No storefront matches this filter yet; complete onboarding before selling." },
               { title: "2. Choose the money path", body: paymentReadyCreators.length > 0 ? "Subscribe, buy PPV, tip, or request custom work only where the creator has enabled that lane." : "Payment lanes are not ready until a creator sets pricing or enables paid features." },
-              { title: "3. Verify before scaling", body: "Revenue should move through Stripe-backed purchase flows and verified ledgers, not inflated static counters." },
+              { title: "3. Verify before scaling", body: "Use secure checkout and confirmed creator offers instead of vague claims or vanity counters." },
             ].map((step) => (
               <div key={step.title} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                 <div className="text-xs font-black uppercase tracking-[.16em] text-red-300 mb-2">{step.title}</div>
@@ -1971,7 +1971,7 @@ function XComTab({ userId }: { userId: number }) {
           {[
             { pct: "40%", type: "Teasers", desc: "Censored previews with VaultX link", color: "bg-red-500" },
             { pct: "30%", type: "Personality", desc: "Your life, opinions, humor — build connection", color: "bg-orange-500" },
-            { pct: "20%", type: "Social proof", desc: "Subscriber counts, testimonials, earnings", color: "bg-amber-500" },
+            { pct: "20%", type: "Social proof", desc: "Subscriber counts, testimonials, results", color: "bg-amber-500" },
             { pct: "10%", type: "Direct CTA", desc: "Hard sell — subscribe now, limited spots", color: "bg-yellow-500" },
           ].map(({ pct, type, desc, color }) => (
             <div key={type} className="flex items-center gap-3">
@@ -2225,11 +2225,11 @@ function VaultXPublicLanding() {
   const faqs = [
     {
       q: "Is this explicit content?",
-      a: "No. This public page is business-safe. The product is for adult, fitness, beauty, and body-led creators who need premium, platform-aware content packaging without exposing private material in the sales page.",
+      a: "No. The preview stays safe for public viewing while the paid asset remains protected. Body Cinema is for adult, fitness, beauty, and body-led creators who need premium packaging without exposing private material on the sales page.",
     },
     {
       q: "What happens after checkout?",
-      a: "Stripe processes the purchase and returns you to CreatorVault. Access and challenge credit are finalized only after the live webhook confirms the completed payment.",
+      a: "Secure checkout processes the purchase and returns you to CreatorVault for the Body Cinema access path.",
     },
     {
       q: "Who is this for?",
@@ -2272,7 +2272,7 @@ function VaultXPublicLanding() {
         {paidSessionId && (
           <section className="vx-shell pt-2">
             <div className="rounded-2xl p-4 border" style={{ background: "rgba(16,185,129,.11)", borderColor: "rgba(16,185,129,.28)", color: "#bbf7d0" }}>
-              <strong>Payment return detected.</strong> Final access and challenge revenue credit depend on the Stripe webhook confirmation for session {paidSessionId.slice(0, 12)}...
+              <strong>Payment return detected.</strong> Your secure checkout return was detected for session {paidSessionId.slice(0, 12)}. Access is being prepared...
             </div>
           </section>
         )}
@@ -2281,13 +2281,13 @@ function VaultXPublicLanding() {
           <div className="grid lg:grid-cols-[1fr_.9fr] gap-10 lg:gap-14 items-center">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-6" style={{ background: "rgba(201,168,76,.12)", border: "1px solid rgba(201,168,76,.28)", color: "#f3d68b" }}>
-                <Shield className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.18em]">Secure Stripe checkout · public-safe creator offer</span>
+                <Shield className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.18em]">Video preview · secure Stripe checkout</span>
               </div>
               <h1 className="font-black leading-[.9] tracking-[-.055em] mb-6" style={{ fontSize: "clamp(3rem, 8vw, 7.2rem)" }}>
-                Make the body look expensive before you sell it.
+                Show the motion before you sell the unlock.
               </h1>
               <p className="text-lg md:text-2xl leading-8 md:leading-10 max-w-2xl mb-8" style={{ color: "#d8d8d3" }}>
-                <strong>Body Cinema</strong> is the VaultX revenue kit for creators who have raw footage but need it cut into seductive, premium, platform-safe assets that are ready to post, message, tease, and monetize.
+                <strong>Body Cinema</strong> packages raw creator footage into a preview-led offer: the buyer sees motion first, then the paid kit explains what unlocks after checkout.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 mb-8">
                 <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex justify-center items-center gap-2 rounded-2xl px-8 py-4 text-base font-black">
@@ -2296,7 +2296,7 @@ function VaultXPublicLanding() {
                 <a href="#body-cinema-kit" className="inline-flex justify-center items-center gap-2 rounded-2xl px-8 py-4 text-base font-bold border border-white/15 text-white hover:bg-white/5">See what you get <ChevronRight className="w-5 h-5" /></a>
               </div>
               <p className="text-sm leading-6 max-w-xl" style={{ color: "#888" }}>
-                Revenue proof is limited to real Stripe Checkout events. Challenge ledger movement waits for the live payment webhook, so buyers and operators see payment-backed progress instead of manual claims.
+                Checkout opens the paid access path. After purchase, the buyer returns to CreatorVault for the Body Cinema kit and next steps.
               </p>
             </div>
 
@@ -2309,11 +2309,14 @@ function VaultXPublicLanding() {
                     <span className="text-xs font-black text-white/60">VaultX</span>
                   </div>
                   <div className="space-y-3">
-                    <div className="h-40 rounded-[1.5rem] relative overflow-hidden" style={{ background: "radial-gradient(circle at 40% 20%, rgba(245,194,122,.28), transparent 28%), linear-gradient(145deg,#2a1812,#080808 70%)" }}>
-                      <div className="absolute left-6 right-6 top-8 h-24 rounded-full blur-2xl" style={{ background: "rgba(201,168,76,.26)" }} />
-                      <div className="absolute inset-x-8 bottom-6 h-2 rounded-full" style={{ background: "linear-gradient(90deg,transparent,#c9a84c,transparent)" }} />
-                      <div className="absolute bottom-5 left-5 right-5 grid grid-cols-5 gap-2">
-                        {[0,1,2,3,4].map((i) => <div key={i} className="h-16 rounded-xl" style={{ background: `rgba(255,255,255,${0.08 + i * 0.025})`, border: "1px solid rgba(255,255,255,.08)" }} />)}
+                    <div className="h-48 rounded-[1.5rem] relative overflow-hidden border border-white/10 bg-black">
+                      <video autoPlay muted loop playsInline controls preload="metadata" poster="/videos/vaultx-cinematic-trailer-poster.png" className="absolute inset-0 w-full h-full object-cover">
+                        <source src="/videos/vaultx-cinematic-trailer.mp4" type="video/mp4" />
+                      </video>
+                      <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.16) 42%,rgba(0,0,0,.78))" }} />
+                      <div className="absolute left-4 right-4 bottom-4">
+                        <span className="kc-badge kc-badge-gold">Playable preview</span>
+                        <p className="mt-2 text-sm leading-5 text-white/80">Buyers see motion, mood, and offer context before checkout.</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -2335,7 +2338,7 @@ function VaultXPublicLanding() {
         <section id="body-cinema-kit" className="vx-shell pb-16 md:pb-24">
           <div className="max-w-3xl mb-10">
             <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#c9a84c" }}>What the buyer receives</div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-5">A content-money kit, not another empty landing page.</h2>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-5">A video-led kit that turns attention into paid access.</h2>
             <p className="text-base md:text-lg leading-8" style={{ color: "#b8b8b8" }}>The offer is built for the moment a creator already has usable footage but does not have the angles, teaser sequence, premium polish, or revenue routing needed to turn that footage into a paid asset path.</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -2384,9 +2387,9 @@ function VaultXPublicLanding() {
 
         <section className="px-5 pb-20 md:pb-28">
           <div className="max-w-5xl mx-auto text-center rounded-[2rem] p-7 md:p-12" style={{ background: "linear-gradient(135deg,rgba(201,168,76,.22),rgba(6,182,212,.10),rgba(239,68,68,.10))", border: "1px solid rgba(201,168,76,.25)" }}>
-            <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-6" style={{ background: "rgba(0,0,0,.28)", border: "1px solid rgba(255,255,255,.12)" }}><Lock className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.16em]">Secure payment. Webhook-proved credit.</span></div>
+            <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-6" style={{ background: "rgba(0,0,0,.28)", border: "1px solid rgba(255,255,255,.12)" }}><Lock className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.16em]">Secure payment. Clear access path.</span></div>
             <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">If the clip already has attention, Body Cinema gives it a money route.</h2>
-            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>Buy the kit, complete Stripe Checkout, and return to CreatorVault for the access path. This is the buyer page that should be used for VaultX Body Cinema outreach.</p>
+            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>Buy the kit, complete secure checkout, and return to CreatorVault for the Body Cinema access path.</p>
             <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center justify-center gap-2 rounded-2xl px-9 py-4 font-black"><CreditCard className="w-5 h-5" /> {vaultXOfferCheckout.isPending ? "Opening secure checkout..." : `Unlock Body Cinema — ${priceLabel}`}</button>
           </div>
         </section>
@@ -2498,7 +2501,7 @@ export default function VaultX() {
             <VaultXActionCard href="/vault-x/editor" title="Process a new video" body="Start with a raw asset and generate Body Cinema outputs, AI analysis, export packages, and publish-ready assets." icon={<Video className="h-5 w-5" />} cta="Open Editor" />
             <VaultXActionCard href="/vault-x/studio" title="Build a revenue bundle" body="Package master files, teasers, captions, sound, platform exports, PPV logic, and distribution assets." icon={<Package className="h-5 w-5" />} cta="Open Studio" />
             <VaultXActionCard href="/vaultx/distribution" title="Push the launch" body="Move finished content into distribution paths for VaultX, Telegram, X.com, and external fan platforms." icon={<Globe className="h-5 w-5" />} cta="Open Distribution" />
-            <VaultXActionCard href="/god-mode" title="Command God Mode" body="Use the AI command layer to turn a creator goal into concrete revenue actions and measurable proof." icon={<Sparkles className="h-5 w-5" />} cta="Open God Mode" />
+            <VaultXActionCard href="/god-mode" title="Command God Mode" body="Turn a creator goal into concrete revenue actions, launch copy, and next-step planning." icon={<Sparkles className="h-5 w-5" />} cta="Open God Mode" />
           </section>
         )}
 
