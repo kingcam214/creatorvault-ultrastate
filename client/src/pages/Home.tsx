@@ -356,8 +356,8 @@ export default function Home() {
       </section>
 
       <section ref={cockpitRef.ref} style={{ position: "relative", padding: "82px 0", borderTop: "1px solid rgba(255,255,255,.06)", overflow: "hidden" }}>
-        <video autoPlay muted loop playsInline preload="metadata" poster={VERIFIED_VAULTX_THUMB} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .16 }}>
-          <source src={VERIFIED_VAULTX_VIDEO} type="video/mp4" />
+        <video autoPlay muted loop playsInline preload="metadata" poster={VAULTX_TRAILER_POSTER} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .16 }}>
+          <source src={VAULTX_TRAILER_VIDEO} type="video/mp4" />
         </video>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(5,5,8,.84),#050508 88%)" }} />
         <div className="vx-shell" style={{ position: "relative" }}>
