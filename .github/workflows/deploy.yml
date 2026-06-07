@@ -104,7 +104,9 @@ jobs:
             if ! command -v pnpm >/dev/null 2>&1; then
               npm install -g pnpm@10.4.1
             fi
-            pnpm install --frozen-lockfile --prod
+            # The bundled server currently imports Vite helper code at runtime, so production cannot prune devDependencies here.
+            # The build still happens on the runner; this install only restores runtime modules required by dist/index.js.
+            pnpm install --frozen-lockfile
 
             chmod +x ./deploy_work_to_prod.sh
             ./deploy_work_to_prod.sh
