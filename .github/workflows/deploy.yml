@@ -13,11 +13,71 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Preflight deployment secrets
+        shell: bash
+        env:
+          CREATORVAULT_VPS_HOST: ${{ secrets.CREATORVAULT_VPS_HOST }}
+          CREATORVAULT_VPS_USER: ${{ secrets.CREATORVAULT_VPS_USER }}
+          CREATORVAULT_VPS_SSH_KEY: ${{ secrets.CREATORVAULT_VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in CREATORVAULT_VPS_HOST CREATORVAULT_VPS_USER CREATORVAULT_VPS_SSH_KEY; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error title=Missing deployment secret::$name is not configured for kingcam214/creatorvault-ultrastate."
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          echo "Deployment secret preflight passed."
+
+      - name: Enable pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies on runner
+        run: pnpm install --frozen-lockfile
+
       - name: Generate release stamp
         run: |
-          echo "{\"commit\":\"${{ github.sha }}\",\"branch\":\"${{ github.ref_name }}\",\"timestamp\":\"$(date -Iseconds)\",\"environment\":\"production\"}" > public/release.json
+          mkdir -p client/public
+          echo "{\"commit\":\"${{ github.sha }}\",\"branch\":\"${{ github.ref_name }}\",\"timestamp\":\"$(date -Iseconds)\",\"environment\":\"production\"}" > client/public/release.json
 
-      - name: Sync repo to VPS and deploy
+      - name: Build release on runner
+        run: pnpm build
+
+      - name: Package runner-built release artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/index.js
+          test -f dist/public/index.html
+          test -f dist/public/release.json
+          tar -czf creatorvault-release-${{ github.sha }}.tar.gz dist deploy_work_to_prod.sh package.json pnpm-lock.yaml
+          sha256sum creatorvault-release-${{ github.sha }}.tar.gz > creatorvault-release-${{ github.sha }}.tar.gz.sha256
+          ls -lh creatorvault-release-${{ github.sha }}.tar.gz creatorvault-release-${{ github.sha }}.tar.gz.sha256
+
+      - name: Upload release artifact to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.CREATORVAULT_VPS_HOST }}
+          username: ${{ secrets.CREATORVAULT_VPS_USER }}
+          key: ${{ secrets.CREATORVAULT_VPS_SSH_KEY }}
+          port: 22
+          source: "creatorvault-release-${{ github.sha }}.tar.gz,creatorvault-release-${{ github.sha }}.tar.gz.sha256"
+          target: "/tmp/creatorvault-release-${{ github.sha }}"
+          overwrite: true
+
+      - name: Install runner-built release on VPS and deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.CREATORVAULT_VPS_HOST }}
@@ -27,16 +87,27 @@ jobs:
           script: |
             set -euo pipefail
 
-            cd /root/creatorvault
+            RELEASE_DIR="/tmp/creatorvault-release-${{ github.sha }}"
+            RELEASE_TAR="$RELEASE_DIR/creatorvault-release-${{ github.sha }}.tar.gz"
+            cd "$RELEASE_DIR"
+            sha256sum -c "creatorvault-release-${{ github.sha }}.tar.gz.sha256"
 
+            cd /root/creatorvault
             git fetch origin main
             git checkout main
             git reset --hard origin/main
 
-            pnpm install --frozen-lockfile
-            pnpm build
+            mkdir -p logs uploads tmp
+            rm -rf dist
+            tar -xzf "$RELEASE_TAR" -C /root/creatorvault
+
+            if ! command -v pnpm >/dev/null 2>&1; then
+              npm install -g pnpm@10.4.1
+            fi
+            pnpm install --frozen-lockfile --prod
 
             chmod +x ./deploy_work_to_prod.sh
             ./deploy_work_to_prod.sh
 
-            pm2 reload all || pm2 restart all
+            node -e "const r=require('fs').readFileSync('dist/public/release.json','utf8'); const parsed=JSON.parse(r); if(parsed.commit !== '${{ github.sha }}') { console.error(r); process.exit(1); } console.log('release-stamp-ok', r);"
+            pm2 reload creatorvault --update-env || pm2 restart creatorvault --update-env
