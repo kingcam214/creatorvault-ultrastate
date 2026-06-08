@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
 import * as db from "../db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export const standaloneAuth = router({
@@ -10,11 +10,25 @@ export const standaloneAuth = router({
   })).mutation(async ({ input }) => {
     const existing = await db.db.select().from(db.schema.users).where(eq(db.schema.users.email, input.email)).limit(1);
     if (existing.length > 0) throw new Error("Email already registered");
+    const normalizedEmail = input.email.trim().toLowerCase();
     const hashed = await bcrypt.hash(input.password, 10);
+    const openId = `local:${normalizedEmail}`;
     const [user] = await db.db.insert(db.schema.users).values({
-      email: input.email, password: hashed, username: input.username, role: "creator", createdAt: new Date(),
-    }).$returningId();
-    return { id: user.id, email: input.email, username: input.username };
+      openId,
+      email: normalizedEmail,
+      password: hashed,
+      username: input.username,
+      name: input.username,
+      loginMethod: "password",
+      role: "user",
+      createdAt: new Date(),
+    } as any).$returningId();
+    try {
+      await db.db.execute(sql`UPDATE users SET is_active = 1 WHERE id = ${user.id}`);
+    } catch (error) {
+      console.warn("[standaloneAuth] unable to mark registered user active; continuing with schema defaults", error);
+    }
+    return { id: user.id, email: normalizedEmail, username: input.username };
   }),
   checkEmail: publicProcedure.input(z.object({ email: z.string().email() })).query(async ({ input }) => {
     const existing = await db.db.select().from(db.schema.users).where(eq(db.schema.users.email, input.email)).limit(1);

@@ -18,6 +18,7 @@ const ALLOWLISTS = {
     'server/routers/videoUploadRouter.ts',
     'server/_core/stripeWebhook.ts',
     'server/_core/index.ts',
+    'server/routers/standaloneAuth.ts',
     'scripts/route-owner.js',
     'scripts/scope-guard.js',
     'client/src/index.css',
