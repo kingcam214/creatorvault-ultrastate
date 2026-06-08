@@ -230,7 +230,7 @@ async function registerUploadedPaidContent(req: Request, file: { url: string; fi
       cid, title, packagedDescription, contentType,
       file.url, assets.coverUrl, assets.coverUrl, assets.coverUrl,
       1, ppvPriceDollars, 0, 0, 0,
-      String(meta.accessTier || "public"), tags,
+      ["basic", "premium", "vip", "ppv"].includes(String(meta.accessTier)) ? String(meta.accessTier) : "ppv", tags,
     ]
   );
 
