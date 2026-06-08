@@ -24,9 +24,9 @@ export const standaloneAuth = router({
       createdAt: new Date(),
     } as any).$returningId();
     try {
-      await db.db.execute(sql`UPDATE users SET is_active = 1 WHERE id = ${user.id}`);
+      await db.db.execute(sql`UPDATE users SET password = ${hashed}, is_active = 1 WHERE id = ${user.id}`);
     } catch (error) {
-      console.warn("[standaloneAuth] unable to mark registered user active; continuing with schema defaults", error);
+      console.warn("[standaloneAuth] unable to write local-auth compatibility fields; continuing with schema defaults", error);
     }
     return { id: user.id, email: normalizedEmail, username: input.username };
   }),
