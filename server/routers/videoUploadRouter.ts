@@ -34,7 +34,7 @@ function getMimeType(filename: string): string {
 // storagePut (Manus CDN proxy) is unavailable from VPS — write directly to
 // /root/uploads/content-vault/{uuid}/{filename} and return a public HTTPS URL.
 const DURABLE_UPLOADS_DIR = "/root/uploads/content-vault";
-async function assembleAndUpload(sessionDir: string, meta: any): Promise<{ url: string; filename: string }> {
+async function assembleAndUpload(sessionDir: string, meta: any): Promise<{ url: string; filename: string; storageId: string; directory: string }> {
   const chunks: Buffer[] = [];
   for (let i = 0; i < meta.totalChunks; i++) {
     const cp = path.join(sessionDir, `chunk-${i.toString().padStart(5, "0")}`);
@@ -54,7 +54,90 @@ async function assembleAndUpload(sessionDir: string, meta: any): Promise<{ url: 
   }
   await unlink(path.join(sessionDir, "meta.json")).catch(() => {});
   await rmdir(sessionDir).catch(() => {});
-  return { url, filename: finalFilename };
+  return { url, filename: finalFilename, storageId: fileUuid, directory: destDir };
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function slugifyAssetName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || "vaultx-release";
+}
+
+async function createVaultxSellableOutputs(file: { url: string; filename: string; storageId?: string; directory?: string }, meta: any, title: string, ppvPriceCents: number) {
+  const priceLabel = `$${(ppvPriceCents / 100).toFixed(2)}`;
+  const base = slugifyAssetName(title);
+  const outputDir = file.directory || path.join(DURABLE_UPLOADS_DIR, file.storageId || randomUUID());
+  const publicBase = file.storageId
+    ? `https://creatorvault.live/uploads/content-vault/${file.storageId}`
+    : `https://creatorvault.live/uploads/content-vault/${path.basename(outputDir)}`;
+  await mkdir(outputDir, { recursive: true });
+
+  const coverName = `${base}-vaultx-cover.svg`;
+  const captionName = `${base}-unlock-caption.txt`;
+  const manifestName = `${base}-sellable-outputs.json`;
+  const coverUrl = `${publicBase}/${coverName}`;
+  const captionUrl = `${publicBase}/${captionName}`;
+  const manifestUrl = `${publicBase}/${manifestName}`;
+  const safeTitle = escapeXml(title);
+  const safeType = escapeXml(String(meta.contentType || contentTypeFromFilename(file.filename)).toUpperCase());
+
+  const coverSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#05070d"/><stop offset="0.48" stop-color="#111827"/><stop offset="1" stop-color="#05070d"/></linearGradient>
+    <radialGradient id="glow" cx="74%" cy="20%" r="66%"><stop offset="0" stop-color="#00d9ff" stop-opacity="0.45"/><stop offset="1" stop-color="#00d9ff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <rect width="1280" height="720" fill="url(#glow)"/>
+  <rect x="72" y="68" width="1136" height="584" rx="34" fill="rgba(0,0,0,0.42)" stroke="#00d9ff" stroke-opacity="0.55" stroke-width="2"/>
+  <text x="104" y="140" fill="#00d9ff" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="800" letter-spacing="5">VAULTX PAID UNLOCK</text>
+  <text x="104" y="270" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="60" font-weight="900">${safeTitle}</text>
+  <text x="104" y="350" fill="#c9a84c" font-family="Inter, Arial, sans-serif" font-size="36" font-weight="800">${safeType} MASTER · TEASER · PPV GATE · CAPTION PACK</text>
+  <text x="104" y="452" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="28">Creator upload processed into a sellable VaultX package.</text>
+  <rect x="104" y="510" width="280" height="82" rx="24" fill="#00d9ff"/>
+  <text x="144" y="563" fill="#020617" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="900">UNLOCK ${escapeXml(priceLabel)}</text>
+  <text x="830" y="590" fill="#94a3b8" font-family="Inter, Arial, sans-serif" font-size="24">Tracked payment · buyer access · creator earnings</text>
+</svg>
+`;
+
+  const caption = [
+    `VaultX paid unlock: ${title}`,
+    `Price: ${priceLabel}`,
+    "This upload is staged as a sellable VaultX package with a protected master, branded unlock cover, PPV checkout route, and post-payment buyer access.",
+    "CTA: Unlock the full VaultX drop and get instant access after payment clears.",
+  ].join("\n");
+
+  const manifest = {
+    engine: "vaultx-upload-money-loop-v2",
+    createdAt: new Date().toISOString(),
+    sourceFilename: file.filename,
+    masterUrl: file.url,
+    teaserCoverUrl: coverUrl,
+    captionUrl,
+    priceCents: ppvPriceCents,
+    sellableOutputs: ["paid_master", "branded_teaser_cover", "ppv_checkout_unlock", "distribution_caption", "buyer_access_receipt"],
+    operationalProof: {
+      requiresStripeCheckout: true,
+      logsPurchase: true,
+      creditsCreatorEarnings: true,
+      unlocksBuyerLibrary: true,
+    },
+  };
+
+  await writeFile(path.join(outputDir, coverName), coverSvg);
+  await writeFile(path.join(outputDir, captionName), caption);
+  await writeFile(path.join(outputDir, manifestName), JSON.stringify(manifest, null, 2));
+  return { coverUrl, captionUrl, manifestUrl };
 }
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 export const videoUploadRouter = Router();
@@ -117,7 +200,7 @@ function contentTypeFromFilename(filename: string): "video" | "photo" | "audio" 
   return "video";
 }
 
-async function registerUploadedPaidContent(req: Request, file: { url: string; filename: string }, meta: any) {
+async function registerUploadedPaidContent(req: Request, file: { url: string; filename: string; storageId?: string; directory?: string }, meta: any) {
   const user = await sdk.authenticateRequest(req);
   const creatorId = await getCreatorId(Number(user.id));
   const cid = creatorId || Number(user.id);
@@ -130,8 +213,11 @@ async function registerUploadedPaidContent(req: Request, file: { url: string; fi
   const contentType = ["video", "photo", "audio"].includes(String(meta.contentType))
     ? String(meta.contentType)
     : contentTypeFromFilename(file.filename);
-  const ppvPrice = parsePriceCents(meta.ppvPrice ?? meta.priceCents ?? meta.price ?? meta.unlockPrice);
-  const tags = JSON.stringify(["vaultx", "upload", "paid-content", "money-loop"]);
+  const ppvPriceCents = parsePriceCents(meta.ppvPrice ?? meta.priceCents ?? meta.price ?? meta.unlockPrice);
+  const ppvPriceDollars = Number((ppvPriceCents / 100).toFixed(2));
+  const tags = JSON.stringify(["vaultx", "upload", "paid-content", "money-loop", "processed-package"]);
+  const assets = await createVaultxSellableOutputs(file, meta, title, ppvPriceCents);
+  const packagedDescription = `${description}\n\nVaultX package outputs: protected master, branded teaser cover, Stripe PPV unlock route, distribution caption, and sellable-output manifest. Caption: ${assets.captionUrl}. Manifest: ${assets.manifestUrl}.`;
 
   const result = await rawExec(
     `INSERT INTO vaultx_content
@@ -141,9 +227,9 @@ async function registerUploadedPaidContent(req: Request, file: { url: string; fi
       access_tier, tags, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
     [
-      cid, title, description, contentType,
-      file.url, null, null, null,
-      1, ppvPrice, 0, 0, 0,
+      cid, title, packagedDescription, contentType,
+      file.url, assets.coverUrl, assets.coverUrl, assets.coverUrl,
+      1, ppvPriceDollars, 0, 0, 0,
       String(meta.accessTier || "public"), tags,
     ]
   );
@@ -155,7 +241,9 @@ async function registerUploadedPaidContent(req: Request, file: { url: string; fi
     title,
     contentType,
     url: file.url,
-    ppvPrice,
+    ppvPrice: ppvPriceDollars,
+    priceCents: ppvPriceCents,
+    sellableOutputs: assets,
     status: "active",
     registered: contentId > 0,
   };
@@ -216,8 +304,8 @@ videoUploadRouter.post("/chunk", upload.single("chunk"), async (req: Request, re
 
     // Auto-finalize when all chunks received — push to CDN
     if (meta.receivedChunks >= meta.totalChunks) {
-      const { url, filename: finalFilename } = await assembleAndUpload(sessionDir, meta);
-      const file = { url, filename: finalFilename };
+      const { url, filename: finalFilename, storageId, directory } = await assembleAndUpload(sessionDir, meta);
+      const file = { url, filename: finalFilename, storageId, directory };
       const paidContent = meta.registerPaidContent === false ? null : await registerUploadedPaidContent(req, file, meta);
       return res.json({
         uploadId, chunkIndex, received: meta.receivedChunks, total: meta.totalChunks,
@@ -244,8 +332,8 @@ videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
     }
     const meta = JSON.parse(await readFile(path.join(sessionDir, "meta.json"), "utf-8"));
     if (filename) meta.filename = filename;
-    const { url, filename: finalFilename } = await assembleAndUpload(sessionDir, meta);
-    const file = { url, filename: finalFilename };
+    const { url, filename: finalFilename, storageId, directory } = await assembleAndUpload(sessionDir, meta);
+    const file = { url, filename: finalFilename, storageId, directory };
     const paidContent = meta.registerPaidContent === false ? null : await registerUploadedPaidContent(req, file, meta);
     res.json({ url, filename: finalFilename, file, paidContent });
   } catch (e) {

@@ -607,7 +607,7 @@ function buildBodyCinemaDecisionEngine(input: {
   };
 }
 
-async function completeVaultxPpvPurchase(input: {
+export async function completeVaultxPpvPurchase(input: {
   fanUserId: number;
   contentId: number;
   paymentIntentId: string;
@@ -1979,9 +1979,9 @@ export const vaultxRouter = router({
       const tierOrder: Record<string, number> = { basic: 1, premium: 2, vip: 3 };
       const fanTierLevel = subTier ? tierOrder[subTier] : 0;
       const rows = await rawQuery(
-        `SELECT id, title, description, content_type, thumbnail_url, censored_thumbnail_url,
+        `SELECT id, title, description, content_type, uncensored_url, censored_url, thumbnail_url, censored_thumbnail_url,
                 is_ppv, ppv_price, is_free_preview, free_preview_seconds, access_tier,
-                view_count, created_at
+                view_count, purchase_count, revenue_generated, created_at
          FROM vaultx_content
          WHERE creator_id = ? AND status = 'active'
          ORDER BY created_at DESC LIMIT ? OFFSET ?`,
@@ -2002,6 +2002,7 @@ export const vaultxRouter = router({
           ...row,
           hasAccess,
           uncensored_url: hasAccess ? row.uncensored_url : null,
+          preview_url: row.censored_url || row.censored_thumbnail_url || row.thumbnail_url || null,
           locked: !hasAccess,
         };
       }));
@@ -2840,21 +2841,63 @@ export const vaultxRouter = router({
   getCreatorContent: protectedProcedure
     .input(z.object({ creatorId: z.number(), limit: z.number().default(20), offset: z.number().default(0) }))
     .query(async ({ ctx, input }) => {
+      const viewerCreatorId = await getCreatorId(ctx.user.id);
+      const isCreatorOwner = viewerCreatorId === input.creatorId || ctx.user.id === input.creatorId || OWNER_IDS.includes(ctx.user.id);
       const subRows = await rawQuery("SELECT id FROM subscriptions WHERE fan_id = ? AND creator_id = ? AND status = 'active' LIMIT 1", [ctx.user.id, input.creatorId]);
-      const isSubscribed = subRows.length > 0 || ctx.user.id === input.creatorId;
-      const rows = await rawQuery(
-        `SELECT id, title, description, file_url, thumbnail_url, mime_type, content_type, price_cents, is_locked, unlock_type, views, created_at FROM content WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      const isSubscribed = subRows.length > 0 || isCreatorOwner;
+      const legacyRows = await rawQuery(
+        `SELECT id, title, description, file_url, thumbnail_url, mime_type, content_type, price_cents, is_locked, unlock_type, views, created_at
+         FROM content WHERE user_id = ? AND status = 'active'
+         ORDER BY created_at DESC LIMIT ? OFFSET ?`,
         [input.creatorId, input.limit, input.offset]
       );
-      const items = await Promise.all(rows.map(async (row: any) => {
+      const vaultxRows = await rawQuery(
+        `SELECT id, title, description, uncensored_url, censored_url, thumbnail_url, censored_thumbnail_url,
+                content_type, ppv_price, is_ppv, access_tier, view_count, purchase_count, revenue_generated, created_at
+         FROM vaultx_content WHERE creator_id = ? AND status = 'active'
+         ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+        [input.creatorId, input.limit, input.offset]
+      );
+      const legacyItems = await Promise.all(legacyRows.map(async (row: any) => {
         let accessible = !row.is_locked || isSubscribed;
         if (!accessible && row.unlock_type === "ppv") {
           const unlocked = await rawQuery("SELECT id FROM content_unlocks WHERE fan_id = ? AND content_id = ? LIMIT 1", [ctx.user.id, row.id]);
           accessible = unlocked.length > 0;
         }
-        return { ...row, file_url: accessible ? row.file_url : null, locked: !accessible };
+        return { ...row, source_table: "content", file_url: accessible ? row.file_url : null, locked: !accessible };
       }));
-      return { items, isSubscribed };
+      const vaultxItems = await Promise.all(vaultxRows.map(async (row: any) => {
+        let accessible = isCreatorOwner || (!row.is_ppv && isSubscribed);
+        if (!accessible && row.is_ppv) {
+          const unlocked = await rawQuery("SELECT id FROM vaultx_ppv_purchases WHERE fan_id = ? AND content_id = ? AND status = 'completed' LIMIT 1", [ctx.user.id, row.id]);
+          accessible = unlocked.length > 0;
+        }
+        const priceCents = Math.round(Number(row.ppv_price || 0) * 100);
+        return {
+          id: `vaultx-${row.id}`,
+          vaultx_content_id: row.id,
+          source_table: "vaultx_content",
+          title: row.title,
+          description: row.description,
+          file_url: accessible ? row.uncensored_url : null,
+          preview_url: row.censored_url || row.censored_thumbnail_url || row.thumbnail_url || null,
+          thumbnail_url: row.thumbnail_url || row.censored_thumbnail_url || row.censored_url || null,
+          mime_type: row.content_type === "audio" ? "audio/mpeg" : row.content_type === "photo" ? "image/jpeg" : "video/mp4",
+          content_type: row.content_type,
+          price_cents: priceCents,
+          is_locked: row.is_ppv ? 1 : 0,
+          unlock_type: row.is_ppv ? "ppv" : row.access_tier || "subscription",
+          views: row.view_count || 0,
+          purchase_count: row.purchase_count || 0,
+          revenue_generated: row.revenue_generated || 0,
+          created_at: row.created_at,
+          locked: !accessible,
+        };
+      }));
+      const items = [...vaultxItems, ...legacyItems]
+        .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+        .slice(0, input.limit);
+      return { items, isSubscribed, creatorOwner: isCreatorOwner };
     }),
 
   saveExportHistory: protectedProcedure

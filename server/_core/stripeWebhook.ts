@@ -65,7 +65,9 @@ export async function handleStripeWebhook(req: Request, res: Response) {
         }));
       }
 
-      if (session.metadata?.type === "creatorvault_telegram_video_offer") {
+      if (session.metadata?.type === "vaultx_ppv") {
+        await handleVaultxPpvCheckout(session);
+      } else if (session.metadata?.type === "creatorvault_telegram_video_offer") {
         const { fulfillCreatorVaultVideoOfferPurchase } = await import("../services/creatorVaultOvernightRevenue");
         await fulfillCreatorVaultVideoOfferPurchase({
           id: session.id,
@@ -151,6 +153,29 @@ function buildStripeChallengeProof(
 /**
  * Handle checkout.session.completed event
  */
+async function handleVaultxPpvCheckout(session: Stripe.Checkout.Session) {
+  const metadata = session.metadata || {};
+  const contentId = Number(metadata.vaultxContentId || metadata.contentId || 0);
+  const fanUserId = Number(metadata.fanId || metadata.userId || 0);
+  const paymentIntentValue = session.payment_intent;
+  const paymentIntentId = typeof paymentIntentValue === "string" ? paymentIntentValue : paymentIntentValue?.id;
+
+  if (!contentId || !fanUserId || !paymentIntentId) {
+    console.error("[Stripe Webhook] Missing VaultX PPV metadata", { contentId, fanUserId, paymentIntentId: Boolean(paymentIntentId), sessionId: session.id });
+    return;
+  }
+
+  const { completeVaultxPpvPurchase } = await import("../routers/vaultxRouter");
+  const result = await completeVaultxPpvPurchase({
+    fanUserId,
+    contentId,
+    paymentIntentId,
+    buyerTelegramId: metadata.buyerTelegramId ? Number(metadata.buyerTelegramId) : undefined,
+    trackingCode: metadata.trackingCode || undefined,
+  });
+  console.log("[Stripe Webhook] VaultX PPV checkout completed", { sessionId: session.id, contentId, fanUserId, result });
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const metadata = session.metadata;
 

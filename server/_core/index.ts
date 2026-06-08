@@ -3,7 +3,7 @@ import "../services/telegramOutboundFirewall";
 import express from "express";
 import { db } from "../db";
 import path from "path";
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, readFileSync } from "fs";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -163,6 +163,34 @@ async function startServer() {
       console.warn("[attribution] redirect error:", err.message);
       return res.redirect(302, fallback);
     }
+  });
+
+  app.get("/__release", (_req, res) => {
+    const candidates = [
+      path.resolve(process.cwd(), "release.json"),
+      path.resolve(process.cwd(), "dist", "release.json"),
+      path.resolve(process.cwd(), "dist", "public", "release.json"),
+    ];
+    const releasePath = candidates.find(candidate => existsSync(candidate));
+    let release: Record<string, unknown> = {};
+    if (releasePath) {
+      try {
+        release = JSON.parse(readFileSync(releasePath, "utf8"));
+      } catch (error: any) {
+        release = { releaseParseError: error?.message || "Unable to parse release metadata" };
+      }
+    }
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      app: "creatorvault-ultrastate",
+      service: "vaultx",
+      nodeEnv: process.env.NODE_ENV || null,
+      releasePath: releasePath ? path.relative(process.cwd(), releasePath) : null,
+      gitSha: process.env.RELEASE_GIT_SHA || release.gitSha || release.git_sha || null,
+      builtAt: process.env.RELEASE_BUILT_AT || release.builtAt || release.built_at || null,
+      deployedAt: process.env.RELEASE_DEPLOYED_AT || release.deployedAt || release.deployed_at || null,
+      ...release,
+    });
   });
 
   // Durable uploads directory — persists across frontend redeployments
