@@ -167,9 +167,9 @@ async function startServer() {
 
   app.get("/__release", (_req, res) => {
     const candidates = [
-      path.resolve(process.cwd(), "release.json"),
       path.resolve(process.cwd(), "dist", "release.json"),
       path.resolve(process.cwd(), "dist", "public", "release.json"),
+      path.resolve(process.cwd(), "release.json"),
     ];
     const releasePath = candidates.find(candidate => existsSync(candidate));
     let release: Record<string, unknown> = {};
