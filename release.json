@@ -1,10 +1,1 @@
-{
-  "app": "creatorvault-ultrastate",
-  "service": "vaultx",
-  "gitSha": "4113678dbdbc2e5c7df501ec4dc723ad6de08ce6",
-  "gitShortSha": "4113678",
-  "branch": "main",
-  "builtAt": "2026-06-08T22:37:47Z",
-  "releaseName": "vaultx-95-money-loop",
-  "acceptance": "creator upload to sellable PPV outputs to Stripe unlock to buyer access to transactions and earnings proof"
-}
+{"commit":"eeb087494377ef0d751e71ddc86623dbc94baab5","gitSha":"eeb087494377ef0d751e71ddc86623dbc94baab5","branch":"main","builtAt":"2026-06-08T23:11:51Z","releaseName":"vaultx-95-money-loop-authfix","acceptance":"creator upload to sellable PPV outputs to Stripe unlock to buyer access to transactions and earnings proof","task":"vaultx-95-money-loop-authfix"}
