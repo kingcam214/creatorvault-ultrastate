@@ -228,7 +228,7 @@ function ForYouFeed() {
   );
 
   const subscribeMut = trpc.vaultx.subscribeToCreator.useMutation();
-  const buyPPV = trpc.vaultx.purchasePpv.useMutation();
+  const createPpvCheckout = trpc.vaultx.createPpvCheckout.useMutation();
 
   // Accumulate items as user scrolls
   useEffect(() => {
@@ -426,11 +426,13 @@ function ForYouFeed() {
         <button
           onClick={async () => {
             try {
-              const result = await buyPPV.mutateAsync({ contentId: item.id });
-              if (result.purchaseId) {
-                window.location.href = `/telegram-connect?purchaseId=${result.purchaseId}`;
+              const result = await createPpvCheckout.mutateAsync({ contentId: item.id });
+              if (result.alreadyPurchased) {
+                toast.success("You already own this PPV unlock.");
+              } else if (result.checkoutUrl) {
+                window.location.href = result.checkoutUrl;
               } else {
-                toast.success("PPV unlocked!");
+                toast.error("Stripe checkout did not return a redirect URL.");
               }
             } catch (e: any) { toast.error(e.message); }
           }}
@@ -521,7 +523,7 @@ function ContentFeedTab({ userId }: { userId: number }) {
   const items = (contentData as any)?.items || [];
   const isSubscribed = (contentData as any)?.isSubscribed || false;
 
-  const buyPPV = trpc.vaultx.purchasePpv.useMutation();
+  const createPpvCheckout = trpc.vaultx.createPpvCheckout.useMutation();
 
   return (
     <div className="space-y-5">
@@ -597,11 +599,13 @@ function ContentFeedTab({ userId }: { userId: number }) {
                         <button
                           onClick={async () => {
                             try {
-                              const result = await buyPPV.mutateAsync({ contentId: item.id });
-                              if (result.purchaseId) {
-                                window.location.href = `/telegram-connect?purchaseId=${result.purchaseId}`;
+                              const result = await createPpvCheckout.mutateAsync({ contentId: item.id });
+                              if (result.alreadyPurchased) {
+                                toast.success("You already own this PPV unlock.");
+                              } else if (result.checkoutUrl) {
+                                window.location.href = result.checkoutUrl;
                               } else {
-                                toast.success("PPV purchase initiated");
+                                toast.error("Stripe checkout did not return a redirect URL.");
                               }
                             } catch (e: any) { toast.error(e.message); }
                           }}
@@ -2407,6 +2411,42 @@ export default function VaultX() {
     retry: false,
     enabled: !!user,
   });
+
+  const confirmPpvCheckout = trpc.vaultx.confirmPpvCheckout.useMutation();
+
+  useEffect(() => {
+    if (!user || confirmPpvCheckout.isPending) return;
+    const params = new URLSearchParams(window.location.search);
+    const checkoutStatus = params.get("checkout");
+    const sessionId = params.get("session_id");
+    const contentId = Number(params.get("content") || 0);
+    if (checkoutStatus === "cancelled") {
+      toast.info("VaultX checkout was cancelled. No PPV access was granted.");
+      window.history.replaceState({}, "", window.location.pathname);
+      return;
+    }
+    if (checkoutStatus !== "success" || !sessionId || !contentId) return;
+    const idempotencyKey = `vaultx_ppv_confirmed_${sessionId}`;
+    if (sessionStorage.getItem(idempotencyKey)) return;
+    sessionStorage.setItem(idempotencyKey, "1");
+    confirmPpvCheckout.mutate(
+      { contentId, checkoutSessionId: sessionId },
+      {
+        onSuccess: (result) => {
+          toast.success(result.alreadyPurchased ? "VaultX PPV already unlocked." : "VaultX PPV unlocked. Access and creator earnings were recorded.");
+          if (result.purchaseId) {
+            window.history.replaceState({}, "", `/vaultx?purchaseId=${result.purchaseId}`);
+          } else {
+            window.history.replaceState({}, "", window.location.pathname);
+          }
+        },
+        onError: (error) => {
+          sessionStorage.removeItem(idempotencyKey);
+          toast.error(error.message || "VaultX could not confirm this checkout.");
+        },
+      }
+    );
+  }, [user, confirmPpvCheckout]);
 
   const isVerified = verified || (realmData as any)?.adultVerified;
 

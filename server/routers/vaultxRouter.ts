@@ -607,6 +607,141 @@ function buildBodyCinemaDecisionEngine(input: {
   };
 }
 
+async function completeVaultxPpvPurchase(input: {
+  fanUserId: number;
+  contentId: number;
+  paymentIntentId: string;
+  buyerTelegramId?: number;
+  trackingCode?: string;
+}): Promise<{ purchaseId?: number; success: boolean; alreadyPurchased?: boolean; paymentIntentId?: string }> {
+      const content = await rawQuery("SELECT * FROM vaultx_content WHERE id = ? AND is_ppv = 1 LIMIT 1", [input.contentId]);
+      if (!content.length) throw new TRPCError({ code: "NOT_FOUND", message: "PPV content not found." });
+      const existing = await rawQuery(
+        "SELECT id FROM vaultx_ppv_purchases WHERE fan_id = ? AND content_id = ? AND status = 'completed' LIMIT 1",
+        [input.fanUserId, input.contentId]
+      );
+      if (existing.length) return { success: true, alreadyPurchased: true };
+      if (!stripe) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe is not configured; PPV purchases cannot be completed safely." });
+      }
+      const paymentIntent = await stripe.paymentIntents.retrieve(input.paymentIntentId);
+      if (paymentIntent.status !== "succeeded") {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: `Payment has not succeeded. Current status: ${paymentIntent.status}` });
+      }
+      const expectedCents = Math.round(Number(content[0].ppv_price) * 100);
+      if ((paymentIntent.amount_received || 0) < expectedCents) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Stripe payment amount is lower than the PPV unlock price." });
+      }
+      const duplicatePayment = await rawQuery(
+        "SELECT id FROM vaultx_ppv_purchases WHERE stripe_payment_intent_id = ? AND status = 'completed' LIMIT 1",
+        [input.paymentIntentId]
+      );
+      if (duplicatePayment.length) {
+        throw new TRPCError({ code: "CONFLICT", message: "This Stripe payment intent has already been used for a completed VaultX purchase." });
+      }
+      const result = await rawExec(
+        `INSERT INTO vaultx_ppv_purchases
+         (fan_id, creator_id, content_id, amount_paid, stripe_payment_intent_id, status)
+         VALUES (?, ?, ?, ?, ?, 'completed')`,
+        [input.fanUserId, content[0].creator_id, input.contentId, content[0].ppv_price, input.paymentIntentId]
+      );
+      await rawExec(
+        "UPDATE vaultx_content SET purchase_count = purchase_count + 1, revenue_generated = revenue_generated + ? WHERE id = ?",
+        [content[0].ppv_price, input.contentId]
+      );
+      const purchaseId = (result as any).insertId;
+      const platformFeeCents = Math.round(expectedCents * PLATFORM_FEE);
+      const creatorShareCents = Math.max(0, expectedCents - platformFeeCents);
+      await rawExec(
+        "UPDATE vaultx_ppv_purchases SET platform_fee_cents = ?, creator_revenue_cents = ? WHERE id = ?",
+        [platformFeeCents, creatorShareCents, purchaseId]
+      );
+      await rawExec(
+        "UPDATE vaultx_creators SET total_revenue = total_revenue + ? WHERE id = ?",
+        [creatorShareCents / 100, content[0].creator_id]
+      );
+      await rawExec(
+        `INSERT INTO transactions
+         (fan_id, creator_id, amount_in_cents, creator_share_in_cents, platform_share_in_cents, stripe_payment_intent_id, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'completed')`,
+        [input.fanUserId, content[0].creator_id, expectedCents, creatorShareCents, platformFeeCents, input.paymentIntentId]
+      );
+      await rawExec(
+        `INSERT INTO creator_balances (creator_id, available_balance_in_cents, pending_balance_in_cents, lifetime_earnings_in_cents)
+         VALUES (?, ?, 0, ?)
+         ON DUPLICATE KEY UPDATE
+           available_balance_in_cents = available_balance_in_cents + VALUES(available_balance_in_cents),
+           lifetime_earnings_in_cents = lifetime_earnings_in_cents + VALUES(lifetime_earnings_in_cents),
+           updated_at = NOW()`,
+        [content[0].creator_id, creatorShareCents, creatorShareCents]
+      );
+
+      // ── Post-purchase: attribution + VIP upsell (non-blocking) ──────────────
+      setImmediate(async () => {
+        try {
+          const { recordCampaignEvent } = await import("../services/telegramCampaign");
+          const { sendVipUpsell } = await import("../services/telegramVipUpsell");
+          const trackingCode = input.trackingCode;
+          const revenueCents = Math.round(parseFloat(content[0].ppv_price) * 100);
+          // Auto-lookup buyer telegram_user_id from users table
+          let buyerTelegramId: number | undefined = input.buyerTelegramId;
+          if (!buyerTelegramId) {
+            const tgRows = await rawQuery(
+              "SELECT telegram_user_id FROM users WHERE id = ? AND telegram_user_id IS NOT NULL LIMIT 1",
+              [input.fanUserId]
+            );
+            if (tgRows.length && tgRows[0].telegram_user_id) {
+              buyerTelegramId = parseInt(String(tgRows[0].telegram_user_id), 10) || undefined;
+              console.log("[VaultX purchasePpv] Auto-resolved buyerTelegramId for user_id=" + input.fanUserId);
+            }
+          }
+          // 1. Attribution tracking
+          if (trackingCode) {
+            await recordCampaignEvent(trackingCode, "purchase", {
+              userId: input.fanUserId,
+              revenueCents,
+              buyerTelegramId,
+            });
+            await rawExec(
+              "UPDATE vaultx_ppv_purchases SET attribution_tracking_code = ?, buyer_telegram_id = ? WHERE id = ?",
+              [trackingCode, buyerTelegramId || null, purchaseId]
+            );
+          } else if (buyerTelegramId) {
+            // Even without tracking code, set buyer_telegram_id on the purchase
+            await rawExec(
+              "UPDATE vaultx_ppv_purchases SET buyer_telegram_id = ? WHERE id = ? AND buyer_telegram_id IS NULL",
+              [buyerTelegramId, purchaseId]
+            );
+          }
+          // 2. VIP upsell — requires real buyer Telegram ID
+          if (buyerTelegramId) {
+            const upsellResult = await sendVipUpsell({
+              purchaseId,
+              buyerTelegramId,
+              amountCents: revenueCents,
+              contentTitle: content[0].title || "exclusive content",
+              campaignId: undefined,
+              trackingCode,
+            });
+            console.log("[VaultX purchasePpv] VIP upsell result:", JSON.stringify(upsellResult));
+          } else {
+            // No telegram_id found — generate connect token for /telegram-connect page
+            const { randomBytes } = await import("crypto");
+            const connectToken = randomBytes(16).toString("hex");
+            await rawExec(
+              "UPDATE vaultx_ppv_purchases SET telegram_connect_token = ?, telegram_link_status = 'pending' WHERE id = ?",
+              [connectToken, purchaseId]
+            );
+            console.log("[VaultX purchasePpv] No buyerTelegramId — connect token generated for purchase_id=" + purchaseId);
+          }
+        } catch (e: any) {
+          console.error("[VaultX purchasePpv] post-purchase hook error:", e.message);
+        }
+      });
+
+      return { purchaseId, success: true };
+}
+
 export const vaultxRouter = router({
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1773,6 +1908,41 @@ export const vaultxRouter = router({
       return { success: true, alreadyPurchased: false, checkoutUrl: session.url, checkoutSessionId: session.id };
     }),
 
+  confirmPpvCheckout: protectedProcedure
+    .input(z.object({
+      contentId: z.number().int().positive(),
+      checkoutSessionId: z.string().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (!stripe) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe is not configured; PPV purchases cannot be completed safely." });
+      const session = await stripe.checkout.sessions.retrieve(input.checkoutSessionId, { expand: ["payment_intent"] });
+      if (session.payment_status !== "paid") {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: `Stripe checkout is not paid. Current status: ${session.payment_status}` });
+      }
+      const metadata = session.metadata || {};
+      if (metadata.type !== "vaultx_ppv") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Stripe checkout session is not a VaultX PPV unlock." });
+      }
+      if (Number(metadata.vaultxContentId) !== input.contentId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Stripe checkout content does not match the requested VaultX content." });
+      }
+      if (Number(metadata.fanId) !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Stripe checkout buyer does not match the signed-in fan." });
+      }
+      const paymentIntentValue = session.payment_intent;
+      const paymentIntentId = typeof paymentIntentValue === "string" ? paymentIntentValue : paymentIntentValue?.id;
+      if (!paymentIntentId) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe checkout did not return a payment intent." });
+      }
+      return completeVaultxPpvPurchase({
+        fanUserId: ctx.user.id,
+        contentId: input.contentId,
+        paymentIntentId,
+        buyerTelegramId: metadata.buyerTelegramId ? Number(metadata.buyerTelegramId) : undefined,
+        trackingCode: metadata.trackingCode || undefined,
+      });
+    }),
+
   purchasePpv: protectedProcedure
     .input(z.object({
       contentId: z.number(),
@@ -1781,132 +1951,13 @@ export const vaultxRouter = router({
       trackingCode: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const content = await rawQuery("SELECT * FROM vaultx_content WHERE id = ? AND is_ppv = 1 LIMIT 1", [input.contentId]);
-      if (!content.length) throw new TRPCError({ code: "NOT_FOUND", message: "PPV content not found." });
-      const existing = await rawQuery(
-        "SELECT id FROM vaultx_ppv_purchases WHERE fan_id = ? AND content_id = ? AND status = 'completed' LIMIT 1",
-        [ctx.user.id, input.contentId]
-      );
-      if (existing.length) return { success: true, alreadyPurchased: true };
-      if (!stripe) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe is not configured; PPV purchases cannot be completed safely." });
-      }
-      const paymentIntent = await stripe.paymentIntents.retrieve(input.paymentIntentId);
-      if (paymentIntent.status !== "succeeded") {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: `Payment has not succeeded. Current status: ${paymentIntent.status}` });
-      }
-      const expectedCents = Math.round(Number(content[0].ppv_price) * 100);
-      if ((paymentIntent.amount_received || 0) < expectedCents) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Stripe payment amount is lower than the PPV unlock price." });
-      }
-      const duplicatePayment = await rawQuery(
-        "SELECT id FROM vaultx_ppv_purchases WHERE stripe_payment_intent_id = ? AND status = 'completed' LIMIT 1",
-        [input.paymentIntentId]
-      );
-      if (duplicatePayment.length) {
-        throw new TRPCError({ code: "CONFLICT", message: "This Stripe payment intent has already been used for a completed VaultX purchase." });
-      }
-      const result = await rawExec(
-        `INSERT INTO vaultx_ppv_purchases
-         (fan_id, creator_id, content_id, amount_paid, stripe_payment_intent_id, status)
-         VALUES (?, ?, ?, ?, ?, 'completed')`,
-        [ctx.user.id, content[0].creator_id, input.contentId, content[0].ppv_price, input.paymentIntentId]
-      );
-      await rawExec(
-        "UPDATE vaultx_content SET purchase_count = purchase_count + 1, revenue_generated = revenue_generated + ? WHERE id = ?",
-        [content[0].ppv_price, input.contentId]
-      );
-      const purchaseId = (result as any).insertId;
-      const platformFeeCents = Math.round(expectedCents * PLATFORM_FEE);
-      const creatorShareCents = Math.max(0, expectedCents - platformFeeCents);
-      await rawExec(
-        "UPDATE vaultx_ppv_purchases SET platform_fee_cents = ?, creator_revenue_cents = ? WHERE id = ?",
-        [platformFeeCents, creatorShareCents, purchaseId]
-      );
-      await rawExec(
-        "UPDATE vaultx_creators SET total_revenue = total_revenue + ? WHERE id = ?",
-        [creatorShareCents / 100, content[0].creator_id]
-      );
-      await rawExec(
-        `INSERT INTO transactions
-         (fan_id, creator_id, amount_in_cents, creator_share_in_cents, platform_share_in_cents, stripe_payment_intent_id, status)
-         VALUES (?, ?, ?, ?, ?, ?, 'completed')`,
-        [ctx.user.id, content[0].creator_id, expectedCents, creatorShareCents, platformFeeCents, input.paymentIntentId]
-      );
-      await rawExec(
-        `INSERT INTO creator_balances (creator_id, available_balance_in_cents, pending_balance_in_cents, lifetime_earnings_in_cents)
-         VALUES (?, ?, 0, ?)
-         ON DUPLICATE KEY UPDATE
-           available_balance_in_cents = available_balance_in_cents + VALUES(available_balance_in_cents),
-           lifetime_earnings_in_cents = lifetime_earnings_in_cents + VALUES(lifetime_earnings_in_cents),
-           updated_at = NOW()`,
-        [content[0].creator_id, creatorShareCents, creatorShareCents]
-      );
-
-      // ── Post-purchase: attribution + VIP upsell (non-blocking) ──────────────
-      setImmediate(async () => {
-        try {
-          const { recordCampaignEvent } = await import("../services/telegramCampaign");
-          const { sendVipUpsell } = await import("../services/telegramVipUpsell");
-          const trackingCode = input.trackingCode;
-          const revenueCents = Math.round(parseFloat(content[0].ppv_price) * 100);
-          // Auto-lookup buyer telegram_user_id from users table
-          let buyerTelegramId: number | undefined = input.buyerTelegramId;
-          if (!buyerTelegramId) {
-            const tgRows = await rawQuery(
-              "SELECT telegram_user_id FROM users WHERE id = ? AND telegram_user_id IS NOT NULL LIMIT 1",
-              [ctx.user.id]
-            );
-            if (tgRows.length && tgRows[0].telegram_user_id) {
-              buyerTelegramId = parseInt(String(tgRows[0].telegram_user_id), 10) || undefined;
-              console.log("[VaultX purchasePpv] Auto-resolved buyerTelegramId for user_id=" + ctx.user.id);
-            }
-          }
-          // 1. Attribution tracking
-          if (trackingCode) {
-            await recordCampaignEvent(trackingCode, "purchase", {
-              userId: ctx.user.id,
-              revenueCents,
-              buyerTelegramId,
-            });
-            await rawExec(
-              "UPDATE vaultx_ppv_purchases SET attribution_tracking_code = ?, buyer_telegram_id = ? WHERE id = ?",
-              [trackingCode, buyerTelegramId || null, purchaseId]
-            );
-          } else if (buyerTelegramId) {
-            // Even without tracking code, set buyer_telegram_id on the purchase
-            await rawExec(
-              "UPDATE vaultx_ppv_purchases SET buyer_telegram_id = ? WHERE id = ? AND buyer_telegram_id IS NULL",
-              [buyerTelegramId, purchaseId]
-            );
-          }
-          // 2. VIP upsell — requires real buyer Telegram ID
-          if (buyerTelegramId) {
-            const upsellResult = await sendVipUpsell({
-              purchaseId,
-              buyerTelegramId,
-              amountCents: revenueCents,
-              contentTitle: content[0].title || "exclusive content",
-              campaignId: undefined,
-              trackingCode,
-            });
-            console.log("[VaultX purchasePpv] VIP upsell result:", JSON.stringify(upsellResult));
-          } else {
-            // No telegram_id found — generate connect token for /telegram-connect page
-            const { randomBytes } = await import("crypto");
-            const connectToken = randomBytes(16).toString("hex");
-            await rawExec(
-              "UPDATE vaultx_ppv_purchases SET telegram_connect_token = ?, telegram_link_status = 'pending' WHERE id = ?",
-              [connectToken, purchaseId]
-            );
-            console.log("[VaultX purchasePpv] No buyerTelegramId — connect token generated for purchase_id=" + purchaseId);
-          }
-        } catch (e: any) {
-          console.error("[VaultX purchasePpv] post-purchase hook error:", e.message);
-        }
+      return completeVaultxPpvPurchase({
+        fanUserId: ctx.user.id,
+        contentId: input.contentId,
+        paymentIntentId: input.paymentIntentId,
+        buyerTelegramId: input.buyerTelegramId,
+        trackingCode: input.trackingCode,
       });
-
-      return { purchaseId, success: true };
     }),
 
   // ═══════════════════════════════════════════════════════════════════════════

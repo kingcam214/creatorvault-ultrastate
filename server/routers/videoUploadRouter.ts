@@ -13,6 +13,9 @@ import { existsSync } from "fs";
 import path from "path";
 import os from "os";
 import { randomUUID } from "crypto";
+import { sql } from "drizzle-orm";
+import { db } from "../db";
+import { sdk } from "../_core/sdk";
 
 // ─── Helper: mime type from filename ─────────────────────────────────────────
 function getMimeType(filename: string): string {
@@ -57,6 +60,106 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100
 export const videoUploadRouter = Router();
 
 const UPLOAD_DIR = path.join(os.tmpdir(), "vaultx-uploads");
+const OWNER_IDS = [6, 33];
+
+async function rawQuery(query: string, params: any[] = []): Promise<any[]> {
+  const pool = (db as any).$client || (db as any).client;
+  if (pool && typeof pool.promise === "function") {
+    const [rows] = await pool.promise().query(query, params);
+    return rows as any[];
+  }
+  if (pool && typeof pool.execute === "function") {
+    const [rows] = await pool.execute(query, params);
+    return rows as any[];
+  }
+  const escaped = query.replace(/\?/g, () => {
+    const value = params.shift();
+    if (value === null || value === undefined) return "NULL";
+    if (typeof value === "number") return String(value);
+    return `'${String(value).replace(/'/g, "''")}'`;
+  });
+  const result = await (db as any).execute(sql.raw(escaped));
+  return (result as any).rows || result;
+}
+
+async function rawExec(query: string, params: any[] = []): Promise<any> {
+  const pool = (db as any).$client || (db as any).client;
+  if (pool && typeof pool.promise === "function") {
+    const [result] = await pool.promise().query(query, params);
+    return result;
+  }
+  if (pool && typeof pool.execute === "function") {
+    const [result] = await pool.execute(query, params);
+    return result;
+  }
+  await (db as any).execute(sql.raw(query));
+}
+
+async function getCreatorId(userId: number): Promise<number | null> {
+  const rows = await rawQuery("SELECT id FROM vaultx_creators WHERE user_id = ? AND is_active = 1 LIMIT 1", [userId]);
+  return rows[0]?.id ?? null;
+}
+
+function parsePriceCents(raw: unknown): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) return Math.max(100, Math.round(raw));
+  if (typeof raw === "string" && raw.trim()) {
+    const cleaned = raw.replace(/[^0-9.]/g, "");
+    const value = Number(cleaned);
+    if (Number.isFinite(value)) return Math.max(100, Math.round(value * (cleaned.includes(".") ? 100 : 1)));
+  }
+  return 999;
+}
+
+function contentTypeFromFilename(filename: string): "video" | "photo" | "audio" {
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return "photo";
+  if (["mp3", "wav", "m4a", "aac"].includes(ext)) return "audio";
+  return "video";
+}
+
+async function registerUploadedPaidContent(req: Request, file: { url: string; filename: string }, meta: any) {
+  const user = await sdk.authenticateRequest(req);
+  const creatorId = await getCreatorId(Number(user.id));
+  const cid = creatorId || Number(user.id);
+  if (!cid || (!creatorId && !OWNER_IDS.includes(Number(user.id)))) {
+    throw new Error("Authenticated creator profile required to register paid VaultX content.");
+  }
+
+  const title = String(meta.title || meta.contentTitle || file.filename.replace(/\.[^.]+$/, "") || "VaultX Upload").slice(0, 255);
+  const description = String(meta.description || "VaultX paid content created from a completed upload.").slice(0, 5000);
+  const contentType = ["video", "photo", "audio"].includes(String(meta.contentType))
+    ? String(meta.contentType)
+    : contentTypeFromFilename(file.filename);
+  const ppvPrice = parsePriceCents(meta.ppvPrice ?? meta.priceCents ?? meta.price ?? meta.unlockPrice);
+  const tags = JSON.stringify(["vaultx", "upload", "paid-content", "money-loop"]);
+
+  const result = await rawExec(
+    `INSERT INTO vaultx_content
+     (creator_id, title, description, content_type,
+      uncensored_url, censored_url, thumbnail_url, censored_thumbnail_url,
+      is_ppv, ppv_price, is_subscription_only, is_free_preview, free_preview_seconds,
+      access_tier, tags, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+    [
+      cid, title, description, contentType,
+      file.url, null, null, null,
+      1, ppvPrice, 0, 0, 0,
+      String(meta.accessTier || "public"), tags,
+    ]
+  );
+
+  const contentId = Number((result as any).insertId || 0);
+  return {
+    id: contentId,
+    creatorId: cid,
+    title,
+    contentType,
+    url: file.url,
+    ppvPrice,
+    status: "active",
+    registered: contentId > 0,
+  };
+}
 
 // ─── /init — register upload session ─────────────────────────────────────────
 videoUploadRouter.post("/init", async (req: Request, res: Response) => {
@@ -69,7 +172,20 @@ videoUploadRouter.post("/init", async (req: Request, res: Response) => {
     await mkdir(sessionDir, { recursive: true });
     await writeFile(
       path.join(sessionDir, "meta.json"),
-      JSON.stringify({ uploadId, totalChunks: parseInt(totalChunks), filename, receivedChunks: 0 })
+              JSON.stringify({
+          uploadId,
+          totalChunks: parseInt(totalChunks),
+          filename,
+          receivedChunks: 0,
+          title: req.body.title,
+          description: req.body.description,
+          contentType: req.body.contentType,
+          ppvPrice: req.body.ppvPrice,
+          priceCents: req.body.priceCents,
+          accessTier: req.body.accessTier,
+          registerPaidContent: req.body.registerPaidContent !== false && req.body.registerPaidContent !== "false",
+        })
+
     );
     res.json({ uploadId, status: "initialized" });
   } catch (e) {
@@ -101,10 +217,13 @@ videoUploadRouter.post("/chunk", upload.single("chunk"), async (req: Request, re
     // Auto-finalize when all chunks received — push to CDN
     if (meta.receivedChunks >= meta.totalChunks) {
       const { url, filename: finalFilename } = await assembleAndUpload(sessionDir, meta);
+      const file = { url, filename: finalFilename };
+      const paidContent = meta.registerPaidContent === false ? null : await registerUploadedPaidContent(req, file, meta);
       return res.json({
         uploadId, chunkIndex, received: meta.receivedChunks, total: meta.totalChunks,
         complete: true,
-        file: { url, filename: finalFilename }
+        file,
+        paidContent,
       });
     }
 
@@ -126,7 +245,9 @@ videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
     const meta = JSON.parse(await readFile(path.join(sessionDir, "meta.json"), "utf-8"));
     if (filename) meta.filename = filename;
     const { url, filename: finalFilename } = await assembleAndUpload(sessionDir, meta);
-    res.json({ url, filename: finalFilename });
+    const file = { url, filename: finalFilename };
+    const paidContent = meta.registerPaidContent === false ? null : await registerUploadedPaidContent(req, file, meta);
+    res.json({ url, filename: finalFilename, file, paidContent });
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }

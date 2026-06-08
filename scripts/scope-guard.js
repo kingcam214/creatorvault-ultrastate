@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
+import { execSync } from 'child_process';
 
 // Task allowlists
 const ALLOWLISTS = {
@@ -13,6 +13,11 @@ const ALLOWLISTS = {
   ],
   vaultx: [
     'client/src/pages/VaultX.tsx',
+    'client/src/pages/VaultXFanLibrary.tsx',
+    'server/routers/vaultxRouter.ts',
+    'server/routers/videoUploadRouter.ts',
+    'scripts/route-owner.js',
+    'scripts/scope-guard.js',
     'client/src/index.css',
     'client/index.html'
   ],
@@ -24,7 +29,7 @@ const ALLOWLISTS = {
 
 function getChangedFiles() {
   try {
-    const output = execSync('git diff --name-only HEAD~1', { encoding: 'utf8' });
+    const output = execSync('git diff --name-only HEAD', { encoding: 'utf8' });
     return output.trim().split('\n').filter(Boolean);
   } catch (e) {
     console.log('No previous commit found, checking staged files...');

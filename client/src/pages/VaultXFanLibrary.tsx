@@ -7,13 +7,13 @@
  * ZERO stubs. ZERO placeholders. Every call is a real tRPC endpoint:
  *   trpc.vaultx.getMySubscriptions     — active subs with creator info
  *   trpc.vaultx.getFanFeed             — content from subscribed creators
- *   trpc.vaultx.purchasePpv            — unlock PPV content
+ *   trpc.vaultx.createPpvCheckout     — open Stripe checkout for PPV content
  *   trpc.vaultx.cancelSubscription     — cancel a subscription
  *   trpc.vaultx.subscribeToCreator     — subscribe to a creator
  *   trpc.vaultx.createTipIntent        — send a tip
  *   trpc.vaultx.getForYouFeed          — discover new creators
  */
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -353,22 +353,29 @@ export default function VaultXFanLibrary() {
   );
 
   // ── Mutations ─────────────────────────────────────────────────────────────
-  const purchaseMut = trpc.vaultx.purchasePpv.useMutation({
+  const createCheckoutMut = trpc.vaultx.createPpvCheckout.useMutation({
     onSuccess: (data) => {
       setUnlocking(null);
       if (data.alreadyPurchased) {
         toast({ title: "Already purchased", description: "You already own this content." });
+        feedQ.refetch();
+      } else if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
       } else {
-        // If purchase returned a purchaseId and no telegram link yet, redirect to connect page
-        if (data.purchaseId) {
-          navigate(`/telegram-connect?purchaseId=${data.purchaseId}`);
-        } else {
-          toast({ title: "Unlocked!", description: "Content is now available." });
-          feedQ.refetch();
-        }
+        toast({ title: "Checkout unavailable", description: "Stripe did not return a checkout URL.", variant: "destructive" });
       }
     },
     onError: (e) => { setUnlocking(null); toast({ title: "Unlock failed", description: e.message, variant: "destructive" }); },
+  });
+
+  const confirmCheckoutMut = trpc.vaultx.confirmPpvCheckout.useMutation({
+    onSuccess: (data) => {
+      setUnlocking(null);
+      toast({ title: data.alreadyPurchased ? "Already unlocked" : "Unlocked!", description: "Your PPV access and creator earnings are recorded." });
+      feedQ.refetch();
+      navigate("/vault-x/fan-library");
+    },
+    onError: (e) => { setUnlocking(null); toast({ title: "Checkout confirmation failed", description: e.message, variant: "destructive" }); },
   });
 
   const cancelMut = trpc.vaultx.cancelSubscription.useMutation({
@@ -390,10 +397,28 @@ export default function VaultXFanLibrary() {
     onError: (e) => { setSubscribing(null); toast({ title: "Subscribe failed", description: e.message, variant: "destructive" }); },
   });
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkoutStatus = params.get("checkout");
+    const sessionId = params.get("session_id");
+    const contentId = Number(params.get("content") || 0);
+    if (checkoutStatus === "cancelled") {
+      toast({ title: "Checkout cancelled", description: "No PPV access was granted." });
+      navigate("/vault-x/fan-library");
+      return;
+    }
+    if (checkoutStatus !== "success" || !sessionId || !contentId || confirmCheckoutMut.isPending) return;
+    const idempotencyKey = `vaultx_fan_ppv_confirmed_${sessionId}`;
+    if (sessionStorage.getItem(idempotencyKey)) return;
+    sessionStorage.setItem(idempotencyKey, "1");
+    setUnlocking(contentId);
+    confirmCheckoutMut.mutate({ contentId, checkoutSessionId: sessionId });
+  }, [confirmCheckoutMut, navigate, toast]);
+
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleUnlock = (contentId: number, price: number) => {
     setUnlocking(contentId);
-    purchaseMut.mutate({ contentId });
+    createCheckoutMut.mutate({ contentId });
   };
 
   const handleCancel = (subscriptionId: number) => {
