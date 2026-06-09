@@ -245,3 +245,5 @@ Ok to proceed? (y)
 - PM2 running stable at 174MB memory
 - All uploads saved to 
 - HTTP 200 confirmed for all processed video files
+
+- 2026-06-09: Added root SSH authorized key fingerprint SHA256:v79rQ+7rvF+v/rFnIgaNht0G08ts4UDrm1ZlPSjnWZE for Manus sandbox deployment access to install the pushed VaultX copy release.
