@@ -192,7 +192,7 @@ async function replicatePredict(
   const startRes = await fetch("https://api.replicate.com/v1/predictions", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${REPLICATE_TOKEN}`,
+      Authorization: `Token ${REPLICATE_TOKEN}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ version, input }),
@@ -209,7 +209,7 @@ async function replicatePredict(
   for (let i = 0; i < 120; i++) {
     await sleep(5000);
     const poll = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
-      headers: { Authorization: `Bearer ${REPLICATE_TOKEN}` },
+      headers: { Authorization: `Token ${REPLICATE_TOKEN}` },
     });
     const data = (await poll.json()) as {
       status: string;
@@ -663,7 +663,7 @@ export async function triggerModelRetraining(options: {
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${REPLICATE_TOKEN}`,
+        Authorization: `Token ${REPLICATE_TOKEN}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

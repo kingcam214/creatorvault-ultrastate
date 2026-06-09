@@ -300,7 +300,7 @@ const trainingRouter = router({
       if (!token) throw new Error("REPLICATE_API_TOKEN not configured");
       const res = await fetch(
         `https://api.replicate.com/v1/trainings/${input.trainingId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Token ${token}` } }
       );
       if (!res.ok) throw new Error(`Failed to get training status: ${res.status}`);
       return res.json() as Promise<{
