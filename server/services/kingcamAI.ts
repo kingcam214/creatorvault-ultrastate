@@ -267,13 +267,15 @@ async function polloGenerate(
       headers: { "x-api-key": POLLO_KEY },
     });
     const pollJson = (await pollRes.json()) as {
-      code: string;
+      code?: string;
       data?: {
         taskId?: string;
         generations?: Array<{ status: string; url?: string; failMsg?: string }>;
       };
+      taskId?: string;
+      generations?: Array<{ status: string; url?: string; failMsg?: string }>;
     };
-    const gen = pollJson?.data?.generations?.[0];
+    const gen = (pollJson?.data?.generations ?? pollJson?.generations)?.[0];
     const status = gen?.status ?? "";
     if (status === "succeed") {
       const url = gen?.url;
@@ -294,15 +296,15 @@ function sleep(ms: number) {
 
 // ─── POLLO MODEL PATH MAP ─────────────────────────────────────────────────────
 const POLLO_MODEL_PATHS: Record<VideoModel, string> = {
-  "kling-3.0":       "kling-ai/kling-3.0",
-  "kling-2.6":       "kling-ai/kling-2.6",
+  "kling-3.0":       "kling-ai/kling-v3",
+  "kling-2.6":       "kling-ai/kling-v2-6",
   "kling-o1":        "kling-ai/kling-video-o1",
-  "seedance-2.0":    "pollo-ai/seedance-2.0",
-  "seedance-1.5-pro":"pollo-ai/seedance-1.5-pro",
-  "wan-2.6":         "pollo-ai/wan-2.6",
-  "vidu-q3-pro":     "pollo-ai/vidu-q3-pro",
-  "pollo-3.0":       "pollo-ai/pollo-3.0",
-  "pollo-2.0":       "pollo-ai/pollo-2.0",
+  "seedance-2.0":    "seedance/seedance-2-0",
+  "seedance-1.5-pro":"seedance/seedance-1-5-pro",
+  "wan-2.6":         "wanx/wan-v2-6",
+  "vidu-q3-pro":     "vidu/viduq3-pro",
+  "pollo-3.0":       "pollo/pollo-v3-0",
+  "pollo-2.0":       "pollo/pollo-v2-0",
 };
 
 // ─── CORE: GENERATE IMAGE ─────────────────────────────────────────────────────
@@ -382,13 +384,19 @@ export async function generateKingCamVideo(
     ? injectKingCamDNA(prompt, { styleLevel: "cinematic" })
     : prompt;
 
-  const input: Record<string, unknown> = {
-    prompt: finalPrompt,
-    aspectRatio,
-    length: duration,
-    mode,
-  };
-  if (imageUrl) input.images = [imageUrl];
+  const input: Record<string, unknown> = imageUrl
+    ? {
+        prompt: finalPrompt,
+        image: imageUrl,
+        length: duration,
+        mode,
+      }
+    : {
+        prompt: finalPrompt,
+        aspectRatio,
+        length: duration,
+        mode,
+      };
 
   const url = await polloGenerate(POLLO_MODEL_PATHS[model], input);
   return { url, model: `pollo/${model}`, provider: "pollo", vertical };
