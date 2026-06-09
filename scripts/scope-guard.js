@@ -14,6 +14,8 @@ const ALLOWLISTS = {
   vaultx: [
     'client/src/pages/VaultX.tsx',
     'client/src/pages/VaultXFanLibrary.tsx',
+    'client/src/pages/VaultXEditor.tsx',
+    'client/src/pages/VaultXStudio.tsx',
     'server/routers/vaultxRouter.ts',
     'server/routers/videoUploadRouter.ts',
     'server/_core/stripeWebhook.ts',
