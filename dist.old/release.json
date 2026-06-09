@@ -1,0 +1,14 @@
+{
+  "app": "creatorvault-ultrastate",
+  "service": "vaultx",
+  "nodeEnv": "production",
+  "releasePath": "dist/release.json",
+  "gitSha": "a172bace91ff39db2fc6cc77c9f146107c4b07aa",
+  "builtAt": "2026-06-08T23:31:28Z",
+  "deployedAt": "2026-06-08T23:31:28Z",
+  "commit": "a172bace91ff39db2fc6cc77c9f146107c4b07aa",
+  "branch": "main",
+  "releaseName": "vaultx-95-money-loop-authcompat",
+  "acceptance": "creator upload to sellable PPV outputs to Stripe unlock to buyer access to transactions and earnings proof",
+  "task": "vaultx-95-money-loop-authcompat"
+}

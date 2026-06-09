@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-06-09T03:11:16.960Z",
+  "policy": "CreatorVault platform-native only; no external media generation; verified KingCam project media only.",
+  "output": {
+    "mp4": "/videos/vaultx-homepage-kingcam-trailer.mp4",
+    "poster": "/videos/vaultx-homepage-kingcam-trailer-poster.jpg",
+    "durationSeconds": 18,
+    "dimensions": "1920x1080"
+  },
+  "sourceAssets": {
+    "cloneWide": "client/public/videos/kingcam-clone-1.mp4",
+    "cloneSquare": "client/public/videos/kingcam-clone-2.mp4",
+    "heroVertical": "client/public/videos/kingcam-hero-cam.mp4"
+  },
+  "cutSheet": [
+    "0:00-0:03 verified KingCam wide/low-presence footage",
+    "0:03-0:05 verified KingCam stride crop with gold grade",
+    "0:05-0:08 verified KingCam chest/face-forward hero footage",
+    "0:08-0:10 verified KingCam wide/platform-world cut",
+    "0:10-0:13 verified KingCam close-up hold before hit",
+    "0:13-0:15 CreatorVault gold logo hold",
+    "0:15-0:18 CTA fade: Join as Creator / Explore as Fan"
+  ],
+  "audio": "Commercial reference track not embedded because no licensed file was supplied; included only a platform-owned low-rumble timing bed suitable for muted homepage autoplay."
+}
