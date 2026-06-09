@@ -2151,103 +2151,49 @@ export function RealmToggle() {
 
 function VaultXPublicLanding() {
   const offerParams = new URLSearchParams(window.location.search);
-  const offerSlug = offerParams.get("offer") || "";
-  const offerPrice = Number(offerParams.get("price") || "97");
+  const offerSlug = offerParams.get("offer") || "body-cinema";
+  const offerPrice = Number(offerParams.get("price") || "0");
   const offerRef = offerParams.get("ref") || "direct";
-  const paidSessionId = offerParams.get("session_id") || "";
-  const isBodyCinemaOffer = offerSlug === "body-cinema";
   const vaultXOfferCheckout = trpc.stripeCheckout.createVaultXOfferCheckout.useMutation({
     onSuccess: (result) => {
       window.location.href = result.url;
     },
     onError: (error) => {
-      toast.error(error.message || "VaultX checkout is not available right now.");
+      toast.error(error.message || "VaultX is not available right now.");
     },
   });
 
   const startVaultXOfferCheckout = () => {
-    if (!isBodyCinemaOffer) {
-      window.location.href = "/vault-x/editor";
-      return;
-    }
-
     vaultXOfferCheckout.mutate({
       offer: offerSlug,
-      price: offerPrice,
+      price: Number.isFinite(offerPrice) ? offerPrice : 0,
       ref: offerRef,
     });
   };
 
-  const priceLabel = `$${Number.isFinite(offerPrice) ? offerPrice : 97}`;
-
-  const deliverables = [
+  const featureCards = [
     {
-      icon: Video,
-      title: "Angle Stack",
-      body: "Turn one raw clip into multiple buyer-ready angles: hero framing, close crop, reveal cut, profile crop, and vertical story version.",
+      title: "PPV Content",
+      body: "Set your price. Fans pay to unlock. You see the money instantly.",
     },
     {
-      icon: Sparkles,
-      title: "Skin Pop Polish",
-      body: "A creator-safe finishing pass focused on glow, contrast, pacing, caption rhythm, and premium visual presentation.",
+      title: "Subscriptions",
+      body: "Monthly recurring income from fans who can't get enough.",
     },
     {
-      icon: Eye,
-      title: "Reveal Teaser System",
-      body: "Build public-safe teasers that create curiosity without exposing the premium asset before the checkout moment.",
+      title: "Direct Messaging",
+      body: "Charge for access to your DMs. Your time has a price. Set it.",
     },
     {
-      icon: Camera,
-      title: "Close-Up Isolator",
-      body: "Pull the most magnetic body, outfit, motion, and expression moments into short clips that feel intentional instead of random.",
-    },
-    {
-      icon: Play,
-      title: "60-Second Body Highlight Reel",
-      body: "Package a concise highlight sequence for profile posts, fan drops, paid previews, Telegram pushes, and follow-up campaigns.",
-    },
-    {
-      icon: DollarSign,
-      title: "Revenue Route Notes",
-      body: "Get clear next-step guidance for where to use each cut: free preview, paid unlock, VIP message, or retargeting follow-up.",
-    },
-  ];
-
-  const moneyFlow = [
-    { step: "Upload", copy: "Bring the raw clip, selfie set, gym clip, outfit change, or creator footage into the VaultX workflow." },
-    { step: "Cinema Cut", copy: "The kit breaks it into angles, hook moments, safe teasers, premium-ready highlights, and caption-ready assets." },
-    { step: "Launch", copy: "Use the finished package for profile drops, fan messages, Telegram pushes, paid unlocks, and offer follow-up." },
-  ];
-
-  const proofTiles = [
-    { value: "5", label: "creator-ready cut types" },
-    { value: "60s", label: "highlight reel target" },
-    { value: "18+", label: "adult creator business context" },
-    { value: "$97", label: "real Stripe offer" },
-  ];
-
-  const faqs = [
-    {
-      q: "Is this explicit content?",
-      a: "No. The preview stays safe for public viewing while the paid asset remains protected. Body Cinema is for adult, fitness, beauty, and body-led creators who need premium packaging without exposing private material on the sales page.",
-    },
-    {
-      q: "What happens after checkout?",
-      a: "Secure checkout processes the purchase and returns you to CreatorVault for the Body Cinema access path.",
-    },
-    {
-      q: "Who is this for?",
-      a: "Creators who already have raw footage but need a sharper money path: better teasers, stronger highlights, cleaner visual polish, and content versions that are ready to send, post, and monetize.",
+      title: "Multi-Platform Publishing",
+      body: "Post once. Push everywhere. TikTok, Telegram, X — all from one dashboard.",
     },
   ];
 
   return (
     <div className="min-h-screen text-white overflow-hidden relative" style={{ background: "#060606" }}>
       <style>{`
-        @keyframes vxGlow { 0%,100%{opacity:.55;transform:scale(1)} 50%{opacity:.9;transform:scale(1.08)} }
-        @keyframes vxFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
         .vx-shell{max-width:1180px;margin:0 auto;padding-left:20px;padding-right:20px}
-        .vx-glass{background:linear-gradient(180deg,rgba(20,20,20,.86),rgba(10,10,10,.76));border:1px solid rgba(201,168,76,.18);box-shadow:0 24px 80px rgba(0,0,0,.48);backdrop-filter:blur(18px)}
         .vx-card{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);transition:transform .22s ease,border-color .22s ease,background .22s ease}.vx-card:hover{transform:translateY(-4px);border-color:rgba(201,168,76,.34);background:rgba(255,255,255,.065)}
         .vx-gold{background:linear-gradient(135deg,#c9a84c,#f3d68b);-webkit-background-clip:text;background-clip:text;color:transparent}
         .vx-btn{background:linear-gradient(135deg,#c9a84c,#f3d68b);color:#050505;box-shadow:0 20px 55px rgba(201,168,76,.28)}
@@ -2257,150 +2203,111 @@ function VaultXPublicLanding() {
       <div className="absolute inset-0 pointer-events-none opacity-[.05]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
 
       <nav className="vx-shell relative z-10 flex items-center justify-between py-5 md:py-7">
-        <a href="/vault-x?offer=body-cinema" className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center kc-animate-pulse-gold" style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)" }}><Flame className="w-5 h-5 text-black" /></div>
-          <div>
-            <VaultXLogo size="sm" />
-            <div className="text-[10px] uppercase tracking-[.28em] font-black" style={{ color: "#c9a84c" }}>Body Cinema</div>
-          </div>
-        </a>
-        <div className="flex items-center gap-2 md:gap-3">
-          <a href="/login" className="hidden sm:inline-flex px-4 py-2.5 rounded-xl text-sm font-bold border border-white/10 text-white/70 hover:text-white hover:bg-white/5">Sign In</a>
-          <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center gap-2 px-4 md:px-6 py-3 rounded-2xl text-sm font-black">
-            <CreditCard className="w-4 h-4" /> {vaultXOfferCheckout.isPending ? "Opening..." : `${priceLabel} Checkout`}
-          </button>
+        <a href="/vault-x" className="text-2xl font-black tracking-[-.04em] vx-gold">VaultX</a>
+        <div className="flex items-center gap-2 md:gap-4">
+          <a href="/login" className="px-4 py-2.5 rounded-xl text-sm font-bold border border-white/10 text-white/70 hover:text-white hover:bg-white/5">Sign In</a>
+          <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn px-4 md:px-6 py-3 rounded-2xl text-sm font-black">Get Started</button>
         </div>
       </nav>
 
       <main className="relative z-10">
-        {paidSessionId && (
-          <section className="vx-shell pt-2">
-            <div className="rounded-2xl p-4 border" style={{ background: "rgba(16,185,129,.11)", borderColor: "rgba(16,185,129,.28)", color: "#bbf7d0" }}>
-              <strong>Payment return detected.</strong> Your secure checkout return was detected for session {paidSessionId.slice(0, 12)}. Access is being prepared...
-            </div>
-          </section>
-        )}
-
-        <section className="vx-shell pt-8 md:pt-14 pb-16 md:pb-24">
-          <div className="grid lg:grid-cols-[1fr_.9fr] gap-10 lg:gap-14 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-6" style={{ background: "rgba(201,168,76,.12)", border: "1px solid rgba(201,168,76,.28)", color: "#f3d68b" }}>
-                <Shield className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.18em]">Video preview · secure Stripe checkout</span>
-              </div>
-              <h1 className="font-black leading-[.9] tracking-[-.055em] mb-6" style={{ fontSize: "clamp(3rem, 8vw, 7.2rem)" }}>
-                Show the motion before you sell the unlock.
-              </h1>
-              <p className="text-lg md:text-2xl leading-8 md:leading-10 max-w-2xl mb-8" style={{ color: "#d8d8d3" }}>
-                <strong>Body Cinema</strong> packages raw creator footage into a preview-led offer: the buyer sees motion first, then the paid kit explains what unlocks after checkout.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 mb-8">
-                <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex justify-center items-center gap-2 rounded-2xl px-8 py-4 text-base font-black">
-                  <Unlock className="w-5 h-5" /> {vaultXOfferCheckout.isPending ? "Opening secure checkout..." : `Unlock Body Cinema — ${priceLabel}`}
-                </button>
-                <a href="#body-cinema-kit" className="inline-flex justify-center items-center gap-2 rounded-2xl px-8 py-4 text-base font-bold border border-white/15 text-white hover:bg-white/5">See what you get <ChevronRight className="w-5 h-5" /></a>
-              </div>
-              <p className="text-sm leading-6 max-w-xl" style={{ color: "#888" }}>
-                Checkout opens the paid access path. After purchase, the buyer returns to CreatorVault for the Body Cinema kit and next steps.
-              </p>
-            </div>
-
-            <div className="vx-glass rounded-[2rem] p-4 md:p-6 relative" style={{ animation: "vxFloat 5s ease-in-out infinite" }}>
-              <div className="absolute -inset-6 rounded-full blur-3xl opacity-40" style={{ background: "radial-gradient(circle, rgba(201,168,76,.32), transparent 64%)", animation: "vxGlow 4s ease-in-out infinite" }} />
-              <div className="relative rounded-[1.6rem] overflow-hidden border border-white/10" style={{ background: "linear-gradient(160deg,#171717,#050505)" }}>
-                <div className="aspect-[4/5] p-5 flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="kc-badge kc-badge-gold">Body Cinema Kit</span>
-                    <span className="text-xs font-black text-white/60">VaultX</span>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="h-48 rounded-[1.5rem] relative overflow-hidden border border-white/10 bg-black">
-                      <video autoPlay muted loop playsInline controls preload="metadata" poster="/videos/vaultx-homepage-kingcam-trailer-poster.jpg" className="absolute inset-0 w-full h-full object-cover">
-                        <source src="/videos/vaultx-homepage-kingcam-trailer.mp4" type="video/mp4" />
-                      </video>
-                      <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.16) 42%,rgba(0,0,0,.78))" }} />
-                      <div className="absolute left-4 right-4 bottom-4">
-                        <span className="kc-badge kc-badge-gold">Playable preview</span>
-                        <p className="mt-2 text-sm leading-5 text-white/80">Buyers see motion, mood, and offer context before checkout.</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {proofTiles.map((tile) => (
-                        <div key={tile.label} className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)" }}>
-                          <div className="text-2xl font-black vx-gold">{tile.value}</div>
-                          <div className="text-xs leading-4 text-white/55 mt-1">{tile.label}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn w-full rounded-2xl py-4 font-black flex items-center justify-center gap-2"><CreditCard className="w-5 h-5" /> Buy the kit now</button>
-                </div>
-              </div>
+        <section className="vx-shell pt-10 md:pt-20 pb-16 md:pb-24">
+          <div className="max-w-4xl">
+            <h1 className="font-black leading-[.9] tracking-[-.055em] mb-8" style={{ fontSize: "clamp(3.8rem, 9vw, 8rem)" }}>
+              Your body.<br />
+              Your content.<br />
+              Your money.
+            </h1>
+            <p className="text-xl md:text-3xl leading-8 md:leading-10 max-w-2xl mb-9" style={{ color: "#d8d8d3" }}>
+              The platform built for adult creators who are serious about getting paid.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex justify-center items-center rounded-2xl px-8 py-4 text-base font-black">Start Earning</button>
+              <a href="#body-cinema" className="inline-flex justify-center items-center rounded-2xl px-8 py-4 text-base font-bold border border-white/15 text-white hover:bg-white/5">See How It Works</a>
             </div>
           </div>
         </section>
 
-        <section id="body-cinema-kit" className="vx-shell pb-16 md:pb-24">
+        <section id="body-cinema" className="vx-shell pb-16 md:pb-24">
+          <div className="max-w-3xl">
+            <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#c9a84c" }}>BODY CINEMA</div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">
+              Upload raw footage.<br />
+              Get a finished product.
+            </h2>
+            <p className="text-base md:text-lg leading-8 mb-8" style={{ color: "#b8b8b8" }}>
+              Body Cinema watches your footage, finds your best moments, and builds a professional edit automatically. No editing skills. No hired editor. Just upload and go.
+            </p>
+            <div className="space-y-3 mb-8 text-lg font-bold" style={{ color: "#f5f0e8" }}>
+              <p>AI selects your best angles and body shots</p>
+              <p>Color graded for your skin tone</p>
+              <p>Ready to sell in minutes, not days</p>
+            </div>
+            <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Try Body Cinema Free</button>
+          </div>
+        </section>
+
+        <section className="vx-shell pb-16 md:pb-24">
+          <div className="rounded-[2rem] p-7 md:p-12" style={{ background: "linear-gradient(180deg,rgba(20,20,20,.86),rgba(10,10,10,.76))", border: "1px solid rgba(201,168,76,.18)", boxShadow: "0 24px 80px rgba(0,0,0,.48)" }}>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">
+              You keep 85%.<br />
+              Always.
+            </h2>
+            <p className="text-base md:text-lg leading-8 max-w-3xl mb-8" style={{ color: "#b8b8b8" }}>
+              OnlyFans keeps 20% of everything you make. VaultX keeps 15%.
+            </p>
+            <p className="text-base md:text-lg leading-8 max-w-3xl mb-8" style={{ color: "#b8b8b8" }}>
+              On $5,000 a month that's $500 more in your pocket every month for doing the exact same work you're already doing.
+            </p>
+            <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Create Your Free Profile</button>
+          </div>
+        </section>
+
+        <section className="vx-shell pb-16 md:pb-24">
           <div className="max-w-3xl mb-10">
-            <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#c9a84c" }}>What the buyer receives</div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-5">A video-led kit that turns attention into paid access.</h2>
-            <p className="text-base md:text-lg leading-8" style={{ color: "#b8b8b8" }}>The offer is built for the moment a creator already has usable footage but does not have the angles, teaser sequence, premium polish, or revenue routing needed to turn that footage into a paid asset path.</p>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-5">Everything you need. Nothing you don't.</h2>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {deliverables.map(({ icon: Icon, title, body }) => (
-              <div key={title} className="vx-card rounded-[1.7rem] p-6">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5" style={{ background: "rgba(201,168,76,.14)", border: "1px solid rgba(201,168,76,.25)", color: "#f3d68b" }}><Icon className="w-6 h-6" /></div>
-                <h3 className="text-2xl font-black mb-3">{title}</h3>
-                <p className="text-sm leading-7" style={{ color: "#aaa" }}>{body}</p>
+          <div className="grid md:grid-cols-2 gap-4">
+            {featureCards.map((item) => (
+              <div key={item.title} className="vx-card rounded-[1.7rem] p-6">
+                <h3 className="text-2xl font-black mb-3">{item.title}</h3>
+                <p className="text-sm leading-7" style={{ color: "#aaa" }}>{item.body}</p>
               </div>
             ))}
           </div>
         </section>
 
         <section className="vx-shell pb-16 md:pb-24">
-          <div className="vx-glass rounded-[2rem] p-6 md:p-10 grid lg:grid-cols-[.8fr_1.2fr] gap-8 items-start">
-            <div>
-              <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#c9a84c" }}>Money path</div>
-              <h2 className="text-4xl md:text-5xl font-black tracking-[-.04em] leading-none mb-5">Raw footage becomes a buyer sequence.</h2>
-              <p className="text-base leading-8 mb-7" style={{ color: "#b8b8b8" }}>Body Cinema is positioned around practical creator revenue mechanics: make the first frame stronger, cut the asset into monetizable versions, and give every version a job in the funnel.</p>
-              <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center gap-2 rounded-2xl px-7 py-4 font-black"><Crown className="w-5 h-5" /> Get Body Cinema</button>
-            </div>
-            <div className="grid gap-3">
-              {moneyFlow.map((item, index) => (
-                <div key={item.step} className="rounded-3xl p-5 flex gap-4" style={{ background: "rgba(0,0,0,.32)", border: "1px solid rgba(255,255,255,.08)" }}>
-                  <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center font-black" style={{ background: "rgba(201,168,76,.16)", color: "#f3d68b" }}>{index + 1}</div>
-                  <div>
-                    <h3 className="text-xl font-black mb-1">{item.step}</h3>
-                    <p className="text-sm leading-7" style={{ color: "#aaa" }}>{item.copy}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="vx-shell pb-16 md:pb-24">
-          <div className="grid lg:grid-cols-3 gap-4">
-            {faqs.map((item) => (
-              <div key={item.q} className="vx-card rounded-[1.7rem] p-6">
-                <h3 className="text-xl font-black mb-3">{item.q}</h3>
-                <p className="text-sm leading-7" style={{ color: "#aaa" }}>{item.a}</p>
-              </div>
-            ))}
+          <div className="max-w-3xl">
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">Real creators. Real earnings.</h2>
+            <p className="text-base md:text-lg leading-8 mb-8" style={{ color: "#b8b8b8" }}>
+              VaultX is invite-only right now. The first creators on the platform are already earning. You can be next.
+            </p>
+            <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Request Your Invite</button>
           </div>
         </section>
 
         <section className="px-5 pb-20 md:pb-28">
           <div className="max-w-5xl mx-auto text-center rounded-[2rem] p-7 md:p-12" style={{ background: "linear-gradient(135deg,rgba(201,168,76,.22),rgba(6,182,212,.10),rgba(239,68,68,.10))", border: "1px solid rgba(201,168,76,.25)" }}>
-            <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-6" style={{ background: "rgba(0,0,0,.28)", border: "1px solid rgba(255,255,255,.12)" }}><Lock className="w-4 h-4" /><span className="text-xs font-black uppercase tracking-[.16em]">Secure payment. Clear access path.</span></div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">If the clip already has attention, Body Cinema gives it a money route.</h2>
-            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>Buy the kit, complete secure checkout, and return to CreatorVault for the Body Cinema access path.</p>
-            <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center justify-center gap-2 rounded-2xl px-9 py-4 font-black"><CreditCard className="w-5 h-5" /> {vaultXOfferCheckout.isPending ? "Opening secure checkout..." : `Unlock Body Cinema — ${priceLabel}`}</button>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">Stop leaving money on the table.</h2>
+            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>Join the platform that was built specifically for you.</p>
+            <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center justify-center rounded-2xl px-9 py-4 font-black">Get Started Free</button>
           </div>
         </section>
       </main>
+
+      <footer className="vx-shell relative z-10 pb-8 flex flex-col md:flex-row gap-4 md:items-center md:justify-between text-sm" style={{ color: "#8f8f8f" }}>
+        <p>© 2026 CreatorVault. All rights reserved.</p>
+        <div className="flex gap-5">
+          <a href="/privacy" className="hover:text-white">Privacy Policy</a>
+          <a href="/terms" className="hover:text-white">Terms of Service</a>
+          <a href="/contact" className="hover:text-white">Contact</a>
+        </div>
+      </footer>
     </div>
   );
 }
+
 
 export default function VaultX() {
   const { user } = useAuth();
