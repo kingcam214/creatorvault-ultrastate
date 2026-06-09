@@ -2314,8 +2314,8 @@ function VaultXPublicLanding() {
                   </div>
                   <div className="space-y-3">
                     <div className="h-48 rounded-[1.5rem] relative overflow-hidden border border-white/10 bg-black">
-                      <video autoPlay muted loop playsInline controls preload="metadata" poster="/videos/vaultx-cinematic-trailer-poster.png" className="absolute inset-0 w-full h-full object-cover">
-                        <source src="/videos/vaultx-cinematic-trailer.mp4" type="video/mp4" />
+                      <video autoPlay muted loop playsInline controls preload="metadata" poster="/videos/vaultx-homepage-kingcam-trailer-poster.jpg" className="absolute inset-0 w-full h-full object-cover">
+                        <source src="/videos/vaultx-homepage-kingcam-trailer.mp4" type="video/mp4" />
                       </video>
                       <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.16) 42%,rgba(0,0,0,.78))" }} />
                       <div className="absolute left-4 right-4 bottom-4">
