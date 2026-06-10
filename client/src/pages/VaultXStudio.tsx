@@ -1,11 +1,14 @@
-import { useState, type ReactNode } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowRight, BadgeDollarSign, Camera, Check, Clapperboard, Crown, Film, Image, Library, Play, Settings, Sparkles, Upload, Wand2 } from "lucide-react";
+import { ArrowRight, BadgeDollarSign, Camera, Check, Clapperboard, Crown, Film, Image, Library, Loader2, Play, RadioTower, Settings, ShieldCheck, Sparkles, Upload, Wand2, Zap } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
-const gold = "#C9A84C";
+const accent = "#F2B15B";
 
 type NavItem = "make" | "edit" | "sell" | "earn" | "settings";
 type MakeChoice = "Body Cinema" | "Clone Video" | "Promo Trailer" | "Photo Set";
+type TelegramMode = "FAST" | "BOOST" | "FULL";
 
 type CardProps = {
   title: string;
@@ -24,7 +27,7 @@ const makeChoices: { title: MakeChoice; body: string; icon: ReactNode; tag: stri
   },
   {
     title: "Clone Video",
-    body: "Use your trained look to produce creator content without starting from scratch.",
+    body: "Route clone-powered media into the same VaultX package, artifact, and monetization spine.",
     icon: <Camera size={26} />,
     tag: "AI creator",
   },
@@ -41,6 +44,17 @@ const makeChoices: { title: MakeChoice; body: string; icon: ReactNode; tag: stri
     tag: "Visual pack",
   },
 ];
+
+function moneyToCents(value: string) {
+  const dollars = Number(value.replace(/[^0-9.]/g, ""));
+  if (!Number.isFinite(dollars)) return 0;
+  return Math.round(dollars * 100);
+}
+
+function isAssetReady(status?: string | null, videoUrl?: string | null) {
+  const normalized = String(status || "").toLowerCase();
+  return Boolean(videoUrl) || ["succeed", "success", "succeeded", "ready", "complete", "completed"].includes(normalized);
+}
 
 function TopNavButton({ active, children, onClick }: { active: boolean; children: ReactNode; onClick: () => void }) {
   return (
@@ -84,20 +98,20 @@ function HeroPreview({ choice }: { choice: MakeChoice }) {
             VaultX Studio
           </p>
           <h1 className="max-w-3xl text-4xl font-black leading-[0.95] tracking-tight text-white md:text-6xl">
-            One room to make premium adult creator content.
+            Body Cinema turns raw desire into a controlled revenue weapon.
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-[#b8b8b8]">
-            Pick what you want to make. VaultX gives you serious production power behind a simple creator screen, with Body Cinema as the fast lane from raw footage to paid content.
+            VaultX is its own uncensored adult-business operating room: source intake, consent lock, AI trailer generation, sellable artifact, checkout, and distribution move as one connected machine.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/vaultx/editor" className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 active:scale-[0.98]">
-              Open Editor
+            <a href="#launch-console" className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 active:scale-[0.98]">
+              Open Body Cinema
               <ArrowRight size={18} />
+            </a>
+            <Link href="/vaultx/editor" className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-[#333] bg-black px-7 py-4 text-base font-black text-white transition hover:border-[#C9A84C] hover:text-[#C9A84C] active:scale-[0.98]">
+              <Film size={18} />
+              Open Editor
             </Link>
-            <button className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-[#333] bg-black px-7 py-4 text-base font-black text-white transition hover:border-[#C9A84C] hover:text-[#C9A84C] active:scale-[0.98]">
-              <Upload size={18} />
-              Upload Footage
-            </button>
           </div>
         </div>
 
@@ -106,14 +120,14 @@ function HeroPreview({ choice }: { choice: MakeChoice }) {
           <div className="absolute inset-6 rounded-[1.75rem] border border-white/10 bg-black/35 p-5 backdrop-blur-sm">
             <div className="flex h-full flex-col justify-between">
               <div>
-                <p className="mb-3 text-sm font-black text-[#C9A84C]">Selected</p>
+                <p className="mb-3 text-sm font-black text-[#C9A84C]">Selected lane</p>
                 <h2 className="text-3xl font-black text-white">{choice}</h2>
-                <p className="mt-3 max-w-sm text-sm leading-6 text-[#b8b8b8]">Creator control in front. Serious video power underneath. No confusing production screen.</p>
+                <p className="mt-3 max-w-sm text-sm leading-6 text-[#b8b8b8]">Adult creator control up front. Model orchestration, durable artifacts, monetization, and routing underneath.</p>
               </div>
               <div className="rounded-[1.5rem] border border-white/10 bg-black/55 p-4">
                 <div className="mb-4 flex items-center justify-between text-sm font-bold text-[#999999]">
-                  <span>Preview</span>
-                  <span>Ready to build</span>
+                  <span>Production spine</span>
+                  <span>Real workflow</span>
                 </div>
                 <div className="flex aspect-video items-center justify-center rounded-2xl bg-[#0a0a0a]">
                   <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#C9A84C] text-black shadow-[0_0_60px_rgba(201,168,76,0.35)]">
@@ -134,13 +148,13 @@ function MakePanel({ selected, setSelected }: { selected: MakeChoice; setSelecte
     <section className="rounded-[2rem] border border-[#242424] bg-black p-5 md:p-6">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black text-white">What are you making?</h2>
-          <p className="mt-2 max-w-2xl text-[#999999]">Four clear doors. Each one opens serious creative power without making the creator manage complexity.</p>
+          <h2 className="text-3xl font-black text-white">Choose the launch lane</h2>
+          <p className="mt-2 max-w-2xl text-[#999999]">Each lane now points into a real VaultX production path instead of a disconnected presentation card.</p>
         </div>
-        <Link href="/vaultx/editor" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#C9A84C] bg-[#141414] px-5 py-3 text-sm font-black text-[#C9A84C] transition hover:bg-[#C9A84C] hover:text-black active:scale-[0.98]">
-          Go to Editor
+        <a href="#launch-console" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#C9A84C] bg-[#141414] px-5 py-3 text-sm font-black text-[#C9A84C] transition hover:bg-[#C9A84C] hover:text-black active:scale-[0.98]">
+          Build package
           <ArrowRight size={16} />
-        </Link>
+        </a>
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {makeChoices.map((choice) => (
@@ -154,16 +168,263 @@ function MakePanel({ selected, setSelected }: { selected: MakeChoice; setSelecte
   );
 }
 
+function StatusPill({ active, text }: { active: boolean; text: string }) {
+  return <span className={`rounded-full px-3 py-1 text-xs font-black ${active ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}>{text}</span>;
+}
+
+function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
+  const utils = trpc.useUtils();
+  const capability = trpc.vaultx.getLaunchCapabilityMatrix.useQuery(undefined, { retry: false, refetchInterval: 30000 });
+  const [title, setTitle] = useState("VaultX premium trailer drop");
+  const [teaserDescription, setTeaserDescription] = useState("A creator-owned premium teaser route built to turn one source asset into a cinematic preview, paid unlock, tracked fan click, follow-up, and VIP escalation lane.");
+  const [sourceMediaUrl, setSourceMediaUrl] = useState("");
+  const [price, setPrice] = useState("29.00");
+  const [vipPrice, setVipPrice] = useState("79.00");
+  const [telegramMode, setTelegramMode] = useState<TelegramMode>("BOOST");
+  const [adultContentFlag, setAdultContentFlag] = useState(false);
+  const [consentConfirmed, setConsentConfirmed] = useState(false);
+  const [packageId, setPackageId] = useState<number | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+
+  const statusQuery = trpc.vaultx.getPackageAssetStatus.useQuery(
+    { packageId: packageId || 1, jobId: jobId || undefined },
+    { enabled: Boolean(packageId), retry: false, refetchInterval: packageId ? 7000 : false }
+  );
+
+  const createPackage = trpc.vaultx.createRevenuePackage.useMutation();
+  const generateAsset = trpc.vaultx.generatePackageAsset.useMutation();
+  const attachCheckout = trpc.vaultx.attachPackageCheckout.useMutation();
+  const publishTelegram = trpc.vaultx.publishPackageTelegramRoute.useMutation();
+
+  const providers = (capability.data as any)?.providers || [];
+  const packageWorkflow = ((capability.data as any)?.workflows || []).find((workflow: any) => workflow.id === "vaultx-package-launch");
+  const statusData = statusQuery.data as any;
+  const assetReady = isAssetReady(statusData?.status, statusData?.videoUrl);
+  const working = createPackage.isPending || generateAsset.isPending || attachCheckout.isPending || publishTelegram.isPending;
+
+  const selectedContentType = useMemo(() => (selectedMake === "Photo Set" ? "photo" : "video") as "photo" | "video", [selectedMake]);
+
+  const handleLaunch = async () => {
+    if (!adultContentFlag || !consentConfirmed) {
+      toast.error("VaultX requires adult-content opt-in and creator consent before launch.");
+      return;
+    }
+    if (!sourceMediaUrl.trim()) {
+      toast.error("Paste a real creator-owned source media URL before starting generation.");
+      return;
+    }
+    const priceCents = moneyToCents(price);
+    const vipPriceCents = moneyToCents(vipPrice);
+    if (priceCents < 100) {
+      toast.error("Set a package price of at least $1.00.");
+      return;
+    }
+
+    try {
+      const created = await createPackage.mutateAsync({
+        title: title.trim(),
+        contentType: selectedContentType,
+        adultContentFlag,
+        consentConfirmed,
+        teaserDescription: teaserDescription.trim(),
+        priceCents,
+        vipPriceCents: vipPriceCents >= 100 ? vipPriceCents : undefined,
+        telegramMode,
+        sourceMediaUrl: sourceMediaUrl.trim(),
+      });
+      const newPackageId = Number((created as any).packageId);
+      setPackageId(newPackageId);
+      toast.success("Body Cinema package created. Starting provider-backed trailer generation now.");
+      const generation = await generateAsset.mutateAsync({
+        packageId: newPackageId,
+        sourceMediaUrl: sourceMediaUrl.trim(),
+        resolution: telegramMode === "FULL" ? "1080p" : "720p",
+        length: telegramMode === "FULL" ? "8" : telegramMode === "BOOST" ? "6" : "5",
+        mode: telegramMode === "FAST" ? "std" : "pro",
+      });
+      setJobId(String((generation as any).jobId || ""));
+      await utils.vaultx.getLaunchCapabilityMatrix.invalidate();
+      await statusQuery.refetch();
+      toast.success("Body Cinema job is live and being tracked by VaultX artifacts.");
+    } catch (error: any) {
+      toast.error(error?.message || "VaultX launch failed.");
+    }
+  };
+
+  const handleAttachCheckout = async () => {
+    if (!packageId) return;
+    try {
+      const result = await attachCheckout.mutateAsync({ packageId });
+      setCheckoutUrl((result as any).checkoutUrl || null);
+      await utils.vaultx.getLaunchCapabilityMatrix.invalidate();
+      toast.success("Checkout attached to the ready VaultX asset.");
+    } catch (error: any) {
+      toast.error(error?.message || "Checkout could not be attached.");
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!packageId) return;
+    try {
+      await publishTelegram.mutateAsync({ packageId });
+      await utils.vaultx.getLaunchCapabilityMatrix.invalidate();
+      toast.success("VaultX Telegram route published with tracked campaign metadata.");
+    } catch (error: any) {
+      toast.error(error?.message || "Telegram route could not be published.");
+    }
+  };
+
+  return (
+    <section id="launch-console" className="rounded-[2rem] border border-[#C9A84C]/35 bg-[linear-gradient(135deg,#090909,#130f05_55%,#050505)] p-5 shadow-[0_0_60px_rgba(201,168,76,0.08)] md:p-6">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="mb-3 inline-flex rounded-full border border-[#C9A84C]/40 bg-black px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Body Cinema command rail</p>
+          <h2 className="text-3xl font-black text-white md:text-4xl">Build the adult trailer, paid unlock, and distribution route end to end.</h2>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-[#b8b8b8]">This command rail calls the live VaultX stack: package creation, provider-backed generation, artifact polling, Stripe checkout attachment, and Telegram route publishing. Locked lanes expose real configuration gaps instead of pretending to work.</p>
+        </div>
+        <div className="rounded-[1.25rem] border border-white/10 bg-black/70 p-4 text-sm">
+          <p className="font-black text-white">Economics</p>
+          <p className="mt-1 text-[#999999]">Creator keeps <span className="font-black text-[#C9A84C]">85%</span>. Platform fee is <span className="font-black text-[#C9A84C]">15%</span>.</p>
+        </div>
+      </div>
+
+      <div className="mb-6 grid gap-3 md:grid-cols-3 xl:grid-cols-5">
+        {providers.map((provider: any) => (
+          <div key={provider.id} className="rounded-[1.25rem] border border-[#242424] bg-black/65 p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="font-black text-white">{provider.label}</p>
+              <StatusPill active={Boolean(provider.configured)} text={provider.configured ? "LIVE" : "LOCKED"} />
+            </div>
+            <p className="text-xs leading-5 text-[#999999]">{provider.configured ? provider.capability : provider.unlockRequirement}</p>
+          </div>
+        ))}
+      </div>
+
+      {packageWorkflow?.blockers?.length ? (
+        <div className="mb-6 rounded-[1.25rem] border border-amber-500/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
+          <p className="font-black text-white">Launch blockers detected</p>
+          <p className="mt-1">{packageWorkflow.blockers.join(" • ")}</p>
+        </div>
+      ) : null}
+
+      <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="rounded-[1.5rem] border border-[#242424] bg-black p-5">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#C9A84C] text-black"><Zap size={22} /></div>
+            <div>
+              <h3 className="text-2xl font-black text-white">Body Cinema intake</h3>
+              <p className="text-sm text-[#999999]">Selected lane: {selectedMake}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4">
+            <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
+              Package title
+              <input value={title} onChange={(e) => setTitle(e.target.value)} className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
+            </label>
+            <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
+              Real creator-owned source media URL
+              <input value={sourceMediaUrl} onChange={(e) => setSourceMediaUrl(e.target.value)} className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
+            </label>
+            <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
+              Teaser-to-unlock description
+              <textarea value={teaserDescription} onChange={(e) => setTeaserDescription(e.target.value)} rows={4} className="rounded-2xl border border-[#242424] bg-[#101010] px-4 py-3 text-white outline-none focus:border-[#C9A84C]" />
+            </label>
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
+                Price
+                <input value={price} onChange={(e) => setPrice(e.target.value)} className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
+                VIP price
+                <input value={vipPrice} onChange={(e) => setVipPrice(e.target.value)} className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
+                Route mode
+                <select value={telegramMode} onChange={(e) => setTelegramMode(e.target.value as TelegramMode)} className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]">
+                  <option value="FAST">FAST</option>
+                  <option value="BOOST">BOOST</option>
+                  <option value="FULL">FULL</option>
+                </select>
+              </label>
+            </div>
+            <label className="flex items-start gap-3 rounded-2xl border border-[#242424] bg-[#101010] p-4 text-sm leading-6 text-[#d6d6d6]">
+              <input type="checkbox" checked={adultContentFlag} onChange={(e) => setAdultContentFlag(e.target.checked)} className="mt-1 h-5 w-5 accent-[#C9A84C]" />
+              I confirm this package is for the VaultX adult vertical and should follow the platform's adult-content gating and launch rules.
+            </label>
+            <label className="flex items-start gap-3 rounded-2xl border border-[#242424] bg-[#101010] p-4 text-sm leading-6 text-[#d6d6d6]">
+              <input type="checkbox" checked={consentConfirmed} onChange={(e) => setConsentConfirmed(e.target.checked)} className="mt-1 h-5 w-5 accent-[#C9A84C]" />
+              I confirm the creator owns or is authorized to use the source asset and consents to AI transformation, monetization, and distribution routing.
+            </label>
+            <button onClick={handleLaunch} disabled={working} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
+              {working ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+              Ignite Body Cinema generation
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-4">
+          <div className="rounded-[1.5rem] border border-[#242424] bg-black p-5">
+            <div className="mb-4 flex items-center gap-3">
+              <ShieldCheck className="text-[#C9A84C]" />
+              <h3 className="text-2xl font-black text-white">Live job status</h3>
+            </div>
+            <div className="space-y-3 text-sm leading-6 text-[#b8b8b8]">
+              <p>Package ID: <span className="font-black text-white">{packageId || "not created yet"}</span></p>
+              <p>Provider job: <span className="font-black text-white">{jobId || "not started yet"}</span></p>
+              <p>Asset status: <span className="font-black text-[#C9A84C]">{statusData?.status || "waiting"}</span></p>
+              <p>Quality gate: <span className="font-black text-white">{statusData?.qualityPassed ? "passed" : "not passed yet"}</span></p>
+            </div>
+            {statusData?.videoUrl ? (
+              <a href={statusData.videoUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex min-h-12 items-center justify-center rounded-full border border-[#C9A84C] px-5 py-3 text-sm font-black text-[#C9A84C] hover:bg-[#C9A84C] hover:text-black">
+                Open ready asset
+              </a>
+            ) : null}
+          </div>
+
+          <div className="rounded-[1.5rem] border border-[#242424] bg-black p-5">
+            <div className="mb-4 flex items-center gap-3">
+              <BadgeDollarSign className="text-[#C9A84C]" />
+              <h3 className="text-2xl font-black text-white">Monetize</h3>
+            </div>
+            <p className="text-sm leading-6 text-[#999999]">Checkout is only available after VaultX confirms a ready package artifact. No fake sales state is shown.</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button onClick={handleAttachCheckout} disabled={!assetReady || attachCheckout.isPending} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-[#C9A84C] disabled:cursor-not-allowed disabled:opacity-50">
+                {attachCheckout.isPending ? <Loader2 size={16} className="animate-spin" /> : null}
+                Attach checkout
+              </button>
+              {checkoutUrl ? <a href={checkoutUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/20 px-5 py-3 text-sm font-black text-white hover:border-[#C9A84C] hover:text-[#C9A84C]">Open checkout</a> : null}
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-[#242424] bg-black p-5">
+            <div className="mb-4 flex items-center gap-3">
+              <RadioTower className="text-[#C9A84C]" />
+              <h3 className="text-2xl font-black text-white">Distribute</h3>
+            </div>
+            <p className="text-sm leading-6 text-[#999999]">Telegram route publishing stays locked until the package has both a ready artifact and checkout URL.</p>
+            <button onClick={handlePublish} disabled={!assetReady || !checkoutUrl || publishTelegram.isPending} className="mt-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#C9A84C] px-5 py-3 text-sm font-black text-[#C9A84C] transition hover:bg-[#C9A84C] hover:text-black disabled:cursor-not-allowed disabled:opacity-50">
+              {publishTelegram.isPending ? <Loader2 size={16} className="animate-spin" /> : null}
+              Publish tracked route
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function EditPanel() {
   return (
     <section className="rounded-[2rem] border border-[#242424] bg-black p-5 md:p-6">
-      <h2 className="text-3xl font-black text-white">Edit without the mess</h2>
-      <p className="mt-2 max-w-2xl text-[#999999]">The editor keeps the creator focused on the decisions that matter: trim, style, captions, price, and post.</p>
+      <h2 className="text-3xl font-black text-white">Edit without losing the production spine</h2>
+      <p className="mt-2 max-w-2xl text-[#999999]">The editor should stay simple, but every action must point back to artifact-backed production: source, style, caption, package, checkout, and route.</p>
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         {[
-          ["Trim", "Cut the start and end fast, then keep the best part moving."],
-          ["Style", "Choose a premium visual finish without needing technical settings."],
-          ["Captions", "Add readable captions and clean promo lines for fan attention."],
+          ["Trim", "Keep the sales beat clean before sending the asset into the AI trailer lane."],
+          ["Style", "Apply the premium VaultX visual law before generation and publishing."],
+          ["Captions", "Shape promo copy around the paid unlock and VIP route mechanics."],
         ].map(([title, body]) => (
           <div key={title} className="rounded-[1.5rem] border border-[#242424] bg-[#141414] p-5">
             <Sparkles className="mb-4 text-[#C9A84C]" size={24} />
@@ -179,13 +440,13 @@ function EditPanel() {
 function SellPanel() {
   return (
     <section className="rounded-[2rem] border border-[#242424] bg-black p-5 md:p-6">
-      <h2 className="text-3xl font-black text-white">Sell the moment it is ready</h2>
-      <p className="mt-2 max-w-2xl text-[#999999]">VaultX connects the creative room to the money room so finished content can drive subscribers, paid unlocks, and repeat buyers.</p>
+      <h2 className="text-3xl font-black text-white">Sell the moment the artifact is ready</h2>
+      <p className="mt-2 max-w-2xl text-[#999999]">VaultX connects creative output to package pricing, paid unlocks, checkout, and tracked distribution so creator content moves toward revenue immediately.</p>
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         {[
-          ["Free Preview", "Give fans a taste and lead them to the full version."],
-          ["Subscribers", "Reward paying fans with premium access."],
-          ["Paid Unlock", "Turn high-intent fans into direct buyers."],
+          ["Free Preview", "The generated teaser becomes the attention layer."],
+          ["Paid Unlock", "The ready package attaches to real checkout before publishing."],
+          ["VIP Route", "The follow-up lane escalates buyers toward higher-value offers."],
         ].map(([title, body]) => (
           <div key={title} className="rounded-[1.5rem] border border-[#242424] bg-[#141414] p-5">
             <BadgeDollarSign className="mb-4 text-[#C9A84C]" size={24} />
@@ -199,37 +460,48 @@ function SellPanel() {
 }
 
 function EarnPanel() {
+  const capability = trpc.vaultx.getLaunchCapabilityMatrix.useQuery(undefined, { retry: false, refetchInterval: 30000 });
+  const packages = ((capability.data as any)?.latestPackages || []) as any[];
   return (
     <section className="rounded-[2rem] border border-[#242424] bg-black p-5 md:p-6">
-      <h2 className="text-3xl font-black text-white">Know what is making money</h2>
-      <p className="mt-2 max-w-2xl text-[#999999]">The creator should know which clips bring subscribers, which previews convert, and which paid drops deserve a follow-up.</p>
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        {[
-          ["$4,820", "Projected monthly sales from this content lane."],
-          ["38%", "Preview-to-unlock rate target."],
-          ["7", "Content drops ready for the next fan push."],
-        ].map(([value, label]) => (
-          <div key={label} className="rounded-[1.5rem] border border-[#242424] bg-[#141414] p-5">
-            <p className="text-3xl font-black text-[#C9A84C]">{value}</p>
-            <p className="mt-2 text-sm leading-6 text-[#999999]">{label}</p>
+      <h2 className="text-3xl font-black text-white">Know what is actually live</h2>
+      <p className="mt-2 max-w-2xl text-[#999999]">This view reads your latest VaultX revenue packages from the real backend instead of showing fantasy metrics.</p>
+      <div className="mt-6 grid gap-4">
+        {packages.length ? packages.map((pkg) => (
+          <div key={pkg.id} className="rounded-[1.5rem] border border-[#242424] bg-[#141414] p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-black text-white">{pkg.title}</h3>
+                <p className="mt-1 text-sm text-[#999999]">Mode {pkg.mode} • ${(pkg.priceCents / 100).toFixed(2)} • {pkg.assetStatus || pkg.status}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <StatusPill active={pkg.hasAsset} text={pkg.hasAsset ? "ASSET" : "NO ASSET"} />
+                <StatusPill active={pkg.hasCheckout} text={pkg.hasCheckout ? "CHECKOUT" : "NO CHECKOUT"} />
+                <StatusPill active={pkg.hasTelegramRoute} text={pkg.hasTelegramRoute ? "ROUTE" : "NO ROUTE"} />
+              </div>
+            </div>
           </div>
-        ))}
+        )) : (
+          <div className="rounded-[1.5rem] border border-[#242424] bg-[#141414] p-5 text-sm leading-6 text-[#999999]">Create a VaultX package in the Launch Console and it will appear here with real artifact, checkout, and route status.</div>
+        )}
       </div>
     </section>
   );
 }
 
 function SettingsPanel() {
+  const capability = trpc.vaultx.getLaunchCapabilityMatrix.useQuery(undefined, { retry: false });
+  const monetization = (capability.data as any)?.monetization;
   return (
     <section className="rounded-[2rem] border border-[#242424] bg-black p-5 md:p-6">
-      <h2 className="text-3xl font-black text-white">Creator controls</h2>
-      <p className="mt-2 max-w-2xl text-[#999999]">Keep the creator controls clear: profile, payout destination, posting defaults, content access, and fan messaging tone.</p>
+      <h2 className="text-3xl font-black text-white">Creator controls and launch readiness</h2>
+      <p className="mt-2 max-w-2xl text-[#999999]">VaultX keeps the creator-facing controls clear while exposing the real launch dependencies behind the scenes.</p>
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         {[
-          ["Posting defaults", "Choose the default preview, subscriber, and paid unlock behavior."],
-          ["Brand voice", "Keep captions and promo text aligned with the creator's style."],
-          ["Content access", "Control what fans see before and after they pay."],
-          ["Payout view", "See where creator money is headed and what is pending."],
+          ["Stripe checkout", monetization?.stripeConfigured ? "Configured for paid unlock attachment." : "Locked until Stripe server credentials are configured."],
+          ["Telegram distribution", monetization?.telegramConfigured ? "Configured for tracked route publishing." : "Locked until Telegram bot/channel configuration is complete."],
+          ["Creator profile", (capability.data as any)?.creatorReady ? "Creator profile is ready for package ownership." : "Create or repair the creator profile before launch."],
+          ["Provider honesty", "Runway and Kling are shown only as configured when real server credentials or confirmed provider routes exist."],
         ].map(([title, body]) => (
           <div key={title} className="rounded-[1.5rem] border border-[#242424] bg-[#141414] p-5">
             <Settings className="mb-4 text-[#C9A84C]" size={24} />
@@ -251,7 +523,7 @@ export default function VaultXStudio() {
       <header className="sticky top-0 z-30 border-b border-[#1f1f1f] bg-[#0a0a0a]/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:px-6 lg:flex-row lg:items-center lg:justify-between">
           <Link href="/vault-x" className="text-2xl font-black tracking-tight text-white">
-            Vault<span style={{ color: gold }}>X</span>
+            Vault<span style={{ color: accent }}>X</span>
           </Link>
           <nav className="grid grid-cols-2 gap-2 sm:grid-cols-5 lg:flex">
             <TopNavButton active={nav === "make"} onClick={() => setNav("make")}>Make Video</TopNavButton>
@@ -268,9 +540,9 @@ export default function VaultXStudio() {
 
         <section className="grid gap-4 md:grid-cols-3">
           {[
-            [<Crown size={24} />, "Studio-grade", "Built for creators and teams that need serious output with simple decisions."],
-            [<Wand2 size={24} />, "Body Cinema", "The flagship path from raw footage to premium sellable content."],
-            [<Library size={24} />, "Money connected", "Finished content moves directly toward subscribers and fan buyers."],
+            [<Crown size={24} />, "Not CreatorVault", "A separate adult-business machine with its own command UX, language, and production rules."],
+            [<Wand2 size={24} />, "Model rack aware", "Pollo, Replicate, clone, and premium lanes are surfaced according to real server configuration."],
+            [<Library size={24} />, "Revenue armed", "Finished content moves directly toward checkout and tracked distribution when the artifact is ready."],
           ].map(([icon, title, body]) => (
             <div key={String(title)} className="rounded-[1.5rem] border border-[#242424] bg-[#141414] p-5">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-[#C9A84C]">{icon}</div>
@@ -285,6 +557,7 @@ export default function VaultXStudio() {
         {nav === "sell" && <SellPanel />}
         {nav === "earn" && <EarnPanel />}
         {nav === "settings" && <SettingsPanel />}
+        <LaunchConsole selectedMake={selectedMake} />
       </div>
     </main>
   );

@@ -1,8 +1,8 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Captions, Check, DollarSign, FastForward, Play, Rewind, Sparkles, Upload } from "lucide-react";
 
-const gold = "#C9A84C";
+const accent = "#F2B15B";
 
 type EditorTab = "style" | "captions" | "publish";
 type StyleChoice = "Natural" | "Warm & Bright" | "Cinematic" | "Bold & Dramatic";
@@ -52,10 +52,10 @@ function VideoPreview() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="mb-2 inline-flex rounded-full border border-[#C9A84C]/40 bg-black px-3 py-1 text-xs font-bold text-[#C9A84C]">
-            Premium creator editor
+            Body Cinema editor
           </p>
-          <h1 className="text-2xl font-black tracking-tight text-white md:text-4xl">Make the clip look elite, then sell it.</h1>
-          <p className="mt-2 max-w-2xl text-base text-[#999999]">One screen for the important moves: preview, trim, style, captions, price, and post.</p>
+          <h1 className="text-2xl font-black tracking-tight text-white md:text-4xl">Cut the preview, arm the unlock, and move the fan toward purchase.</h1>
+          <p className="mt-2 max-w-2xl text-base text-[#999999]">An adult-first editing cockpit for trailer pacing, caption control, paid preview logic, and launch routing.</p>
         </div>
         <div className="flex min-h-12 rounded-full border border-[#2a2a2a] bg-black p-1">
           <button
@@ -80,8 +80,8 @@ function VideoPreview() {
             <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#C9A84C] text-black shadow-[0_0_60px_rgba(201,168,76,0.35)]">
               <Play size={34} fill="currentColor" />
             </div>
-            <p className="text-lg font-bold text-white">Your video preview</p>
-            <p className="mt-2 max-w-xs text-sm text-[#999999]">Upload a clip and control the finish without hunting through menus.</p>
+            <p className="text-lg font-bold text-white">Body Cinema preview deck</p>
+            <p className="mt-2 max-w-xs text-sm text-[#999999]">Load a creator-owned clip, shape the sales beat, and keep monetization attached to the edit.</p>
           </div>
         </div>
       </div>
@@ -112,8 +112,8 @@ function Timeline() {
   return (
     <section className="rounded-[1.5rem] border border-[#242424] bg-[#141414] p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xl font-black text-white">Timeline</h2>
-        <p className="text-sm text-[#999999]">Drag handles to trim</p>
+        <h2 className="text-xl font-black text-white">Sales-beat timeline</h2>
+        <p className="text-sm text-[#999999]">Trim around the unlock moment</p>
       </div>
       <div className="relative h-16 overflow-hidden rounded-2xl border border-[#333] bg-black p-2">
         <div className="grid h-full grid-cols-24 gap-1">
@@ -133,8 +133,8 @@ function StylePanel({ selected, setSelected }: { selected: StyleChoice; setSelec
     <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-black text-white">How should it look?</h2>
-          <p className="mt-1 text-[#999999]">Choose the finish. VaultX keeps the control simple and the result premium.</p>
+          <h2 className="text-2xl font-black text-white">Choose the visual weapon</h2>
+          <p className="mt-1 text-[#999999]">Pick the adult promo finish that matches the tease, the buyer intent, and the unlock value.</p>
         </div>
         <UploadNewVideoButton />
       </div>
@@ -167,8 +167,8 @@ function CaptionsPanel({ captionsOn, setCaptionsOn, style, setStyle }: { caption
     <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-black text-white">Add captions</h2>
-          <p className="mt-1 text-[#999999]">Turn audio into readable lines, then edit the wording before posting.</p>
+          <h2 className="text-2xl font-black text-white">Write the conversion captions</h2>
+          <p className="mt-1 text-[#999999]">Shape readable hooks that sell the preview without breaking the creator’s voice or consent lane.</p>
         </div>
         <UploadNewVideoButton />
       </div>
@@ -213,8 +213,8 @@ function PublishPanel({ priceChoice, setPriceChoice, audience, setAudience }: { 
     <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-black text-white">Where does this go?</h2>
-          <p className="mt-1 text-[#999999]">Place the clip in the right spot, set access, and turn attention into paid demand.</p>
+          <h2 className="text-2xl font-black text-white">Where does the money route go?</h2>
+          <p className="mt-1 text-[#999999]">Connect the edited asset to free preview, subscriber value, or paid unlock so the output leaves with a revenue purpose.</p>
         </div>
         <UploadNewVideoButton />
       </div>
@@ -248,7 +248,7 @@ function PublishPanel({ priceChoice, setPriceChoice, audience, setAudience }: { 
         </div>
       </div>
       <button className="mt-5 min-h-14 w-full rounded-2xl bg-[#C9A84C] px-6 py-4 text-lg font-black text-black shadow-[0_0_40px_rgba(201,168,76,0.22)] transition hover:brightness-110 active:scale-[0.99]">
-        POST IT
+        ARM THE DROP
       </button>
     </div>
   );
@@ -267,7 +267,7 @@ export default function VaultXEditor() {
       <header className="sticky top-0 z-30 border-b border-[#1f1f1f] bg-[#0a0a0a]/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 md:px-6">
           <Link href="/vault-x" className="text-2xl font-black tracking-tight text-white">
-            Vault<span style={{ color: gold }}>X</span>
+            Vault<span style={{ color: accent }}>X</span>
           </Link>
           <nav className="flex items-center gap-2">
             <Link href="/vaultx/fan-library" className="min-h-12 rounded-full px-4 py-3 text-sm font-bold text-[#999999] transition hover:bg-[#141414] hover:text-white">
@@ -313,9 +313,9 @@ export default function VaultXEditor() {
 
         <section className="grid gap-4 md:grid-cols-3">
           {[
-            ["Fast finish", "Trim, style, caption, and price without leaving the page."],
-            ["Paid first", "Free preview, subscriber post, or paid unlock are always one tap away."],
-            ["Body Cinema ready", "Send raw footage to the flagship AI room when you want the system to build the finished cut."],
+            ["Adult-first edit flow", "Trim, style, caption, price, and route the clip without falling back into generic creator tools."],
+            ["Paid unlock logic", "Free preview, subscriber post, or paid unlock are always one tap away."],
+            ["Body Cinema handoff", "Send raw footage to the flagship AI room when you want the system to build the finished cut."],
           ].map(([title, body]) => (
             <div key={title} className="rounded-[1.5rem] border border-[#242424] bg-[#141414] p-5">
               <Sparkles className="mb-3 text-[#C9A84C]" size={22} />

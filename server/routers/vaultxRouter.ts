@@ -745,6 +745,142 @@ export async function completeVaultxPpvPurchase(input: {
 export const vaultxRouter = router({
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // SOFT-LAUNCH CONTROL PLANE — real provider/workflow capability matrix
+  // ═══════════════════════════════════════════════════════════════════════════
+  getLaunchCapabilityMatrix: protectedProcedure
+    .query(async ({ ctx }) => {
+      await ensureVaultxRevenuePackageSchema();
+      await ensureVaultxArtifactSchema().catch(() => undefined);
+      const creatorId = await getCreatorId(ctx.user.id).catch(() => null);
+      const hasPollo = Boolean(POLLO_API_KEY);
+      const hasReplicate = Boolean(process.env.REPLICATE_API_TOKEN);
+      const hasStripe = Boolean(stripe);
+      const hasTelegram = Boolean(process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_KEY);
+      const hasOpenAi = Boolean(process.env.OPENAI_API_KEY);
+      const hasRunway = Boolean(process.env.RUNWAY_API_KEY || process.env.RUNWAYML_API_SECRET);
+      const hasKling = Boolean(process.env.KLING_API_KEY || process.env.KLING_ACCESS_KEY || process.env.KLING_SECRET_KEY);
+      const latestPackages = await rawQuery(
+        `SELECT id, title, content_type, telegram_mode, price_cents, status, asset_status, asset_url, checkout_url, telegram_tracking_code, created_at
+         FROM vaultx_revenue_packages
+         WHERE user_id = ?
+         ORDER BY id DESC
+         LIMIT 6`,
+        [ctx.user.id]
+      ).catch(() => []);
+
+      return {
+        creatorReady: Boolean(creatorId),
+        creatorId: creatorId || null,
+        adultVertical: "VaultX",
+        launchPromise: "source asset → consent gate → cinematic AI promo → durable VaultX artifact → checkout → Telegram/X distribution",
+        hardRules: {
+          adultContentOptInRequired: true,
+          consentConfirmationRequired: true,
+          fakeProviderJobsForbidden: true,
+          platformFeePercent: 15,
+          creatorKeepPercent: 85,
+        },
+        providers: [
+          {
+            id: "pollo",
+            label: "Pollo AI Video",
+            tier: "active-production",
+            configured: hasPollo,
+            capability: "Image-to-video package assets and premium trailer motion through the existing Pollo generation/status pipeline.",
+            unlockRequirement: hasPollo ? null : "Configure POLLO_API_KEY on the server.",
+            primaryEndpoints: ["createRevenuePackage", "generatePackageAsset", "getPackageAssetStatus"],
+          },
+          {
+            id: "replicate",
+            label: "Replicate Model Rack",
+            tier: "active-production",
+            configured: hasReplicate,
+            capability: "Enhancement, motion, teaser, thumbnail, and clone-adjacent model routes already present in VaultX services.",
+            unlockRequirement: hasReplicate ? null : "Configure REPLICATE_API_TOKEN on the server.",
+            primaryEndpoints: ["generateDesireTeaser", "buildPpvBundle", "generateThumbnails", "analyzeHook"],
+          },
+          {
+            id: "clone",
+            label: "Clone Command",
+            tier: "active-existing-system",
+            configured: hasPollo || hasReplicate,
+            capability: "Clone-image/video handoff, generation history, Vault persistence, and hero assets through the existing Clone Command router.",
+            unlockRequirement: hasPollo || hasReplicate ? null : "Enable at least one media provider key before launching clone media generation.",
+            primaryEndpoints: ["cloneCommand.generateCloneImage", "cloneCommand.generateCloneVideo", "cloneCommand.getGenerationHistory"],
+          },
+          {
+            id: "runway",
+            label: "Runway Premium Lane",
+            tier: hasRunway ? "configured-premium" : "pending-direct-configuration",
+            configured: hasRunway,
+            capability: "Premium video model lane reserved for direct Runway orchestration when server credentials are present; otherwise do not claim live direct generation.",
+            unlockRequirement: hasRunway ? null : "Configure a real Runway API credential before exposing direct Runway jobs.",
+            primaryEndpoints: [],
+          },
+          {
+            id: "kling",
+            label: "Kling Premium Lane",
+            tier: hasKling ? "configured-premium" : "pending-direct-configuration",
+            configured: hasKling,
+            capability: "Premium motion lane reserved for direct Kling orchestration when server credentials are present or confirmed through a provider aggregator.",
+            unlockRequirement: hasKling ? null : "Configure real Kling credentials or a confirmed provider model route before exposing direct Kling jobs.",
+            primaryEndpoints: [],
+          },
+        ],
+        workflows: [
+          {
+            id: "vaultx-package-launch",
+            label: "VaultX Package Launch",
+            status: hasPollo ? "ready" : "blocked",
+            does: "Turns one creator source media URL into a Pollo-generated cinematic promo asset, persists it as a VaultX artifact, then routes it into checkout and Telegram distribution.",
+            steps: ["createRevenuePackage", "generatePackageAsset", "getPackageAssetStatus", "attachPackageCheckout", "publishPackageTelegramRoute"],
+            blockers: [
+              ...(hasPollo ? [] : ["POLLO_API_KEY missing"]),
+              ...(hasStripe ? [] : ["Stripe secret key missing for checkout attachment"]),
+              ...(hasTelegram ? [] : ["Telegram bot/channel configuration missing for auto-publish"]),
+            ],
+          },
+          {
+            id: "desire-teaser-to-ppv",
+            label: "Desire Teaser → PPV Bundle",
+            status: hasReplicate ? "ready" : "limited",
+            does: "Analyzes the source asset for hook strength, creates teaser/thumbnail/bundle outputs, and prepares pricing plus distribution-ready assets.",
+            steps: ["generateDesireTeaser", "buildPpvBundle", "suggestPrice", "distributeContent"],
+            blockers: hasReplicate ? [] : ["REPLICATE_API_TOKEN missing for premium model stages"],
+          },
+          {
+            id: "ai-sales-and-follow-up",
+            label: "AI Sales Chatter + PPV Follow-Up",
+            status: hasOpenAi ? "ready" : "blocked",
+            does: "Uses the creator persona and fan context to generate conversion-aware replies, PPV pitches, and tip prompts.",
+            steps: ["generateCreatorPersona", "generateAIChatterResponse"],
+            blockers: hasOpenAi ? [] : ["OPENAI_API_KEY missing"],
+          },
+        ],
+        monetization: {
+          stripeConfigured: hasStripe,
+          telegramConfigured: hasTelegram,
+          checkoutEndpoint: "attachPackageCheckout",
+          distributionEndpoint: "publishPackageTelegramRoute",
+          economics: { platformFeePercent: 15, creatorKeepPercent: 85 },
+        },
+        latestPackages: latestPackages.map((pkg: any) => ({
+          id: Number(pkg.id),
+          title: pkg.title,
+          contentType: pkg.content_type,
+          mode: pkg.telegram_mode,
+          priceCents: Number(pkg.price_cents || 0),
+          status: pkg.status,
+          assetStatus: pkg.asset_status,
+          hasAsset: Boolean(pkg.asset_url),
+          hasCheckout: Boolean(pkg.checkout_url),
+          hasTelegramRoute: Boolean(pkg.telegram_tracking_code),
+          createdAt: pkg.created_at,
+        })),
+      };
+    }),
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // PROCEDURE 1 — setupCreatorProfile
   // ═══════════════════════════════════════════════════════════════════════════
   setupCreatorProfile: protectedProcedure
