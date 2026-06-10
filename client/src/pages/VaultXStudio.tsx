@@ -1,6 +1,6 @@
 import { ReactNode, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowRight, BadgeDollarSign, Camera, Check, Clapperboard, Crown, Film, Image, Library, Loader2, Play, RadioTower, Settings, ShieldCheck, Sparkles, Upload, Wand2, Zap } from "lucide-react";
+import { ArrowRight, BadgeDollarSign, Camera, Check, Clapperboard, Crown, Film, Image, Library, Loader2, Play, RadioTower, Route, Settings, ShieldCheck, Sparkles, Upload, Wand2, Zap } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -228,10 +228,8 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
     { enabled: Boolean(packageId), retry: false, refetchInterval: packageId ? 7000 : false }
   );
 
-  const createPackage = trpc.vaultx.createRevenuePackage.useMutation();
-  const generateAsset = trpc.vaultx.generatePackageAsset.useMutation();
-  const attachCheckout = trpc.vaultx.attachPackageCheckout.useMutation();
-  const publishTelegram = trpc.vaultx.publishPackageTelegramRoute.useMutation();
+  const launchRevenuePath = trpc.vaultx.launchRevenuePath.useMutation();
+  const finalizeRevenuePath = trpc.vaultx.finalizeRevenuePath.useMutation();
 
   const providers = (capability.data as any)?.providers || [];
   const socialPresence = (capability.data as any)?.socialPresence;
@@ -241,13 +239,42 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   const statusData = statusQuery.data as any;
   const artifactId = statusData?.artifact?.id || statusData?.artifacts?.find?.((artifact: any) => artifact.status === "ready")?.id || null;
   const assetReady = isAssetReady(statusData?.status, statusData?.videoUrl);
-  const working = createPackage.isPending || generateAsset.isPending || attachCheckout.isPending || publishTelegram.isPending;
+  const working = launchRevenuePath.isPending || finalizeRevenuePath.isPending;
   const budgetCapCents = centsFromDollars(budgetCap);
   const estimatedCostCents = Number(selectedProviderProfile?.estimatedCostCents?.[telegramMode] || selectedProviderProfile?.estimatedCostCents?.default || 0);
   const providerLaunchReady = providerCanLaunchBodyCinema(selectedProviderProfile);
   const budgetAllowsLaunch = !estimatedCostCents || !budgetCapCents || estimatedCostCents <= budgetCapCents;
 
   const selectedContentType = useMemo(() => (selectedMake === "Photo Set" ? "photo" : "video") as "photo" | "video", [selectedMake]);
+
+  const applyLaunchResult = (result: any) => {
+    const nextPackageId = Number(result?.packageId || packageId || 0) || null;
+    const nextJobId = String(result?.jobId || jobId || "") || null;
+    setPackageId(nextPackageId);
+    setJobId(nextJobId);
+    setCheckoutUrl(result?.checkoutUrl || null);
+    setLaunchReceipt({
+      packageId: nextPackageId || undefined,
+      provider: selectedProviderProfile?.label || selectedProvider,
+      jobId: nextJobId || undefined,
+      artifactId: result?.artifact?.id || null,
+      checkoutUrl: result?.checkoutUrl || null,
+      checkoutSessionId: result?.checkoutSessionId || null,
+      campaignId: result?.campaignId || null,
+      trackingCode: result?.trackingCode || null,
+      trackedUrl: result?.trackedUrl || null,
+      steps: [
+        { label: "Package DB row", value: String(result?.packageId || nextPackageId || "created") },
+        { label: "Pollo job", value: String(result?.jobId || nextJobId || "not issued") },
+        { label: "Artifact record", value: String(result?.artifact?.id || "queued") },
+        { label: "Launch status", value: String(result?.status || "processing") },
+        ...(result?.checkoutSessionId ? [{ label: "Stripe checkout", value: String(result.checkoutSessionId), href: result.checkoutUrl || null }] : []),
+        ...(result?.vaultxContentId ? [{ label: "VaultX content row", value: String(result.vaultxContentId) }] : []),
+        ...(result?.campaignId ? [{ label: "Telegram campaign", value: String(result.campaignId) }] : []),
+        ...(result?.trackedUrl ? [{ label: "Tracked route", value: String(result.trackingCode || result.trackedUrl), href: result.trackedUrl }] : []),
+      ],
+    });
+  };
 
   const handleLaunch = async () => {
     if (!adultContentFlag || !consentConfirmed) {
@@ -274,7 +301,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
     }
 
     try {
-      const created = await createPackage.mutateAsync({
+      const result = await launchRevenuePath.mutateAsync({
         title: title.trim(),
         contentType: selectedContentType,
         adultContentFlag,
@@ -284,92 +311,36 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
         vipPriceCents: vipPriceCents >= 100 ? vipPriceCents : undefined,
         telegramMode,
         sourceMediaUrl: sourceMediaUrl.trim(),
-      });
-      const newPackageId = Number((created as any).packageId);
-      setPackageId(newPackageId);
-      setLaunchReceipt({
-        packageId: newPackageId,
-        provider: selectedProviderProfile?.label || selectedProvider,
-        steps: [
-          { label: "Package created", value: `#${newPackageId}` },
-          { label: "Provider lane", value: selectedProviderProfile?.label || selectedProvider },
-          { label: "Spend guard", value: `${formatMoney(estimatedCostCents)} estimated inside ${formatMoney(budgetCapCents)} cap` },
-        ],
-      });
-      toast.success("Body Cinema package created. Starting provider-backed trailer generation now.");
-      const generation = await generateAsset.mutateAsync({
-        packageId: newPackageId,
-        sourceMediaUrl: sourceMediaUrl.trim(),
         resolution: telegramMode === "FULL" ? "1080p" : "720p",
         length: telegramMode === "FULL" ? "8" : telegramMode === "BOOST" ? "6" : "5",
         mode: telegramMode === "FAST" ? "std" : "pro",
       });
-      const newJobId = String((generation as any).jobId || "");
-      setJobId(newJobId);
-      setLaunchReceipt((current) => ({
-        ...(current || { steps: [] }),
-        packageId: newPackageId,
-        provider: selectedProviderProfile?.label || selectedProvider,
-        jobId: newJobId,
-        artifactId: (generation as any)?.artifact?.id || null,
-        steps: [
-          ...((current?.steps || []).filter((step) => step.label !== "Provider job")),
-          { label: "Provider job", value: newJobId || "started" },
-          { label: "Artifact record", value: String((generation as any)?.artifact?.id || "tracking") },
-        ],
-      }));
+      applyLaunchResult(result);
       await utils.vaultx.getLaunchCapabilityMatrix.invalidate();
       await statusQuery.refetch();
-      toast.success("Body Cinema job is live and being tracked by VaultX artifacts.");
+      if ((result as any).complete) {
+        toast.success("VaultX Body Cinema package generated, checkout attached, and Telegram route published.");
+      } else {
+        toast.success("Pollo accepted the Body Cinema job. Checkout and Telegram will unlock when the artifact is ready.");
+      }
     } catch (error: any) {
       toast.error(error?.message || "VaultX launch failed.");
     }
   };
 
-  const handleAttachCheckout = async () => {
-    if (!packageId) return;
-    try {
-      const result = await attachCheckout.mutateAsync({ packageId });
-      setCheckoutUrl((result as any).checkoutUrl || null);
-      setLaunchReceipt((current) => ({
-        ...(current || { steps: [] }),
-        packageId,
-        checkoutUrl: (result as any).checkoutUrl || null,
-        checkoutSessionId: (result as any).checkoutSessionId || null,
-        artifactId: (result as any)?.artifact?.id || current?.artifactId || artifactId,
-        steps: [
-          ...(current?.steps || []),
-          { label: "Checkout session", value: (result as any).checkoutSessionId || "created", href: (result as any).checkoutUrl || null },
-        ],
-      }));
-      await utils.vaultx.getLaunchCapabilityMatrix.invalidate();
-      toast.success("Checkout attached to the ready VaultX asset.");
-    } catch (error: any) {
-      toast.error(error?.message || "Checkout could not be attached.");
+  const handleFinalize = async () => {
+    if (!packageId) {
+      toast.error("Launch or load a VaultX package before finalizing checkout and Telegram.");
+      return;
     }
-  };
-
-  const handlePublish = async () => {
-    if (!packageId) return;
     try {
-      const result = await publishTelegram.mutateAsync({ packageId });
-      setLaunchReceipt((current) => ({
-        ...(current || { steps: [] }),
-        packageId,
-        campaignId: (result as any).campaignId || null,
-        trackingCode: (result as any).trackingCode || null,
-        trackedUrl: (result as any).trackedUrl || null,
-        artifactId: (result as any)?.artifact?.id || current?.artifactId || artifactId,
-        steps: [
-          ...(current?.steps || []),
-          { label: "Telegram campaign", value: String((result as any).campaignId || "created") },
-          { label: "Tracked route", value: (result as any).trackingCode || "published", href: (result as any).trackedUrl || null },
-        ],
-      }));
+      const result = await finalizeRevenuePath.mutateAsync({ packageId });
+      applyLaunchResult(result);
       await utils.vaultx.getLaunchCapabilityMatrix.invalidate();
-      toast.success("VaultX Telegram route published with tracked campaign metadata.");
+      await statusQuery.refetch();
+      toast.success("VaultX checkout, content row, Telegram route, and proof events are live.");
     } catch (error: any) {
-      toast.error(error?.message || "Telegram route could not be published.");
+      toast.error(error?.message || "VaultX finalization failed.");
     }
   };
 
@@ -521,10 +492,16 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               <input type="checkbox" checked={consentConfirmed} onChange={(e) => setConsentConfirmed(e.target.checked)} className="mt-1 h-5 w-5 accent-[#C9A84C]" />
               I confirm the creator owns or is authorized to use the source asset and consents to AI transformation, monetization, and distribution routing.
             </label>
-            <button onClick={handleLaunch} disabled={working} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
-              {working ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
-              Ignite Body Cinema generation
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button onClick={handleLaunch} disabled={working} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
+                {launchRevenuePath.isPending ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+                Ignite Body Cinema generation
+              </button>
+              <button onClick={handleFinalize} disabled={working || !packageId} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-[#C9A84C]/70 px-7 py-4 text-base font-black text-[#C9A84C] transition hover:bg-[#C9A84C] hover:text-black disabled:cursor-not-allowed disabled:opacity-60">
+                {finalizeRevenuePath.isPending ? <Loader2 size={18} className="animate-spin" /> : <Route size={18} />}
+                Finalize checkout + Telegram
+              </button>
+            </div>
           </div>
         </div>
 
@@ -553,12 +530,8 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               <BadgeDollarSign className="text-[#C9A84C]" />
               <h3 className="text-2xl font-black text-white">Monetize</h3>
             </div>
-            <p className="text-sm leading-6 text-[#999999]">Checkout is only available after VaultX confirms a ready package artifact. No fake sales state is shown.</p>
+            <p className="text-sm leading-6 text-[#999999]">The one-click launch attaches checkout automatically when the Pollo artifact is ready. If media is still processing, this panel stays honest and shows the next locked step.</p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <button onClick={handleAttachCheckout} disabled={!assetReady || attachCheckout.isPending} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-[#C9A84C] disabled:cursor-not-allowed disabled:opacity-50">
-                {attachCheckout.isPending ? <Loader2 size={16} className="animate-spin" /> : null}
-                Attach checkout
-              </button>
               {checkoutUrl ? <a href={checkoutUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/20 px-5 py-3 text-sm font-black text-white hover:border-[#C9A84C] hover:text-[#C9A84C]">Open checkout</a> : null}
             </div>
           </div>
@@ -568,11 +541,8 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               <RadioTower className="text-[#C9A84C]" />
               <h3 className="text-2xl font-black text-white">Distribute</h3>
             </div>
-            <p className="text-sm leading-6 text-[#999999]">Telegram route publishing stays locked until the package has both a ready artifact and checkout URL.</p>
-            <button onClick={handlePublish} disabled={!assetReady || !checkoutUrl || publishTelegram.isPending} className="mt-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#C9A84C] px-5 py-3 text-sm font-black text-[#C9A84C] transition hover:bg-[#C9A84C] hover:text-black disabled:cursor-not-allowed disabled:opacity-50">
-              {publishTelegram.isPending ? <Loader2 size={16} className="animate-spin" /> : null}
-              Publish tracked route
-            </button>
+            <p className="text-sm leading-6 text-[#999999]">Telegram route creation is part of the same backend launch. It only returns campaign and tracked-route IDs after checkout and artifact proof exist.</p>
+            {launchReceipt?.trackedUrl ? <a href={launchReceipt.trackedUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#C9A84C] px-5 py-3 text-sm font-black text-[#C9A84C] transition hover:bg-[#C9A84C] hover:text-black">Open tracked route</a> : null}
           </div>
 
           <div className="rounded-[1.5rem] border border-[#C9A84C]/30 bg-[#120d05] p-5">
