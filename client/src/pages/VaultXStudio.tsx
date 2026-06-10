@@ -9,6 +9,26 @@ const accent = "#F2B15B";
 type NavItem = "make" | "edit" | "sell" | "earn" | "settings";
 type MakeChoice = "Body Cinema" | "Clone Video" | "Promo Trailer" | "Photo Set";
 type TelegramMode = "FAST" | "BOOST" | "FULL";
+type ProviderChoice = "pollo" | "replicate" | "runway" | "kling" | "clone";
+
+type LaunchReceiptStep = {
+  label: string;
+  value: string;
+  href?: string | null;
+};
+
+type LaunchReceipt = {
+  packageId?: number | null;
+  provider?: string | null;
+  jobId?: string | null;
+  artifactId?: string | number | null;
+  checkoutUrl?: string | null;
+  checkoutSessionId?: string | null;
+  campaignId?: string | number | null;
+  trackingCode?: string | null;
+  trackedUrl?: string | null;
+  steps: LaunchReceiptStep[];
+};
 
 type CardProps = {
   title: string;
@@ -54,6 +74,19 @@ function moneyToCents(value: string) {
 function isAssetReady(status?: string | null, videoUrl?: string | null) {
   const normalized = String(status || "").toLowerCase();
   return Boolean(videoUrl) || ["succeed", "success", "succeeded", "ready", "complete", "completed"].includes(normalized);
+}
+
+function centsFromDollars(value: string) {
+  return moneyToCents(value);
+}
+
+function formatMoney(cents?: number | null) {
+  if (typeof cents !== "number" || !Number.isFinite(cents)) return "not set";
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+function providerCanLaunchBodyCinema(provider: any) {
+  return Boolean(provider?.configured && Array.isArray(provider?.primaryEndpoints) && provider.primaryEndpoints.includes("generatePackageAsset"));
 }
 
 function TopNavButton({ active, children, onClick }: { active: boolean; children: ReactNode; onClick: () => void }) {
@@ -181,11 +214,14 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   const [price, setPrice] = useState("29.00");
   const [vipPrice, setVipPrice] = useState("79.00");
   const [telegramMode, setTelegramMode] = useState<TelegramMode>("BOOST");
+  const [selectedProvider, setSelectedProvider] = useState<ProviderChoice>("pollo");
+  const [budgetCap, setBudgetCap] = useState("6.00");
   const [adultContentFlag, setAdultContentFlag] = useState(false);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [packageId, setPackageId] = useState<number | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [launchReceipt, setLaunchReceipt] = useState<LaunchReceipt | null>(null);
 
   const statusQuery = trpc.vaultx.getPackageAssetStatus.useQuery(
     { packageId: packageId || 1, jobId: jobId || undefined },
@@ -198,10 +234,16 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   const publishTelegram = trpc.vaultx.publishPackageTelegramRoute.useMutation();
 
   const providers = (capability.data as any)?.providers || [];
+  const selectedProviderProfile = providers.find((provider: any) => provider.id === selectedProvider) || providers.find((provider: any) => provider.id === "pollo");
   const packageWorkflow = ((capability.data as any)?.workflows || []).find((workflow: any) => workflow.id === "vaultx-package-launch");
   const statusData = statusQuery.data as any;
+  const artifactId = statusData?.artifact?.id || statusData?.artifacts?.find?.((artifact: any) => artifact.status === "ready")?.id || null;
   const assetReady = isAssetReady(statusData?.status, statusData?.videoUrl);
   const working = createPackage.isPending || generateAsset.isPending || attachCheckout.isPending || publishTelegram.isPending;
+  const budgetCapCents = centsFromDollars(budgetCap);
+  const estimatedCostCents = Number(selectedProviderProfile?.estimatedCostCents?.[telegramMode] || selectedProviderProfile?.estimatedCostCents?.default || 0);
+  const providerLaunchReady = providerCanLaunchBodyCinema(selectedProviderProfile);
+  const budgetAllowsLaunch = !estimatedCostCents || !budgetCapCents || estimatedCostCents <= budgetCapCents;
 
   const selectedContentType = useMemo(() => (selectedMake === "Photo Set" ? "photo" : "video") as "photo" | "video", [selectedMake]);
 
@@ -220,6 +262,14 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
       toast.error("Set a package price of at least $1.00.");
       return;
     }
+    if (!providerLaunchReady) {
+      toast.error(`${selectedProviderProfile?.label || "Selected provider"} is not wired for direct Body Cinema package generation yet. Choose a live package-generation provider.`);
+      return;
+    }
+    if (!budgetAllowsLaunch) {
+      toast.error(`Budget guard blocked this launch: estimated ${formatMoney(estimatedCostCents)} exceeds cap ${formatMoney(budgetCapCents)}.`);
+      return;
+    }
 
     try {
       const created = await createPackage.mutateAsync({
@@ -235,6 +285,15 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
       });
       const newPackageId = Number((created as any).packageId);
       setPackageId(newPackageId);
+      setLaunchReceipt({
+        packageId: newPackageId,
+        provider: selectedProviderProfile?.label || selectedProvider,
+        steps: [
+          { label: "Package created", value: `#${newPackageId}` },
+          { label: "Provider lane", value: selectedProviderProfile?.label || selectedProvider },
+          { label: "Spend guard", value: `${formatMoney(estimatedCostCents)} estimated inside ${formatMoney(budgetCapCents)} cap` },
+        ],
+      });
       toast.success("Body Cinema package created. Starting provider-backed trailer generation now.");
       const generation = await generateAsset.mutateAsync({
         packageId: newPackageId,
@@ -243,7 +302,20 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
         length: telegramMode === "FULL" ? "8" : telegramMode === "BOOST" ? "6" : "5",
         mode: telegramMode === "FAST" ? "std" : "pro",
       });
-      setJobId(String((generation as any).jobId || ""));
+      const newJobId = String((generation as any).jobId || "");
+      setJobId(newJobId);
+      setLaunchReceipt((current) => ({
+        ...(current || { steps: [] }),
+        packageId: newPackageId,
+        provider: selectedProviderProfile?.label || selectedProvider,
+        jobId: newJobId,
+        artifactId: (generation as any)?.artifact?.id || null,
+        steps: [
+          ...((current?.steps || []).filter((step) => step.label !== "Provider job")),
+          { label: "Provider job", value: newJobId || "started" },
+          { label: "Artifact record", value: String((generation as any)?.artifact?.id || "tracking") },
+        ],
+      }));
       await utils.vaultx.getLaunchCapabilityMatrix.invalidate();
       await statusQuery.refetch();
       toast.success("Body Cinema job is live and being tracked by VaultX artifacts.");
@@ -257,6 +329,17 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
     try {
       const result = await attachCheckout.mutateAsync({ packageId });
       setCheckoutUrl((result as any).checkoutUrl || null);
+      setLaunchReceipt((current) => ({
+        ...(current || { steps: [] }),
+        packageId,
+        checkoutUrl: (result as any).checkoutUrl || null,
+        checkoutSessionId: (result as any).checkoutSessionId || null,
+        artifactId: (result as any)?.artifact?.id || current?.artifactId || artifactId,
+        steps: [
+          ...(current?.steps || []),
+          { label: "Checkout session", value: (result as any).checkoutSessionId || "created", href: (result as any).checkoutUrl || null },
+        ],
+      }));
       await utils.vaultx.getLaunchCapabilityMatrix.invalidate();
       toast.success("Checkout attached to the ready VaultX asset.");
     } catch (error: any) {
@@ -267,7 +350,20 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   const handlePublish = async () => {
     if (!packageId) return;
     try {
-      await publishTelegram.mutateAsync({ packageId });
+      const result = await publishTelegram.mutateAsync({ packageId });
+      setLaunchReceipt((current) => ({
+        ...(current || { steps: [] }),
+        packageId,
+        campaignId: (result as any).campaignId || null,
+        trackingCode: (result as any).trackingCode || null,
+        trackedUrl: (result as any).trackedUrl || null,
+        artifactId: (result as any)?.artifact?.id || current?.artifactId || artifactId,
+        steps: [
+          ...(current?.steps || []),
+          { label: "Telegram campaign", value: String((result as any).campaignId || "created") },
+          { label: "Tracked route", value: (result as any).trackingCode || "published", href: (result as any).trackedUrl || null },
+        ],
+      }));
       await utils.vaultx.getLaunchCapabilityMatrix.invalidate();
       toast.success("VaultX Telegram route published with tracked campaign metadata.");
     } catch (error: any) {
@@ -290,15 +386,48 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
       </div>
 
       <div className="mb-6 grid gap-3 md:grid-cols-3 xl:grid-cols-5">
-        {providers.map((provider: any) => (
-          <div key={provider.id} className="rounded-[1.25rem] border border-[#242424] bg-black/65 p-4">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <p className="font-black text-white">{provider.label}</p>
-              <StatusPill active={Boolean(provider.configured)} text={provider.configured ? "LIVE" : "LOCKED"} />
+        {providers.map((provider: any) => {
+          const canLaunch = providerCanLaunchBodyCinema(provider);
+          const active = selectedProvider === provider.id;
+          return (
+            <button
+              key={provider.id}
+              type="button"
+              onClick={() => setSelectedProvider(provider.id as ProviderChoice)}
+              className={`rounded-[1.25rem] border p-4 text-left transition active:scale-[0.98] ${active ? "border-[#C9A84C] bg-[#201705]" : "border-[#242424] bg-black/65 hover:border-[#C9A84C]/70"}`}
+            >
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <p className="font-black text-white">{provider.label}</p>
+                <StatusPill active={canLaunch} text={canLaunch ? "LAUNCH" : provider.configured ? "WIRED" : "LOCKED"} />
+              </div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#C9A84C]">{provider.tier}</p>
+              <p className="mt-2 text-xs leading-5 text-[#999999]">{provider.configured ? provider.capability : provider.unlockRequirement}</p>
+              <div className="mt-4 rounded-2xl border border-white/10 bg-black/50 p-3 text-xs leading-5 text-[#b8b8b8]">
+                <p>Recommended mode: <span className="font-black text-white">{provider.recommendedMode || "operator choice"}</span></p>
+                <p>Estimated BOOST spend: <span className="font-black text-white">{formatMoney(provider.estimatedCostCents?.BOOST || provider.estimatedCostCents?.default)}</span></p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mb-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-[1.25rem] border border-[#242424] bg-black/70 p-4">
+          <p className="text-sm font-black text-white">Provider command board</p>
+          <p className="mt-2 text-sm leading-6 text-[#999999]">Selected lane: <span className="font-black text-[#C9A84C]">{selectedProviderProfile?.label || selectedProvider}</span>. Body Cinema generation only unlocks when the selected provider exposes the real package-generation endpoint; configured-but-unwired premium lanes remain honest instead of pretending to run.</p>
+        </div>
+        <div className="rounded-[1.25rem] border border-[#242424] bg-black/70 p-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <label className="grid flex-1 gap-2 text-sm font-bold text-[#d6d6d6]">
+              Launch spend cap
+              <input value={budgetCap} onChange={(e) => setBudgetCap(e.target.value)} className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
+            </label>
+            <div className="min-w-44 rounded-2xl border border-white/10 bg-[#101010] p-3 text-xs leading-5 text-[#b8b8b8]">
+              <p>Estimated: <span className="font-black text-white">{formatMoney(estimatedCostCents)}</span></p>
+              <p>Guard: <span className={`font-black ${budgetAllowsLaunch ? "text-emerald-300" : "text-red-300"}`}>{budgetAllowsLaunch ? "inside cap" : "blocked"}</span></p>
             </div>
-            <p className="text-xs leading-5 text-[#999999]">{provider.configured ? provider.capability : provider.unlockRequirement}</p>
           </div>
-        ))}
+        </div>
       </div>
 
       {packageWorkflow?.blockers?.length ? (
@@ -373,6 +502,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
             <div className="space-y-3 text-sm leading-6 text-[#b8b8b8]">
               <p>Package ID: <span className="font-black text-white">{packageId || "not created yet"}</span></p>
               <p>Provider job: <span className="font-black text-white">{jobId || "not started yet"}</span></p>
+              <p>Artifact ID: <span className="font-black text-white">{artifactId || "not issued yet"}</span></p>
               <p>Asset status: <span className="font-black text-[#C9A84C]">{statusData?.status || "waiting"}</span></p>
               <p>Quality gate: <span className="font-black text-white">{statusData?.qualityPassed ? "passed" : "not passed yet"}</span></p>
             </div>
@@ -408,6 +538,26 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               {publishTelegram.isPending ? <Loader2 size={16} className="animate-spin" /> : null}
               Publish tracked route
             </button>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-[#C9A84C]/30 bg-[#120d05] p-5">
+            <div className="mb-4 flex items-center gap-3">
+              <Library className="text-[#C9A84C]" />
+              <h3 className="text-2xl font-black text-white">Output receipt</h3>
+            </div>
+            <p className="text-sm leading-6 text-[#999999]">Every launch step prints a creator-facing receipt backed by returned package, provider, artifact, checkout, and campaign data.</p>
+            <div className="mt-4 grid gap-3">
+              {(launchReceipt?.steps?.length ? launchReceipt.steps : [{ label: "Receipt", value: "Launch a package to issue the first production receipt." }]).map((step, index) => (
+                <div key={`${step.label}-${index}`} className="rounded-2xl border border-white/10 bg-black/55 p-3 text-sm leading-6">
+                  <p className="font-black text-white">{step.label}</p>
+                  {step.href ? (
+                    <a href={step.href} target="_blank" rel="noreferrer" className="break-all text-[#C9A84C] hover:underline">{step.value}</a>
+                  ) : (
+                    <p className="break-all text-[#b8b8b8]">{step.value}</p>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -473,6 +623,7 @@ function EarnPanel() {
               <div>
                 <h3 className="text-xl font-black text-white">{pkg.title}</h3>
                 <p className="mt-1 text-sm text-[#999999]">Mode {pkg.mode} • ${(pkg.priceCents / 100).toFixed(2)} • {pkg.assetStatus || pkg.status}</p>
+                <p className="mt-1 text-xs text-[#777]">Job {pkg.providerJobId || "not started"} • Artifact {pkg.artifactId || "not ready"}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <StatusPill active={pkg.hasAsset} text={pkg.hasAsset ? "ASSET" : "NO ASSET"} />

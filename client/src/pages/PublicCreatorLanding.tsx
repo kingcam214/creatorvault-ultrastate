@@ -67,7 +67,7 @@ const creators: Record<string, Creator> = {
 
 export default function PublicCreatorLanding() {
   const [, params] = useRoute("/creator/:handle");
-  const handle = params?.handle?.toLowerCase() ?? "kingcam";
+  const handle = (params as { handle?: string } | null)?.handle?.toLowerCase() ?? "kingcam";
   const creator = creators[handle];
 
   if (!creator) {

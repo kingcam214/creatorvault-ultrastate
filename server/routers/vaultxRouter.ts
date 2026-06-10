@@ -51,7 +51,7 @@ const POLLO_API_KEY = process.env.POLLO_API_KEY || "";
 const POLLO_API_URL = "https://pollo.ai/api/platform/generation/pollo/pollo-v1-6";
 const POLLO_BASE_URL = "https://pollo.ai/api/platform";
 const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-12-15.clover" })
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-02-25.clover" })
   : null;
 
 type VaultxPackageMode = "FAST" | "BOOST" | "FULL";
@@ -760,10 +760,11 @@ export const vaultxRouter = router({
       const hasRunway = Boolean(process.env.RUNWAY_API_KEY || process.env.RUNWAYML_API_SECRET);
       const hasKling = Boolean(process.env.KLING_API_KEY || process.env.KLING_ACCESS_KEY || process.env.KLING_SECRET_KEY);
       const latestPackages = await rawQuery(
-        `SELECT id, title, content_type, telegram_mode, price_cents, status, asset_status, asset_url, checkout_url, telegram_tracking_code, created_at
-         FROM vaultx_revenue_packages
-         WHERE user_id = ?
-         ORDER BY id DESC
+        `SELECT p.id, p.title, p.content_type, p.telegram_mode, p.price_cents, p.status, p.asset_status, p.asset_url, p.checkout_url, p.telegram_tracking_code, p.pollo_job_id, p.stripe_checkout_session_id, p.telegram_campaign_id, p.vaultx_content_id, p.created_at,
+                (SELECT va.id FROM vaultx_artifacts va WHERE va.package_id = p.id ORDER BY va.id DESC LIMIT 1) AS artifact_id
+         FROM vaultx_revenue_packages p
+         WHERE p.user_id = ?
+         ORDER BY p.id DESC
          LIMIT 6`,
         [ctx.user.id]
       ).catch(() => []);
@@ -784,20 +785,26 @@ export const vaultxRouter = router({
           {
             id: "pollo",
             label: "Pollo AI Video",
-            tier: "active-production",
+            tier: "active-package-generation",
             configured: hasPollo,
-            capability: "Image-to-video package assets and premium trailer motion through the existing Pollo generation/status pipeline.",
+            capability: "Image-to-video Body Cinema package assets through the existing Pollo generation/status/artifact pipeline.",
             unlockRequirement: hasPollo ? null : "Configure POLLO_API_KEY on the server.",
             primaryEndpoints: ["createRevenuePackage", "generatePackageAsset", "getPackageAssetStatus"],
+            recommendedMode: "BOOST",
+            estimatedCostCents: { FAST: 250, BOOST: 450, FULL: 850, default: 450 },
+            qualityTier: "production",
           },
           {
             id: "replicate",
             label: "Replicate Model Rack",
-            tier: "active-production",
+            tier: "active-enhancement-rack",
             configured: hasReplicate,
-            capability: "Enhancement, motion, teaser, thumbnail, and clone-adjacent model routes already present in VaultX services.",
+            capability: "Enhancement, motion, teaser, thumbnail, and clone-adjacent routes are available in VaultX services, but direct package generation remains Pollo-owned until a package endpoint is wired.",
             unlockRequirement: hasReplicate ? null : "Configure REPLICATE_API_TOKEN on the server.",
             primaryEndpoints: ["generateDesireTeaser", "buildPpvBundle", "generateThumbnails", "analyzeHook"],
+            recommendedMode: "BOOST",
+            estimatedCostCents: { FAST: 300, BOOST: 600, FULL: 1100, default: 600 },
+            qualityTier: "enhancement",
           },
           {
             id: "clone",
@@ -807,24 +814,33 @@ export const vaultxRouter = router({
             capability: "Clone-image/video handoff, generation history, Vault persistence, and hero assets through the existing Clone Command router.",
             unlockRequirement: hasPollo || hasReplicate ? null : "Enable at least one media provider key before launching clone media generation.",
             primaryEndpoints: ["cloneCommand.generateCloneImage", "cloneCommand.generateCloneVideo", "cloneCommand.getGenerationHistory"],
+            recommendedMode: "operator",
+            estimatedCostCents: { FAST: 250, BOOST: 500, FULL: 900, default: 500 },
+            qualityTier: "clone-system",
           },
           {
             id: "runway",
             label: "Runway Premium Lane",
-            tier: hasRunway ? "configured-premium" : "pending-direct-configuration",
+            tier: hasRunway ? "credential-detected-needs-endpoint" : "pending-direct-configuration",
             configured: hasRunway,
-            capability: "Premium video model lane reserved for direct Runway orchestration when server credentials are present; otherwise do not claim live direct generation.",
-            unlockRequirement: hasRunway ? null : "Configure a real Runway API credential before exposing direct Runway jobs.",
+            capability: "Premium video model lane reserved for direct Runway orchestration; credentials alone do not expose fake jobs until a real package endpoint is wired.",
+            unlockRequirement: hasRunway ? "Wire and verify a direct Runway package-generation endpoint before creator launch." : "Configure a real Runway API credential before exposing direct Runway jobs.",
             primaryEndpoints: [],
+            recommendedMode: "FULL",
+            estimatedCostCents: { FAST: 900, BOOST: 1500, FULL: 2600, default: 1500 },
+            qualityTier: "premium-pending",
           },
           {
             id: "kling",
             label: "Kling Premium Lane",
-            tier: hasKling ? "configured-premium" : "pending-direct-configuration",
+            tier: hasKling ? "credential-detected-needs-endpoint" : "pending-direct-configuration",
             configured: hasKling,
-            capability: "Premium motion lane reserved for direct Kling orchestration when server credentials are present or confirmed through a provider aggregator.",
-            unlockRequirement: hasKling ? null : "Configure real Kling credentials or a confirmed provider model route before exposing direct Kling jobs.",
+            capability: "Premium motion lane reserved for direct Kling orchestration or a confirmed provider aggregator route; no direct fake generation is claimed.",
+            unlockRequirement: hasKling ? "Wire and verify a direct Kling or confirmed aggregator package endpoint before creator launch." : "Configure real Kling credentials or a confirmed provider model route before exposing direct Kling jobs.",
             primaryEndpoints: [],
+            recommendedMode: "FULL",
+            estimatedCostCents: { FAST: 850, BOOST: 1400, FULL: 2400, default: 1400 },
+            qualityTier: "premium-pending",
           },
         ],
         workflows: [
@@ -875,6 +891,12 @@ export const vaultxRouter = router({
           hasAsset: Boolean(pkg.asset_url),
           hasCheckout: Boolean(pkg.checkout_url),
           hasTelegramRoute: Boolean(pkg.telegram_tracking_code),
+          providerJobId: pkg.pollo_job_id || null,
+          checkoutSessionId: pkg.stripe_checkout_session_id || null,
+          telegramCampaignId: pkg.telegram_campaign_id || null,
+          telegramTrackingCode: pkg.telegram_tracking_code || null,
+          vaultxContentId: pkg.vaultx_content_id || null,
+          artifactId: pkg.artifact_id ? Number(pkg.artifact_id) : null,
           createdAt: pkg.created_at,
         })),
       };
