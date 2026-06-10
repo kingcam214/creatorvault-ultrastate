@@ -13,7 +13,8 @@ module.exports = {
       max_memory_restart: '1G',
       env: {
         NODE_ENV: 'production',
-        DOTENV_CONFIG_PATH: '/root/creatorvault/.env'
+        DOTENV_CONFIG_PATH: '/root/creatorvault/.env',
+        DOTENV_CONFIG_OVERRIDE: 'true'
       }
     }
   ]

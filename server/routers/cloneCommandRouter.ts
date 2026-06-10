@@ -398,13 +398,15 @@ export const cloneCommandRouter = router({
 
       const conn = await getDb();
       try {
+        const safeLimit = Math.max(1, Math.min(100, Math.trunc(input.limit)));
+        const safeOffset = Math.max(0, Math.trunc(input.offset));
         const rows = extractRows(
           await conn.execute(
             `SELECT * FROM kingcam_clone_generations
              WHERE user_id = ?
              ORDER BY created_at DESC
-             LIMIT ? OFFSET ?`,
-            [ctx.user.id, input.limit, input.offset],
+             LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+            [ctx.user.id],
           ),
         );
 
