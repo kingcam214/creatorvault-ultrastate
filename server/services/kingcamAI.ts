@@ -48,9 +48,9 @@ const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN ?? "";
 const POLLO_KEY = process.env.POLLO_API_KEY ?? "";
 
 export const FLUXDEVCAM = {
-  model: "kingcam214/fluxdevcam",
-  version: "6f76a5fb9645488a56e2fdd36a9f213fc08b5aee638d9aa46253b6cd17c3bcff",
-  triggerWord: "fluxdevCam",
+  model: process.env.REPLICATE_CLONE_MODEL_ID ?? "kingcam214/fluxdevcam",
+  version: process.env.REPLICATE_CLONE_VERSION ?? "e8074c4eeec195ad8ab617bf1502cd0c297db7f2c1cf5d9a665fad4710468727",
+  triggerWord: process.env.REPLICATE_CLONE_TRIGGER_WORD ?? "fluxdevCam",
 };
 
 // ─── KINGCAM VISUAL DNA ───────────────────────────────────────────────────────

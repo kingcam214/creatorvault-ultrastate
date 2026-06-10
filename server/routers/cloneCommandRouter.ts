@@ -149,8 +149,9 @@ export const cloneCommandRouter = router({
         width: input.width,
         height: input.height,
         num_outputs: input.numOutputs,
-        guidance: input.guidanceScale,
+        guidance_scale: input.guidanceScale,
         num_inference_steps: input.numInferenceSteps,
+        aspect_ratio: "custom",
         output_format: "webp",
         output_quality: 90,
       };
