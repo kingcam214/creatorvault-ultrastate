@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "generatedAt": "2026-06-09T12:46:40.227Z",
+  "policy": "Generated through CreatorVault platform-native KingCam AI service using the configured production Pollo provider; no Manus media generation used.",
+  "servicePath": "generateKingCamVideo -> polloGenerate -> Pollo generation API",
+  "provider": "pollo",
+  "model": "pollo/kling-3.0",
+  "vertical": "vaultx",
+  "promptPreview": "KingCam walks through a luxury CreatorVault VaultX studio like a high-value founder and creator magnet, cinematic dark black and gold environment, confident eye contact, body cinema energy, premium platform launch trailer, modern adult creator monetization bra",
+  "output": {
+    "relativePath": "client/public/uploads/vaultx/homepage-trailer/platform_native_pollo_kling3_2026-06-09T12-46-40-227Z.mp4",
+    "latestRelativePath": "client/public/uploads/vaultx/homepage-trailer/platform_native_pollo_kling3_latest.mp4",
+    "redactedSourceUrl": "https://videocdn.pollo.ai/web-cdn/pollo/production/..."
+  }
+}
