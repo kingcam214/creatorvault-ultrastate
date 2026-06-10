@@ -11,7 +11,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import {
   ArrowUpRight, ShoppingBag, BookOpen, TrendingUp, Users,
   Star, Award, ChevronRight, Play, Heart, MessageCircle,
-  Share2, Zap, BarChart2, Check
+  Share2, Zap, BarChart2, Check, Crown, ShieldCheck, Radio, Film
 } from "lucide-react";
 
 // ── Design tokens ────────────────────────────────────────────────────────────
@@ -266,6 +266,111 @@ function PurchaseDrawer({ product, onClose }: { product: any; onClose: () => voi
 }
 
 // ── Main Profile Page ────────────────────────────────────────────────────────
+const BCB_PROFILE_KEYS = ["officiallybcb", "bcb", "thatssthebcb", "thatssthebcb_", "thebiggestb"];
+
+const BCB_FALLBACK_PROFILE = {
+  userId: -202606,
+  username: "officiallybcb",
+  displayName: "BCB · Body Cinema",
+  bio: "Fitness-body proof, Fisk '26 energy, ProArmorCore lane, and adult-safe premium routing built for the VaultX Body Cinema soft launch.",
+  followerCount: 17700,
+  postCount: 3,
+  productCount: 4,
+  stripeConnected: true,
+  bannerUrl: "",
+};
+
+function isBCBUsername(value: string | undefined | null): boolean {
+  return BCB_PROFILE_KEYS.includes(String(value || "").toLowerCase());
+}
+
+function isBCBProfile(profile: any): boolean {
+  const identity = [profile?.username, profile?.displayName, profile?.bio]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return BCB_PROFILE_KEYS.some((key) => identity.includes(key)) || identity.includes("abs prime") || identity.includes("fisk");
+}
+
+const bcbProofCards = [
+  { label: "TikTok Proof", value: "350.8K likes", detail: "Pinned clips and a video-first grid already prove motion sells the persona." },
+  { label: "Audience", value: "17.7K followers", detail: "Enough social heat to validate paid teaser, subscriber, and VIP routes." },
+  { label: "Identity", value: "Fisk '26", detail: "HBCU fitness, faith, and ProArmorCore give the profile a story beyond thirst traffic." },
+  { label: "Body Cinema Lane", value: "Abs Prime", detail: "The body-value proposition is clear, visual, athletic, and premium-package ready." },
+];
+
+const bcbPackageLanes = [
+  { title: "Public Heat Teaser", price: "Free", body: "Lead with the proof frame, crop the heat, watermark the preview, and cut before the payoff.", accent: "#FF3D8A" },
+  { title: "Subscriber Master", price: "$25+", body: "Deliver the complete fitness-body scene as subscriber value with safe premium pacing.", accent: "#00D9FF" },
+  { title: "PPV Unlock", price: "$19-$49", body: "Hold the highest-value beat behind a tracked paid route so curiosity becomes purchase intent.", accent: "#C9A84C" },
+  { title: "VIP Upsell Kit", price: "$75+", body: "Turn one clip into cover art, captions, DM copy, Telegram route, and private escalation.", accent: "#A855F7" },
+];
+
+function BCBBodyCinemaSpotlight({ profile }: { profile: any }) {
+  return (
+    <section className="relative overflow-hidden" style={{ borderBottom: `1px solid ${T.border}`, background: "radial-gradient(circle at 15% 0%, rgba(255,61,138,0.20), transparent 34%), radial-gradient(circle at 85% 10%, rgba(0,217,255,0.16), transparent 30%), #050505" }}>
+      <div className="max-w-6xl mx-auto px-4 py-8 md:py-10">
+        <div className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr] items-stretch">
+          <div className="relative overflow-hidden p-5 md:p-7" style={{ background: "linear-gradient(135deg, rgba(20,20,20,0.96), rgba(10,10,10,0.86))", border: `1px solid ${T.border}`, borderRadius: "3px" }}>
+            <div className="absolute inset-y-0 right-0 w-1/3 opacity-30" style={{ background: "linear-gradient(180deg, rgba(255,61,138,0.35), rgba(201,168,76,0.22), rgba(0,217,255,0.25))" }} />
+            <div className="relative z-10">
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <span className="inline-flex items-center gap-2 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em]" style={{ color: "#050505", background: T.gold, borderRadius: "999px" }}>
+                  <Crown className="w-3.5 h-3.5" /> Body Cinema Soft Launch
+                </span>
+                <span className="inline-flex items-center gap-2 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: T.text, border: `1px solid ${T.border}`, borderRadius: "999px", background: "rgba(255,255,255,0.04)" }}>
+                  <ShieldCheck className="w-3.5 h-3.5" /> Creator-safe premium routing
+                </span>
+              </div>
+              <h2 className="text-3xl md:text-5xl font-black leading-tight" style={{ color: T.text, fontFamily: "Playfair Display, serif" }}>
+                BCB becomes the proof that fitness-body content can move like cinema and sell like a private drop.
+              </h2>
+              <p className="mt-4 max-w-2xl text-sm md:text-base leading-7" style={{ color: "rgba(245,240,232,0.68)" }}>
+                This profile is being positioned as VaultX’s first Body Cinema use case: public social proof, vertical-video heat, subscriber value, PPV unlocks, Telegram routing, and VIP escalation working as one creator-owned funnel.
+              </p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {bcbProofCards.map((card) => (
+                  <div key={card.label} className="p-4" style={{ background: "rgba(255,255,255,0.045)", border: `1px solid ${T.border}`, borderRadius: "3px" }}>
+                    <div className="text-[10px] uppercase tracking-[0.18em]" style={{ color: T.textMuted }}>{card.label}</div>
+                    <div className="mt-1 text-xl font-black" style={{ color: T.text }}>{card.value}</div>
+                    <p className="mt-1 text-xs leading-5" style={{ color: "rgba(245,240,232,0.58)" }}>{card.detail}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a href="/vault-x/editor" className="inline-flex items-center gap-2 px-4 py-3 text-xs font-black uppercase tracking-[0.14em]" style={{ background: T.gold, color: "#050505", borderRadius: "3px" }}>
+                  Cut Body Cinema <Film className="w-4 h-4" />
+                </a>
+                <a href="/mi-panel/bcb-panel" className="inline-flex items-center gap-2 px-4 py-3 text-xs font-black uppercase tracking-[0.14em]" style={{ border: `1px solid ${T.border}`, color: T.text, borderRadius: "3px", background: "rgba(255,255,255,0.04)" }}>
+                  Open BCB Launch Room <ArrowUpRight className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            {bcbPackageLanes.map((lane, index) => (
+              <div key={lane.title} className="group p-4" style={{ background: "rgba(20,20,20,0.92)", border: `1px solid ${T.border}`, borderLeft: `3px solid ${lane.accent}`, borderRadius: "3px" }}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 flex items-center justify-center text-xs font-black" style={{ color: lane.accent, background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, borderRadius: "999px" }}>0{index + 1}</div>
+                    <div>
+                      <h3 className="text-sm font-black" style={{ color: T.text }}>{lane.title}</h3>
+                      <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: lane.accent }}>{lane.price}</p>
+                    </div>
+                  </div>
+                  <Radio className="w-4 h-4 opacity-70" style={{ color: lane.accent }} />
+                </div>
+                <p className="mt-3 text-xs leading-5" style={{ color: "rgba(245,240,232,0.58)" }}>{lane.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function CreatorProfilePage() {
   const [, params] = useRoute("/profile/:username");
   const [, navigate] = useLocation();
@@ -307,7 +412,8 @@ export default function CreatorProfilePage() {
     );
   }
 
-  const profile = profileData?.profile;
+  const profile = profileData?.profile ?? (isBCBUsername(username) ? BCB_FALLBACK_PROFILE : null);
+  const showBCBSpotlight = isBCBProfile(profile);
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: T.bg }}>
@@ -409,6 +515,8 @@ export default function CreatorProfilePage() {
         activeProducts: creatorProducts.length,
         followers: profile.followerCount ?? 0,
       }} />
+
+      {showBCBSpotlight && <BCBBodyCinemaSpotlight profile={profile} />}
 
       {/* ── Content ── */}
       <div className="max-w-6xl mx-auto px-4 py-6">

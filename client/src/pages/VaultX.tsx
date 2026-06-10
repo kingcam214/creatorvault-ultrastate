@@ -1109,6 +1109,31 @@ function DiscoverTab() {
         </div>
       </div>
 
+      <div className="relative overflow-hidden rounded-3xl border border-pink-500/20 bg-black/50 p-5 sm:p-6" style={{ boxShadow: "0 0 70px rgba(236,72,153,0.10) inset" }}>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(236,72,153,0.22),transparent_32%),radial-gradient(circle_at_90%_20%,rgba(34,211,238,0.14),transparent_28%)]" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-pink-200">
+              <Clapperboard className="h-3.5 w-3.5" /> Soft-launch use case · BCB Body Cinema
+            </div>
+            <h2 className="text-2xl font-black leading-tight text-white sm:text-3xl">
+              Watch VaultX turn a real fitness-body creator profile into teaser, unlock, Telegram route, and VIP package logic.
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-400">
+              BCB is wired as the first Body Cinema proof lane: public social heat, subscriber master, PPV unlock, and private-route upsell all pointing back into the CreatorVault OS.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <a href="/profile/officiallybcb" className="inline-flex items-center gap-2 rounded-xl bg-pink-500 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-pink-400">
+              Open profile <ArrowUpRight className="h-4 w-4" />
+            </a>
+            <a href="/mi-panel/bcb-panel" className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/10">
+              Launch room <Crown className="h-4 w-4 text-amber-300" />
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* Search + Filter */}
       <div className="flex gap-3 flex-col sm:flex-row">
         <div className="flex-1 relative">
