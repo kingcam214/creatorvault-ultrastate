@@ -1,213 +1,108 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CheckCircle2, Sparkles, DollarSign, Zap, Users } from "lucide-react";
 
 export default function Waitlist() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [creatorType, setCreatorType] = useState("");
+  const [audienceType, setAudienceType] = useState<"" | "creator" | "fan">("");
+  const [socialHandle, setSocialHandle] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  const joinWaitlist = trpc.waitlist.join.useMutation({
+  const requestAccess = trpc.waitlist.signup.useMutation({
     onSuccess: () => {
       setSubmitted(true);
-      toast.success("You're on the list! We'll notify you when we launch.");
+      toast.success("Access request saved.");
     },
     onError: (error) => {
-      toast.error(error.message);
+      if (error.message.toLowerCase().includes("already")) {
+        setSubmitted(true);
+        toast.success("You are already on the access list.");
+        return;
+      }
+      toast.error(error.message || "Could not save your request.");
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!name || !email || !creatorType) {
-      toast.error("Please fill in all fields");
+    if (!name.trim() || !email.trim() || !audienceType) {
+      toast.error("Name, email, and Creator/Fan selection are required.");
       return;
     }
 
-  // @ts-ignore
-    joinWaitlist.mutate({ name, email, creatorType });
+    requestAccess.mutate({
+      name: name.trim(),
+      email: email.trim(),
+      referralSource: socialHandle.trim() ? `social:${socialHandle.trim()}` : "public-signup",
+      interestedIn: [audienceType, "vaultx", "creatorvault"],
+    });
   };
 
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-700 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full bg-black/40 border-white/20 backdrop-blur">
-          <CardContent className="pt-12 pb-8 text-center space-y-6">
-            <div className="flex justify-center">
-              <div className="rounded-full bg-green-500/20 p-4">
-                <CheckCircle2 className="h-12 w-12 text-green-400" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-white">You're In!</h2>
-              <p className="text-gray-300">
-                We'll email you at <span className="text-purple-300 font-semibold">{email}</span> when CreatorVault launches.
-              </p>
-            </div>
-            <div className="pt-4 space-y-2">
-              <p className="text-sm text-gray-400">
-                Want to learn more? Check out our demo videos:
-              </p>
-              <Button 
-                onClick={() => window.location.href = '/demos'}
-                variant="outline"
-                className="w-full border-purple-400 text-purple-300 hover:bg-purple-500/20"
-              >
-                Watch Demos
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-700">
-      {/* Hero Section */}
-      <div className="container max-w-6xl py-12 md:py-24 space-y-12">
-        <div className="text-center space-y-6">
-          <div className="inline-block">
-            <div className="flex items-center gap-2 bg-purple-500/20 backdrop-blur px-4 py-2 rounded-full border border-purple-400/30">
-              <Sparkles className="h-4 w-4 text-purple-300" />
-              <span className="text-sm font-medium text-purple-200">Coming Soon</span>
+    <main style={styles.shell}>
+      <section style={styles.card}>
+        <Link href="/" style={styles.brand}>CreatorVault / VaultX</Link>
+        {submitted ? (
+          <div style={{ textAlign: "center" }}>
+            <p style={styles.kicker}>Request received</p>
+            <h1 style={styles.title}>You are on the access list.</h1>
+            <p style={styles.copy}>We saved your request for <strong style={{ color: "#f7d67a" }}>{email}</strong>. Creator, fan, and partner access is being staged carefully so the front door, legal layer, and creator profiles stay ready for serious conversations.</p>
+            <div style={styles.actions}>
+              <Link href="/"><button style={styles.primary}>Back to homepage</button></Link>
+              <Link href="/creator/kingcam"><button style={styles.secondary}>View creator profile</button></Link>
             </div>
           </div>
-          
-          <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight">
-            CreatorVault
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300">
-              ULTRASTATE
-            </span>
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-gray-200 max-w-3xl mx-auto">
-            The Platform Where Creators Keep <span className="text-purple-300 font-bold">85%</span>
-          </p>
-          
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-            No Twitch. No YouTube. No OnlyFans taking 50%. This is YOUR platform. Built by a creator, for creators.
-          </p>
-        </div>
-
-        {/* Features Grid */}
-        <div className="grid md:grid-cols-3 gap-6 pt-8">
-          <Card className="bg-black/40 border-purple-400/30 backdrop-blur">
-            <CardHeader>
-              <DollarSign className="h-8 w-8 text-green-400 mb-2" />
-              <CardTitle className="text-white">Keep 85%</CardTitle>
-              <CardDescription className="text-gray-300">
-                VaultLive streaming with the highest creator split in the industry
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="bg-black/40 border-purple-400/30 backdrop-blur">
-            <CardHeader>
-              <Zap className="h-8 w-8 text-yellow-400 mb-2" />
-              <CardTitle className="text-white">Instant Payouts</CardTitle>
-              <CardDescription className="text-gray-300">
-                Cash App, PayPal, Zelle - get paid your way, fast
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="bg-black/40 border-purple-400/30 backdrop-blur">
-            <CardHeader>
-              <Users className="h-8 w-8 text-blue-400 mb-2" />
-              <CardTitle className="text-white">Your Community</CardTitle>
-              <CardDescription className="text-gray-300">
-                Subscriptions, marketplace, podcast studio - all in one place
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-
-        {/* Waitlist Form */}
-        <Card className="max-w-xl mx-auto bg-black/60 border-white/20 backdrop-blur-xl">
-          <CardHeader>
-            <CardTitle className="text-2xl text-white text-center">Join the Waitlist</CardTitle>
-            <CardDescription className="text-gray-300 text-center">
-              Be the first to know when we launch. Limited spots available.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-gray-200">Name</Label>
-                <Input
-                  id="name"
-                  placeholder="Your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-200">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="creator-type" className="text-gray-200">I'm a...</Label>
-                <Select value={creatorType} onValueChange={setCreatorType}>
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                    <SelectValue placeholder="Select creator type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="streamer">Streamer</SelectItem>
-                    <SelectItem value="podcaster">Podcaster</SelectItem>
-                    <SelectItem value="influencer">Influencer</SelectItem>
-                    <SelectItem value="adult_creator">Adult Creator</SelectItem>
-                    <SelectItem value="artist">Artist/Musician</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold"
-                disabled={joinWaitlist.isPending}
-              >
-                {joinWaitlist.isPending ? "Joining..." : "Join Waitlist"}
-              </Button>
+        ) : (
+          <>
+            <p style={styles.kicker}>Request Access</p>
+            <h1 style={styles.title}>Enter the CreatorVault / VaultX launch lane.</h1>
+            <p style={styles.copy}>Request early access as a creator or fan. This public page saves to the real waitlist database and does not require login.</p>
+            <form onSubmit={handleSubmit} style={styles.form}>
+              <label style={styles.label}>
+                Name
+                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" style={styles.input} />
+              </label>
+              <label style={styles.label}>
+                Email
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" style={styles.input} />
+              </label>
+              <label style={styles.label}>
+                I am a
+                <select value={audienceType} onChange={(e) => setAudienceType(e.target.value as "creator" | "fan" | "")} style={styles.input}>
+                  <option value="" style={styles.option}>Select one</option>
+                  <option value="creator" style={styles.option}>Creator</option>
+                  <option value="fan" style={styles.option}>Fan</option>
+                </select>
+              </label>
+              <label style={styles.label}>
+                Social handle <span style={{ color: "rgba(255,255,255,.34)" }}>(optional)</span>
+                <input value={socialHandle} onChange={(e) => setSocialHandle(e.target.value)} placeholder="@handle or profile URL" style={styles.input} />
+              </label>
+              <button type="submit" disabled={requestAccess.isPending} style={{ ...styles.primary, width: "100%", opacity: requestAccess.isPending ? .7 : 1 }}>
+                {requestAccess.isPending ? "Saving request..." : "Request Access"}
+              </button>
             </form>
-          </CardContent>
-        </Card>
-
-        {/* Social Proof */}
-        <div className="text-center space-y-4 pt-8">
-          <p className="text-gray-300">
-            Want to see what we're building?
-          </p>
-          <Button 
-            onClick={() => window.location.href = '/demos'}
-            variant="outline"
-            size="lg"
-            className="border-purple-400 text-purple-300 hover:bg-purple-500/20"
-          >
-            Watch Demo Videos
-          </Button>
-        </div>
-      </div>
-    </div>
+          </>
+        )}
+      </section>
+    </main>
   );
 }
+
+const styles: Record<string, React.CSSProperties> = {
+  shell: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "radial-gradient(circle at 20% 0%, rgba(201,168,76,.18), transparent 34%), linear-gradient(145deg,#050508,#09070d 50%,#130611)", color: "#fff" },
+  card: { width: "min(720px, 100%)", border: "1px solid rgba(255,255,255,.10)", borderRadius: 30, background: "linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.026))", boxShadow: "0 34px 120px rgba(0,0,0,.58)", padding: "clamp(24px, 5vw, 52px)" },
+  brand: { color: "#f7d67a", textDecoration: "none", fontSize: 12, fontWeight: 950, letterSpacing: ".18em", textTransform: "uppercase" },
+  kicker: { margin: "24px 0 10px", color: "#f7d67a", fontSize: 12, fontWeight: 950, letterSpacing: ".18em", textTransform: "uppercase" },
+  title: { margin: 0, fontSize: "clamp(38px, 7vw, 68px)", lineHeight: .9, letterSpacing: "-.065em", fontWeight: 950 },
+  copy: { color: "rgba(255,255,255,.70)", fontSize: 17, lineHeight: 1.68, marginTop: 18 },
+  form: { display: "grid", gap: 16, marginTop: 28 },
+  label: { display: "grid", gap: 8, color: "rgba(255,255,255,.58)", fontSize: 11, fontWeight: 900, letterSpacing: ".14em", textTransform: "uppercase" },
+  input: { width: "100%", border: "1px solid rgba(255,255,255,.14)", borderRadius: 13, background: "rgba(255,255,255,.06)", color: "#fff", padding: "14px 15px", fontSize: 15, outline: "none" },
+  option: { background: "#09070d", color: "#fff" },
+  primary: { border: "none", borderRadius: 13, padding: "15px 22px", background: "linear-gradient(135deg,#f7d67a,#c9a84c 48%,#8f6b21)", color: "#050508", fontWeight: 950, letterSpacing: ".08em", textTransform: "uppercase", cursor: "pointer" },
+  secondary: { border: "1px solid rgba(255,255,255,.18)", borderRadius: 13, padding: "15px 22px", background: "rgba(255,255,255,.055)", color: "#fff", fontWeight: 850, letterSpacing: ".08em", textTransform: "uppercase", cursor: "pointer" },
+  actions: { display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 12, marginTop: 26 },
+};

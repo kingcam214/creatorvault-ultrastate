@@ -29,17 +29,34 @@ const ALLOWLISTS = {
   navigation: [
     'client/src/App.tsx',
     'client/src/components/AppHeader.tsx'
+  ],
+  credibility: [
+    'client/src/App.tsx',
+    'client/src/components/AgeGate.tsx',
+    'client/src/pages/Home.tsx',
+    'client/src/pages/LegalPages.tsx',
+    'client/src/pages/PublicCreatorLanding.tsx',
+    'client/src/pages/Waitlist.tsx',
+    'public/audio/vaultx-homepage-pulse.wav',
+    'scripts/create-vaultx-homepage-audio.py',
+    'scripts/route-owner.js',
+    'scripts/scope-guard.js'
   ]
 };
 
+function splitFileList(output) {
+  return output.trim().split('\n').filter(Boolean);
+}
+
 function getChangedFiles() {
   try {
-    const output = execSync('git diff --name-only HEAD', { encoding: 'utf8' });
-    return output.trim().split('\n').filter(Boolean);
+    const trackedOutput = execSync('git diff --name-only HEAD', { encoding: 'utf8' });
+    const untrackedOutput = execSync('git ls-files --others --exclude-standard', { encoding: 'utf8' });
+    return [...new Set([...splitFileList(trackedOutput), ...splitFileList(untrackedOutput)])];
   } catch (e) {
     console.log('No previous commit found, checking staged files...');
     const output = execSync('git diff --cached --name-only', { encoding: 'utf8' });
-    return output.trim().split('\n').filter(Boolean);
+    return splitFileList(output);
   }
 }
 

@@ -111,6 +111,7 @@ const KINGCAM_HERO_VIDEO = "/videos/kingcam-hero-cam.mp4";
 const KINGCAM_HERO_POSTER = "/assets/kingcam-hero.jpg";
 const VAULTX_TRAILER_VIDEO = "/videos/vaultx-cinematic-trailer.mp4";
 const VAULTX_TRAILER_POSTER = "/videos/vaultx-cinematic-trailer-poster.png";
+const VAULTX_HOMEPAGE_AUDIO = "/audio/vaultx-homepage-pulse.wav";
 
 export default function Home() {
   const [heroLoaded, setHeroLoaded] = useState(false);
@@ -119,6 +120,8 @@ export default function Home() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [creatorType, setCreatorType] = useState("");
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const outputsRef = useScrollReveal();
   const polloRef = useScrollReveal();
@@ -137,7 +140,7 @@ export default function Home() {
     return () => window.clearTimeout(t);
   }, []);
 
-  const signupMutation = trpc.auth.signup.useMutation({
+  const signupMutation = trpc.waitlist.signup.useMutation({
     onSuccess: () => {
       toast.success("You are on the VaultX early-access list.");
       setEmail("");
@@ -145,14 +148,45 @@ export default function Home() {
       setPhone("");
       setCreatorType("");
     },
-    onError: (err) => toast.error(err.message || "Something went wrong."),
+    onError: (err) => {
+      if (err.message.toLowerCase().includes("already")) {
+        toast.success("You are already on the VaultX access list.");
+        return;
+      }
+      toast.error(err.message || "Something went wrong.");
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !name) return toast.error("Email and name are required.");
-    // @ts-ignore legacy signup contract accepts creatorType/phone fields in production
-    signupMutation.mutate({ email, name, phone, creatorType });
+    if (!email.trim() || !name.trim()) return toast.error("Email and name are required.");
+    signupMutation.mutate({
+      email: email.trim(),
+      name: name.trim(),
+      phone: phone.trim() || undefined,
+      referralSource: "homepage-vaultx",
+      interestedIn: [creatorType || "vaultx", "video-first-workflow", "creatorvault"],
+    });
+  };
+
+  const handleAudioUnlock = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    try {
+      audio.loop = true;
+      audio.volume = 0;
+      await audio.play();
+      setIsAudioPlaying(true);
+      const startedAt = window.performance.now();
+      const fade = (now: number) => {
+        const progress = Math.min(1, (now - startedAt) / 1500);
+        audio.volume = progress * 0.58;
+        if (progress < 1) window.requestAnimationFrame(fade);
+      };
+      window.requestAnimationFrame(fade);
+    } catch {
+      toast.error("Tap again to enable homepage audio.");
+    }
   };
 
   const creatorTypes = [
@@ -204,6 +238,33 @@ export default function Home() {
         @media(max-width:960px){.vx-hero-grid,.vx-two-col,#video-workflow{grid-template-columns:1fr}.vx-output-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.vx-process-grid,.vx-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.vx-hero-panel{min-height:560px}.vx-nav{align-items:flex-start;gap:14px}.vx-nav-actions{justify-content:flex-end}}
         @media(max-width:620px){.vx-output-grid,.vx-process-grid,.vx-metric-grid{grid-template-columns:1fr}.vx-phone-grid{grid-template-columns:1fr;position:relative;left:auto;right:auto;bottom:auto;margin:190px 16px 16px}.vx-phone{min-height:150px}.vx-hero-panel{min-height:auto}.vx-nav{flex-direction:column}.vx-nav-actions{justify-content:flex-start}.vx-shell{padding:0 16px}}
       `}</style>
+
+      <audio ref={audioRef} src={VAULTX_HOMEPAGE_AUDIO} preload="auto" />
+      <button
+        type="button"
+        onClick={handleAudioUnlock}
+        aria-label="Unmute homepage audio"
+        style={{
+          position: "fixed",
+          right: 18,
+          bottom: 18,
+          zIndex: 60,
+          border: "1px solid rgba(247,214,122,.34)",
+          background: isAudioPlaying ? "rgba(201,168,76,.92)" : "rgba(5,5,8,.82)",
+          color: isAudioPlaying ? "#050508" : "#f7d67a",
+          borderRadius: 999,
+          padding: "12px 16px",
+          fontSize: 11,
+          fontWeight: 950,
+          letterSpacing: ".12em",
+          textTransform: "uppercase",
+          boxShadow: "0 18px 48px rgba(0,0,0,.42)",
+          backdropFilter: "blur(14px)",
+          cursor: "pointer",
+        }}
+      >
+        {isAudioPlaying ? "Audio on" : "Unmute"}
+      </button>
 
       <section className="vx-hero">
         {!heroVideoFailed && (
@@ -477,7 +538,12 @@ export default function Home() {
 
       <footer style={{ borderTop: "1px solid rgba(255,255,255,.06)", padding: "30px 20px", textAlign: "center" }}>
         <img src="/logo-white.png" alt="CreatorVault" style={{ height: 24, objectFit: "contain", opacity: .58, marginBottom: 12 }} />
-        <p style={{ fontSize: 11, color: "rgba(255,255,255,.24)", letterSpacing: ".10em", textTransform: "uppercase" }}>CreatorVault · VaultX premium creator revenue OS</p>
+        <p style={{ fontSize: 11, color: "rgba(255,255,255,.24)", letterSpacing: ".10em", textTransform: "uppercase", marginBottom: 12 }}>CreatorVault · VaultX premium creator revenue OS · 18+ only</p>
+        <nav aria-label="Legal and launch links" style={{ display: "flex", justifyContent: "center", gap: 14, flexWrap: "wrap", fontSize: 12 }}>
+          {[ ["Terms", "/terms"], ["Privacy", "/privacy"], ["DMCA", "/dmca"], ["2257", "/2257"], ["Request Access", "/signup"] ].map(([label, href]) => (
+            <Link key={href} href={href} style={{ color: "rgba(255,255,255,.52)", textDecoration: "none" }}>{label}</Link>
+          ))}
+        </nav>
       </footer>
     </div>
   );

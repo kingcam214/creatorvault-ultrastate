@@ -449,6 +449,9 @@ import VaultXEditor from "./pages/VaultXEditor";
 import VaultXAnalytics from "./pages/VaultXAnalytics";
 import VideoOS from "./pages/VideoOS";
 import Waitlist from "./pages/Waitlist";
+import AgeGate from "./components/AgeGate";
+import PublicCreatorLanding from "./pages/PublicCreatorLanding";
+import { DmcaPage, PrivacyPage, Statement2257Page, TermsPage } from "./pages/LegalPages";
 import LirysMissedRevenue from "./pages/greatest-show/LirysMissedRevenue";
 import MarielkaProfile from "./pages/greatest-show/MarielkaProfile";
 import SubscribeSuccess from "./pages/greatest-show/SubscribeSuccess";
@@ -489,6 +492,12 @@ function Router() {
       <Route path={"/__release"} component={ReleaseInfo} />
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
+      <Route path={"/signup"} component={Waitlist} />
+      <Route path={"/terms"} component={TermsPage} />
+      <Route path={"/privacy"} component={PrivacyPage} />
+      <Route path={"/dmca"} component={DmcaPage} />
+      <Route path={"/2257"} component={Statement2257Page} />
+      <Route path={"/creator/:handle"} component={PublicCreatorLanding} />
       <Route path={"/dashboard"} component={CreatorHome} />
       <Route path={"/operator"} component={OperatorDashboard} />
       <Route path={"/flyer-generator"} component={FlyerGenerator} />
@@ -818,6 +827,7 @@ function App() {
         <TooltipProvider>
           <AuthProvider>
             <CreatorModeProvider>
+              <AgeGate />
               <Router />
             </CreatorModeProvider>
           </AuthProvider>
