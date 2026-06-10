@@ -51,7 +51,7 @@ const POLLO_API_KEY = process.env.POLLO_API_KEY || "";
 const POLLO_API_URL = "https://pollo.ai/api/platform/generation/pollo/pollo-v1-6";
 const POLLO_BASE_URL = "https://pollo.ai/api/platform";
 const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-02-25.clover" })
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-12-15.clover" })
   : null;
 
 type VaultxPackageMode = "FAST" | "BOOST" | "FULL";
@@ -759,6 +759,12 @@ export const vaultxRouter = router({
       const hasOpenAi = Boolean(process.env.OPENAI_API_KEY);
       const hasRunway = Boolean(process.env.RUNWAY_API_KEY || process.env.RUNWAYML_API_SECRET);
       const hasKling = Boolean(process.env.KLING_API_KEY || process.env.KLING_ACCESS_KEY || process.env.KLING_SECRET_KEY);
+      const canonicalBaseUrl = process.env.PUBLIC_APP_URL || process.env.CREATORVAULT_PUBLIC_URL || process.env.APP_URL || "https://creatorvault.live";
+      const hasTikTokApp = Boolean(process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET);
+      const hasMetaApp = Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET);
+      const hasFacebookPage = Boolean(process.env.FACEBOOK_PAGE_ID && (process.env.FACEBOOK_PAGE_ACCESS_TOKEN || process.env.META_PAGE_ACCESS_TOKEN));
+      const hasInstagramBusiness = Boolean(process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID && (process.env.INSTAGRAM_ACCESS_TOKEN || process.env.META_PAGE_ACCESS_TOKEN));
+      const socialCallbackBase = `${canonicalBaseUrl.replace(/\/$/, "")}/api/social`;
       const latestPackages = await rawQuery(
         `SELECT p.id, p.title, p.content_type, p.telegram_mode, p.price_cents, p.status, p.asset_status, p.asset_url, p.checkout_url, p.telegram_tracking_code, p.pollo_job_id, p.stripe_checkout_session_id, p.telegram_campaign_id, p.vaultx_content_id, p.created_at,
                 (SELECT va.id FROM vaultx_artifacts va WHERE va.package_id = p.id ORDER BY va.id DESC LIMIT 1) AS artifact_id
@@ -879,6 +885,71 @@ export const vaultxRouter = router({
           checkoutEndpoint: "attachPackageCheckout",
           distributionEndpoint: "publishPackageTelegramRoute",
           economics: { platformFeePercent: 15, creatorKeepPercent: 85 },
+        },
+        socialPresence: {
+          status: hasTikTokApp || hasMetaApp ? "developer-apps-detected" : "developer-console-approval-required",
+          callbackBase: socialCallbackBase,
+          officialOnly: true,
+          fakePostingForbidden: true,
+          platforms: [
+            {
+              id: "tiktok",
+              label: "TikTok",
+              configured: hasTikTokApp,
+              status: hasTikTokApp ? "oauth-ready-needs-user-connection" : "developer-app-required",
+              products: ["Login Kit", "Content Posting API", "Research API"],
+              creatorValue: "Creator identity, TikTok share/post handoff, public research signals, and campaign-safe short-form distribution planning.",
+              requiredCredentials: ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"],
+              callbackUrls: [`${socialCallbackBase}/tiktok/callback`],
+              requiredScopes: ["user.info.basic", "video.upload", "video.publish"],
+              approvalChecklist: [
+                "Create or select the TikTok developer app.",
+                "Add the production callback URL exactly as shown.",
+                "Request Login Kit and Content Posting API permissions before enabling direct publish buttons.",
+                "Request Research API separately for public-data intelligence use cases.",
+              ],
+              allowedActions: hasTikTokApp ? ["connect-account", "prepare-share", "queue-after-oauth"] : ["show-setup-checklist"],
+              blockedActions: hasTikTokApp ? ["fake-posting-without-user-token"] : ["oauth", "posting", "research-api-calls"],
+            },
+            {
+              id: "instagram",
+              label: "Instagram",
+              configured: hasMetaApp && hasInstagramBusiness,
+              status: hasMetaApp ? (hasInstagramBusiness ? "business-publishing-ready-needs-user-token" : "meta-app-ready-needs-instagram-business-account") : "meta-app-required",
+              products: ["Instagram Platform", "Instagram Graph API", "Content Publishing"],
+              creatorValue: "Professional-account linking, Reels/media publishing after approval, insights, and comment/message growth loops where permissions allow.",
+              requiredCredentials: ["META_APP_ID", "META_APP_SECRET", "INSTAGRAM_BUSINESS_ACCOUNT_ID", "META_PAGE_ACCESS_TOKEN or INSTAGRAM_ACCESS_TOKEN"],
+              callbackUrls: [`${socialCallbackBase}/meta/callback`],
+              requiredScopes: ["instagram_basic", "instagram_content_publish", "instagram_manage_insights", "pages_show_list"],
+              approvalChecklist: [
+                "Create a Meta app and complete business verification if required.",
+                "Connect an Instagram professional account to a Facebook Page.",
+                "Add OAuth redirect URLs and webhook callback URLs for production.",
+                "Pass App Review for publishing and insights permissions before live automation.",
+              ],
+              allowedActions: hasMetaApp && hasInstagramBusiness ? ["connect-account", "prepare-reel", "queue-after-oauth"] : ["show-setup-checklist"],
+              blockedActions: hasMetaApp && hasInstagramBusiness ? ["fake-publishing-without-review-or-token"] : ["oauth", "reels-publishing", "insights-sync"],
+            },
+            {
+              id: "facebook",
+              label: "Facebook",
+              configured: hasMetaApp && hasFacebookPage,
+              status: hasMetaApp ? (hasFacebookPage ? "page-publishing-ready-needs-user-token" : "meta-app-ready-needs-page-token") : "meta-app-required",
+              products: ["Facebook Login", "Pages API", "Webhooks"],
+              creatorValue: "Page presence, content publishing, lead/community distribution, webhook-driven engagement events, and cross-post support for CreatorVault offers.",
+              requiredCredentials: ["META_APP_ID", "META_APP_SECRET", "FACEBOOK_PAGE_ID", "FACEBOOK_PAGE_ACCESS_TOKEN or META_PAGE_ACCESS_TOKEN"],
+              callbackUrls: [`${socialCallbackBase}/meta/callback`],
+              requiredScopes: ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "public_profile"],
+              approvalChecklist: [
+                "Create or reuse the same Meta app used for Instagram.",
+                "Connect the production Facebook Page and generate approved page access flow.",
+                "Configure webhook callback and verify token on the production domain.",
+                "Pass App Review for page publishing and engagement permissions before automation.",
+              ],
+              allowedActions: hasMetaApp && hasFacebookPage ? ["connect-page", "prepare-post", "queue-after-oauth"] : ["show-setup-checklist"],
+              blockedActions: hasMetaApp && hasFacebookPage ? ["fake-page-posting-without-token"] : ["oauth", "page-publishing", "webhook-event-sync"],
+            },
+          ],
         },
         latestPackages: latestPackages.map((pkg: any) => ({
           id: Number(pkg.id),

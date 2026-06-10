@@ -234,6 +234,8 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   const publishTelegram = trpc.vaultx.publishPackageTelegramRoute.useMutation();
 
   const providers = (capability.data as any)?.providers || [];
+  const socialPresence = (capability.data as any)?.socialPresence;
+  const socialPlatforms = (socialPresence?.platforms || []) as any[];
   const selectedProviderProfile = providers.find((provider: any) => provider.id === selectedProvider) || providers.find((provider: any) => provider.id === "pollo");
   const packageWorkflow = ((capability.data as any)?.workflows || []).find((workflow: any) => workflow.id === "vaultx-package-launch");
   const statusData = statusQuery.data as any;
@@ -436,6 +438,39 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
           <p className="mt-1">{packageWorkflow.blockers.join(" • ")}</p>
         </div>
       ) : null}
+
+      <div className="mb-6 rounded-[1.5rem] border border-[#242424] bg-black/70 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-[#C9A84C]">Official social presence</p>
+            <h3 className="mt-2 text-2xl font-black text-white">TikTok, Instagram, and Facebook readiness</h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#999999]">VaultX now exposes the real developer-console state for social distribution. Direct posting stays locked until official apps, OAuth callbacks, app review, and user/page tokens are present; no fake social reach is claimed.</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-[#101010] p-3 text-xs leading-5 text-[#b8b8b8]">
+            <p>Status: <span className="font-black text-white">{socialPresence?.status || "checking"}</span></p>
+            <p>Callback base: <span className="break-all font-black text-[#C9A84C]">{socialPresence?.callbackBase || "not configured"}</span></p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {socialPlatforms.map((platform) => (
+            <div key={platform.id} className="rounded-[1.25rem] border border-white/10 bg-[#101010] p-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <p className="font-black text-white">{platform.label}</p>
+                <StatusPill active={Boolean(platform.configured)} text={platform.configured ? "APP READY" : "SETUP"} />
+              </div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#C9A84C]">{platform.status}</p>
+              <p className="mt-2 text-xs leading-5 text-[#999999]">{platform.creatorValue}</p>
+              <div className="mt-3 rounded-2xl border border-white/10 bg-black/50 p-3 text-xs leading-5 text-[#b8b8b8]">
+                <p className="font-black text-white">Next approval step</p>
+                <p>{platform.approvalChecklist?.[0] || "Complete official developer setup."}</p>
+              </div>
+            </div>
+          ))}
+          {!socialPlatforms.length ? (
+            <div className="rounded-[1.25rem] border border-white/10 bg-[#101010] p-4 text-sm leading-6 text-[#999999]">Social-platform readiness is loading from the backend capability matrix.</div>
+          ) : null}
+        </div>
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="rounded-[1.5rem] border border-[#242424] bg-black p-5">
@@ -643,6 +678,8 @@ function EarnPanel() {
 function SettingsPanel() {
   const capability = trpc.vaultx.getLaunchCapabilityMatrix.useQuery(undefined, { retry: false });
   const monetization = (capability.data as any)?.monetization;
+  const socialPresence = (capability.data as any)?.socialPresence;
+  const socialPlatforms = (socialPresence?.platforms || []) as any[];
   return (
     <section className="rounded-[2rem] border border-[#242424] bg-black p-5 md:p-6">
       <h2 className="text-3xl font-black text-white">Creator controls and launch readiness</h2>
@@ -660,6 +697,47 @@ function SettingsPanel() {
             <p className="mt-2 text-sm leading-6 text-[#999999]">{body}</p>
           </div>
         ))}
+      </div>
+      <div className="mt-6 rounded-[1.5rem] border border-[#C9A84C]/25 bg-[#120d05] p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h3 className="text-2xl font-black text-white">Official social activation board</h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#999999]">These are the exact platform gates needed before CreatorVault or VaultX can publish through TikTok, Instagram, or Facebook. Connected apps unlock only lawful OAuth, approved scopes, user/page tokens, and webhook-backed automation.</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-black/60 p-3 text-xs leading-5 text-[#b8b8b8]">
+            <p>Callback base</p>
+            <p className="break-all font-black text-[#C9A84C]">{socialPresence?.callbackBase || "Configure PUBLIC_APP_URL"}</p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3">
+          {socialPlatforms.map((platform) => (
+            <div key={platform.id} className="rounded-[1.25rem] border border-white/10 bg-black/55 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-lg font-black text-white">{platform.label}</h4>
+                  <p className="mt-1 text-xs font-black uppercase tracking-[0.16em] text-[#C9A84C]">{platform.products?.join(" • ")}</p>
+                </div>
+                <StatusPill active={Boolean(platform.configured)} text={platform.configured ? "CONFIGURED" : "NEEDS APP"} />
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-[#101010] p-3 text-xs leading-5 text-[#b8b8b8]">
+                  <p className="font-black text-white">Required credentials</p>
+                  <p>{platform.requiredCredentials?.join(" • ")}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-[#101010] p-3 text-xs leading-5 text-[#b8b8b8]">
+                  <p className="font-black text-white">Scopes / permissions</p>
+                  <p>{platform.requiredScopes?.join(" • ")}</p>
+                </div>
+              </div>
+              <div className="mt-3 rounded-2xl border border-white/10 bg-[#101010] p-3 text-xs leading-5 text-[#b8b8b8]">
+                <p className="font-black text-white">Approval checklist</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {(platform.approvalChecklist || []).map((item: string) => <li key={item}>{item}</li>)}
+                </ul>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
