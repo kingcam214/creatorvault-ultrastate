@@ -1,19 +1,21 @@
-/*
- * Home.tsx — VaultX-first CreatorVault public homepage
- * Corrective pass: concrete product content, visible VaultX/Pollo routes, and useful creator-output explanation.
- */
-import { useState, useEffect, useRef } from "react";
-import { trpc } from "@/lib/trpc";
-import { toast } from "sonner";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "wouter";
+import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+
+const KINGCAM_HERO_VIDEO = "/videos/kingcam-hero-cam.mp4";
+const VAULTX_HERO_VIDEO = "/videos/vaultx-creator-economy-hero.mp4";
+const VAULTX_TRAILER_VIDEO = "/videos/vaultx-cinematic-trailer.mp4";
+const VAULTX_HOMEPAGE_AUDIO = "/audio/vaultx-homepage-pulse.wav";
 
 function useScrollReveal(threshold = 0.12) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
     const obs = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -23,6 +25,7 @@ function useScrollReveal(threshold = 0.12) {
       },
       { threshold }
     );
+
     obs.observe(el);
     return () => obs.disconnect();
   }, [threshold]);
@@ -30,7 +33,7 @@ function useScrollReveal(threshold = 0.12) {
   return { ref, visible };
 }
 
-function useCounter(target: number, duration = 1800, active = false) {
+function useCounter(target: number, duration = 1400, active = false) {
   const [value, setValue] = useState(0);
 
   useEffect(() => {
@@ -46,99 +49,83 @@ function useCounter(target: number, duration = 1800, active = false) {
         setValue(Math.floor(start));
       }
     }, 16);
+
     return () => window.clearInterval(timer);
-  }, [target, duration, active]);
+  }, [active, duration, target]);
 
   return value;
 }
 
-function ActionButton({ href, children, variant = "gold" }: { href: string; children: React.ReactNode; variant?: "gold" | "dark" | "ghost" }) {
-  const styles = {
-    gold: {
-      background: "linear-gradient(135deg,#f7d67a,#c9a84c 48%,#8f6b21)",
-      color: "#050508",
-      border: "1px solid rgba(255,255,255,0.08)",
-      boxShadow: "0 18px 44px rgba(201,168,76,.22)",
-    },
-    dark: {
-      background: "rgba(255,255,255,0.075)",
-      color: "#fff",
-      border: "1px solid rgba(255,255,255,0.18)",
-      boxShadow: "none",
-    },
-    ghost: {
-      background: "transparent",
-      color: "rgba(255,255,255,.72)",
-      border: "1px solid rgba(255,255,255,0.12)",
-      boxShadow: "none",
-    },
-  }[variant];
-
-  return (
-    <Link href={href}>
-      <button style={{ ...styles, borderRadius: 12, padding: "14px 20px", fontSize: 12, fontWeight: 900, letterSpacing: "0.07em", textTransform: "uppercase", cursor: "pointer" }}>
-        {children}
-      </button>
-    </Link>
+function CyanButton({ href, children, submit = false, disabled = false }: { href?: string; children: ReactNode; submit?: boolean; disabled?: boolean }) {
+  const button = (
+    <button
+      type={submit ? "submit" : "button"}
+      disabled={disabled}
+      style={{
+        fontFamily: "Bebas Neue, sans-serif",
+        fontSize: 18,
+        letterSpacing: "0.12em",
+        color: "#0A0A0A",
+        background: disabled ? "rgba(0,217,255,0.45)" : "#00D9FF",
+        border: "none",
+        padding: "16px 40px",
+        cursor: disabled ? "not-allowed" : "pointer",
+        animation: disabled ? "none" : "fadeUp 0.6s ease forwards, pulseCyan 2.5s ease infinite",
+        animationDelay: "0.8s",
+        opacity: disabled ? 1 : 0,
+        textTransform: "uppercase",
+        boxShadow: "0 0 34px rgba(0,217,255,.22)",
+      }}
+    >
+      {children}
+    </button>
   );
+
+  return href ? <Link href={href}>{button}</Link> : button;
 }
 
-function MiniOutputCard({ eyebrow, title, body, accent }: { eyebrow: string; title: string; body: string; accent: string }) {
-  return (
-    <div className="vx-card" style={{ borderColor: `${accent}34` }}>
-      <div className="vx-card-scan" style={{ background: `linear-gradient(90deg,transparent,${accent}25,transparent)` }} />
-      <p style={{ color: accent, fontSize: 10, fontWeight: 950, letterSpacing: ".18em", textTransform: "uppercase", marginBottom: 10 }}>{eyebrow}</p>
-      <h3 style={{ color: "#fff", fontFamily: "Playfair Display, serif", fontSize: 24, lineHeight: 1.08, marginBottom: 10 }}>{title}</h3>
-      <p style={{ color: "rgba(255,255,255,.56)", fontSize: 13, lineHeight: 1.68 }}>{body}</p>
-    </div>
-  );
-}
+const outputStrip = [
+  { label: "TEASER", title: "Public preview cut", color: "#00D9FF" },
+  { label: "PPV DROP", title: "Paid unlock package", color: "#C9A84C" },
+  { label: "CAPTIONS", title: "Hook + DM copy set", color: "#00D9FF" },
+  { label: "PLATFORM PACK", title: "OF, Fansly, Telegram, X", color: "#C9A84C" },
+  { label: "AI STUDIO", title: "Motion promos + covers", color: "#00D9FF" },
+  { label: "VAULT", title: "Campaign archive", color: "#C9A84C" },
+];
 
-function VisualPhone({ label, caption, accent, poster }: { label: string; caption: string; accent: string; poster: string }) {
-  return (
-    <div className="vx-phone" style={{ borderColor: `${accent}44` }}>
-      <img src={poster} alt={label} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-      <div className="vx-phone-gradient" />
-      <div className="vx-phone-content">
-        <span style={{ borderColor: `${accent}44`, color: accent }}>{label}</span>
-        <strong>{caption}</strong>
-      </div>
-    </div>
-  );
-}
+const workflowSteps = [
+  { n: "01", title: "Upload your clip", body: "Raw phone footage, a selfie video, anything. VaultX handles the rest." },
+  { n: "02", title: "AI builds your package", body: "Teaser cut, PPV bundle, captions, platform exports — generated automatically." },
+  { n: "03", title: "Push to every platform", body: "OnlyFans, Fansly, Telegram, Twitter, and your VaultX profile in one click." },
+  { n: "04", title: "Track what earns", body: "Live revenue dashboard. See every sale, subscriber, and PPV unlock in real time." },
+];
 
-const KINGCAM_HERO_VIDEO = "/videos/kingcam-hero-cam.mp4";
-const KINGCAM_HERO_POSTER = "/assets/kingcam-hero.jpg";
-const VAULTX_TRAILER_VIDEO = "/videos/vaultx-cinematic-trailer.mp4";
-const VAULTX_TRAILER_POSTER = "/videos/vaultx-cinematic-trailer-poster.png";
-const VAULTX_HOMEPAGE_AUDIO = "/audio/vaultx-homepage-pulse.wav";
+const creatorTypes = [
+  { value: "adult_creator", label: "Adult creator or premium model" },
+  { value: "agency", label: "Agency, manager, or studio" },
+  { value: "content_creator", label: "Independent video creator" },
+  { value: "brand", label: "Brand, product, or partner" },
+];
 
 export default function Home() {
-  const [heroLoaded, setHeroLoaded] = useState(false);
-  const [heroVideoFailed, setHeroVideoFailed] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [creatorType, setCreatorType] = useState("");
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [heroVideoFailed, setHeroVideoFailed] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const outputsRef = useScrollReveal();
-  const polloRef = useScrollReveal();
-  const cockpitRef = useScrollReveal();
-  const moneyRef = useScrollReveal();
+  const workflowRef = useScrollReveal();
+  const proofRef = useScrollReveal();
   const metricsRef = useScrollReveal();
   const waitlistRef = useScrollReveal();
 
-  const weeklyOutputs = useCounter(12, 1700, metricsRef.visible);
-  const revenueShare = useCounter(85, 1500, metricsRef.visible);
-  const destinations = useCounter(20, 1500, metricsRef.visible);
-  const steps = useCounter(4, 1200, metricsRef.visible);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setHeroLoaded(true), 80);
-    return () => window.clearTimeout(t);
-  }, []);
+  const revenueShare = useCounter(70, 1300, metricsRef.visible);
+  const outputTypes = useCounter(6, 1000, metricsRef.visible);
+  const platforms = useCounter(4, 1000, metricsRef.visible);
+  const upload = useCounter(1, 800, metricsRef.visible);
 
   const signupMutation = trpc.waitlist.signup.useMutation({
     onSuccess: () => {
@@ -164,7 +151,7 @@ export default function Home() {
       email: email.trim(),
       name: name.trim(),
       phone: phone.trim() || undefined,
-      referralSource: "homepage-vaultx",
+      referralSource: "homepage-cinematic-vaultx",
       interestedIn: [creatorType || "vaultx", "video-first-workflow", "creatorvault"],
     });
   };
@@ -180,7 +167,7 @@ export default function Home() {
       const startedAt = window.performance.now();
       const fade = (now: number) => {
         const progress = Math.min(1, (now - startedAt) / 1500);
-        audio.volume = progress * 0.58;
+        audio.volume = progress * 0.46;
         if (progress < 1) window.requestAnimationFrame(fade);
       };
       window.requestAnimationFrame(fade);
@@ -189,54 +176,28 @@ export default function Home() {
     }
   };
 
-  const creatorTypes = [
-    { value: "adult_creator", label: "Adult creator or premium model" },
-    { value: "agency", label: "Agency, manager, or studio" },
-    { value: "content_creator", label: "Independent video creator" },
-    { value: "brand", label: "Brand, product, or partner" },
-  ];
-
-  const outputCards = [
-    { eyebrow: "Teaser", title: "Scroll-stopping preview cut", body: "Turn one raw clip into a public-safe teaser with hook text, crop direction, motion notes, and a clean call-to-action for paid access.", accent: "#38bdf8" },
-    { eyebrow: "Launch bundle", title: "PPV cover and unlock package", body: "Package the premium version with cover frame, title, description, price suggestion, unlock language, and archive metadata.", accent: "#c9a84c" },
-    { eyebrow: "AI Studio", title: "Motion promos and visual variants", body: "Create campaign-safe video variations, motion flyers, cover options, and short-form assets that help one drop travel farther.", accent: "#f472b6" },
-    { eyebrow: "DM funnel", title: "Captions, scripts, and follow-ups", body: "Generate DM openers, fan replies, Telegram copy, story captions, and a short sales sequence that matches the drop.", accent: "#4ade80" },
-    { eyebrow: "Distribution", title: "Export once, route everywhere", body: "Prepare the same campaign for VaultX, public socials, VIP channels, Telegram, paid fan platforms, and future reposts without rebuilding it manually.", accent: "#fb923c" },
-    { eyebrow: "Vault", title: "Reusable campaign memory", body: "Keep the asset, captions, offer, price, publishing history, and results together so the next drop starts stronger.", accent: "#a78bfa" },
-  ];
-
-  const studioSteps = [
-    { label: "Upload", detail: "Clip, image, reference frame, or campaign concept." },
-    { label: "Choose output", detail: "Teaser, AI video, PPV cover, clone loop, story pack, or launch bundle." },
-    { label: "Create", detail: "Generate video variants, motion promos, covers, and campaign visuals." },
-    { label: "Publish", detail: "Prepare the finished assets for VaultX, socials, VIP channels, and future reposts." },
-  ];
-
   return (
-    <div style={{ background: "#050508", color: "#fff", fontFamily: "Inter, sans-serif", minHeight: "100vh", overflowX: "hidden" }}>
+    <main style={{ background: "#0A0A0A", color: "#fff", minHeight: "100vh", overflowX: "hidden", fontFamily: "DM Sans, sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap');
-        * { margin:0; padding:0; box-sizing:border-box; }
-        @keyframes fade-up { from{opacity:0;transform:translateY(26px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes scan { 0%{transform:translateX(-120%);opacity:0} 20%{opacity:.75} 100%{transform:translateX(120%);opacity:0} }
-        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
-        @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,.34)} 50%{box-shadow:0 0 0 12px rgba(201,168,76,0)} }
-        @keyframes rail { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
-        @keyframes orbit { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-        @keyframes stage-glow { 0%,100%{filter:saturate(1) brightness(1)} 50%{filter:saturate(1.25) brightness(1.08)} }
-        @keyframes signal-rise { 0%{transform:translateY(16px);opacity:.35} 50%{opacity:1} 100%{transform:translateY(-16px);opacity:.35} }
-        @keyframes world-pulse { 0%,100%{transform:scale(1);opacity:.68} 50%{transform:scale(1.035);opacity:1} }
-        .vx-reveal{opacity:0;transform:translateY(30px);transition:opacity .65s ease,transform .65s ease}.vx-reveal.visible{opacity:1;transform:translateY(0)}
-        .vx-shell{max-width:1180px;margin:0 auto;padding:0 20px}.vx-kicker{font-size:10px;font-weight:950;letter-spacing:.26em;text-transform:uppercase;color:#c9a84c;margin-bottom:12px}.vx-title{font-family:'Playfair Display',serif;font-size:clamp(34px,7vw,66px);line-height:.98;font-weight:900;letter-spacing:-.045em;color:#fff}.vx-copy{font-size:15px;line-height:1.75;color:rgba(255,255,255,.58)}
-        .vx-card{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.10);border-radius:22px;background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.025));padding:22px;min-height:218px;box-shadow:0 24px 70px rgba(0,0,0,.28)}
-        .vx-card-scan{position:absolute;top:0;bottom:0;width:45%;animation:scan 6s ease-in-out infinite;pointer-events:none}.vx-card>*:not(.vx-card-scan){position:relative;z-index:1}
-        .vx-hero{position:relative;min-height:100svh;overflow:hidden;background:#030305;display:flex;flex-direction:column}.vx-hero-grid{position:relative;z-index:4;display:grid;grid-template-columns:minmax(0,1.01fr) minmax(390px,.99fr);gap:40px;align-items:center;flex:1;padding:34px 20px 76px;max-width:1240px;margin:0 auto;width:100%}
-        .vx-nav{position:relative;z-index:8;display:flex;align-items:center;justify-content:space-between;padding:18px 22px}.vx-nav-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.vx-hero-panel{position:relative;border-radius:34px;overflow:hidden;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);box-shadow:0 46px 140px rgba(0,0,0,.62);min-height:600px}.vx-hero-panel:before{content:'';position:absolute;inset:-45%;background:conic-gradient(from 90deg,transparent,rgba(201,168,76,.18),transparent,rgba(56,189,248,.16),transparent,rgba(244,114,182,.14),transparent);animation:orbit 20s linear infinite}.vx-hero-inner{position:absolute;inset:1px;border-radius:33px;overflow:hidden;background:rgba(5,5,8,.90)}.vx-main-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.78;animation:stage-glow 7s ease-in-out infinite}.vx-video-sheen{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.36) 48%,rgba(5,5,8,.92) 100%),radial-gradient(circle at 50% 18%,rgba(201,168,76,.18),transparent 34%)}.vx-broadcast-card{position:absolute;left:20px;right:20px;bottom:20px;border-radius:24px;border:1px solid rgba(255,255,255,.14);background:rgba(2,2,6,.72);backdrop-filter:blur(18px);padding:18px;box-shadow:0 24px 70px rgba(0,0,0,.42)}.vx-signal{height:34px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.03));overflow:hidden;display:flex;align-items:end;gap:4px;padding:6px}.vx-signal i{display:block;flex:1;border-radius:999px;background:linear-gradient(180deg,#f7d67a,#38bdf8);animation:signal-rise 1.8s ease-in-out infinite}.vx-signal i:nth-child(2n){animation-delay:.2s}.vx-signal i:nth-child(3n){animation-delay:.4s}.vx-world-node{animation:world-pulse 4s ease-in-out infinite}
-        .vx-phone-grid{position:absolute;left:18px;right:18px;bottom:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.vx-phone{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.14);border-radius:20px;min-height:190px;background:linear-gradient(160deg,#14141c,#060608);animation:float 6s ease-in-out infinite}.vx-phone:nth-child(2){animation-delay:.3s}.vx-phone:nth-child(3){animation-delay:.6s}.vx-phone img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.70}.vx-phone-gradient{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.06),rgba(0,0,0,.88))}.vx-phone-content{position:absolute;left:10px;right:10px;bottom:10px}.vx-phone-content span{display:inline-flex;border:1px solid;border-radius:999px;padding:4px 7px;font-size:8px;font-weight:950;letter-spacing:.12em;text-transform:uppercase;background:rgba(0,0,0,.45);margin-bottom:7px}.vx-phone-content strong{display:block;color:#fff;font-size:12px;line-height:1.2}
-        .vx-output-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.vx-process-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.vx-two-col{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:26px;align-items:center}.vx-metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0}.vx-rail{display:flex;gap:12px;animation:rail 34s linear infinite;width:max-content}.vx-rail:hover{animation-play-state:paused}
-        input:focus,select:focus{outline:none;border-color:rgba(201,168,76,0.6)!important;box-shadow:0 0 0 3px rgba(201,168,76,0.12)!important}
-        @media(max-width:960px){.vx-hero-grid,.vx-two-col,#video-workflow{grid-template-columns:1fr}.vx-output-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.vx-process-grid,.vx-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.vx-hero-panel{min-height:560px}.vx-nav{align-items:flex-start;gap:14px}.vx-nav-actions{justify-content:flex-end}}
-        @media(max-width:620px){.vx-output-grid,.vx-process-grid,.vx-metric-grid{grid-template-columns:1fr}.vx-phone-grid{grid-template-columns:1fr;position:relative;left:auto;right:auto;bottom:auto;margin:190px 16px 16px}.vx-phone{min-height:150px}.vx-hero-panel{min-height:auto}.vx-nav{flex-direction:column}.vx-nav-actions{justify-content:flex-start}.vx-shell{padding:0 16px}}
+        * { box-sizing: border-box; }
+        body { background:#0A0A0A; }
+        .cv-shell { max-width: 1180px; margin: 0 auto; }
+        .cv-reveal { opacity: 0; transform: translateY(28px); transition: opacity .72s ease, transform .72s ease; }
+        .cv-reveal.visible { opacity: 1; transform: translateY(0); }
+        .cv-output-strip::-webkit-scrollbar { display: none; }
+        .cv-output-card { transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease; }
+        .cv-output-card:hover { transform: translateY(-10px); border-color: rgba(0,217,255,.42) !important; box-shadow: 0 28px 80px rgba(0,217,255,.10); }
+        .cv-step { transition: transform .35s ease, opacity .35s ease; }
+        .cv-step:hover { transform: translateX(10px); }
+        .cv-input:focus { outline:none; border-color: rgba(0,217,255,.65) !important; box-shadow: 0 0 0 3px rgba(0,217,255,.12); }
+        @media (max-width: 720px) {
+          .cv-nav { padding: 18px !important; }
+          .cv-nav-actions { display: none !important; }
+          .cv-hero-copy { bottom: 68px !important; }
+          .cv-workflow-step { gap: 18px !important; }
+          .cv-metrics { grid-template-columns: 1fr 1fr !important; }
+          .cv-form-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
       <audio ref={audioRef} src={VAULTX_HOMEPAGE_AUDIO} preload="auto" />
@@ -248,303 +209,170 @@ export default function Home() {
           position: "fixed",
           right: 18,
           bottom: 18,
-          zIndex: 60,
-          border: "1px solid rgba(247,214,122,.34)",
-          background: isAudioPlaying ? "rgba(201,168,76,.92)" : "rgba(5,5,8,.82)",
-          color: isAudioPlaying ? "#050508" : "#f7d67a",
-          borderRadius: 999,
+          zIndex: 80,
+          border: "1px solid rgba(0,217,255,.38)",
+          background: isAudioPlaying ? "#00D9FF" : "rgba(10,10,10,.78)",
+          color: isAudioPlaying ? "#0A0A0A" : "#00D9FF",
           padding: "12px 16px",
-          fontSize: 11,
-          fontWeight: 950,
-          letterSpacing: ".12em",
+          fontFamily: "Space Mono, monospace",
+          fontSize: 10,
+          letterSpacing: ".16em",
           textTransform: "uppercase",
-          boxShadow: "0 18px 48px rgba(0,0,0,.42)",
-          backdropFilter: "blur(14px)",
           cursor: "pointer",
+          backdropFilter: "blur(18px)",
         }}
       >
         {isAudioPlaying ? "Audio on" : "Unmute"}
       </button>
 
-      <section className="vx-hero">
-        {!heroVideoFailed && (
-          <video autoPlay muted loop playsInline preload="metadata" poster={KINGCAM_HERO_POSTER} onError={() => setHeroVideoFailed(true)} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .54 }}>
-            <source src={KINGCAM_HERO_VIDEO} type="video/mp4" />
-            <source src={VAULTX_TRAILER_VIDEO} type="video/mp4" />
-          </video>
-        )}
-        {heroVideoFailed && <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 68% 24%,rgba(201,168,76,.32),transparent 30%),radial-gradient(circle at 22% 22%,rgba(56,189,248,.24),transparent 32%),linear-gradient(135deg,#030305,#100b16 45%,#050508)" }} />}
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 74% 20%,rgba(201,168,76,.28),transparent 28%),radial-gradient(circle at 20% 18%,rgba(56,189,248,.20),transparent 30%),linear-gradient(180deg,rgba(3,3,5,.50),rgba(3,3,5,.78) 52%,#050508 100%)" }} />
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px)", backgroundSize: "54px 54px", maskImage: "linear-gradient(180deg,rgba(0,0,0,.88),transparent)" }} />
-
-        <nav className="vx-nav">
-          <Link href="/">
-            <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
-              <img src="/logo-white.png" alt="CreatorVault" style={{ height: 30, objectFit: "contain" }} />
-              <span style={{ padding: "6px 10px", borderRadius: 999, border: "1px solid rgba(201,168,76,.30)", color: "#f4d37c", background: "rgba(201,168,76,.10)", fontSize: 10, fontWeight: 950, letterSpacing: ".14em", textTransform: "uppercase" }}>VaultX</span>
-            </div>
+      <section style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden", background: "#0A0A0A" }}>
+        <nav className="cv-nav" style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 30, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "22px 24px" }}>
+          <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
+            <img src="/logo-white.png" alt="CreatorVault" style={{ height: 28, objectFit: "contain" }} />
+            <span style={{ fontFamily: "Space Mono, monospace", fontSize: 10, letterSpacing: ".18em", color: "#00D9FF", border: "1px solid rgba(0,217,255,.28)", padding: "6px 10px" }}>VAULTX</span>
           </Link>
-          <div className="vx-nav-actions">
-            <ActionButton href="/vault-x/studio" variant="dark">Open Studio</ActionButton>
-            <ActionButton href="/login" variant="ghost">Log in</ActionButton>
+          <div className="cv-nav-actions" style={{ display: "flex", gap: 10 }}>
+            <Link href="/vault-x/studio" style={{ color: "rgba(255,255,255,.74)", fontFamily: "Space Mono, monospace", fontSize: 11, letterSpacing: ".14em", textDecoration: "none", textTransform: "uppercase" }}>Studio</Link>
+            <Link href="/login" style={{ color: "rgba(255,255,255,.74)", fontFamily: "Space Mono, monospace", fontSize: 11, letterSpacing: ".14em", textDecoration: "none", textTransform: "uppercase" }}>Log in</Link>
           </div>
         </nav>
 
-        <div className="vx-hero-grid">
-          <div style={{ opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? "translateY(0)" : "translateY(24px)", transition: "opacity .7s ease, transform .7s ease" }}>
-            <p className="vx-kicker">Video-first CreatorVault system</p>
-            <h1 style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(46px,8.5vw,98px)", lineHeight: .88, fontWeight: 950, letterSpacing: "-.065em", marginBottom: 22 }}>
-              Start with the video. Build the paid campaign around it.
-            </h1>
-            <p style={{ fontSize: "clamp(17px,2.2vw,22px)", lineHeight: 1.58, color: "rgba(255,255,255,.78)", maxWidth: 682, marginBottom: 16 }}>
-              CreatorVault opens with real footage first, then helps creators turn that video into teasers, paid previews, fan messages, and distribution assets that people understand immediately.
-            </p>
-            <p style={{ fontSize: 14, lineHeight: 1.72, color: "rgba(255,255,255,.54)", maxWidth: 650, marginBottom: 28 }}>
-              Watch the clip first, understand how the offer is built around it, then request access to package your own content the same way.
-            </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 22 }}>
-              <ActionButton href="#waitlist">Request access</ActionButton>
-              <ActionButton href="#video-workflow" variant="dark">Watch the workflow</ActionButton>
-            </div>
-            <div style={{ maxWidth: 650, borderRadius: 22, border: "1px solid rgba(201,168,76,.24)", background: "rgba(0,0,0,.42)", padding: 16, display: "grid", gap: 12 }}>
-              <p style={{ color: "#f4d37c", fontSize: 11, fontWeight: 950, letterSpacing: ".14em", textTransform: "uppercase" }}>Watch KingCam first</p>
-              <p style={{ color: "rgba(255,255,255,.66)", fontSize: 13, lineHeight: 1.62 }}>The page opens with a playable KingCam reel so visitors see the creator, the motion, and the paid-content angle before reading details.</p>
-            </div>
-          </div>
+        {!heroVideoFailed && (
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            onError={() => setHeroVideoFailed(true)}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", filter: "brightness(0.75) contrast(1.1) saturate(1.2)" }}
+          >
+            <source src={KINGCAM_HERO_VIDEO} type="video/mp4" />
+            <source src={VAULTX_HERO_VIDEO} type="video/mp4" />
+            <source src={VAULTX_TRAILER_VIDEO} type="video/mp4" />
+          </video>
+        )}
 
-          <div className="vx-hero-panel" style={{ opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? "translateY(0)" : "translateY(26px)", transition: "opacity .8s ease .18s, transform .8s ease .18s" }}>
-            <div className="vx-hero-inner">
-              {!heroVideoFailed && (
-                <video className="vx-main-video" autoPlay muted loop playsInline preload="metadata" poster={KINGCAM_HERO_POSTER} onError={() => setHeroVideoFailed(true)}>
-                  <source src={KINGCAM_HERO_VIDEO} type="video/mp4" />
-                  <source src={VAULTX_TRAILER_VIDEO} type="video/mp4" />
-                </video>
-              )}
-              {heroVideoFailed && <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 48% 18%,rgba(201,168,76,.27),transparent 32%),radial-gradient(circle at 74% 24%,rgba(244,114,182,.16),transparent 34%),linear-gradient(160deg,#111018,#040407)" }} />}
-              <div className="vx-video-sheen" />
-              <div style={{ position: "absolute", left: 22, right: 22, top: 20, display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-                <div>
-                  <p style={{ fontSize: 9, color: "rgba(255,255,255,.58)", letterSpacing: ".20em", textTransform: "uppercase", fontWeight: 950 }}>KingCam reel is playing</p>
-                  <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: 31, lineHeight: 1.02, marginTop: 4 }}>Watch the content first</h2>
-                </div>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 11px", borderRadius: 999, border: "1px solid rgba(16,185,129,.40)", background: "rgba(16,185,129,.15)", color: "#a7f3d0", fontSize: 9, fontWeight: 950, letterSpacing: ".12em", textTransform: "uppercase" }}><i style={{ width: 7, height: 7, borderRadius: "50%", background: "#10B981", boxShadow: "0 0 14px #10B981" }} />Video first</span>
-              </div>
+        {heroVideoFailed && (
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 58% 18%,rgba(0,217,255,.24),transparent 30%),radial-gradient(circle at 18% 34%,rgba(201,168,76,.18),transparent 34%),linear-gradient(135deg,#0A0A0A,#111,#050505)" }} />
+        )}
 
-              <div style={{ position: "absolute", left: 24, top: 104, width: 182, display: "grid", gap: 10 }}>
-                {[
-                  ["Guide", "Warms every lead"],
-                  ["Voice", "Branded replies"],
-                  ["Motion", "AI promos"],
-                ].map(([label, detail], i) => (
-                  <div key={label} className="vx-world-node" style={{ animationDelay: `${i * .22}s`, padding: "12px 13px", borderRadius: 18, border: "1px solid rgba(255,255,255,.14)", background: "rgba(0,0,0,.46)", backdropFilter: "blur(14px)" }}>
-                    <strong style={{ display: "block", color: i === 1 ? "#f4d37c" : i === 2 ? "#f9a8d4" : "#7dd3fc", fontSize: 13, marginBottom: 4 }}>{label}</strong>
-                    <span style={{ display: "block", color: "rgba(255,255,255,.56)", fontSize: 10, lineHeight: 1.35, textTransform: "uppercase", letterSpacing: ".08em" }}>{detail}</span>
-                  </div>
-                ))}
-              </div>
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(10,10,10,0) 0%, rgba(10,10,10,0) 40%, rgba(10,10,10,0.6) 70%, rgba(10,10,10,1) 100%), linear-gradient(to right, rgba(10,10,10,0.5) 0%, rgba(10,10,10,0) 50%)" }} />
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(0,217,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(0,217,255,.05) 1px, transparent 1px)", backgroundSize: "72px 72px", maskImage: "linear-gradient(180deg,rgba(0,0,0,.24),transparent 68%)" }} />
+        <div style={{ position: "absolute", left: 0, right: 0, height: 1, background: "linear-gradient(to right, transparent, #00D9FF, transparent)", opacity: 0.4, animation: "scanDown 8s linear infinite" }} />
 
-              <div className="vx-broadcast-card">
-                <div style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 14, alignItems: "center" }}>
-                  <div>
-                    <p style={{ color: "#c9a84c", fontSize: 10, fontWeight: 950, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 8 }}>The clip leads the campaign</p>
-                    <h3 style={{ fontFamily: "Playfair Display, serif", fontSize: 31, lineHeight: 1.04, color: "#fff", marginBottom: 10 }}>A real video becomes the teaser, paid preview, and launch package.</h3>
-                    <p style={{ color: "rgba(255,255,255,.56)", fontSize: 12, lineHeight: 1.6 }}>CreatorVault keeps the content visible while the platform prepares the offer around it.</p>
-                  </div>
-                  <div style={{ display: "grid", gap: 10 }}>
-                    <div className="vx-signal" aria-hidden="true">
-                      {[18, 28, 14, 32, 23, 30, 16, 34, 22, 28].map((height, i) => <i key={i} style={{ height }} />)}
-                    </div>
-                    {[
-                      ["01", "Public teaser", "#38bdf8"],
-                      ["02", "Paid preview", "#c9a84c"],
-                      ["03", "Launch bundle", "#4ade80"],
-                    ].map(([num, label, color]) => (
-                      <div key={num} style={{ display: "grid", gridTemplateColumns: "34px 1fr", gap: 9, alignItems: "center", padding: 10, borderRadius: 15, border: `1px solid ${color}33`, background: "rgba(255,255,255,.045)" }}>
-                        <span style={{ width: 34, height: 34, borderRadius: 12, display: "grid", placeItems: "center", color, background: `${color}16`, fontWeight: 950, fontSize: 11 }}>{num}</span>
-                        <strong style={{ color: "rgba(255,255,255,.82)", fontSize: 12 }}>{label}</strong>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="cv-hero-copy" style={{ position: "absolute", bottom: 80, left: 24, right: 24, zIndex: 10 }}>
+          <p style={{ fontFamily: "Space Mono, monospace", fontSize: 10, letterSpacing: "0.2em", color: "#00D9FF", marginBottom: 12, animation: "fadeUp 0.6s ease forwards", animationDelay: "0.2s", opacity: 0 }}>VIDEO-FIRST CREATOR PLATFORM</p>
+          <h1 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "clamp(52px, 12vw, 88px)", lineHeight: 0.95, color: "#FFFFFF", margin: "0 0 20px 0", animation: "fadeUp 0.6s ease forwards", animationDelay: "0.4s", opacity: 0 }}>
+            YOUR VIDEO.<br />YOUR EMPIRE.
+          </h1>
+          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: 16, color: "rgba(255,255,255,0.7)", maxWidth: 360, lineHeight: 1.5, marginBottom: 32, animation: "fadeUp 0.6s ease forwards", animationDelay: "0.6s", opacity: 0 }}>
+            Upload once. VaultX builds your teaser, PPV drop, and distribution — automatically.
+          </p>
+          <CyanButton href="#waitlist">Start Creating Free</CyanButton>
+        </div>
+
+        <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, animation: "float 2s ease-in-out infinite" }}>
+          <div style={{ width: 1, height: 32, background: "linear-gradient(to bottom, #00D9FF, transparent)" }} />
         </div>
       </section>
 
-      <section ref={outputsRef.ref} style={{ position: "relative", padding: "82px 0 74px", borderTop: "1px solid rgba(255,255,255,.06)", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 18% 20%,rgba(56,189,248,.12),transparent 32%),radial-gradient(circle at 82% 30%,rgba(201,168,76,.10),transparent 34%)" }} />
-        <div className="vx-shell" style={{ position: "relative" }}>
-          <div className={`vx-reveal ${outputsRef.visible ? "visible" : ""}`} style={{ maxWidth: 760, marginBottom: 34 }}>
-            <p className="vx-kicker">What VaultX actually creates</p>
-            <h2 className="vx-title" style={{ marginBottom: 16 }}>Concrete outputs, not vague platform promises.</h2>
-            <p className="vx-copy">VaultX turns one piece of content into the assets a creator needs to promote, sell, deliver, and reuse a premium drop across every audience channel.</p>
-          </div>
-          <div className="vx-output-grid">
-            {outputCards.map((card, i) => (
-              <div key={card.title} className={`vx-reveal ${outputsRef.visible ? "visible" : ""}`} style={{ transitionDelay: `${i * .06}s` }}>
-                <MiniOutputCard {...card} />
+      <section ref={outputsRef.ref} style={{ background: "#0A0A0A", padding: "80px 24px", overflow: "hidden" }}>
+        <div className={`cv-shell cv-reveal ${outputsRef.visible ? "visible" : ""}`}>
+          <p style={{ fontFamily: "Space Mono, monospace", fontSize: 10, letterSpacing: "0.2em", color: "#00D9FF", marginBottom: 24 }}>ONE UPLOAD. SIX OUTPUTS.</p>
+          <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "clamp(40px, 10vw, 72px)", lineHeight: 0.95, color: "#FFFFFF", marginBottom: 48 }}>
+            Everything your<br />drop needs to sell.
+          </h2>
+          <div className="cv-output-strip" style={{ display: "flex", gap: 12, overflowX: "auto", scrollSnapType: "x mandatory", paddingBottom: 16, scrollbarWidth: "none" }}>
+            {outputStrip.map((item, i) => (
+              <div key={item.label} className="cv-output-card" style={{ minWidth: 200, scrollSnapAlign: "start", background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.06)", borderTop: `2px solid ${item.color}`, padding: "24px 20px", borderRadius: 4, flexShrink: 0, transitionDelay: `${i * 40}ms` }}>
+                <p style={{ fontFamily: "Space Mono, monospace", fontSize: 9, letterSpacing: "0.15em", color: item.color, marginBottom: 12 }}>{item.label}</p>
+                <p style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 22, color: "#FFFFFF", lineHeight: 1.1, margin: 0 }}>{item.title}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section ref={polloRef.ref} style={{ position: "relative", padding: "82px 0", borderTop: "1px solid rgba(255,255,255,.06)", background: "linear-gradient(180deg,#050508,#08070d)" }}>
-        <div className="vx-shell vx-two-col">
-          <div className={`vx-reveal ${polloRef.visible ? "visible" : ""}`}>
-            <p className="vx-kicker">AI content studio</p>
-            <h2 className="vx-title" style={{ marginBottom: 18 }}>Generate campaign visuals without leaving VaultX.</h2>
-            <p className="vx-copy" style={{ marginBottom: 18 }}>VaultX Studio is where creators build video variants, motion promos, covers, and campaign visuals that make a paid drop feel bigger than one upload.</p>
-            <p className="vx-copy" style={{ marginBottom: 28 }}>The workflow is simple: describe the campaign, choose the output, generate the asset, and reuse the finished result in the paid offer, fan funnel, or distribution plan.</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-              <ActionButton href="/vault-x/studio">Open VaultX Studio</ActionButton>
-              <ActionButton href="#waitlist" variant="dark">Request studio access</ActionButton>
-            </div>
-          </div>
-          <div className={`vx-reveal ${polloRef.visible ? "visible" : ""}`} style={{ display: "grid", gap: 12 }}>
-            {studioSteps.map((step, i) => (
-              <div key={step.label} style={{ display: "grid", gridTemplateColumns: "56px 1fr", gap: 14, alignItems: "center", padding: 17, borderRadius: 20, border: "1px solid rgba(255,255,255,.10)", background: "linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.025))" }}>
-                <div style={{ width: 56, height: 56, borderRadius: 18, display: "grid", placeItems: "center", color: i === 2 ? "#f9a8d4" : "#f4d37c", background: i === 2 ? "rgba(244,114,182,.14)" : "rgba(201,168,76,.13)", fontWeight: 950 }}>{String(i + 1).padStart(2, "0")}</div>
-                <div>
-                  <strong style={{ display: "block", fontSize: 16, color: "#fff", marginBottom: 4 }}>{step.label}</strong>
-                  <span style={{ display: "block", color: "rgba(255,255,255,.52)", fontSize: 13, lineHeight: 1.55 }}>{step.detail}</span>
-                </div>
+      <section ref={workflowRef.ref} style={{ background: "#111111", padding: "80px 24px" }}>
+        <div className={`cv-shell cv-reveal ${workflowRef.visible ? "visible" : ""}`}>
+          <p style={{ fontFamily: "Space Mono, monospace", fontSize: 10, letterSpacing: "0.2em", color: "#00D9FF", marginBottom: 24 }}>THE WORKFLOW</p>
+          <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "clamp(40px, 10vw, 72px)", lineHeight: 0.95, color: "#FFFFFF", marginBottom: 48 }}>
+            Four steps.<br />One paid drop.
+          </h2>
+          {workflowSteps.map((step, i) => (
+            <div key={step.n} className="cv-step cv-workflow-step" style={{ display: "flex", gap: 24, alignItems: "flex-start", marginBottom: 40, paddingBottom: 40, borderBottom: i < 3 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+              <span style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 48, color: "#00D9FF", lineHeight: 1, opacity: 0.4, minWidth: 56 }}>{step.n}</span>
+              <div>
+                <h3 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 28, color: "#FFFFFF", marginBottom: 8 }}>{step.title}</h3>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: 15, color: "rgba(255,255,255,0.6)", lineHeight: 1.6, maxWidth: 400 }}>{step.body}</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section ref={cockpitRef.ref} style={{ position: "relative", padding: "82px 0", borderTop: "1px solid rgba(255,255,255,.06)", overflow: "hidden" }}>
-        <video autoPlay muted loop playsInline preload="metadata" poster={VAULTX_TRAILER_POSTER} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .16 }}>
-          <source src={VAULTX_TRAILER_VIDEO} type="video/mp4" />
-        </video>
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(5,5,8,.84),#050508 88%)" }} />
-        <div className="vx-shell" style={{ position: "relative" }}>
-          <div className={`vx-reveal ${cockpitRef.visible ? "visible" : ""}`} style={{ textAlign: "center", maxWidth: 780, margin: "0 auto 36px" }}>
-            <p className="vx-kicker">Campaign workflow</p>
-            <h2 className="vx-title" style={{ marginBottom: 16 }}>Watch the clip become a paid campaign.</h2>
-            <p className="vx-copy">In seconds, visitors can see the clip, understand what is being sold, and see how VaultX packages the launch.</p>
-          </div>
-          <div id="video-workflow" className={`vx-reveal ${cockpitRef.visible ? "visible" : ""}`} style={{ display: "grid", gridTemplateColumns: "minmax(0,1.15fr) minmax(280px,.85fr)", gap: 18, alignItems: "stretch" }}>
-            <div style={{ position: "relative", borderRadius: 26, overflow: "hidden", border: "1px solid rgba(201,168,76,.22)", background: "#050508", minHeight: 360, boxShadow: "0 32px 90px rgba(0,0,0,.38)" }}>
-              <video autoPlay muted loop playsInline controls preload="metadata" poster={VAULTX_TRAILER_POSTER} style={{ width: "100%", height: "100%", minHeight: 360, objectFit: "cover", display: "block" }}>
-                <source src={VAULTX_TRAILER_VIDEO} type="video/mp4" />
-              </video>
-              <div style={{ position: "absolute", left: 16, right: 16, bottom: 16, borderRadius: 18, border: "1px solid rgba(255,255,255,.14)", background: "rgba(0,0,0,.62)", backdropFilter: "blur(14px)", padding: 16 }}>
-                <p style={{ color: "#f4d37c", fontSize: 10, fontWeight: 950, letterSpacing: ".14em", textTransform: "uppercase", marginBottom: 6 }}>Playable workflow preview</p>
-                <strong style={{ display: "block", color: "#fff", fontFamily: "Playfair Display, serif", fontSize: 28, lineHeight: 1.06 }}>The video comes first. The campaign details follow it.</strong>
-              </div>
-            </div>
-            <div style={{ display: "grid", gap: 12 }}>
-              {[
-                ["Watch", "Lead with the creator clip so the audience understands the content immediately."],
-                ["Cut", "Turn that footage into a public teaser and locked preview instead of a page of abstract labels."],
-                ["Sell", "Package the finished video with captions, offer copy, and distribution routes."],
-              ].map(([title, body], i) => (
-                <div key={title} style={{ padding: 20, borderRadius: 22, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.045)" }}>
-                  <span style={{ color: "#c9a84c", fontSize: 12, fontWeight: 950, letterSpacing: ".14em", textTransform: "uppercase" }}>0{i + 1}</span>
-                  <h3 style={{ fontFamily: "Playfair Display, serif", fontSize: 27, color: "#fff", margin: "8px 0 8px" }}>{title}</h3>
-                  <p style={{ color: "rgba(255,255,255,.58)", fontSize: 13, lineHeight: 1.65 }}>{body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", marginTop: 30 }}>
-            <ActionButton href="#waitlist">Request video workflow access</ActionButton>
-            <ActionButton href="/vault-x/distribution" variant="dark">See distribution</ActionButton>
-          </div>
-        </div>
-      </section>
-
-      <section ref={moneyRef.ref} style={{ padding: "76px 0", borderTop: "1px solid rgba(255,255,255,.06)", background: "linear-gradient(180deg,#050508,#080808)" }}>
-        <div className="vx-shell">
-          <div className={`vx-reveal ${moneyRef.visible ? "visible" : ""}`} style={{ maxWidth: 800, marginBottom: 28 }}>
-            <p className="vx-kicker">Why creators care</p>
-            <h2 className="vx-title" style={{ marginBottom: 16 }}>VaultX gives creators leverage that used to belong to studios.</h2>
-            <p className="vx-copy">The value is simple: start with real footage, show the preview, package the paid drop, organize the launch, and keep the assets ready for the next release.</p>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
-            {[
-              ["Video clarity", "Visitors see an actual reel first, not abstract product jargon."],
-              ["Paid preview", "The premium offer is framed around the video the creator is selling."],
-              ["Reusable campaign", "Each drop keeps its teaser, locked clip, copy, price, and route together."],
-            ].map(([title, body]) => (
-              <div key={title} style={{ padding: 20, borderRadius: 20, border: "1px solid rgba(201,168,76,.20)", background: "rgba(201,168,76,.065)" }}>
-                <h3 style={{ color: "#f4d37c", fontFamily: "Playfair Display, serif", fontSize: 25, marginBottom: 8 }}>{title}</h3>
-                <p style={{ color: "rgba(255,255,255,.58)", fontSize: 13, lineHeight: 1.62 }}>{body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section ref={metricsRef.ref} style={{ position: "relative", borderTop: "1px solid rgba(255,255,255,.06)", borderBottom: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.02)" }}>
-        <div className="vx-shell vx-metric-grid">
-          {[
-            { value: weeklyOutputs, suffix: "+", label: "output types per drop", color: "#38bdf8" },
-            { value: revenueShare, suffix: "%", label: "creator revenue share target", color: "#c9a84c" },
-            { value: destinations, suffix: "+", label: "distribution destinations", color: "#4ade80" },
-            { value: steps, suffix: "", label: "steps from asset to launch", color: "#f472b6" },
-          ].map((m, i) => (
-            <div key={m.label} className={`vx-reveal ${metricsRef.visible ? "visible" : ""}`} style={{ padding: "34px 18px", textAlign: "center", borderRight: i < 3 ? "1px solid rgba(255,255,255,.06)" : "none", transitionDelay: `${i * .06}s` }}>
-              <div style={{ fontFamily: "Playfair Display, serif", fontSize: "clamp(34px,7vw,52px)", fontWeight: 900, color: m.color, lineHeight: 1 }}>{m.value}{m.suffix}</div>
-              <p style={{ color: "rgba(255,255,255,.38)", fontSize: 10, fontWeight: 850, letterSpacing: ".12em", textTransform: "uppercase", marginTop: 8 }}>{m.label}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section id="waitlist" ref={waitlistRef.ref} style={{ position: "relative", padding: "80px 20px 88px", borderTop: "1px solid rgba(255,255,255,.06)", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 0%,rgba(201,168,76,.13),transparent 34%)" }} />
-        <div style={{ position: "relative", maxWidth: 590, margin: "0 auto" }}>
-          <div className={`vx-reveal ${waitlistRef.visible ? "visible" : ""}`} style={{ textAlign: "center", marginBottom: 34 }}>
-            <p className="vx-kicker">Early access</p>
-            <h2 className="vx-title" style={{ fontSize: "clamp(30px,6vw,46px)", marginBottom: 14 }}>Get the VaultX invite path.</h2>
-            <p className="vx-copy">Join if you want the creator workflow that turns raw content into a monetizable launch bundle with AI Studio assets, campaign packaging, and distribution routes in one place.</p>
-          </div>
-          <div className={`vx-reveal ${waitlistRef.visible ? "visible" : ""}`} style={{ borderRadius: 24, border: "1px solid rgba(255,255,255,.10)", background: "linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.025))", padding: 28, boxShadow: "0 28px 80px rgba(0,0,0,.34)" }}>
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 10, fontWeight: 850, letterSpacing: ".15em", textTransform: "uppercase", color: "rgba(255,255,255,.44)", marginBottom: 7 }}>Email</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" style={{ width: "100%", background: "rgba(255,255,255,.055)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, padding: "12px 14px", fontSize: 14, color: "#fff" }} />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={{ display: "block", fontSize: 10, fontWeight: 850, letterSpacing: ".15em", textTransform: "uppercase", color: "rgba(255,255,255,.44)", marginBottom: 7 }}>Name</label>
-                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" style={{ width: "100%", background: "rgba(255,255,255,.055)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, padding: "12px 14px", fontSize: 14, color: "#fff" }} />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 10, fontWeight: 850, letterSpacing: ".15em", textTransform: "uppercase", color: "rgba(255,255,255,.44)", marginBottom: 7 }}>Phone</label>
-                  <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Optional" style={{ width: "100%", background: "rgba(255,255,255,.055)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, padding: "12px 14px", fontSize: 14, color: "#fff" }} />
-                </div>
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: 10, fontWeight: 850, letterSpacing: ".15em", textTransform: "uppercase", color: "rgba(255,255,255,.44)", marginBottom: 7 }}>Creator lane</label>
-                <select value={creatorType} onChange={(e) => setCreatorType(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,.055)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, padding: "12px 14px", fontSize: 14, color: creatorType ? "#fff" : "rgba(255,255,255,.36)", appearance: "none", cursor: "pointer" }}>
-                  <option value="" style={{ background: "#0a0a0f" }}>Select your lane</option>
-                  {creatorTypes.map((ct) => <option key={ct.value} value={ct.value} style={{ background: "#0a0a0f" }}>{ct.label}</option>)}
-                </select>
-              </div>
-              <button type="submit" disabled={signupMutation.isPending} style={{ background: signupMutation.isPending ? "rgba(201,168,76,.55)" : "linear-gradient(135deg,#f7d67a,#c9a84c 48%,#8f6b21)", color: "#050508", border: "none", borderRadius: 11, padding: "14px 24px", fontSize: 13, fontWeight: 950, letterSpacing: ".08em", textTransform: "uppercase", cursor: signupMutation.isPending ? "not-allowed" : "pointer", marginTop: 4, animation: signupMutation.isPending ? "none" : "pulse 3s ease-in-out infinite" }}>
-                {signupMutation.isPending ? "Saving your invite..." : "Request VaultX access"}
-              </button>
-              <p style={{ fontSize: 12, lineHeight: 1.55, color: "rgba(255,255,255,.30)", textAlign: "center" }}>No spam. This list is for creators, operators, and partners who want the VaultX output workflow.</p>
-            </form>
-          </div>
+      <section ref={proofRef.ref} style={{ position: "relative", padding: "90px 24px", background: "#0A0A0A", overflow: "hidden", borderTop: "1px solid rgba(255,255,255,.06)" }}>
+        <video autoPlay muted loop playsInline preload="metadata" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.2, filter: "saturate(1.15) contrast(1.08)" }}>
+          <source src={VAULTX_TRAILER_VIDEO} type="video/mp4" />
+          <source src={VAULTX_HERO_VIDEO} type="video/mp4" />
+        </video>
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,#0A0A0A 0%,rgba(10,10,10,.72) 48%,rgba(10,10,10,.95) 100%)" }} />
+        <div className={`cv-shell cv-reveal ${proofRef.visible ? "visible" : ""}`} style={{ position: "relative", display: "grid", gap: 24 }}>
+          <p style={{ fontFamily: "Space Mono, monospace", fontSize: 10, letterSpacing: "0.2em", color: "#00D9FF" }}>MONETIZE THE MOTION</p>
+          <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "clamp(42px, 9vw, 82px)", lineHeight: .92, margin: 0, maxWidth: 820 }}>The content is the product. The system turns it into revenue.</h2>
+          <p style={{ color: "rgba(255,255,255,.62)", fontSize: 17, lineHeight: 1.7, maxWidth: 540 }}>VaultX keeps the video in front, builds the sellable package around it, and routes the campaign to the audience that is ready to pay.</p>
         </div>
       </section>
 
-      <footer style={{ borderTop: "1px solid rgba(255,255,255,.06)", padding: "30px 20px", textAlign: "center" }}>
+      <section ref={metricsRef.ref} style={{ background: "#050505", borderTop: "1px solid rgba(255,255,255,.06)", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+        <div className="cv-shell cv-metrics" style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))" }}>
+          {[
+            { value: revenueShare, suffix: "%", label: "CREATOR REVENUE SHARE" },
+            { value: outputTypes, suffix: "+", label: "OUTPUT TYPES PER DROP" },
+            { value: platforms, suffix: "", label: "PLATFORMS AT ONCE" },
+            { value: upload, suffix: "", label: "UPLOAD TO START" },
+          ].map((m, i) => (
+            <div key={m.label} className={`cv-reveal ${metricsRef.visible ? "visible" : ""}`} style={{ padding: "38px 16px", textAlign: "center", borderRight: i < 3 ? "1px solid rgba(255,255,255,.06)" : "none", transitionDelay: `${i * 70}ms` }}>
+              <div style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "clamp(42px,7vw,72px)", color: "#00D9FF", lineHeight: .9 }}>{m.value}{m.suffix}</div>
+              <p style={{ fontFamily: "Space Mono, monospace", color: "rgba(255,255,255,.52)", fontSize: 10, letterSpacing: ".14em", marginTop: 12 }}>{m.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="waitlist" ref={waitlistRef.ref} style={{ position: "relative", padding: "88px 24px 96px", background: "#0A0A0A", overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 0%,rgba(0,217,255,.16),transparent 34%),radial-gradient(circle at 12% 82%,rgba(201,168,76,.10),transparent 32%)" }} />
+        <div className={`cv-shell cv-reveal ${waitlistRef.visible ? "visible" : ""}`} style={{ position: "relative", maxWidth: 650 }}>
+          <p style={{ fontFamily: "Space Mono, monospace", fontSize: 10, letterSpacing: "0.2em", color: "#00D9FF", marginBottom: 18 }}>JOIN CREATORVAULT</p>
+          <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "clamp(42px,10vw,76px)", lineHeight: .94, color: "#FFFFFF", marginBottom: 18 }}>Your first drop is free.</h2>
+          <p style={{ color: "rgba(255,255,255,.64)", fontSize: 17, lineHeight: 1.68, marginBottom: 34 }}>Sign up, upload your first video, and VaultX builds your teaser and PPV package — no production experience needed.</p>
+          <form onSubmit={handleSubmit} style={{ display: "grid", gap: 14, padding: 22, border: "1px solid rgba(0,217,255,.18)", background: "rgba(26,26,26,.76)", backdropFilter: "blur(18px)" }}>
+            <input className="cv-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" style={{ width: "100%", background: "#0A0A0A", border: "1px solid rgba(255,255,255,.10)", color: "#fff", padding: "14px 15px", fontFamily: "DM Sans, sans-serif", fontSize: 14 }} />
+            <div className="cv-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <input className="cv-input" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" style={{ width: "100%", background: "#0A0A0A", border: "1px solid rgba(255,255,255,.10)", color: "#fff", padding: "14px 15px", fontFamily: "DM Sans, sans-serif", fontSize: 14 }} />
+              <input className="cv-input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone optional" style={{ width: "100%", background: "#0A0A0A", border: "1px solid rgba(255,255,255,.10)", color: "#fff", padding: "14px 15px", fontFamily: "DM Sans, sans-serif", fontSize: 14 }} />
+            </div>
+            <select className="cv-input" value={creatorType} onChange={(e) => setCreatorType(e.target.value)} style={{ width: "100%", background: "#0A0A0A", border: "1px solid rgba(255,255,255,.10)", color: creatorType ? "#fff" : "rgba(255,255,255,.42)", padding: "14px 15px", fontFamily: "DM Sans, sans-serif", fontSize: 14 }}>
+              <option value="" style={{ background: "#0A0A0A" }}>Select your lane</option>
+              {creatorTypes.map((ct) => <option key={ct.value} value={ct.value} style={{ background: "#0A0A0A" }}>{ct.label}</option>)}
+            </select>
+            <div style={{ marginTop: 6 }}>
+              <CyanButton submit disabled={signupMutation.isPending}>{signupMutation.isPending ? "Creating..." : "Create Your Account"}</CyanButton>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <footer style={{ borderTop: "1px solid rgba(255,255,255,.06)", padding: "32px 20px", textAlign: "center", background: "#050505" }}>
         <img src="/logo-white.png" alt="CreatorVault" style={{ height: 24, objectFit: "contain", opacity: .58, marginBottom: 12 }} />
-        <p style={{ fontSize: 11, color: "rgba(255,255,255,.24)", letterSpacing: ".10em", textTransform: "uppercase", marginBottom: 12 }}>CreatorVault · VaultX premium creator revenue OS · 18+ only</p>
+        <p style={{ fontFamily: "Space Mono, monospace", fontSize: 10, color: "rgba(255,255,255,.28)", letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 12 }}>CreatorVault · VaultX premium creator revenue OS · 18+ only</p>
         <nav aria-label="Legal and launch links" style={{ display: "flex", justifyContent: "center", gap: 14, flexWrap: "wrap", fontSize: 12 }}>
-          {[ ["Terms", "/terms"], ["Privacy", "/privacy"], ["DMCA", "/dmca"], ["2257", "/2257"], ["Request Access", "/signup"] ].map(([label, href]) => (
+          {[["Terms", "/terms"], ["Privacy", "/privacy"], ["DMCA", "/dmca"], ["2257", "/2257"], ["Request Access", "/signup"]].map(([label, href]) => (
             <Link key={href} href={href} style={{ color: "rgba(255,255,255,.52)", textDecoration: "none" }}>{label}</Link>
           ))}
         </nav>
       </footer>
-    </div>
+    </main>
   );
 }
