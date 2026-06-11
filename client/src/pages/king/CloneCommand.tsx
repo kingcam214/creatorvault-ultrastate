@@ -23,6 +23,23 @@ const BORDER = "#222222";
 const MUTED = "#666666";
 const TRIGGER = "fluxdevCam";
 
+const KINGCAM_FINAL_IDENTITY_PROMPT =
+  "kingcam_clone, bald fade with 360 waves on top, clean lineup, tapered sides, " +
+  "full beard, deep dark brown skin, melanin rich, broad strong muscular build, " +
+  "Dita Mach-One aviators OR Versace eyewear, ultra thin titanium frame sunglasses, " +
+  "layered gold chain necklace, gold bracelet, small diamond hoop earrings, " +
+  "tiny diamond hoops, small gold diamond hoop earrings, petite hoop earrings with diamonds, " +
+  "subtle earrings, luxury jewelry, signature look";
+
+const KINGCAM_FINAL_IDENTITY_NEGATIVE =
+  "bald head, no hair, afro, locs, braids, long hair, curly hair, no waves, " +
+  "wrong glasses, no sunglasses, plastic cheap frames, light skin, medium skin, thin build, " +
+  "slim, lanky, no beard, clean shaven, large hoop earrings, oversized hoops, " +
+  "big earrings, chunky earrings, dangling earrings, no earrings, studs, plain hoops without diamonds, no jewelry, no chain";
+
+const KINGCAM_JEWELRY_DESCRIPTOR =
+  "small diamond hoop earrings, tiny diamond hoops, small gold hoops with diamonds";
+
 // Preset dimensions
 const PRESETS = [
   { label: "1:1", w: 1024, h: 1024 },
@@ -36,8 +53,8 @@ export default function CloneCommand() {
   const { toast } = useToast();
 
   // ─── State: Controls ────────────────────────────────────────────────
-  const [prompt, setPrompt] = useState("");
-  const [negativePrompt, setNegativePrompt] = useState("");
+  const [prompt, setPrompt] = useState(KINGCAM_FINAL_IDENTITY_PROMPT);
+  const [negativePrompt, setNegativePrompt] = useState(KINGCAM_FINAL_IDENTITY_NEGATIVE);
   const [preset, setPreset] = useState(0);
   const [numOutputs, setNumOutputs] = useState(1);
   const [guidanceScale, setGuidanceScale] = useState(3.5);
@@ -350,6 +367,27 @@ export default function CloneCommand() {
             <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>
               Trigger word <span style={{ color: CYAN, fontWeight: 700 }}>{TRIGGER}</span> is
               automatically included
+            </div>
+          </div>
+
+          {/* Jewelry Identity Descriptor */}
+          <div>
+            <label style={labelStyle}>JEWELRY DESCRIPTION</label>
+            <textarea
+              value={KINGCAM_JEWELRY_DESCRIPTOR}
+              readOnly
+              rows={2}
+              style={{
+                ...inputStyle,
+                resize: "vertical",
+                fontFamily: "inherit",
+                color: CYAN,
+                border: `1px solid ${CYAN}33`,
+                background: "rgba(0,217,255,0.06)",
+              }}
+            />
+            <div style={{ fontSize: 11, color: MUTED, marginTop: 4, lineHeight: 1.45 }}>
+              Identity lock requires small visible diamond hoops only: no oversized hoops, studs, plain hoops, or missing earrings.
             </div>
           </div>
 

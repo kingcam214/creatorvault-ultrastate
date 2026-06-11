@@ -31,8 +31,10 @@
  *   Model: kingcam214/fluxdevcam
  *   Version: 6f76a5fb9645488a56e2fdd36a9f213fc08b5aee638d9aa46253b6cd17c3bcff
  *   Trigger: "fluxdevCam"
- *   Identity: Black male, royal velvet suit with diamond/crystal trim,
- *             gold crown, gold chains, aviator sunglasses, designer sneakers
+ *   Identity: kingcam_clone, bald fade with 360 waves on top, clean lineup,
+ *             full beard, deep dark brown skin, broad muscular build,
+ *             Dita Mach-One aviators OR Versace eyewear, layered gold chains,
+ *             gold bracelet, small diamond hoop earrings, designer sneakers
  *
  * CROSS-FEATURE COMMUNICATION:
  *   - Any feature can request assets from any other feature
@@ -59,9 +61,12 @@ export const KINGCAM_DNA = {
 
   /** Core identity injected into every prompt */
   baseIdentity:
-    "fluxdevCam, Black male, royal velvet suit with diamond and crystal trim lapels, " +
-    "gold crown, layered gold chains, aviator sunglasses, designer high-top sneakers, " +
-    "commanding royal presence, luxury interior with dark leather and gold accents",
+    "kingcam_clone, bald fade with 360 waves on top, clean lineup, tapered sides, " +
+    "full beard, deep dark brown skin, melanin rich, broad strong muscular build, " +
+    "Dita Mach-One aviators OR Versace eyewear, ultra thin titanium frame sunglasses, " +
+    "layered gold chain necklace, gold bracelet, small diamond hoop earrings, " +
+    "tiny diamond hoops, small gold diamond hoop earrings, petite hoop earrings with diamonds, " +
+    "subtle earrings, luxury jewelry, signature look",
 
   /** All suit color variants for the brand */
   suitColorVariants: [
@@ -78,6 +83,13 @@ export const KINGCAM_DNA = {
     { name: "Slate Sovereign", color: "charcoal slate velvet with silver trim" },
     { name: "Rose Gold King",  color: "dusty rose velvet with rose gold trim" },
   ],
+
+  /** Negative identity guardrails for generated prompts */
+  negativeIdentity:
+    "bald head, no hair, afro, locs, braids, long hair, curly hair, no waves, " +
+    "wrong glasses, no sunglasses, plastic cheap frames, light skin, medium skin, " +
+    "thin build, slim, lanky, no beard, clean shaven, large hoop earrings, oversized hoops, " +
+    "big earrings, chunky earrings, dangling earrings, no earrings, studs, plain hoops without diamonds, no jewelry, no chain",
 
   /** Style modifiers appended to every generated prompt */
   styleModifiers:
