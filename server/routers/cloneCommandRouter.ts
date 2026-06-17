@@ -60,8 +60,31 @@ const DEFAULT_VERSION =
   process.env.REPLICATE_CLONE_VERSION ||
   "e8074c4eeec195ad8ab617bf1502cd0c297db7f2c1cf5d9a665fad4710468727";
 const TRIGGER_WORD = process.env.REPLICATE_CLONE_TRIGGER_WORD || "fluxdevCam";
+const KINGCAM_IDENTITY_PREFIX =
+  "man with natural hair fade haircut, visible dark hair, clean hairline, thick visible waves on top, gold crown on head, crown clearly visible";
+const KINGCAM_IDENTITY_SUFFIX =
+  "wearing crown, crown sitting above visible hair, hair visible below crown at hairline and sides, regal KingCam presence";
+const KINGCAM_LOCKED_NEGATIVE_PROMPT =
+  "bald, shaved head, no hair, no crown, hat, beanie, hood, cropped out crown, hidden hair, covered head";
 const POLLO_API_KEY = process.env.POLLO_API_KEY || "";
 const POLLO_BASE_URL = "https://pollo.ai/api/platform";
+
+function buildKingCamIdentityPrompt(userPrompt: string) {
+  const promptWithoutTrigger = userPrompt
+    .replace(new RegExp(`\\b${TRIGGER_WORD}\\b`, "gi"), "")
+    .trim()
+    .replace(/^,+|,+$/g, "")
+    .trim();
+
+  return `${TRIGGER_WORD} ${KINGCAM_IDENTITY_PREFIX}, ${promptWithoutTrigger}, ${KINGCAM_IDENTITY_SUFFIX}`;
+}
+
+function buildKingCamNegativePrompt(userNegativePrompt?: string) {
+  const cleanUserNegative = userNegativePrompt?.trim();
+  return cleanUserNegative
+    ? `${KINGCAM_LOCKED_NEGATIVE_PROMPT}, ${cleanUserNegative}`
+    : KINGCAM_LOCKED_NEGATIVE_PROMPT;
+}
 
 // ─── Replicate Helpers ────────────────────────────────────────────────────────
 async function replicatePost(endpoint: string, body: object): Promise<any> {
@@ -135,30 +158,26 @@ export const cloneCommandRouter = router({
     .mutation(async ({ ctx, input }) => {
       ownerGuard(ctx.user.id);
 
-      // Ensure trigger word is in prompt
-      let finalPrompt = input.prompt;
-      if (!finalPrompt.toLowerCase().includes(TRIGGER_WORD.toLowerCase())) {
-        finalPrompt = `${TRIGGER_WORD} ${finalPrompt}`;
-      }
+      const finalPrompt = buildKingCamIdentityPrompt(input.prompt);
+      const finalNegativePrompt = buildKingCamNegativePrompt(input.negativePrompt);
 
       const version = input.modelVersion || DEFAULT_VERSION;
 
-      // Build Replicate input
+      // Build Replicate input. KingCam identity elements are server-locked so
+      // every generation keeps visible hair and the crown even if the UI prompt
+      // only describes the scene.
       const replicateInput: Record<string, any> = {
         prompt: finalPrompt,
+        negative_prompt: finalNegativePrompt,
         width: input.width,
         height: input.height,
         num_outputs: input.numOutputs,
         guidance_scale: input.guidanceScale,
         num_inference_steps: input.numInferenceSteps,
         aspect_ratio: "custom",
-        output_format: "webp",
-        output_quality: 90,
+        output_format: "png",
+        output_quality: 100,
       };
-
-      if (input.negativePrompt) {
-        replicateInput.negative_prompt = input.negativePrompt;
-      }
       if (input.seed !== undefined) {
         replicateInput.seed = input.seed;
       }
@@ -183,7 +202,7 @@ export const cloneCommandRouter = router({
             DEFAULT_MODEL,
             version,
             finalPrompt,
-            input.negativePrompt || null,
+            finalNegativePrompt,
             input.width,
             input.height,
             input.numOutputs,

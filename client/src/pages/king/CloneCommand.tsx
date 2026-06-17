@@ -23,16 +23,11 @@ const BORDER = "#222222";
 const MUTED = "#666666";
 const TRIGGER = "fluxdevCam";
 
-const KINGCAM_FINAL_IDENTITY_PROMPT =
-  "kingcam_clone, bald fade with 360 waves on top, clean lineup, tapered sides, " +
-  "full beard, deep dark brown skin, melanin rich, broad strong muscular build, " +
-  "Dita Mach-One aviators OR Versace eyewear, ultra thin titanium frame sunglasses, " +
-  "layered gold chain necklace, gold bracelet, small diamond hoop earrings, " +
-  "tiny diamond hoops, small gold diamond hoop earrings, petite hoop earrings with diamonds, " +
-  "subtle earrings, luxury jewelry, signature look";
+const KINGCAM_DEFAULT_SCENE_PROMPT =
+  "dark throne room, velvet suit, gold chains, neon lighting, looking into camera";
 
 const KINGCAM_FINAL_IDENTITY_NEGATIVE =
-  "bald head, no hair, afro, locs, braids, long hair, curly hair, no waves, " +
+  "bald, shaved head, no hair, no crown, hat, beanie, hood, " +
   "wrong glasses, no sunglasses, plastic cheap frames, light skin, medium skin, thin build, " +
   "slim, lanky, no beard, clean shaven, large hoop earrings, oversized hoops, " +
   "big earrings, chunky earrings, dangling earrings, no earrings, studs, plain hoops without diamonds, no jewelry, no chain";
@@ -53,7 +48,7 @@ export default function CloneCommand() {
   const { toast } = useToast();
 
   // ─── State: Controls ────────────────────────────────────────────────
-  const [prompt, setPrompt] = useState(KINGCAM_FINAL_IDENTITY_PROMPT);
+  const [prompt, setPrompt] = useState(KINGCAM_DEFAULT_SCENE_PROMPT);
   const [negativePrompt, setNegativePrompt] = useState(KINGCAM_FINAL_IDENTITY_NEGATIVE);
   const [preset, setPreset] = useState(0);
   const [numOutputs, setNumOutputs] = useState(1);
@@ -355,7 +350,7 @@ export default function CloneCommand() {
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder={`Describe your image... (${TRIGGER} is auto-prepended)`}
+              placeholder="dark penthouse throne room, gold chains, velvet suit, cinematic neon lighting, looking into camera — crown and hair always included automatically"
               rows={5}
               style={{
                 ...inputStyle,
@@ -364,9 +359,19 @@ export default function CloneCommand() {
                 fontFamily: "inherit",
               }}
             />
+            <div
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 12,
+                color: "var(--text-muted)",
+                marginTop: 4,
+              }}
+            >
+              Crown and hair are locked into every generation automatically.
+            </div>
             <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>
               Trigger word <span style={{ color: CYAN, fontWeight: 700 }}>{TRIGGER}</span> is
-              automatically included
+              automatically included server-side.
             </div>
           </div>
 
