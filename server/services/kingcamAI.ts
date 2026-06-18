@@ -91,6 +91,13 @@ export const KINGCAM_DNA = {
     "thin build, slim, lanky, no beard, clean shaven, large hoop earrings, oversized hoops, " +
     "big earrings, chunky earrings, dangling earrings, no earrings, studs, plain hoops without diamonds, no jewelry, no chain",
 
+  /** Negative artifact guardrails for production-ready generated visuals */
+  negativeVisualArtifacts:
+    "fake text, garbled text, unreadable letters, random typography, watermark, logo, signature, " +
+    "deformed hands, malformed hands, extra fingers, missing fingers, fused fingers, broken fingers, " +
+    "distorted anatomy, twisted limbs, disfigured face, asymmetrical eyes, blurry face, low resolution, " +
+    "bad teeth, plastic skin, uncanny, cartoon, illustration, duplicate person, extra arms, extra legs",
+
   /** Style modifiers appended to every generated prompt */
   styleModifiers:
     "photorealistic, 8K ultra HD, cinematic lighting, luxury fashion editorial, " +
@@ -342,17 +349,23 @@ export async function generateKingCamImage(
   const finalPrompt = injectDNA
     ? injectKingCamDNA(prompt, { suitColor, styleLevel })
     : prompt;
+  const productionPrompt =
+    `${finalPrompt}, production-ready premium creator asset, clean composition, ` +
+    "natural face, realistic anatomy, crisp eyes, clean hands only if hands are visible, " +
+    "no fake text artifacts, no watermarks, no distorted fingers";
+  const negativePrompt = `${KINGCAM_DNA.negativeIdentity}, ${KINGCAM_DNA.negativeVisualArtifacts}`;
 
   // Primary: fluxdevcam
   if (model === "fluxdevcam" && REPLICATE_TOKEN) {
     try {
       const input: Record<string, unknown> = {
-        prompt: finalPrompt,
+        prompt: productionPrompt,
+        negative_prompt: negativePrompt,
         aspect_ratio: aspectRatio,
         output_format: "webp",
-        output_quality: 90,
-        num_inference_steps: 28,
-        guidance_scale: 3.5,
+        output_quality: 95,
+        num_inference_steps: 32,
+        guidance_scale: 3.8,
       };
       if (referenceImageUrl) input.image = referenceImageUrl;
 
@@ -365,7 +378,7 @@ export async function generateKingCamImage(
 
   // Fallback: forge
   const { generateImage } = await import("../_core/imageGeneration");
-  const result = await generateImage({ prompt: finalPrompt });
+  const result = await generateImage({ prompt: productionPrompt });
   return { url: result.url ?? "", model: "forge", provider: "forge", vertical };
 }
 
@@ -395,16 +408,20 @@ export async function generateKingCamVideo(
   const finalPrompt = injectDNA
     ? injectKingCamDNA(prompt, { styleLevel: "cinematic" })
     : prompt;
+  const productionVideoPrompt =
+    `${finalPrompt}. Preserve the exact face, skin tone, eyewear, jewelry, and wardrobe from the reference. ` +
+    "Use subtle cinematic motion, stable camera, natural eye contact, clean lip-safe movement, no morphing, " +
+    "no extra people, no text overlays, no watermarks, no warped hands, no distorted anatomy.";
 
   const input: Record<string, unknown> = imageUrl
     ? {
-        prompt: finalPrompt,
+        prompt: productionVideoPrompt,
         image: imageUrl,
         length: duration,
         mode,
       }
     : {
-        prompt: finalPrompt,
+        prompt: productionVideoPrompt,
         aspectRatio,
         length: duration,
         mode,

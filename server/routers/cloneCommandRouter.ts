@@ -469,7 +469,7 @@ export const cloneCommandRouter = router({
             numOutputs: r.num_outputs,
             guidanceScale: r.guidance_scale,
             status: r.status,
-            outputUrls: r.output_urls ? (typeof r.output_urls === string ? JSON.parse(r.output_urls) : r.output_urls) : [],
+            outputUrls: r.output_urls ? (typeof r.output_urls === "string" ? JSON.parse(r.output_urls) : r.output_urls) : [],
             savedToVault: !!r.saved_to_vault,
             createdAt: r.created_at,
           })),

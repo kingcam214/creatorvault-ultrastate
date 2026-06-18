@@ -51,7 +51,7 @@ const POLLO_API_KEY = process.env.POLLO_API_KEY || "";
 const POLLO_API_URL = "https://pollo.ai/api/platform/generation/pollo/pollo-v1-6";
 const POLLO_BASE_URL = "https://pollo.ai/api/platform";
 const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-02-25.clover" })
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-12-15.clover" })
   : null;
 
 type VaultxPackageMode = "FAST" | "BOOST" | "FULL";

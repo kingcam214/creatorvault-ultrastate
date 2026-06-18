@@ -322,14 +322,14 @@ function QuickActions() {
               textAlign: "left",
             }}
             onMouseEnter={e => {
-              (e.currentGoal as HTMLButtonElement).style.background = "rgba(201,169,97,0.08)";
-              (e.currentGoal as HTMLButtonElement).style.color = "#C9A961";
-              (e.currentGoal as HTMLButtonElement).style.borderColor = "rgba(201,169,97,0.2)";
+              (e.currentTarget as HTMLButtonElement).style.background = "rgba(201,169,97,0.08)";
+              (e.currentTarget as HTMLButtonElement).style.color = "#C9A961";
+              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(201,169,97,0.2)";
             }}
             onMouseLeave={e => {
-              (e.currentGoal as HTMLButtonElement).style.background = "rgba(255,255,255,0.03)";
-              (e.currentGoal as HTMLButtonElement).style.color = "#888";
-              (e.currentGoal as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.06)";
+              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.03)";
+              (e.currentTarget as HTMLButtonElement).style.color = "#888";
+              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.06)";
             }}
           >
             <action.icon size={13} />
