@@ -61,15 +61,15 @@ const DEFAULT_VERSION =
   "e8074c4eeec195ad8ab617bf1502cd0c297db7f2c1cf5d9a665fad4710468727";
 const TRIGGER_WORD = process.env.REPLICATE_CLONE_TRIGGER_WORD || "fluxdevCam";
 const KINGCAM_IDENTITY_PREFIX =
-  "man with natural hair fade haircut, visible dark hair, clean hairline, thick visible waves on top, gold crown on head, crown clearly visible";
+  "KingCam reference-first identity lock: preserve the exact hairstyle, hairline, hair length, hair texture, facial hair, jewelry, skin tone, face structure, body build, and wardrobe specified by the user prompt or attached/source reference media; do not invent, replace, clean up, or stylize the hairstyle";
 const KINGCAM_IDENTITY_SUFFIX =
-  "wearing crown, crown sitting above visible hair, hair visible below crown at hairline and sides, regal KingCam presence";
+  "paid clone output must match the submitted prompt and reference-media identity exactly; if a crown is requested, place it above the reference-accurate hair without covering or changing the hairstyle";
 const KINGCAM_LOCKED_NEGATIVE_PROMPT =
-  "bald, shaved head, no hair, no crown, hat, beanie, hood, cropped out crown, hidden hair, covered head";
+  "wrong hairstyle, invented hairstyle, generic AI haircut, default model haircut, unrequested natural hair fade, unrequested thick waves, unrequested 360 waves, wrong hairline, altered hairline, bald, shaved head, no hair, no crown, hat, beanie, hood, cropped out crown, hidden hair, covered head";
 const POLLO_API_KEY = process.env.POLLO_API_KEY || "";
 const POLLO_BASE_URL = "https://pollo.ai/api/platform";
 
-function buildKingCamIdentityPrompt(userPrompt: string) {
+export function buildKingCamIdentityPrompt(userPrompt: string) {
   const promptWithoutTrigger = userPrompt
     .replace(new RegExp(`\\b${TRIGGER_WORD}\\b`, "gi"), "")
     .trim()
@@ -79,7 +79,7 @@ function buildKingCamIdentityPrompt(userPrompt: string) {
   return `${TRIGGER_WORD} ${KINGCAM_IDENTITY_PREFIX}, ${promptWithoutTrigger}, ${KINGCAM_IDENTITY_SUFFIX}`;
 }
 
-function buildKingCamNegativePrompt(userNegativePrompt?: string) {
+export function buildKingCamNegativePrompt(userNegativePrompt?: string) {
   const cleanUserNegative = userNegativePrompt?.trim();
   return cleanUserNegative
     ? `${KINGCAM_LOCKED_NEGATIVE_PROMPT}, ${cleanUserNegative}`
@@ -138,6 +138,27 @@ function buildCloneMotionPrompt(input: { prompt?: string; motionStyle?: "vaultx_
 
 // ─── Router ───────────────────────────────────────────────────────────────────
 export const cloneCommandRouter = router({
+  /**
+   * 0. previewImagePrompt — No-credit final prompt preview before paid generation.
+   */
+  previewImagePrompt: protectedProcedure
+    .input(
+      z.object({
+        prompt: z.string().min(1).max(2000),
+        negativePrompt: z.string().max(2000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      ownerGuard(ctx.user.id);
+      return {
+        prompt: buildKingCamIdentityPrompt(input.prompt),
+        negativePrompt: buildKingCamNegativePrompt(input.negativePrompt),
+        creditCost: "none",
+        safetyRule:
+          "This preview does not call Replicate or Pollo. Paid generation must use this exact final prompt after owner review.",
+      };
+    }),
+
   /**
    * 1. generateImage — Fire a Replicate prediction for fluxdevcam
    */

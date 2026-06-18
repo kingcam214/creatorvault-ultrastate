@@ -27,6 +27,7 @@ const KINGCAM_DEFAULT_SCENE_PROMPT =
   "dark throne room, velvet suit, gold chains, neon lighting, looking into camera";
 
 const KINGCAM_FINAL_IDENTITY_NEGATIVE =
+  "wrong hairstyle, invented hairstyle, generic AI haircut, unrequested natural hair fade, unrequested thick waves, " +
   "bald, shaved head, no hair, no crown, hat, beanie, hood, " +
   "wrong glasses, no sunglasses, plastic cheap frames, light skin, medium skin, thin build, " +
   "slim, lanky, no beard, clean shaven, large hoop earrings, oversized hoops, " +
@@ -55,6 +56,8 @@ export default function CloneCommand() {
   const [guidanceScale, setGuidanceScale] = useState(3.5);
   const [steps, setSteps] = useState(28);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [promptPreview, setPromptPreview] = useState<{ prompt: string; negativePrompt: string; safetyRule: string } | null>(null);
+  const [promptPreviewApproved, setPromptPreviewApproved] = useState(false);
 
   // ─── State: Generation ──────────────────────────────────────────────
   const [generating, setGenerating] = useState(false);
@@ -77,6 +80,8 @@ export default function CloneCommand() {
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ─── tRPC ───────────────────────────────────────────────────────────
+  // @ts-ignore
+  const previewPromptMutation = trpc.cloneCommand.previewImagePrompt.useMutation();
   // @ts-ignore
   const generateMutation = trpc.cloneCommand.generateImage.useMutation();
   // @ts-ignore
@@ -142,10 +147,43 @@ export default function CloneCommand() {
     }
   }, [videoStatusQuery.data]);
 
+  useEffect(() => {
+    setPromptPreview(null);
+    setPromptPreviewApproved(false);
+  }, [prompt, negativePrompt]);
+
+  const handlePreviewPrompt = useCallback(async () => {
+    if (!prompt.trim()) {
+      toast({ title: "Enter a prompt", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const preview = await previewPromptMutation.mutateAsync({
+        prompt: prompt.trim(),
+        negativePrompt: negativePrompt.trim() || undefined,
+      });
+      setPromptPreview(preview);
+      setPromptPreviewApproved(false);
+      toast({ title: "No-credit preview ready", description: "Review the exact paid prompt before generation." });
+    } catch (err: any) {
+      toast({ title: "Preview error", description: err.message, variant: "destructive" });
+    }
+  }, [prompt, negativePrompt]);
+
   // ─── Generate handler ──────────────────────────────────────────────
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
       toast({ title: "Enter a prompt", variant: "destructive" });
+      return;
+    }
+
+    if (!promptPreview || !promptPreviewApproved) {
+      toast({
+        title: "Review final prompt first",
+        description: "No paid generation can run until the no-credit prompt preview is approved.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -171,7 +209,7 @@ export default function CloneCommand() {
       setGenerating(false);
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
-  }, [prompt, negativePrompt, preset, numOutputs, guidanceScale, steps]);
+  }, [prompt, negativePrompt, preset, numOutputs, guidanceScale, steps, promptPreview, promptPreviewApproved]);
 
   const handleGenerateVideo = useCallback(async () => {
     const imageUrl = outputImages[selectedOutput];
@@ -350,7 +388,7 @@ export default function CloneCommand() {
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="dark penthouse throne room, gold chains, velvet suit, cinematic neon lighting, looking into camera — crown and hair always included automatically"
+              placeholder="dark penthouse throne room, gold chains, velvet suit, cinematic neon lighting, looking into camera — hairstyle must match submitted reference/prompt exactly"
               rows={5}
               style={{
                 ...inputStyle,
@@ -367,7 +405,7 @@ export default function CloneCommand() {
                 marginTop: 4,
               }}
             >
-              Crown and hair are locked into every generation automatically.
+              Reference-first identity lock: the submitted prompt and any source media define the hairstyle. The system must not invent a default haircut.
             </div>
             <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>
               Trigger word <span style={{ color: CYAN, fontWeight: 700 }}>{TRIGGER}</span> is
@@ -557,28 +595,70 @@ export default function CloneCommand() {
             </div>
           )}
 
+          {/* No-credit final prompt preview */}
+          <div style={{ padding: 14, background: SURFACE, borderRadius: 12, border: `1px solid ${promptPreviewApproved ? CYAN : BORDER}`, display: "flex", flexDirection: "column", gap: 10 }}>
+            <label style={{ ...labelStyle, color: CYAN }}>NO-CREDIT FINAL PROMPT PREVIEW</label>
+            <button
+              onClick={handlePreviewPrompt}
+              disabled={previewPromptMutation.isPending || generating || !prompt.trim()}
+              style={{
+                padding: "10px 12px",
+                borderRadius: 8,
+                border: `1px solid ${CYAN}55`,
+                background: "rgba(0,217,255,0.08)",
+                color: CYAN,
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: previewPromptMutation.isPending ? "wait" : "pointer",
+                letterSpacing: "0.05em",
+              }}
+            >
+              {previewPromptMutation.isPending ? "BUILDING PREVIEW..." : "BUILD FINAL PROMPT PREVIEW"}
+            </button>
+            {promptPreview && (
+              <>
+                <div style={{ maxHeight: 150, overflowY: "auto", whiteSpace: "pre-wrap", fontSize: 11, lineHeight: 1.5, color: "#ddd", background: "#050505", border: `1px solid ${BORDER}`, borderRadius: 8, padding: 10 }}>
+                  {promptPreview.prompt}
+                  {"\n\nNEGATIVE: "}{promptPreview.negativePrompt}
+                </div>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 11, color: "#ccc", lineHeight: 1.45 }}>
+                  <input
+                    type="checkbox"
+                    checked={promptPreviewApproved}
+                    onChange={(e) => setPromptPreviewApproved(e.target.checked)}
+                    style={{ marginTop: 2 }}
+                  />
+                  I reviewed the exact final paid prompt. It preserves the submitted hairstyle/reference instructions and does not contain an unwanted default haircut.
+                </label>
+              </>
+            )}
+            <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.45 }}>
+              Paid Replicate generation stays blocked until this preview is approved.
+            </div>
+          </div>
+
           {/* Generate Button */}
           <button
             onClick={handleGenerate}
-            disabled={generating || !prompt.trim()}
+            disabled={generating || !prompt.trim() || !promptPreviewApproved}
             style={{
               width: "100%",
               padding: "16px 0",
               borderRadius: 12,
               border: "none",
-              background: generating
+              background: generating || !promptPreviewApproved
                 ? SURFACE2
                 : `linear-gradient(135deg, ${CYAN}, #0099BB)`,
-              color: generating ? MUTED : "#000",
+              color: generating || !promptPreviewApproved ? MUTED : "#000",
               fontSize: 15,
               fontWeight: 800,
               letterSpacing: "0.08em",
-              cursor: generating ? "not-allowed" : "pointer",
+              cursor: generating || !promptPreviewApproved ? "not-allowed" : "pointer",
               transition: "all 0.2s",
               marginTop: "auto",
             }}
           >
-            {generating ? "⏳ GENERATING..." : "⚡ GENERATE"}
+            {generating ? "GENERATING..." : promptPreviewApproved ? "GENERATE PAID CLONE" : "REVIEW PROMPT BEFORE PAID GENERATION"}
           </button>
         </div>
 
