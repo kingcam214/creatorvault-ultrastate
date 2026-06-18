@@ -36,14 +36,20 @@ const STORAGE_DIR = process.env.STORAGE_DIR || "/root/creatorvault/storage";
 const AUDIO_DIR = path.join(STORAGE_DIR, "audio", "clone");
 const VIDEO_DIR = path.join(STORAGE_DIR, "videos", "clone");
 const PUBLIC_VIDEO_DIR = "/root/creatorvault/dist/public/videos/clone";
+const PUBLIC_AUDIO_DIR = "/root/creatorvault/dist/public/storage/audio/clone";
+
+type CloneAudioRender = {
+  duration: number;
+  provider: "elevenlabs" | "replicate-kokoro" | "forge" | "elevenlabs-direct";
+};
 
 function ensureDirs() {
-  [AUDIO_DIR, VIDEO_DIR, PUBLIC_VIDEO_DIR].forEach(d => {
+  [AUDIO_DIR, VIDEO_DIR, PUBLIC_VIDEO_DIR, PUBLIC_AUDIO_DIR].forEach(d => {
     if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
   });
 }
 
-async function generateElevenLabsAudio(text: string, outputPath: string): Promise<number> {
+async function generateElevenLabsAudio(text: string, outputPath: string): Promise<CloneAudioRender> {
   try {
     const result = await generateSpeech(text, {
       voice: "kingcam",
@@ -59,7 +65,10 @@ async function generateElevenLabsAudio(text: string, outputPath: string): Promis
     }
     const buf = Buffer.from(await audioResponse.arrayBuffer());
     fs.writeFileSync(outputPath, buf);
-    return result.duration || Math.ceil(buf.length / 16000);
+    return {
+      duration: result.duration || Math.ceil(buf.length / 16000),
+      provider: result.provider,
+    };
   } catch (err) {
     console.error("[CloneEmpire] hardened TTS path failed; attempting direct ElevenLabs final fallback:", err);
   }
@@ -79,7 +88,10 @@ async function generateElevenLabsAudio(text: string, outputPath: string): Promis
   if (!res.ok) throw new Error(`ElevenLabs error: ${await res.text()}`);
   const buf = Buffer.from(await res.arrayBuffer());
   fs.writeFileSync(outputPath, buf);
-  return Math.ceil(buf.length / 16000);
+  return {
+    duration: Math.ceil(buf.length / 16000),
+    provider: "elevenlabs-direct",
+  };
 }
 
 const CLONE_IMAGE_NEGATIVE_PROMPT = "extra fingers, fused fingers, missing fingers, deformed hands, warped face, duplicate face, distorted eyes, bad anatomy, mutated limbs, text artifacts, watermark, logo, blurry, low resolution, plastic skin, uncanny valley, over-smoothed face, ai artifacts";
@@ -222,12 +234,13 @@ export const cloneEmpireRouter = router({
 
     (async () => {
       try {
-        const duration = await generateElevenLabsAudio(input.script, audioPath);
+        const audioRender = await generateElevenLabsAudio(input.script, audioPath);
         await buildVideoFromAudio(audioPath, videoPath, input.title || "KingCam Clone", input.style);
         fs.copyFileSync(videoPath, publicPath);
+        fs.copyFileSync(audioPath, path.join(PUBLIC_AUDIO_DIR, `${videoId}.mp3`));
         const db2 = await getDb();
-        await db2.execute("UPDATE kingcam_clone_videos SET render_status = 'ready', video_url = ?, audio_url = ?, duration_seconds = ?, updated_at = NOW() WHERE id = ?",
-          [`/videos/clone/${videoId}.mp4`, `/storage/audio/clone/${videoId}.mp3`, duration, videoId]);
+        await db2.execute("UPDATE kingcam_clone_videos SET render_status = 'ready', video_url = ?, audio_url = ?, duration_seconds = ?, render_provider = ?, updated_at = NOW() WHERE id = ?",
+          [`/videos/clone/${videoId}.mp4`, `/storage/audio/clone/${videoId}.mp3`, audioRender.duration, `${audioRender.provider}_ffmpeg`, videoId]);
         db2.end();
       } catch (err: any) {
         const db2 = await getDb();
@@ -262,12 +275,13 @@ export const cloneEmpireRouter = router({
 
     (async () => {
       try {
-        const duration = await generateElevenLabsAudio(input.script, audioPath);
+        const audioRender = await generateElevenLabsAudio(input.script, audioPath);
         await buildVideoFromAudio(audioPath, videoPath, input.title || "KingCam", input.style);
         fs.copyFileSync(videoPath, publicPath);
+        fs.copyFileSync(audioPath, path.join(PUBLIC_AUDIO_DIR, `${videoId}.mp3`));
         const db2 = await getDb();
-        await db2.execute("UPDATE kingcam_clone_videos SET render_status = 'ready', video_url = ?, audio_url = ?, duration_seconds = ?, updated_at = NOW() WHERE id = ?",
-          [`/videos/clone/${videoId}.mp4`, `/storage/audio/clone/${videoId}.mp3`, duration, videoId]);
+        await db2.execute("UPDATE kingcam_clone_videos SET render_status = 'ready', video_url = ?, audio_url = ?, duration_seconds = ?, render_provider = ?, updated_at = NOW() WHERE id = ?",
+          [`/videos/clone/${videoId}.mp4`, `/storage/audio/clone/${videoId}.mp3`, audioRender.duration, `${audioRender.provider}_ffmpeg`, videoId]);
         db2.end();
       } catch (err: any) {
         const db2 = await getDb();
