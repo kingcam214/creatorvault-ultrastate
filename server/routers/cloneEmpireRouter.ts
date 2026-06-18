@@ -11,11 +11,7 @@ import OpenAI from "openai";
 import crypto from "crypto";
 import path from "path";
 import fs from "fs";
-import { exec } from "child_process";
-import { promisify } from "util";
 import { generateSpeech } from "../_core/tts.js";
-
-const execAsync = promisify(exec);
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 async function getDb() {
@@ -105,20 +101,35 @@ function buildCloneImagePrompt(prompt: string, style: string): string {
   ].join(", ");
 }
 
-async function buildVideoFromAudio(audioPath: string, videoPath: string, title: string, style: string): Promise<void> {
-  const bgColor = style === "studio" ? "0x0a0a0a" : style === "street" ? "0x1a0a00" : "0x050510";
-  const accentHex = style === "studio" ? "00D9FF" : style === "street" ? "FF6B00" : "C9A84C";
-  const safeTitle = title.replace(/['"\\:]/g, "").substring(0, 45);
-  const fontFile = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
-  const cmd = `ffmpeg -y \
-    -f lavfi -i "color=c=${bgColor}:size=1080x1920:rate=30" \
-    -i "${audioPath}" \
-    -filter_complex "[0:v]drawtext=text='KINGCAM':fontcolor=white:fontsize=42:x=(w-text_w)/2:y=h*0.08:fontfile=${fontFile}:alpha=0.8,drawtext=text='${safeTitle}':fontcolor=0x${accentHex}:fontsize=48:x=(w-text_w)/2:y=h*0.15:fontfile=${fontFile}:shadowcolor=black:shadowx=2:shadowy=2[vout]" \
-    -map "[vout]" -map 1:a \
-    -c:v libx264 -preset fast -crf 23 \
-    -c:a aac -b:a 128k \
-    -shortest "${videoPath}"`;
-  await execAsync(cmd);
+async function getCloneVideo(imageUrl: string): Promise<string> {
+  const res = await fetch('https://api.pollo.ai/v1/generate', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.POLLO_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: process.env.POLLO_KLING_MODEL_ID,
+      image_url: imageUrl,
+      prompt: 'slow cinematic camera push, dramatic luxury lighting, KingCam presence',
+      duration: 5,
+      aspect_ratio: '9:16'
+    })
+  });
+  const job = await res.json();
+  const jobId = job.id || job.job_id || job.task_id;
+  for (let i = 0; i < 60; i++) {
+    await new Promise(r => setTimeout(r, 5000));
+    const poll = await fetch(`https://api.pollo.ai/v1/jobs/${jobId}`, {
+      headers: { 'Authorization': `Bearer ${process.env.POLLO_API_KEY}` }
+    });
+    const result = await poll.json();
+    if (result.status === 'completed' || result.status === 'succeeded') {
+      return result.video_url || result.output?.url || result.url;
+    }
+    if (result.status === 'failed') throw new Error(`Pollo: ${result.error}`);
+  }
+  throw new Error('Pollo timeout');
 }
 
 export const cloneEmpireRouter = router({
@@ -223,24 +234,23 @@ export const cloneEmpireRouter = router({
     const db = await getDb();
     try {
       await db.execute(
-        "INSERT INTO kingcam_clone_videos (id, user_id, context, title, script, style, render_status, render_provider, created_at) VALUES (?, ?, 'clone_empire', ?, ?, ?, 'rendering', 'elevenlabs_ffmpeg', NOW())",
+        "INSERT INTO kingcam_clone_videos (id, user_id, context, title, script, style, render_status, render_provider, created_at) VALUES (?, ?, 'clone_empire', ?, ?, ?, 'rendering', 'pollo', NOW())",
         [videoId, ctx.user.id, input.title || `Clone Video ${new Date().toLocaleDateString()}`, input.script, input.style]
       );
     } finally { db.end(); }
 
     const audioPath = path.join(AUDIO_DIR, `${videoId}.mp3`);
-    const videoPath = path.join(VIDEO_DIR, `${videoId}.mp4`);
-    const publicPath = path.join(PUBLIC_VIDEO_DIR, `${videoId}.mp4`);
 
     (async () => {
       try {
+        const imageUrl = input.background || process.env.KINGCAM_CLONE_IMAGE_URL || process.env.CLONE_VIDEO_IMAGE_URL || "";
+        if (!imageUrl) throw new Error("Clone video image URL is required for Pollo generation");
         const audioRender = await generateElevenLabsAudio(input.script, audioPath);
-        await buildVideoFromAudio(audioPath, videoPath, input.title || "KingCam Clone", input.style);
-        fs.copyFileSync(videoPath, publicPath);
+        const polloVideoUrl = await getCloneVideo(imageUrl);
         fs.copyFileSync(audioPath, path.join(PUBLIC_AUDIO_DIR, `${videoId}.mp3`));
         const db2 = await getDb();
         await db2.execute("UPDATE kingcam_clone_videos SET render_status = 'ready', video_url = ?, audio_url = ?, duration_seconds = ?, render_provider = ?, updated_at = NOW() WHERE id = ?",
-          [`/videos/clone/${videoId}.mp4`, `/storage/audio/clone/${videoId}.mp3`, audioRender.duration, `${audioRender.provider}_ffmpeg`, videoId]);
+          [polloVideoUrl, `/storage/audio/clone/${videoId}.mp3`, audioRender.duration, `${audioRender.provider}_pollo`, videoId]);
         db2.end();
       } catch (err: any) {
         const db2 = await getDb();
@@ -264,24 +274,23 @@ export const cloneEmpireRouter = router({
     const db = await getDb();
     try {
       await db.execute(
-        "INSERT INTO kingcam_clone_videos (id, user_id, context, title, script, style, render_status, render_provider, created_at) VALUES (?, ?, 'clone_empire', ?, ?, ?, 'rendering', 'elevenlabs_ffmpeg', NOW())",
+        "INSERT INTO kingcam_clone_videos (id, user_id, context, title, script, style, render_status, render_provider, created_at) VALUES (?, ?, 'clone_empire', ?, ?, ?, 'rendering', 'pollo', NOW())",
         [videoId, ctx.user.id, input.title || `Full Body ${new Date().toLocaleDateString()}`, input.script, input.style]
       );
     } finally { db.end(); }
 
     const audioPath = path.join(AUDIO_DIR, `${videoId}.mp3`);
-    const videoPath = path.join(VIDEO_DIR, `${videoId}.mp4`);
-    const publicPath = path.join(PUBLIC_VIDEO_DIR, `${videoId}.mp4`);
 
     (async () => {
       try {
+        const imageUrl = process.env.KINGCAM_CLONE_IMAGE_URL || process.env.CLONE_VIDEO_IMAGE_URL || "";
+        if (!imageUrl) throw new Error("Clone video image URL is required for Pollo generation");
         const audioRender = await generateElevenLabsAudio(input.script, audioPath);
-        await buildVideoFromAudio(audioPath, videoPath, input.title || "KingCam", input.style);
-        fs.copyFileSync(videoPath, publicPath);
+        const polloVideoUrl = await getCloneVideo(imageUrl);
         fs.copyFileSync(audioPath, path.join(PUBLIC_AUDIO_DIR, `${videoId}.mp3`));
         const db2 = await getDb();
         await db2.execute("UPDATE kingcam_clone_videos SET render_status = 'ready', video_url = ?, audio_url = ?, duration_seconds = ?, render_provider = ?, updated_at = NOW() WHERE id = ?",
-          [`/videos/clone/${videoId}.mp4`, `/storage/audio/clone/${videoId}.mp3`, audioRender.duration, `${audioRender.provider}_ffmpeg`, videoId]);
+          [polloVideoUrl, `/storage/audio/clone/${videoId}.mp3`, audioRender.duration, `${audioRender.provider}_pollo`, videoId]);
         db2.end();
       } catch (err: any) {
         const db2 = await getDb();
