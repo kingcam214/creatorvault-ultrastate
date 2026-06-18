@@ -1,6 +1,1 @@
-{
-  "commit": "4fe680a7366daa46192e0fc02fa4218da7a84f83",
-  "short": "4fe680a7 fix: harden live clone factory endpoints",
-  "deployedAt": "2026-06-18T18:37:51Z",
-  "source": "local-validated-artifact-deploy"
-}
+{"commit":"103ff6ef958a6473d1e6122a99ca29d8120603d9","deployed_at":"2026-06-18T18:51:56Z","source":"github-main"}
