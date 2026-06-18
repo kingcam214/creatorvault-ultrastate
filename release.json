@@ -1,6 +1,6 @@
 {
-  "commit": "e3495225507902148cbaabbbbf24d27e7e6f3683",
-  "short": "e349522 fix: harden content factory voice and visuals",
-  "deployedAt": "2026-06-18T18:30:14+00:00",
-  "source": "manual-local-artifact-deploy"
+  "commit": "4fe680a7366daa46192e0fc02fa4218da7a84f83",
+  "short": "4fe680a7 fix: harden live clone factory endpoints",
+  "deployedAt": "2026-06-18T18:37:51Z",
+  "source": "local-validated-artifact-deploy"
 }
