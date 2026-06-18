@@ -50,78 +50,29 @@ Make careful, surgical improvements to the real CreatorVault codebase without br
 - If fixing build/server issues, document exactly how static assets are resolved in production.
 - Be careful with ESM/CJS boundaries, path resolution, and Vite production serving.
 
-## VPS SSH Access (PERMANENT RULE — NON-NEGOTIABLE)
+## Production Access Rule (NO PERMANENT GITHUB SSH KEY)
 
-**NEVER use password auth. NEVER use sshpass. SSH key ONLY. Always.**
+**Do not require or restore `CREATORVAULT_VPS_SSH_KEY` as a GitHub Actions secret.** The production deployment path is now a server-side workflow: GitHub checks out code on a self-hosted runner that lives on the production VPS, builds the release there, syncs it into `/root/creatorvault`, and reloads PM2 locally. This removes the old pattern where GitHub stored a private VPS key and pushed files over SSH/SCP.
 
-### VPS Credentials
+### VPS Coordinates
 ```
 Host:     134.199.202.69
 User:     root
 Provider: DigitalOcean ATL1
 App dir:  /root/creatorvault
 PM2 app:  creatorvault
+Runner:   self-hosted labels linux, creatorvault-production
 ```
 
-### Sandbox SSH Key (already in VPS authorized_keys — DO NOT REGENERATE)
-```
-Private:  /home/ubuntu/.ssh/creatorvault_deploy
-Public:   ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHfQt5ZrDAux08/cSHhLvWq1LVTy+Ta7V/SuvSiZPSy0 manus-sandbox-deploy
-```
+### Production Deploy Truth
+- Deployments should run from GitHub Actions on the production server itself.
+- The workflow file is `.github/workflows/deploy.yml`.
+- The workflow must not use `appleboy/ssh-action`, `appleboy/scp-action`, or `CREATORVAULT_VPS_SSH_KEY`.
+- If the workflow is queued or skipped, fix the self-hosted runner registration on the VPS instead of adding a permanent private key to GitHub.
+- Keep `.env`, `uploads`, `logs`, `tmp`, and runtime secrets on the VPS only.
 
-### FIRST COMMAND every session — run before ANY work:
-```bash
-ssh -i /home/ubuntu/.ssh/creatorvault_deploy -o StrictHostKeyChecking=no root@134.199.202.69 "echo SSH_OK && pm2 list | grep creatorvault"
-```
-Expected: `SSH_OK` + `creatorvault | online`
-
-### If sandbox was wiped and key is gone (2-minute fix):
-```bash
-# 1. Regenerate key
-ssh-keygen -t ed25519 -f /home/ubuntu/.ssh/creatorvault_deploy -N ""
-
-# 2. Add to VPS via DigitalOcean web console (login: GitHub → kingcam214)
-#    Open: https://cloud.digitalocean.com/droplets/545144175/terminal/ui/?os_user=root
-#    Run in console:
-echo "$(cat /home/ubuntu/.ssh/creatorvault_deploy.pub)" >> /root/.ssh/authorized_keys
-
-# 3. Test
-ssh -i /home/ubuntu/.ssh/creatorvault_deploy -o StrictHostKeyChecking=no root@134.199.202.69 "echo SSH_OK"
-```
-
-### NEVER run `npm run build` on the VPS — it OOMs (2GB RAM, Vite needs 1.7GB)
-### Build on sandbox or use esbuild for server-only changes:
-```bash
-# Server-only rebuild on VPS:
-ssh -i /home/ubuntu/.ssh/creatorvault_deploy -o StrictHostKeyChecking=no root@134.199.202.69 \
-  "cd /root/creatorvault && npx esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && pm2 restart creatorvault && echo DEPLOYED"
-```
-
----
-
-## GitHub Auth (PERMANENT RULE — NON-NEGOTIABLE)
-
-**NEVER use HTTPS token (`gh auth`) for git push. Tokens expire and cause multi-day blockers.**
-
-### Always push via SSH deploy key:
-```bash
-GIT_SSH_COMMAND="ssh -i /home/ubuntu/.ssh/creatorvault_deploy -o StrictHostKeyChecking=no" git push origin main
-```
-
-### Setup (already done — do NOT redo unless sandbox is wiped):
-- Deploy key private key: `/home/ubuntu/.ssh/creatorvault_deploy`
-- Deploy key added to repo: `github.com/kingcam214/creatorvault-ultrastate → Settings → Deploy keys → manus-sandbox-deploy`
-- Git remote set to SSH: `git remote set-url origin git@github.com:kingcam214/creatorvault-ultrastate.git`
-- `core.sshCommand` set in `.git/config` — SSH is now the default for this repo
-
-### If sandbox is wiped and key is gone:
-1. Generate new key: `ssh-keygen -t ed25519 -f ~/.ssh/creatorvault_deploy -N ""`
-2. Add public key to GitHub: `gh api repos/kingcam214/creatorvault-ultrastate/keys --method POST --field title="manus-sandbox-deploy" --field key="$(cat ~/.ssh/creatorvault_deploy.pub)" --field read_only=false`
-3. Test: `ssh -i ~/.ssh/creatorvault_deploy -T git@github.com`
-4. Set remote: `git remote set-url origin git@github.com:kingcam214/creatorvault-ultrastate.git`
-5. Set config: `git config core.sshCommand "ssh -i ~/.ssh/creatorvault_deploy -o StrictHostKeyChecking=no"`
-
-**This takes 2 minutes. The HTTPS token path wastes days. SSH only, always.**
+### Git Push Auth
+Use the already configured GitHub CLI/session for repository operations in this environment. Do not introduce a new permanent VPS private key just to push repository changes.
 
 ---
 

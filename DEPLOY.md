@@ -1,4 +1,4 @@
-# CreatorVault VPS Deployment Guide
+# CreatorVault Production Deployment
 
 This guide covers production deployment of `kingcam214/creatorvault-ultrastate` to the Ubuntu VPS behind Nginx + PM2.
 
@@ -6,86 +6,79 @@ Live URL: `https://creatorvault.live`
 
 ---
 
+## Deployment principle
+
+CreatorVault no longer requires a permanent private VPS key stored in GitHub Actions. The production deployment path is **server-side**: a GitHub self-hosted runner lives on the VPS, checks out the repository from GitHub, builds the release locally on the server, syncs the built release into `/root/creatorvault`, and reloads PM2 locally.
+
+This design removes the old `CREATORVAULT_VPS_SSH_KEY` blocker entirely. If deployment does not start, fix the VPS runner registration or runner service; do **not** add a private SSH key back into GitHub secrets.
+
+| Environment | Branch | Workflow | Runner label | App directory | PM2 app |
+|---|---|---|---|---|---|
+| Production | `main` | `.github/workflows/deploy.yml` | `creatorvault-production` | `/root/creatorvault` | `creatorvault` |
+| Preview | `work` | `.github/workflows/preview-deploy.yml` | `creatorvault-preview` | `/root/creatorvault-preview` | `preview` |
+
+---
+
 ## Pre-deployment checklist
 
-- [ ] You are on the VPS and inside the app directory (example: `/var/www/creatorvault`)
-- [ ] Repo remote is correct: `origin -> kingcam214/creatorvault-ultrastate`
-- [ ] Node.js and pnpm are installed (`node -v`, `pnpm -v`)
-- [ ] PM2 is installed (`pm2 -v`)
-- [ ] `.env` / production secrets are present and valid
-- [ ] Nginx reverse proxy is running and points to the app process
-- [ ] PM2 process exists and **watch mode is false**
-- [ ] Working tree is clean (`git status`)
-- [ ] You know the PM2 process name (example: `creatorvault-ultrastate`)
+- [ ] The GitHub self-hosted runner is online on the VPS.
+- [ ] The production runner has labels `self-hosted`, `linux`, and `creatorvault-production`.
+- [ ] Node.js and pnpm are installed for the runner user.
+- [ ] PM2 is installed for the runner user.
+- [ ] `/root/creatorvault/.env` exists and contains production secrets.
+- [ ] Nginx reverse proxy is running and points to the app process.
+- [ ] PM2 process name is `creatorvault`.
+- [ ] PM2 watch mode is disabled.
 
 ---
 
-## One-time setup (on VPS)
+## Standard deployment
+
+### 1) Push to `main`
 
 ```bash
-# clone if needed
-git clone git@github.com:kingcam214/creatorvault-ultrastate.git
-cd creatorvault-ultrastate
-
-# make deploy script executable
-chmod +x deploy.sh
+git push origin main
 ```
+
+GitHub Actions will schedule the `Deploy to CreatorVault VPS` workflow on the production VPS runner. The workflow builds the release, syncs it into `/root/creatorvault`, installs runtime dependencies, and runs:
+
+```bash
+./deploy_work_to_prod.sh
+```
+
+### 2) Manual dispatch
+
+If a commit is already pushed and needs re-running, dispatch `.github/workflows/deploy.yml` from GitHub Actions. This still does not require a GitHub-stored private VPS key.
 
 ---
 
-## Standard deployment (recommended)
+## What the workflow does
 
-### 1) Deploy with script
-
-```bash
-cd /path/to/creatorvault-ultrastate
-PM2_APP_NAME=creatorvault-ultrastate ./deploy.sh
-```
-
-Optional environment flags:
-
-- `BRANCH=main` (default `main`)
-- `REMOTE=origin` (default `origin`)
-- `HEALTHCHECK_URL=https://creatorvault.live` (default value)
-- `RUN_TESTS=true` (default `true`; set `false` only for emergency hotfixes)
-
-### 2) What the script does
-
-1. Validates required tools (`git`, `pnpm`, `pm2`, `node`, `curl`)
-2. Ensures clean git working tree
-3. Stores current commit for rollback
-4. Pulls latest code using `git pull --ff-only`
-5. Runs `pnpm install`
-6. Runs `pnpm build`
-7. Runs `pnpm test` (if `RUN_TESTS=true`)
-8. Runs **`pm2 reload`** (never restart)
-9. Verifies PM2 watch mode is not enabled
-10. Runs health check against `https://creatorvault.live`
-
-If any step after pull fails, it automatically rolls back to the previous commit and reloads PM2.
+1. Checks out the repository on the production VPS runner.
+2. Generates `client/public/release.json` for the pushed commit.
+3. Runs `pnpm install --frozen-lockfile`.
+4. Runs `pnpm build`.
+5. Verifies `dist/index.js`, `dist/public/index.html`, and `dist/public/release.json` exist.
+6. Syncs the release into `/root/creatorvault` with `rsync`, excluding `.git`, `node_modules`, `.env`, `logs`, `uploads`, and `tmp`.
+7. Installs production runtime dependencies in `/root/creatorvault`.
+8. Runs `deploy_work_to_prod.sh` to reload PM2 and run the local health probe.
+9. Verifies the release stamp matches the GitHub commit SHA.
 
 ---
 
 ## Manual rollback instructions
 
-Use this if you need to rollback without re-running deployment:
+Use this only from the VPS if a release has to be rolled back without GitHub Actions.
 
 ```bash
-cd /path/to/creatorvault-ultrastate
+cd /root/creatorvault
 
-# find previous known-good commit
 git log --oneline -n 20
 
-# rollback code
 git reset --hard <KNOWN_GOOD_COMMIT>
-
-# reinstall/build
-pnpm install
+pnpm install --frozen-lockfile
 pnpm build
-pnpm test
-
-# reload process (NOT restart)
-pm2 reload creatorvault-ultrastate --update-env
+CREATORVAULT_PM2_APP=creatorvault ./deploy_work_to_prod.sh
 ```
 
 ---
@@ -95,32 +88,27 @@ pm2 reload creatorvault-ultrastate --update-env
 After deployment, verify all of the following:
 
 ```bash
-# App responds
 curl -I https://creatorvault.live
-
-# Optional: full response check
-curl -sS https://creatorvault.live > /tmp/creatorvault-home.html
-
-# PM2 process is online
+curl -fsS https://creatorvault.live/api/release
 pm2 status
-
-# PM2 watch must be disabled
-pm2 show creatorvault-ultrastate | grep -i watch
-
-# Check recent runtime logs
-pm2 logs creatorvault-ultrastate --lines 100
+pm2 show creatorvault | grep -i watch
+pm2 logs creatorvault --lines 100
 ```
 
 Also verify from browser:
 
-- Homepage loads with no white screen
-- Auth-required routes redirect correctly
-- Key pages render (`CloneEmpire`, `VaultLive`, dashboard)
+- Homepage loads with no white screen.
+- Auth-required routes redirect correctly.
+- Clone Command shows the no-credit final prompt preview gate before any paid generation.
+- Key pages render: CloneEmpire, VaultLive, and dashboard.
 
 ---
 
 ## Notes
 
+- Do not restore `CREATORVAULT_VPS_SSH_KEY` as a required GitHub secret.
+- Do not use SSH/SCP-based GitHub Actions to deploy production.
+- Keep `.env` and runtime files on the VPS only.
 - Use **`pm2 reload`** in production to avoid hard restarts.
-- Keep PM2 `watch` mode **disabled** in production to prevent reload loops.
+- Keep PM2 watch mode **disabled** in production to prevent reload loops.
 - Prefer deploying from `main` only after GitHub push is confirmed.

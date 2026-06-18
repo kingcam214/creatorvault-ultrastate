@@ -1,54 +1,35 @@
-#!/bin/bash
-# CreatorVault Deploy Script — PERMANENT FIX
-# Uses ~/.ssh/config alias "creatorvault-vps" — never prompts, never hangs
-# Usage: ./deploy.sh [server|full]
-#   server = rebuild server bundle only (fast, ~30s)
-#   full   = SCP ALL frontend assets + server bundle (~2-3 min)
-#
-# SSH config at ~/.ssh/config:
-#   Host creatorvault-vps -> 134.199.202.69, key=creatorvault_deploy, BatchMode=yes
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -e
+# CreatorVault local/server deploy wrapper.
+# This script intentionally does not SSH/SCP anywhere and does not require a GitHub-stored VPS private key.
+# Run it from inside the checked-out app directory on the production VPS or from the self-hosted runner workflow.
 
-VPS="creatorvault-vps"
-APP_DIR="/root/creatorvault"
-SSH="ssh $VPS"
-SCP="scp -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=no -i /home/ubuntu/.ssh/creatorvault_deploy"
+APP_DIR="${CREATORVAULT_APP_DIR:-$(pwd)}"
+APP_NAME="${CREATORVAULT_PM2_APP:-creatorvault}"
+RUN_BUILD="${RUN_BUILD:-true}"
 
-echo "=== CreatorVault Deploy ==="
+log() {
+  printf '[creatorvault-local-deploy] %s\n' "$*"
+}
 
-echo "[1/4] Testing SSH..."
-$SSH "echo SSH_OK && hostname" || {
-  echo "FATAL: SSH failed. Internal deployment access blocker. Do not ask the project owner for VPS credentials, SSH keys, passwords, GitHub secrets, or sync decisions."
-  echo "See ops/DEPLOYMENT_ACCESS_LAW.md."
+fail() {
+  printf '[creatorvault-local-deploy:ERROR] %s\n' "$*" >&2
   exit 1
 }
 
-MODE=${1:-server}
+cd "$APP_DIR"
+[ -f package.json ] || fail "package.json missing in ${APP_DIR}"
 
-if [ "$MODE" = "server" ]; then
-  echo "[2/4] Rebuilding server bundle on VPS..."
-  $SSH "cd $APP_DIR && npx esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist 2>&1 | tail -5"
+command -v pnpm >/dev/null 2>&1 || fail "pnpm is required"
+command -v node >/dev/null 2>&1 || fail "node is required"
 
-elif [ "$MODE" = "full" ]; then
-  echo "[2/4] Syncing frontend assets to VPS..."
-  $SCP -r dist/public/assets/ root@134.199.202.69:$APP_DIR/dist/public/
-  $SCP dist/public/index.html root@134.199.202.69:$APP_DIR/dist/public/
-  echo "  Frontend assets synced."
+log "deploying locally from ${APP_DIR} with PM2 app ${APP_NAME}"
+pnpm install --frozen-lockfile
 
-  echo "[3/4] Rebuilding server bundle on VPS..."
-  $SSH "cd $APP_DIR && npx esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist 2>&1 | tail -5"
+if [ "$RUN_BUILD" = "true" ]; then
+  pnpm build
 fi
 
-echo "[4/4] Restarting PM2..."
-$SSH "pm2 restart creatorvault && sleep 2 && pm2 list | grep creatorvault"
-
-echo ""
-echo "=== Verifying live site... ==="
-HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://creatorvault.live/)
-echo "HTTP status: $HTTP"
-if [ "$HTTP" = "200" ]; then
-  echo "LIVE: https://creatorvault.live — OK"
-else
-  echo "WARNING: Got HTTP $HTTP — debug: ssh creatorvault-vps pm2 logs creatorvault --lines 20"
-fi
+chmod +x ./deploy_work_to_prod.sh
+CREATORVAULT_PM2_APP="$APP_NAME" ./deploy_work_to_prod.sh
