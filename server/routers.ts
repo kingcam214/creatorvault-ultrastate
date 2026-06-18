@@ -952,6 +952,7 @@ export const appRouter = router({
   kingcamBrain: kingcamBrainRouter,
   cloneLab: cloneLabRouter,
   cloneCommand: cloneCommandRouter,
+  clone: cloneCommandRouter,
   cloneTrainingLab: cloneTrainingLabRouter,
   godMode: godModeRouter,
   chuuchMembers: chuuchMembersRouter,
