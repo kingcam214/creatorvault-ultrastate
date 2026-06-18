@@ -1,8 +1,10 @@
 /**
  * 🦁 KINGCAM SCRIPT GENERATOR
- * 
+ *
  * Generates video scripts in KingCam voice and personality.
- * Uses RealGPT system prompt for authentic KingCam tone.
+ * Uses RealGPT when available, then falls back to a deterministic
+ * operator-grade script packet so the content factory never dies at
+ * the first step because a single LLM provider is quota-limited.
  */
 
 import { invokeRealGPT } from "../_core/llm.js";
@@ -29,24 +31,55 @@ export interface ScriptGenerationOptions {
   tone?: "educational" | "promotional" | "motivational";
 }
 
+interface RawScriptSegment {
+  text?: unknown;
+  visualDescription?: unknown;
+  duration?: unknown;
+  sceneIndex?: unknown;
+}
+
+interface RawScriptResponse {
+  title?: unknown;
+  segments?: RawScriptSegment[];
+}
+
 /**
- * Generate complete video script using KingCam personality
+ * Generate complete video script using KingCam personality.
+ *
+ * The primary path remains RealGPT. The fallback is intentionally not a
+ * placeholder: it creates a complete, usable, scene-based production script
+ * from the same topic/options contract so downstream voice, image, video,
+ * and persistence steps can continue during quota/rate-limit incidents.
  */
 export async function generateKingCamScript(
   options: ScriptGenerationOptions
 ): Promise<VideoScript> {
+  const normalized = normalizeOptions(options);
+
+  try {
+    return await generateKingCamScriptWithRealGPT(normalized);
+  } catch (error) {
+    console.warn(
+      "[KingCamScriptGenerator] RealGPT script generation failed; using production fallback script.",
+      redactScriptError(error)
+    );
+    return generateFallbackKingCamScript(normalized, error);
+  }
+}
+
+async function generateKingCamScriptWithRealGPT(
+  options: Required<ScriptGenerationOptions>
+): Promise<VideoScript> {
   const {
     topic,
-    sector = "general",
-    targetDuration = 60,
-    sceneCount = 4,
-    tone = "educational",
+    sector,
+    targetDuration,
+    sceneCount,
+    tone,
   } = options;
 
-  // Get sector-specific context
   const sectorContext = sector !== "general" ? getSectorContext(sector) : "";
 
-  // Build prompt for RealGPT
   const userPrompt = `Create a ${targetDuration}-second video script about: ${topic}
 
 ${sectorContext}
@@ -76,37 +109,159 @@ Return JSON with this structure:
 
   const response = await invokeRealGPT({
     userMessage: userPrompt,
-    mode: "KingCam", // Use KingCam identity mode
+    mode: "KingCam",
   });
 
-  // Parse response
-  const content = response.choices[0].message.content;
-  let responseText = typeof content === "string" ? content : "{}";
-  
-  // Strip markdown code blocks if present
-  responseText = responseText.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-  
-  const scriptData = JSON.parse(responseText);
+  const content = response.choices?.[0]?.message?.content;
+  const responseText = (typeof content === "string" ? content : "{}")
+    .replace(/```json\s*/g, "")
+    .replace(/```\s*/g, "")
+    .trim();
 
-  // Build script segments
-  const segments: ScriptSegment[] = scriptData.segments.map((seg: any) => ({
-    text: seg.text,
-    duration: seg.duration,
-    sceneIndex: seg.sceneIndex,
-  }));
+  const scriptData = JSON.parse(responseText) as RawScriptResponse;
+  return normalizeScriptResponse(scriptData, options);
+}
 
-  // Calculate total duration
-  const totalDuration = segments.reduce((sum, seg) => sum + seg.duration, 0);
-
-  // Combine all text
-  const fullText = segments.map(seg => seg.text).join("\n\n");
+function normalizeOptions(options: ScriptGenerationOptions): Required<ScriptGenerationOptions> {
+  const sceneCount = Math.max(3, Math.min(8, Math.floor(options.sceneCount ?? 4)));
+  const targetDuration = Math.max(30, Math.min(180, Math.floor(options.targetDuration ?? 60)));
 
   return {
-    title: scriptData.title,
+    topic: sanitizeTopic(options.topic),
+    sector: options.sector ?? "general",
+    targetDuration,
+    sceneCount,
+    tone: options.tone ?? "educational",
+  };
+}
+
+function normalizeScriptResponse(
+  scriptData: RawScriptResponse,
+  options: Required<ScriptGenerationOptions>
+): VideoScript {
+  if (!Array.isArray(scriptData.segments) || scriptData.segments.length === 0) {
+    throw new Error("RealGPT returned no script segments");
+  }
+
+  const fallbackDuration = Math.max(8, Math.floor(options.targetDuration / scriptData.segments.length));
+  const segments: ScriptSegment[] = scriptData.segments.map((seg, index) => {
+    const text = typeof seg.text === "string" ? seg.text.trim() : "";
+    if (!text) {
+      throw new Error(`RealGPT returned an empty segment at index ${index}`);
+    }
+
+    const duration = Number(seg.duration);
+    return {
+      text,
+      duration: Number.isFinite(duration) && duration > 0 ? Math.round(duration) : fallbackDuration,
+      sceneIndex: Number.isFinite(Number(seg.sceneIndex)) ? Number(seg.sceneIndex) : index,
+    };
+  });
+
+  const totalDuration = segments.reduce((sum, seg) => sum + seg.duration, 0);
+  const fullText = segments.map((seg) => seg.text).join("\n\n");
+
+  return {
+    title: typeof scriptData.title === "string" && scriptData.title.trim()
+      ? scriptData.title.trim()
+      : buildFallbackTitle(options.topic),
     totalDuration,
     segments,
     fullText,
   };
+}
+
+function generateFallbackKingCamScript(
+  options: Required<ScriptGenerationOptions>,
+  cause?: unknown
+): VideoScript {
+  const { topic, sector, targetDuration, sceneCount, tone } = options;
+  const sceneDuration = Math.max(8, Math.floor(targetDuration / sceneCount));
+  const angle = getSectorAngle(sector);
+  const toneLine = getToneLine(tone);
+  const proofLine = getProofLine(sector);
+  const failureContext = isQuotaLikeError(cause)
+    ? "Primary AI quota was unavailable, so the factory used the resilient KingCam script engine and kept the production line moving."
+    : "Primary AI response was unavailable, so the factory used the resilient KingCam script engine and kept the production line moving.";
+
+  const templates = [
+    `Real talk. ${topic} is not a content idea, it is an execution test. If it cannot turn into a clear offer, a sharp visual, and a paid action, it is noise. Today we cut the noise and turn the concept into a product people can understand in five seconds.`,
+    `Here is the Lion Logic. First, name the buyer. Second, name the pain. Third, show the transformation. ${angle} The viewer should know exactly why this matters before the first scroll impulse hits.`,
+    `Now make it visual. Open on the strongest proof frame, not a lecture. Show the creator, the result, the vault, the unlock, and the next move. ${toneLine} Every line should push the viewer closer to trust, desire, or action.`,
+    `This is where CreatorVault separates itself. The clone does not just talk. It packages the drop, points the buyer to the unlock, and keeps the creator focused on revenue instead of busywork. ${proofLine}`, 
+    `Final move. Put the offer in plain language, give one direct action, and remove every weak word. If they want access, they know where to tap. If they want proof, the content shows it. That is how one phone turns into a content factory.`,
+    `${failureContext} The standard stays the same: useful script, premium visual direction, clear CTA, and a finished asset path that can sell.`
+  ];
+
+  const selected = Array.from({ length: sceneCount }, (_, index) => templates[index] ?? templates[templates.length - 1]);
+  const segments = selected.map((text, index) => ({
+    text,
+    duration: sceneDuration,
+    sceneIndex: index,
+  }));
+
+  const totalDuration = segments.reduce((sum, seg) => sum + seg.duration, 0);
+  const fullText = segments.map((seg) => seg.text).join("\n\n");
+
+  return {
+    title: buildFallbackTitle(topic),
+    totalDuration,
+    segments,
+    fullText,
+  };
+}
+
+function sanitizeTopic(topic: string): string {
+  const clean = String(topic || "CreatorVault revenue drop").replace(/\s+/g, " ").trim();
+  return clean.length > 180 ? `${clean.slice(0, 177)}...` : clean;
+}
+
+function buildFallbackTitle(topic: string): string {
+  const compact = sanitizeTopic(topic).replace(/[.!?]+$/g, "");
+  return compact.length > 72 ? `${compact.slice(0, 69)}...` : compact;
+}
+
+function getSectorAngle(sector: ScriptGenerationOptions["sector"]): string {
+  if (sector === "dominican") {
+    return "For Dominican creators, the edge is speed, trust, and knowing how to turn local attention into global cash flow.";
+  }
+  if (sector === "adult") {
+    return "For adult creators, keep the language business-clean: control the funnel, protect the account, and move serious fans into paid access.";
+  }
+  return "For modern creators, the edge is converting attention into a repeatable asset, not chasing random posts.";
+}
+
+function getToneLine(tone: ScriptGenerationOptions["tone"]): string {
+  if (tone === "promotional") {
+    return "Sell the outcome without sounding desperate.";
+  }
+  if (tone === "motivational") {
+    return "Make the ambition feel immediate, but keep the instruction practical.";
+  }
+  return "Teach it like an operator, not a classroom.";
+}
+
+function getProofLine(sector: ScriptGenerationOptions["sector"]): string {
+  if (sector === "adult") {
+    return "Keep the preview clean, make the paid promise obvious, and move the fan toward controlled access.";
+  }
+  if (sector === "dominican") {
+    return "The message is simple: build once, distribute smart, and let the vault collect while the creator keeps moving.";
+  }
+  return "The message is simple: build the asset, publish the offer, and let the system carry the repeat work.";
+}
+
+function redactScriptError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message
+    .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, "Bearer [redacted]")
+    .replace(/api[_-]?key[=:]\s*[A-Za-z0-9._-]+/gi, "api_key=[redacted]")
+    .slice(0, 600);
+}
+
+function isQuotaLikeError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /quota|rate.?limit|429|insufficient/i.test(message);
 }
 
 /**
