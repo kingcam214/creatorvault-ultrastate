@@ -1,0 +1,263 @@
+# No-private-key workflow replacement patch
+# Generated because the connected GitHub token can push normal repo files but cannot modify .github/workflows without workflow scope.
+# Apply from repo root with: patch -p0 < ops/no-private-key-workflows.patch
+# This patch removes GitHub-stored VPS private-key SSH/SCP deploys and targets self-hosted runners.
+
+--- /creatorvault-ultrastate/.github/workflows/deploy.yml	2026-06-18 13:21:48.308316644 +0000
++++ /creatorvault-ultrastate/.github/workflows/deploy.yml	2026-06-18 13:20:42.770289067 +0000
+@@ -4,35 +4,29 @@
+   push:
+     branches:
+       - main
++  workflow_dispatch:
++
++concurrency:
++  group: creatorvault-production
++  cancel-in-progress: false
+ 
+ jobs:
+   deploy:
+-    runs-on: ubuntu-latest
++    name: Deploy on production server without GitHub SSH key
++    runs-on:
++      - self-hosted
++      - linux
++      - creatorvault-production
++
++    env:
++      CREATORVAULT_APP_DIR: /root/creatorvault
++      CREATORVAULT_PM2_APP: creatorvault
++      NODE_ENV: production
+ 
+     steps:
+       - name: Checkout repo
+         uses: actions/checkout@v4
+ 
+-      - name: Preflight deployment secrets
+-        shell: bash
+-        env:
+-          CREATORVAULT_VPS_HOST: ${{ secrets.CREATORVAULT_VPS_HOST }}
+-          CREATORVAULT_VPS_USER: ${{ secrets.CREATORVAULT_VPS_USER }}
+-          CREATORVAULT_VPS_SSH_KEY: ${{ secrets.CREATORVAULT_VPS_SSH_KEY }}
+-        run: |
+-          set -euo pipefail
+-          missing=0
+-          for name in CREATORVAULT_VPS_HOST CREATORVAULT_VPS_USER CREATORVAULT_VPS_SSH_KEY; do
+-            if [ -z "${!name:-}" ]; then
+-              echo "::error title=Missing deployment secret::$name is not configured for kingcam214/creatorvault-ultrastate."
+-              missing=1
+-            fi
+-          done
+-          if [ "$missing" -ne 0 ]; then
+-            exit 1
+-          fi
+-          echo "Deployment secret preflight passed."
+-
+       - name: Enable pnpm
+         uses: pnpm/action-setup@v4
+         with:
+@@ -44,72 +38,43 @@
+           node-version: 22
+           cache: pnpm
+ 
+-      - name: Install dependencies on runner
+-        run: pnpm install --frozen-lockfile
+-
+       - name: Generate release stamp
++        shell: bash
+         run: |
++          set -euo pipefail
+           mkdir -p client/public
+-          echo "{\"commit\":\"${{ github.sha }}\",\"branch\":\"${{ github.ref_name }}\",\"timestamp\":\"$(date -Iseconds)\",\"environment\":\"production\"}" > client/public/release.json
++          echo "{\"commit\":\"${{ github.sha }}\",\"branch\":\"${{ github.ref_name }}\",\"timestamp\":\"$(date -Iseconds)\",\"environment\":\"production\",\"deployMode\":\"self-hosted-runner-no-github-ssh-key\"}" > client/public/release.json
+ 
+-      - name: Build release on runner
+-        run: pnpm build
+-
+-      - name: Package runner-built release artifact
++      - name: Build release in runner workspace
+         shell: bash
+         run: |
+           set -euo pipefail
++          pnpm install --frozen-lockfile
++          pnpm build
+           test -f dist/index.js
+           test -f dist/public/index.html
+           test -f dist/public/release.json
+-          tar -czf creatorvault-release-${{ github.sha }}.tar.gz dist deploy_work_to_prod.sh package.json pnpm-lock.yaml
+-          sha256sum creatorvault-release-${{ github.sha }}.tar.gz > creatorvault-release-${{ github.sha }}.tar.gz.sha256
+-          ls -lh creatorvault-release-${{ github.sha }}.tar.gz creatorvault-release-${{ github.sha }}.tar.gz.sha256
+ 
+-      - name: Upload release artifact to VPS
+-        uses: appleboy/scp-action@v0.1.7
+-        with:
+-          host: ${{ secrets.CREATORVAULT_VPS_HOST }}
+-          username: ${{ secrets.CREATORVAULT_VPS_USER }}
+-          key: ${{ secrets.CREATORVAULT_VPS_SSH_KEY }}
+-          port: 22
+-          source: "creatorvault-release-${{ github.sha }}.tar.gz,creatorvault-release-${{ github.sha }}.tar.gz.sha256"
+-          target: "/tmp/creatorvault-release-${{ github.sha }}"
+-          overwrite: true
+-
+-      - name: Install runner-built release on VPS and deploy
+-        uses: appleboy/ssh-action@v1.0.3
+-        with:
+-          host: ${{ secrets.CREATORVAULT_VPS_HOST }}
+-          username: ${{ secrets.CREATORVAULT_VPS_USER }}
+-          key: ${{ secrets.CREATORVAULT_VPS_SSH_KEY }}
+-          port: 22
+-          script: |
+-            set -euo pipefail
+-
+-            RELEASE_DIR="/tmp/creatorvault-release-${{ github.sha }}"
+-            RELEASE_TAR="$RELEASE_DIR/creatorvault-release-${{ github.sha }}.tar.gz"
+-            cd "$RELEASE_DIR"
+-            sha256sum -c "creatorvault-release-${{ github.sha }}.tar.gz.sha256"
+-
+-            cd /root/creatorvault
+-            git fetch origin main
+-            git checkout main
+-            git reset --hard origin/main
+-
+-            mkdir -p logs uploads tmp
+-            rm -rf dist
+-            tar -xzf "$RELEASE_TAR" -C /root/creatorvault
+-
+-            if ! command -v pnpm >/dev/null 2>&1; then
+-              npm install -g pnpm@10.4.1
+-            fi
+-            # The bundled server currently imports Vite helper code at runtime, so production cannot prune devDependencies here.
+-            # The build still happens on the runner; this install only restores runtime modules required by dist/index.js.
+-            pnpm install --frozen-lockfile
+-
+-            chmod +x ./deploy_work_to_prod.sh
+-            ./deploy_work_to_prod.sh
++      - name: Sync release into production directory
++        shell: bash
++        run: |
++          set -euo pipefail
++          mkdir -p "$CREATORVAULT_APP_DIR"
++          rsync -a --delete \
++            --exclude='.git' \
++            --exclude='node_modules' \
++            --exclude='.env' \
++            --exclude='logs' \
++            --exclude='uploads' \
++            --exclude='tmp' \
++            "$GITHUB_WORKSPACE"/ "$CREATORVAULT_APP_DIR"/
+ 
+-            node -e "const r=require('fs').readFileSync('dist/public/release.json','utf8'); const parsed=JSON.parse(r); if(parsed.commit !== '${{ github.sha }}') { console.error(r); process.exit(1); } console.log('release-stamp-ok', r);"
+-            pm2 reload creatorvault --update-env || pm2 restart creatorvault --update-env
++      - name: Install runtime dependencies and reload PM2
++        shell: bash
++        working-directory: /root/creatorvault
++        run: |
++          set -euo pipefail
++          pnpm install --frozen-lockfile
++          chmod +x ./deploy_work_to_prod.sh
++          ./deploy_work_to_prod.sh
++          node -e "const r=require('fs').readFileSync('dist/public/release.json','utf8'); const parsed=JSON.parse(r); if(parsed.commit !== '${{ github.sha }}') { console.error(r); process.exit(1); } console.log('release-stamp-ok', r);"
+--- /creatorvault-ultrastate/.github/workflows/preview-deploy.yml	2026-06-18 13:21:48.308316644 +0000
++++ /creatorvault-ultrastate/.github/workflows/preview-deploy.yml	2026-06-18 13:20:42.846289850 +0000
+@@ -4,39 +4,77 @@
+   push:
+     branches:
+       - work
++  workflow_dispatch:
++
++concurrency:
++  group: creatorvault-preview
++  cancel-in-progress: true
+ 
+ jobs:
+   preview-deploy:
+-    runs-on: ubuntu-latest
++    name: Deploy preview on server without GitHub SSH key
++    runs-on:
++      - self-hosted
++      - linux
++      - creatorvault-preview
++
++    env:
++      CREATORVAULT_APP_DIR: /root/creatorvault-preview
++      CREATORVAULT_PM2_APP: preview
++      NODE_ENV: production
+ 
+     steps:
+       - name: Checkout repo
+         uses: actions/checkout@v4
+ 
+-      - name: Generate release stamp
+-        run: |
+-          echo "{\"commit\":\"${{ github.sha }}\",\"branch\":\"${{ github.ref_name }}\",\"timestamp\":\"$(date -Iseconds)\",\"environment\":\"preview\"}" > public/release.json
++      - name: Enable pnpm
++        uses: pnpm/action-setup@v4
++        with:
++          version: 10.4.1
+ 
+-      - name: Sync repo to VPS and deploy
+-        uses: appleboy/ssh-action@v1.0.3
++      - name: Setup Node
++        uses: actions/setup-node@v4
+         with:
+-          host: ${{ secrets.CREATORVAULT_VPS_HOST }}
+-          username: ${{ secrets.CREATORVAULT_VPS_USER }}
+-          key: ${{ secrets.CREATORVAULT_VPS_SSH_KEY }}
+-          port: 22
+-          script: |
+-            set -euo pipefail
+-
+-            cd /root/creatorvault-preview
+-
+-            git fetch origin work
+-            git checkout work
+-            git reset --hard origin/work
++          node-version: 22
++          cache: pnpm
+ 
+-            pnpm install --frozen-lockfile
+-            pnpm build
++      - name: Generate release stamp
++        shell: bash
++        run: |
++          set -euo pipefail
++          mkdir -p client/public
++          echo "{\"commit\":\"${{ github.sha }}\",\"branch\":\"${{ github.ref_name }}\",\"timestamp\":\"$(date -Iseconds)\",\"environment\":\"preview\",\"deployMode\":\"self-hosted-runner-no-github-ssh-key\"}" > client/public/release.json
+ 
+-            chmod +x ./deploy_work_to_prod.sh
+-            ./deploy_work_to_prod.sh
++      - name: Build preview release in runner workspace
++        shell: bash
++        run: |
++          set -euo pipefail
++          pnpm install --frozen-lockfile
++          pnpm build
++          test -f dist/index.js
++          test -f dist/public/index.html
++          test -f dist/public/release.json
+ 
+-            pm2 reload preview || pm2 restart preview
+\ No newline at end of file
++      - name: Sync release into preview directory
++        shell: bash
++        run: |
++          set -euo pipefail
++          mkdir -p "$CREATORVAULT_APP_DIR"
++          rsync -a --delete \
++            --exclude='.git' \
++            --exclude='node_modules' \
++            --exclude='.env' \
++            --exclude='logs' \
++            --exclude='uploads' \
++            --exclude='tmp' \
++            "$GITHUB_WORKSPACE"/ "$CREATORVAULT_APP_DIR"/
++
++      - name: Install runtime dependencies and reload preview PM2 app
++        shell: bash
++        working-directory: /root/creatorvault-preview
++        run: |
++          set -euo pipefail
++          pnpm install --frozen-lockfile
++          chmod +x ./deploy_work_to_prod.sh
++          ./deploy_work_to_prod.sh
++          node -e "const r=require('fs').readFileSync('dist/public/release.json','utf8'); const parsed=JSON.parse(r); if(parsed.commit !== '${{ github.sha }}') { console.error(r); process.exit(1); } console.log('preview-release-stamp-ok', r);"
