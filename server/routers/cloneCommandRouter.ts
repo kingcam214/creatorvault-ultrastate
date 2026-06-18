@@ -424,6 +424,63 @@ export const cloneCommandRouter = router({
     }),
 
   /**
+   * 5a. getCloneHistory — Backward-compatible live Clone Command history alias.
+   */
+  getCloneHistory: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(20),
+        offset: z.number().min(0).default(0),
+      }).default({ limit: 20, offset: 0 }),
+    )
+    .query(async ({ ctx, input }) => {
+      ownerGuard(ctx.user.id);
+
+      const conn = await getDb();
+      try {
+        const safeLimit = Math.max(1, Math.min(100, Math.trunc(input.limit)));
+        const safeOffset = Math.max(0, Math.trunc(input.offset));
+        const rows = extractRows(
+          await conn.execute(
+            `SELECT * FROM kingcam_clone_generations
+             WHERE user_id = ?
+             ORDER BY created_at DESC
+             LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+            [ctx.user.id],
+          ),
+        );
+
+        const countResult = extractRows(
+          await conn.execute(
+            `SELECT COUNT(*) as total FROM kingcam_clone_generations WHERE user_id = ?`,
+            [ctx.user.id],
+          ),
+        );
+        const total = (countResult[0] as any)?.total || 0;
+
+        return {
+          generations: rows.map((r: any) => ({
+            id: r.id,
+            predictionId: r.replicate_prediction_id,
+            prompt: r.prompt,
+            negativePrompt: r.negative_prompt,
+            width: r.width,
+            height: r.height,
+            numOutputs: r.num_outputs,
+            guidanceScale: r.guidance_scale,
+            status: r.status,
+            outputUrls: r.output_urls ? (typeof r.output_urls === string ? JSON.parse(r.output_urls) : r.output_urls) : [],
+            savedToVault: !!r.saved_to_vault,
+            createdAt: r.created_at,
+          })),
+          total,
+        };
+      } finally {
+        await conn.end();
+      }
+    }),
+
+  /**
    * 5. getGenerationHistory — Paginated list of all generations
    */
   getGenerationHistory: protectedProcedure
