@@ -91,9 +91,10 @@ export default function Marketplace() {
               <Sparkles className="w-4 h-4" />
               <span className="text-xs font-black uppercase tracking-[.2em]">CreatorVault Commerce OS</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-black tracking-[-.06em] leading-[.9] max-w-4xl">Premium drops that feel curated, scarce, and ready to buy.</h1>
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-[-.06em] leading-[.92] max-w-4xl">Premium drops that feel curated, scarce, and ready to buy.</h1>
             <p className="mt-5 max-w-2xl text-base md:text-lg leading-8" style={{ color: T.muted }}>Browse creator playbooks, premium templates, digital assets, and operator products presented with clear pricing, strong visuals, and a direct path to purchase.</p>
-            <div className="grid sm:grid-cols-3 gap-3 mt-7 max-w-3xl">
+            <a href="#live-drops" className="mt-5 inline-flex min-h-12 items-center justify-center rounded-2xl px-5 text-sm font-black uppercase tracking-[.14em] transition hover:scale-[1.01]" style={{ background: "linear-gradient(135deg,#00e5ff,#c9a84c)", color: "#050505" }}>See live drops <ArrowRight className="ml-2 h-4 w-4" /></a>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-7 max-w-3xl">
               {[
                 { icon: Boxes, label: "Active inventory", value: `${activeCount}`, color: T.cyan },
                 { icon: BadgeDollarSign, label: "Visible catalog", value: money(catalogValue), color: T.gold },
@@ -155,7 +156,7 @@ export default function Marketplace() {
             <p className="text-sm" style={{ color: T.muted }}>Try another search, category, or sort option.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div id="live-drops" className="grid scroll-mt-24 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredProducts.map((product: any) => {
               const mainImage = product.main_image ?? product.mainImage ?? VERIFIED_MARKETPLACE_MEDIA[String(product.id)] ?? "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg";
               const rawPrice = product.sale_price ?? product.salePrice ?? product.price_amount ?? product.priceAmount ?? 0;
@@ -184,7 +185,7 @@ export default function Marketplace() {
                     <p className="mt-2 text-sm leading-6 line-clamp-2" style={{ color: T.muted }}>{description}</p>
                     <div className="mt-5 flex items-center justify-between">
                       <span className="text-[11px] uppercase tracking-[.18em] font-black" style={{ color: T.faint }}>{product.category ?? "digital"}</span>
-                      <span className="inline-flex items-center gap-1 text-sm font-black" style={{ color: T.cyan }}>View drop <ArrowRight className="w-4 h-4" /></span>
+                      <span className="inline-flex items-center gap-1 text-sm font-black" style={{ color: T.cyan }}>View / buy drop <ArrowRight className="w-4 h-4" /></span>
                     </div>
                   </div>
                 </article>

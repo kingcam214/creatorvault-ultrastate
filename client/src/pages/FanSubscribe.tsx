@@ -9,21 +9,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
 export default function FanSubscribe() {
-  const [, params] = useRoute<{ tierId: string }>("/subscribe/:tierId");
+  const [, params] = useRoute<{ creatorId: string }>("/subscribe/:creatorId");
   const { user } = useAuth();
   const { toast } = useToast();
-  const tierId = params?.tierId ? parseInt(params.tierId) : 0;
+  const routeId = params?.creatorId ? parseInt(params.creatorId) : 0;
 
   const [step, setStep] = useState<"select" | "instructions" | "confirm">("select");
   const [paymentMethod, setPaymentMethod] = useState<"cashapp" | "zelle" | "applepay" | "venmo" | "paypal" | "">("");
   const [confirmationCode, setConfirmationCode] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Get tier details
-  const { data: tier, isLoading } = trpc.subscriptions.getTier.useQuery(
-    { tierId },
-    { enabled: tierId > 0 }
+  // Route supports the public /subscribe/:creatorId path and safely falls back when an older tier link is shared.
+  const { data: creatorTiers, isLoading: tiersLoading } = trpc.subscriptions.getCreatorTiers.useQuery(
+    { creatorId: routeId },
+    { enabled: routeId > 0 }
   );
+  const { data: tierById, isLoading: tierLoading } = trpc.subscriptions.getTier.useQuery(
+    { tierId: routeId },
+    { enabled: routeId > 0 }
+  );
+  const tier = creatorTiers?.[0] ?? tierById ?? null;
+  const isLoading = tiersLoading || tierLoading;
 
   const createSubscription = trpc.subscriptions.createSubscription.useMutation({
     onSuccess: () => {
@@ -82,7 +88,6 @@ export default function FanSubscribe() {
   const creatorReceives = (tier.priceInCents * 0.7) / 100;
   const platformFee = (tier.priceInCents * 0.3) / 100;
 
-  // Get creator payment handles (mock for now - should come from tier.creator)
   const paymentHandles = {
     cashapp: "$KingCam",
     zelle: "kingcam@creatorvault.com",
@@ -92,16 +97,19 @@ export default function FanSubscribe() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-black text-white p-8">
-      <div className="max-w-2xl mx-auto">
-  // @ts-ignore
-        <h1 className="text-4xl font-bold mb-8 text-center">Subscribe to {(tier as any).creatorName || "Creator"}</h1>
+    <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-black px-4 py-6 text-white sm:p-8">
+      <div className="mx-auto max-w-2xl">
+        <div className="mb-6 rounded-3xl border border-purple-400/30 bg-black/35 p-5 text-center shadow-2xl">
+          <p className="mb-2 text-xs font-black uppercase tracking-[0.22em] text-purple-200">Secure manual unlock</p>
+          <h1 className="text-3xl font-black leading-tight sm:text-4xl">Subscribe to {(tier as any).creatorName || "Creator"}</h1>
+          <p className="mt-3 text-sm leading-6 text-gray-300">Choose a payment app, send the exact amount, then submit the transaction ID so access can be verified.</p>
+        </div>
 
         {step === "select" && (
-          <Card className="bg-gray-900 p-8 border-2 border-purple-600">
+          <Card className="border-2 border-purple-600 bg-gray-900 p-5 sm:p-8">
             <div className="text-center mb-6">
-              <h2 className="text-3xl font-bold mb-2">{tier.name}</h2>
-              <p className="text-5xl font-bold text-purple-400 mb-4">
+              <h2 className="mb-2 text-2xl font-bold sm:text-3xl">{tier.name}</h2>
+              <p className="mb-4 text-4xl font-bold text-purple-400 sm:text-5xl">
                 ${priceInDollars.toFixed(2)}<span className="text-xl">/month</span>
               </p>
               {tier.description && (
@@ -140,40 +148,40 @@ export default function FanSubscribe() {
             {!user ? (
               <Button
                 onClick={() => (window.location.href = "/login")}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-xl py-6"
+                className="min-h-14 w-full bg-purple-600 text-lg font-bold hover:bg-purple-700 sm:text-xl"
               >
                 Log In to Subscribe
               </Button>
             ) : (
               <div className="space-y-3">
-                <h3 className="font-bold text-center mb-4">Choose Payment Method:</h3>
+                <h3 className="mb-4 text-center font-bold">Choose payment method and keep the app receipt:</h3>
                 <Button
                   onClick={() => handlePaymentMethodSelect("cashapp")}
-                  className="w-full bg-green-600 hover:bg-green-700 py-4"
+                  className="min-h-13 w-full bg-green-600 py-5 text-base font-bold hover:bg-green-700"
                 >
                   💵 CashApp
                 </Button>
                 <Button
                   onClick={() => handlePaymentMethodSelect("zelle")}
-                  className="w-full bg-purple-600 hover:bg-purple-700 py-4"
+                  className="min-h-13 w-full bg-purple-600 py-5 text-base font-bold hover:bg-purple-700"
                 >
                   💳 Zelle
                 </Button>
                 <Button
                   onClick={() => handlePaymentMethodSelect("applepay")}
-                  className="w-full bg-gray-700 hover:bg-gray-800 py-4"
+                  className="min-h-13 w-full bg-gray-700 py-5 text-base font-bold hover:bg-gray-800"
                 >
                   🍎 Apple Pay
                 </Button>
                 <Button
                   onClick={() => handlePaymentMethodSelect("venmo")}
-                  className="w-full bg-blue-600 hover:bg-blue-700 py-4"
+                  className="min-h-13 w-full bg-blue-600 py-5 text-base font-bold hover:bg-blue-700"
                 >
                   💙 Venmo
                 </Button>
                 <Button
                   onClick={() => handlePaymentMethodSelect("paypal")}
-                  className="w-full bg-blue-500 hover:bg-blue-600 py-4"
+                  className="min-h-13 w-full bg-blue-500 py-5 text-base font-bold hover:bg-blue-600"
                 >
                   🌐 PayPal
                 </Button>
@@ -183,8 +191,8 @@ export default function FanSubscribe() {
         )}
 
         {step === "instructions" && paymentMethod && (
-          <Card className="bg-gray-900 p-8 border-2 border-green-600">
-            <h2 className="text-3xl font-bold mb-6 text-center text-green-400">Send Payment</h2>
+          <Card className="border-2 border-green-600 bg-gray-900 p-5 sm:p-8">
+            <h2 className="mb-6 text-center text-2xl font-bold text-green-400 sm:text-3xl">Send payment, then verify</h2>
 
             <div className="bg-gray-800 p-6 rounded-lg mb-6">
               <h3 className="font-bold mb-4 text-xl">Payment Instructions:</h3>
@@ -195,7 +203,7 @@ export default function FanSubscribe() {
                 </div>
                 <div>
                   <p className="text-gray-400 text-sm">Send to:</p>
-                  <p className="text-2xl font-bold text-purple-400">{paymentHandles[paymentMethod]}</p>
+                  <p className="break-all text-2xl font-bold text-purple-400">{paymentHandles[paymentMethod]}</p>
                 </div>
                 <div>
                   <p className="text-gray-400 text-sm">Method:</p>
@@ -206,8 +214,7 @@ export default function FanSubscribe() {
 
             <div className="bg-yellow-900/30 p-4 rounded-lg mb-6">
               <p className="text-sm text-yellow-200">
-                ⚠️ <strong>Important:</strong> After sending payment, enter your confirmation code or transaction ID below.
-                Your subscription will be activated once payment is verified.
+                <strong>Important:</strong> Send the exact amount, copy the payment app confirmation code, and paste it below. Access stays pending until the creator verifies the payment.
               </p>
             </div>
 
@@ -233,18 +240,18 @@ export default function FanSubscribe() {
                 />
               </div>
 
-              <div className="flex gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <Button
                   onClick={() => setStep("select")}
                   variant="outline"
-                  className="flex-1"
+                  className="min-h-12"
                 >
-                  ← Back
+                  Back
                 </Button>
                 <Button
                   onClick={handleConfirmPayment}
                   disabled={!confirmationCode || createSubscription.isPending}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  className="min-h-12 bg-green-600 font-bold hover:bg-green-700"
                 >
                   {createSubscription.isPending ? "Confirming..." : "Confirm Payment"}
                 </Button>
@@ -254,12 +261,12 @@ export default function FanSubscribe() {
         )}
 
         {step === "confirm" && (
-          <Card className="bg-gray-900 p-8 border-2 border-green-600">
+          <Card className="border-2 border-green-600 bg-gray-900 p-5 sm:p-8">
             <div className="text-center">
-              <div className="text-6xl mb-4">✅</div>
-              <h2 className="text-3xl font-bold mb-4 text-green-400">Payment Submitted!</h2>
+              <div className="mb-4 text-5xl font-black text-green-400">OK</div>
+              <h2 className="mb-4 text-2xl font-bold text-green-400 sm:text-3xl">Payment submitted for verification</h2>
               <p className="text-gray-300 mb-6">
-                Your subscription is pending verification. You'll receive access once the creator confirms your payment.
+                Your subscription is pending verification. Keep this code saved; access turns on after the creator confirms the payment.
               </p>
               <div className="bg-gray-800 p-4 rounded-lg mb-6">
                 <p className="text-sm text-gray-400">Confirmation Code:</p>
@@ -267,9 +274,9 @@ export default function FanSubscribe() {
               </div>
               <Button
                 onClick={() => (window.location.href = "/")}
-                className="bg-purple-600 hover:bg-purple-700"
+                className="min-h-12 w-full bg-purple-600 font-bold hover:bg-purple-700 sm:w-auto"
               >
-                Return Home
+                Return home
               </Button>
             </div>
           </Card>

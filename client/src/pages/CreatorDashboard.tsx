@@ -144,24 +144,34 @@ export default function CreatorDashboard() {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Creator Dashboard</h1>
-        <p className="text-muted-foreground">Create and manage your products, courses, and services</p>
+    <div className="container mx-auto px-4 py-6 sm:py-8">
+      <div className="mb-6 rounded-3xl border border-amber-500/20 bg-gradient-to-br from-black via-zinc-950 to-amber-950/20 p-5 text-white shadow-2xl sm:p-7">
+        <p className="mb-3 text-xs font-black uppercase tracking-[0.22em] text-amber-300">Phone-first money loop</p>
+        <h1 className="text-3xl font-black leading-tight tracking-[-0.04em] sm:text-4xl">Create the paid drop, price it, then send fans to buy.</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300 sm:text-base">
+          Build the offer from your phone in three moves: name the asset, set the price, and choose how buyers receive it after checkout or verification.
+        </p>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          {["1. Package the offer", "2. Set price + currency", "3. Publish and verify access"].map((step) => (
+            <div key={step} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-zinc-100">
+              {step}
+            </div>
+          ))}
+        </div>
       </div>
 
       <Tabs defaultValue="products" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="products">Products</TabsTrigger>
-          <TabsTrigger value="courses">Courses</TabsTrigger>
-          <TabsTrigger value="services">Services</TabsTrigger>
+        <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-2xl p-1">
+          <TabsTrigger value="products" className="min-h-11 text-xs sm:text-sm">Products</TabsTrigger>
+          <TabsTrigger value="courses" className="min-h-11 text-xs sm:text-sm">Courses</TabsTrigger>
+          <TabsTrigger value="services" className="min-h-11 text-xs sm:text-sm">Services</TabsTrigger>
         </TabsList>
 
         <TabsContent value="products">
           <Card>
             <CardHeader>
-              <CardTitle>Create Product</CardTitle>
-              <CardDescription>Add a new digital product, service, bundle, or subscription</CardDescription>
+              <CardTitle>Create a paid drop</CardTitle>
+              <CardDescription>Package something a fan can understand, buy, and receive without needing you at a laptop.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCreateProduct} className="space-y-4">
@@ -169,6 +179,7 @@ export default function CreatorDashboard() {
                   <Label htmlFor="product-title">Title</Label>
                   <Input
                     id="product-title"
+                    placeholder="Example: VIP teaser pack, custom menu, premium template"
                     value={productForm.title}
                     onChange={(e) => setProductForm({ ...productForm, title: e.target.value })}
                     required
@@ -179,13 +190,14 @@ export default function CreatorDashboard() {
                   <Label htmlFor="product-description">Description</Label>
                   <Textarea
                     id="product-description"
+                    placeholder="Tell the buyer what they get, delivery timing, and what unlocks after payment."
                     value={productForm.description}
                     onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
                     rows={4}
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="product-type">Type</Label>
                     <Select
@@ -222,12 +234,14 @@ export default function CreatorDashboard() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="product-price">Price</Label>
                     <Input
                       id="product-price"
                       type="number"
+                      inputMode="decimal"
+                      placeholder="49.00"
                       step="0.01"
                       value={productForm.price}
                       onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
@@ -253,8 +267,8 @@ export default function CreatorDashboard() {
                   </div>
                 </div>
 
-                <Button type="submit" disabled={createProduct.isPending}>
-                  {createProduct.isPending ? "Creating..." : "Create Product"}
+                <Button type="submit" disabled={createProduct.isPending} className="min-h-12 w-full text-base font-bold sm:w-auto">
+                  {createProduct.isPending ? "Creating..." : "Create paid drop"}
                 </Button>
               </form>
             </CardContent>
@@ -303,12 +317,14 @@ export default function CreatorDashboard() {
                 </div>
 
                 {!courseForm.isFree && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <Label htmlFor="course-price">Price</Label>
                       <Input
                         id="course-price"
                         type="number"
+                        inputMode="decimal"
+                        placeholder="99.00"
                         step="0.01"
                         value={courseForm.price}
                         onChange={(e) => setCourseForm({ ...courseForm, price: e.target.value })}
@@ -335,8 +351,8 @@ export default function CreatorDashboard() {
                   </div>
                 )}
 
-                <Button type="submit" disabled={createCourse.isPending}>
-                  {createCourse.isPending ? "Creating..." : "Create Course"}
+                <Button type="submit" disabled={createCourse.isPending} className="min-h-12 w-full text-base font-bold sm:w-auto">
+                  {createCourse.isPending ? "Creating..." : "Create course offer"}
                 </Button>
               </form>
             </CardContent>
@@ -347,7 +363,7 @@ export default function CreatorDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Create Service</CardTitle>
-              <CardDescription>Offer a professional service to clients</CardDescription>
+              <CardDescription>Sell a deliverable with a clear price, scope, and delivery window.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCreateService} className="space-y-4">
@@ -388,12 +404,14 @@ export default function CreatorDashboard() {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div>
                     <Label htmlFor="service-price">Price</Label>
                     <Input
                       id="service-price"
                       type="number"
+                      inputMode="decimal"
+                      placeholder="250.00"
                       step="0.01"
                       value={serviceForm.price}
                       onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
@@ -423,6 +441,8 @@ export default function CreatorDashboard() {
                     <Input
                       id="service-delivery"
                       type="number"
+                      inputMode="numeric"
+                      placeholder="3"
                       value={serviceForm.deliveryDays}
                       onChange={(e) => setServiceForm({ ...serviceForm, deliveryDays: e.target.value })}
                       required
@@ -430,8 +450,8 @@ export default function CreatorDashboard() {
                   </div>
                 </div>
 
-                <Button type="submit" disabled={createService.isPending}>
-                  {createService.isPending ? "Creating..." : "Create Service"}
+                <Button type="submit" disabled={createService.isPending} className="min-h-12 w-full text-base font-bold sm:w-auto">
+                  {createService.isPending ? "Creating..." : "Create service offer"}
                 </Button>
               </form>
             </CardContent>

@@ -62,6 +62,18 @@ export async function getCreatorTiers(creatorId: number): Promise<SubscriptionTi
 }
 
 /**
+ * Get a single subscription tier by ID.
+ */
+export async function getSubscriptionTierById(tierId: number): Promise<SubscriptionTier | null> {
+  const [tier] = await db
+    .select()
+    .from(subscriptionTiers)
+    .where(eq(subscriptionTiers.id, tierId));
+
+  return (tier as SubscriptionTier | undefined) ?? null;
+}
+
+/**
  * Subscribe fan to tier
  */
 export async function subscribeFanToTier(input: SubscribeInput): Promise<{ success: boolean; subscriptionId: number }> {

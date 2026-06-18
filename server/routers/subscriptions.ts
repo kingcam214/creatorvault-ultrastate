@@ -3,6 +3,7 @@ import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import {
   createSubscriptionTier,
   getCreatorTiers,
+  getSubscriptionTierById,
   subscribeFanToTier,
   processSubscriptionPayment,
   getCreatorBalance,
@@ -40,9 +41,7 @@ export const subscriptionsRouter = router({
   getTier: publicProcedure
     .input(z.object({ tierId: z.number() }))
     .query(async ({ input }) => {
-      const tiers = await getCreatorTiers(0);
-      const tier = tiers.find((t: any) => t.id === input.tierId);
-      return tier || null;
+      return await getSubscriptionTierById(input.tierId);
     }),
 
   /**
