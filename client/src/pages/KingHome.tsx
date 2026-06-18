@@ -10,7 +10,7 @@
  *   2. Today's Priorities (AI-generated from Empire Brain)
  *   3. Revenue Snapshot (live from challenge tracker)
  *   4. Active Launches
- *   5. Critical Alerts (PM2, Stripe, WhatsApp)
+ *   5. Needs attention (PM2, Stripe, WhatsApp)
  *   6. Quick Actions (6 max)
  * ============================================================================
  */
@@ -23,7 +23,7 @@ import {
   CheckCircle,
   ArrowRight,
   Zap,
-  Target,
+  Goal,
   MessageSquare,
   BarChart3,
   Key,
@@ -100,11 +100,11 @@ function RevenueSnapshot() {
   return (
     <Section>
       <SectionLabel>Revenue Snapshot</SectionLabel>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "14px", marginBottom: "20px" }}>
         {[
-          { label: "Week 1 Challenge", value: isLoading ? "—" : `$${current.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, accent: true },
-          { label: "Target", value: isLoading ? "—" : `$${target.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, accent: false },
-          { label: "Gap", value: isLoading ? "—" : `$${gap.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, accent: false },
+          { label: "Launch revenue", value: isLoading ? "—" : `$${current.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, accent: true },
+          { label: "Goal", value: isLoading ? "—" : `$${target.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, accent: false },
+          { label: "Still needed", value: isLoading ? "—" : `$${gap.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, accent: false },
           { label: "Progress", value: isLoading ? "—" : `${pct.toFixed(1)}%`, accent: false },
         ].map(stat => (
           <div key={stat.label}>
@@ -137,7 +137,7 @@ function RevenueSnapshot() {
       </div>
       {!isLoading && (
         <div style={{ fontSize: "11px", color: "#444", marginTop: "8px" }}>
-          {challenge?.title ?? "Week 1 Challenge: First $5,000"} — {pct.toFixed(1)}% complete
+          {challenge?.title ?? "Launch revenue: First $5,000"} — {pct.toFixed(1)}% complete
         </div>
       )}
     </Section>
@@ -149,25 +149,25 @@ function RevenueSnapshot() {
 const PRIORITIES = [
   {
     id: 1,
-    title: "Launch IGNITE Phase — Money Mission",
-    context: "Drop the 4-piece trailer. Fire Telegram broadcast. DM 30 prospects with Creator Growth Agent offer.",
-    cta: "Open Money Mission",
+    title: "Launch today's revenue push",
+    context: "Release the strongest trailer, send the fan broadcast, and message the next 30 best prospects with a clear offer.",
+    cta: "Open Revenue Plan",
     path: "/king/money-mission",
     urgent: true,
   },
   {
     id: 2,
-    title: "Verify WhatsApp Token",
-    context: "Permanent Meta System User token must be set in .env to unlock automated outreach.",
-    cta: "Open Back Office",
+    title: "Finish fan-message setup",
+    context: "One setup item is still blocking automated fan outreach. Open setup and finish the connection checklist.",
+    cta: "Open Platform Setup",
     path: "/king/backoffice",
     urgent: true,
   },
   {
     id: 3,
-    title: "Review Presentation Empire Packages",
-    context: "127 packages generated, 0 sold. Select top 5 and send to prospects manually.",
-    cta: "Open Presentation Empire",
+    title: "Pick the best offer packages",
+    context: "Choose the five strongest packages and send them to the warmest prospects first.",
+    cta: "Open Offer Decks",
     path: "/owner-cockpit/presentation-empire",
     urgent: false,
   },
@@ -240,20 +240,20 @@ function TodaysPriorities() {
   );
 }
 
-// ─── Critical Alerts ──────────────────────────────────────────────────────────
+// ─── Needs attention ──────────────────────────────────────────────────────────
 
 function CriticalAlerts() {
   const [, setLocation] = useLocation();
 
   const ALERTS = [
-    { id: "whatsapp", label: "WhatsApp permanent token not confirmed in .env", severity: "critical", path: "/king/backoffice" },
-    { id: "challenge", label: "Week 1 Challenge at $0.00 — IGNITE phase not launched", severity: "critical", path: "/king/money-mission" },
-    { id: "presentation", label: "127 Presentation Empire packages generated — 0 sent to prospects", severity: "warning", path: "/owner-cockpit/presentation-empire" },
+    { id: "whatsapp", label: "Fan-message automation still needs setup before outreach can run", severity: "critical", path: "/king/backoffice" },
+    { id: "challenge", label: "Launch revenue at $0.00 — IGNITE phase not launched", severity: "critical", path: "/king/money-mission" },
+    { id: "presentation", label: "Offer packages are ready — send the strongest ones to prospects", severity: "warning", path: "/owner-cockpit/presentation-empire" },
   ];
 
   return (
     <Section>
-      <SectionLabel>Critical Alerts</SectionLabel>
+      <SectionLabel>Needs attention</SectionLabel>
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {ALERTS.map(alert => (
           <div
@@ -262,7 +262,8 @@ function CriticalAlerts() {
               display: "flex",
               alignItems: "center",
               gap: "12px",
-              padding: "12px 14px",
+              padding: "14px 14px",
+              minHeight: "48px",
               borderRadius: "8px",
               background: alert.severity === "critical" ? "rgba(239,68,68,0.06)" : "rgba(245,158,11,0.06)",
               border: alert.severity === "critical" ? "1px solid rgba(239,68,68,0.2)" : "1px solid rgba(245,158,11,0.2)",
@@ -286,12 +287,12 @@ function CriticalAlerts() {
 // ─── Quick Actions ────────────────────────────────────────────────────────────
 
 const QUICK_ACTIONS = [
-  { label: "Money Mission", path: "/king/money-mission", icon: DollarSign },
+  { label: "Revenue Plan", path: "/king/money-mission", icon: DollarSign },
   { label: "Telegram Hub", path: "/king/telegram-hub", icon: MessageSquare },
-  { label: "Presentation Builder", path: "/king/presentation-builder", icon: Film },
+  { label: "Build a Deck", path: "/king/presentation-builder", icon: Film },
   { label: "Analytics", path: "/king/analytics", icon: BarChart3 },
-  { label: "Vault", path: "/king/backoffice", icon: Key },
-  { label: "Launch Command", path: "/king/launch-command", icon: Target },
+  { label: "Content Vault", path: "/king/backoffice", icon: Key },
+  { label: "Launch Command", path: "/king/launch-command", icon: Goal },
 ];
 
 function QuickActions() {
@@ -299,7 +300,7 @@ function QuickActions() {
   return (
     <Section>
       <SectionLabel>Quick Actions</SectionLabel>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "10px" }}>
         {QUICK_ACTIONS.map(action => (
           <button
             key={action.path}
@@ -308,7 +309,8 @@ function QuickActions() {
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              padding: "12px 14px",
+              padding: "14px 14px",
+              minHeight: "48px",
               background: "rgba(255,255,255,0.03)",
               border: "1px solid rgba(255,255,255,0.06)",
               borderRadius: "8px",
@@ -320,14 +322,14 @@ function QuickActions() {
               textAlign: "left",
             }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(201,169,97,0.08)";
-              (e.currentTarget as HTMLButtonElement).style.color = "#C9A961";
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(201,169,97,0.2)";
+              (e.currentGoal as HTMLButtonElement).style.background = "rgba(201,169,97,0.08)";
+              (e.currentGoal as HTMLButtonElement).style.color = "#C9A961";
+              (e.currentGoal as HTMLButtonElement).style.borderColor = "rgba(201,169,97,0.2)";
             }}
             onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.03)";
-              (e.currentTarget as HTMLButtonElement).style.color = "#888";
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.06)";
+              (e.currentGoal as HTMLButtonElement).style.background = "rgba(255,255,255,0.03)";
+              (e.currentGoal as HTMLButtonElement).style.color = "#888";
+              (e.currentGoal as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.06)";
             }}
           >
             <action.icon size={13} />
@@ -343,13 +345,13 @@ function QuickActions() {
 
 export default function KingCommandZone() {
   return (
-    <div style={{ maxWidth: "860px" }}>
+    <div style={{ maxWidth: "860px", width: "100%" }}>
 
       {/* Header */}
       <div style={{ marginBottom: "36px" }}>
         <h1 style={{
           fontFamily: "'Playfair Display', serif",
-          fontSize: "42px",
+          fontSize: "clamp(30px, 9vw, 42px)",
           fontWeight: 700,
           color: "#F5F5F0",
           letterSpacing: "-0.02em",

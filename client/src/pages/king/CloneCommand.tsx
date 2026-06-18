@@ -56,6 +56,7 @@ export default function CloneCommand() {
   const [guidanceScale, setGuidanceScale] = useState(3.5);
   const [steps, setSteps] = useState(28);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isPhone, setIsPhone] = useState(false);
   const [promptPreview, setPromptPreview] = useState<{ prompt: string; negativePrompt: string; safetyRule: string } | null>(null);
   const [promptPreviewApproved, setPromptPreviewApproved] = useState(false);
 
@@ -123,7 +124,7 @@ export default function CloneCommand() {
       setActivePredictionId(null);
       setGenMetrics(metrics);
       historyQuery.refetch();
-      toast({ title: "Generation complete", description: `${urls.length} image(s) ready` });
+      toast({ title: "Clone image ready", description: `${urls.length} shot${urls.length > 1 ? "s" : ""} ready to save, download, or turn into motion.` });
     } else if (status === "failed" || status === "canceled") {
       setGenError(error || "Generation failed");
       setGenerating(false);
@@ -148,6 +149,13 @@ export default function CloneCommand() {
   }, [videoStatusQuery.data]);
 
   useEffect(() => {
+    const syncPhoneLayout = () => setIsPhone(window.innerWidth < 900);
+    syncPhoneLayout();
+    window.addEventListener("resize", syncPhoneLayout);
+    return () => window.removeEventListener("resize", syncPhoneLayout);
+  }, []);
+
+  useEffect(() => {
     setPromptPreview(null);
     setPromptPreviewApproved(false);
   }, [prompt, negativePrompt]);
@@ -165,7 +173,7 @@ export default function CloneCommand() {
       });
       setPromptPreview(preview);
       setPromptPreviewApproved(false);
-      toast({ title: "No-credit preview ready", description: "Review the exact paid prompt before generation." });
+      toast({ title: "Final direction ready", description: "Review the shot plan before you spend a generation." });
     } catch (err: any) {
       toast({ title: "Preview error", description: err.message, variant: "destructive" });
     }
@@ -180,8 +188,8 @@ export default function CloneCommand() {
 
     if (!promptPreview || !promptPreviewApproved) {
       toast({
-        title: "Review final prompt first",
-        description: "No paid generation can run until the no-credit prompt preview is approved.",
+        title: "Preview the shot plan first",
+        description: "Review and approve the final direction before creating the image.",
         variant: "destructive",
       });
       return;
@@ -207,7 +215,7 @@ export default function CloneCommand() {
     } catch (err: any) {
       setGenError(err.message || "Failed to start generation");
       setGenerating(false);
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Could not start", description: err.message, variant: "destructive" });
     }
   }, [prompt, negativePrompt, preset, numOutputs, guidanceScale, steps, promptPreview, promptPreviewApproved]);
 
@@ -230,10 +238,10 @@ export default function CloneCommand() {
       });
       setVideoTaskId(result.taskId);
       setVideoStatus(result.status || "waiting");
-      toast({ title: "Clone video started", description: "Motion job submitted." });
+      toast({ title: "Motion video started", description: "Your selected clone shot is being turned into a teaser." });
     } catch (err: any) {
       setVideoGenerating(false);
-      toast({ title: "Video error", description: err.message, variant: "destructive" });
+      toast({ title: "Motion video error", description: err.message, variant: "destructive" });
     }
   }, [outputImages, selectedOutput, videoPrompt, videoResolution, videoLength]);
 
@@ -254,9 +262,9 @@ export default function CloneCommand() {
           imageUrl,
         });
         historyQuery.refetch();
-        toast({ title: "Saved to Vault" });
+        toast({ title: "Saved to your Vault" });
       } catch (err: any) {
-        toast({ title: "Error", description: err.message, variant: "destructive" });
+        toast({ title: "Could not start", description: err.message, variant: "destructive" });
       }
     },
     [historyQuery.data],
@@ -266,9 +274,9 @@ export default function CloneCommand() {
   const handleSetHero = useCallback(async (imageUrl: string) => {
     try {
       await setHeroMutation.mutateAsync({ imageUrl });
-      toast({ title: "Hero image updated", description: "Homepage hero set" });
+      toast({ title: "Hero image updated", description: "This shot can now headline the experience." });
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Could not start", description: err.message, variant: "destructive" });
     }
   }, []);
 
@@ -279,6 +287,24 @@ export default function CloneCommand() {
       : genStatus === "failed" || genStatus === "canceled"
         ? "#FF4444"
         : CYAN;
+
+  const creatorStatus = genError
+    || (genStatus === "starting"
+      ? "Setting up your shot"
+      : genStatus === "processing"
+        ? "Creating your clone image"
+        : genStatus === "succeeded"
+          ? "Ready to use"
+          : genStatus
+            ? genStatus.replace(/_/g, " ")
+            : "");
+
+  const workflowSteps = [
+    { label: "1. Scene", help: "Tell the studio what the shot should look and feel like." },
+    { label: "2. Preview", help: "Review the final direction before you spend a generation." },
+    { label: "3. Create", help: "Generate the clone image and pick the strongest result." },
+    { label: "4. Move", help: "Turn the winning image into a short motion teaser." },
+  ];
 
   return (
     <div
@@ -292,14 +318,16 @@ export default function CloneCommand() {
       {/* ─── Header ─────────────────────────────────────────────────── */}
       <div
         style={{
-          padding: "24px 32px 16px",
+          padding: isPhone ? "18px 16px 14px" : "24px 32px 16px",
           borderBottom: `1px solid ${BORDER}`,
           display: "flex",
-          alignItems: "center",
+          alignItems: isPhone ? "flex-start" : "center",
           justifyContent: "space-between",
+          gap: isPhone ? 12 : 16,
+          flexWrap: "wrap",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isPhone ? 12 : 16 }}>
           <div
             style={{
               width: 40,
@@ -327,10 +355,10 @@ export default function CloneCommand() {
                 WebkitTextFillColor: "transparent",
               }}
             >
-              CLONE COMMAND CENTER
+              Clone Command Studio
             </h1>
             <p style={{ fontSize: 12, color: MUTED, margin: 0, marginTop: 2 }}>
-              KingCam AI Image Generation · {TRIGGER} Model
+              Create the image, then turn it into motion — built for phone-first creators.
             </p>
           </div>
         </div>
@@ -356,7 +384,7 @@ export default function CloneCommand() {
               }}
             />
             <span style={{ fontSize: 12, fontWeight: 600, color: CYAN }}>
-              GENERATING
+              CREATING
             </span>
           </div>
         )}
@@ -366,29 +394,42 @@ export default function CloneCommand() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "320px 1fr 300px",
-          height: "calc(100vh - 90px)",
-          overflow: "hidden",
+          gridTemplateColumns: isPhone ? "1fr" : "320px 1fr 300px",
+          height: isPhone ? "auto" : "calc(100vh - 90px)",
+          overflow: isPhone ? "visible" : "hidden",
         }}
       >
         {/* ═══ LEFT PANEL: Controls ═══ */}
         <div
           style={{
-            borderRight: `1px solid ${BORDER}`,
-            padding: 20,
-            overflowY: "auto",
+            borderRight: isPhone ? "none" : `1px solid ${BORDER}`,
+            borderBottom: isPhone ? `1px solid ${BORDER}` : "none",
+            padding: isPhone ? 16 : 20,
+            overflowY: isPhone ? "visible" : "auto",
             display: "flex",
             flexDirection: "column",
             gap: 16,
           }}
         >
+          <div style={{ padding: 14, background: "linear-gradient(135deg, rgba(0,217,255,0.10), rgba(255,255,255,0.025))", borderRadius: 14, border: `1px solid ${CYAN}22` }}>
+            <label style={{ ...labelStyle, color: CYAN }}>YOUR PHONE-FIRST FLOW</label>
+            <div style={{ display: "grid", gridTemplateColumns: isPhone ? "1fr" : "1fr 1fr", gap: 8 }}>
+              {workflowSteps.map((step) => (
+                <div key={step.label} style={{ padding: "10px 12px", borderRadius: 10, background: "rgba(0,0,0,0.28)", border: `1px solid ${BORDER}` }}>
+                  <div style={{ color: "#fff", fontSize: 12, fontWeight: 800, marginBottom: 4 }}>{step.label}</div>
+                  <div style={{ color: "#888", fontSize: 11, lineHeight: 1.45 }}>{step.help}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Prompt */}
           <div>
-            <label style={labelStyle}>PROMPT</label>
+            <label style={labelStyle}>DESCRIBE THE SCENE</label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="dark penthouse throne room, gold chains, velvet suit, cinematic neon lighting, looking into camera — hairstyle must match submitted reference/prompt exactly"
+              placeholder="Example: luxury penthouse at night, confident eye contact, cinematic neon, premium creator-brand energy. Add hairstyle, outfit, jewelry, mood, and camera angle."
               rows={5}
               style={{
                 ...inputStyle,
@@ -405,17 +446,16 @@ export default function CloneCommand() {
                 marginTop: 4,
               }}
             >
-              Reference-first identity lock: the submitted prompt and any source media define the hairstyle. The system must not invent a default haircut.
+              Creator tip: include the hairstyle, outfit, expression, setting, camera angle, and mood you want. The identity rules protect the look you describe.
             </div>
             <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>
-              Trigger word <span style={{ color: CYAN, fontWeight: 700 }}>{TRIGGER}</span> is
-              automatically included server-side.
+              The clone identity is added automatically, so you can focus on the scene and creative direction.
             </div>
           </div>
 
           {/* Jewelry Identity Descriptor */}
           <div>
-            <label style={labelStyle}>JEWELRY DESCRIPTION</label>
+            <label style={labelStyle}>LOCK THE SIGNATURE DETAILS</label>
             <textarea
               value={KINGCAM_JEWELRY_DESCRIPTOR}
               readOnly
@@ -430,17 +470,17 @@ export default function CloneCommand() {
               }}
             />
             <div style={{ fontSize: 11, color: MUTED, marginTop: 4, lineHeight: 1.45 }}>
-              Identity lock requires small visible diamond hoops only: no oversized hoops, studs, plain hoops, or missing earrings.
+              These details help keep the clone recognizable and consistent from image to video.
             </div>
           </div>
 
           {/* Negative Prompt */}
           <div>
-            <label style={labelStyle}>NEGATIVE PROMPT</label>
+            <label style={labelStyle}>KEEP OUT OF THE SHOT</label>
             <textarea
               value={negativePrompt}
               onChange={(e) => setNegativePrompt(e.target.value)}
-              placeholder="What to exclude..."
+              placeholder="Anything you do not want: wrong hair, cheap lighting, extra fingers, blurry face, bad jewelry, off-brand outfit..."
               rows={2}
               style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }}
             />
@@ -448,7 +488,7 @@ export default function CloneCommand() {
 
           {/* Aspect Ratio Presets */}
           <div>
-            <label style={labelStyle}>ASPECT RATIO</label>
+            <label style={labelStyle}>FORMAT</label>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {PRESETS.map((p, i) => (
                 <button
@@ -477,7 +517,7 @@ export default function CloneCommand() {
 
           {/* Outputs */}
           <div>
-            <label style={labelStyle}>OUTPUTS</label>
+            <label style={labelStyle}>HOW MANY OPTIONS?</label>
             <div style={{ display: "flex", gap: 6 }}>
               {[1, 2, 3, 4].map((n) => (
                 <button
@@ -503,12 +543,12 @@ export default function CloneCommand() {
 
           {/* Clone Video Controls */}
           <div style={{ padding: 14, background: "linear-gradient(135deg, rgba(0,217,255,0.10), rgba(255,255,255,0.03))", borderRadius: 12, border: `1px solid ${CYAN}22`, display: "flex", flexDirection: "column", gap: 10 }}>
-            <label style={{ ...labelStyle, color: CYAN }}>CLONE VIDEO CONTROLS</label>
+            <label style={{ ...labelStyle, color: CYAN }}>TURN THE BEST SHOT INTO MOTION</label>
             <textarea
               value={videoPrompt}
               onChange={(e) => setVideoPrompt(e.target.value)}
               rows={3}
-              placeholder="Describe the motion, camera move, lighting, and creator-brand energy..."
+              placeholder="Example: slow luxury push-in, confident glance, neon glow, premium teaser energy..."
               style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit", minHeight: 76 }}
             />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -522,7 +562,7 @@ export default function CloneCommand() {
                 <option value="10s">10s Hero Clip</option>
               </select>
             </div>
-            <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>Generate the clone image first, then turn the selected image into a motion teaser without leaving Clone Command.</div>
+            <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>First create a clone image. Then choose your favorite shot and create a motion teaser right here.</div>
           </div>
 
           {/* Advanced Toggle */}
@@ -545,7 +585,7 @@ export default function CloneCommand() {
             <span style={{ transform: showAdvanced ? "rotate(90deg)" : "none", transition: "0.2s" }}>
               ▶
             </span>
-            ADVANCED SETTINGS
+            FINE-TUNE THE SHOT
           </button>
 
           {showAdvanced && (
@@ -562,7 +602,7 @@ export default function CloneCommand() {
             >
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <label style={{ ...labelStyle, margin: 0 }}>GUIDANCE</label>
+                  <label style={{ ...labelStyle, margin: 0 }}>CREATIVE STRENGTH</label>
                   <span style={{ color: CYAN, fontSize: 13, fontWeight: 700 }}>
                     {guidanceScale.toFixed(1)}
                   </span>
@@ -579,7 +619,7 @@ export default function CloneCommand() {
               </div>
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <label style={{ ...labelStyle, margin: 0 }}>STEPS</label>
+                  <label style={{ ...labelStyle, margin: 0 }}>DETAIL LEVEL</label>
                   <span style={{ color: CYAN, fontSize: 13, fontWeight: 700 }}>{steps}</span>
                 </div>
                 <input
@@ -597,12 +637,12 @@ export default function CloneCommand() {
 
           {/* No-credit final prompt preview */}
           <div style={{ padding: 14, background: SURFACE, borderRadius: 12, border: `1px solid ${promptPreviewApproved ? CYAN : BORDER}`, display: "flex", flexDirection: "column", gap: 10 }}>
-            <label style={{ ...labelStyle, color: CYAN }}>NO-CREDIT FINAL PROMPT PREVIEW</label>
+            <label style={{ ...labelStyle, color: CYAN }}>PREVIEW THE FINAL DIRECTION</label>
             <button
               onClick={handlePreviewPrompt}
               disabled={previewPromptMutation.isPending || generating || !prompt.trim()}
               style={{
-                padding: "10px 12px",
+                padding: "12px 12px", minHeight: 44,
                 borderRadius: 8,
                 border: `1px solid ${CYAN}55`,
                 background: "rgba(0,217,255,0.08)",
@@ -613,7 +653,7 @@ export default function CloneCommand() {
                 letterSpacing: "0.05em",
               }}
             >
-              {previewPromptMutation.isPending ? "BUILDING PREVIEW..." : "BUILD FINAL PROMPT PREVIEW"}
+              {previewPromptMutation.isPending ? "PREPARING PREVIEW..." : "PREVIEW MY SHOT PLAN"}
             </button>
             {promptPreview && (
               <>
@@ -628,12 +668,12 @@ export default function CloneCommand() {
                     onChange={(e) => setPromptPreviewApproved(e.target.checked)}
                     style={{ marginTop: 2 }}
                   />
-                  I reviewed the exact final paid prompt. It preserves the submitted hairstyle/reference instructions and does not contain an unwanted default haircut.
+                  I reviewed the final shot direction. It matches the look, hairstyle, and creator-brand details I want.
                 </label>
               </>
             )}
             <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.45 }}>
-              Paid Replicate generation stays blocked until this preview is approved.
+              This protects you from spending a generation before the shot direction looks right.
             </div>
           </div>
 
@@ -643,7 +683,7 @@ export default function CloneCommand() {
             disabled={generating || !prompt.trim() || !promptPreviewApproved}
             style={{
               width: "100%",
-              padding: "16px 0",
+              padding: "16px 0", minHeight: 52,
               borderRadius: 12,
               border: "none",
               background: generating || !promptPreviewApproved
@@ -658,7 +698,7 @@ export default function CloneCommand() {
               marginTop: "auto",
             }}
           >
-            {generating ? "GENERATING..." : promptPreviewApproved ? "GENERATE PAID CLONE" : "REVIEW PROMPT BEFORE PAID GENERATION"}
+            {generating ? "CREATING YOUR CLONE..." : promptPreviewApproved ? "CREATE MY CLONE IMAGE" : "PREVIEW THE SHOT PLAN FIRST"}
           </button>
         </div>
 
@@ -669,8 +709,8 @@ export default function CloneCommand() {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            padding: 24,
-            overflow: "hidden",
+            padding: isPhone ? 16 : 24,
+            overflow: isPhone ? "visible" : "hidden",
             position: "relative",
           }}
         >
@@ -692,7 +732,7 @@ export default function CloneCommand() {
                 zIndex: 10,
               }}
             >
-              {genError || genStatus.toUpperCase()}
+              {creatorStatus.toUpperCase()}
               {genMetrics?.predict_time && (
                 <span style={{ marginLeft: 8, opacity: 0.7 }}>
                   {genMetrics.predict_time.toFixed(1)}s
@@ -728,7 +768,7 @@ export default function CloneCommand() {
                   alt="Generated"
                   style={{
                     maxWidth: "100%",
-                    maxHeight: "calc(100vh - 260px)",
+                    maxHeight: isPhone ? "72vh" : "calc(100vh - 260px)",
                     borderRadius: 12,
                     border: `1px solid ${BORDER}`,
                     objectFit: "contain",
@@ -740,14 +780,14 @@ export default function CloneCommand() {
               {videoUrl && (
                 <div style={{ width: "min(520px, 100%)", border: `1px solid ${CYAN}33`, borderRadius: 12, padding: 10, background: `${CYAN}08` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <span style={{ color: CYAN, fontSize: 11, fontWeight: 800, letterSpacing: "0.08em" }}>CLONE VIDEO READY</span>
-                    <a href={videoUrl} target="_blank" rel="noreferrer" style={{ color: CYAN, fontSize: 11, fontWeight: 700 }}>OPEN VIDEO</a>
+                    <span style={{ color: CYAN, fontSize: 11, fontWeight: 800, letterSpacing: "0.08em" }}>MOTION TEASER READY</span>
+                    <a href={videoUrl} target="_blank" rel="noreferrer" style={{ color: CYAN, fontSize: 11, fontWeight: 700 }}>OPEN TEASER</a>
                   </div>
                   <video src={videoUrl} controls playsInline style={{ width: "100%", maxHeight: 260, borderRadius: 10, background: "#000" }} />
                 </div>
               )}
               {videoGenerating && (
-                <div style={{ color: CYAN, fontSize: 12, fontWeight: 700 }}>Clone video status: {videoStatus || "waiting"}</div>
+                <div style={{ color: CYAN, fontSize: 12, fontWeight: 700 }}>Motion teaser: {videoStatus === "waiting" ? "getting ready" : videoStatus || "getting ready"}</div>
               )}
 
               {/* Thumbnails if multiple */}
@@ -779,25 +819,25 @@ export default function CloneCommand() {
               )}
 
               {/* Action buttons */}
-              <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", width: "100%", justifyContent: "center" }}>
                 <button
                   onClick={() => handleSaveToVault(outputImages[selectedOutput])}
-                  style={actionBtnStyle}
+                  style={{ ...actionBtnStyle, flex: isPhone ? "1 1 100%" : undefined }}
                 >
                   💎 SAVE TO VAULT
                 </button>
                 <button
                   onClick={() => handleSetHero(outputImages[selectedOutput])}
-                  style={{ ...actionBtnStyle, borderColor: "#FFD70044", color: "#FFD700" }}
+                  style={{ ...actionBtnStyle, borderColor: "#FFD70044", color: "#FFD700", flex: isPhone ? "1 1 100%" : undefined }}
                 >
                   👑 SET AS HERO
                 </button>
                 <button
                   onClick={handleGenerateVideo}
                   disabled={videoGenerating}
-                  style={{ ...actionBtnStyle, borderColor: `${CYAN}55`, color: CYAN }}
+                  style={{ ...actionBtnStyle, borderColor: `${CYAN}55`, color: CYAN, flex: isPhone ? "1 1 100%" : undefined }}
                 >
-                  {videoGenerating ? "◌ MAKING VIDEO" : "🎬 CREATE CLONE VIDEO"}
+                  {videoGenerating ? "MAKING MOTION TEASER" : "CREATE MOTION TEASER"}
                 </button>
                 <a
                   href={outputImages[selectedOutput]}
@@ -809,6 +849,8 @@ export default function CloneCommand() {
                     textDecoration: "none",
                     display: "flex",
                     alignItems: "center",
+                    justifyContent: "center",
+                    flex: isPhone ? "1 1 100%" : undefined,
                   }}
                 >
                   ⬇ DOWNLOAD
@@ -830,14 +872,14 @@ export default function CloneCommand() {
                 }}
               />
               <p style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>
-                Generating Your Clone...
+                Creating your clone image...
               </p>
               <p style={{ fontSize: 13, color: MUTED, marginTop: 8 }}>
                 {genStatus === "starting"
-                  ? "Warming up the model..."
+                  ? "Setting up the shot..."
                   : genStatus === "processing"
-                    ? "Creating your image..."
-                    : "Preparing..."}
+                    ? "Building the image now..."
+                    : "Preparing your studio..."}
               </p>
             </div>
           ) : (
@@ -860,12 +902,10 @@ export default function CloneCommand() {
                 🎨
               </div>
               <p style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>
-                Ready to Generate
+                Ready to create your first shot
               </p>
               <p style={{ fontSize: 13, color: MUTED, marginTop: 8, lineHeight: 1.6 }}>
-                Enter a prompt with your vision. The{" "}
-                <span style={{ color: CYAN, fontWeight: 700 }}>{TRIGGER}</span> trigger word
-                is automatically prepended to every generation.
+                Start by describing the scene. Preview the final direction, approve it, then create the image and turn the winner into motion.
               </p>
             </div>
           )}
@@ -874,9 +914,10 @@ export default function CloneCommand() {
         {/* ═══ RIGHT PANEL: Vault History ═══ */}
         <div
           style={{
-            borderLeft: `1px solid ${BORDER}`,
-            padding: 16,
-            overflowY: "auto",
+            borderLeft: isPhone ? "none" : `1px solid ${BORDER}`,
+            borderTop: isPhone ? `1px solid ${BORDER}` : "none",
+            padding: isPhone ? 16 : 16,
+            overflowY: isPhone ? "visible" : "auto",
             display: "flex",
             flexDirection: "column",
           }}
@@ -890,7 +931,7 @@ export default function CloneCommand() {
             }}
           >
             <h2 style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.08em", color: MUTED }}>
-              VAULT HISTORY
+              RECENT SHOTS
             </h2>
             <span style={{ fontSize: 11, color: MUTED }}>
               {historyQuery.data?.total || 0} total
@@ -901,9 +942,9 @@ export default function CloneCommand() {
             <div style={{ textAlign: "center", padding: 40, color: MUTED }}>Loading...</div>
           ) : historyQuery.data?.generations?.length === 0 ? (
             <div style={{ textAlign: "center", padding: 40, color: MUTED, fontSize: 13 }}>
-              No generations yet.
+              No shots yet.
               <br />
-              Fire your first one!
+              Create your first clone image above.
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, flex: 1 }}>
@@ -1087,7 +1128,12 @@ const sliderStyle: React.CSSProperties = {
 };
 
 const actionBtnStyle: React.CSSProperties = {
-  padding: "10px 18px",
+  padding: "12px 18px",
+  minHeight: 44,
+  boxSizing: "border-box",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
   borderRadius: 10,
   border: `1px solid ${CYAN}33`,
   background: `${CYAN}10`,
@@ -1099,7 +1145,8 @@ const actionBtnStyle: React.CSSProperties = {
 };
 
 const navBtnStyle: React.CSSProperties = {
-  padding: "6px 14px",
+  padding: "10px 14px",
+  minHeight: 44,
   borderRadius: 6,
   border: `1px solid ${BORDER}`,
   background: SURFACE,

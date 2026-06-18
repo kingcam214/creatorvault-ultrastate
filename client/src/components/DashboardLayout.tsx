@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * KingCam OS V2 — DashboardLayout
+ * CreatorVault Studio V2 — DashboardLayout
  * ============================================================================
  * The 5-Zone Navigation Shell:
  *   COMMAND | IDENTITY | EXECUTION | STUDIOS | INFRA
@@ -63,11 +63,11 @@ import {
 // ─── Zone Definitions ─────────────────────────────────────────────────────────
 
 const ZONES = [
-  { id: "command", label: "Command", icon: Zap, path: "/king" },
-  { id: "identity", label: "Identity", icon: Crown, path: "/king/identity" },
-  { id: "execution", label: "Execution", icon: DollarSign, path: "/king/money-mission" },
-  { id: "studios", label: "Studios", icon: Film, path: "/king/presentation-builder" },
-  { id: "infra", label: "Infra", icon: Settings, path: "/king/backoffice" },
+  { id: "command", label: "Launch", icon: Zap, path: "/king" },
+  { id: "identity", label: "Brand", icon: Crown, path: "/king/identity" },
+  { id: "execution", label: "Earn", icon: DollarSign, path: "/king/money-mission" },
+  { id: "studios", label: "Create", icon: Film, path: "/king/presentation-builder" },
+  { id: "infra", label: "Setup", icon: Settings, path: "/king/backoffice" },
 ] as const;
 
 type ZoneId = typeof ZONES[number]["id"];
@@ -76,48 +76,48 @@ type ZoneId = typeof ZONES[number]["id"];
 
 const ZONE_NAV: Record<ZoneId, { label: string; path: string; icon: any }[]> = {
   command: [
-    { label: "Today's Mission", path: "/king", icon: Zap },
-    { label: "Empire Brain", path: "/empire-brain", icon: Brain },
-    { label: "Launch Command", path: "/king/launch-command", icon: Target },
+    { label: "Today's Moves", path: "/king", icon: Zap },
+    { label: "Growth Brain", path: "/empire-brain", icon: Brain },
+    { label: "Launch Plan", path: "/king/launch-command", icon: Target },
     { label: "Analytics", path: "/king/analytics", icon: BarChart3 },
-    { label: "Users", path: "/king/users", icon: Users },
+    { label: "Fans + Users", path: "/king/users", icon: Users },
   ],
   identity: [
-    { label: "KingCam Profile", path: "/king/identity", icon: Crown },
-    { label: "Brand Assets", path: "/king/engine", icon: Palette },
-    { label: "Voice Library", path: "/king/script-writer", icon: Mic },
-    { label: "Vault", path: "/king/backoffice", icon: Key },
+    { label: "Creator Profile", path: "/king/identity", icon: Crown },
+    { label: "Brand Kit", path: "/king/engine", icon: Palette },
+    { label: "Scripts + Voice", path: "/king/script-writer", icon: Mic },
+    { label: "Content Vault", path: "/king/backoffice", icon: Key },
     { label: "KingCam Demos", path: "/king/demos", icon: Star },
   ],
   execution: [
-    { label: "Money Mission", path: "/king/money-mission", icon: DollarSign },
+    { label: "Revenue Plan", path: "/king/money-mission", icon: DollarSign },
     { label: "Chicas Empire", path: "/owner-cockpit/chicas-empire", icon: Users },
-    { label: "Presentation Empire", path: "/owner-cockpit/presentation-empire", icon: Monitor },
-    { label: "Recruitment", path: "/owner-cockpit/recruitment", icon: Target },
+    { label: "Offer Decks", path: "/owner-cockpit/presentation-empire", icon: Monitor },
+    { label: "Creator Recruiting", path: "/owner-cockpit/recruitment", icon: Target },
     { label: "Marketplace", path: "/marketplace", icon: ShoppingBag },
     { label: "Subscriptions", path: "/subscriptions", icon: DollarSign },
   ],
   studios: [
-    { label: "Presentation Builder", path: "/king/presentation-builder", icon: Monitor },
-    { label: "AI Agents", path: "/emma-ai-agents", icon: Bot },
-    { label: "Animated Flyer", path: "/animated-flyer-studio", icon: Film },
-    { label: "Image Lab", path: "/image-lab", icon: Palette },
+    { label: "Build a Deck", path: "/king/presentation-builder", icon: Monitor },
+    { label: "Automation Agents", path: "/emma-ai-agents", icon: Bot },
+    { label: "Motion Flyer", path: "/animated-flyer-studio", icon: Film },
+    { label: "Image Studio", path: "/image-lab", icon: Palette },
     { label: "VaultX Editor", path: "/vault-x/editor", icon: Video },
     { label: "VaultX Studio", path: "/vault-x/studio", icon: Video },
-    { label: "University", path: "/university", icon: GraduationCap },
+    { label: "Learn", path: "/university", icon: GraduationCap },
     { label: "Hollywood Studio", path: "/hollywood-studio", icon: Tv },
     { label: "Chuuch", path: "/chuuch/members", icon: Church },
     { label: "DayShift Doctor", path: "/dayshift-doctor", icon: Stethoscope },
     { label: "Apparel Lab", path: "/apparel-lab", icon: Shirt },
   ],
   infra: [
-    { label: "Back Office", path: "/king/backoffice", icon: Settings },
-    { label: "Empire State", path: "/empire-state", icon: Activity },
-    { label: "Agent Tracker", path: "/agent-tracker", icon: Bot },
-    { label: "Gem Center", path: "/king/gem-center", icon: Crown },
+    { label: "Platform Setup", path: "/king/backoffice", icon: Settings },
+    { label: "System Health", path: "/empire-state", icon: Activity },
+    { label: "Agent Status", path: "/agent-tracker", icon: Bot },
+    { label: "Rewards Center", path: "/king/gem-center", icon: Crown },
     { label: "VaultSpace", path: "/vaultspace-dashboard", icon: Globe },
     { label: "WhatsApp Bot", path: "/king/whatsapp-bot", icon: MessageSquare },
-    { label: "Loyalty Command", path: "/loyalty-command", icon: Shield },
+    { label: "Loyalty Tools", path: "/loyalty-command", icon: Shield },
   ],
 };
 
@@ -174,9 +174,9 @@ function getBreadcrumb(path: string, zone: ZoneId): string[] {
   const zoneLabel = ZONES.find(z => z.id === zone)?.label ?? "Command";
   const subItem = ZONE_NAV[zone].find(item => item.path === path);
   if (!subItem || subItem.path === ZONES.find(z => z.id === zone)?.path) {
-    return ["KingCam OS", zoneLabel];
+    return ["CreatorVault Studio", zoneLabel];
   }
-  return ["KingCam OS", zoneLabel, subItem.label];
+  return ["CreatorVault Studio", zoneLabel, subItem.label];
 }
 
 // ─── Main Layout ──────────────────────────────────────────────────────────────
@@ -192,7 +192,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex items-center justify-center min-h-screen" style={{ background: "#0A0A0A" }}>
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "28px", fontWeight: 700, color: "#F5F5F0", letterSpacing: "-0.02em", textAlign: "center" }}>
-            KingCam OS
+            CreatorVault Studio
           </h1>
           <p style={{ color: "#666", fontSize: "14px", textAlign: "center", lineHeight: 1.6 }}>
             Access requires authentication.
@@ -238,8 +238,8 @@ function KingCamOSShell({ children }: { children: React.ReactNode }) {
       {/* ── Sidebar ── */}
       <aside
         style={{
-          width: isMobile ? (mobileOpen ? "280px" : "0") : "280px",
-          minWidth: isMobile ? (mobileOpen ? "280px" : "0") : "280px",
+          width: isMobile ? (mobileOpen ? "min(88vw, 340px)" : "0") : "280px",
+          minWidth: isMobile ? (mobileOpen ? "min(88vw, 340px)" : "0") : "280px",
           background: "#111111",
           borderRight: "1px solid rgba(255,255,255,0.06)",
           display: "flex",
@@ -255,7 +255,7 @@ function KingCamOSShell({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div style={{ padding: "28px 24px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "20px", fontWeight: 700, color: "#F5F5F0", letterSpacing: "-0.01em" }}>
-            KingCam OS
+            CreatorVault Studio
           </div>
           <div style={{ fontSize: "11px", color: "#C9A961", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: "4px" }}>
             CreatorVault
@@ -278,7 +278,8 @@ function KingCamOSShell({ children }: { children: React.ReactNode }) {
                   alignItems: "center",
                   gap: "10px",
                   width: "100%",
-                  padding: "10px 12px",
+                  padding: isMobile ? "13px 14px" : "10px 12px",
+                  minHeight: isMobile ? "46px" : undefined,
                   borderRadius: "8px",
                   border: "none",
                   background: isActive ? "rgba(201,169,97,0.12)" : "transparent",
@@ -318,7 +319,8 @@ function KingCamOSShell({ children }: { children: React.ReactNode }) {
                   alignItems: "center",
                   gap: "10px",
                   width: "100%",
-                  padding: "9px 12px",
+                  padding: isMobile ? "13px 14px" : "9px 12px",
+                  minHeight: isMobile ? "46px" : undefined,
                   borderRadius: "6px",
                   border: "none",
                   background: isActive ? "rgba(255,255,255,0.05)" : "transparent",
@@ -362,12 +364,12 @@ function KingCamOSShell({ children }: { children: React.ReactNode }) {
 
         {/* Top Bar */}
         <header style={{
-          height: "56px",
+          height: isMobile ? "64px" : "56px",
           background: "#111111",
           borderBottom: "1px solid rgba(255,255,255,0.06)",
           display: "flex",
           alignItems: "center",
-          padding: "0 24px",
+          padding: isMobile ? "0 14px" : "0 24px",
           gap: "16px",
           position: "sticky",
           top: 0,
@@ -376,7 +378,8 @@ function KingCamOSShell({ children }: { children: React.ReactNode }) {
           {isMobile && (
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              style={{ background: "none", border: "none", color: "#666", cursor: "pointer", padding: "4px" }}
+              aria-label="Open creator navigation"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px", color: "#F5F5F0", cursor: "pointer", padding: "10px", minWidth: "44px", minHeight: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               {mobileOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
@@ -437,7 +440,7 @@ function KingCamOSShell({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page Content */}
-        <main style={{ flex: 1, padding: "32px", overflowY: "auto" }}>
+        <main style={{ flex: 1, padding: isMobile ? "18px 14px 28px" : "32px", overflowY: "auto" }}>
           {children}
         </main>
       </div>

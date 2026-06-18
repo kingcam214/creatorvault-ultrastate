@@ -1,97 +1,109 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
-import { Play, TrendingUp, DollarSign, Users, Video, Star, ArrowRight, Zap } from "lucide-react";
+import { DollarSign, Users, Video, Star, ArrowRight, Zap, Smartphone } from "lucide-react";
 
 export default function CreatorHome() {
   const { user } = useAuth();
   const { data: stats } = (trpc.vaultAnalytics as any).getOverview?.useQuery(undefined, { retry: false });
 
   const tools = [
-    { label: "VaultX Editor", href: "/vault-x/editor", icon: "🎬", desc: "CapCut-style editor for creators" },
-    { label: "Pollo AI Video", href: "/vault-x/studio?mode=ai-video-generator#pollo", icon: "⚡", desc: "Image-to-video generator with Pollo/Kling output" },
-    { label: "Script Writer", href: "/king/script-writer", icon: "✍️", desc: "AI-powered scripts" },
-    { label: "Telegram Hub", href: "/king/telegram-hub", icon: "📱", desc: "Broadcast to fans" },
-    { label: "Empire Agents", href: "/king/empire", icon: "🤖", desc: "49 AI agents working" },
-    { label: "Challenge", href: "/king/challenge-story", icon: "💰", desc: "$5k Empire Challenge" },
-    { label: "Analytics", href: "/creator/analytics", icon: "📊", desc: "Track performance" },
-    { label: "Marketplace", href: "/marketplace", icon: "🛒", desc: "Sell your products" },
-    { label: "Brand Deals", href: "/brand-deals", icon: "🤝", desc: "Land sponsorships" },
-    { label: "KingCam Engine", href: "/king/engine", icon: "🎥", desc: "Clone video studio" },
-    { label: "Viral Optimizer", href: "/tools/viral-optimizer", icon: "🔥", desc: "Maximize reach" },
-    { label: "Podcast Studio", href: "/podcast-studio", icon: "🎙️", desc: "Record & distribute" },
-    { label: "Social Autoposter", href: "/social-autoposter", icon: "📲", desc: "Auto-post everywhere" },
+    { label: "Edit a drop", href: "/vault-x/editor", icon: "🎬", desc: "Cut clips, package teasers, and prep paid content from your phone." },
+    { label: "Make motion", href: "/vault-x/studio?mode=ai-video-generator#pollo", icon: "⚡", desc: "Turn a strong image into a scroll-stopping video." },
+    { label: "Write the script", href: "/king/script-writer", icon: "✍️", desc: "Create captions, scene ideas, and sales messages fast." },
+    { label: "Broadcast to fans", href: "/king/telegram-hub", icon: "📱", desc: "Send updates and offers without hunting through menus." },
+    { label: "Clone studio", href: "/king/clone-command", icon: "👑", desc: "Create clone images, then turn the best shot into motion." },
+    { label: "Challenge tracker", href: "/king/challenge-story", icon: "💰", desc: "See the next money move and what still needs attention." },
+    { label: "Performance", href: "/creator/analytics", icon: "📊", desc: "Track what is getting views, fans, and revenue." },
+    { label: "Sell products", href: "/marketplace", icon: "🛒", desc: "Package offers and make them easier to buy." },
+    { label: "Brand deals", href: "/brand-deals", icon: "🤝", desc: "Organize sponsorship opportunities and creator offers." },
+    { label: "Viral boost", href: "/tools/viral-optimizer", icon: "🔥", desc: "Tighten hooks, captions, and reach before posting." },
+    { label: "Podcast studio", href: "/podcast-studio", icon: "🎙️", desc: "Record, package, and distribute longer-form content." },
+    { label: "Auto-post", href: "/social-autoposter", icon: "📲", desc: "Queue finished content across your channels." },
   ];
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Hero */}
       <div className="relative overflow-hidden bg-gradient-to-br from-black via-yellow-950/20 to-black border-b border-yellow-500/20">
-        <div className="max-w-6xl mx-auto px-6 py-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-black font-bold text-lg">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-black font-bold text-lg shrink-0">
               {user?.name?.[0] || "C"}
             </div>
             <div>
-              <p className="text-yellow-400 text-sm font-medium">CREATOR DASHBOARD</p>
-              <h1 className="text-2xl font-bold">Welcome back, {user?.name || "Creator"}</h1>
+              <p className="text-yellow-400 text-xs sm:text-sm font-semibold tracking-[0.16em] uppercase">Creator launchpad</p>
+              <h1 className="text-2xl sm:text-3xl font-bold">Welcome back, {user?.name || "Creator"}</h1>
             </div>
           </div>
-          <p className="text-gray-400 max-w-xl">Your empire command center. Open VaultX Editor for CapCut-style clipping, safe previews, PPV packaging, platform exports, and revenue-ready drops — all in one place.</p>
+          <p className="text-gray-300 max-w-2xl leading-relaxed">Everything here is built for a phone-first creator: make the asset, polish the drop, send it to fans, and track what earns.</p>
         </div>
       </div>
 
-      {/* Stats Row */}
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="mb-6 rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/15 via-white/5 to-purple-500/10 p-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <div className="w-11 h-11 rounded-xl bg-yellow-400 text-black flex items-center justify-center shrink-0">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-yellow-300 font-bold text-lg">Start on your phone</p>
+              <p className="text-gray-300 text-sm leading-relaxed mt-1">Use this as a simple daily flow: create the visual, edit the drop, then broadcast or sell it. No laptop should be required for the core moves.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 text-sm">
+                {["1. Create a shot", "2. Package the drop", "3. Send or sell"].map((step) => (
+                  <div key={step} className="rounded-xl bg-black/30 border border-white/10 px-3 py-3 text-gray-200 font-semibold">{step}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-10">
           {[
-            { label: "Total Revenue", value: stats?.totalRevenue ? `$${stats.totalRevenue.toFixed(2)}` : "$0.00", icon: DollarSign, color: "text-green-400" },
+            { label: "Revenue", value: stats?.totalRevenue ? `$${stats.totalRevenue.toFixed(2)}` : "$0.00", icon: DollarSign, color: "text-green-400" },
             { label: "Subscribers", value: stats?.totalSubscribers ?? 0, icon: Users, color: "text-blue-400" },
-            { label: "Content Items", value: stats?.totalContent ?? 0, icon: Video, color: "text-purple-400" },
+            { label: "Content", value: stats?.totalContent ?? 0, icon: Video, color: "text-purple-400" },
             { label: "Empire Score", value: stats?.empireScore ?? "—", icon: Star, color: "text-yellow-400" },
           ].map((s) => (
-            <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4 min-h-[112px]">
               <s.icon className={`w-5 h-5 ${s.color} mb-2`} />
-              <p className="text-2xl font-bold">{s.value}</p>
+              <p className="text-xl sm:text-2xl font-bold">{s.value}</p>
               <p className="text-gray-400 text-sm">{s.label}</p>
             </div>
           ))}
         </div>
 
-        {/* Tools Grid */}
         <h2 className="text-lg font-semibold text-yellow-400 mb-4 flex items-center gap-2">
-          <Zap className="w-5 h-5" /> Empire Tools
+          <Zap className="w-5 h-5" /> Creator tools
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {tools.map((tool) => (
             <Link key={tool.href} href={tool.href}>
-              <div className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-yellow-500/40 rounded-xl p-4 cursor-pointer transition-all group">
+              <div className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-yellow-500/40 rounded-xl p-4 min-h-[116px] cursor-pointer transition-all group">
                 <div className="text-2xl mb-2">{tool.icon}</div>
                 <p className="font-semibold text-sm group-hover:text-yellow-400 transition-colors">{tool.label}</p>
-                <p className="text-gray-500 text-xs mt-1">{tool.desc}</p>
+                <p className="text-gray-400 text-xs mt-1 leading-relaxed">{tool.desc}</p>
               </div>
             </Link>
           ))}
         </div>
 
-        {/* Quick Actions */}
-        <div className="mt-8 grid md:grid-cols-2 gap-4">
-          <Link href="/vault-x/editor">
-            <div className="bg-gradient-to-r from-purple-500/25 via-pink-500/15 to-yellow-500/10 border border-purple-500/40 rounded-xl p-5 cursor-pointer hover:border-pink-500/70 transition-all flex items-center justify-between">
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link href="/king/clone-command">
+            <div className="bg-gradient-to-r from-cyan-500/20 to-yellow-500/10 border border-cyan-500/40 rounded-xl p-5 min-h-[92px] cursor-pointer hover:border-cyan-400/70 transition-all flex items-center justify-between gap-4">
               <div>
-                <p className="font-bold text-purple-300">🎬 Open VaultX Editor</p>
-                <p className="text-gray-400 text-sm mt-1">CapCut-style editing, teaser cuts, PPV packs, and exports</p>
+                <p className="font-bold text-cyan-300">Open Clone Command Studio</p>
+                <p className="text-gray-300 text-sm mt-1">Create the shot, then make it move.</p>
               </div>
-              <ArrowRight className="w-5 h-5 text-purple-300" />
+              <ArrowRight className="w-5 h-5 text-cyan-300 shrink-0" />
             </div>
           </Link>
-          <Link href="/vault-x/studio?mode=ai-video-generator#pollo">
-            <div className="bg-gradient-to-r from-red-500/20 to-yellow-500/10 border border-red-500/30 rounded-xl p-5 cursor-pointer hover:border-red-500/60 transition-all flex items-center justify-between">
+          <Link href="/vault-x/editor">
+            <div className="bg-gradient-to-r from-purple-500/25 via-pink-500/15 to-yellow-500/10 border border-purple-500/40 rounded-xl p-5 min-h-[92px] cursor-pointer hover:border-pink-500/70 transition-all flex items-center justify-between gap-4">
               <div>
-                <p className="font-bold text-red-300">Generate with Pollo AI</p>
-                <p className="text-gray-400 text-sm mt-1">Upload an image, direct the motion, and export a real video</p>
+                <p className="font-bold text-purple-300">Package a finished drop</p>
+                <p className="text-gray-300 text-sm mt-1">Cut, polish, export, and prep content for sales.</p>
               </div>
-              <ArrowRight className="w-5 h-5 text-red-300" />
+              <ArrowRight className="w-5 h-5 text-purple-300 shrink-0" />
             </div>
           </Link>
         </div>
