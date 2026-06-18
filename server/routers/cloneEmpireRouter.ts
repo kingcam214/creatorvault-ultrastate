@@ -13,6 +13,7 @@ import path from "path";
 import fs from "fs";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { generateSpeech } from "../_core/tts.js";
 
 const execAsync = promisify(exec);
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -43,21 +44,53 @@ function ensureDirs() {
 }
 
 async function generateElevenLabsAudio(text: string, outputPath: string): Promise<number> {
+  try {
+    const result = await generateSpeech(text, {
+      voice: "kingcam",
+      speed: 0.95,
+      stability: 0.5,
+      similarityBoost: 0.85,
+      style: 0.35,
+      language: "en",
+    });
+    const audioResponse = await fetch(result.audioUrl);
+    if (!audioResponse.ok) {
+      throw new Error(`Generated speech download failed: ${audioResponse.status} ${await audioResponse.text().catch(() => audioResponse.statusText)}`);
+    }
+    const buf = Buffer.from(await audioResponse.arrayBuffer());
+    fs.writeFileSync(outputPath, buf);
+    return result.duration || Math.ceil(buf.length / 16000);
+  } catch (err) {
+    console.error("[CloneEmpire] hardened TTS path failed; attempting direct ElevenLabs final fallback:", err);
+  }
+
   const voiceId = process.env.KINGCAM_ELEVEN_VOICE_ID || "rwc11bXCBw5KydM4avHE";
   const apiKey = process.env.ELEVENLABS_API_KEY || "";
+  if (!apiKey) throw new Error("ELEVENLABS_API_KEY missing and hardened TTS fallback failed");
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method: "POST",
     headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
     body: JSON.stringify({
       text,
-      model_id: "eleven_turbo_v2",
-      voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.3, use_speaker_boost: true }
+      model_id: "eleven_multilingual_v2",
+      voice_settings: { stability: 0.5, similarity_boost: 0.85, style: 0.35, use_speaker_boost: true }
     })
   });
   if (!res.ok) throw new Error(`ElevenLabs error: ${await res.text()}`);
   const buf = Buffer.from(await res.arrayBuffer());
   fs.writeFileSync(outputPath, buf);
   return Math.ceil(buf.length / 16000);
+}
+
+const CLONE_IMAGE_NEGATIVE_PROMPT = "extra fingers, fused fingers, missing fingers, deformed hands, warped face, duplicate face, distorted eyes, bad anatomy, mutated limbs, text artifacts, watermark, logo, blurry, low resolution, plastic skin, uncanny valley, over-smoothed face, ai artifacts";
+
+function buildCloneImagePrompt(prompt: string, style: string): string {
+  return [
+    `fluxdevCam ${prompt}`,
+    `${style} style`,
+    "premium editorial portrait quality, realistic skin texture, natural facial symmetry, accurate hands, clean anatomy, cinematic lighting, sharp focus, professional color grading",
+    "no text overlays, no watermark, no logos, no distorted hands, no facial warping, no duplicate limbs"
+  ].join(", ");
 }
 
 async function buildVideoFromAudio(audioPath: string, videoPath: string, title: string, style: string): Promise<void> {
@@ -254,11 +287,22 @@ export const cloneEmpireRouter = router({
     const token = process.env.REPLICATE_API_TOKEN || "";
     if (!token) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Replicate not configured" });
     const model = process.env.REPLICATE_CLONE_MODEL_ID || "kingcam214/fluxdevcam";
-    const fullPrompt = `fluxdevCam ${input.prompt}, ${input.style} style, high quality`;
+    const fullPrompt = buildCloneImagePrompt(input.prompt, input.style);
     const res = await fetch("https://api.replicate.com/v1/predictions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, input: { prompt: fullPrompt, num_outputs: 1, width: 1024, height: 1024 } })
+      body: JSON.stringify({
+        model,
+        input: {
+          prompt: fullPrompt,
+          negative_prompt: CLONE_IMAGE_NEGATIVE_PROMPT,
+          num_outputs: 1,
+          width: 1024,
+          height: 1024,
+          guidance_scale: 7.5,
+          num_inference_steps: 32,
+        }
+      })
     });
     if (!res.ok) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Replicate error: ${await res.text()}` });
     const prediction = await res.json();
