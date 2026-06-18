@@ -1,1 +1,6 @@
-{"commit":"f0ed417d871ad4a4c55594af2ea74caa8adfeeb3","gitSha":"f0ed417d871ad4a4c55594af2ea74caa8adfeeb3","branch":"main","builtAt":"2026-06-10T00:24:21Z","timestamp":"2026-06-10T00:24:21Z","environment":"production","task":"vaultx-body-cinema-launch-console","releaseName":"vaultx-body-cinema-launch-console-f0ed417"}
+{
+  "commit": "f0410adefe7e462da9133d7d25b76b3fe298bae0",
+  "short": "f0410ade fix: keep factory running when script llm fails",
+  "deployedAt": "2026-06-18T18:06:40.013Z",
+  "source": "manual-vps-deploy"
+}

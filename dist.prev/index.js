@@ -4422,14 +4422,14 @@ var init_kingcamAI = __esm({
     REPLICATE_TOKEN2 = process.env.REPLICATE_API_TOKEN ?? "";
     POLLO_KEY = process.env.POLLO_API_KEY ?? "";
     FLUXDEVCAM = {
-      model: "kingcam214/fluxdevcam",
-      version: "6f76a5fb9645488a56e2fdd36a9f213fc08b5aee638d9aa46253b6cd17c3bcff",
-      triggerWord: "fluxdevCam"
+      model: process.env.REPLICATE_CLONE_MODEL_ID ?? "kingcam214/fluxdevcam",
+      version: process.env.REPLICATE_CLONE_VERSION ?? "e8074c4eeec195ad8ab617bf1502cd0c297db7f2c1cf5d9a665fad4710468727",
+      triggerWord: process.env.REPLICATE_CLONE_TRIGGER_WORD ?? "fluxdevCam"
     };
     KINGCAM_DNA = {
       triggerWord: FLUXDEVCAM.triggerWord,
       /** Core identity injected into every prompt */
-      baseIdentity: "fluxdevCam, Black male, royal velvet suit with diamond and crystal trim lapels, gold crown, layered gold chains, aviator sunglasses, designer high-top sneakers, commanding royal presence, luxury interior with dark leather and gold accents",
+      baseIdentity: "kingcam_clone, bald fade with 360 waves on top, clean lineup, tapered sides, full beard, deep dark brown skin, melanin rich, broad strong muscular build, Dita Mach-One aviators OR Versace eyewear, ultra thin titanium frame sunglasses, layered gold chain necklace, gold bracelet, small diamond hoop earrings, tiny diamond hoops, small gold diamond hoop earrings, petite hoop earrings with diamonds, subtle earrings, luxury jewelry, signature look",
       /** All suit color variants for the brand */
       suitColorVariants: [
         { name: "Crimson King", color: "deep crimson red velvet" },
@@ -4445,6 +4445,8 @@ var init_kingcamAI = __esm({
         { name: "Slate Sovereign", color: "charcoal slate velvet with silver trim" },
         { name: "Rose Gold King", color: "dusty rose velvet with rose gold trim" }
       ],
+      /** Negative identity guardrails for generated prompts */
+      negativeIdentity: "bald head, no hair, afro, locs, braids, long hair, curly hair, no waves, wrong glasses, no sunglasses, plastic cheap frames, light skin, medium skin, thin build, slim, lanky, no beard, clean shaven, large hoop earrings, oversized hoops, big earrings, chunky earrings, dangling earrings, no earrings, studs, plain hoops without diamonds, no jewelry, no chain",
       /** Style modifiers appended to every generated prompt */
       styleModifiers: "photorealistic, 8K ultra HD, cinematic lighting, luxury fashion editorial, sharp focus, dramatic shadows, professional photography"
     };
@@ -5145,12 +5147,24 @@ var init_slangExxchange = __esm({
 
 // server/services/kingcamScriptGenerator.ts
 async function generateKingCamScript(options) {
+  const normalized = normalizeOptions(options);
+  try {
+    return await generateKingCamScriptWithRealGPT(normalized);
+  } catch (error) {
+    console.warn(
+      "[KingCamScriptGenerator] RealGPT script generation failed; using production fallback script.",
+      redactScriptError(error)
+    );
+    return generateFallbackKingCamScript(normalized, error);
+  }
+}
+async function generateKingCamScriptWithRealGPT(options) {
   const {
     topic,
-    sector = "general",
-    targetDuration = 60,
-    sceneCount = 4,
-    tone = "educational"
+    sector,
+    targetDuration,
+    sceneCount,
+    tone
   } = options;
   const sectorContext = sector !== "general" ? getSectorContext(sector) : "";
   const userPrompt = `Create a ${targetDuration}-second video script about: ${topic}
@@ -5182,25 +5196,121 @@ Return JSON with this structure:
   const response = await invokeRealGPT({
     userMessage: userPrompt,
     mode: "KingCam"
-    // Use KingCam identity mode
   });
-  const content2 = response.choices[0].message.content;
-  let responseText = typeof content2 === "string" ? content2 : "{}";
-  responseText = responseText.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+  const content2 = response.choices?.[0]?.message?.content;
+  const responseText = (typeof content2 === "string" ? content2 : "{}").replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
   const scriptData = JSON.parse(responseText);
-  const segments = scriptData.segments.map((seg) => ({
-    text: seg.text,
-    duration: seg.duration,
-    sceneIndex: seg.sceneIndex
-  }));
+  return normalizeScriptResponse(scriptData, options);
+}
+function normalizeOptions(options) {
+  const sceneCount = Math.max(3, Math.min(8, Math.floor(options.sceneCount ?? 4)));
+  const targetDuration = Math.max(30, Math.min(180, Math.floor(options.targetDuration ?? 60)));
+  return {
+    topic: sanitizeTopic(options.topic),
+    sector: options.sector ?? "general",
+    targetDuration,
+    sceneCount,
+    tone: options.tone ?? "educational"
+  };
+}
+function normalizeScriptResponse(scriptData, options) {
+  if (!Array.isArray(scriptData.segments) || scriptData.segments.length === 0) {
+    throw new Error("RealGPT returned no script segments");
+  }
+  const fallbackDuration = Math.max(8, Math.floor(options.targetDuration / scriptData.segments.length));
+  const segments = scriptData.segments.map((seg, index5) => {
+    const text6 = typeof seg.text === "string" ? seg.text.trim() : "";
+    if (!text6) {
+      throw new Error(`RealGPT returned an empty segment at index ${index5}`);
+    }
+    const duration = Number(seg.duration);
+    return {
+      text: text6,
+      duration: Number.isFinite(duration) && duration > 0 ? Math.round(duration) : fallbackDuration,
+      sceneIndex: Number.isFinite(Number(seg.sceneIndex)) ? Number(seg.sceneIndex) : index5
+    };
+  });
   const totalDuration = segments.reduce((sum3, seg) => sum3 + seg.duration, 0);
   const fullText = segments.map((seg) => seg.text).join("\n\n");
   return {
-    title: scriptData.title,
+    title: typeof scriptData.title === "string" && scriptData.title.trim() ? scriptData.title.trim() : buildFallbackTitle(options.topic),
     totalDuration,
     segments,
     fullText
   };
+}
+function generateFallbackKingCamScript(options, cause) {
+  const { topic, sector, targetDuration, sceneCount, tone } = options;
+  const sceneDuration = Math.max(8, Math.floor(targetDuration / sceneCount));
+  const angle = getSectorAngle(sector);
+  const toneLine = getToneLine(tone);
+  const proofLine = getProofLine(sector);
+  const failureContext = isQuotaLikeError(cause) ? "Primary AI quota was unavailable, so the factory used the resilient KingCam script engine and kept the production line moving." : "Primary AI response was unavailable, so the factory used the resilient KingCam script engine and kept the production line moving.";
+  const templates = [
+    `Real talk. ${topic} is not a content idea, it is an execution test. If it cannot turn into a clear offer, a sharp visual, and a paid action, it is noise. Today we cut the noise and turn the concept into a product people can understand in five seconds.`,
+    `Here is the Lion Logic. First, name the buyer. Second, name the pain. Third, show the transformation. ${angle} The viewer should know exactly why this matters before the first scroll impulse hits.`,
+    `Now make it visual. Open on the strongest proof frame, not a lecture. Show the creator, the result, the vault, the unlock, and the next move. ${toneLine} Every line should push the viewer closer to trust, desire, or action.`,
+    `This is where CreatorVault separates itself. The clone does not just talk. It packages the drop, points the buyer to the unlock, and keeps the creator focused on revenue instead of busywork. ${proofLine}`,
+    `Final move. Put the offer in plain language, give one direct action, and remove every weak word. If they want access, they know where to tap. If they want proof, the content shows it. That is how one phone turns into a content factory.`,
+    `${failureContext} The standard stays the same: useful script, premium visual direction, clear CTA, and a finished asset path that can sell.`
+  ];
+  const selected = Array.from({ length: sceneCount }, (_, index5) => templates[index5] ?? templates[templates.length - 1]);
+  const segments = selected.map((text6, index5) => ({
+    text: text6,
+    duration: sceneDuration,
+    sceneIndex: index5
+  }));
+  const totalDuration = segments.reduce((sum3, seg) => sum3 + seg.duration, 0);
+  const fullText = segments.map((seg) => seg.text).join("\n\n");
+  return {
+    title: buildFallbackTitle(topic),
+    totalDuration,
+    segments,
+    fullText
+  };
+}
+function sanitizeTopic(topic) {
+  const clean = String(topic || "CreatorVault revenue drop").replace(/\s+/g, " ").trim();
+  return clean.length > 180 ? `${clean.slice(0, 177)}...` : clean;
+}
+function buildFallbackTitle(topic) {
+  const compact = sanitizeTopic(topic).replace(/[.!?]+$/g, "");
+  return compact.length > 72 ? `${compact.slice(0, 69)}...` : compact;
+}
+function getSectorAngle(sector) {
+  if (sector === "dominican") {
+    return "For Dominican creators, the edge is speed, trust, and knowing how to turn local attention into global cash flow.";
+  }
+  if (sector === "adult") {
+    return "For adult creators, keep the language business-clean: control the funnel, protect the account, and move serious fans into paid access.";
+  }
+  return "For modern creators, the edge is converting attention into a repeatable asset, not chasing random posts.";
+}
+function getToneLine(tone) {
+  if (tone === "promotional") {
+    return "Sell the outcome without sounding desperate.";
+  }
+  if (tone === "motivational") {
+    return "Make the ambition feel immediate, but keep the instruction practical.";
+  }
+  return "Teach it like an operator, not a classroom.";
+}
+function getProofLine(sector) {
+  if (sector === "adult") {
+    return "Keep the preview clean, make the paid promise obvious, and move the fan toward controlled access.";
+  }
+  if (sector === "dominican") {
+    return "The message is simple: build once, distribute smart, and let the vault collect while the creator keeps moving.";
+  }
+  return "The message is simple: build the asset, publish the offer, and let the system carry the repeat work.";
+}
+function redactScriptError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.replace(/Bearer\s+[A-Za-z0-9._-]+/gi, "Bearer [redacted]").replace(/api[_-]?key[=:]\s*[A-Za-z0-9._-]+/gi, "api_key=[redacted]").slice(0, 600);
+}
+function isQuotaLikeError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /quota|rate.?limit|429|insufficient/i.test(message);
 }
 function getSectorContext(sector) {
   const contexts = {
@@ -10675,7 +10785,7 @@ var init_vaultxRouter = __esm({
     POLLO_API_KEY2 = process.env.POLLO_API_KEY || "";
     POLLO_API_URL = "https://pollo.ai/api/platform/generation/pollo/pollo-v1-6";
     POLLO_BASE_URL2 = "https://pollo.ai/api/platform";
-    stripe4 = process.env.STRIPE_SECRET_KEY ? new Stripe4(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-12-15.clover" }) : null;
+    stripe4 = process.env.STRIPE_SECRET_KEY ? new Stripe4(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-02-25.clover" }) : null;
     BODY_CINEMA_REGION_WEIGHTS = {
       face: 0.74,
       bust: 0.92,
@@ -10708,11 +10818,18 @@ var init_vaultxRouter = __esm({
         const hasOpenAi = Boolean(process.env.OPENAI_API_KEY);
         const hasRunway = Boolean(process.env.RUNWAY_API_KEY || process.env.RUNWAYML_API_SECRET);
         const hasKling = Boolean(process.env.KLING_API_KEY || process.env.KLING_ACCESS_KEY || process.env.KLING_SECRET_KEY);
+        const canonicalBaseUrl = process.env.PUBLIC_APP_URL || process.env.CREATORVAULT_PUBLIC_URL || process.env.APP_URL || "https://creatorvault.live";
+        const hasTikTokApp = Boolean(process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET);
+        const hasMetaApp = Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET);
+        const hasFacebookPage = Boolean(process.env.FACEBOOK_PAGE_ID && (process.env.FACEBOOK_PAGE_ACCESS_TOKEN || process.env.META_PAGE_ACCESS_TOKEN));
+        const hasInstagramBusiness = Boolean(process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID && (process.env.INSTAGRAM_ACCESS_TOKEN || process.env.META_PAGE_ACCESS_TOKEN));
+        const socialCallbackBase = `${canonicalBaseUrl.replace(/\/$/, "")}/api/social`;
         const latestPackages = await rawQuery6(
-          `SELECT id, title, content_type, telegram_mode, price_cents, status, asset_status, asset_url, checkout_url, telegram_tracking_code, created_at
-         FROM vaultx_revenue_packages
-         WHERE user_id = ?
-         ORDER BY id DESC
+          `SELECT p.id, p.title, p.content_type, p.telegram_mode, p.price_cents, p.status, p.asset_status, p.asset_url, p.checkout_url, p.telegram_tracking_code, p.pollo_job_id, p.stripe_checkout_session_id, p.telegram_campaign_id, p.vaultx_content_id, p.created_at,
+                (SELECT va.id FROM vaultx_artifacts va WHERE va.package_id = p.id ORDER BY va.id DESC LIMIT 1) AS artifact_id
+         FROM vaultx_revenue_packages p
+         WHERE p.user_id = ?
+         ORDER BY p.id DESC
          LIMIT 6`,
           [ctx.user.id]
         ).catch(() => []);
@@ -10732,20 +10849,26 @@ var init_vaultxRouter = __esm({
             {
               id: "pollo",
               label: "Pollo AI Video",
-              tier: "active-production",
+              tier: "active-package-generation",
               configured: hasPollo,
-              capability: "Image-to-video package assets and premium trailer motion through the existing Pollo generation/status pipeline.",
+              capability: "Image-to-video Body Cinema package assets through the existing Pollo generation/status/artifact pipeline.",
               unlockRequirement: hasPollo ? null : "Configure POLLO_API_KEY on the server.",
-              primaryEndpoints: ["createRevenuePackage", "generatePackageAsset", "getPackageAssetStatus"]
+              primaryEndpoints: ["createRevenuePackage", "generatePackageAsset", "getPackageAssetStatus"],
+              recommendedMode: "BOOST",
+              estimatedCostCents: { FAST: 250, BOOST: 450, FULL: 850, default: 450 },
+              qualityTier: "production"
             },
             {
               id: "replicate",
               label: "Replicate Model Rack",
-              tier: "active-production",
+              tier: "active-enhancement-rack",
               configured: hasReplicate,
-              capability: "Enhancement, motion, teaser, thumbnail, and clone-adjacent model routes already present in VaultX services.",
+              capability: "Enhancement, motion, teaser, thumbnail, and clone-adjacent routes are available in VaultX services, but direct package generation remains Pollo-owned until a package endpoint is wired.",
               unlockRequirement: hasReplicate ? null : "Configure REPLICATE_API_TOKEN on the server.",
-              primaryEndpoints: ["generateDesireTeaser", "buildPpvBundle", "generateThumbnails", "analyzeHook"]
+              primaryEndpoints: ["generateDesireTeaser", "buildPpvBundle", "generateThumbnails", "analyzeHook"],
+              recommendedMode: "BOOST",
+              estimatedCostCents: { FAST: 300, BOOST: 600, FULL: 1100, default: 600 },
+              qualityTier: "enhancement"
             },
             {
               id: "clone",
@@ -10754,25 +10877,34 @@ var init_vaultxRouter = __esm({
               configured: hasPollo || hasReplicate,
               capability: "Clone-image/video handoff, generation history, Vault persistence, and hero assets through the existing Clone Command router.",
               unlockRequirement: hasPollo || hasReplicate ? null : "Enable at least one media provider key before launching clone media generation.",
-              primaryEndpoints: ["cloneCommand.generateCloneImage", "cloneCommand.generateCloneVideo", "cloneCommand.getGenerationHistory"]
+              primaryEndpoints: ["cloneCommand.generateCloneImage", "cloneCommand.generateCloneVideo", "cloneCommand.getGenerationHistory"],
+              recommendedMode: "operator",
+              estimatedCostCents: { FAST: 250, BOOST: 500, FULL: 900, default: 500 },
+              qualityTier: "clone-system"
             },
             {
               id: "runway",
               label: "Runway Premium Lane",
-              tier: hasRunway ? "configured-premium" : "pending-direct-configuration",
+              tier: hasRunway ? "credential-detected-needs-endpoint" : "pending-direct-configuration",
               configured: hasRunway,
-              capability: "Premium video model lane reserved for direct Runway orchestration when server credentials are present; otherwise do not claim live direct generation.",
-              unlockRequirement: hasRunway ? null : "Configure a real Runway API credential before exposing direct Runway jobs.",
-              primaryEndpoints: []
+              capability: "Premium video model lane reserved for direct Runway orchestration; credentials alone do not expose fake jobs until a real package endpoint is wired.",
+              unlockRequirement: hasRunway ? "Wire and verify a direct Runway package-generation endpoint before creator launch." : "Configure a real Runway API credential before exposing direct Runway jobs.",
+              primaryEndpoints: [],
+              recommendedMode: "FULL",
+              estimatedCostCents: { FAST: 900, BOOST: 1500, FULL: 2600, default: 1500 },
+              qualityTier: "premium-pending"
             },
             {
               id: "kling",
               label: "Kling Premium Lane",
-              tier: hasKling ? "configured-premium" : "pending-direct-configuration",
+              tier: hasKling ? "credential-detected-needs-endpoint" : "pending-direct-configuration",
               configured: hasKling,
-              capability: "Premium motion lane reserved for direct Kling orchestration when server credentials are present or confirmed through a provider aggregator.",
-              unlockRequirement: hasKling ? null : "Configure real Kling credentials or a confirmed provider model route before exposing direct Kling jobs.",
-              primaryEndpoints: []
+              capability: "Premium motion lane reserved for direct Kling orchestration or a confirmed provider aggregator route; no direct fake generation is claimed.",
+              unlockRequirement: hasKling ? "Wire and verify a direct Kling or confirmed aggregator package endpoint before creator launch." : "Configure real Kling credentials or a confirmed provider model route before exposing direct Kling jobs.",
+              primaryEndpoints: [],
+              recommendedMode: "FULL",
+              estimatedCostCents: { FAST: 850, BOOST: 1400, FULL: 2400, default: 1400 },
+              qualityTier: "premium-pending"
             }
           ],
           workflows: [
@@ -10812,6 +10944,71 @@ var init_vaultxRouter = __esm({
             distributionEndpoint: "publishPackageTelegramRoute",
             economics: { platformFeePercent: 15, creatorKeepPercent: 85 }
           },
+          socialPresence: {
+            status: hasTikTokApp || hasMetaApp ? "developer-apps-detected" : "developer-console-approval-required",
+            callbackBase: socialCallbackBase,
+            officialOnly: true,
+            fakePostingForbidden: true,
+            platforms: [
+              {
+                id: "tiktok",
+                label: "TikTok",
+                configured: hasTikTokApp,
+                status: hasTikTokApp ? "oauth-ready-needs-user-connection" : "developer-app-required",
+                products: ["Login Kit", "Content Posting API", "Research API"],
+                creatorValue: "Creator identity, TikTok share/post handoff, public research signals, and campaign-safe short-form distribution planning.",
+                requiredCredentials: ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"],
+                callbackUrls: [`${socialCallbackBase}/tiktok/callback`],
+                requiredScopes: ["user.info.basic", "video.upload", "video.publish"],
+                approvalChecklist: [
+                  "Create or select the TikTok developer app.",
+                  "Add the production callback URL exactly as shown.",
+                  "Request Login Kit and Content Posting API permissions before enabling direct publish buttons.",
+                  "Request Research API separately for public-data intelligence use cases."
+                ],
+                allowedActions: hasTikTokApp ? ["connect-account", "prepare-share", "queue-after-oauth"] : ["show-setup-checklist"],
+                blockedActions: hasTikTokApp ? ["fake-posting-without-user-token"] : ["oauth", "posting", "research-api-calls"]
+              },
+              {
+                id: "instagram",
+                label: "Instagram",
+                configured: hasMetaApp && hasInstagramBusiness,
+                status: hasMetaApp ? hasInstagramBusiness ? "business-publishing-ready-needs-user-token" : "meta-app-ready-needs-instagram-business-account" : "meta-app-required",
+                products: ["Instagram Platform", "Instagram Graph API", "Content Publishing"],
+                creatorValue: "Professional-account linking, Reels/media publishing after approval, insights, and comment/message growth loops where permissions allow.",
+                requiredCredentials: ["META_APP_ID", "META_APP_SECRET", "INSTAGRAM_BUSINESS_ACCOUNT_ID", "META_PAGE_ACCESS_TOKEN or INSTAGRAM_ACCESS_TOKEN"],
+                callbackUrls: [`${socialCallbackBase}/meta/callback`],
+                requiredScopes: ["instagram_basic", "instagram_content_publish", "instagram_manage_insights", "pages_show_list"],
+                approvalChecklist: [
+                  "Create a Meta app and complete business verification if required.",
+                  "Connect an Instagram professional account to a Facebook Page.",
+                  "Add OAuth redirect URLs and webhook callback URLs for production.",
+                  "Pass App Review for publishing and insights permissions before live automation."
+                ],
+                allowedActions: hasMetaApp && hasInstagramBusiness ? ["connect-account", "prepare-reel", "queue-after-oauth"] : ["show-setup-checklist"],
+                blockedActions: hasMetaApp && hasInstagramBusiness ? ["fake-publishing-without-review-or-token"] : ["oauth", "reels-publishing", "insights-sync"]
+              },
+              {
+                id: "facebook",
+                label: "Facebook",
+                configured: hasMetaApp && hasFacebookPage,
+                status: hasMetaApp ? hasFacebookPage ? "page-publishing-ready-needs-user-token" : "meta-app-ready-needs-page-token" : "meta-app-required",
+                products: ["Facebook Login", "Pages API", "Webhooks"],
+                creatorValue: "Page presence, content publishing, lead/community distribution, webhook-driven engagement events, and cross-post support for CreatorVault offers.",
+                requiredCredentials: ["META_APP_ID", "META_APP_SECRET", "FACEBOOK_PAGE_ID", "FACEBOOK_PAGE_ACCESS_TOKEN or META_PAGE_ACCESS_TOKEN"],
+                callbackUrls: [`${socialCallbackBase}/meta/callback`],
+                requiredScopes: ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "public_profile"],
+                approvalChecklist: [
+                  "Create or reuse the same Meta app used for Instagram.",
+                  "Connect the production Facebook Page and generate approved page access flow.",
+                  "Configure webhook callback and verify token on the production domain.",
+                  "Pass App Review for page publishing and engagement permissions before automation."
+                ],
+                allowedActions: hasMetaApp && hasFacebookPage ? ["connect-page", "prepare-post", "queue-after-oauth"] : ["show-setup-checklist"],
+                blockedActions: hasMetaApp && hasFacebookPage ? ["fake-page-posting-without-token"] : ["oauth", "page-publishing", "webhook-event-sync"]
+              }
+            ]
+          },
           latestPackages: latestPackages.map((pkg) => ({
             id: Number(pkg.id),
             title: pkg.title,
@@ -10823,6 +11020,12 @@ var init_vaultxRouter = __esm({
             hasAsset: Boolean(pkg.asset_url),
             hasCheckout: Boolean(pkg.checkout_url),
             hasTelegramRoute: Boolean(pkg.telegram_tracking_code),
+            providerJobId: pkg.pollo_job_id || null,
+            checkoutSessionId: pkg.stripe_checkout_session_id || null,
+            telegramCampaignId: pkg.telegram_campaign_id || null,
+            telegramTrackingCode: pkg.telegram_tracking_code || null,
+            vaultxContentId: pkg.vaultx_content_id || null,
+            artifactId: pkg.artifact_id ? Number(pkg.artifact_id) : null,
             createdAt: pkg.created_at
           }))
         };
@@ -11868,6 +12071,438 @@ var init_vaultxRouter = __esm({
         if (!sent.success) throw new TRPCError18({ code: "BAD_GATEWAY", message: sent.error || "Telegram publish failed." });
         await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId: Number(pkg.creator_id), packageId: pkg.id, eventType: "telegram.published", status: "ready", payload: { campaignId: campaign.campaignId, trackedUrl: sent.trackedUrl } });
         return { campaignId: campaign.campaignId, trackingCode: campaign.trackingCode, trackedUrl: sent.trackedUrl, artifact: publicArtifactPayload(readyArtifact), success: true };
+      }),
+      launchRevenuePath: protectedProcedure.input(z193.object({
+        title: z193.string().min(3).max(255),
+        contentType: z193.enum(["photo", "video", "audio"]).default("video"),
+        adultContentFlag: z193.boolean(),
+        consentConfirmed: z193.boolean(),
+        teaserDescription: z193.string().min(10).max(2e3),
+        priceCents: z193.number().int().min(100),
+        vipPriceCents: z193.number().int().min(100).optional(),
+        telegramMode: z193.enum(["FAST", "BOOST", "FULL"]).default("BOOST"),
+        sourceMediaUrl: z193.string().url(),
+        resolution: z193.enum(["540p", "720p", "1080p"]).default("720p"),
+        length: z193.enum(["5", "6", "8", "10"]).default("6"),
+        mode: z193.enum(["std", "pro"]).default("pro")
+      })).mutation(async ({ ctx, input }) => {
+        if (!input.adultContentFlag || !input.consentConfirmed) {
+          throw new TRPCError18({ code: "BAD_REQUEST", message: "VaultX launch requires adult-content opt-in and creator consent confirmation." });
+        }
+        if (!POLLO_API_KEY2) throw new TRPCError18({ code: "PRECONDITION_FAILED", message: "POLLO_API_KEY is not configured for VaultX media generation." });
+        if (!stripe4) throw new TRPCError18({ code: "PRECONDITION_FAILED", message: "STRIPE_SECRET_KEY is not configured for VaultX checkout creation." });
+        await ensureVaultxRevenuePackageSchema();
+        await ensureVaultxArtifactSchema();
+        const creatorId = await getCreatorId(ctx.user.id);
+        const cid = creatorId || ctx.user.id;
+        const publicTeaserCopy = qualityGate.check(buildVaultxPackagePublicCopy(input), {
+          surface: "vaultx-drop",
+          context: "vaultx",
+          recipientKey: `vaultx-end-to-end-${ctx.user.id}-${Date.now()}`,
+          hasActionElement: true,
+          requireMessagingDna: true,
+          requireMechanism: true,
+          requireCreatorVaultPositioning: true,
+          ctaAngle: "asset-conversion"
+        });
+        qualityGate.checkVisual(input.sourceMediaUrl, {
+          prompt: "VaultX creator-owned source asset for Body Cinema teaser to paid unlock to tracked Telegram route; premium cinematic, platform-safe public preview.",
+          publicPost: true
+        });
+        const packageResult = await rawExec4(
+          `INSERT INTO vaultx_revenue_packages
+         (creator_id, user_id, title, content_type, adult_content_flag, consent_confirmed, teaser_description, public_teaser_copy, price_cents, vip_price_cents, platform_fee_bps, creator_keep_bps, telegram_mode, source_media_url, status)
+         VALUES (?, ?, ?, ?, 1, 1, ?, ?, ?, ?, 1500, 8500, ?, ?, 'created')`,
+          [cid, ctx.user.id, input.title.trim(), input.contentType, input.teaserDescription.trim(), publicTeaserCopy, input.priceCents, input.vipPriceCents || null, input.telegramMode, input.sourceMediaUrl]
+        );
+        const packageId = Number(packageResult.insertId);
+        const pkgRows = await rawQuery6("SELECT * FROM vaultx_revenue_packages WHERE id = ? LIMIT 1", [packageId]);
+        const pkg = pkgRows[0];
+        if (!pkg) throw new TRPCError18({ code: "INTERNAL_SERVER_ERROR", message: "VaultX package row was not readable after creation." });
+        const prompt = buildVaultxPackagePolloPrompt(pkg);
+        const reusableAssets = await rawQuery6(
+          `SELECT taskId, videoUrl, status
+         FROM pollo_generations
+         WHERE imageUrl = ? AND status IN ('succeed', 'success', 'succeeded') AND videoUrl IS NOT NULL AND videoUrl <> ''
+         ORDER BY updatedAt DESC, id DESC
+         LIMIT 1`,
+          [input.sourceMediaUrl]
+        );
+        const reusable = reusableAssets[0];
+        let jobId = "";
+        let generationStatus = "waiting";
+        let readyArtifact = null;
+        let queuedArtifact = null;
+        let reusedExistingPolloAsset = false;
+        if (reusable?.videoUrl) {
+          qualityGate.checkVisual(reusable.videoUrl, { prompt, publicPost: true });
+          readyArtifact = await persistReadyVaultxArtifact({
+            creatorId: Number(pkg.creator_id),
+            packageId,
+            kind: "package",
+            stage: "end_to_end_package_asset_reuse",
+            provider: "pollo",
+            providerJobId: reusable.taskId,
+            sourceUrl: input.sourceMediaUrl,
+            finalUrl: reusable.videoUrl,
+            metadata: { prompt, resolution: input.resolution, length: input.length, mode: input.mode, reusedExistingPolloAsset: true, launchMode: "end_to_end" }
+          });
+          jobId = reusable.taskId;
+          generationStatus = "succeed";
+          reusedExistingPolloAsset = true;
+          await rawExec4(
+            `UPDATE vaultx_revenue_packages
+           SET source_media_url = ?, asset_prompt = ?, pollo_job_id = ?, asset_status = 'succeed', asset_url = ?, asset_quality_passed = 1, status = 'asset_ready'
+           WHERE id = ?`,
+            [input.sourceMediaUrl, prompt, jobId, readyArtifact.output_url || reusable.videoUrl, packageId]
+          );
+        } else {
+          const generationController = new AbortController();
+          const generationTimeout = setTimeout(() => generationController.abort(), 3e4);
+          const response = await fetch(POLLO_API_URL, {
+            method: "POST",
+            headers: { "x-api-key": POLLO_API_KEY2, "Content-Type": "application/json" },
+            signal: generationController.signal,
+            body: JSON.stringify({
+              input: {
+                image: input.sourceMediaUrl,
+                prompt,
+                resolution: input.resolution,
+                length: Number(input.length),
+                mode: input.mode === "pro" ? "pro" : "basic"
+              }
+            })
+          }).finally(() => clearTimeout(generationTimeout));
+          const data = await response.json();
+          if (!response.ok || data?.code && data.code !== "SUCCESS") {
+            throw new TRPCError18({ code: "BAD_GATEWAY", message: data?.message || data?.error || `Pollo generation failed to start: ${JSON.stringify(data).slice(0, 500)}` });
+          }
+          jobId = data?.data?.taskId || data?.taskId || data?.id;
+          if (!jobId) throw new TRPCError18({ code: "BAD_GATEWAY", message: "Pollo did not return a task id." });
+          generationStatus = normalisePolloStatus2(data?.data?.status || data?.status);
+          await rawExec4(
+            `INSERT INTO pollo_generations (userId, taskId, imageUrl, prompt, resolution, length, mode, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [ctx.user.id, jobId, input.sourceMediaUrl, prompt, input.resolution, input.length, input.mode, generationStatus]
+          );
+          queuedArtifact = await createVaultxArtifact({
+            creatorId: Number(pkg.creator_id),
+            packageId,
+            kind: "package",
+            stage: "end_to_end_package_asset_generation",
+            provider: "pollo",
+            providerJobId: jobId,
+            sourceUrl: input.sourceMediaUrl,
+            status: generationStatus === "failed" ? "failed" : "queued",
+            metadata: { prompt, resolution: input.resolution, length: input.length, mode: input.mode, polloResponse: data, launchMode: "end_to_end" }
+          });
+          await rawExec4(
+            `UPDATE vaultx_revenue_packages
+           SET source_media_url = ?, asset_prompt = ?, pollo_job_id = ?, asset_status = ?, status = 'asset_generating'
+           WHERE id = ?`,
+            [input.sourceMediaUrl, prompt, jobId, generationStatus, packageId]
+          );
+        }
+        if (!readyArtifact) {
+          const pendingArtifactId = queuedArtifact?.id || null;
+          if (pendingArtifactId) {
+            await recordVaultxArtifactEvent({
+              artifactId: Number(pendingArtifactId),
+              creatorId: Number(pkg.creator_id),
+              packageId,
+              eventType: "vaultx.launch.awaiting_media",
+              status: "queued",
+              payload: { packageId, jobId, generationStatus, reason: "Pollo job started; checkout and Telegram route require ready artifact." }
+            });
+          }
+          return {
+            success: true,
+            complete: false,
+            status: "media_processing",
+            packageId,
+            jobId,
+            generationStatus,
+            artifact: publicArtifactPayload(queuedArtifact),
+            artifacts: queuedArtifact ? [publicArtifactPayload(queuedArtifact)] : [],
+            checkoutUrl: null,
+            checkoutSessionId: null,
+            campaignId: null,
+            trackingCode: null,
+            trackedUrl: null,
+            vaultxContentId: null,
+            reusedExistingPolloAsset,
+            message: "Pollo accepted the Body Cinema job. Checkout and Telegram distribution stay locked until a ready artifact is persisted."
+          };
+        }
+        const session = await stripe4.checkout.sessions.create({
+          mode: "payment",
+          line_items: [{
+            price_data: {
+              currency: "usd",
+              product_data: { name: `VaultX Unlock: ${pkg.title}` },
+              unit_amount: Number(pkg.price_cents)
+            },
+            quantity: 1
+          }],
+          success_url: `${FRONTEND_BASE_URL}/vaultx?package=${packageId}&checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${FRONTEND_BASE_URL}/vaultx?package=${packageId}&checkout=cancelled`,
+          metadata: {
+            type: "vaultx_package_unlock",
+            vaultxPackageId: String(packageId),
+            creatorId: String(pkg.creator_id),
+            platformFeePercent: "15",
+            creatorKeepPercent: "85",
+            vaultxArtifactId: String(readyArtifact.id)
+          }
+        });
+        await rawExec4(
+          `UPDATE vaultx_revenue_packages
+         SET checkout_url = ?, stripe_checkout_session_id = ?, status = 'checkout_attached'
+         WHERE id = ?`,
+          [session.url, session.id, packageId]
+        );
+        await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId: Number(pkg.creator_id), packageId, eventType: "checkout.attached", status: "ready", payload: { checkoutSessionId: session.id, checkoutUrl: session.url, endToEndLaunch: true } });
+        const publishCopy = qualityGate.check(pkg.public_teaser_copy || publicTeaserCopy, {
+          surface: "vaultx-drop",
+          context: "vaultx",
+          recipientKey: `vaultx-e2e-publish-${packageId}`,
+          hasActionElement: true,
+          requireMessagingDna: true,
+          requireMechanism: true,
+          requireCreatorVaultPositioning: true,
+          ctaAngle: "proof-unlock"
+        });
+        const contentResult = await rawExec4(
+          `INSERT INTO vaultx_content
+         (creator_id, title, description, content_type, thumbnail_url, censored_url, uncensored_url, is_ppv, ppv_price, status, access_tier)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 'active', 'basic')`,
+          [pkg.creator_id, pkg.title, publishCopy, pkg.content_type, pkg.source_media_url || readyArtifact.output_url || null, readyArtifact.output_url, readyArtifact.output_url, Number(pkg.price_cents) / 100]
+        );
+        const contentId = Number(contentResult.insertId);
+        await rawExec4("UPDATE vaultx_revenue_packages SET vaultx_content_id = ? WHERE id = ?", [contentId, packageId]);
+        const campaign = await createAIDrop({
+          contentId,
+          creatorId: Number(pkg.creator_id),
+          campaignMode: pkg.telegram_mode,
+          campaignType: "PPV_DROP",
+          overridePrice: Number(pkg.price_cents) / 100
+        });
+        await rawExec4(
+          `UPDATE vaultx_revenue_packages
+         SET telegram_campaign_id = ?, telegram_tracking_code = ?, status = 'telegram_route_created'
+         WHERE id = ?`,
+          [campaign.campaignId, campaign.trackingCode, packageId]
+        );
+        await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId: Number(pkg.creator_id), packageId, eventType: "telegram.route_created", status: "ready", payload: { campaignId: campaign.campaignId, trackingCode: campaign.trackingCode, contentId, endToEndLaunch: true } });
+        const sent = await sendDropToChannel(campaign.campaignId);
+        await rawExec4("UPDATE vaultx_revenue_packages SET status = ? WHERE id = ?", [sent.success ? "telegram_published" : "telegram_failed", packageId]);
+        if (!sent.success) throw new TRPCError18({ code: "BAD_GATEWAY", message: sent.error || "Telegram publish failed." });
+        await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId: Number(pkg.creator_id), packageId, eventType: "telegram.published", status: "ready", payload: { campaignId: campaign.campaignId, trackedUrl: sent.trackedUrl, endToEndLaunch: true } });
+        const artifacts = await listVaultxPackageArtifacts(Number(pkg.creator_id), packageId);
+        return {
+          success: true,
+          complete: true,
+          status: "published",
+          packageId,
+          jobId,
+          generationStatus,
+          artifact: publicArtifactPayload(readyArtifact),
+          artifacts: artifacts.map(publicArtifactPayload),
+          checkoutUrl: session.url,
+          checkoutSessionId: session.id,
+          campaignId: campaign.campaignId,
+          trackingCode: campaign.trackingCode,
+          trackedUrl: sent.trackedUrl,
+          vaultxContentId: contentId,
+          reusedExistingPolloAsset,
+          revenue: {
+            priceCents: Number(pkg.price_cents),
+            platformFeeCents: Math.round(Number(pkg.price_cents) * PLATFORM_FEE),
+            creatorKeepCents: Math.max(0, Number(pkg.price_cents) - Math.round(Number(pkg.price_cents) * PLATFORM_FEE))
+          }
+        };
+      }),
+      finalizeRevenuePath: protectedProcedure.input(z193.object({ packageId: z193.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        if (!stripe4) throw new TRPCError18({ code: "PRECONDITION_FAILED", message: "STRIPE_SECRET_KEY is not configured for VaultX checkout creation." });
+        await ensureVaultxRevenuePackageSchema();
+        await ensureVaultxArtifactSchema();
+        const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
+        const packageId = Number(pkg.id);
+        const creatorId = Number(pkg.creator_id);
+        const jobId = String(pkg.pollo_job_id || "");
+        let readyArtifact = null;
+        let generationStatus = String(pkg.asset_status || "waiting");
+        const packageArtifacts = await listVaultxPackageArtifacts(creatorId, packageId);
+        readyArtifact = packageArtifacts.find((item) => item.provider === "pollo" && item.status === "ready") || null;
+        const pendingArtifact = packageArtifacts.find((item) => item.provider === "pollo" && item.status !== "ready" && item.status !== "failed");
+        if (!readyArtifact && pendingArtifact) {
+          try {
+            const polledArtifact = await pollAndPersistProviderArtifact({
+              artifactId: Number(pendingArtifact.id),
+              creatorId,
+              packageId,
+              kind: "package",
+              stage: "end_to_end_package_asset_generation",
+              provider: "pollo"
+            });
+            if (polledArtifact.status === "ready") readyArtifact = polledArtifact;
+          } catch (err) {
+            await updateVaultxArtifactStatus(Number(pendingArtifact.id), { creatorId, status: "failed", failureReason: err.message, metadata: { finalizePollError: true } }).catch(() => void 0);
+          }
+        }
+        if (jobId && POLLO_API_KEY2 && !readyArtifact) {
+          const statusController = new AbortController();
+          const statusTimeout = setTimeout(() => statusController.abort(), 2e4);
+          const response = await fetch(`${POLLO_BASE_URL2}/generation/${jobId}/status`, {
+            method: "GET",
+            headers: { "x-api-key": POLLO_API_KEY2 },
+            signal: statusController.signal
+          }).finally(() => clearTimeout(statusTimeout));
+          const data = await response.json();
+          if (!response.ok || data?.code && data.code !== "SUCCESS") {
+            throw new TRPCError18({ code: "BAD_GATEWAY", message: data?.message || data?.error || `Pollo status check failed: ${JSON.stringify(data).slice(0, 500)}` });
+          }
+          const generation = data?.data?.generations?.[0] || null;
+          generationStatus = normalisePolloStatus2(generation?.status || data?.data?.status || data?.status);
+          const videoUrl = generation?.url || data?.data?.videoUrl || data?.data?.url || data?.videoUrl || data?.url || null;
+          await rawExec4("UPDATE pollo_generations SET status = ?, videoUrl = COALESCE(?, videoUrl), updatedAt = CURRENT_TIMESTAMP WHERE taskId = ?", [generationStatus, videoUrl, jobId]);
+          if (videoUrl) {
+            qualityGate.checkVisual(videoUrl, { prompt: pkg.asset_prompt || buildVaultxPackagePolloPrompt(pkg), publicPost: true });
+            readyArtifact = await persistReadyVaultxArtifact({
+              creatorId,
+              packageId,
+              kind: "package",
+              stage: "end_to_end_package_asset_generation",
+              provider: "pollo",
+              providerJobId: jobId,
+              sourceUrl: pkg.source_media_url,
+              finalUrl: videoUrl,
+              metadata: { prompt: pkg.asset_prompt || buildVaultxPackagePolloPrompt(pkg), polloStatusResponse: data, finalizedRevenuePath: true }
+            });
+            await rawExec4(
+              `UPDATE vaultx_revenue_packages
+             SET asset_status = ?, asset_url = ?, asset_quality_passed = 1, status = 'asset_ready'
+             WHERE id = ?`,
+              [generationStatus, readyArtifact.output_url || videoUrl, packageId]
+            );
+          }
+        }
+        if (!readyArtifact) {
+          throw new TRPCError18({
+            code: "PRECONDITION_FAILED",
+            message: `VaultX package ${packageId} is not ready for checkout/Telegram finalization. Current Pollo status: ${generationStatus || "waiting"}; jobId: ${jobId || "missing"}.`
+          });
+        }
+        let checkoutUrl = pkg.checkout_url || null;
+        let checkoutSessionId = pkg.stripe_checkout_session_id || null;
+        if (!checkoutUrl || !checkoutSessionId) {
+          const session = await stripe4.checkout.sessions.create({
+            mode: "payment",
+            line_items: [{
+              price_data: {
+                currency: "usd",
+                product_data: { name: `VaultX Unlock: ${pkg.title}` },
+                unit_amount: Number(pkg.price_cents)
+              },
+              quantity: 1
+            }],
+            success_url: `${FRONTEND_BASE_URL}/vaultx?package=${packageId}&checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${FRONTEND_BASE_URL}/vaultx?package=${packageId}&checkout=cancelled`,
+            metadata: {
+              type: "vaultx_package_unlock",
+              vaultxPackageId: String(packageId),
+              creatorId: String(creatorId),
+              platformFeePercent: "15",
+              creatorKeepPercent: "85",
+              vaultxArtifactId: String(readyArtifact.id)
+            }
+          });
+          checkoutUrl = session.url;
+          checkoutSessionId = session.id;
+          await rawExec4(
+            `UPDATE vaultx_revenue_packages
+           SET checkout_url = ?, stripe_checkout_session_id = ?, status = 'checkout_attached'
+           WHERE id = ?`,
+            [checkoutUrl, checkoutSessionId, packageId]
+          );
+          await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId, packageId, eventType: "checkout.attached", status: "ready", payload: { checkoutSessionId, checkoutUrl, finalizedRevenuePath: true } });
+        }
+        const publishCopy = qualityGate.check(pkg.public_teaser_copy || buildVaultxPackagePublicCopy({
+          title: pkg.title,
+          teaserDescription: pkg.teaser_description,
+          priceCents: Number(pkg.price_cents),
+          vipPriceCents: pkg.vip_price_cents ? Number(pkg.vip_price_cents) : null,
+          telegramMode: pkg.telegram_mode
+        }), {
+          surface: "vaultx-drop",
+          context: "vaultx",
+          recipientKey: `vaultx-finalize-publish-${packageId}`,
+          hasActionElement: true,
+          requireMessagingDna: true,
+          requireMechanism: true,
+          requireCreatorVaultPositioning: true,
+          ctaAngle: "proof-unlock"
+        });
+        let contentId = pkg.vaultx_content_id ? Number(pkg.vaultx_content_id) : null;
+        if (!contentId) {
+          const contentResult = await rawExec4(
+            `INSERT INTO vaultx_content
+           (creator_id, title, description, content_type, thumbnail_url, censored_url, uncensored_url, is_ppv, ppv_price, status, access_tier)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 'active', 'basic')`,
+            [creatorId, pkg.title, publishCopy, pkg.content_type, pkg.source_media_url || readyArtifact.output_url || null, readyArtifact.output_url, readyArtifact.output_url, Number(pkg.price_cents) / 100]
+          );
+          contentId = Number(contentResult.insertId);
+          await rawExec4("UPDATE vaultx_revenue_packages SET vaultx_content_id = ? WHERE id = ?", [contentId, packageId]);
+        }
+        let campaignId = pkg.telegram_campaign_id ? Number(pkg.telegram_campaign_id) : null;
+        let trackingCode = pkg.telegram_tracking_code || null;
+        let trackedUrl = trackingCode ? `${FRONTEND_BASE_URL}/vaultx?tracking=${encodeURIComponent(String(trackingCode))}` : null;
+        if (!campaignId || !trackingCode) {
+          const campaign = await createAIDrop({
+            contentId: Number(contentId),
+            creatorId,
+            campaignMode: pkg.telegram_mode,
+            campaignType: "PPV_DROP",
+            overridePrice: Number(pkg.price_cents) / 100
+          });
+          campaignId = Number(campaign.campaignId);
+          trackingCode = campaign.trackingCode;
+          trackedUrl = `${FRONTEND_BASE_URL}/vaultx?tracking=${encodeURIComponent(String(trackingCode))}`;
+          await rawExec4(
+            `UPDATE vaultx_revenue_packages
+           SET telegram_campaign_id = ?, telegram_tracking_code = ?, status = 'telegram_route_created'
+           WHERE id = ?`,
+            [campaignId, trackingCode, packageId]
+          );
+          await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId, packageId, eventType: "telegram.route_created", status: "ready", payload: { campaignId, trackingCode, contentId, finalizedRevenuePath: true } });
+        }
+        const sent = await sendDropToChannel(Number(campaignId));
+        trackedUrl = sent.trackedUrl || trackedUrl;
+        await rawExec4("UPDATE vaultx_revenue_packages SET status = ? WHERE id = ?", [sent.success ? "telegram_published" : "telegram_failed", packageId]);
+        if (!sent.success) throw new TRPCError18({ code: "BAD_GATEWAY", message: sent.error || "Telegram publish failed." });
+        await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId, packageId, eventType: "telegram.published", status: "ready", payload: { campaignId, trackedUrl, finalizedRevenuePath: true } });
+        const artifacts = await listVaultxPackageArtifacts(creatorId, packageId);
+        return {
+          success: true,
+          complete: true,
+          status: "published",
+          packageId,
+          jobId,
+          generationStatus,
+          artifact: publicArtifactPayload(readyArtifact),
+          artifacts: artifacts.map(publicArtifactPayload),
+          checkoutUrl,
+          checkoutSessionId,
+          campaignId,
+          trackingCode,
+          trackedUrl,
+          vaultxContentId: contentId,
+          revenue: {
+            priceCents: Number(pkg.price_cents),
+            platformFeeCents: Math.round(Number(pkg.price_cents) * PLATFORM_FEE),
+            creatorKeepCents: Math.max(0, Number(pkg.price_cents) - Math.round(Number(pkg.price_cents) * PLATFORM_FEE))
+          }
+        };
       }),
       // ═══════════════════════════════════════════════════════════════════════════
       // PROCEDURE 27 — cancelSubscription
@@ -18213,8 +18848,19 @@ var REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN || "";
 var DEFAULT_MODEL = process.env.REPLICATE_CLONE_MODEL_ID || "kingcam214/fluxdevcam";
 var DEFAULT_VERSION = process.env.REPLICATE_CLONE_VERSION || "e8074c4eeec195ad8ab617bf1502cd0c297db7f2c1cf5d9a665fad4710468727";
 var TRIGGER_WORD = process.env.REPLICATE_CLONE_TRIGGER_WORD || "fluxdevCam";
+var KINGCAM_IDENTITY_PREFIX = "KingCam reference-first identity lock: preserve the exact hairstyle, hairline, hair length, hair texture, facial hair, jewelry, skin tone, face structure, body build, and wardrobe specified by the user prompt or attached/source reference media; do not invent, replace, clean up, or stylize the hairstyle";
+var KINGCAM_IDENTITY_SUFFIX = "paid clone output must match the submitted prompt and reference-media identity exactly; if a crown is requested, place it above the reference-accurate hair without covering or changing the hairstyle";
+var KINGCAM_LOCKED_NEGATIVE_PROMPT = "wrong hairstyle, invented hairstyle, generic AI haircut, default model haircut, unrequested natural hair fade, unrequested thick waves, unrequested 360 waves, wrong hairline, altered hairline, bald, shaved head, no hair, no crown, hat, beanie, hood, cropped out crown, hidden hair, covered head";
 var POLLO_API_KEY = process.env.POLLO_API_KEY || "";
 var POLLO_BASE_URL = "https://pollo.ai/api/platform";
+function buildKingCamIdentityPrompt(userPrompt) {
+  const promptWithoutTrigger = userPrompt.replace(new RegExp(`\\b${TRIGGER_WORD}\\b`, "gi"), "").trim().replace(/^,+|,+$/g, "").trim();
+  return `${TRIGGER_WORD} ${KINGCAM_IDENTITY_PREFIX}, ${promptWithoutTrigger}, ${KINGCAM_IDENTITY_SUFFIX}`;
+}
+function buildKingCamNegativePrompt(userNegativePrompt) {
+  const cleanUserNegative = userNegativePrompt?.trim();
+  return cleanUserNegative ? `${KINGCAM_LOCKED_NEGATIVE_PROMPT}, ${cleanUserNegative}` : KINGCAM_LOCKED_NEGATIVE_PROMPT;
+}
 async function replicatePost(endpoint, body) {
   const resp = await fetch(`https://api.replicate.com/v1/${endpoint}`, {
     method: "POST",
@@ -18262,6 +18908,23 @@ function buildCloneMotionPrompt(input) {
 }
 var cloneCommandRouter = router({
   /**
+   * 0. previewImagePrompt — No-credit final prompt preview before paid generation.
+   */
+  previewImagePrompt: protectedProcedure.input(
+    z7.object({
+      prompt: z7.string().min(1).max(2e3),
+      negativePrompt: z7.string().max(2e3).optional()
+    })
+  ).mutation(async ({ ctx, input }) => {
+    ownerGuard(ctx.user.id);
+    return {
+      prompt: buildKingCamIdentityPrompt(input.prompt),
+      negativePrompt: buildKingCamNegativePrompt(input.negativePrompt),
+      creditCost: "none",
+      safetyRule: "This preview does not call Replicate or Pollo. Paid generation must use this exact final prompt after owner review."
+    };
+  }),
+  /**
    * 1. generateImage — Fire a Replicate prediction for fluxdevcam
    */
   generateImage: protectedProcedure.input(
@@ -18278,24 +18941,21 @@ var cloneCommandRouter = router({
     })
   ).mutation(async ({ ctx, input }) => {
     ownerGuard(ctx.user.id);
-    let finalPrompt = input.prompt;
-    if (!finalPrompt.toLowerCase().includes(TRIGGER_WORD.toLowerCase())) {
-      finalPrompt = `${TRIGGER_WORD} ${finalPrompt}`;
-    }
+    const finalPrompt = buildKingCamIdentityPrompt(input.prompt);
+    const finalNegativePrompt = buildKingCamNegativePrompt(input.negativePrompt);
     const version = input.modelVersion || DEFAULT_VERSION;
     const replicateInput = {
       prompt: finalPrompt,
+      negative_prompt: finalNegativePrompt,
       width: input.width,
       height: input.height,
       num_outputs: input.numOutputs,
-      guidance: input.guidanceScale,
+      guidance_scale: input.guidanceScale,
       num_inference_steps: input.numInferenceSteps,
-      output_format: "webp",
-      output_quality: 90
+      aspect_ratio: "custom",
+      output_format: "png",
+      output_quality: 100
     };
-    if (input.negativePrompt) {
-      replicateInput.negative_prompt = input.negativePrompt;
-    }
     if (input.seed !== void 0) {
       replicateInput.seed = input.seed;
     }
@@ -18316,7 +18976,7 @@ var cloneCommandRouter = router({
           DEFAULT_MODEL,
           version,
           finalPrompt,
-          input.negativePrompt || null,
+          finalNegativePrompt,
           input.width,
           input.height,
           input.numOutputs,
@@ -18487,6 +19147,57 @@ var cloneCommandRouter = router({
     }
   }),
   /**
+   * 5a. getCloneHistory — Backward-compatible live Clone Command history alias.
+   */
+  getCloneHistory: protectedProcedure.input(
+    z7.object({
+      limit: z7.number().min(1).max(100).default(20),
+      offset: z7.number().min(0).default(0)
+    }).default({ limit: 20, offset: 0 })
+  ).query(async ({ ctx, input }) => {
+    ownerGuard(ctx.user.id);
+    const conn = await getDb2();
+    try {
+      const safeLimit = Math.max(1, Math.min(100, Math.trunc(input.limit)));
+      const safeOffset = Math.max(0, Math.trunc(input.offset));
+      const rows6 = extractRows(
+        await conn.execute(
+          `SELECT * FROM kingcam_clone_generations
+             WHERE user_id = ?
+             ORDER BY created_at DESC
+             LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+          [ctx.user.id]
+        )
+      );
+      const countResult = extractRows(
+        await conn.execute(
+          `SELECT COUNT(*) as total FROM kingcam_clone_generations WHERE user_id = ?`,
+          [ctx.user.id]
+        )
+      );
+      const total = countResult[0]?.total || 0;
+      return {
+        generations: rows6.map((r) => ({
+          id: r.id,
+          predictionId: r.replicate_prediction_id,
+          prompt: r.prompt,
+          negativePrompt: r.negative_prompt,
+          width: r.width,
+          height: r.height,
+          numOutputs: r.num_outputs,
+          guidanceScale: r.guidance_scale,
+          status: r.status,
+          outputUrls: r.output_urls ? typeof r.output_urls === string ? JSON.parse(r.output_urls) : r.output_urls : [],
+          savedToVault: !!r.saved_to_vault,
+          createdAt: r.created_at
+        })),
+        total
+      };
+    } finally {
+      await conn.end();
+    }
+  }),
+  /**
    * 5. getGenerationHistory — Paginated list of all generations
    */
   getGenerationHistory: protectedProcedure.input(
@@ -18498,13 +19209,15 @@ var cloneCommandRouter = router({
     ownerGuard(ctx.user.id);
     const conn = await getDb2();
     try {
+      const safeLimit = Math.max(1, Math.min(100, Math.trunc(input.limit)));
+      const safeOffset = Math.max(0, Math.trunc(input.offset));
       const rows6 = extractRows(
         await conn.execute(
           `SELECT * FROM kingcam_clone_generations
              WHERE user_id = ?
              ORDER BY created_at DESC
-             LIMIT ? OFFSET ?`,
-          [ctx.user.id, input.limit, input.offset]
+             LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+          [ctx.user.id]
         )
       );
       const countResult = extractRows(
@@ -42709,6 +43422,10 @@ async function getCreatorTiers(creatorId) {
   const tiers = await db.select().from(subscriptionTiers).where(eq66(subscriptionTiers.creatorId, creatorId));
   return tiers;
 }
+async function getSubscriptionTierById(tierId) {
+  const [tier] = await db.select().from(subscriptionTiers).where(eq66(subscriptionTiers.id, tierId));
+  return tier ?? null;
+}
 async function subscribeFanToTier(input) {
   const [tier] = await db.select().from(subscriptionTiers).where(eq66(subscriptionTiers.id, input.tierId));
   if (!tier) {
@@ -42803,9 +43520,7 @@ var subscriptionsRouter = router({
    * Get single tier by ID
    */
   getTier: publicProcedure.input(z162.object({ tierId: z162.number() })).query(async ({ input }) => {
-    const tiers = await getCreatorTiers(0);
-    const tier = tiers.find((t2) => t2.id === input.tierId);
-    return tier || null;
+    return await getSubscriptionTierById(input.tierId);
   }),
   /**
    * Subscribe fan to tier
@@ -45269,7 +45984,7 @@ async function getCreatorBalance3(userId) {
 init_env();
 import Stripe3 from "stripe";
 var stripe3 = ENV.stripeSecretKey ? new Stripe3(ENV.stripeSecretKey, {
-  apiVersion: "2025-12-15.clover"
+  apiVersion: "2026-02-25.clover"
 }) : null;
 async function createTipCheckout(input) {
   const { streamId, creatorId, creatorName, amount, viewerEmail, message } = input;
@@ -55236,6 +55951,7 @@ var appRouter = router({
   kingcamBrain: kingcamBrainRouter,
   cloneLab: cloneLabRouter,
   cloneCommand: cloneCommandRouter,
+  clone: cloneCommandRouter,
   cloneTrainingLab: cloneTrainingLabRouter,
   godMode: godModeRouter,
   chuuchMembers: chuuchMembersRouter,
