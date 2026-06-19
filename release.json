@@ -1,1 +1,14 @@
-{"commit":"103ff6ef958a6473d1e6122a99ca29d8120603d9","deployed_at":"2026-06-18T18:51:56Z","source":"github-main"}
+{
+  "app": "creatorvault-ultrastate",
+  "service": "vaultx",
+  "nodeEnv": "production",
+  "releasePath": "dist/release.json",
+  "gitSha": "4d34ec4d194d58a8f474f68db751924b0f748e30",
+  "builtAt": "2026-06-19T23:39:23+00:00",
+  "deployedAt": "2026-06-19T23:39:23+00:00",
+  "commit": "4d34ec4d194d58a8f474f68db751924b0f748e30",
+  "shortCommit": "4d34ec4d",
+  "branch": "main",
+  "environment": "production",
+  "deployMode": "manual-vps-documented-path"
+}
