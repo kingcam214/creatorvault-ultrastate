@@ -102,32 +102,38 @@ function buildCloneImagePrompt(prompt: string, style: string): string {
 }
 
 async function getCloneVideo(imageUrl: string): Promise<string> {
-  const res = await fetch('https://api.pollo.ai/v1/generate', {
-    method: 'POST',
+  const res = await fetch("https://pollo.ai/api/platform/generation/pollo/pollo-v1-6", {
+    method: "POST",
     headers: {
-      'Authorization': `Bearer ${process.env.POLLO_API_KEY}`,
-      'Content-Type': 'application/json'
+      "x-api-key": process.env.POLLO_API_KEY || "",
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: process.env.POLLO_KLING_MODEL_ID,
-      image_url: imageUrl,
-      prompt: 'slow cinematic camera push, dramatic luxury lighting, KingCam presence',
-      duration: 5,
-      aspect_ratio: '9:16'
+      input: {
+        image: imageUrl,
+        prompt: "slow cinematic camera push, dramatic luxury lighting, KingCam presence",
+        resolution: "720p",
+        length: 5,
+        mode: "basic"
+      }
     })
   });
+  if (!res.ok) throw new Error(`Pollo.ai API error: ${res.status} - ${await res.text()}`);
   const job = await res.json();
-  const jobId = job.id || job.job_id || job.task_id;
+  const jobId = job?.data?.taskId || job.id || job.job_id || job.task_id;
+  if (!jobId) throw new Error(`Pollo.ai did not return a taskId: ${JSON.stringify(job)}`);
   for (let i = 0; i < 60; i++) {
     await new Promise(r => setTimeout(r, 5000));
-    const poll = await fetch(`https://api.pollo.ai/v1/jobs/${jobId}`, {
-      headers: { 'Authorization': `Bearer ${process.env.POLLO_API_KEY}` }
+    const poll = await fetch(`https://pollo.ai/api/platform/generation/${jobId}/status`, {
+      headers: { "x-api-key": process.env.POLLO_API_KEY || "" }
     });
+    if (!poll.ok) throw new Error(`Pollo.ai status check error: ${poll.status} - ${await poll.text()}`);
     const result = await poll.json();
-    if (result.status === 'completed' || result.status === 'succeeded') {
-      return result.video_url || result.output?.url || result.url;
-    }
-    if (result.status === 'failed') throw new Error(`Pollo: ${result.error}`);
+    const gen = result?.data?.generations?.[0];
+    const status = String(gen?.status || result?.data?.status || "").toLowerCase();
+    const url = gen?.url || result.video_url || result.output?.url || result.url;
+    if ((status === "succeed" || status === "succeeded" || status === "completed") && url) return url;
+    if (status === "failed" || status === "fail" || status === "error") throw new Error(`Pollo: ${gen?.failMsg || result.error || JSON.stringify(result)}`);
   }
   throw new Error('Pollo timeout');
 }
