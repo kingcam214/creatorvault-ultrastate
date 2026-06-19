@@ -135,6 +135,75 @@ export async function bootstrapSchema() {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )`,
+
+    // Clone Passport — durable identity/operating kernel for creator clones
+    `CREATE TABLE IF NOT EXISTS clone_passports (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      clone_key VARCHAR(120) NOT NULL DEFAULT 'default',
+      display_name VARCHAR(255) NOT NULL,
+      identity_profile JSON NOT NULL,
+      voice_profile JSON,
+      visual_profile JSON,
+      behavioral_profile JSON,
+      operating_rules JSON,
+      source_refs JSON,
+      status ENUM('draft', 'active', 'archived') NOT NULL DEFAULT 'active',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uniq_clone_passports_user_key (user_id, clone_key),
+      INDEX idx_clone_passports_user_status (user_id, status),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`,
+
+    // Clone Memory Core — durable, queryable memory attached to Clone Passports
+    `CREATE TABLE IF NOT EXISTS clone_memory_entries (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      passport_id INT NOT NULL,
+      user_id INT NOT NULL,
+      memory_type ENUM('fact', 'preference', 'event', 'instruction', 'interaction', 'asset', 'attribution', 'system') NOT NULL DEFAULT 'fact',
+      source VARCHAR(120),
+      source_id VARCHAR(191),
+      importance INT NOT NULL DEFAULT 50,
+      confidence DECIMAL(5,4) NOT NULL DEFAULT 1.0000,
+      content TEXT NOT NULL,
+      metadata JSON,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      last_accessed_at TIMESTAMP NULL,
+      access_count INT NOT NULL DEFAULT 0,
+      archived_at TIMESTAMP NULL,
+      INDEX idx_clone_memory_passport_created (passport_id, created_at),
+      INDEX idx_clone_memory_user_type (user_id, memory_type),
+      INDEX idx_clone_memory_source (source, source_id),
+      FULLTEXT KEY ft_clone_memory_content (content),
+      FOREIGN KEY (passport_id) REFERENCES clone_passports(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`,
+
+    // Agent Action Receipts — durable proof packets for autonomous operator runs
+    `CREATE TABLE IF NOT EXISTS agent_action_receipts (
+      id VARCHAR(36) PRIMARY KEY,
+      telemetry_event_id VARCHAR(36),
+      cycle_id VARCHAR(36),
+      agent_slug VARCHAR(128) NOT NULL,
+      agent_name VARCHAR(256) NOT NULL,
+      agent_category VARCHAR(64) NOT NULL,
+      task_type VARCHAR(100) NOT NULL,
+      action VARCHAR(191) NOT NULL,
+      status ENUM('started', 'success', 'failed', 'skipped') NOT NULL,
+      outcome_summary TEXT,
+      evidence JSON,
+      artifacts JSON,
+      revenue_generated DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      started_at TIMESTAMP NULL,
+      finished_at TIMESTAMP NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_agent_action_receipts_agent_created (agent_slug, created_at),
+      INDEX idx_agent_action_receipts_cycle (cycle_id),
+      INDEX idx_agent_action_receipts_status_created (status, created_at),
+      INDEX idx_agent_action_receipts_telemetry (telemetry_event_id)
+    )`,
   ];
 
   for (const sql of tables) {

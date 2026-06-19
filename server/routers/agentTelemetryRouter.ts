@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { router, protectedProcedure } from "../_core/trpc";
 import * as db from "../db";
 import { eq, desc, gte, and, sql } from "drizzle-orm";
+import { getRecentAgentActionReceipts } from "../services/agentActionReceipts";
 
 function rowsFromExecute(result: any): any[] {
   if (!result) return [];
@@ -169,6 +170,25 @@ export const agentTelemetryRouter = router({
         return rows;
       } catch (e) {
         console.error("[agentTelemetry.getAgentLeaderboard]", e);
+        return [];
+      }
+    }),
+
+  getActionReceipts: protectedProcedure
+    .input(z.object({
+      limit: z.number().int().min(1).max(100).default(25),
+      agentSlug: z.string().optional(),
+      onlyPrimary: z.boolean().default(false),
+    }).optional())
+    .query(async ({ input }) => {
+      try {
+        return await getRecentAgentActionReceipts({
+          limit: input?.limit,
+          agentSlug: input?.agentSlug,
+          onlyPrimary: input?.onlyPrimary ?? false,
+        });
+      } catch (e) {
+        console.error("[agentTelemetry.getActionReceipts]", e);
         return [];
       }
     }),

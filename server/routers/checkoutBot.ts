@@ -74,6 +74,8 @@ export const checkoutBotRouter = router({
         itemType: z.enum(["product", "course", "service"]),
         successUrl: z.string().url(),
         cancelUrl: z.string().url(),
+        trackingCode: z.string().trim().min(1).optional(),
+        attributionSessionId: z.string().trim().min(1).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {

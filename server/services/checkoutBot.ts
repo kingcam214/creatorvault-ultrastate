@@ -162,6 +162,8 @@ export async function createCheckoutSession(params: {
   buyerId: number;
   successUrl: string;
   cancelUrl: string;
+  trackingCode?: string;
+  attributionSessionId?: string;
 }): Promise<{ sessionId: string; url: string }> {
   // Get item details
   let item: ProductCatalogItem | null = null;
@@ -256,6 +258,8 @@ export async function createCheckoutSession(params: {
       buyerId: params.buyerId.toString(),
       creatorId: item.creatorId.toString(),
       recruiterId: item.recruiterId?.toString() || "",
+      trackingCode: params.trackingCode || "",
+      attributionSessionId: params.attributionSessionId || "",
     },
   });
 

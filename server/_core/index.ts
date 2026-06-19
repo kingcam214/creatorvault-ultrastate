@@ -17,6 +17,7 @@ import { initializeSimulatedBots, startAutonomousConversationGenerator } from ".
 import { initializeWebRTC } from "../webrtc";
 import { handleStripeWebhook } from "./stripeWebhook";
 import { runStartupTasks } from "./startup";
+import { getLLMProviderStatus } from "./llm";
 import videoStudioRouter from "../routers/videoStudioRouter";
 import { videoUploadRouter } from "../routers/videoUploadRouter";
 import { registerTelegramConnectRoutes } from "../services/telegramConnectRoute";
@@ -163,6 +164,26 @@ async function startServer() {
       console.warn("[attribution] redirect error:", err.message);
       return res.redirect(302, fallback);
     }
+  });
+
+  app.get("/api/ops/llm/status", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      ok: true,
+      service: "llm-provider-reliability",
+      providers: getLLMProviderStatus().map(provider => ({
+        name: provider.name,
+        circuitOpen: provider.circuitOpen,
+        failures: provider.failures,
+        successes: provider.successes,
+        openedUntil: provider.openedUntil ? new Date(provider.openedUntil).toISOString() : null,
+        lastStatus: provider.lastStatus ?? null,
+        lastLatencyMs: provider.lastLatencyMs ?? null,
+        lastAttemptAt: provider.lastAttemptAt ?? null,
+        lastSuccessAt: provider.lastSuccessAt ?? null,
+        lastError: provider.lastError ?? null,
+      })),
+    });
   });
 
   app.get("/__release", (_req, res) => {

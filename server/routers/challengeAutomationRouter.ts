@@ -12,6 +12,11 @@ import * as db from "../db";
 import { sql } from "drizzle-orm";
 import { sendFreeChannelDrop } from "../services/telegramMoneyLoop";
 import { qualityGate, withCreatorVaultMessagingDna } from "../services/qualityGate";
+import {
+  ensureAgentActionReceiptsSchema,
+  getPrimaryAgentReceiptRank,
+  recordAgentActionReceipt,
+} from "../services/agentActionReceipts";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // @ts-ignore
@@ -1079,28 +1084,80 @@ export async function runChallengeAutomationCycle(mode: "priority" | "full" = "p
 
   challengeAutomationRunning = true;
   const startedAt = new Date();
+  const cycleId = randomUUID();
   const slugs = mode === "full" ? Object.keys(AGENT_META) : REVENUE_PRIORITY_AGENT_SLUGS;
-  const results: Array<{ agentSlug: string; status: string; revenue: number; action: string; outcome: string; eventId?: string }> = [];
+  const results: Array<{ agentSlug: string; status: string; revenue: number; action: string; outcome: string; eventId?: string; receiptId?: string }> = [];
   let totalRevenue = 0;
 
   try {
     await ensureAgentReportsSchema();
+    await ensureAgentActionReceiptsSchema();
     await db.db.execute(sql`
       INSERT INTO empire_agent_reports (agent_slug, agent_name, report_type, content, revenue_impact, created_at)
-      VALUES ('ai-agent-only-challenge-swarm', 'AI Agent Only Challenge Swarm', 'autonomous_cycle_started', ${`Started ${mode} autonomous challenge cycle with ${slugs.length} revenue-focused agents.`}, 0, NOW())
+      VALUES ('ai-agent-only-challenge-swarm', 'AI Agent Only Challenge Swarm', 'autonomous_cycle_started', ${`Started ${mode} autonomous challenge cycle ${cycleId} with ${slugs.length} revenue-focused agents.`}, 0, NOW())
     `);
 
     for (const slug of slugs) {
       const meta = AGENT_META[slug];
       try {
+        const agentStartedAt = new Date();
         const { outcome, revenue, status, action } = await executeAgent(slug);
         const eventId = await logTelemetry(slug, meta.name, meta.category, meta.taskType, status, outcome, revenue);
-        results.push({ agentSlug: slug, status, revenue, action, outcome: outcome.slice(0, 600), eventId });
+        const receiptId = await recordAgentActionReceipt({
+          telemetryEventId: eventId,
+          cycleId,
+          agentSlug: slug,
+          agentName: meta.name,
+          agentCategory: meta.category,
+          taskType: meta.taskType,
+          action,
+          status,
+          outcomeSummary: outcome,
+          revenueGenerated: revenue,
+          startedAt: agentStartedAt,
+          finishedAt: new Date(),
+          evidence: {
+            source: "challengeAutomationRouter.runChallengeAutomationCycle",
+            mode,
+            primaryAgentRank: getPrimaryAgentReceiptRank(slug),
+            telemetryEventId: eventId,
+            moneyTruthGate: revenue > 0 ? "reported_as_live_source_context_not_auto_credited_without_payment_proof" : "no_revenue_claimed",
+          },
+          artifacts: {
+            reportTable: "empire_agent_reports",
+            telemetryTable: "agent_telemetry_events",
+          },
+        });
+        results.push({ agentSlug: slug, status, revenue, action, outcome: outcome.slice(0, 600), eventId, receiptId });
         totalRevenue += Number(revenue || 0);
       } catch (agentError: any) {
         const outcome = `Autonomous cycle failure: ${agentError?.message || String(agentError)}`;
         const eventId = await logTelemetry(slug, meta.name, meta.category, meta.taskType, "failed", outcome, 0);
-        results.push({ agentSlug: slug, status: "failed", revenue: 0, action: "autonomous_cycle_error", outcome, eventId });
+        const receiptId = await recordAgentActionReceipt({
+          telemetryEventId: eventId,
+          cycleId,
+          agentSlug: slug,
+          agentName: meta.name,
+          agentCategory: meta.category,
+          taskType: meta.taskType,
+          action: "autonomous_cycle_error",
+          status: "failed",
+          outcomeSummary: outcome,
+          revenueGenerated: 0,
+          startedAt: new Date(),
+          finishedAt: new Date(),
+          evidence: {
+            source: "challengeAutomationRouter.runChallengeAutomationCycle",
+            mode,
+            primaryAgentRank: getPrimaryAgentReceiptRank(slug),
+            telemetryEventId: eventId,
+            errorClass: agentError?.name || "Error",
+          },
+          artifacts: {
+            telemetryTable: "agent_telemetry_events",
+          },
+        });
+        results.push({ agentSlug: slug, status: "failed", revenue: 0, action: "autonomous_cycle_error", outcome, eventId, receiptId });
       }
     }
 
@@ -1113,6 +1170,7 @@ export async function runChallengeAutomationCycle(mode: "priority" | "full" = "p
     const summary = {
       skipped: false,
       mode,
+      cycleId,
       startedAt: startedAt.toISOString(),
       finishedAt: new Date().toISOString(),
       agentsRan: results.length,

@@ -287,7 +287,11 @@ export const marketplaceRouter = router({
 
   // Create Stripe checkout session
   createCheckoutSession: protectedProcedure
-    .input(z.object({ productId: z.string() }))
+    .input(z.object({
+      productId: z.string(),
+      trackingCode: z.string().trim().min(1).optional(),
+      attributionSessionId: z.string().trim().min(1).optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -313,6 +317,13 @@ export const marketplaceRouter = router({
         customer_email: ctx.user.email ?? undefined,
         client_reference_id: String(ctx.user.id),
         metadata: {
+          itemId: product.id,
+          itemType: "product",
+          buyerId: String(ctx.user.id),
+          creatorId: String(product.creatorId),
+          recruiterId: product.recruiterId ? String(product.recruiterId) : "",
+          trackingCode: input.trackingCode || "",
+          attributionSessionId: input.attributionSessionId || "",
           user_id: String(ctx.user.id),
           product_id: product.id,
           creator_id: String(product.creatorId),

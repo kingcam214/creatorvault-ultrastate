@@ -21,6 +21,7 @@ import { adminRouter } from "./routers/adminRouter";
 import { adultSalesBotRouter } from "./routers/adultSalesBot";
 import { cloneLabRouter } from "./routers/cloneLabRouter";
 import { cloneCommandRouter } from "./routers/cloneCommandRouter";
+import { clonePassportRouter } from "./routers/clonePassportRouter";
 import { cloneTrainingLabRouter } from "./routers/cloneTrainingLabRouter";
 import { godModeRouter } from "./routers/godModeRouter";
 import { agentTrackerRouter } from "./routers/agentTracker";
@@ -953,6 +954,7 @@ export const appRouter = router({
   cloneLab: cloneLabRouter,
   cloneCommand: cloneCommandRouter,
   clone: cloneCommandRouter,
+  clonePassport: clonePassportRouter,
   cloneTrainingLab: cloneTrainingLabRouter,
   godMode: godModeRouter,
   chuuchMembers: chuuchMembersRouter,

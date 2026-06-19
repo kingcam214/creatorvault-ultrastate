@@ -79,8 +79,14 @@ export async function handleStripeWebhook(req: Request, res: Response) {
         // Check if this is a subscription checkout (has tierId in metadata)
         await handleSubscriptionCheckout(session);
       } else {
-        // VaultLive tip/donation
-        await handleCheckoutCompleted(session);
+        const { isCommerceCheckoutSession, fulfillCommerceCheckoutSession } = await import("../services/stripeCommerceFulfillment");
+        if (isCommerceCheckoutSession(session.metadata)) {
+          const result = await fulfillCommerceCheckoutSession(session);
+          console.log("[Stripe Webhook] CreatorVault commerce checkout fulfilled", result);
+        } else {
+          // VaultLive tip/donation
+          await handleCheckoutCompleted(session);
+        }
       }
     } else if (event.type === "payment_intent.succeeded") {
       const pi = event.data.object as Stripe.PaymentIntent;
