@@ -1,7 +1,7 @@
 /**
- * WhatsApp AI Studio — Full Production
+ * WhatsApp Profit Studio — Body Cinema Distribution
  * ============================================================================
- * Video-first AI content generation for WhatsApp channels and automation.
+ * Premium Body Cinema packaging for opt-in WhatsApp audience lanes.
  * Tabs: Video · Clone · Image · Voice · Copy · Schedule
  * All Replicate models. Multilingual. Full-body clone video. TTS.
  * ============================================================================
@@ -12,7 +12,7 @@ import {
   Video, Image, Mic, MessageSquare, Calendar, Settings,
   Play, Loader2, CheckCircle, AlertCircle, Download, Copy,
   Globe, Zap, ChevronDown, Upload, RefreshCw, Plus, Trash2,
-  Send, Clock, Users, BarChart3, Bot, Sparkles, Film,
+  Send, Clock, Users, BarChart3, Sparkles, Film,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -31,34 +31,34 @@ const LANGUAGES: { value: Language; label: string; flag: string }[] = [
 ];
 
 const VIDEO_MODELS = [
-  { value: "minimax", label: "MiniMax Hailuo", desc: "6s cinematic video, best quality" },
-  { value: "zeroscope", label: "Zeroscope XL", desc: "High-res text-to-video" },
-  { value: "hotshot", label: "Hotshot GIF/MP4", desc: "Fast animated clips" },
+  { value: "minimax", label: "Cinema Engine", desc: "Premium short-form motion for paid tease drops" },
+  { value: "zeroscope", label: "Motion Cut XL", desc: "High-resolution concept clips and scene bridges" },
+  { value: "hotshot", label: "Teaser Loop", desc: "Fast animated hooks for status and channel previews" },
 ];
 
 const IMAGE_MODELS = [
-  { value: "flux_clone", label: "KingCam Clone (Flux)", desc: "Your trained clone model" },
-  { value: "photomaker", label: "PhotoMaker Style", desc: "Reference photo + style" },
-  { value: "instant_id", label: "Instant-ID Portrait", desc: "Realistic portrait from photo" },
-  { value: "sdxl", label: "SDXL", desc: "General purpose image gen" },
+  { value: "flux_clone", label: "Signature Look", desc: "Creator-approved reference style for brand-consistent visuals" },
+  { value: "photomaker", label: "Cover Art Builder", desc: "Reference-driven campaign visuals and promo stills" },
+  { value: "instant_id", label: "Identity-Safe Portrait", desc: "Consent-first creator portraits from approved references" },
+  { value: "sdxl", label: "Visual Lab", desc: "Premium backgrounds, thumbnails, and promo concepts" },
 ];
 
 const COPY_TYPES = [
-  { value: "status", label: "Status Update" },
-  { value: "broadcast", label: "Broadcast Message" },
-  { value: "caption", label: "Caption" },
-  { value: "cta", label: "Call to Action" },
-  { value: "promo", label: "Promotion" },
-  { value: "teaser", label: "Teaser" },
-  { value: "announcement", label: "Announcement" },
+  { value: "status", label: "Status Tease" },
+  { value: "broadcast", label: "VIP Blast" },
+  { value: "caption", label: "Scene Caption" },
+  { value: "cta", label: "Buy Button Copy" },
+  { value: "promo", label: "Paid Drop Promo" },
+  { value: "teaser", label: "Curiosity Hook" },
+  { value: "announcement", label: "Launch Note" },
 ];
 
 const TONES = [
   { value: "casual", label: "Casual" },
-  { value: "professional", label: "Professional" },
+  { value: "professional", label: "Luxury" },
   { value: "flirty", label: "Flirty" },
-  { value: "urgent", label: "Urgent" },
-  { value: "hype", label: "Hype" },
+  { value: "urgent", label: "Limited Drop" },
+  { value: "hype", label: "High Heat" },
 ];
 
 const VOICES = [
@@ -84,6 +84,19 @@ const MOTION_STYLES = [
   { value: "dynamic", label: "Dynamic" },
   { value: "slow", label: "Slow & Elegant" },
   { value: "cinematic", label: "Cinematic" },
+];
+
+const PROFIT_RAILS = [
+  { label: "Body Cinema Packager", desc: "Turn raw scenes into teaser clips, cover visuals, voice notes, captions, and launch copy from one command center." },
+  { label: "Opt-In Audience Lanes", desc: "Prepare compliant WhatsApp drops for VIP buyers, fan clubs, studios, and high-intent subscriber segments." },
+  { label: "AI Profit Assist", desc: "Use the model stack for hooks, angles, multilingual copy, visual polish, and monetization-ready delivery assets." },
+];
+
+const LAUNCH_GUARDS = [
+  "Consent-first references",
+  "Opt-in audience delivery",
+  "No deepfake positioning",
+  "Paid-drop packaging",
 ];
 
 // ─── Shared components ────────────────────────────────────────────────────────
@@ -727,11 +740,11 @@ function CopyTab() {
       </div>
 
       <div>
-        <label className="text-gray-400 text-xs mb-1 block">Topic / Subject</label>
+        <label className="text-gray-300 text-xs mb-1 block">Launch angle</label>
         <textarea
           value={topic}
           onChange={e => setTopic(e.target.value)}
-          placeholder="What is this content about?"
+          placeholder="Drop the raw idea: scene mood, offer, audience, price point, and urgency."
           rows={3}
           className="w-full bg-[#0d0d1a] border border-[#25d366]/20 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#25d366]/60 resize-none"
         />
@@ -744,7 +757,7 @@ function CopyTab() {
         >
           <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${includeEmoji ? "left-4" : "left-0.5"}`} />
         </button>
-        <span className="text-gray-400 text-sm">Include emojis</span>
+        <span className="text-gray-300 text-sm">Add tasteful signal accents</span>
       </div>
 
       <button
@@ -753,7 +766,7 @@ function CopyTab() {
         className="w-full py-3 bg-[#25d366] hover:bg-[#25d366]/90 disabled:opacity-40 disabled:cursor-not-allowed text-black font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors"
       >
         {status === "generating" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-        {status === "generating" ? "Generating..." : "Generate Copy"}
+        {status === "generating" ? "Forging the offer..." : "Forge Offer Copy"}
       </button>
 
       <GenerationOutput status={status} output={output} error={error} type="copy" />
@@ -801,17 +814,17 @@ function ScheduleTab() {
     <div className="space-y-6">
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-white font-semibold flex items-center gap-2"><Users className="w-4 h-4 text-[#25d366]" /> Channels</h3>
+          <h3 className="text-white font-semibold flex items-center gap-2"><Users className="w-4 h-4 text-[#25d366]" /> Audience Lanes</h3>
           <button onClick={() => setShowNewChannel(!showNewChannel)} className="flex items-center gap-1 text-[#25d366] text-sm hover:text-[#25d366]/80">
-            <Plus className="w-4 h-4" /> New
+            <Plus className="w-4 h-4" /> Add Lane
           </button>
         </div>
 
         {showNewChannel && (
           <div className="p-4 bg-[#0d0d1a] border border-[#25d366]/20 rounded-xl space-y-3 mb-3">
-            <input value={channelName} onChange={e => setChannelName(e.target.value)} placeholder="Channel name" className="w-full bg-[#1a1a2e] border border-[#25d366]/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
-            <input value={channelPhone} onChange={e => setChannelPhone(e.target.value)} placeholder="+1234567890" className="w-full bg-[#1a1a2e] border border-[#25d366]/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
-            <button onClick={handleCreateChannel} className="w-full py-2 bg-[#25d366] text-black font-semibold rounded-lg text-sm">Create Channel</button>
+            <input value={channelName} onChange={e => setChannelName(e.target.value)} placeholder="VIP lane name" className="w-full bg-[#1a1a2e] border border-[#25d366]/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
+            <input value={channelPhone} onChange={e => setChannelPhone(e.target.value)} placeholder="WhatsApp Business number" className="w-full bg-[#1a1a2e] border border-[#25d366]/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
+            <button onClick={handleCreateChannel} className="w-full py-2 bg-[#25d366] text-black font-semibold rounded-lg text-sm">Save Audience Lane</button>
           </div>
         )}
 
@@ -820,22 +833,22 @@ function ScheduleTab() {
             <div key={ch.id} className="p-3 bg-[#0d0d1a] border border-[#25d366]/20 rounded-xl flex items-center justify-between">
               <div>
                 <p className="text-white text-sm font-medium">{ch.community_name}</p>
-                <p className="text-gray-500 text-xs">{ch.phone_number} · {ch.member_count} members · {ch.status}</p>
+                <p className="text-gray-500 text-xs">{ch.phone_number} · {ch.member_count} buyers · {ch.status}</p>
               </div>
               <div className={`w-2 h-2 rounded-full ${ch.status === "active" ? "bg-[#25d366]" : "bg-gray-600"}`} />
             </div>
           ))}
           {(!channelsQuery.data?.channels.length) && (
-            <p className="text-gray-600 text-sm text-center py-4">No channels yet — create one above</p>
+            <p className="text-gray-600 text-sm text-center py-4">No audience lanes yet — add your first VIP lane above</p>
           )}
         </div>
       </div>
 
       <div>
-        <h3 className="text-white font-semibold flex items-center gap-2 mb-3"><Clock className="w-4 h-4 text-[#25d366]" /> Schedule Drop</h3>
+        <h3 className="text-white font-semibold flex items-center gap-2 mb-3"><Clock className="w-4 h-4 text-[#25d366]" /> Launch a Paid Drop</h3>
         <div className="p-4 bg-[#0d0d1a] border border-[#25d366]/20 rounded-xl space-y-3">
           <select value={dropChannelId || ""} onChange={e => setDropChannelId(Number(e.target.value))} className="w-full bg-[#1a1a2e] border border-[#25d366]/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none">
-            <option value="">Select channel</option>
+            <option value="">Choose audience lane</option>
             {channelsQuery.data?.channels.map((ch: any) => <option key={ch.id} value={ch.id}>{ch.community_name}</option>)}
           </select>
           <div className="grid grid-cols-2 gap-2">
@@ -843,20 +856,20 @@ function ScheduleTab() {
               <button key={t} onClick={() => setDropContentType(t)} className={`py-2 rounded-lg text-xs font-medium capitalize ${dropContentType === t ? "bg-[#25d366] text-black" : "bg-[#1a1a2e] border border-[#25d366]/20 text-gray-300"}`}>{t}</button>
             ))}
           </div>
-          <input value={dropContentUrl} onChange={e => setDropContentUrl(e.target.value)} placeholder="Content URL (optional)" className="w-full bg-[#1a1a2e] border border-[#25d366]/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
+          <input value={dropContentUrl} onChange={e => setDropContentUrl(e.target.value)} placeholder="Final asset link, preview URL, or vault package path" className="w-full bg-[#1a1a2e] border border-[#25d366]/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
           <input type="datetime-local" value={dropScheduledFor} onChange={e => setDropScheduledFor(e.target.value)} className="w-full bg-[#1a1a2e] border border-[#25d366]/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
           <div>
-            <label className="text-gray-400 text-xs mb-1 block">Price (cents, 0 = free)</label>
+            <label className="text-gray-400 text-xs mb-1 block">Price gate in cents (0 keeps it free)</label>
             <input type="number" min={0} value={dropPriceCents} onChange={e => setDropPriceCents(Number(e.target.value))} className="w-full bg-[#1a1a2e] border border-[#25d366]/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
           </div>
           <button onClick={handleScheduleDrop} disabled={!dropChannelId || !dropScheduledFor} className="w-full py-2.5 bg-[#25d366] disabled:opacity-40 text-black font-semibold rounded-lg text-sm flex items-center justify-center gap-2">
-            <Send className="w-4 h-4" /> Schedule Drop
+            <Send className="w-4 h-4" /> Queue Profit Drop
           </button>
         </div>
       </div>
 
       <div>
-        <h3 className="text-white font-semibold flex items-center gap-2 mb-3"><Calendar className="w-4 h-4 text-[#25d366]" /> Scheduled Drops</h3>
+        <h3 className="text-white font-semibold flex items-center gap-2 mb-3"><Calendar className="w-4 h-4 text-[#25d366]" /> Launch Queue</h3>
         <div className="space-y-2">
           {dropsQuery.data?.drops.map((d: any) => (
             <div key={d.id} className="p-3 bg-[#0d0d1a] border border-[#25d366]/20 rounded-xl">
@@ -868,7 +881,7 @@ function ScheduleTab() {
             </div>
           ))}
           {(!dropsQuery.data?.drops.length) && (
-            <p className="text-gray-600 text-sm text-center py-4">No scheduled drops yet</p>
+            <p className="text-gray-600 text-sm text-center py-4">No drops queued yet — build the first launch above</p>
           )}
         </div>
       </div>
@@ -883,12 +896,12 @@ export default function WhatsAppContentGenerator() {
   const historyQuery = trpc.whatsappContent.getGenerationHistory.useQuery({ limit: 5, type: "all" });
 
   const TABS: { id: Tab; label: string; icon: any }[] = [
-    { id: "video", label: "Video", icon: Film },
-    { id: "clone", label: "Clone", icon: Sparkles },
-    { id: "image", label: "Image", icon: Image },
+    { id: "video", label: "Cinema", icon: Film },
+    { id: "clone", label: "Reference", icon: Sparkles },
+    { id: "image", label: "Visuals", icon: Image },
     { id: "voice", label: "Voice", icon: Mic },
-    { id: "copy", label: "Copy", icon: MessageSquare },
-    { id: "schedule", label: "Schedule", icon: Calendar },
+    { id: "copy", label: "Offers", icon: MessageSquare },
+    { id: "schedule", label: "Launch", icon: Calendar },
   ];
 
   return (
@@ -898,23 +911,49 @@ export default function WhatsAppContentGenerator() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#25d366] flex items-center justify-center">
-              <Bot className="w-5 h-5 text-black" />
+              <Sparkles className="w-5 h-5 text-black" />
             </div>
             <div>
-              <h1 className="text-white font-bold text-lg leading-none">WhatsApp AI Studio</h1>
-              <p className="text-gray-500 text-xs mt-0.5">Video-first content generation</p>
+              <h1 className="text-white font-bold text-lg leading-none">WhatsApp Profit Studio</h1>
+              <p className="text-gray-400 text-xs mt-0.5">Body Cinema assets, VIP chat copy, and paid-drop launch rails</p>
             </div>
           </div>
           <div className="flex items-center gap-4 text-xs text-gray-500">
-            <span className="flex items-center gap-1"><BarChart3 className="w-3 h-3 text-[#25d366]" />{analyticsQuery.data?.totalGenerations || 0} generated</span>
-            <span className="flex items-center gap-1"><Users className="w-3 h-3 text-[#25d366]" />{analyticsQuery.data?.channels || 0} channels</span>
+            <span className="flex items-center gap-1"><BarChart3 className="w-3 h-3 text-[#25d366]" />{analyticsQuery.data?.totalGenerations || 0} assets forged</span>
+            <span className="flex items-center gap-1"><Users className="w-3 h-3 text-[#25d366]" />{analyticsQuery.data?.channels || 0} audience lanes</span>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
+        <section className="relative overflow-hidden rounded-[2rem] border border-[#25d366]/25 bg-gradient-to-br from-[#0d1f17] via-[#080814] to-[#13071b] p-6 mb-6 shadow-[0_0_70px_rgba(37,211,102,0.12)]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(37,211,102,0.22),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(201,168,76,0.14),transparent_30%)]" />
+          <div className="relative grid gap-5 lg:grid-cols-[1.25fr_0.75fr] items-end">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#25d366]/30 bg-[#25d366]/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-[#98f5bb] mb-4">
+                <Zap className="w-3.5 h-3.5" /> Raw footage to profit
+              </div>
+              <h2 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">Package the scene, write the desire, and queue the drop from one control room.</h2>
+              <p className="text-gray-300 mt-3 max-w-2xl text-sm md:text-base leading-relaxed">This is the WhatsApp side of Body Cinema: creator-approved media, premium hooks, multilingual VIP copy, voice notes, covers, and launch timing built for opt-in buyers.</p>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {LAUNCH_GUARDS.map((guard) => (
+                  <span key={guard} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-gray-200">{guard}</span>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-3">
+              {PROFIT_RAILS.map((rail) => (
+                <div key={rail.label} className="rounded-2xl border border-[#25d366]/20 bg-black/25 p-4 backdrop-blur">
+                  <div className="text-white font-semibold text-sm">{rail.label}</div>
+                  <p className="text-gray-400 text-xs leading-relaxed mt-1">{rail.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Tab Navigation */}
-        <div className="flex gap-1 bg-[#0d0d1a] rounded-2xl p-1.5 mb-6 overflow-x-auto">
+        <div className="flex gap-1 bg-[#0d0d1a] rounded-2xl p-1.5 mb-6 overflow-x-auto border border-[#25d366]/10 shadow-[0_0_35px_rgba(37,211,102,0.08)]">
           {TABS.map(tab => {
             const Icon = tab.icon;
             return (
@@ -931,7 +970,7 @@ export default function WhatsAppContentGenerator() {
         </div>
 
         {/* Tab Content */}
-        <div className="bg-[#0d0d1a] border border-[#25d366]/20 rounded-2xl p-6">
+        <div className="bg-[#0d0d1a] border border-[#25d366]/20 rounded-2xl p-6 shadow-[0_0_45px_rgba(37,211,102,0.06)]">
           {activeTab === "video" && <VideoTab />}
           {activeTab === "clone" && <CloneTab />}
           {activeTab === "image" && <ImageTab />}
@@ -944,7 +983,7 @@ export default function WhatsAppContentGenerator() {
         {historyQuery.data?.items && historyQuery.data.items.length > 0 && (
           <div className="mt-6">
             <h3 className="text-gray-400 text-sm font-medium mb-3 flex items-center gap-2">
-              <RefreshCw className="w-4 h-4" /> Recent Generations
+              <RefreshCw className="w-4 h-4" /> Recent Assets Forged
             </h3>
             <div className="space-y-2">
               {historyQuery.data.items.slice(0, 5).map((item: any) => (

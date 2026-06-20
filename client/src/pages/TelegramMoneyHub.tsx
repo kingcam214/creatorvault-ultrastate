@@ -3,12 +3,12 @@ import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import {
-  Send, ChevronLeft, Bot, Users, MessageSquare, TrendingUp,
+  Send, ChevronLeft, Users, MessageSquare, TrendingUp,
   Plus, Trash2, CheckCircle, XCircle, RefreshCw, Video,
   Zap, Radio, Eye, Hash, Globe, Crown, WalletCards, Smartphone
 } from "lucide-react";
 
-function BotStatusDot({ online }: { online: boolean }) {
+function EngineStatusDot({ online }: { online: boolean }) {
   return (
     <span style={{
       display: "inline-block", width: 8, height: 8, borderRadius: "50%",
@@ -50,35 +50,35 @@ export function TelegramMoneyHub() {
 
   const broadcast = trpc.telegramHub.broadcastMessage.useMutation({
     onSuccess: (data) => {
-      toast({ title: `Sent to ${data.sent}/${data.total} channels`, description: data.failed > 0 ? `${data.failed} failed` : "All delivered" });
+      toast({ title: `Delivered to ${data.sent}/${data.total} audience lanes`, description: data.failed > 0 ? `${data.failed} lane needs attention` : "Every selected lane received the drop" });
       setBroadcastMsg("");
       refetchOverview();
     },
-    onError: (err) => toast({ title: "Broadcast failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Drop delivery needs attention", description: err.message, variant: "destructive" }),
   });
 
   const addChannel = trpc.telegramHub.addChannel.useMutation({
     onSuccess: () => {
-      toast({ title: "Channel added" });
+      toast({ title: "Audience lane added" });
       setNewChannelId(""); setNewChannelName("");
       refetchChannels(); refetchOverview();
     },
-    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Audience lane could not be saved", description: err.message, variant: "destructive" }),
   });
 
   const removeChannel = trpc.telegramHub.removeChannel.useMutation({
-    onSuccess: () => { toast({ title: "Channel removed" }); refetchChannels(); refetchOverview(); },
+    onSuccess: () => { toast({ title: "Audience lane removed" }); refetchChannels(); refetchOverview(); },
   });
 
   const activateAllSegments = trpc.telegramFunnel["acquisition.activateAllSegments"].useMutation({
     onSuccess: (data) => {
       toast({
-        title: `Activated ${data.totalSegments} creator acquisition lanes`,
-        description: `Indie coverage: ${data.independentSegmentsCovered.join(", ")}`,
+        title: `Activated ${data.totalSegments} profit acquisition lanes`,
+        description: `Covered segments: ${data.independentSegmentsCovered.join(", ")}`,
       });
       refetchOverview();
     },
-    onError: (err) => toast({ title: "Acquisition activation failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Acquisition engine needs attention", description: err.message, variant: "destructive" }),
   });
 
   const { data: miniAppRails, refetch: refetchMiniAppRails } = trpc.telegramFunnel["miniApp.packageRails"].useQuery({
@@ -89,17 +89,17 @@ export function TelegramMoneyHub() {
     onSuccess: (data) => {
       if (data.invoiceLink) window.open(data.invoiceLink, "_blank", "noopener,noreferrer");
       toast({
-        title: data.success ? `${data.packageName} Stars invoice ready` : "Stars invoice needs bot configuration",
-        description: data.success ? `${data.starPrice} Stars · ${data.segment}` : (data.error || "Check Telegram monetization bot token / Stars setup."),
+        title: data.success ? `${data.packageName} Stars invoice ready` : "Stars checkout rail needs a connected payment engine",
+        description: data.success ? `${data.starPrice} Stars · ${data.segment}` : (data.error || "Connect the Telegram payment engine to unlock instant paid package checkout."),
         variant: data.success ? undefined : "destructive",
       });
       refetchMiniAppRails();
     },
-    onError: (err) => toast({ title: "Stars invoice failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Stars checkout could not open", description: err.message, variant: "destructive" }),
   });
 
   const handleBroadcast = () => {
-    if (!broadcastMsg.trim()) { toast({ title: "Enter a message", variant: "destructive" }); return; }
+    if (!broadcastMsg.trim()) { toast({ title: "Write the drop before sending", variant: "destructive" }); return; }
     broadcast.mutate({
       message: broadcastMsg,
       channelIds: selectedChannels.length > 0 ? selectedChannels : undefined,
@@ -117,11 +117,11 @@ export function TelegramMoneyHub() {
   const bots = botStatus?.bots || overview?.bots || [];
 
   const TABS = [
-    { key: "overview", label: "Overview", icon: TrendingUp },
-    { key: "broadcast", label: "Broadcast", icon: Radio },
-    { key: "channels", label: "Channels", icon: Hash },
-    { key: "leads", label: "Leads", icon: Users },
-    { key: "history", label: "History", icon: MessageSquare },
+    { key: "overview", label: "Command", icon: TrendingUp },
+    { key: "broadcast", label: "Drops", icon: Radio },
+    { key: "channels", label: "Lanes", icon: Hash },
+    { key: "leads", label: "Buyers", icon: Users },
+    { key: "history", label: "Receipts", icon: MessageSquare },
   ];
 
   return (
@@ -138,9 +138,9 @@ export function TelegramMoneyHub() {
             <Send size={16} color="#00D9FF" />
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>Telegram Money Hub</div>
+            <div style={{ fontSize: 16, fontWeight: 800 }}>Telegram Profit Command</div>
             <div style={{ fontSize: 11, color: "#666" }}>
-              {bots.filter((b: any) => b.online).length}/{bots.length} bots online
+              {bots.filter((b: any) => b.online).length}/{bots.length} engines live
               {bots.filter((b: any) => b.online).length > 0 && <span style={{ color: "#27AE60", marginLeft: 6 }}>● LIVE</span>}
             </div>
           </div>
@@ -167,11 +167,29 @@ export function TelegramMoneyHub() {
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <div>
+            <div style={{ background: "radial-gradient(circle at top left, #00D9FF22, transparent 34%), linear-gradient(135deg, #061621, #120817 58%, #1a1203)", border: "1px solid #00D9FF44", borderRadius: 18, padding: 22, marginBottom: 20, boxShadow: "0 0 60px rgba(0,217,255,0.10)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.25fr) minmax(240px, 0.75fr)", gap: 18, alignItems: "end" }}>
+                <div>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 999, border: "1px solid #C9A84C55", background: "#C9A84C14", color: "#f0d27a", fontSize: 11, fontWeight: 900, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 14 }}>
+                    <Crown size={13} /> Raw footage to paid Telegram packages
+                  </div>
+                  <div style={{ fontSize: 30, lineHeight: 1.08, fontWeight: 950, letterSpacing: -0.8, maxWidth: 760 }}>Turn attention into unlocks with a polished, consent-first Telegram revenue lane.</div>
+                  <div style={{ color: "#b9c8d0", fontSize: 13, lineHeight: 1.65, marginTop: 12, maxWidth: 760 }}>
+                    Build buyer paths for Body Cinema drops, route every segment into the right lane, and sell final packages through Telegram Mini App and Stars checkout when the monetization engine is connected.
+                  </div>
+                </div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {["Studio acquisition", "Buyer-ready package rails", "Approved Telegram delivery", "No deepfake positioning"].map((item) => (
+                    <div key={item} style={{ padding: "10px 12px", border: "1px solid #ffffff14", background: "#ffffff08", borderRadius: 10, color: "#e8fbff", fontSize: 12, fontWeight: 800 }}>{item}</div>
+                  ))}
+                </div>
+              </div>
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 24 }}>
-              <StatCard icon={Hash} label="Channels" value={overview?.totalChannels || 0} color="#00D9FF" />
-              <StatCard icon={MessageSquare} label="Total Messages" value={overview?.totalMessages || 0} color="#C9A84C" />
-              <StatCard icon={Users} label="Total Leads" value={overview?.totalLeads || 0} color="#27AE60" />
-              <StatCard icon={Bot} label="Active Bots" value={`${overview?.activeBots || 0}/4`} color="#9B59B6" />
+              <StatCard icon={Hash} label="Audience Lanes" value={overview?.totalChannels || 0} color="#00D9FF" />
+              <StatCard icon={MessageSquare} label="Drops Sent" value={overview?.totalMessages || 0} color="#C9A84C" />
+              <StatCard icon={Users} label="Captured Buyers" value={overview?.totalLeads || 0} color="#27AE60" />
+              <StatCard icon={Zap} label="Live Engines" value={`${overview?.activeBots || 0}/4`} color="#9B59B6" />
             </div>
 
             {/* Domination Activation */}
@@ -181,14 +199,14 @@ export function TelegramMoneyHub() {
                   <Crown size={20} color="#C9A84C" />
                 </div>
                 <div style={{ flex: 1, minWidth: 280 }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: "white" }}>All-Creator Acquisition Domination</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "white" }}>Telegram Profit Acquisition Engine</div>
                   <div style={{ fontSize: 12, color: "#bca76a", lineHeight: 1.5 }}>
-                    Creates tracked CreatorVault/VaultX Telegram campaigns and keyword funnels for studios, platforms, distributors, indie creators, solo operators, and small creator groups.
+                    Creates tracked campaign lanes for studios, platforms, distributors, indie creators, solo talent, and private groups so every audience has a clean path from curiosity to paid package.
                   </div>
                 </div>
                 <button onClick={() => activateAllSegments.mutate({ sendNow: false, refreshFunnels: true })} disabled={activateAllSegments.isPending}
                   style={{ padding: "10px 16px", borderRadius: 10, border: "none", background: activateAllSegments.isPending ? "#2a2414" : "linear-gradient(135deg, #C9A84C, #F0D27A)", color: activateAllSegments.isPending ? "#777" : "#0a0a0a", cursor: activateAllSegments.isPending ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 900, display: "flex", alignItems: "center", gap: 7 }}>
-                  {activateAllSegments.isPending ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Activating...</> : <><Zap size={14} /> Activate Every Segment</>}
+                  {activateAllSegments.isPending ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Lighting the lanes...</> : <><Zap size={14} /> Light Up Every Segment</>}
                 </button>
               </div>
               <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
@@ -207,14 +225,14 @@ export function TelegramMoneyHub() {
                   <Smartphone size={20} color="#00D9FF" />
                 </div>
                 <div style={{ flex: 1, minWidth: 280 }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: "white" }}>Telegram Mini App + Stars Checkout Rails</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "white" }}>Telegram Mini App + Stars Checkout</div>
                   <div style={{ fontSize: 12, color: "#8fddea", lineHeight: 1.5 }}>
-                    Native Telegram package entry is wired for studios, platforms, distributors, indie creators, solo operators, and groups. Star invoices open instantly when the monetization bot is configured.
+                    Native Telegram package entry turns interest into paid unlocks. Stars invoices open instantly once the monetization lane is connected and approved.
                   </div>
                 </div>
                 <a href={miniAppRails?.miniAppEntry || "/vaultx?source=telegram_mini_app"} target="_blank" rel="noreferrer"
                   style={{ padding: "10px 16px", borderRadius: 10, border: "1px solid #00D9FF55", background: "#00D9FF18", color: "#9ceeff", cursor: "pointer", fontSize: 13, fontWeight: 900, display: "flex", alignItems: "center", gap: 7, textDecoration: "none" }}>
-                  <Smartphone size={14} /> Open Mini App Path
+                  <Smartphone size={14} /> Preview Buyer Path
                 </a>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
@@ -230,7 +248,7 @@ export function TelegramMoneyHub() {
                           {(pkg.deliveryContract.deliveredFiles || []).slice(0, 3).join(" · ")}
                         </div>
                         <div style={{ fontSize: 10, color: "#7fb8c2", marginTop: 6 }}>
-                          CTA: {pkg.deliveryContract.primaryCTA} · Proof required before render release
+                          CTA: {pkg.deliveryContract.primaryCTA} · Buyer proof unlocks final package release
                         </div>
                       </div>
                     )}
@@ -246,21 +264,21 @@ export function TelegramMoneyHub() {
               </div>
             </div>
 
-            {/* Bot Status */}
+            {/* Delivery Engines */}
             <div style={{ background: "#0f0f1a", border: "1px solid #1a1a2e", borderRadius: 12, padding: 20, marginBottom: 20 }}>
               <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-                <Bot size={14} color="#9B59B6" /> Bot Status
+                <Zap size={14} color="#9B59B6" /> Delivery Engines
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
-                {bots.map((bot: any) => (
-                  <div key={bot.name} style={{ padding: "12px 14px", background: "#0a0a1a", borderRadius: 8, border: `1px solid ${bot.online ? "#27AE6033" : "#1a1a2e"}`, display: "flex", alignItems: "center", gap: 10 }}>
-                    <BotStatusDot online={bot.online} />
+                {bots.map((engine: any, index: number) => (
+                  <div key={engine.name || index} style={{ padding: "12px 14px", background: "#0a0a1a", borderRadius: 8, border: `1px solid ${engine.online ? "#27AE6033" : "#1a1a2e"}`, display: "flex", alignItems: "center", gap: 10 }}>
+                    <EngineStatusDot online={engine.online} />
                     <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: bot.online ? "#e0e0e0" : "#555" }}>@{bot.username || bot.name}</div>
-                      <div style={{ fontSize: 11, color: "#555", textTransform: "capitalize" }}>{bot.role}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: engine.online ? "#e0e0e0" : "#555" }}>{engine.username ? `Engine ${index + 1}` : (engine.name ? `${engine.name} Engine` : `Engine ${index + 1}`)}</div>
+                      <div style={{ fontSize: 11, color: "#555", textTransform: "capitalize" }}>{engine.role}</div>
                     </div>
-                    <div style={{ marginLeft: "auto", fontSize: 11, color: bot.online ? "#27AE60" : "#E74C3C", fontWeight: 700 }}>
-                      {bot.online ? "ONLINE" : "OFFLINE"}
+                    <div style={{ marginLeft: "auto", fontSize: 11, color: engine.online ? "#27AE60" : "#E74C3C", fontWeight: 700 }}>
+                      {engine.online ? "LIVE" : "ACTION NEEDED"}
                     </div>
                   </div>
                 ))}
@@ -270,23 +288,23 @@ export function TelegramMoneyHub() {
             {/* Quick Broadcast */}
             <div style={{ background: "#0f0f1a", border: "1px solid #1a1a2e", borderRadius: 12, padding: 20 }}>
               <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-                <Radio size={14} color="#00D9FF" /> Quick Broadcast
+                <Radio size={14} color="#00D9FF" /> Fast Drop
               </div>
               <textarea value={broadcastMsg} onChange={e => setBroadcastMsg(e.target.value)}
-                placeholder="Type your message... (supports HTML: <b>bold</b>, <i>italic</i>, <a href='...'>link</a>)"
+                placeholder="Write the drop: hook, benefit, scarcity, package link, and buyer instruction."
                 rows={4} style={{ width: "100%", padding: "12px", background: "#0a0a1a", border: "1px solid #1a1a2e", borderRadius: 8, color: "white", fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
               <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}>
                 <select value={selectedBot} onChange={e => setSelectedBot(e.target.value)}
                   style={{ padding: "8px 12px", background: "#0a0a1a", border: "1px solid #1a1a2e", borderRadius: 8, color: "#888", fontSize: 12, cursor: "pointer" }}>
-                  <option value="main">Main Bot</option>
-                  <option value="recruiter">Recruiter Bot</option>
-                  <option value="engagement">Engagement Bot</option>
-                  <option value="monetization">Monetization Bot</option>
+                  <option value="main">Main Delivery Engine</option>
+                  <option value="recruiter">Acquisition Engine</option>
+                  <option value="engagement">Engagement Engine</option>
+                  <option value="monetization">Checkout Engine</option>
                 </select>
-                <span style={{ fontSize: 12, color: "#555" }}>→ {selectedChannels.length > 0 ? `${selectedChannels.length} selected` : "all channels"}</span>
+                <span style={{ fontSize: 12, color: "#555" }}>→ {selectedChannels.length > 0 ? `${selectedChannels.length} selected` : "all audience lanes"}</span>
                 <button onClick={handleBroadcast} disabled={broadcast.isPending || !broadcastMsg.trim()}
                   style={{ marginLeft: "auto", padding: "8px 20px", borderRadius: 8, border: "none", background: broadcast.isPending ? "#1a1a2e" : "#00D9FF", color: broadcast.isPending ? "#555" : "#000", cursor: broadcast.isPending ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                  {broadcast.isPending ? <><RefreshCw size={13} style={{ animation: "spin 1s linear infinite" }} /> Sending...</> : <><Send size={13} /> Broadcast</>}
+                  {broadcast.isPending ? <><RefreshCw size={13} style={{ animation: "spin 1s linear infinite" }} /> Delivering...</> : <><Send size={13} /> Send Drop</>}
                 </button>
               </div>
             </div>
@@ -296,39 +314,39 @@ export function TelegramMoneyHub() {
         {/* Broadcast Tab */}
         {activeTab === "broadcast" && (
           <div style={{ maxWidth: 800 }}>
-            <div style={{ marginBottom: 20, fontSize: 18, fontWeight: 700 }}>Broadcast Message</div>
+            <div style={{ marginBottom: 20, fontSize: 18, fontWeight: 800 }}>Drop Composer</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 20 }}>
               <div>
-                <label style={{ fontSize: 11, color: "#666", textTransform: "uppercase", letterSpacing: "1px", display: "block", marginBottom: 8 }}>Message (HTML supported)</label>
+                <label style={{ fontSize: 11, color: "#666", textTransform: "uppercase", letterSpacing: "1px", display: "block", marginBottom: 8 }}>Drop script</label>
                 <textarea value={broadcastMsg} onChange={e => setBroadcastMsg(e.target.value)}
-                  placeholder="<b>🔥 KingCam Empire Update</b>&#10;&#10;Your message here..."
-                  rows={12} style={{ width: "100%", padding: "14px", background: "#0f0f1a", border: "1px solid #1a1a2e", borderRadius: 10, color: "white", fontSize: 14, lineHeight: 1.7, outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "monospace" }} />
+                  placeholder="VIP drop incoming: lead with the tease, name the package, state the unlock, add scarcity, and close with the link."
+                  rows={12} style={{ width: "100%", padding: "14px", background: "#0f0f1a", border: "1px solid #1a1a2e", borderRadius: 10, color: "white", fontSize: 14, lineHeight: 1.7, outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
                 <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
                   <select value={selectedBot} onChange={e => setSelectedBot(e.target.value)}
                     style={{ padding: "8px 12px", background: "#0f0f1a", border: "1px solid #1a1a2e", borderRadius: 8, color: "#888", fontSize: 12, cursor: "pointer" }}>
-                    <option value="main">Main Bot</option>
-                    <option value="recruiter">Recruiter Bot</option>
-                    <option value="engagement">Engagement Bot</option>
-                    <option value="monetization">Monetization Bot</option>
+                    <option value="main">Main Delivery Engine</option>
+                    <option value="recruiter">Acquisition Engine</option>
+                    <option value="engagement">Engagement Engine</option>
+                    <option value="monetization">Checkout Engine</option>
                   </select>
                   <button onClick={handleBroadcast} disabled={broadcast.isPending || !broadcastMsg.trim()}
                     style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: broadcast.isPending ? "#1a1a2e" : "linear-gradient(135deg, #00D9FF, #0099BB)", color: broadcast.isPending ? "#555" : "#000", cursor: broadcast.isPending ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                    {broadcast.isPending ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Sending...</> : <><Send size={14} /> Send to {selectedChannels.length > 0 ? `${selectedChannels.length} channels` : "all channels"}</>}
+                    {broadcast.isPending ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Delivering...</> : <><Send size={14} /> Send to {selectedChannels.length > 0 ? `${selectedChannels.length} lanes` : "all lanes"}</>}
                   </button>
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 11, color: "#666", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 8 }}>Target Channels</div>
+                <div style={{ fontSize: 11, color: "#666", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 8 }}>Target Audience Lanes</div>
                 <div style={{ background: "#0f0f1a", border: "1px solid #1a1a2e", borderRadius: 10, overflow: "hidden" }}>
                   <div style={{ padding: "10px 14px", borderBottom: "1px solid #1a1a2e", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 12, color: "#888" }}>{channels.length} channels</span>
+                    <span style={{ fontSize: 12, color: "#888" }}>{channels.length} lanes</span>
                     <button onClick={() => setSelectedChannels(selectedChannels.length === channels.length ? [] : channels.map((c: any) => c.id))}
                       style={{ fontSize: 11, color: "#00D9FF", background: "none", border: "none", cursor: "pointer" }}>
                       {selectedChannels.length === channels.length ? "Deselect all" : "Select all"}
                     </button>
                   </div>
                   {channels.length === 0 ? (
-                    <div style={{ padding: 20, textAlign: "center", color: "#444", fontSize: 13 }}>No channels added yet</div>
+                    <div style={{ padding: 20, textAlign: "center", color: "#444", fontSize: 13 }}>No audience lanes connected yet</div>
                   ) : (
                     channels.map((ch: any) => (
                       <div key={ch.id} onClick={() => toggleChannel(ch.id)}
@@ -353,17 +371,17 @@ export function TelegramMoneyHub() {
         {activeTab === "channels" && (
           <div>
             <div style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>Channels & Groups</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>Audience Lanes</div>
             </div>
             {/* Add Channel */}
             <div style={{ background: "#0f0f1a", border: "1px solid #1a1a2e", borderRadius: 12, padding: 20, marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "#888" }}>Add Channel / Group</div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "#888" }}>Add Audience Lane</div>
               <div style={{ display: "flex", gap: 8 }}>
                 <input value={newChannelId} onChange={e => setNewChannelId(e.target.value)}
-                  placeholder="Chat ID (e.g. -1001234567890)"
+                  placeholder="Telegram channel, group link, or saved delivery lane"
                   style={{ flex: 1, padding: "10px 12px", background: "#0a0a1a", border: "1px solid #1a1a2e", borderRadius: 8, color: "white", fontSize: 13, outline: "none" }} />
                 <input value={newChannelName} onChange={e => setNewChannelName(e.target.value)}
-                  placeholder="Display name"
+                  placeholder="Audience lane name"
                   style={{ flex: 1, padding: "10px 12px", background: "#0a0a1a", border: "1px solid #1a1a2e", borderRadius: 8, color: "white", fontSize: 13, outline: "none" }} />
                 <select value={newChannelType} onChange={e => setNewChannelType(e.target.value as any)}
                   style={{ padding: "10px 12px", background: "#0a0a1a", border: "1px solid #1a1a2e", borderRadius: 8, color: "#888", fontSize: 12, cursor: "pointer" }}>
@@ -374,18 +392,18 @@ export function TelegramMoneyHub() {
                 <button onClick={() => { if (!newChannelId || !newChannelName) { toast({ title: "Fill in all fields", variant: "destructive" }); return; } addChannel.mutate({ channelId: newChannelId, channelName: newChannelName, channelType: newChannelType }); }}
                   disabled={addChannel.isPending}
                   style={{ padding: "10px 16px", borderRadius: 8, border: "none", background: "#00D9FF", color: "#000", cursor: "pointer", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                  <Plus size={14} /> Add
+                  <Plus size={14} /> Save Lane
                 </button>
               </div>
               <div style={{ marginTop: 8, fontSize: 11, color: "#555" }}>
-                To get your channel/group ID: forward a message to @userinfobot or use @getidsbot
+                Use an approved Telegram channel or private group where your delivery engine is an admin before saving the lane.
               </div>
             </div>
             {/* Channel List */}
             {channels.length === 0 ? (
               <div style={{ textAlign: "center", padding: 60, color: "#444" }}>
                 <Hash size={40} style={{ marginBottom: 12 }} />
-                <div>No channels added yet. Add a channel above to start broadcasting.</div>
+                <div>No audience lanes connected yet. Add the first Telegram lane, then start sending paid-drop campaigns.</div>
               </div>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
@@ -412,11 +430,11 @@ export function TelegramMoneyHub() {
         {/* Leads Tab */}
         {activeTab === "leads" && (
           <div>
-            <div style={{ marginBottom: 20, fontSize: 18, fontWeight: 700 }}>Telegram Leads ({leads.length})</div>
+            <div style={{ marginBottom: 20, fontSize: 18, fontWeight: 700 }}>Buyer Signals ({leads.length})</div>
             {leads.length === 0 ? (
               <div style={{ textAlign: "center", padding: 60, color: "#444" }}>
                 <Users size={40} style={{ marginBottom: 12 }} />
-                <div>No leads yet. Leads are captured when users interact with your bots.</div>
+                <div>No buyer signals yet. They appear as soon as people tap, reply, or enter your Telegram package lanes.</div>
               </div>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
@@ -440,18 +458,18 @@ export function TelegramMoneyHub() {
         {/* History Tab */}
         {activeTab === "history" && (
           <div>
-            <div style={{ marginBottom: 20, fontSize: 18, fontWeight: 700 }}>Message History</div>
+            <div style={{ marginBottom: 20, fontSize: 18, fontWeight: 700 }}>Delivery Receipts</div>
             {history.length === 0 ? (
               <div style={{ textAlign: "center", padding: 60, color: "#444" }}>
                 <MessageSquare size={40} style={{ marginBottom: 12 }} />
-                <div>No messages sent yet.</div>
+                <div>No drops sent yet. Your delivery receipts will appear here after the first campaign.</div>
               </div>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
                 {history.map((msg: any) => (
                   <div key={msg.id} style={{ background: "#0f0f1a", border: "1px solid #1a1a2e", borderRadius: 10, padding: "14px 16px" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                      <span style={{ fontSize: 12, color: "#888" }}>{msg.channel_name || "Direct"}</span>
+                      <span style={{ fontSize: 12, color: "#888" }}>{msg.channel_name || "Direct lane"}</span>
                       <span style={{ fontSize: 11, color: "#555" }}>{msg.sent_at ? new Date(msg.sent_at).toLocaleString() : ""}</span>
                     </div>
                     <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.5, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>

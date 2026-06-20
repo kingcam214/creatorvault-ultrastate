@@ -30,6 +30,11 @@ const ALLOWLISTS = {
     'client/src/App.tsx',
     'client/src/components/AppHeader.tsx'
   ],
+  distribution: [
+    'client/src/pages/WhatsAppContentGenerator.tsx',
+    'client/src/pages/TelegramMoneyHub.tsx',
+    'scripts/scope-guard.js'
+  ],
   credibility: [
     'client/src/App.tsx',
     'client/src/components/AgeGate.tsx',
