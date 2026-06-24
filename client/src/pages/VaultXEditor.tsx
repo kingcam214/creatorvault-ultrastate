@@ -204,17 +204,18 @@ function VaultXEditor() {
 
   const readinessItems = useMemo(
     () => [
-      { label: "Clip loaded", done: Boolean(videoUrl), value: 22 },
+      { label: "Source loaded", done: Boolean(videoUrl), value: 20 },
       { label: "Preview window set", done: effectivePreviewLength >= 8 && effectivePreviewLength <= 30, value: 14 },
       { label: "Unlock beat protected", done: effectiveUnlockAt > effectivePreviewLength, value: 16 },
       { label: "Sales hook written", done: hook.trim().length >= 18 && cta.trim().length >= 6, value: 16 },
-      { label: "Paid path attached", done: paidPrice > 0 && destination === "VaultX Unlock", value: 16 },
-      { label: "Creator safety checked", done: consentCheck && safeTease && watermark, value: 16 },
+      { label: "Paid path attached", done: paidPrice >= 1 && destination === "VaultX Unlock", value: 16 },
+      { label: "Consent and safety locked", done: consentCheck && safeTease && watermark, value: 18 },
     ],
     [videoUrl, effectivePreviewLength, effectiveUnlockAt, hook, cta, paidPrice, destination, consentCheck, safeTease, watermark],
   );
 
   const readinessScore = readinessItems.reduce((total, item) => total + (item.done ? item.value : 0), 0);
+  const launchReady = readinessItems.every((item) => item.done);
 
   const launchSummary = useMemo(
     () => ({
@@ -227,8 +228,9 @@ function VaultXEditor() {
       price: paidPrice > 0 ? `$${paidPrice.toFixed(2)}` : "Price needed",
       destination,
       readiness: `${readinessScore}/100`,
+      status: launchReady ? "Studio-ready" : "Close gaps before Studio launch",
     }),
-    [fileName, aspect, effectivePreviewLength, effectiveUnlockAt, selectedStyle, captionsOn, captionStyle, paidPrice, destination, readinessScore],
+    [fileName, aspect, effectivePreviewLength, effectiveUnlockAt, selectedStyle, captionsOn, captionStyle, paidPrice, destination, readinessScore, launchReady],
   );
 
   useEffect(() => {
@@ -281,7 +283,11 @@ function VaultXEditor() {
   }
 
   function exportPackage() {
-    const payload = JSON.stringify(launchSummary, null, 2);
+    const payload = JSON.stringify({
+      ...launchSummary,
+      exportedAt: new Date().toISOString(),
+      nextStep: launchReady ? "Open /vault-x/studio and attach this package to the Body Cinema command rail." : "Resolve all readiness gaps before launch.",
+    }, null, 2);
     const blob = new Blob([payload], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -329,10 +335,10 @@ function VaultXEditor() {
                 <span className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[0.68rem] font-black uppercase tracking-[0.18em] text-zinc-400">Adult-first revenue workflow</span>
               </div>
               <h1 className="max-w-4xl text-3xl font-black uppercase leading-[0.92] tracking-[-0.04em] text-white sm:text-5xl lg:text-7xl">
-                Cut the tease. Lock the payoff. Sell the full drop.
+                Shape the preview. Protect the payoff. Hand it to Studio ready to sell.
               </h1>
               <p className="mt-4 max-w-3xl text-base leading-7 text-zinc-300 md:text-lg">
-                A premium mobile editing room for adult creators who need the preview, caption, price, and paid-unlock path built into one clean workflow. No dead panels. No generic creator-tool energy.
+                A premium Body Cinema prep room for adult creators who need the source, preview, caption, price, safety checks, and paid-unlock path aligned before the Studio launch. No dead panels. No generic creator-tool energy.
               </p>
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <StatPill icon={<Scissors size={18} />} label="Public cut" value={`${formatTime(effectivePreviewLength)} preview`} />
@@ -346,7 +352,7 @@ function VaultXEditor() {
                 <ReadinessRing score={readinessScore} />
                 <div>
                   <p className="text-lg font-black text-white">Launch readiness</p>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">The editor scores what matters before a drop goes out: clip, preview, unlock, captions, money path, and safety checks.</p>
+                  <p className="mt-1 text-sm leading-6 text-zinc-400">The editor scores what matters before a drop reaches Studio: approved source, preview, unlock, captions, money path, and consent/safety checks.</p>
                 </div>
               </div>
               <div className="mt-4 space-y-2">
@@ -470,6 +476,7 @@ function VaultXEditor() {
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
                 <button type="button" onClick={saveDraft} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 font-black text-white transition hover:border-[#F2B15B]/60"><Save size={18} /> Save draft</button>
                 <button type="button" onClick={exportPackage} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#F2B15B] px-4 py-3 font-black text-black transition hover:brightness-110"><Download size={18} /> Export package</button>
+                <Link href="/vault-x/studio" className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-4 py-3 font-black transition ${launchReady ? "border border-emerald-400/40 bg-emerald-400/10 text-emerald-100 hover:border-emerald-300" : "border border-white/10 bg-white/[0.035] text-zinc-500"}`}>Open Studio</Link>
               </div>
               <p className="mt-3 text-xs font-bold text-zinc-500">{saveState}</p>
             </Panel>
@@ -600,7 +607,7 @@ function VaultXEditor() {
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="rounded-[1.5rem] border border-white/10 bg-black/55 p-5">
                 <h2 className="text-2xl font-black text-white md:text-3xl">Attach the money path</h2>
-                <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">A VaultX edit is not finished until the buyer route, price, and creator-safety checks travel with the asset.</p>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">A Body Cinema prep package is not finished until the buyer route, price, watermark, consent, and public-safety checks travel with the asset into Studio.</p>
                 <div className="mt-5 grid gap-5 md:grid-cols-2">
                   <label className="block">
                     <span className="mb-2 flex items-center gap-2 text-sm font-black text-white"><DollarSign size={18} className="text-[#F2B15B]" /> Unlock price</span>

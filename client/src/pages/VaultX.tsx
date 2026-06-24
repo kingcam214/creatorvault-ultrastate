@@ -2257,18 +2257,25 @@ function VaultXPublicLanding() {
           <div className="max-w-3xl">
             <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#c9a84c" }}>BODY CINEMA</div>
             <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">
-              Upload raw footage.<br />
-              Get a finished product.
+              Upload approved source media.<br />
+              Leave with a launchable product.
             </h2>
             <p className="text-base md:text-lg leading-8 mb-8" style={{ color: "#b8b8b8" }}>
-              Body Cinema watches your footage, finds your best moments, and builds a professional edit automatically. No editing skills. No hired editor. Just upload and go.
+              Body Cinema turns creator-owned media into a cinematic teaser, paid unlock, VIP upsell, checkout path, and tracked distribution route. It is not a disconnected edit button; it is the VaultX revenue workflow in one launch room.
             </p>
-            <div className="space-y-3 mb-8 text-lg font-bold" style={{ color: "#f5f0e8" }}>
-              <p>AI selects your best angles and body shots</p>
-              <p>Color graded for your skin tone</p>
-              <p>Ready to sell in minutes, not days</p>
+            <div className="grid gap-3 mb-8 md:grid-cols-3" style={{ color: "#f5f0e8" }}>
+              {[
+                ["Governed intake", "Consent, ownership, adult-content gating, and source-media readiness come first."],
+                ["Premium packaging", "The teaser, unlock, price, VIP ladder, and provider route are built together."],
+                ["Revenue routing", "Checkout, Telegram tracking, and proof receipts stay visible instead of hidden."],
+              ].map(([title, body]) => (
+                <div key={title} className="rounded-[1.25rem] border border-white/10 bg-white/[.035] p-4">
+                  <p className="text-sm font-black text-white">{title}</p>
+                  <p className="mt-2 text-xs leading-5" style={{ color: "#aaa" }}>{body}</p>
+                </div>
+              ))}
             </div>
-            <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Try Body Cinema Free</button>
+            <a href="/vault-x/studio" className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Open Body Cinema Studio</a>
           </div>
         </section>
 
@@ -2412,10 +2419,10 @@ export default function VaultX() {
   ] as const;
 
     const workflowSteps = [
-    { label: "Create the asset", detail: "Upload raw footage or open the editor for Body Cinema processing.", done: activeTab !== "discover" },
-    { label: "Package the drop", detail: "Use Studio to create master, teaser, PPV bundle, captions, sound, and platform exports.", done: ["feed", "messages", "earnings"].includes(activeTab) },
-    { label: "Launch to fans", detail: "Publish to VaultX, Telegram, X.com, and fan platforms with direct monetization paths.", done: ["telegram", "xcom", "earnings"].includes(activeTab) },
-    { label: "Collect revenue", detail: "Track subscriptions, PPV, tips, and creator earnings from real transactions.", done: activeTab === "earnings" },
+    { label: "Approve the source", detail: "Start with creator-owned media, consent, adult gating, and a clean Body Cinema intake.", done: activeTab !== "discover" },
+    { label: "Package the drop", detail: "Use Studio to create teaser, paid unlock, VIP ladder, provider generation, checkout, and receipts.", done: ["feed", "messages", "earnings"].includes(activeTab) },
+    { label: "Launch the route", detail: "Push finished content into VaultX, Telegram, X.com, and fan-platform paths with tracked monetization.", done: ["telegram", "xcom", "earnings"].includes(activeTab) },
+    { label: "Prove revenue", detail: "Track purchases, routes, receipts, and creator earnings from real backend records.", done: activeTab === "earnings" },
   ];
 
   return (
@@ -2455,8 +2462,8 @@ export default function VaultX() {
           <div className="grid gap-6 lg:grid-cols-[1.1fr_.9fr] lg:items-end">
             <div>
               <p className="text-[11px] font-black uppercase tracking-[.28em] text-red-300">Creator command center</p>
-              <h1 className="mt-2 text-3xl font-black tracking-[-.06em] sm:text-5xl">Build the clip, package the drop, launch the money route.</h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400 sm:text-base">VaultX now opens with the actual operating path: create or process content, package it into sellable video assets, distribute it, and track revenue. Every primary action points to a live production workflow.</p>
+              <h1 className="mt-2 text-3xl font-black tracking-[-.06em] sm:text-5xl">Approve the source, package the drop, launch the money route.</h1>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400 sm:text-base">VaultX now opens with the actual Body Cinema operating path: verify consent, process creator-owned media, package it into a sellable teaser and unlock, distribute it, and track revenue. Every primary action points to a real production workflow.</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <a href="/vault-x/editor" className="rounded-3xl bg-red-500 p-4 text-sm font-black text-white shadow-2xl shadow-red-950/30 hover:bg-red-600"><Video className="mb-4 h-5 w-5" />Upload & Process</a>
@@ -2470,10 +2477,10 @@ export default function VaultX() {
 
         {activeTab === "discover" && (
           <section className="mb-6 grid gap-3 md:grid-cols-4">
-            <VaultXActionCard href="/vault-x/editor" title="Process a new video" body="Start with a raw asset and generate Body Cinema outputs, AI analysis, export packages, and publish-ready assets." icon={<Video className="h-5 w-5" />} cta="Open Editor" />
-            <VaultXActionCard href="/vault-x/studio" title="Build a revenue bundle" body="Package master files, teasers, captions, sound, platform exports, PPV logic, and distribution assets." icon={<Package className="h-5 w-5" />} cta="Open Studio" />
-            <VaultXActionCard href="/vaultx/distribution" title="Push the launch" body="Move finished content into distribution paths for VaultX, Telegram, X.com, and external fan platforms." icon={<Globe className="h-5 w-5" />} cta="Open Distribution" />
-            <VaultXActionCard href="/god-mode" title="Command God Mode" body="Turn a creator goal into concrete revenue actions, launch copy, and next-step planning." icon={<Sparkles className="h-5 w-5" />} cta="Open God Mode" />
+            <VaultXActionCard href="/vault-x/editor" title="Prepare approved media" body="Start with a creator-owned asset, generate Body Cinema analysis, polish exports, and keep source readiness visible." icon={<Video className="h-5 w-5" />} cta="Open Editor" />
+            <VaultXActionCard href="/vault-x/studio" title="Build the Body Cinema launch" body="Package teaser, paid unlock, VIP ladder, provider generation, checkout, Telegram route, and proof receipt in one command rail." icon={<Package className="h-5 w-5" />} cta="Open Studio" />
+            <VaultXActionCard href="/vaultx/distribution" title="Push the launch" body="Move finished content into tracked distribution paths for VaultX, Telegram, X.com, and external fan platforms." icon={<Globe className="h-5 w-5" />} cta="Open Distribution" />
+            <VaultXActionCard href="/god-mode" title="Command God Mode" body="Turn a creator goal into concrete revenue actions, compliant launch copy, and next-step planning." icon={<Sparkles className="h-5 w-5" />} cta="Open God Mode" />
           </section>
         )}
 
