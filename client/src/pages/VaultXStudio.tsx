@@ -41,7 +41,7 @@ type CardProps = {
 const makeChoices: { title: MakeChoice; body: string; icon: ReactNode; tag: string }[] = [
   {
     title: "Body Cinema",
-    body: "Upload raw footage and turn it into a polished, sellable video built for adult creators.",
+    body: "Transform creator-owned source media into a cinematic teaser, paid unlock, VIP upsell, and tracked distribution route in one governed workflow.",
     icon: <Clapperboard size={26} />,
     tag: "Flagship",
   },
@@ -131,10 +131,10 @@ function HeroPreview({ choice }: { choice: MakeChoice }) {
             VaultX Studio
           </p>
           <h1 className="max-w-3xl text-4xl font-black leading-[0.95] tracking-tight text-white md:text-6xl">
-            Body Cinema turns raw desire into a controlled revenue weapon.
+            Body Cinema is the premium launch room for creator-owned adult media.
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-[#b8b8b8]">
-            VaultX is its own uncensored adult-business operating room: source intake, consent lock, AI trailer generation, sellable artifact, checkout, and distribution move as one connected machine.
+            VaultX turns one approved source asset into a cinematic preview, paid unlock, VIP upsell, checkout, and tracked distribution route without hiding compliance, provider, or revenue gates.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <a href="#launch-console" className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 active:scale-[0.98]">
@@ -244,6 +244,16 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   const estimatedCostCents = Number(selectedProviderProfile?.estimatedCostCents?.[telegramMode] || selectedProviderProfile?.estimatedCostCents?.default || 0);
   const providerLaunchReady = providerCanLaunchBodyCinema(selectedProviderProfile);
   const budgetAllowsLaunch = !estimatedCostCents || !budgetCapCents || estimatedCostCents <= budgetCapCents;
+  const livePriceCents = moneyToCents(price);
+  const liveVipPriceCents = moneyToCents(vipPrice);
+  const launchChecklist = [
+    { label: "Consent lock", detail: "Adult-content and creator authorization confirmed", ready: adultContentFlag && consentConfirmed },
+    { label: "Source asset", detail: "Creator-owned media URL is present", ready: Boolean(sourceMediaUrl.trim()) },
+    { label: "Economics", detail: `Paid unlock ${formatMoney(livePriceCents)} • VIP ${liveVipPriceCents >= 100 ? formatMoney(liveVipPriceCents) : "optional"}`, ready: livePriceCents >= 100 },
+    { label: "Provider", detail: selectedProviderProfile?.label ? `${selectedProviderProfile.label} package endpoint` : "Select a launch provider", ready: providerLaunchReady },
+    { label: "Spend guard", detail: `Estimated ${formatMoney(estimatedCostCents)} against ${formatMoney(budgetCapCents)} cap`, ready: budgetAllowsLaunch },
+  ];
+  const launchReady = launchChecklist.every((item) => item.ready);
 
   const selectedContentType = useMemo(() => (selectedMake === "Photo Set" ? "photo" : "video") as "photo" | "video", [selectedMake]);
 
@@ -349,13 +359,25 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="mb-3 inline-flex rounded-full border border-[#C9A84C]/40 bg-black px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Body Cinema command rail</p>
-          <h2 className="text-3xl font-black text-white md:text-4xl">Build the adult trailer, paid unlock, and distribution route end to end.</h2>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-[#b8b8b8]">This command rail calls the live VaultX stack: package creation, provider-backed generation, artifact polling, Stripe checkout attachment, and Telegram route publishing. Locked lanes expose real configuration gaps instead of pretending to work.</p>
+          <h2 className="text-3xl font-black text-white md:text-4xl">Build the cinematic preview, paid unlock, VIP ladder, and distribution route end to end.</h2>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-[#b8b8b8]">This command rail calls the live VaultX stack: governed intake, provider-backed generation, artifact polling, Stripe checkout attachment, and Telegram route publishing. Locked lanes expose real configuration gaps instead of pretending to work.</p>
         </div>
         <div className="rounded-[1.25rem] border border-white/10 bg-black/70 p-4 text-sm">
           <p className="font-black text-white">Economics</p>
           <p className="mt-1 text-[#999999]">Creator keeps <span className="font-black text-[#C9A84C]">85%</span>. Platform fee is <span className="font-black text-[#C9A84C]">15%</span>.</p>
         </div>
+      </div>
+
+      <div className="mb-6 grid gap-3 md:grid-cols-5">
+        {launchChecklist.map((item) => (
+          <div key={item.label} className={`rounded-[1.25rem] border p-4 ${item.ready ? "border-emerald-500/25 bg-emerald-500/10" : "border-[#242424] bg-black/65"}`}>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-sm font-black text-white">{item.label}</p>
+              <StatusPill active={item.ready} text={item.ready ? "READY" : "GAP"} />
+            </div>
+            <p className="text-xs leading-5 text-[#999999]">{item.detail}</p>
+          </div>
+        ))}
       </div>
 
       <div className="mb-6 grid gap-3 md:grid-cols-3 xl:grid-cols-5">
@@ -387,7 +409,8 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
       <div className="mb-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-[1.25rem] border border-[#242424] bg-black/70 p-4">
           <p className="text-sm font-black text-white">Provider command board</p>
-          <p className="mt-2 text-sm leading-6 text-[#999999]">Selected lane: <span className="font-black text-[#C9A84C]">{selectedProviderProfile?.label || selectedProvider}</span>. Body Cinema generation only unlocks when the selected provider exposes the real package-generation endpoint; configured-but-unwired premium lanes remain honest instead of pretending to run.</p>
+              <p className="mt-2 text-sm leading-6 text-[#999999]">Selected lane: <span className="font-black text-[#C9A84C]">{selectedProviderProfile?.label || selectedProvider}</span>. Body Cinema generation only unlocks when the selected provider exposes the real package-generation endpoint; configured-but-unwired premium lanes remain honest instead of pretending to run.</p>
+              <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] text-[#C9A84C]">{launchReady ? "Launch room ready" : "Close every gap above before ignition"}</p>
         </div>
         <div className="rounded-[1.25rem] border border-[#242424] bg-black/70 p-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -460,20 +483,21 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
             </label>
             <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
               Real creator-owned source media URL
-              <input value={sourceMediaUrl} onChange={(e) => setSourceMediaUrl(e.target.value)} className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
+              <input value={sourceMediaUrl} onChange={(e) => setSourceMediaUrl(e.target.value)} placeholder="https://.../approved-source.mp4" className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
+              <span className="text-xs font-medium leading-5 text-[#777]">Use only media the creator owns or has explicit authorization to transform, monetize, and distribute.</span>
             </label>
             <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
               Teaser-to-unlock description
-              <textarea value={teaserDescription} onChange={(e) => setTeaserDescription(e.target.value)} rows={4} className="rounded-2xl border border-[#242424] bg-[#101010] px-4 py-3 text-white outline-none focus:border-[#C9A84C]" />
+              <textarea value={teaserDescription} onChange={(e) => setTeaserDescription(e.target.value)} rows={4} placeholder="Describe the cinematic hook, preview promise, paid unlock, and VIP escalation in plain operator language." className="rounded-2xl border border-[#242424] bg-[#101010] px-4 py-3 text-white outline-none focus:border-[#C9A84C]" />
             </label>
             <div className="grid gap-4 md:grid-cols-3">
               <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
-                Price
-                <input value={price} onChange={(e) => setPrice(e.target.value)} className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
+                Paid unlock price
+                <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="29.00" className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
               </label>
               <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
-                VIP price
-                <input value={vipPrice} onChange={(e) => setVipPrice(e.target.value)} className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
+                VIP ladder price
+                <input value={vipPrice} onChange={(e) => setVipPrice(e.target.value)} placeholder="79.00" className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
               </label>
               <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
                 Route mode
@@ -493,9 +517,9 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               I confirm the creator owns or is authorized to use the source asset and consents to AI transformation, monetization, and distribution routing.
             </label>
             <div className="flex flex-wrap gap-3">
-              <button onClick={handleLaunch} disabled={working} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
+              <button onClick={handleLaunch} disabled={working || !launchReady} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
                 {launchRevenuePath.isPending ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
-                Ignite Body Cinema generation
+                {launchReady ? "Ignite Body Cinema generation" : "Close launch gaps first"}
               </button>
               <button onClick={handleFinalize} disabled={working || !packageId} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-[#C9A84C]/70 px-7 py-4 text-base font-black text-[#C9A84C] transition hover:bg-[#C9A84C] hover:text-black disabled:cursor-not-allowed disabled:opacity-60">
                 {finalizeRevenuePath.isPending ? <Loader2 size={18} className="animate-spin" /> : <Route size={18} />}
@@ -516,7 +540,12 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               <p>Provider job: <span className="font-black text-white">{jobId || "not started yet"}</span></p>
               <p>Artifact ID: <span className="font-black text-white">{artifactId || "not issued yet"}</span></p>
               <p>Asset status: <span className="font-black text-[#C9A84C]">{statusData?.status || "waiting"}</span></p>
-              <p>Quality gate: <span className="font-black text-white">{statusData?.qualityPassed ? "passed" : "not passed yet"}</span></p>
+              <p>Quality gate: <span className="font-black text-white">{statusData?.qualityPassed ? "passed" : assetReady ? "ready for review" : "not passed yet"}</span></p>
+            </div>
+            <div className="mt-4 grid gap-2 text-xs font-black uppercase tracking-[0.14em] md:grid-cols-3">
+              <div className={`rounded-2xl border p-3 ${packageId ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200" : "border-white/10 bg-[#101010] text-[#777]"}`}>Package</div>
+              <div className={`rounded-2xl border p-3 ${assetReady ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200" : "border-white/10 bg-[#101010] text-[#777]"}`}>Asset</div>
+              <div className={`rounded-2xl border p-3 ${checkoutUrl || launchReceipt?.trackedUrl ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200" : "border-white/10 bg-[#101010] text-[#777]"}`}>Route</div>
             </div>
             {statusData?.videoUrl ? (
               <a href={statusData.videoUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex min-h-12 items-center justify-center rounded-full border border-[#C9A84C] px-5 py-3 text-sm font-black text-[#C9A84C] hover:bg-[#C9A84C] hover:text-black">
