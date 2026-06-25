@@ -2236,59 +2236,141 @@ function VaultXPublicLanding() {
       </nav>
 
       <main className="relative z-10">
-        <section className="vx-shell pt-10 md:pt-20 pb-16 md:pb-24">
-          <div className="grid gap-8 lg:grid-cols-[1fr_.86fr] lg:items-center">
-            <div className="max-w-4xl">
-              <h1 className="font-black leading-[.9] tracking-[-.055em] mb-8" style={{ fontSize: "clamp(3.8rem, 9vw, 8rem)" }}>
-                Your body.<br />
-                Your content.<br />
-                Your money.
-              </h1>
-              <p className="text-xl md:text-3xl leading-8 md:leading-10 max-w-2xl mb-9" style={{ color: "#d8d8d3" }}>
-                The platform built for adult creators who are serious about getting paid.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex justify-center items-center rounded-2xl px-8 py-4 text-base font-black">Start Earning</button>
-                <a href="#body-cinema" className="inline-flex justify-center items-center rounded-2xl px-8 py-4 text-base font-bold border border-white/15 text-white hover:bg-white/5">See How It Works</a>
-              </div>
-            </div>
-            <div className="relative overflow-hidden rounded-[2rem] border border-[#c9a84c]/25 bg-black shadow-2xl shadow-black/60" aria-label="VaultX women creator monetization hero">
-              <picture>
-                <source media="(max-width: 640px)" srcSet="/images/vaultx/vaultx-business-presenter-mobile.png" />
-                <img
-                  src="/images/vaultx/vaultx-business-presenter-hero.png"
-                  alt="Woman creator presenting the VaultX adult creator monetization dashboard"
-                  className="h-[520px] w-full object-cover object-center md:h-[560px]"
-                  loading="eager"
-                />
-              </picture>
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/25 to-transparent" />
-              <div className="absolute left-5 right-5 top-5 flex items-start justify-between gap-3">
-                <div className="rounded-2xl border border-red-300/25 bg-black/55 px-4 py-3 backdrop-blur-md">
-                  <p className="text-[10px] font-black uppercase tracking-[.26em] text-red-200">Women creators first</p>
-                  <p className="mt-1 text-sm font-black text-white">Sell desire, access, and loyalty.</p>
-                </div>
-                <div className="rounded-2xl border border-emerald-400/25 bg-emerald-500/15 px-4 py-3 text-right backdrop-blur-md">
-                  <p className="text-[10px] font-black uppercase tracking-[.18em] text-emerald-100">Creator keeps</p>
-                  <p className="text-3xl font-black text-emerald-100">85%</p>
-                </div>
-              </div>
-              <div className="absolute bottom-5 left-5 right-5 rounded-[1.6rem] border border-white/10 bg-black/68 p-4 backdrop-blur-xl">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {[
-                    { label: "PPV drop", value: "Teaser → paid unlock", icon: Unlock },
-                    { label: "VIP ladder", value: "Upsell higher access", icon: Crown },
-                    { label: "Revenue proof", value: "Checkout + receipts", icon: Wallet },
-                  ].map(({ label, value, icon: Icon }) => (
-                    <div key={label} className="rounded-2xl border border-white/10 bg-white/[.055] p-3">
-                      <Icon className="mb-2 h-4 w-4 text-[#f3d68b]" />
-                      <p className="text-sm font-black text-white">{label}</p>
-                      <p className="mt-1 text-xs font-bold text-zinc-300">{value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+        <section
+          aria-label="VaultX cinematic creator monetization hero"
+          style={{
+            position: "relative",
+            width: "100vw",
+            height: "100vh",
+            minHeight: "700px",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+            padding: "0 0 60px 0",
+            marginLeft: "calc(50% - 50vw)",
+            marginRight: "calc(50% - 50vw)",
+          }}
+        >
+          {/* BACKGROUND VIDEO — fullscreen behind everything */}
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            poster="/images/platform/vaultx-hero-fallback.jpg"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center top",
+              zIndex: 0,
+            }}
+          >
+            <source src="/videos/platform/vaultx-hero.mp4" type="video/mp4" />
+          </video>
+
+          {/* FALLBACK IMAGE — static woman visual if video playback is unavailable */}
+          <img
+            src="/images/platform/vaultx-hero-fallback.jpg"
+            alt=""
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center top",
+              zIndex: -1,
+            }}
+          />
+
+          {/* GRADIENT OVERLAY — darkens bottom so text is readable */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `linear-gradient(
+                to bottom,
+                rgba(0,0,0,0.05) 0%,
+                rgba(0,0,0,0.1) 30%,
+                rgba(0,0,0,0.6) 60%,
+                rgba(10,10,10,0.95) 100%
+              )`,
+              zIndex: 1,
+            }}
+          />
+
+          {/* CONTENT — sits above video */}
+          <div
+            style={{
+              position: "relative",
+              zIndex: 2,
+              padding: "0 24px",
+            }}
+          >
+            <h1
+              style={{
+                fontFamily: "Bebas Neue, sans-serif",
+                fontSize: "clamp(48px, 12vw, 80px)",
+                lineHeight: 0.95,
+                color: "#FFFFFF",
+                margin: "0 0 16px 0",
+              }}
+            >
+              YOUR BODY.<br />
+              YOUR CONTENT.<br />
+              YOUR MONEY.
+            </h1>
+
+            <p
+              style={{
+                fontFamily: "DM Sans, sans-serif",
+                fontSize: "16px",
+                color: "rgba(255,255,255,0.75)",
+                maxWidth: "340px",
+                lineHeight: 1.5,
+                margin: "0 0 32px 0",
+              }}
+            >
+              The platform built for adult creators who are serious about getting paid.
+            </p>
+
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              <button
+                onClick={startVaultXOfferCheckout}
+                disabled={vaultXOfferCheckout.isPending}
+                style={{
+                  fontFamily: "Bebas Neue, sans-serif",
+                  fontSize: "17px",
+                  letterSpacing: "0.08em",
+                  background: "#C9A84C",
+                  color: "#0A0A0A",
+                  border: "none",
+                  padding: "14px 32px",
+                  cursor: vaultXOfferCheckout.isPending ? "wait" : "pointer",
+                }}
+              >
+                Start Earning
+              </button>
+              <a
+                href="#body-cinema"
+                style={{
+                  fontFamily: "DM Sans, sans-serif",
+                  fontSize: "15px",
+                  background: "transparent",
+                  color: "#FFFFFF",
+                  border: "1px solid rgba(255,255,255,0.4)",
+                  padding: "14px 24px",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                }}
+              >
+                See How It Works
+              </a>
             </div>
           </div>
         </section>
