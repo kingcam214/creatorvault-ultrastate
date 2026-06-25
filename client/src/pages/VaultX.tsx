@@ -2258,7 +2258,7 @@ function VaultXPublicLanding() {
             muted
             loop
             playsInline
-            poster="/images/platform/vaultx-hero-fallback.jpg"
+            poster="/images/platform/vaultx-hero-fallback.jpg?v=vaultx-safe-motion-20260625"
             style={{
               position: "absolute",
               inset: 0,
@@ -2269,12 +2269,12 @@ function VaultXPublicLanding() {
               zIndex: 0,
             }}
           >
-            <source src="/videos/platform/vaultx-hero.mp4" type="video/mp4" />
+            <source src="/videos/platform/vaultx-hero.mp4?v=vaultx-safe-motion-20260625" type="video/mp4" />
           </video>
 
           {/* FALLBACK IMAGE — static woman visual if video playback is unavailable */}
           <img
-            src="/images/platform/vaultx-hero-fallback.jpg"
+            src="/images/platform/vaultx-hero-fallback.jpg?v=vaultx-safe-motion-20260625"
             alt=""
             aria-hidden="true"
             style={{
