@@ -2253,7 +2253,7 @@ function VaultXPublicLanding() {
               </div>
             </div>
             <figure className="overflow-hidden rounded-[2rem] border border-white/10 bg-black/45 shadow-2xl shadow-black/50">
-              <img src="/images/platform/vaultx-hero.webp" alt="VaultX operating workflow showing creator source media becoming PPV drops, distribution routes, checkout, and revenue proof" className="w-full object-cover" loading="eager" />
+              <video src="/videos/platform/vaultx-hero.mp4" poster="/images/platform/vaultx-hero.webp" aria-label="VaultX operating workflow showing creator source media becoming PPV drops, distribution routes, checkout, and revenue proof" className="w-full object-cover" muted autoPlay loop playsInline preload="metadata" />
               <figcaption className="border-t border-white/10 px-5 py-4 text-xs font-bold leading-5" style={{ color: "#b8b8b8" }}>VaultX is shown as a revenue workflow: intake, package, distribute, checkout, and proof.</figcaption>
             </figure>
           </div>
