@@ -24,7 +24,9 @@ const ALLOWLISTS = {
     'scripts/route-owner.js',
     'scripts/scope-guard.js',
     'client/src/index.css',
-    'client/index.html'
+    'client/index.html',
+    'public/images/platform/vaultx-hero-fallback.jpg',
+    'public/videos/platform/vaultx-hero.mp4'
   ],
   navigation: [
     'client/src/App.tsx',
