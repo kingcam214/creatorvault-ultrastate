@@ -884,28 +884,23 @@ export default function CloneCommand() {
             </div>
           ) : (
             /* Empty state */
-            <div style={{ textAlign: "center", maxWidth: 400 }}>
-              <div
+            <div style={{ textAlign: "center", maxWidth: 520 }}>
+              <img
+                src="/images/platform/clone-command-ambient.webp"
+                alt="Clone Command workflow showing persona selection, scenario prompt, approval gate, motion render, and vault save"
                 style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: 20,
-                  background: `linear-gradient(135deg, ${CYAN}15, ${CYAN}05)`,
-                  border: `1px dashed ${CYAN}33`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 42,
-                  margin: "0 auto 20px",
+                  width: "100%",
+                  borderRadius: 22,
+                  border: `1px solid ${CYAN}33`,
+                  boxShadow: `0 24px 70px rgba(0,0,0,0.42)`,
+                  margin: "0 auto 22px",
                 }}
-              >
-                🎨
-              </div>
+              />
               <p style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>
                 Ready to create your first shot
               </p>
               <p style={{ fontSize: 13, color: MUTED, marginTop: 8, lineHeight: 1.6 }}>
-                Start by describing the scene. Preview the final direction, approve it, then create the image and turn the winner into motion.
+                Choose a persona, shape the scenario prompt, approve the generated frame, then move the winner into motion and save it back to the vault.
               </p>
             </div>
           )}

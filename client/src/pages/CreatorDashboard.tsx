@@ -146,17 +146,22 @@ export default function CreatorDashboard() {
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8">
       <div className="mb-6 rounded-3xl border border-amber-500/20 bg-gradient-to-br from-black via-zinc-950 to-amber-950/20 p-5 text-white shadow-2xl sm:p-7">
-        <p className="mb-3 text-xs font-black uppercase tracking-[0.22em] text-amber-300">Phone-first money loop</p>
-        <h1 className="text-3xl font-black leading-tight tracking-[-0.04em] sm:text-4xl">Create the paid drop, price it, then send fans to buy.</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300 sm:text-base">
-          Build the offer from your phone in three moves: name the asset, set the price, and choose how buyers receive it after checkout or verification.
-        </p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {["1. Package the offer", "2. Set price + currency", "3. Publish and verify access"].map((step) => (
-            <div key={step} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-zinc-100">
-              {step}
+        <div className="grid gap-5 lg:grid-cols-[1fr_360px] lg:items-center">
+          <div>
+            <p className="mb-3 text-xs font-black uppercase tracking-[0.22em] text-amber-300">Phone-first money loop</p>
+            <h1 className="text-3xl font-black leading-tight tracking-[-0.04em] sm:text-4xl">Create the paid drop, price it, then send fans to buy.</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300 sm:text-base">
+              Build the offer from your phone in three moves: name the asset, set the price, and choose how buyers receive it after checkout or verification.
+            </p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              {["1. Package the offer", "2. Set price + currency", "3. Publish and verify access"].map((step) => (
+                <div key={step} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-zinc-100">
+                  {step}
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+          <img src="/images/platform/dashboard-ambient.webp" alt="Creator dashboard launch queue showing products, pricing, publish status, verification, and next actions" className="w-full rounded-[1.5rem] border border-white/10 object-cover" loading="eager" />
         </div>
       </div>
 

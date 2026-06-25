@@ -348,6 +348,7 @@ function VaultXEditor() {
             </div>
 
             <div className="rounded-[1.75rem] border border-white/10 bg-black/45 p-4">
+              <img src="/images/platform/editor-hero.webp" alt="Body Cinema editor showing approved source media, preview cut, locked payoff, captions, pricing, and Studio handoff readiness" className="mb-4 w-full rounded-[1.25rem] border border-white/10 object-cover" loading="eager" />
               <div className="flex items-center justify-between gap-4">
                 <ReadinessRing score={readinessScore} />
                 <div>

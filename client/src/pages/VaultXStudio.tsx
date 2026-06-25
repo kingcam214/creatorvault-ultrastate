@@ -1,6 +1,6 @@
 import { ReactNode, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowRight, BadgeDollarSign, Camera, Check, Clapperboard, Crown, Film, Image, Library, Loader2, Play, RadioTower, Route, Settings, ShieldCheck, Sparkles, Upload, Wand2, Zap } from "lucide-react";
+import { ArrowRight, BadgeDollarSign, Camera, Check, Clapperboard, Crown, Film, Image, Library, Loader2, RadioTower, Route, Settings, ShieldCheck, Sparkles, Upload, Wand2, Zap } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -149,24 +149,17 @@ function HeroPreview({ choice }: { choice: MakeChoice }) {
         </div>
 
         <div className="relative min-h-[420px] overflow-hidden border-t border-[#242424] bg-black lg:border-l lg:border-t-0">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(201,168,76,0.30),transparent_35%),linear-gradient(145deg,#090909,#1a1203_48%,#050505)]" />
-          <div className="absolute inset-6 rounded-[1.75rem] border border-white/10 bg-black/35 p-5 backdrop-blur-sm">
+          <video src="/videos/platform/studio-hero.mp4" poster="/images/platform/studio-hero.webp" muted autoPlay loop playsInline className="absolute inset-0 h-full w-full object-cover opacity-95" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/30" />
+          <div className="absolute inset-6 rounded-[1.75rem] border border-white/10 bg-black/35 p-5 backdrop-blur-[2px]">
             <div className="flex h-full flex-col justify-between">
               <div>
                 <p className="mb-3 text-sm font-black text-[#C9A84C]">Selected lane</p>
                 <h2 className="text-3xl font-black text-white">{choice}</h2>
-                <p className="mt-3 max-w-sm text-sm leading-6 text-[#b8b8b8]">Adult creator control up front. Model orchestration, durable artifacts, monetization, and routing underneath.</p>
+                <p className="mt-3 max-w-sm text-sm leading-6 text-[#f4e7c6]">The visual behind this panel is the actual Studio story: provider gate, package asset, checkout URL, campaign route, and receipt proof.</p>
               </div>
-              <div className="rounded-[1.5rem] border border-white/10 bg-black/55 p-4">
-                <div className="mb-4 flex items-center justify-between text-sm font-bold text-[#999999]">
-                  <span>Production spine</span>
-                  <span>Real workflow</span>
-                </div>
-                <div className="flex aspect-video items-center justify-center rounded-2xl bg-[#0a0a0a]">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#C9A84C] text-black shadow-[0_0_60px_rgba(201,168,76,0.35)]">
-                    <Play size={30} fill="currentColor" />
-                  </div>
-                </div>
+              <div className="grid gap-2 text-xs font-black uppercase tracking-[0.14em] text-white sm:grid-cols-2">
+                {["Provider ready", "Asset job", "Checkout URL", "Tracked route"].map((item) => <span key={item} className="rounded-full border border-[#C9A84C]/35 bg-black/60 px-3 py-2 text-center">{item}</span>)}
               </div>
             </div>
           </div>

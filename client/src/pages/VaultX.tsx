@@ -2237,45 +2237,57 @@ function VaultXPublicLanding() {
 
       <main className="relative z-10">
         <section className="vx-shell pt-10 md:pt-20 pb-16 md:pb-24">
-          <div className="max-w-4xl">
-            <h1 className="font-black leading-[.9] tracking-[-.055em] mb-8" style={{ fontSize: "clamp(3.8rem, 9vw, 8rem)" }}>
-              Your body.<br />
-              Your content.<br />
-              Your money.
-            </h1>
-            <p className="text-xl md:text-3xl leading-8 md:leading-10 max-w-2xl mb-9" style={{ color: "#d8d8d3" }}>
-              The platform built for adult creators who are serious about getting paid.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex justify-center items-center rounded-2xl px-8 py-4 text-base font-black">Start Earning</button>
-              <a href="#body-cinema" className="inline-flex justify-center items-center rounded-2xl px-8 py-4 text-base font-bold border border-white/15 text-white hover:bg-white/5">See How It Works</a>
+          <div className="grid gap-8 lg:grid-cols-[1fr_.86fr] lg:items-center">
+            <div className="max-w-4xl">
+              <h1 className="font-black leading-[.9] tracking-[-.055em] mb-8" style={{ fontSize: "clamp(3.8rem, 9vw, 8rem)" }}>
+                Your body.<br />
+                Your content.<br />
+                Your money.
+              </h1>
+              <p className="text-xl md:text-3xl leading-8 md:leading-10 max-w-2xl mb-9" style={{ color: "#d8d8d3" }}>
+                The platform built for adult creators who are serious about getting paid.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex justify-center items-center rounded-2xl px-8 py-4 text-base font-black">Start Earning</button>
+                <a href="#body-cinema" className="inline-flex justify-center items-center rounded-2xl px-8 py-4 text-base font-bold border border-white/15 text-white hover:bg-white/5">See How It Works</a>
+              </div>
             </div>
+            <figure className="overflow-hidden rounded-[2rem] border border-white/10 bg-black/45 shadow-2xl shadow-black/50">
+              <img src="/images/platform/vaultx-hero.webp" alt="VaultX operating workflow showing creator source media becoming PPV drops, distribution routes, checkout, and revenue proof" className="w-full object-cover" loading="eager" />
+              <figcaption className="border-t border-white/10 px-5 py-4 text-xs font-bold leading-5" style={{ color: "#b8b8b8" }}>VaultX is shown as a revenue workflow: intake, package, distribute, checkout, and proof.</figcaption>
+            </figure>
           </div>
         </section>
 
         <section id="body-cinema" className="vx-shell pb-16 md:pb-24">
-          <div className="max-w-3xl">
-            <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#c9a84c" }}>BODY CINEMA</div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">
-              Upload approved source media.<br />
-              Leave with a launchable product.
-            </h2>
-            <p className="text-base md:text-lg leading-8 mb-8" style={{ color: "#b8b8b8" }}>
-              Body Cinema turns creator-owned media into a cinematic teaser, paid unlock, VIP upsell, checkout path, and tracked distribution route. It is not a disconnected edit button; it is the VaultX revenue workflow in one launch room.
-            </p>
-            <div className="grid gap-3 mb-8 md:grid-cols-3" style={{ color: "#f5f0e8" }}>
-              {[
-                ["Governed intake", "Consent, ownership, adult-content gating, and source-media readiness come first."],
-                ["Premium packaging", "The teaser, unlock, price, VIP ladder, and provider route are built together."],
-                ["Revenue routing", "Checkout, Telegram tracking, and proof receipts stay visible instead of hidden."],
-              ].map(([title, body]) => (
-                <div key={title} className="rounded-[1.25rem] border border-white/10 bg-white/[.035] p-4">
-                  <p className="text-sm font-black text-white">{title}</p>
-                  <p className="mt-2 text-xs leading-5" style={{ color: "#aaa" }}>{body}</p>
-                </div>
-              ))}
+          <div className="grid gap-8 lg:grid-cols-[.92fr_1.08fr] lg:items-center">
+            <div className="max-w-3xl">
+              <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#c9a84c" }}>BODY CINEMA</div>
+              <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">
+                Upload approved source media.<br />
+                Leave with a launchable product.
+              </h2>
+              <p className="text-base md:text-lg leading-8 mb-8" style={{ color: "#b8b8b8" }}>
+                Body Cinema turns creator-owned media into a cinematic teaser, paid unlock, VIP upsell, checkout path, and tracked distribution route. It is not a disconnected edit button; it is the VaultX revenue workflow in one launch room.
+              </p>
+              <div className="grid gap-3 mb-8 md:grid-cols-3" style={{ color: "#f5f0e8" }}>
+                {[
+                  ["Governed intake", "Consent, ownership, adult-content gating, and source-media readiness come first."],
+                  ["Premium packaging", "The teaser, unlock, price, VIP ladder, and provider route are built together."],
+                  ["Revenue routing", "Checkout, Telegram tracking, and proof receipts stay visible instead of hidden."],
+                ].map(([title, body]) => (
+                  <div key={title} className="rounded-[1.25rem] border border-white/10 bg-white/[.035] p-4">
+                    <p className="text-sm font-black text-white">{title}</p>
+                    <p className="mt-2 text-xs leading-5" style={{ color: "#aaa" }}>{body}</p>
+                  </div>
+                ))}
+              </div>
+              <a href="/vault-x/studio" className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Open Body Cinema Studio</a>
             </div>
-            <a href="/vault-x/studio" className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Open Body Cinema Studio</a>
+            <figure className="overflow-hidden rounded-[2rem] border border-[#c9a84c]/25 bg-black/55 shadow-2xl shadow-black/50">
+              <video src="/videos/platform/body-cinema-hero.mp4" poster="/images/platform/body-cinema-hero.webp" muted autoPlay loop playsInline className="w-full object-cover" />
+              <figcaption className="border-t border-white/10 px-5 py-4 text-xs font-bold leading-5" style={{ color: "#d8d8d3" }}>Body Cinema visualizes the exact transformation: approved source, cinematic teaser, paid unlock, VIP upsell, checkout, and tracked route.</figcaption>
+            </figure>
           </div>
         </section>
 
@@ -2465,11 +2477,16 @@ export default function VaultX() {
               <h1 className="mt-2 text-3xl font-black tracking-[-.06em] sm:text-5xl">Approve the source, package the drop, launch the money route.</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400 sm:text-base">VaultX now opens with the actual Body Cinema operating path: verify consent, process creator-owned media, package it into a sellable teaser and unlock, distribute it, and track revenue. Every primary action points to a real production workflow.</p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <a href="/vault-x/editor" className="rounded-3xl bg-red-500 p-4 text-sm font-black text-white shadow-2xl shadow-red-950/30 hover:bg-red-600"><Video className="mb-4 h-5 w-5" />Upload & Process</a>
-              <a href="/vault-x/studio" className="rounded-3xl border border-white/10 bg-white/10 p-4 text-sm font-black text-white hover:border-red-400/50"><Clapperboard className="mb-4 h-5 w-5" />Launch Studio</a>
-              <a href="/vaultx/distribution" className="rounded-3xl border border-white/10 bg-white/10 p-4 text-sm font-black text-white hover:border-red-400/50"><Globe className="mb-4 h-5 w-5" />Distribute</a>
-              <button onClick={() => setActiveTab("earnings")} className="rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-left text-sm font-black text-emerald-100 hover:border-emerald-300/50"><DollarSign className="mb-4 h-5 w-5" />View Earnings</button>
+            <div className="space-y-3">
+              <figure className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-black/50">
+                <img src="/images/platform/vaultx-hero.webp" alt="VaultX command center map showing editor, studio, distribution, and earnings states" className="w-full object-cover" loading="eager" />
+              </figure>
+              <div className="grid grid-cols-2 gap-3">
+                <a href="/vault-x/editor" className="rounded-3xl bg-red-500 p-4 text-sm font-black text-white shadow-2xl shadow-red-950/30 hover:bg-red-600"><Video className="mb-4 h-5 w-5" />Upload & Process</a>
+                <a href="/vault-x/studio" className="rounded-3xl border border-white/10 bg-white/10 p-4 text-sm font-black text-white hover:border-red-400/50"><Clapperboard className="mb-4 h-5 w-5" />Launch Studio</a>
+                <a href="/vaultx/distribution" className="rounded-3xl border border-white/10 bg-white/10 p-4 text-sm font-black text-white hover:border-red-400/50"><Globe className="mb-4 h-5 w-5" />Distribute</a>
+                <button onClick={() => setActiveTab("earnings")} className="rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-left text-sm font-black text-emerald-100 hover:border-emerald-300/50"><DollarSign className="mb-4 h-5 w-5" />View Earnings</button>
+              </div>
             </div>
           </div>
           <div className="mt-6"><VaultXWorkflow steps={workflowSteps} activeStep={activeTab === "discover" ? 0 : activeTab === "profile" ? 1 : activeTab === "telegram" || activeTab === "xcom" ? 2 : activeTab === "earnings" ? 3 : 1} /></div>
