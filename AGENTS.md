@@ -198,3 +198,5 @@ Ok to proceed? (y)
 - HTTP 200 confirmed for all processed video files
 
 - 2026-06-09: Added root SSH authorized key fingerprint SHA256:v79rQ+7rvF+v/rFnIgaNht0G08ts4UDrm1ZlPSjnWZE for Manus sandbox deployment access to install the pushed VaultX copy release.
+
+- 2026-06-25: VaultX hero media deployment required restoring PM2 from stale pnpm command to repository-defined ecosystem.config.cjs/start.sh using pm2 delete creatorvault; pm2 start ecosystem.config.cjs --update-env; pm2 save --force. Public /vault-x returned 200 OK afterward.
