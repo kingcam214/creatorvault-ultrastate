@@ -111,7 +111,7 @@ export default function Marketplace() {
 
           <aside className="rounded-[2rem] p-5 md:p-6 flex flex-col justify-between" style={{ background: "linear-gradient(180deg, rgba(201,168,76,.16), rgba(255,255,255,.04))", border: "1px solid rgba(201,168,76,.25)", boxShadow: "0 28px 90px rgba(0,0,0,.42)" }}>
             <div>
-              <img src="/images/platform/marketplace-hero.webp" alt="Marketplace buyer flow showing premium drop card, clear price, checkout path, and creator payout proof" className="mb-5 w-full rounded-[1.35rem] border border-white/10 object-cover" loading="eager" />
+              <video src="/videos/platform/marketplace-hero.mp4" poster="/images/platform/marketplace-hero.webp" aria-label="Marketplace buyer flow showing premium drop card, clear price, checkout path, and creator payout proof" className="mb-5 w-full rounded-[1.35rem] border border-white/10 object-cover" muted autoPlay loop playsInline preload="metadata" />
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5" style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)", color: "#070707" }}><Crown className="w-6 h-6" /></div>
               <h2 className="text-3xl font-black tracking-[-.04em] leading-none">Signal over shelf clutter.</h2>
               <p className="mt-4 text-sm leading-7" style={{ color: T.muted }}>Every drop shows what it is, what it costs, why it matters, and how to take the next step without making buyers hunt for the offer.</p>

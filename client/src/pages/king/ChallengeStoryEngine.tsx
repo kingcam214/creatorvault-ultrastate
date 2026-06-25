@@ -243,7 +243,7 @@ export function ChallengeStoryEngine() {
             <div className="ac-glass rounded-[2rem] p-4 md:p-7 relative">
               <div className="absolute -inset-6 rounded-full blur-3xl opacity-40" style={{ background: "radial-gradient(circle, rgba(201,168,76,.3), transparent 64%)", animation: "acGlow 4s ease-in-out infinite" }} />
               <div className="relative">
-                <img src="/images/platform/challenge-bg.webp" alt="Verified Revenue Challenge proof loop showing buyer choice, Stripe checkout, webhook verification, and live ledger update" className="mb-5 w-full rounded-[1.4rem] border border-white/10 object-cover shadow-2xl shadow-black/30" loading="eager" />
+                <video src="/videos/platform/challenge-bg.mp4" poster="/images/platform/challenge-bg.webp" aria-label="Verified Revenue Challenge proof loop showing buyer choice, Stripe checkout, webhook verification, and live ledger update" className="mb-5 w-full rounded-[1.4rem] border border-white/10 object-cover shadow-2xl shadow-black/30" muted autoPlay loop playsInline preload="metadata" />
                 <div className="flex items-start justify-between gap-4 mb-5">
                   <div>
                     <div className="text-xs font-black uppercase tracking-[.2em] mb-2" style={{ color: "#c9a84c" }}>Selected offer</div>
