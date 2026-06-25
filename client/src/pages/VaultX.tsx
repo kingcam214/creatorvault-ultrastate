@@ -2252,10 +2252,44 @@ function VaultXPublicLanding() {
                 <a href="#body-cinema" className="inline-flex justify-center items-center rounded-2xl px-8 py-4 text-base font-bold border border-white/15 text-white hover:bg-white/5">See How It Works</a>
               </div>
             </div>
-            <figure className="overflow-hidden rounded-[2rem] border border-white/10 bg-black/45 shadow-2xl shadow-black/50">
-              <video src="/videos/platform/vaultx-hero.mp4" poster="/images/platform/vaultx-hero.webp" aria-label="VaultX operating workflow showing creator source media becoming PPV drops, distribution routes, checkout, and revenue proof" className="w-full object-cover" muted autoPlay loop playsInline preload="metadata" />
-              <figcaption className="border-t border-white/10 px-5 py-4 text-xs font-bold leading-5" style={{ color: "#b8b8b8" }}>VaultX is shown as a revenue workflow: intake, package, distribute, checkout, and proof.</figcaption>
-            </figure>
+            <div className="relative overflow-hidden rounded-[2rem] border border-[#c9a84c]/25 bg-black shadow-2xl shadow-black/60" aria-label="VaultX women creator monetization hero">
+              <picture>
+                <source media="(max-width: 640px)" srcSet="/images/vaultx/vaultx-business-presenter-mobile.png" />
+                <img
+                  src="/images/vaultx/vaultx-business-presenter-hero.png"
+                  alt="Woman creator presenting the VaultX adult creator monetization dashboard"
+                  className="h-[520px] w-full object-cover object-center md:h-[560px]"
+                  loading="eager"
+                />
+              </picture>
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/25 to-transparent" />
+              <div className="absolute left-5 right-5 top-5 flex items-start justify-between gap-3">
+                <div className="rounded-2xl border border-red-300/25 bg-black/55 px-4 py-3 backdrop-blur-md">
+                  <p className="text-[10px] font-black uppercase tracking-[.26em] text-red-200">Women creators first</p>
+                  <p className="mt-1 text-sm font-black text-white">Sell desire, access, and loyalty.</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-400/25 bg-emerald-500/15 px-4 py-3 text-right backdrop-blur-md">
+                  <p className="text-[10px] font-black uppercase tracking-[.18em] text-emerald-100">Creator keeps</p>
+                  <p className="text-3xl font-black text-emerald-100">85%</p>
+                </div>
+              </div>
+              <div className="absolute bottom-5 left-5 right-5 rounded-[1.6rem] border border-white/10 bg-black/68 p-4 backdrop-blur-xl">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    { label: "PPV drop", value: "Teaser → paid unlock", icon: Unlock },
+                    { label: "VIP ladder", value: "Upsell higher access", icon: Crown },
+                    { label: "Revenue proof", value: "Checkout + receipts", icon: Wallet },
+                  ].map(({ label, value, icon: Icon }) => (
+                    <div key={label} className="rounded-2xl border border-white/10 bg-white/[.055] p-3">
+                      <Icon className="mb-2 h-4 w-4 text-[#f3d68b]" />
+                      <p className="text-sm font-black text-white">{label}</p>
+                      <p className="mt-1 text-xs font-bold text-zinc-300">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -2284,10 +2318,34 @@ function VaultXPublicLanding() {
               </div>
               <a href="/vault-x/studio" className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Open Body Cinema Studio</a>
             </div>
-            <figure className="overflow-hidden rounded-[2rem] border border-[#c9a84c]/25 bg-black/55 shadow-2xl shadow-black/50">
-              <video src="/videos/platform/body-cinema-hero.mp4" poster="/images/platform/body-cinema-hero.webp" muted autoPlay loop playsInline className="w-full object-cover" />
-              <figcaption className="border-t border-white/10 px-5 py-4 text-xs font-bold leading-5" style={{ color: "#d8d8d3" }}>Body Cinema visualizes the exact transformation: approved source, cinematic teaser, paid unlock, VIP upsell, checkout, and tracked route.</figcaption>
-            </figure>
+            <div className="relative overflow-hidden rounded-[2rem] border border-[#c9a84c]/25 bg-black/70 shadow-2xl shadow-black/50" aria-label="Body Cinema women creator launch workflow">
+              <img
+                src="/images/vaultx/vaultx-business-presenter-mobile.png"
+                alt="Woman creator using VaultX mobile monetization workflow"
+                className="h-[620px] w-full object-cover object-center opacity-90"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/10" />
+              <div className="absolute inset-x-4 bottom-4 space-y-3">
+                {[
+                  { step: "01", title: "Approved source", detail: "Creator-owned media, consent, 18+ gate, launch readiness." },
+                  { step: "02", title: "Body Cinema package", detail: "Teaser, paid unlock, VIP ladder, captions, price." },
+                  { step: "03", title: "Fans pay for access", detail: "PPV, subscription, Telegram route, receipt proof." },
+                ].map((item) => (
+                  <div key={item.step} className="flex gap-3 rounded-[1.35rem] border border-white/10 bg-black/70 p-3 backdrop-blur-xl">
+                    <div className="flex h-10 w-10 flex-none items-center justify-center rounded-2xl bg-[#c9a84c] text-sm font-black text-black">{item.step}</div>
+                    <div>
+                      <p className="text-sm font-black text-white">{item.title}</p>
+                      <p className="mt-1 text-xs leading-5 text-zinc-300">{item.detail}</p>
+                    </div>
+                  </div>
+                ))}
+                <div className="rounded-[1.35rem] border border-red-300/20 bg-red-500/15 p-4 backdrop-blur-xl">
+                  <p className="text-sm font-black text-red-100">Women-led adult creator monetization.</p>
+                  <p className="mt-1 text-xs leading-5 text-red-100/75">The visual stays on the creator and the money path: teaser, unlock, VIP, checkout, proof.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -2478,9 +2536,28 @@ export default function VaultX() {
               <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400 sm:text-base">VaultX now opens with the actual Body Cinema operating path: verify consent, process creator-owned media, package it into a sellable teaser and unlock, distribute it, and track revenue. Every primary action points to a real production workflow.</p>
             </div>
             <div className="space-y-3">
-              <figure className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-black/50">
-                <img src="/images/platform/vaultx-hero.webp" alt="VaultX command center map showing editor, studio, distribution, and earnings states" className="w-full object-cover" loading="eager" />
-              </figure>
+              <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-black/50" aria-label="VaultX women creator command stack">
+                <img
+                  src="/images/vaultx/vaultx-business-presenter-mobile.png"
+                  alt="Woman creator operating VaultX revenue workflow"
+                  className="h-[430px] w-full object-cover object-center opacity-95"
+                  loading="eager"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/45 to-transparent" />
+                <div className="absolute inset-x-4 bottom-4 rounded-[1.35rem] border border-red-300/20 bg-black/70 p-4 backdrop-blur-xl">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[.24em] text-red-200">Women-led launch stack</p>
+                      <p className="mt-1 text-xl font-black tracking-[-.04em] text-white">Tease → Unlock → VIP → Receipt</p>
+                    </div>
+                    <div className="rounded-2xl bg-emerald-500/10 px-3 py-2 text-right text-emerald-100">
+                      <p className="text-[10px] font-black uppercase tracking-[.18em]">Creator</p>
+                      <p className="text-lg font-black">85%</p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-zinc-300">The command center stays centered on women creators, paid access, routed traffic, checkout proof, and revenue control.</p>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <a href="/vault-x/editor" className="rounded-3xl bg-red-500 p-4 text-sm font-black text-white shadow-2xl shadow-red-950/30 hover:bg-red-600"><Video className="mb-4 h-5 w-5" />Upload & Process</a>
                 <a href="/vault-x/studio" className="rounded-3xl border border-white/10 bg-white/10 p-4 text-sm font-black text-white hover:border-red-400/50"><Clapperboard className="mb-4 h-5 w-5" />Launch Studio</a>
