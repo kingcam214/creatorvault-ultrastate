@@ -81,6 +81,8 @@ export default function Marketplace() {
 
   return (
     <div className="min-h-screen text-white overflow-hidden relative" style={{ background: T.bg, fontFamily: "var(--kc-font-ui, Inter, sans-serif)" }}>
+      <video src="/videos/platform/marketplace-hero.mp4" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-[.28] pointer-events-none" muted autoPlay loop playsInline preload="metadata" />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(0,0,0,.64), rgba(0,0,0,.9))" }} />
       <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(circle at 14% 6%, rgba(0,229,255,.18), transparent 30%), radial-gradient(circle at 82% 12%, rgba(201,168,76,.22), transparent 32%), radial-gradient(circle at 54% 92%, rgba(16,185,129,.10), transparent 38%)" }} />
       <div className="absolute inset-0 pointer-events-none opacity-[.06]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px)", backgroundSize: "52px 52px" }} />
 
@@ -111,7 +113,7 @@ export default function Marketplace() {
 
           <aside className="rounded-[2rem] p-5 md:p-6 flex flex-col justify-between" style={{ background: "linear-gradient(180deg, rgba(201,168,76,.16), rgba(255,255,255,.04))", border: "1px solid rgba(201,168,76,.25)", boxShadow: "0 28px 90px rgba(0,0,0,.42)" }}>
             <div>
-              <video src="/videos/platform/marketplace-hero.mp4" poster="/images/platform/marketplace-hero.webp" aria-label="Marketplace buyer flow showing premium drop card, clear price, checkout path, and creator payout proof" className="mb-5 w-full rounded-[1.35rem] border border-white/10 object-cover" muted autoPlay loop playsInline preload="metadata" />
+              <video src="/videos/platform/marketplace-hero.mp4" aria-label="Marketplace buyer flow showing premium drop card, clear price, checkout path, and creator payout proof" className="mb-5 aspect-[9/16] max-h-[430px] w-full rounded-[1.35rem] border border-white/10 object-cover shadow-2xl shadow-black/40" muted autoPlay loop playsInline preload="metadata" />
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5" style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)", color: "#070707" }}><Crown className="w-6 h-6" /></div>
               <h2 className="text-3xl font-black tracking-[-.04em] leading-none">Signal over shelf clutter.</h2>
               <p className="mt-4 text-sm leading-7" style={{ color: T.muted }}>Every drop shows what it is, what it costs, why it matters, and how to take the next step without making buyers hunt for the offer.</p>

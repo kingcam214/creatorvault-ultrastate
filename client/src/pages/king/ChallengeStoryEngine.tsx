@@ -156,6 +156,8 @@ export function ChallengeStoryEngine() {
 
   return (
     <div className="min-h-screen text-white relative overflow-hidden" style={{ background: "#070707", fontFamily: "var(--kc-font-ui)" }}>
+      <video src="/videos/platform/challenge-hero.mp4" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-[.3] pointer-events-none" muted autoPlay loop playsInline preload="metadata" />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(0,0,0,.58), rgba(0,0,0,.9))" }} />
       <style>{`
         @keyframes acGlow{0%,100%{opacity:.48;transform:scale(1)}50%{opacity:.86;transform:scale(1.08)}}
         @keyframes acTicker{0%{transform:translateX(-35%);opacity:.35}50%{opacity:.95}100%{transform:translateX(135%);opacity:.2}}
@@ -243,7 +245,7 @@ export function ChallengeStoryEngine() {
             <div className="ac-glass rounded-[2rem] p-4 md:p-7 relative">
               <div className="absolute -inset-6 rounded-full blur-3xl opacity-40" style={{ background: "radial-gradient(circle, rgba(201,168,76,.3), transparent 64%)", animation: "acGlow 4s ease-in-out infinite" }} />
               <div className="relative">
-                <video src="/videos/platform/challenge-bg.mp4" poster="/images/platform/challenge-bg.webp" aria-label="Verified Revenue Challenge proof loop showing buyer choice, Stripe checkout, webhook verification, and live ledger update" className="mb-5 w-full rounded-[1.4rem] border border-white/10 object-cover shadow-2xl shadow-black/30" muted autoPlay loop playsInline preload="metadata" />
+                <video src="/videos/platform/challenge-hero.mp4" aria-label="Verified Revenue Challenge proof loop showing buyer choice, Stripe checkout, webhook verification, and live ledger update" className="mb-5 aspect-[9/16] max-h-[430px] w-full rounded-[1.4rem] border border-white/10 object-cover shadow-2xl shadow-black/40" muted autoPlay loop playsInline preload="metadata" />
                 <div className="flex items-start justify-between gap-4 mb-5">
                   <div>
                     <div className="text-xs font-black uppercase tracking-[.2em] mb-2" style={{ color: "#c9a84c" }}>Selected offer</div>

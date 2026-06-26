@@ -23,8 +23,10 @@ export default function CreatorHome() {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="relative overflow-hidden bg-gradient-to-br from-black via-yellow-950/20 to-black border-b border-yellow-500/20">
+    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+      <video src="/videos/platform/dashboard-hero.mp4" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-[.3] pointer-events-none" muted autoPlay loop playsInline preload="metadata" />
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/60 via-black/78 to-black" />
+      <div className="relative z-10 overflow-hidden bg-gradient-to-br from-black/65 via-yellow-950/25 to-black/75 border-b border-yellow-500/20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-11 h-11 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-black font-bold text-lg shrink-0">
@@ -39,7 +41,7 @@ export default function CreatorHome() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="mb-6 rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/15 via-white/5 to-purple-500/10 p-5 sm:p-6">
           <div className="flex items-start gap-3">
             <div className="w-11 h-11 rounded-xl bg-yellow-400 text-black flex items-center justify-center shrink-0">
