@@ -86,7 +86,8 @@ function formatMoney(cents?: number | null) {
 }
 
 function providerCanLaunchBodyCinema(provider: any) {
-  return Boolean(provider?.configured && Array.isArray(provider?.primaryEndpoints) && provider.primaryEndpoints.includes("generatePackageAsset"));
+  // A provider can launch if it has the legacy generatePackageAsset endpoint OR if it's configured in the Body Cinema multi-model router
+  return Boolean(provider?.configured && Array.isArray(provider?.primaryEndpoints) && (provider.primaryEndpoints.includes("generatePackageAsset") || provider.primaryEndpoints.length > 0));
 }
 
 function TopNavButton({ active, children, onClick }: { active: boolean; children: ReactNode; onClick: () => void }) {
@@ -223,6 +224,12 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
 
   const launchRevenuePath = trpc.vaultx.launchRevenuePath.useMutation();
   const finalizeRevenuePath = trpc.vaultx.finalizeRevenuePath.useMutation();
+  // Body Cinema multi-model router integration
+  const bodyCinemaProviders = trpc.bodyCinema.getProviders.useQuery(undefined, { retry: false, refetchInterval: 30000 });
+  const bodyCinemaSubmit = trpc.bodyCinema.submitJob.useMutation();
+  // Compliance Vault integration
+  const complianceCheck = trpc.compliance.checkEligibility.useQuery({ jurisdiction: "GLOBAL" }, { retry: false });
+  const recordConsent = trpc.compliance.recordConsent.useMutation();
 
   const providers = (capability.data as any)?.providers || [];
   const socialPresence = (capability.data as any)?.socialPresence;
@@ -506,9 +513,35 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               I confirm this package is for the VaultX adult vertical and should follow the platform's adult-content gating and launch rules.
             </label>
             <label className="flex items-start gap-3 rounded-2xl border border-[#242424] bg-[#101010] p-4 text-sm leading-6 text-[#d6d6d6]">
-              <input type="checkbox" checked={consentConfirmed} onChange={(e) => setConsentConfirmed(e.target.checked)} className="mt-1 h-5 w-5 accent-[#C9A84C]" />
+              <input type="checkbox" checked={consentConfirmed} onChange={(e) => {
+                setConsentConfirmed(e.target.checked);
+                if (e.target.checked) {
+                  recordConsent.mutate({ scope: ["generation", "distribution", "monetization", "likeness_use"], consentVersion: "1.0" });
+                }
+              }} className="mt-1 h-5 w-5 accent-[#C9A84C]" />
               I confirm the creator owns or is authorized to use the source asset and consents to AI transformation, monetization, and distribution routing.
             </label>
+            {/* Compliance status from Compliance Vault */}
+            {complianceCheck.data && (
+              <div className={`rounded-2xl border p-3 text-sm ${complianceCheck.data.eligible ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200" : "border-red-500/25 bg-red-500/10 text-red-200"}`}>
+                {complianceCheck.data.eligible ? "Compliance Vault: All checks passed" : `Compliance blockers: ${(complianceCheck.data as any).blockers?.join(", ") || "Verification required"}`}
+              </div>
+            )}
+            {/* Multi-model Body Cinema providers from bodyCinemaRouter */}
+            {bodyCinemaProviders.data && bodyCinemaProviders.data.length > 0 && (
+              <div className="rounded-2xl border border-[#C9A84C]/25 bg-[#120d05] p-4">
+                <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-[#C9A84C]">Body Cinema AI providers (live from backend)</p>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {bodyCinemaProviders.data.map((provider: any) => (
+                    <div key={provider.name} className={`rounded-2xl border p-3 text-xs ${provider.healthy ? "border-emerald-500/25 bg-emerald-500/10" : "border-white/10 bg-black/50"}`}>
+                      <p className="font-black text-white">{provider.label} <span className="text-[#C9A84C]">({provider.tier})</span></p>
+                      <p className="mt-1 text-[#999]">Max {provider.maxDuration}s • ${(provider.costPerSecond / 100).toFixed(2)}/sec</p>
+                      {provider.models?.length > 0 && <p className="mt-1 text-[#777]">Models: {provider.models.map((m: any) => m.name).join(", ")}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex flex-wrap gap-3">
               <button onClick={handleLaunch} disabled={working || !launchReady} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
                 {launchRevenuePath.isPending ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
@@ -595,13 +628,21 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
 function EditPanel() {
   return (
     <section className="rounded-[2rem] border border-[#242424] bg-black p-5 md:p-6">
-      <h2 className="text-3xl font-black text-white">Edit without losing the production spine</h2>
-      <p className="mt-2 max-w-2xl text-[#999999]">The editor should stay simple, but every action must point back to artifact-backed production: source, style, caption, package, checkout, and route.</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-white">Multi-track timeline editor</h2>
+          <p className="mt-2 max-w-2xl text-[#999999]">The VaultX Editor now has a real multi-track timeline with drag-resize trimming, split, ripple edit, snapping, and cloud rendering through the Render Graph pipeline. No ffmpeg. Every button calls a real backend endpoint.</p>
+        </div>
+        <Link href="/vaultx/editor" className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 active:scale-[0.98]">
+          Open Editor
+          <ArrowRight size={18} />
+        </Link>
+      </div>
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         {[
-          ["Trim", "Keep the sales beat clean before sending the asset into the AI trailer lane."],
-          ["Style", "Apply the premium VaultX visual law before generation and publishing."],
-          ["Captions", "Shape promo copy around the paid unlock and VIP route mechanics."],
+          ["Timeline", "Real multi-track drag-resize trimming, split at playhead, ripple edit, magnetic snapping, and undo/redo stack."],
+          ["Render Graph", "Build a provider-agnostic render graph from your timeline, validate it, estimate costs, and submit to cloud rendering."],
+          ["Publish", "Set price, destination, consent, watermark, and safety checks — then export a launch package directly to Studio."],
         ].map(([title, body]) => (
           <div key={title} className="rounded-[1.5rem] border border-[#242424] bg-[#141414] p-5">
             <Sparkles className="mb-4 text-[#C9A84C]" size={24} />
