@@ -11,6 +11,22 @@ const ALLOWLISTS = {
     'package.json',
     'pnpm-lock.yaml'
   ],
+  editor: [
+    'client/src/components/videoeditor/Timeline.tsx',
+    'client/src/components/videoeditor/ControlsPanel.tsx',
+    'client/src/components/videoeditor/MediaPanel.tsx',
+    'client/src/components/videoeditor/VideoPreview.tsx',
+    'client/src/pages/VaultXEditor.tsx',
+    'client/src/pages/VaultXStudio.tsx',
+    'server/routers/vaultxRouter.ts',
+    'server/routers/videoStudioRouter.ts',
+    'server/routers/creatorVideoEditorRouter.ts',
+    'server/services/vaultxArtifactSpineService.ts',
+    'server/services/adultVerification.ts',
+    'server/services/adultSalesBot.ts',
+    'server/_core/stripeWebhook.ts',
+    'scripts/scope-guard.js'
+  ],
   vaultx: [
     'client/src/pages/VaultX.tsx',
     'client/src/pages/VaultXFanLibrary.tsx',
