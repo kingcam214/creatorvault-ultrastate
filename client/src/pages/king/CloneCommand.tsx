@@ -313,8 +313,12 @@ export default function CloneCommand() {
         minHeight: "100vh",
         color: "#fff",
         fontFamily: "'Inter', 'SF Pro Display', -apple-system, sans-serif",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
+      <video src="/videos/platform/clone-command-hero.mp4" aria-hidden="true" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.24, pointerEvents: "none" }} muted autoPlay loop playsInline preload="metadata" />
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(180deg, rgba(0,0,0,.64), rgba(0,0,0,.9))" }} />
       {/* ─── Header ─────────────────────────────────────────────────── */}
       <div
         style={{
@@ -325,6 +329,8 @@ export default function CloneCommand() {
           justifyContent: "space-between",
           gap: isPhone ? 12 : 16,
           flexWrap: "wrap",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: isPhone ? 12 : 16 }}>
@@ -397,6 +403,8 @@ export default function CloneCommand() {
           gridTemplateColumns: isPhone ? "1fr" : "320px 1fr 300px",
           height: isPhone ? "auto" : "calc(100vh - 90px)",
           overflow: isPhone ? "visible" : "hidden",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         {/* ═══ LEFT PANEL: Controls ═══ */}
@@ -885,16 +893,24 @@ export default function CloneCommand() {
           ) : (
             /* Empty state */
             <div style={{ textAlign: "center", maxWidth: 520 }}>
-              <img
-                src="/images/platform/clone-command-ambient.webp"
-                alt="Clone Command workflow showing persona selection, scenario prompt, approval gate, motion render, and vault save"
+              <video
+                src="/videos/platform/clone-command-hero.mp4"
+                aria-label="Clone Command ambient throne-room loop representing persona selection, scenario prompt, approval gate, motion render, and vault save"
                 style={{
                   width: "100%",
+                  aspectRatio: "9 / 16",
+                  maxHeight: 430,
+                  objectFit: "cover",
                   borderRadius: 22,
                   border: `1px solid ${CYAN}33`,
                   boxShadow: `0 24px 70px rgba(0,0,0,0.42)`,
                   margin: "0 auto 22px",
                 }}
+                muted
+                autoPlay
+                loop
+                playsInline
+                preload="metadata"
               />
               <p style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>
                 Ready to create your first shot
