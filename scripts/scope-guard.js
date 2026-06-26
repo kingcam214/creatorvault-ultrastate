@@ -12,6 +12,13 @@ const ALLOWLISTS = {
     'pnpm-lock.yaml'
   ],
   editor: [
+    'server/services/bodyCinemaProviderRouter.ts',
+    'server/services/complianceVault.ts',
+    'server/services/renderGraph.ts',
+    'server/services/paymentRouter.ts',
+    'server/routers/bodyCinemaRouter.ts',
+    'server/routers/complianceRouter.ts',
+    'server/routers/renderGraphRouter.ts',
     'client/src/components/videoeditor/Timeline.tsx',
     'client/src/components/videoeditor/ControlsPanel.tsx',
     'client/src/components/videoeditor/MediaPanel.tsx',
