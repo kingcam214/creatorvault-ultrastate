@@ -81,50 +81,75 @@ export default function Marketplace() {
 
   return (
     <div className="min-h-screen text-white overflow-hidden relative" style={{ background: T.bg, fontFamily: "var(--kc-font-ui, Inter, sans-serif)" }}>
-      <video src="/videos/platform/marketplace-hero.mp4" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-[.28] pointer-events-none" muted autoPlay loop playsInline preload="metadata" />
       <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(0,0,0,.64), rgba(0,0,0,.9))" }} />
       <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(circle at 14% 6%, rgba(0,229,255,.18), transparent 30%), radial-gradient(circle at 82% 12%, rgba(201,168,76,.22), transparent 32%), radial-gradient(circle at 54% 92%, rgba(16,185,129,.10), transparent 38%)" }} />
       <div className="absolute inset-0 pointer-events-none opacity-[.06]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px)", backgroundSize: "52px 52px" }} />
 
-      <main className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
-        <section className="grid lg:grid-cols-[1.15fr_.85fr] gap-6 mb-7">
-          <div className="rounded-[2rem] p-6 md:p-8" style={{ background: "linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.028))", border: `1px solid ${T.border}`, boxShadow: "0 34px 100px rgba(0,0,0,.46)" }}>
-            <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-5" style={{ background: "rgba(0,229,255,.1)", border: "1px solid rgba(0,229,255,.26)", color: T.cyan }}>
-              <Sparkles className="w-4 h-4" />
-              <span className="text-xs font-black uppercase tracking-[.2em]">CreatorVault Commerce OS</span>
-            </div>
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-[-.06em] leading-[.92] max-w-4xl">Premium drops that feel curated, scarce, and ready to buy.</h1>
-            <p className="mt-5 max-w-2xl text-base md:text-lg leading-8" style={{ color: T.muted }}>Browse creator playbooks, premium templates, digital assets, and operator products presented with clear pricing, strong visuals, and a direct path to purchase.</p>
-            <a href="#live-drops" className="mt-5 inline-flex min-h-12 items-center justify-center rounded-2xl px-5 text-sm font-black uppercase tracking-[.14em] transition hover:scale-[1.01]" style={{ background: "linear-gradient(135deg,#00e5ff,#c9a84c)", color: "#050505" }}>See live drops <ArrowRight className="ml-2 h-4 w-4" /></a>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-7 max-w-3xl">
+      {/* ── FULLSCREEN HERO ─────────────────────────────────────────── */}
+      <section style={{
+        position: "relative",
+        width: "100vw",
+        minHeight: "70vh",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-end",
+        padding: "0 0 40px 0",
+        marginLeft: "calc(-50vw + 50%)",
+      }}>
+        {/* Fullscreen video background */}
+        <video
+          autoPlay muted loop playsInline preload="metadata"
+          aria-label="Marketplace hero — premium creator drops"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center top",
+            zIndex: 0,
+          }}
+        >
+          <source src="/videos/platform/marketplace-hero.mp4" type="video/mp4" />
+        </video>
+        {/* Gradient overlay — dark at bottom so headline is readable */}
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          background: "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 55%, rgba(6,6,6,0.96) 100%)",
+          zIndex: 1,
+        }} />
+        {/* Headline + stats over the video */}
+        <div style={{ position: "relative", zIndex: 2, padding: "0 24px", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+          <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-5" style={{ background: "rgba(0,229,255,.12)", border: "1px solid rgba(0,229,255,.3)", color: T.cyan }}>
+            <Sparkles className="w-4 h-4" />
+            <span className="text-xs font-black uppercase tracking-[.2em]">CreatorVault Commerce OS</span>
+          </div>
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-[-.06em] leading-[.92] max-w-4xl" style={{ textShadow: "0 2px 24px rgba(0,0,0,0.7)" }}>Premium drops that feel curated, scarce, and ready to buy.</h1>
+          <p className="mt-5 max-w-2xl text-base md:text-lg leading-8" style={{ color: T.muted }}>Browse creator playbooks, premium templates, digital assets, and operator products presented with clear pricing, strong visuals, and a direct path to purchase.</p>
+          <div className="flex flex-wrap items-center gap-4 mt-6">
+            <a href="#live-drops" className="inline-flex min-h-12 items-center justify-center rounded-2xl px-6 text-sm font-black uppercase tracking-[.14em] transition hover:scale-[1.01]" style={{ background: "linear-gradient(135deg,#00e5ff,#c9a84c)", color: "#050505" }}>See live drops <ArrowRight className="ml-2 h-4 w-4" /></a>
+            <div className="flex gap-3 flex-wrap">
               {[
                 { icon: Boxes, label: "Active inventory", value: `${activeCount}`, color: T.cyan },
-                { icon: BadgeDollarSign, label: "Visible catalog", value: money(catalogValue), color: T.gold },
+                { icon: BadgeDollarSign, label: "Catalog value", value: money(catalogValue), color: T.gold },
                 { icon: ShieldCheck, label: "Buyer path", value: "Verified", color: T.green },
               ].map(({ icon: Icon, label, value, color }) => (
-                <div key={label} className="rounded-2xl p-4" style={{ background: "rgba(0,0,0,.28)", border: `1px solid ${color}33` }}>
-                  <Icon className="w-4 h-4 mb-3" style={{ color }} />
-                  <div className="text-2xl font-black" style={{ color }}>{value}</div>
-                  <div className="text-xs font-bold uppercase tracking-[.14em] mt-1" style={{ color: T.faint }}>{label}</div>
+                <div key={label} className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: "rgba(0,0,0,.52)", border: `1px solid ${color}44`, backdropFilter: "blur(12px)" }}>
+                  <Icon className="w-4 h-4 flex-shrink-0" style={{ color }} />
+                  <div>
+                    <div className="text-lg font-black leading-none" style={{ color }}>{value}</div>
+                    <div className="text-[10px] font-bold uppercase tracking-[.14em] mt-0.5" style={{ color: T.faint }}>{label}</div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
+        </div>
+      </section>
 
-          <aside className="rounded-[2rem] p-5 md:p-6 flex flex-col justify-between" style={{ background: "linear-gradient(180deg, rgba(201,168,76,.16), rgba(255,255,255,.04))", border: "1px solid rgba(201,168,76,.25)", boxShadow: "0 28px 90px rgba(0,0,0,.42)" }}>
-            <div>
-              <video src="/videos/platform/marketplace-hero.mp4" aria-label="Marketplace buyer flow showing premium drop card, clear price, checkout path, and creator payout proof" className="mb-5 aspect-[9/16] max-h-[430px] w-full rounded-[1.35rem] border border-white/10 object-cover shadow-2xl shadow-black/40" muted autoPlay loop playsInline preload="metadata" />
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5" style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)", color: "#070707" }}><Crown className="w-6 h-6" /></div>
-              <h2 className="text-3xl font-black tracking-[-.04em] leading-none">Signal over shelf clutter.</h2>
-              <p className="mt-4 text-sm leading-7" style={{ color: T.muted }}>Every drop shows what it is, what it costs, why it matters, and how to take the next step without making buyers hunt for the offer.</p>
-            </div>
-            <div className="mt-6 rounded-2xl p-4" style={{ background: "rgba(0,0,0,.28)", border: `1px solid ${T.border}` }}>
-              <div className="text-xs uppercase tracking-[.2em] font-black" style={{ color: T.gold }}>Current view</div>
-              <div className="mt-2 text-2xl font-black">{isLoading ? "Loading" : `${filteredProducts.length} products`}</div>
-              <div className="mt-1 text-xs" style={{ color: T.muted }}>{categoryFilter === "all" ? "All categories" : categoryFilter.toUpperCase()} · {sortBy.replace("-", " ")}</div>
-            </div>
-          </aside>
-        </section>
+      <main className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
 
         <section className="rounded-[1.75rem] p-4 md:p-5 mb-6" style={{ background: "rgba(255,255,255,.045)", border: `1px solid ${T.border}`, backdropFilter: "blur(18px)" }}>
           <div className="grid lg:grid-cols-[1fr_auto] gap-4 items-center">
