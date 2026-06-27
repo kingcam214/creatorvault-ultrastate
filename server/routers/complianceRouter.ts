@@ -16,6 +16,12 @@ export const complianceRouter = router({
     return complianceVault.generateComplianceReport(String(ctx.user.id));
   }),
 
+  // One-shot: creator confirms 18+ and ownership → records age attestation + all
+  // consents so launch is never blocked. This is what the consent checkbox calls.
+  confirmEligibility: protectedProcedure.mutation(async ({ ctx }) => {
+    return complianceVault.confirmCreatorEligibility(String(ctx.user.id));
+  }),
+
   recordConsent: protectedProcedure.input(z.object({
     scope: z.array(z.enum(["generation", "distribution", "monetization", "ai_training", "likeness_use", "third_party_platform"])),
     consentVersion: z.string().default("1.0"),

@@ -788,9 +788,10 @@ function Router() {
       <Route path="/vaultx/onboarding" component={VaultXOnboarding} />
       <Route path="/vaultx/drop" component={VaultXDrop} />
       <Route path="/drop" component={VaultXDrop} />
-      <Route path="/vaultx/studio" component={VaultXStudio} />
+      <Route path="/vaultx/studio" component={VaultXDrop} />
       <Route path="/vaultx/distribution" component={VaultXDistribution} />
-      <Route path="/vault-x/studio" component={VaultXStudio} />
+      <Route path="/vault-x/studio" component={VaultXDrop} />
+      <Route path="/vaultx/studio-advanced" component={VaultXStudio} />
       <Route path="/vault-x/editor" component={VaultXEditor} />
       <Route path="/vaultx/editor" component={VaultXEditor} />
       <Route path="/vaultx/capcut" component={VaultXEditor} />

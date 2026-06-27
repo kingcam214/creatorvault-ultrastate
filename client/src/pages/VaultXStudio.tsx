@@ -256,6 +256,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   // Compliance Vault integration
   const complianceCheck = trpc.compliance.checkEligibility.useQuery({ jurisdiction: "GLOBAL" }, { retry: false });
   const recordConsent = trpc.compliance.recordConsent.useMutation();
+  const confirmEligibility = (trpc as any).compliance?.confirmEligibility?.useMutation?.() || { mutate: () => {}, mutateAsync: async () => {} };
 
   const providers = (capability.data as any)?.providers || [];
   const socialPresence = (capability.data as any)?.socialPresence;
@@ -663,6 +664,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               <input type="checkbox" checked={consentConfirmed} onChange={(e) => {
                 setConsentConfirmed(e.target.checked);
                 if (e.target.checked) {
+                  confirmEligibility.mutate();
                   recordConsent.mutate({ scope: ["generation", "distribution", "monetization", "likeness_use"], consentVersion: "1.0" });
                 }
               }} className="mt-1 h-5 w-5 accent-[#C9A84C]" />

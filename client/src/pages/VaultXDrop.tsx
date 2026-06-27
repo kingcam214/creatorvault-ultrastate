@@ -111,6 +111,7 @@ export default function VaultXDrop() {
 
   // ─── tRPC ─────────────────────────────────────────────────────────────────
   const launchRevenuePath = trpc.vaultx.launchRevenuePath.useMutation();
+  const confirmEligibility = (trpc as any).compliance?.confirmEligibility?.useMutation?.() || { mutateAsync: async () => {} };
   const postTelegram = (trpc as any).contentCommand?.postToTelegram?.useMutation?.() || { mutateAsync: async () => {} };
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
@@ -496,16 +497,23 @@ export default function VaultXDrop() {
               </div>
             </div>
 
-            {/* Consent */}
+            {/* Consent — ticking this records age attestation + all consents so launch is never blocked */}
             <label style={{ display: "flex", alignItems: "flex-start", gap: 12, background: CARD, border: `1px solid ${consent ? "rgba(0,230,118,0.3)" : BORDER}`, borderRadius: 12, padding: "14px", cursor: "pointer", marginBottom: 20 }}>
               <div
-                onClick={() => setConsent(!consent)}
+                onClick={async () => {
+                  const next = !consent;
+                  setConsent(next);
+                  if (next) {
+                    try { await confirmEligibility.mutateAsync(); }
+                    catch { /* non-blocking; launch will surface any real issue */ }
+                  }
+                }}
                 style={{ width: 22, height: 22, borderRadius: 6, background: consent ? GREEN : "transparent", border: `2px solid ${consent ? GREEN : BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}
               >
                 {consent && <Check size={14} color="#000" />}
               </div>
               <p style={{ fontSize: 13, color: consent ? "#fff" : MUTED, lineHeight: 1.5, margin: 0 }}>
-                I own this content and consent to AI transformation, monetization, and distribution through VaultX.
+                I am 18 or older, I own this content, and I consent to AI transformation, monetization, and distribution through VaultX.
               </p>
             </label>
 
