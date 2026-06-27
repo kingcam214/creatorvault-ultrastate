@@ -43,6 +43,7 @@ export interface RenderRequest {
   aspect?: "9:16" | "16:9" | "1:1";
   colorGrade?: string;    // preset id (see COLOR_GRADES)
   motion?: string;        // motion preset id (see MOTION_PRESETS) — for image clips
+  focus?: string;         // body focus framing (see FOCUS_PRESETS)
   captionText?: string;   // hook/caption to burn in
   captionStyle?: "bold_center" | "lower_third" | "minimal_top";
   musicUrl?: string;      // optional background music
@@ -50,6 +51,39 @@ export interface RenderRequest {
   watermarkText?: string;
   fadeInOut?: boolean;
   durationCap?: number;   // hard cap on total output seconds
+}
+
+// ─── Body-focus framing presets ───────────────────────────────────────────────
+// After the clip is fit to the output frame (WxH), a focus crop re-frames onto a
+// body region by scaling up and panning to a normalized center, then re-fitting.
+// cx/cy are the focal center as a fraction of the frame (0..1). zoom>1 tightens.
+export const FOCUS_PRESETS: Record<string, { label: string; emoji: string; cx: number; cy: number; zoom: number }> = {
+  none:        { label: "Full Body",   emoji: "🧍", cx: 0.5,  cy: 0.5,  zoom: 1.0 },
+  abs:         { label: "Abs",         emoji: "💪", cx: 0.5,  cy: 0.52, zoom: 1.7 },
+  waist:       { label: "Waist",       emoji: "⏳", cx: 0.5,  cy: 0.55, zoom: 1.55 },
+  butt:        { label: "Butt",        emoji: "🍑", cx: 0.5,  cy: 0.66, zoom: 1.7 },
+  hips:        { label: "Hips",        emoji: "💃", cx: 0.5,  cy: 0.62, zoom: 1.5 },
+  legs:        { label: "Legs",        emoji: "👠", cx: 0.5,  cy: 0.74, zoom: 1.45 },
+  thighs:      { label: "Thighs",      emoji: "🔥", cx: 0.5,  cy: 0.68, zoom: 1.65 },
+  chest:       { label: "Chest",       emoji: "💎", cx: 0.5,  cy: 0.38, zoom: 1.6 },
+  back:        { label: "Back",        emoji: "🖤", cx: 0.5,  cy: 0.5,  zoom: 1.5 },
+  lowerback:   { label: "Lower Back",  emoji: "💫", cx: 0.5,  cy: 0.62, zoom: 1.75 },
+  face:        { label: "Face",        emoji: "👄", cx: 0.5,  cy: 0.28, zoom: 1.7 },
+  silhouette:  { label: "Silhouette",  emoji: "✨", cx: 0.5,  cy: 0.5,  zoom: 1.15 },
+};
+
+function focusFilter(focus: string, W: number, H: number): string {
+  const f = FOCUS_PRESETS[focus];
+  if (!f || f.zoom <= 1.01) return "";
+  // crop a tighter region centered on (cx,cy), then scale back up to WxH.
+  // Origin is clamped in JS to guaranteed-valid even integers.
+  const cw = Math.round((W / f.zoom) / 2) * 2;
+  const ch = Math.round((H / f.zoom) / 2) * 2;
+  let x = Math.round(f.cx * W - cw / 2);
+  let y = Math.round(f.cy * H - ch / 2);
+  x = Math.max(0, Math.min(x, W - cw));
+  y = Math.max(0, Math.min(y, H - ch));
+  return `crop=${cw}:${ch}:${x}:${y},scale=${W}:${H}`;
 }
 
 export interface RenderJob {
@@ -220,14 +254,16 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
 
       // Build the video filter chain
       const fitChain = `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps}`;
+      const focus = focusFilter(req.focus || "none", W, H);
       const filters: string[] = [];
 
       if (isImg) {
         const dur = Math.max(2, Math.min(8, clip.trimEnd && clip.trimStart != null ? (clip.trimEnd - clip.trimStart) : 5));
         const motion = MOTION_PRESETS[req.motion || "slow_push"]?.expr(dur, fps) || "";
-        // For images: zoompan first (outputs WxH), then grade
+        // For images: zoompan first (outputs WxH), then focus crop, then grade
         if (motion) filters.push(motion);
         else filters.push(fitChain);
+        if (focus) filters.push(focus);
         if (grade) filters.push(grade);
         const vf = filters.join(",");
         await ff([
@@ -240,6 +276,7 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
         const ss = clip.trimStart != null ? ["-ss", String(clip.trimStart)] : [];
         const dur = (clip.trimEnd != null && clip.trimStart != null) ? ["-t", String(Math.max(0.5, clip.trimEnd - clip.trimStart))] : [];
         filters.push(fitChain);
+        if (focus) filters.push(focus);
         if (grade) filters.push(grade);
         const vf = filters.join(",");
         await ff([

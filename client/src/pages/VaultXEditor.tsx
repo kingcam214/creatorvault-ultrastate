@@ -48,13 +48,14 @@ export default function VaultXEditor() {
   const [presetId, setPresetId] = useState<string | null>(null);
   const [colorGrade, setColorGrade] = useState("none");
   const [motion, setMotion] = useState("slow_push");
+  const [focus, setFocus] = useState("none");
   const [aspect, setAspect] = useState<"9:16" | "16:9" | "1:1">("9:16");
   const [caption, setCaption] = useState("");
   const [captionStyle, setCaptionStyle] = useState<"bold_center" | "lower_third" | "minimal_top">("bold_center");
   const [watermark, setWatermark] = useState("");
   const [fadeInOut, setFadeInOut] = useState(true);
   const [musicUrl, setMusicUrl] = useState<string | null>(null);
-  const [tab, setTab] = useState<"presets" | "grade" | "motion" | "text" | "music">("presets");
+  const [tab, setTab] = useState<"presets" | "focus" | "grade" | "motion" | "text" | "music">("presets");
 
   // Render
   const [jobId, setJobId] = useState<string | null>(null);
@@ -78,6 +79,7 @@ export default function VaultXEditor() {
   const categories = data?.categories || [];
   const colorGrades = data?.colorGrades || [];
   const motionPresets = data?.motionPresets || [];
+  const focusPresets = data?.focusPresets || [];
 
   // Poll render status
   useEffect(() => {
@@ -139,6 +141,7 @@ export default function VaultXEditor() {
     setPresetId(p.id);
     setColorGrade(p.colorGrade);
     setMotion(p.motion);
+    setFocus(p.focus || "none");
     setAspect(p.aspect);
     setCaptionStyle(p.captionStyle);
     setFadeInOut(p.fadeInOut);
@@ -155,13 +158,13 @@ export default function VaultXEditor() {
       if (presetId) {
         res = await renderPresetMut.mutateAsync({ presetId, clips: clipPayload, captionText: caption || undefined, musicUrl: musicUrl || undefined, watermarkText: watermark || undefined });
       } else {
-        res = await renderMut.mutateAsync({ clips: clipPayload, aspect, colorGrade, motion, captionText: caption || undefined, captionStyle, musicUrl: musicUrl || undefined, watermarkText: watermark || undefined, fadeInOut });
+        res = await renderMut.mutateAsync({ clips: clipPayload, aspect, colorGrade, motion, focus, captionText: caption || undefined, captionStyle, musicUrl: musicUrl || undefined, watermarkText: watermark || undefined, fadeInOut });
       }
       setJobId(res.jobId);
     } catch (e: any) { toast.error(e?.message || "Render failed"); setStep("edit"); }
-  }, [clips, presetId, caption, captionStyle, musicUrl, watermark, aspect, colorGrade, motion, fadeInOut]);
+  }, [clips, presetId, caption, captionStyle, musicUrl, watermark, aspect, colorGrade, motion, focus, fadeInOut]);
 
-  const reset = () => { setStep("upload"); setClips([]); setPresetId(null); setColorGrade("none"); setMotion("slow_push"); setCaption(""); setWatermark(""); setMusicUrl(null); setJobId(null); setOutputUrl(null); setRenderPct(0); };
+  const reset = () => { setStep("upload"); setClips([]); setPresetId(null); setColorGrade("none"); setMotion("slow_push"); setFocus("none"); setCaption(""); setWatermark(""); setMusicUrl(null); setJobId(null); setOutputUrl(null); setRenderPct(0); };
 
   const ac = clips[activeClip];
   const aspectStyle = aspect === "16:9" ? { aspectRatio: "16/9", maxWidth: 480 } : aspect === "1:1" ? { aspectRatio: "1/1", maxWidth: 360 } : { aspectRatio: "9/16", maxHeight: 380 };
@@ -253,7 +256,7 @@ export default function VaultXEditor() {
 
             {/* Tabs */}
             <div style={{ display: "flex", gap: 4, background: CARD, borderRadius: 12, padding: 4 }}>
-              {([["presets", "Looks", Sparkles], ["grade", "Color", Droplet], ["motion", "Motion", Wand2], ["text", "Text", Type], ["music", "Music", Music]] as const).map(([id, label, Icon]) => (
+              {([["presets", "Looks", Sparkles], ["focus", "Body", Scissors], ["grade", "Color", Droplet], ["motion", "Motion", Wand2], ["text", "Text", Type], ["music", "Music", Music]] as const).map(([id, label, Icon]) => (
                 <button key={id} onClick={() => setTab(id as any)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: "none", background: tab === id ? GOLD : "transparent", color: tab === id ? "#000" : MUTED, fontSize: 11, fontWeight: 800, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
                   <Icon size={15} />{label}
                 </button>
@@ -271,6 +274,19 @@ export default function VaultXEditor() {
                       <p style={{ fontSize: 9, color: MUTED, margin: "2px 0 0" }}>{"🔥".repeat(Math.min(p.heat, 3))}</p>
                     </button>
                   ))}
+                </div>
+              )}
+              {tab === "focus" && (
+                <div>
+                  <p style={{ fontSize: 11, color: MUTED, margin: "0 0 8px" }}>Frame the video on a specific body feature. The render crops and re-centers in real ffmpeg.</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                    {focusPresets.map((f: any) => (
+                      <button key={f.id} onClick={() => { setFocus(f.id); setPresetId(null); }} style={{ background: focus === f.id ? GOLD_DIM : CARD, border: `1px solid ${focus === f.id ? GOLD : BORDER}`, borderRadius: 12, padding: "12px 6px", textAlign: "center", cursor: "pointer" }}>
+                        <div style={{ fontSize: 22 }}>{f.emoji}</div>
+                        <p style={{ fontSize: 11, fontWeight: 800, margin: "4px 0 0", color: focus === f.id ? "#fff" : MUTED }}>{f.label}</p>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               {tab === "grade" && (

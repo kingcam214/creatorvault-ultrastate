@@ -10,7 +10,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc.js";
 import { TRPCError } from "@trpc/server";
-import { startRender, getRenderJob, COLOR_GRADES, MOTION_PRESETS } from "../services/realRenderEngine.js";
+import { startRender, getRenderJob, COLOR_GRADES, MOTION_PRESETS, FOCUS_PRESETS } from "../services/realRenderEngine.js";
 import { BODY_CINEMA_EDIT_PRESETS, EDIT_PRESET_CATEGORIES, getEditPreset } from "../services/bodyCinemaEditPresets.js";
 
 const clipSchema = z.object({
@@ -27,10 +27,13 @@ export const realEditorRouter = router({
       categories: EDIT_PRESET_CATEGORIES,
       colorGrades: Object.entries(COLOR_GRADES).map(([id, v]) => ({ id, label: v.label })),
       motionPresets: Object.entries(MOTION_PRESETS).map(([id, v]) => ({ id, label: v.label })),
+      focusPresets: Object.entries(FOCUS_PRESETS).map(([id, v]) => ({ id, label: v.label, emoji: v.emoji })),
       stats: {
         total: BODY_CINEMA_EDIT_PRESETS.length,
+        bodyFocus: BODY_CINEMA_EDIT_PRESETS.filter(p => p.category === "body").length,
         colorGrades: Object.keys(COLOR_GRADES).length,
         motionPresets: Object.keys(MOTION_PRESETS).length,
+        focusPresets: Object.keys(FOCUS_PRESETS).length,
       },
     };
   }),
@@ -41,6 +44,7 @@ export const realEditorRouter = router({
       aspect: z.enum(["9:16", "16:9", "1:1"]).default("9:16"),
       colorGrade: z.string().default("none"),
       motion: z.string().default("slow_push"),
+      focus: z.string().default("none"),
       captionText: z.string().optional(),
       captionStyle: z.enum(["bold_center", "lower_third", "minimal_top"]).default("bold_center"),
       musicUrl: z.string().optional(),
@@ -69,6 +73,7 @@ export const realEditorRouter = router({
         aspect: preset.aspect,
         colorGrade: preset.colorGrade,
         motion: preset.motion,
+        focus: preset.focus || "none",
         captionText: input.captionText,
         captionStyle: preset.captionStyle,
         musicUrl: input.musicUrl,
