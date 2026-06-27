@@ -27,6 +27,7 @@ export default function TrailerStudio() {
   const [priceLine, setPriceLine] = useState("");
   const [musicUrl, setMusicUrl] = useState<string | null>(null);
   const [aspect, setAspect] = useState<"9:16" | "16:9" | "1:1">("9:16");
+  const [aiRemix, setAiRemix] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [pct, setPct] = useState(0);
   const [stage, setStage] = useState("");
@@ -77,12 +78,13 @@ export default function TrailerStudio() {
         templateId, clips: clips.map(c => ({ src: c.src })),
         title: title || undefined, ctaSubText: priceLine || undefined, aspect,
         musicUrl: musicUrl || undefined, watermarkText: title || undefined,
+        aiRemix: aiRemix || undefined,
       });
       setJobId(res.jobId);
     } catch (e: any) { toast.error(e?.message || "Build failed"); setStep("template"); }
-  }, [templateId, clips, title, priceLine, aspect, musicUrl]);
+  }, [templateId, clips, title, priceLine, aspect, musicUrl, aiRemix]);
 
-  const reset = () => { setStep("clips"); setClips([]); setTemplateId(null); setTitle(""); setPriceLine(""); setMusicUrl(null); setJobId(null); setOutputUrl(null); setPct(0); };
+  const reset = () => { setStep("clips"); setClips([]); setTemplateId(null); setTitle(""); setPriceLine(""); setMusicUrl(null); setJobId(null); setOutputUrl(null); setPct(0); setAiRemix(false); };
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: "#fff", fontFamily: "DM Sans, sans-serif", paddingBottom: 110 }}>
@@ -162,6 +164,18 @@ export default function TrailerStudio() {
                   <input type="file" accept="audio/*" style={{ display: "none" }} onChange={addMusic} />
                 </label>
               )}
+
+              {/* AI Remix toggle */}
+              <button onClick={() => setAiRemix(v => !v)} style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", background: aiRemix ? GOLD_DIM : CARD, border: `1px solid ${aiRemix ? GOLD : BORDER}`, borderRadius: 12, padding: "14px", cursor: "pointer" }}>
+                <span style={{ fontSize: 24 }}>🧠</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 800, margin: 0, color: aiRemix ? "#fff" : "#ddd" }}>AI Remix — reshoot from new angles</p>
+                  <p style={{ fontSize: 11, color: MUTED, margin: "2px 0 0", lineHeight: 1.4 }}>AI generates brand-new camera angles &amp; motion from your clip so the trailer looks nothing like the original. Adds ~1–2 min.</p>
+                </div>
+                <div style={{ width: 44, height: 26, borderRadius: 13, background: aiRemix ? GOLD : "#333", position: "relative", flexShrink: 0, transition: "background 0.2s" }}>
+                  <div style={{ position: "absolute", top: 3, left: aiRemix ? 21 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
+                </div>
+              </button>
             </div>
           </div>
         )}

@@ -28,6 +28,7 @@ export interface TrailerTemplate {
   conversionScore: number; // 1..10
   polish?: boolean;        // film grain + bloom
   transitions?: boolean;   // xfade between cuts
+  aiRemix?: boolean;       // AI generates new camera angles from the upload
 }
 
 export const TRAILER_TEMPLATES: TrailerTemplate[] = [
@@ -76,6 +77,11 @@ export const TRAILER_TEMPLATES: TrailerTemplate[] = [
     vibe: "velvet_midnight", intensity: "slow", focusRotation: ["face", "chest", "lowerback", "silhouette"],
     hookText: "come closer", ctaText: "THE REST IS PRIVATE", ctaSubText: "Unlock me 🕯️", bestFor: "Intimate PPV", conversionScore: 9, polish: true, transitions: true,
   },
+  {
+    id: "ai-remix", name: "AI Remix", emoji: "🧠", tagline: "AI reshoots your clip from all-new camera angles — looks nothing like the original.",
+    vibe: "cinematic_heat", intensity: "fast", focusRotation: ["face", "chest", "waist", "abs", "butt", "legs"],
+    hookText: "made by AI", ctaText: "UNLOCK THE FULL DROP", ctaSubText: "Only on the link 🔓", bestFor: "Maximum wow-factor", conversionScore: 10, polish: true, transitions: true, aiRemix: true,
+  },
 ];
 
 const clipSchema = z.object({ src: z.string(), trimStart: z.number().optional(), trimEnd: z.number().optional() });
@@ -99,6 +105,8 @@ export const trailerRouter = router({
       intensity: z.enum(["fast", "medium", "slow"]).default("fast"),
       musicUrl: z.string().optional(),
       watermarkText: z.string().optional(),
+      aiRemix: z.boolean().optional(),
+      aiShotCount: z.number().min(2).max(8).optional(),
     }))
     .mutation(({ input }) => {
       const job = startTrailer(input);
@@ -114,6 +122,7 @@ export const trailerRouter = router({
       aspect: z.enum(["9:16", "16:9", "1:1"]).default("9:16"),
       musicUrl: z.string().optional(),
       watermarkText: z.string().optional(),
+      aiRemix: z.boolean().optional(), // force AI remix on any template
     }))
     .mutation(({ input }) => {
       const tpl = TRAILER_TEMPLATES.find(t => t.id === input.templateId);
@@ -132,6 +141,8 @@ export const trailerRouter = router({
         watermarkText: input.watermarkText,
         polish: tpl.polish !== false,
         transitions: tpl.transitions !== false,
+        aiRemix: input.aiRemix ?? tpl.aiRemix ?? false,
+        aiShotCount: 4,
       });
       return { jobId: job.id, status: job.status, templateApplied: tpl.name };
     }),

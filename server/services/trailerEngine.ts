@@ -16,6 +16,7 @@ import { spawn, execSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
+import { generateAIShots } from "./aiShotGenerator.js";
 
 const PUBLIC_ROOT = "/root/uploads";
 const TRAILER_DIR = path.join(PUBLIC_ROOT, "trailers");
@@ -71,6 +72,8 @@ export interface TrailerRequest {
   intensity?: "fast" | "medium" | "slow";
   polish?: boolean;        // film grain + bloom (default true)
   transitions?: boolean;   // xfade between cuts (default true)
+  aiRemix?: boolean;       // generate NEW AI camera angles from the upload and mix them in
+  aiShotCount?: number;    // how many AI shots to generate (default 4)
 }
 export interface TrailerJob {
   id: string; status: "queued" | "processing" | "succeeded" | "failed"; progress: number;
@@ -190,8 +193,26 @@ async function build(job: TrailerJob, req: TrailerRequest) {
   const XFADE = 0.28; // transition overlap seconds
 
   try {
-    const clips = (req.clips || []).filter(c => c && c.src);
+    let clips = (req.clips || []).filter(c => c && c.src);
     if (clips.length === 0) throw new Error("No clips provided");
+
+    // AI REMIX: generate brand-new camera angles/views from the upload via Pollo,
+    // then mix them with the original so the trailer looks nothing like the source.
+    if (req.aiRemix) {
+      upd(job, { progress: 6, stage: "AI is shooting new angles" });
+      try {
+        const want = Math.max(2, Math.min(8, req.aiShotCount || 4));
+        const ai = await generateAIShots(clips.map(c => ({ src: c.src })), want, {
+          resolution: "720p",
+          onProgress: (d, t) => upd(job, { progress: 6 + Math.round((d / t) * 14), stage: `AI generating new shots (${d}/${t})` }),
+        });
+        if (ai.shots.length > 0) {
+          // Lead with AI shots, keep one original as an anchor for authenticity
+          const aiClips = ai.shots.map(s => ({ src: s }));
+          clips = [...aiClips, clips[0]];
+        }
+      } catch { /* fall back to original clips if AI fails */ }
+    }
 
     const segments: { path: string; dur: number }[] = [];
     let segIdx = 0;
@@ -331,22 +352,36 @@ async function build(job: TrailerJob, req: TrailerRequest) {
 }
 
 // Chain segments together with xfade transitions, cycling the transition style.
+// Uses REAL probed durations each step so the xfade offset is always correct
+// (prevents the side-by-side / split-screen artifact from drifted offsets).
 async function xfadeConcat(segments: { path: string; dur: number }[], work: string, xfade: number, fps: number): Promise<string> {
+  // Safe, full-frame transitions only (no split/slide that can read as 2-up on fast cuts)
+  const SAFE = ["fade", "fadeblack", "dissolve", "circleopen", "radial", "smoothleft", "smoothup"];
   let acc = segments[0].path;
-  let accDur = segments[0].dur;
   for (let i = 1; i < segments.length; i++) {
     const next = segments[i];
-    const mode = TRANSITIONS[(i - 1) % TRANSITIONS.length];
-    const offset = Math.max(0.1, accDur - xfade);
+    const mode = SAFE[(i - 1) % SAFE.length];
+    const accDur = probe(acc) || segments[0].dur;
+    // xfade must overlap strictly inside the accumulator; clamp xfade to < accDur
+    const xf = Math.max(0.15, Math.min(xfade, accDur - 0.15, next.dur - 0.05));
+    const offset = Math.max(0.05, accDur - xf);
     const out = path.join(work, `xf-${i}.mp4`);
-    await ff([
-      "-i", acc, "-i", next.path,
-      "-filter_complex",
-      `[0:v][1:v]xfade=transition=${mode}:duration=${xfade}:offset=${offset.toFixed(3)}[v];[0:a][1:a]acrossfade=d=${xfade}[a]`,
-      "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-ar", "44100", out,
-    ]);
-    acc = out;
-    accDur = accDur + next.dur - xfade;
+    try {
+      await ff([
+        "-i", acc, "-i", next.path,
+        "-filter_complex",
+        `[0:v][1:v]xfade=transition=${mode}:duration=${xf.toFixed(3)}:offset=${offset.toFixed(3)}[v];[0:a][1:a]acrossfade=d=${xf.toFixed(3)}[a]`,
+        "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-ar", "44100", out,
+      ]);
+      acc = out;
+    } catch {
+      // Fallback: hard concat this pair if xfade fails for any reason
+      const lf = path.join(work, `cc-${i}.txt`);
+      fs.writeFileSync(lf, [`file '${acc}'`, `file '${next.path}'`].join("\n"));
+      const out2 = path.join(work, `cc-${i}.mp4`);
+      await ff(["-f", "concat", "-safe", "0", "-i", lf, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-ar", "44100", out2]);
+      acc = out2;
+    }
   }
   return acc;
 }
