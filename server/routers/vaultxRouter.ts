@@ -108,6 +108,45 @@ async function ensureVaultxRevenuePackageSchema(): Promise<void> {
   )`);
 }
 
+// ─── Video frame extraction ────────────────────────────────────────────────
+// Pollo's image-to-video model requires a still image. When a creator uploads
+// a VIDEO, extract a high-quality frame and return its public URL so the
+// creator never has to think about image vs video.
+function isVideoSource(url: string): boolean {
+  const clean = url.split("?")[0].toLowerCase();
+  return /\.(mp4|mov|webm|mkv|avi|m4v)$/.test(clean);
+}
+
+async function extractFrameToPublicImage(videoUrl: string): Promise<string> {
+  const frameUuid = randomUUID();
+  // Public uploads dir served at /uploads (process.cwd()/../uploads)
+  const publicRoot = path.resolve(process.cwd(), "..", "uploads");
+  const frameDir = path.join(publicRoot, "body-cinema-frames", frameUuid);
+  fs.mkdirSync(frameDir, { recursive: true });
+  const localSource = path.join(frameDir, "source.bin");
+  // Download or copy the source video
+  const localUpload = normalizeLocalUploadPath(videoUrl);
+  if (localUpload && fs.existsSync(localUpload)) {
+    fs.copyFileSync(localUpload, localSource);
+  } else {
+    const resp = await fetch(videoUrl);
+    if (!resp.ok) throw new Error(`Unable to fetch source video (${resp.status})`);
+    fs.writeFileSync(localSource, Buffer.from(await resp.arrayBuffer()));
+  }
+  // Extract a frame ~1s in (skips black intro frames), high quality
+  const framePath = path.join(frameDir, "frame.jpg");
+  try {
+    execSync(`ffmpeg -y -ss 00:00:01 -i ${JSON.stringify(localSource)} -frames:v 1 -q:v 2 ${JSON.stringify(framePath)}`, { stdio: "ignore", timeout: 60000 });
+  } catch {
+    // Fallback: grab the very first frame if 1s seek fails (short clips)
+    execSync(`ffmpeg -y -i ${JSON.stringify(localSource)} -frames:v 1 -q:v 2 ${JSON.stringify(framePath)}`, { stdio: "ignore", timeout: 60000 });
+  }
+  if (!fs.existsSync(framePath)) throw new Error("Frame extraction produced no image.");
+  // Clean up the source copy to save disk
+  try { fs.unlinkSync(localSource); } catch {}
+  return `${FRONTEND_BASE_URL}/uploads/body-cinema-frames/${frameUuid}/frame.jpg`;
+}
+
 function buildVaultxPackagePublicCopy(input: {
   title: string;
   teaserDescription: string;
@@ -1794,9 +1833,19 @@ export const vaultxRouter = router({
     .mutation(async ({ ctx, input }) => {
       if (!POLLO_API_KEY) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "POLLO_API_KEY is not configured for VaultX media generation." });
       const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
-      const sourceMediaUrl = input.sourceMediaUrl || pkg.source_media_url;
-      if (!sourceMediaUrl) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "A real creator source media URL is required before Pollo can generate a VaultX promo asset." });
+      const rawSource = input.sourceMediaUrl || pkg.source_media_url;
+      if (!rawSource) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Upload your video before generating a VaultX drop." });
+      }
+      // 2026 UX: creators upload videos. Pollo image-to-video needs a still frame.
+      // If the source is a video, extract a cinematic frame automatically.
+      let sourceMediaUrl = rawSource;
+      if (isVideoSource(rawSource)) {
+        try {
+          sourceMediaUrl = await extractFrameToPublicImage(rawSource);
+        } catch (frameErr: any) {
+          throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: `Could not process the uploaded video: ${frameErr?.message || "frame extraction failed"}` });
+        }
       }
       qualityGate.checkVisual(sourceMediaUrl, {
         prompt: "VaultX creator source asset for teaser to paid unlock to tracked click to follow-up to VIP route; dark luxury cinematic premium style.",
@@ -2092,6 +2141,20 @@ export const vaultxRouter = router({
       await ensureVaultxRevenuePackageSchema();
       await ensureVaultxArtifactSchema();
 
+      // 2026 UX: creators upload videos. Pollo image-to-video needs a still frame.
+      // If the upload is a video, extract a cinematic frame automatically.
+      // `polloImageUrl` is what we send to Pollo; `displaySourceUrl` is the
+      // original upload we store as the package source for the creator.
+      const displaySourceUrl = input.sourceMediaUrl;
+      let polloImageUrl = input.sourceMediaUrl;
+      if (isVideoSource(input.sourceMediaUrl)) {
+        try {
+          polloImageUrl = await extractFrameToPublicImage(input.sourceMediaUrl);
+        } catch (frameErr: any) {
+          throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: `Could not process the uploaded video: ${frameErr?.message || "frame extraction failed"}` });
+        }
+      }
+
       const creatorId = await getCreatorId(ctx.user.id);
       const cid = creatorId || ctx.user.id;
       const publicTeaserCopy = qualityGate.check(buildVaultxPackagePublicCopy(input), {
@@ -2104,7 +2167,7 @@ export const vaultxRouter = router({
         requireCreatorVaultPositioning: true,
         ctaAngle: "asset-conversion",
       });
-      qualityGate.checkVisual(input.sourceMediaUrl, {
+      qualityGate.checkVisual(polloImageUrl, {
         prompt: "VaultX creator-owned source asset for Body Cinema teaser to paid unlock to tracked Telegram route; premium cinematic, platform-safe public preview.",
         publicPost: true,
       });
@@ -2153,7 +2216,7 @@ export const vaultxRouter = router({
          WHERE imageUrl = ? AND status IN ('succeed', 'success', 'succeeded') AND videoUrl IS NOT NULL AND videoUrl <> ''
          ORDER BY updatedAt DESC, id DESC
          LIMIT 1`,
-        [input.sourceMediaUrl]
+        [polloImageUrl]
       );
       const reusable = reusableAssets[0];
       let jobId = "";
@@ -2193,7 +2256,7 @@ export const vaultxRouter = router({
           signal: generationController.signal,
           body: JSON.stringify({
             input: {
-              image: input.sourceMediaUrl,
+              image: polloImageUrl,
               prompt,
               resolution: input.resolution,
               length: Number(input.length),
@@ -2211,7 +2274,7 @@ export const vaultxRouter = router({
         await rawExec(
           `INSERT INTO pollo_generations (userId, taskId, imageUrl, prompt, resolution, length, mode, status)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [ctx.user.id, jobId, input.sourceMediaUrl, prompt, input.resolution, input.length, input.mode, generationStatus]
+          [ctx.user.id, jobId, polloImageUrl, prompt, input.resolution, input.length, input.mode, generationStatus]
         );
         queuedArtifact = await createVaultxArtifact({
           creatorId: Number(pkg.creator_id),
