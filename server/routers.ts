@@ -21,6 +21,7 @@ import { adminRouter } from "./routers/adminRouter";
 import { adultSalesBotRouter } from "./routers/adultSalesBot";
 import { cloneLabRouter } from "./routers/cloneLabRouter";
 import { cloneEngineRouter } from "./routers/cloneEngineRouter";
+import { contentCommandRouter } from "./routers/contentCommandRouter";
 import { cloneCommandRouter } from "./routers/cloneCommandRouter";
 import { clonePassportRouter } from "./routers/clonePassportRouter";
 import { cloneTrainingLabRouter } from "./routers/cloneTrainingLabRouter";
@@ -1015,6 +1016,7 @@ export const appRouter = router({
   kingcamAI: kingcamAIRouter,
   cloneEmpire: cloneEmpireRouter,
   cloneEngine: cloneEngineRouter,
+  contentCommand: contentCommandRouter,
   agentTelemetry: agentTelemetryRouter,
   challengeAutomation: challengeAutomationRouter,
   activationWarRoom: activationWarRoomRouter,
