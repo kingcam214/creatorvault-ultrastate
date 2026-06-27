@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from "react";
+import { Fragment, ReactNode, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { ArrowRight, BadgeDollarSign, Camera, Check, Clapperboard, Crown, Film, Image, Library, Loader2, RadioTower, Route, Settings, ShieldCheck, Sparkles, Upload, Wand2, Zap } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -1125,9 +1125,8 @@ export default function VaultXStudio() {
             {/* Step tracker */}
             <div className="flex items-center gap-1">
               {STEPS.map((s, i) => (
-                <>
+                <Fragment key={s.n}>
                   <button
-                    key={s.n}
                     onClick={() => setGuidedStep(s.n as 1 | 2 | 3)}
                     className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black transition ${
                       guidedStep === s.n
@@ -1144,7 +1143,7 @@ export default function VaultXStudio() {
                   {i < STEPS.length - 1 && (
                     <div className={`h-px w-4 ${ guidedStep > s.n ? "bg-emerald-500" : "bg-zinc-700" }`} />
                   )}
-                </>
+                </Fragment>
               ))}
             </div>
             {/* Advanced nav */}
@@ -1226,15 +1225,8 @@ export default function VaultXStudio() {
               <button onClick={() => setGuidedStep(3)} className="flex-shrink-0 rounded-full border border-zinc-700 px-4 py-2 text-sm font-black text-zinc-400 hover:text-white">Skip →</button>
             </div>
 
-            {/* Inline preset picker — simplified */}
+            {/* Preset picker lives inside LaunchConsole — show full console here */}
             <LaunchConsole selectedMake={selectedMake} />
-
-            <button
-              onClick={() => setGuidedStep(3)}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#C9A84C] py-4 text-base font-black text-black"
-            >
-              Preset selected — Next: Launch <ArrowRight size={18} />
-            </button>
           </div>
         )}
 
