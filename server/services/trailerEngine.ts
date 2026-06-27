@@ -176,7 +176,7 @@ async function build(job: TrailerJob, req: TrailerRequest) {
   const usePolish = req.polish !== false;
   const useTransitions = req.transitions !== false;
   let beat = Math.max(0.55, Math.min(1.8, req.beatSeconds || (req.intensity === "fast" ? 0.7 : req.intensity === "slow" ? 1.4 : 1.0)));
-  const focuses = req.focusRotation && req.focusRotation.length ? req.focusRotation : ["face", "chest", "waist", "abs", "butt", "legs"];
+  const focuses = (req as any)._aiFocuses || (req.focusRotation && req.focusRotation.length ? req.focusRotation : ["face", "chest", "waist", "abs", "butt", "legs"]);
   const work = path.join(WORK_ROOT, job.id); fs.mkdirSync(work, { recursive: true });
   // Beat-sync: if music is provided, detect tempo and align cut length to it
   let musicLocal: string | null = null;
@@ -210,6 +210,13 @@ async function build(job: TrailerJob, req: TrailerRequest) {
           // Lead with AI shots, keep one original as an anchor for authenticity
           const aiClips = ai.shots.map(s => ({ src: s }));
           clips = [...aiClips, clips[0]];
+          // Override focus rotation with the body-specific focuses the AI used
+          if (ai.bodyFocuses.length > 0) {
+            const origFocuses = req.focusRotation && req.focusRotation.length ? req.focusRotation : ["face","chest","waist","abs","butt","legs"];
+            // Merge AI body focuses with original rotation for variety
+            const merged = [...ai.bodyFocuses, ...origFocuses.slice(0, 2)];
+            (req as any)._aiFocuses = merged;
+          }
         }
       } catch { /* fall back to original clips if AI fails */ }
     }
@@ -218,35 +225,85 @@ async function build(job: TrailerJob, req: TrailerRequest) {
     let segIdx = 0;
 
     // Render one beat segment: fit → focus → grade → speed-ramp → polish → text → flash
-    async function makeSegment(clip: TrailerClip, focusId: string, dur: number, opts: { speed?: number; text?: string; flashIn?: boolean; punch?: boolean } = {}): Promise<{ path: string; dur: number }> {
+    async function makeSegment(clip: TrailerClip, focusId: string, dur: number, opts: { speed?: number; ramp?: boolean; text?: string; flashIn?: boolean; punch?: boolean } = {}): Promise<{ path: string; dur: number }> {
       const speed = opts.speed ?? 1.0;
       const localExt = isImage(clip.src) ? ".img" : ".mp4";
       const local = path.join(work, `raw-${segIdx}${localExt}`);
       await fetchLocal(clip.src, local);
       const out = path.join(work, `seg-${segIdx}.mp4`); segIdx++;
       const img = isImage(clip.src);
+      const focusMeta = FOCUS[focusId] || FOCUS.none;
       const focus = focusChain(focusId, W, H);
       const gradePart = grade ? `,${grade}` : "";
-      // zoom-punch: a quick scale-in over the cut for energy
-      const punch = opts.punch ? `,zoompan=z='min(zoom+0.004,1.12)':d=${Math.round(dur*fps)}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${W}x${H}:fps=${fps}` : "";
       const polishPart = usePolish ? `,${POLISH}` : "";
       const textPart = opts.text ? animatedText(opts.text, W, H, dur) : "";
       const flashPart = opts.flashIn ? `,fade=t=in:st=0:d=0.12:color=white` : "";
 
+      // BODY-FOCUSED ZOOM-PUNCH: zooms toward the actual body region (cx,cy) not just center.
+      // Uses zoompan with a body-part-aware x/y offset so the punch pushes INTO the feature.
+      let punch = "";
+      if (opts.punch) {
+        const maxZ = 1.18;
+        const cx = focusMeta.cx; const cy = focusMeta.cy;
+        const d = Math.round(dur * fps);
+        // x/y expressions keep the focal point (cx,cy) centered as zoom increases
+        punch = `,zoompan=z='min(zoom+0.006,${maxZ})':d=${d}:x='iw*${cx.toFixed(3)}-(iw/zoom)*${cx.toFixed(3)}':y='ih*${cy.toFixed(3)}-(ih/zoom)*${cy.toFixed(3)}':s=${W}x${H}:fps=${fps}`;
+      }
+
       if (img) {
-        // eased ken-burns push
-        const vf = `zoompan=z='min(zoom+0.0016,1.28)':d=${Math.round(dur*fps)}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${W}x${H}:fps=${fps}${focus}${gradePart}${polishPart}${textPart}${flashPart}`;
+        // Ken-burns push toward the body focus point
+        const cx = focusMeta.cx; const cy = focusMeta.cy;
+        const d = Math.round(dur * fps);
+        const vf = `zoompan=z='min(zoom+0.0018,1.32)':d=${d}:x='iw*${cx.toFixed(3)}-(iw/zoom)*${cx.toFixed(3)}':y='ih*${cy.toFixed(3)}-(ih/zoom)*${cy.toFixed(3)}':s=${W}x${H}:fps=${fps}${focus}${gradePart}${polishPart}${textPart}${flashPart}`;
         await ff(["-loop", "1", "-t", String(dur), "-i", local, "-f", "lavfi", "-t", String(dur), "-i", "anullsrc=cl=stereo:r=44100", "-vf", vf, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-shortest", out]);
       } else {
         const srcDur = probe(local) || 5;
-        const grab = dur * speed;
-        // smart moment: pick a point ~35% in unless trim provided
-        const start = clip.trimStart != null ? clip.trimStart : Math.max(0, Math.min(srcDur * 0.35, Math.max(0, srcDur - grab)));
-        const setpts = speed !== 1.0 ? `,setpts=${(1/speed).toFixed(3)}*PTS` : "";
-        // motion-smooth the slow-mo with tblend for that pro ramp feel
-        const ramp = speed < 1.0 ? `,tblend=all_mode=average` : "";
+        const grab = dur * (speed < 1.0 ? speed : 1.0);
+        const start = clip.trimStart != null ? clip.trimStart : Math.max(0, Math.min(srcDur * 0.35, Math.max(0, srcDur - Math.max(grab, 0.5))));
+
+        // DYNAMIC SPEED RAMP: fast-in → slow peak → fast-out using a smooth PTS curve.
+        // We split the segment into 3 sub-clips and concat them:
+        //   phase A (first 25%): normal speed (1.0x) — the snap-in
+        //   phase B (middle 50%): slow-mo (speed x) — the cinematic reveal
+        //   phase C (last 25%): normal speed (1.0x) — the snap-out
+        // This is the real "speed ramp" you see in pro trailers.
+        let setpts = "";
+        let ramp = "";
+        if (opts.ramp && speed < 1.0 && srcDur >= 1.5) {
+          const pA = Math.max(0.1, dur * 0.25); // fast-in
+          const pB = Math.max(0.2, dur * 0.50); // slow peak
+          const pC = Math.max(0.1, dur * 0.25); // fast-out
+          const grabA = pA;                      // 1x speed
+          const grabB = pB / speed;              // slow-mo grab
+          const grabC = pC;                      // 1x speed
+          const totalGrab = grabA + grabB + grabC;
+          const safeStart = Math.max(0, Math.min(srcDur * 0.3, srcDur - totalGrab));
+
+          // Build 3 sub-segments and concat them
+          const subA = path.join(work, `ramp-a-${segIdx-1}.mp4`);
+          const subB = path.join(work, `ramp-b-${segIdx-1}.mp4`);
+          const subC = path.join(work, `ramp-c-${segIdx-1}.mp4`);
+          const vfBase = `${fitChain}${focus}${gradePart}${punch}${polishPart}`;
+          await ff(["-ss", String(safeStart), "-t", String(grabA), "-i", local, "-f", "lavfi", "-t", String(pA), "-i", "anullsrc=cl=stereo:r=44100", "-vf", vfBase, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-t", String(pA), subA]);
+          await ff(["-ss", String(safeStart + grabA), "-t", String(grabB), "-i", local, "-f", "lavfi", "-t", String(pB), "-i", "anullsrc=cl=stereo:r=44100", "-vf", `${vfBase},setpts=${(1/speed).toFixed(3)}*PTS,tblend=all_mode=average`, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-t", String(pB), subB]);
+          await ff(["-ss", String(safeStart + grabA + grabB), "-t", String(grabC), "-i", local, "-f", "lavfi", "-t", String(pC), "-i", "anullsrc=cl=stereo:r=44100", "-vf", vfBase, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-t", String(pC), subC]);
+          const rampList = path.join(work, `ramp-list-${segIdx-1}.txt`);
+          fs.writeFileSync(rampList, [`file '${subA}'`, `file '${subB}'`, `file '${subC}'`].join("\n"));
+          // Add text/flash on top of the stitched ramp
+          const rampRaw = path.join(work, `ramp-raw-${segIdx-1}.mp4`);
+          await ff(["-f", "concat", "-safe", "0", "-i", rampList, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-ar", "44100", rampRaw]);
+          if (textPart || flashPart) {
+            await ff(["-i", rampRaw, "-vf", `${textPart.slice(1)}${flashPart}`, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy", out]);
+          } else {
+            fs.copyFileSync(rampRaw, out);
+          }
+          return { path: out, dur };
+        }
+
+        // Standard (no ramp): flat speed
+        setpts = speed !== 1.0 ? `,setpts=${(1/speed).toFixed(3)}*PTS` : "";
+        ramp = speed < 1.0 ? `,tblend=all_mode=average` : "";
         const vf = `${fitChain}${focus}${gradePart}${punch}${setpts}${ramp}${polishPart}${textPart}${flashPart}`;
-        // attach a silent stereo track so every segment has audio (required by xfade audio crossfade)
         await ff(["-ss", String(start), "-t", String(grab), "-i", local, "-f", "lavfi", "-t", String(dur), "-i", "anullsrc=cl=stereo:r=44100", "-vf", vf, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-t", String(dur), out]);
       }
       return { path: out, dur };
@@ -268,9 +325,9 @@ async function build(job: TrailerJob, req: TrailerRequest) {
       upd(job, { progress: 24 + Math.round((i + 1) / buildCuts * 30) });
     }
 
-    // 3. TEASE PEAK — best clip, eased slow-mo + full frame
+    // 3. TEASE PEAK — dynamic ramp (fast-in → slow peak → fast-out) + body focus
     upd(job, { progress: 58, stage: "Tease peak" });
-    segments.push(await makeSegment(clips[clips.length - 1], "none", Math.max(1.5, beat * 1.7), { speed: 0.55 }));
+    segments.push(await makeSegment(clips[clips.length - 1], focuses[0] || "none", Math.max(2.0, beat * 2.2), { speed: 0.45, ramp: true, punch: true }));
 
     // 4. TENSION micro-black (0.35s) before the reveal
     const blackPath = path.join(work, "tension.mp4");

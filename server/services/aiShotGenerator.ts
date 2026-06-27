@@ -23,15 +23,21 @@ const PUBLIC_BASE = (process.env.PUBLIC_APP_URL || "https://creatorvault.live").
 const POLLO_URL = "https://pollo.ai/api/platform/generation/pollo/pollo-v1-6";
 const POLLO_KEY = () => process.env.POLLO_API_KEY || "";
 
-// Distinct cinematic camera treatments — each produces a visibly different shot.
-export const AI_CAMERA_SHOTS: { id: string; label: string; prompt: string }[] = [
-  { id: "low_push",   label: "Low-Angle Push",   prompt: "slow cinematic camera push in from a low angle, dramatic upward perspective, luxury lighting, shallow depth of field, premium film look" },
-  { id: "orbit",      label: "Orbit",            prompt: "smooth orbital camera move circling the subject, parallax, cinematic rim lighting, glossy editorial color, premium film look" },
-  { id: "side_glide", label: "Side Glide",       prompt: "lateral tracking shot gliding sideways past the subject, motion parallax, moody key light, cinematic anamorphic feel" },
-  { id: "overhead",   label: "Overhead Pan",     prompt: "slow overhead descending camera pan, top-down reveal, soft directional light, high-end editorial mood" },
-  { id: "rack_focus", label: "Rack Focus",       prompt: "static frame with a slow rack focus pull onto the subject, bokeh background, intimate close detail, cinematic warmth" },
-  { id: "dolly_out",  label: "Dolly Out",        prompt: "slow dolly-out reveal pulling back from a tight detail to a wider frame, dramatic falloff lighting, premium cinematic grade" },
-  { id: "slow_tilt",  label: "Slow Tilt",        prompt: "slow vertical camera tilt up the body, elegant reveal, soft glamour lighting, glossy skin, cinematic premium look" },
+// Body-part-specific cinematic camera treatments.
+// Each prompt tells Pollo EXACTLY which body feature to frame and how to move.
+export const AI_CAMERA_SHOTS: { id: string; label: string; bodyFocus: string; prompt: string }[] = [
+  { id: "abs_push",      label: "Abs Push",         bodyFocus: "abs",       prompt: "slow cinematic camera push in tight on a toned midsection, abs as the hero, low angle looking up, dramatic side lighting, shallow depth of field, luxury film grade" },
+  { id: "waist_orbit",   label: "Waist Orbit",      bodyFocus: "waist",     prompt: "smooth orbital camera circling the hourglass waist, side-light accentuating the curve, slow 180-degree arc, cinematic rim lighting, premium editorial look" },
+  { id: "butt_arch",     label: "Butt Arch",        bodyFocus: "butt",      prompt: "low-angle camera push from behind, rear curves as the hero, backlight creating a halo silhouette on the arch, slow push in, cinematic heat grade" },
+  { id: "legs_tilt",     label: "Legs Tilt",        bodyFocus: "legs",      prompt: "slow vertical camera tilt from ankle up the full length of the legs, elongating low angle, soft glamour lighting, cinematic premium look" },
+  { id: "thigh_glide",   label: "Thigh Glide",      bodyFocus: "thighs",    prompt: "lateral tracking shot gliding at thigh level, tight framing on inner thighs, soft boudoir lighting, shallow focus, intimate cinematic warmth" },
+  { id: "chest_reveal",  label: "Chest Reveal",     bodyFocus: "chest",     prompt: "slow camera tilt from collarbone down to chest, rack focus pulling onto the decollete, rose-warm lighting, cinematic editorial quality" },
+  { id: "back_spine",    label: "Back Spine",       bodyFocus: "back",      prompt: "slow camera tilt down the spine from nape to lower back, backlight edge glow, cinematic noir grade, intimate reveal" },
+  { id: "lowerback_glow",label: "Lower Back Glow",  bodyFocus: "lowerback", prompt: "tight close-up push on the lower back dimples, warm backlight halo, slow push in, cinematic luxury grade" },
+  { id: "hips_sway",     label: "Hip Sway",         bodyFocus: "hips",      prompt: "side tracking shot following the hip sway in motion, parallax, neon-warm lighting, cinematic energy" },
+  { id: "face_closeup",  label: "Face Close-Up",    bodyFocus: "face",      prompt: "extreme close-up orbit around the jawline and lips, dramatic side light, soft skin glow, cinematic intimacy" },
+  { id: "silhouette",    label: "Silhouette",       bodyFocus: "silhouette",prompt: "full-body silhouette with strong backlight, 360-degree orbit, cinematic noir, every curve visible against the light" },
+  { id: "dolly_reveal",  label: "Dolly Reveal",     bodyFocus: "none",      prompt: "slow dolly-out reveal from a tight body detail to a full-frame wide shot, dramatic falloff lighting, premium cinematic grade" },
 ];
 
 function ffSync(args: string[], timeoutMs = 60000): void {
@@ -99,7 +105,7 @@ async function polloShot(imageUrl: string, prompt: string, resolution = "720p", 
   } catch { return null; }
 }
 
-export interface AIShotResult { shots: string[]; framesUsed: number; }
+export interface AIShotResult { shots: string[]; bodyFocuses: string[]; framesUsed: number; }
 
 /**
  * Generate `count` NEW AI shots from the provided source clips.
@@ -139,14 +145,20 @@ export async function generateAIShots(
     // 3. Run Pollo with bounded concurrency (3 at a time)
     const res = opts.resolution || "720p";
     const out: string[] = [];
+    const outFocuses: string[] = [];
     let done = 0;
     const CONC = 3;
     for (let i = 0; i < jobs.length; i += CONC) {
       const batch = jobs.slice(i, i + CONC);
       const results = await Promise.all(batch.map(j => polloShot(j.frame, j.prompt, res, 5)));
-      for (const u of results) { if (u) out.push(u); done++; opts.onProgress?.(done, jobs.length); }
+      for (let k = 0; k < results.length; k++) {
+        const u = results[k];
+        const cam = AI_CAMERA_SHOTS[(i + k) % AI_CAMERA_SHOTS.length];
+        if (u) { out.push(u); outFocuses.push(cam.bodyFocus); }
+        done++; opts.onProgress?.(done, jobs.length);
+      }
     }
-    return { shots: out, framesUsed: frames.length };
+    return { shots: out, bodyFocuses: outFocuses, framesUsed: frames.length };
   } finally {
     try { execSync(`rm -rf ${JSON.stringify(work)}`); } catch {}
   }
