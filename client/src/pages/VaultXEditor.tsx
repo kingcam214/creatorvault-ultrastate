@@ -621,11 +621,65 @@ function VaultXEditor() {
         </Panel>
       </div>
 
-      {/* Mobile bottom bar */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/90 p-3 backdrop-blur-2xl lg:hidden">
-        <div className="mx-auto grid max-w-2xl grid-cols-[1fr_auto] gap-3">
-          <button type="button" onClick={exportPackage} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#F2B15B] px-4 py-3 font-black text-black"><Download size={18} /> Export drop package</button>
-          <button type="button" onClick={saveDraft} className="flex min-h-12 min-w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-white"><Save size={18} /></button>
+      {/* Smart Next Step Bar — always visible, tells creator exactly what to do */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/95 backdrop-blur-2xl">
+        <div className="mx-auto max-w-2xl p-3">
+          {/* Step indicator */}
+          {(() => {
+            const step = !videoUrl ? 1 : timelineClips.length === 0 ? 1 : !selectedStyle ? 2 : paidPrice < 1 ? 3 : !consentCheck ? 3 : 4;
+            const steps = [
+              { n: 1, label: "Upload" },
+              { n: 2, label: "Style" },
+              { n: 3, label: "Price" },
+              { n: 4, label: "Export" },
+            ];
+            return (
+              <div className="mb-2 flex items-center justify-center gap-1">
+                {steps.map((s, i) => (
+                  <>
+                    <div key={s.n} className={`flex items-center gap-1 text-[10px] font-black ${
+                      step > s.n ? "text-emerald-400" : step === s.n ? "text-[#F2B15B]" : "text-zinc-600"
+                    }`}>
+                      <div className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-black ${
+                        step > s.n ? "bg-emerald-400 text-black" : step === s.n ? "bg-[#F2B15B] text-black" : "bg-zinc-800 text-zinc-500"
+                      }`}>{step > s.n ? "✓" : s.n}</div>
+                      <span className="hidden sm:block">{s.label}</span>
+                    </div>
+                    {i < steps.length - 1 && <div className={`h-px w-6 ${ step > s.n ? "bg-emerald-400" : "bg-zinc-700" }`} />}
+                  </>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Next step action */}
+          {!videoUrl ? (
+            <label className="flex min-h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[#F2B15B] font-black text-black">
+              <Upload size={18} /> Upload your video to start
+              <input type="file" accept="video/*,audio/*" className="hidden" onChange={handleUpload} />
+            </label>
+          ) : !selectedStyle ? (
+            <button type="button" onClick={() => setActiveTab("style")} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#F2B15B] font-black text-black">
+              <Wand2 size={18} /> Next: Pick a style for your drop
+            </button>
+          ) : paidPrice < 1 ? (
+            <button type="button" onClick={() => setActiveTab("publish")} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#F2B15B] font-black text-black">
+              <DollarSign size={18} /> Next: Set your unlock price
+            </button>
+          ) : !consentCheck ? (
+            <button type="button" onClick={() => { setConsentCheck(true); setActiveTab("publish"); }} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#F2B15B] font-black text-black">
+              <ShieldCheck size={18} /> Next: Confirm consent to unlock export
+            </button>
+          ) : (
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <button type="button" onClick={exportPackage} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#F2B15B] font-black text-black">
+                <Download size={18} /> Export drop package — ready to launch
+              </button>
+              <button type="button" onClick={saveDraft} className="flex min-h-14 min-w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-white">
+                <Save size={18} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </main>

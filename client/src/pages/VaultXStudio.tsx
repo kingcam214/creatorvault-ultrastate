@@ -1103,46 +1103,177 @@ export default function VaultXStudio() {
   const [nav, setNav] = useState<NavItem>("make");
   const [selectedMake, setSelectedMake] = useState<MakeChoice>("Body Cinema");
 
+  // Guided flow state — tracks where the creator is in the 3-step flow
+  const [guidedStep, setGuidedStep] = useState<1 | 2 | 3>(1);
+
+  const STEPS = [
+    { n: 1, label: "Upload or Edit", icon: <Upload size={16} />, desc: "Bring your video" },
+    { n: 2, label: "Pick a Preset", icon: <Sparkles size={16} />, desc: "Choose your look" },
+    { n: 3, label: "Launch", icon: <Zap size={16} />, desc: "Set price and go live" },
+  ];
+
   return (
-    <main className="min-h-screen bg-[#0a0a0a] text-white">
+    <main className="min-h-screen bg-[#0a0a0a] pb-24 text-white">
+
+      {/* Sticky header with step tracker */}
       <header className="sticky top-0 z-30 border-b border-[#1f1f1f] bg-[#0a0a0a]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <Link href="/vault-x" className="text-2xl font-black tracking-tight text-white">
-            Vault<span style={{ color: accent }}>X</span>
-          </Link>
-          <nav className="grid grid-cols-2 gap-2 sm:grid-cols-5 lg:flex">
-            <TopNavButton active={nav === "make"} onClick={() => setNav("make")}>Make Video</TopNavButton>
-            <TopNavButton active={nav === "edit"} onClick={() => setNav("edit")}>Edit Video</TopNavButton>
-            <TopNavButton active={nav === "sell"} onClick={() => setNav("sell")}>Sell It</TopNavButton>
-            <TopNavButton active={nav === "earn"} onClick={() => setNav("earn")}>Money</TopNavButton>
-            <TopNavButton active={nav === "settings"} onClick={() => setNav("settings")}>Settings</TopNavButton>
-          </nav>
+        <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-3 md:px-6">
+          <div className="flex items-center justify-between">
+            <Link href="/vault-x" className="text-xl font-black tracking-tight text-white">
+              Vault<span style={{ color: accent }}>X</span>
+            </Link>
+            {/* Step tracker */}
+            <div className="flex items-center gap-1">
+              {STEPS.map((s, i) => (
+                <>
+                  <button
+                    key={s.n}
+                    onClick={() => setGuidedStep(s.n as 1 | 2 | 3)}
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black transition ${
+                      guidedStep === s.n
+                        ? "bg-[#C9A84C] text-black"
+                        : guidedStep > s.n
+                        ? "bg-emerald-500/20 text-emerald-300"
+                        : "bg-white/5 text-zinc-500"
+                    }`}
+                  >
+                    {guidedStep > s.n ? <Check size={12} /> : s.icon}
+                    <span className="hidden sm:block">{s.label}</span>
+                    <span className="sm:hidden">{s.n}</span>
+                  </button>
+                  {i < STEPS.length - 1 && (
+                    <div className={`h-px w-4 ${ guidedStep > s.n ? "bg-emerald-500" : "bg-zinc-700" }`} />
+                  )}
+                </>
+              ))}
+            </div>
+            {/* Advanced nav */}
+            <button
+              onClick={() => setNav(nav === "earn" ? "make" : "earn")}
+              className="text-xs font-black text-zinc-500 hover:text-white"
+            >
+              {nav === "earn" ? "← Back" : "Money →"}
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-        <HeroPreview choice={selectedMake} />
+      <div className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-5 md:px-6">
 
-        <section className="grid gap-4 md:grid-cols-3">
-          {[
-            [<Crown size={24} />, "Not CreatorVault", "A separate adult-business machine with its own command UX, language, and production rules."],
-            [<Wand2 size={24} />, "Model rack aware", "Pollo, Replicate, clone, and premium lanes are surfaced according to real server configuration."],
-            [<Library size={24} />, "Revenue armed", "Finished content moves directly toward checkout and tracked distribution when the artifact is ready."],
-          ].map(([icon, title, body]) => (
-            <div key={String(title)} className="rounded-[1.5rem] border border-[#242424] bg-[#141414] p-5">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-[#C9A84C]">{icon}</div>
-              <h3 className="text-xl font-black text-white">{title}</h3>
-              <p className="mt-2 text-sm leading-6 text-[#999999]">{body}</p>
+        {/* ═══ STEP 1: UPLOAD OR EDIT ═══════════════════════════════════════ */}
+        {guidedStep === 1 && (
+          <div>
+            <div className="mb-5">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Step 1 of 3</p>
+              <h1 className="mt-1 text-3xl font-black text-white">Bring your video.</h1>
+              <p className="mt-1 text-sm text-zinc-400">Upload a clip to the editor, or use an existing URL. Your video is the source — everything else builds from it.</p>
             </div>
-          ))}
-        </section>
 
-        {nav === "make" && <MakePanel selected={selectedMake} setSelected={setSelectedMake} />}
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Option A: Go to Editor */}
+              <Link
+                href="/vaultx/editor"
+                className="flex flex-col items-start gap-3 rounded-[1.5rem] border border-[#C9A84C]/40 bg-[#130f05] p-6 transition hover:border-[#C9A84C] hover:shadow-[0_0_30px_rgba(201,168,76,0.1)]"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#C9A84C] text-black">
+                  <Film size={22} />
+                </div>
+                <div>
+                  <p className="text-lg font-black text-white">Open Editor</p>
+                  <p className="mt-1 text-sm text-zinc-400">Upload your clip, trim it, pick a style, set a price — then come back here to launch.</p>
+                </div>
+                <div className="mt-auto flex items-center gap-2 text-sm font-black text-[#C9A84C]">
+                  Go to Editor <ArrowRight size={16} />
+                </div>
+              </Link>
+
+              {/* Option B: Paste URL directly */}
+              <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[#242424] bg-[#141414] p-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-[#C9A84C]">
+                  <Upload size={22} />
+                </div>
+                <div>
+                  <p className="text-lg font-black text-white">Paste a video URL</p>
+                  <p className="mt-1 text-sm text-zinc-400">Already have a hosted video? Paste the URL and go straight to launch.</p>
+                </div>
+                <button
+                  onClick={() => setGuidedStep(2)}
+                  className="mt-auto inline-flex items-center gap-2 rounded-full border border-[#C9A84C] px-4 py-2 text-sm font-black text-[#C9A84C] hover:bg-[#C9A84C] hover:text-black"
+                >
+                  Skip to preset picker <ArrowRight size={14} />
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setGuidedStep(2)}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#C9A84C] py-4 text-base font-black text-black"
+            >
+              I have my video — Next: Pick a Preset <ArrowRight size={18} />
+            </button>
+          </div>
+        )}
+
+        {/* ═══ STEP 2: PICK A PRESET ════════════════════════════════════════ */}
+        {guidedStep === 2 && (
+          <div>
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Step 2 of 3</p>
+                <h1 className="mt-1 text-3xl font-black text-white">Pick a preset.</h1>
+                <p className="mt-1 text-sm text-zinc-400">Each preset controls the lighting, motion, camera, and copy for your drop. Pick one — it fills everything in automatically.</p>
+              </div>
+              <button onClick={() => setGuidedStep(3)} className="flex-shrink-0 rounded-full border border-zinc-700 px-4 py-2 text-sm font-black text-zinc-400 hover:text-white">Skip →</button>
+            </div>
+
+            {/* Inline preset picker — simplified */}
+            <LaunchConsole selectedMake={selectedMake} />
+
+            <button
+              onClick={() => setGuidedStep(3)}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#C9A84C] py-4 text-base font-black text-black"
+            >
+              Preset selected — Next: Launch <ArrowRight size={18} />
+            </button>
+          </div>
+        )}
+
+        {/* ═══ STEP 3: LAUNCH ═══════════════════════════════════════════════ */}
+        {guidedStep === 3 && (
+          <div>
+            <div className="mb-5">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Step 3 of 3</p>
+              <h1 className="mt-1 text-3xl font-black text-white">Launch it.</h1>
+              <p className="mt-1 text-sm text-zinc-400">Paste your video URL, confirm the price, check consent — then hit Ignite. The AI stack runs, Pollo generates, Stripe attaches, Telegram publishes.</p>
+            </div>
+            <LaunchConsole selectedMake={selectedMake} />
+          </div>
+        )}
+
+        {/* Advanced panels — accessible from nav */}
         {nav === "edit" && <EditPanel />}
         {nav === "sell" && <SellPanel />}
         {nav === "earn" && <EarnPanel />}
         {nav === "settings" && <SettingsPanel />}
-        <LaunchConsole selectedMake={selectedMake} />
+
+      </div>
+
+      {/* Bottom nav — always visible on mobile */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#1f1f1f] bg-[#0a0a0a]/95 backdrop-blur-xl lg:hidden">
+        <div className="mx-auto grid max-w-5xl grid-cols-3 gap-1 p-2">
+          {STEPS.map(s => (
+            <button
+              key={s.n}
+              onClick={() => setGuidedStep(s.n as 1 | 2 | 3)}
+              className={`flex flex-col items-center gap-0.5 rounded-2xl py-2 text-[10px] font-black transition ${
+                guidedStep === s.n ? "bg-[#C9A84C] text-black" : "text-zinc-500"
+              }`}
+            >
+              {s.icon}
+              {s.label}
+            </button>
+          ))}
+        </div>
       </div>
     </main>
   );
