@@ -220,6 +220,7 @@ import { bodyCinemaRouter } from "./routers/bodyCinemaRouter";
 import { complianceRouter } from "./routers/complianceRouter";
 import { renderGraphRouter } from "./routers/renderGraphRouter";
 import { realEditorRouter } from "./routers/realEditorRouter";
+import { trailerRouter } from "./routers/trailerRouter";
 import { videoLabProRouter } from "./routers/videoLabProRouter";
 import { videoLabRouter } from "./routers/videoLabRouter";
 import { videoLabAgentRouter } from "./routers/videoLabAgentRouter";
@@ -942,6 +943,7 @@ export const appRouter = router({
   compliance: complianceRouter,
   renderGraph: renderGraphRouter,
   editor: realEditorRouter,
+  trailer: trailerRouter,
   verticalWizard: verticalWizardRouter,
   videoEditor: videoEditorRouter,
   creatorVideoEditor: creatorVideoEditorRouter,

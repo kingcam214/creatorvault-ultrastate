@@ -2637,15 +2637,15 @@ export default function VaultX() {
 
             {/* Quick links */}
             <div className="grid grid-cols-2 gap-3 mb-8">
+              <a href="/vaultx/trailers" className="flex flex-col gap-2 rounded-2xl border border-[#F2B15B]/30 bg-[#F2B15B]/10 p-4 hover:border-[#F2B15B]/60 transition">
+                <Flame className="h-5 w-5" style={{ color: "#F2B15B" }} />
+                <p className="font-black text-sm">Viral Trailers</p>
+                <p className="text-xs text-zinc-500">Auto-cut teasers built to convert</p>
+              </a>
               <a href="/vaultx/editor" className="flex flex-col gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 hover:border-white/20 transition">
                 <Video className="h-5 w-5 text-red-400" />
                 <p className="font-black text-sm">Video Editor</p>
-                <p className="text-xs text-zinc-500">Trim, style, and export your clip</p>
-              </a>
-              <a href="/king/content" className="flex flex-col gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 hover:border-white/20 transition">
-                <Sparkles className="h-5 w-5" style={{ color: "#00D9FF" }} />
-                <p className="font-black text-sm">Content Factory</p>
-                <p className="text-xs text-zinc-500">Generate clone drops, trailers, posts</p>
+                <p className="text-xs text-zinc-500">Trim, style, export with Body Cinema</p>
               </a>
             </div>
 
