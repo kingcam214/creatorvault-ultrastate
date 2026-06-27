@@ -2577,99 +2577,136 @@ export default function VaultX() {
     { label: "Prove revenue", detail: "Track purchases, routes, receipts, and creator earnings from real backend records.", done: activeTab === "earnings" },
   ];
 
+  // Creator-first home screen — no developer panels, no GAP badges, no config walls
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute -top-28 right-0 h-72 w-72 rounded-full bg-red-600/20 blur-3xl" />
-        <div className="absolute top-1/2 -left-24 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl" />
-      </div>
-      <div className="sticky top-0 z-50 border-b border-white/10 bg-black/85 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <a href="/vault-x" className="flex items-center gap-2"><VaultXLogo size="sm" /><span className="rounded-full bg-red-500/15 px-2 py-1 text-[10px] font-black text-red-300">18+ VERIFIED</span></a>
-            <div className="hidden items-center gap-2 sm:flex">
-              <a href="/vault-x/editor" className="rounded-xl bg-red-500 px-4 py-2 text-xs font-black text-white hover:bg-red-600">Upload & Process</a>
-              <a href="/vault-x/studio" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-black text-white hover:border-red-400/50">Open Studio</a>
-            </div>
-          </div>
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            {tabs.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => setActiveTab(id)}
-                className={`flex flex-shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-black transition-colors ${
-                  activeTab === id ? "bg-red-500 text-white shadow-lg shadow-red-950/30" : "bg-white/[.045] text-zinc-400 hover:bg-white/[.08] hover:text-white"
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-              </button>
-            ))}
+    <div className="min-h-screen bg-[#080808] text-white">
+
+      {/* Clean sticky header */}
+      <div className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#080808]/95 backdrop-blur-xl">
+        <div className="mx-auto max-w-2xl px-4 py-3 flex items-center justify-between">
+          <a href="/vault-x" className="text-xl font-black tracking-tight" style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>VaultX</a>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setActiveTab("earnings")} className={`px-3 py-1.5 rounded-xl text-xs font-black transition ${ activeTab === "earnings" ? "bg-emerald-500/20 text-emerald-300" : "text-zinc-500 hover:text-white" }`}>Earnings</button>
+            <button onClick={() => setActiveTab("profile")} className={`px-3 py-1.5 rounded-xl text-xs font-black transition ${ activeTab === "profile" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-white" }`}>My Profile</button>
+            <button onClick={() => setActiveTab("messages")} className={`px-3 py-1.5 rounded-xl text-xs font-black transition ${ activeTab === "messages" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-white" }`}>Messages</button>
           </div>
         </div>
       </div>
 
-      <main className="relative mx-auto max-w-7xl px-4 pb-24 pt-5 sm:px-6 lg:px-8">
-        <section className="mb-6 rounded-[2rem] border border-white/10 bg-white/[.035] p-5 shadow-2xl shadow-black/40 sm:p-7">
-          <div className="grid gap-6 lg:grid-cols-[1.1fr_.9fr] lg:items-end">
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[.28em] text-red-300">Creator command center</p>
-              <h1 className="mt-2 text-3xl font-black tracking-[-.06em] sm:text-5xl">Approve the source, package the drop, launch the money route.</h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400 sm:text-base">VaultX now opens with the actual Body Cinema operating path: verify consent, process creator-owned media, package it into a sellable teaser and unlock, distribute it, and track revenue. Every primary action points to a real production workflow.</p>
+      <main className="mx-auto max-w-2xl px-4 pb-32 pt-6">
+
+        {/* ── HOME VIEW ─────────────────────────────────────────────────── */}
+        {activeTab === "discover" && (
+          <div>
+            {/* Welcome */}
+            <div className="mb-8">
+              <p className="text-xs font-black uppercase tracking-[0.2em] mb-2" style={{ color: "#c9a84c" }}>VaultX</p>
+              <h1 className="text-3xl font-black leading-tight mb-3">Turn your content into paid drops. Keep 85%.</h1>
+              <p className="text-sm text-zinc-400 leading-relaxed">Upload a video. Pick a style. Set your price. VaultX generates the cinematic preview, attaches checkout, and publishes to Telegram — all in one flow.</p>
             </div>
-            <div className="space-y-3">
-              <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-black/50" aria-label="VaultX women creator command stack">
-                <img
-                  src="/images/vaultx/vaultx-business-presenter-mobile.png"
-                  alt="Woman creator operating VaultX revenue workflow"
-                  className="h-[430px] w-full object-cover object-center opacity-95"
-                  loading="eager"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/45 to-transparent" />
-                <div className="absolute inset-x-4 bottom-4 rounded-[1.35rem] border border-red-300/20 bg-black/70 p-4 backdrop-blur-xl">
-                  <div className="flex items-start justify-between gap-3">
+
+            {/* Primary CTA — the one thing to do */}
+            <a
+              href="/vaultx/drop"
+              className="flex items-center justify-between w-full rounded-2xl p-5 mb-4 transition hover:brightness-110"
+              style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)", color: "#050505" }}
+            >
+              <div>
+                <p className="text-lg font-black">Create a Drop</p>
+                <p className="text-sm font-medium opacity-70">Upload → Pick style → Set price → Launch</p>
+              </div>
+              <div className="text-2xl">→</div>
+            </a>
+
+            {/* What VaultX does — 3 things */}
+            <div className="grid gap-3 mb-8">
+              {[
+                { emoji: "🎬", title: "Body Cinema", desc: "Your video becomes a cinematic teaser + paid unlock. Fans pay to see the full version.", href: "/vaultx/drop" },
+                { emoji: "💰", title: "Paid Drops", desc: "Set a price. Stripe handles checkout. You get 85% of every sale.", href: "/vaultx/drop" },
+                { emoji: "📱", title: "Telegram Distribution", desc: "Your drop gets published to your Telegram channel automatically with a tracked link.", href: "/vaultx/drop" },
+              ].map(item => (
+                <a key={item.title} href={item.href} className="flex items-start gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 hover:border-white/20 transition">
+                  <span className="text-2xl flex-shrink-0 mt-0.5">{item.emoji}</span>
+                  <div>
+                    <p className="font-black text-white mb-1">{item.title}</p>
+                    <p className="text-sm text-zinc-400 leading-relaxed">{item.desc}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            {/* Quick links */}
+            <div className="grid grid-cols-2 gap-3 mb-8">
+              <a href="/vaultx/editor" className="flex flex-col gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 hover:border-white/20 transition">
+                <Video className="h-5 w-5 text-red-400" />
+                <p className="font-black text-sm">Video Editor</p>
+                <p className="text-xs text-zinc-500">Trim, style, and export your clip</p>
+              </a>
+              <a href="/king/content" className="flex flex-col gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 hover:border-white/20 transition">
+                <Sparkles className="h-5 w-5" style={{ color: "#00D9FF" }} />
+                <p className="font-black text-sm">Content Factory</p>
+                <p className="text-xs text-zinc-500">Generate clone drops, trailers, posts</p>
+              </a>
+            </div>
+
+            {/* How it works */}
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-zinc-500 mb-4">How it works</p>
+              <div className="space-y-4">
+                {[
+                  ["1", "Upload your video", "Any clip you own. Phone video, studio footage — anything."],
+                  ["2", "Pick a Body Cinema preset", "Abs, curves, silhouette, mirror moment — one tap sets the cinematic style."],
+                  ["3", "Set your unlock price", "$19, $29, $49 — you decide. Fans pay to unlock the full version."],
+                  ["4", "Hit Launch", "AI generates the cinematic version, Stripe attaches checkout, Telegram publishes."],
+                ].map(([n, title, desc]) => (
+                  <div key={n} className="flex gap-4">
+                    <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black" style={{ background: "rgba(201,168,76,0.15)", color: "#c9a84c" }}>{n}</div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-[.24em] text-red-200">Women-led launch stack</p>
-                      <p className="mt-1 text-xl font-black tracking-[-.04em] text-white">Tease → Unlock → VIP → Receipt</p>
-                    </div>
-                    <div className="rounded-2xl bg-emerald-500/10 px-3 py-2 text-right text-emerald-100">
-                      <p className="text-[10px] font-black uppercase tracking-[.18em]">Creator</p>
-                      <p className="text-lg font-black">85%</p>
+                      <p className="font-black text-sm text-white">{title}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">{desc}</p>
                     </div>
                   </div>
-                  <p className="mt-3 text-xs leading-5 text-zinc-300">The command center stays centered on women creators, paid access, routed traffic, checkout proof, and revenue control.</p>
-                </div>
+                ))}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <a href="/vault-x/editor" className="rounded-3xl bg-red-500 p-4 text-sm font-black text-white shadow-2xl shadow-red-950/30 hover:bg-red-600"><Video className="mb-4 h-5 w-5" />Upload & Process</a>
-                <a href="/vault-x/studio" className="rounded-3xl border border-white/10 bg-white/10 p-4 text-sm font-black text-white hover:border-red-400/50"><Clapperboard className="mb-4 h-5 w-5" />Launch Studio</a>
-                <a href="/vaultx/distribution" className="rounded-3xl border border-white/10 bg-white/10 p-4 text-sm font-black text-white hover:border-red-400/50"><Globe className="mb-4 h-5 w-5" />Distribute</a>
-                <button onClick={() => setActiveTab("earnings")} className="rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-left text-sm font-black text-emerald-100 hover:border-emerald-300/50"><DollarSign className="mb-4 h-5 w-5" />View Earnings</button>
-              </div>
+              <a href="/vaultx/drop" className="mt-5 flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-black transition" style={{ background: "rgba(201,168,76,0.15)", color: "#c9a84c" }}>
+                Start your first drop →
+              </a>
             </div>
           </div>
-          <div className="mt-6"><VaultXWorkflow steps={workflowSteps} activeStep={activeTab === "discover" ? 0 : activeTab === "profile" ? 1 : activeTab === "telegram" || activeTab === "xcom" ? 2 : activeTab === "earnings" ? 3 : 1} /></div>
-        </section>
-
-        {activeTab === "discover" && (
-          <section className="mb-6 grid gap-3 md:grid-cols-4">
-            <VaultXActionCard href="/vault-x/editor" title="Prepare approved media" body="Start with a creator-owned asset, generate Body Cinema analysis, polish exports, and keep source readiness visible." icon={<Video className="h-5 w-5" />} cta="Open Editor" />
-            <VaultXActionCard href="/vault-x/studio" title="Build the Body Cinema launch" body="Package teaser, paid unlock, VIP ladder, provider generation, checkout, Telegram route, and proof receipt in one command rail." icon={<Package className="h-5 w-5" />} cta="Open Studio" />
-            <VaultXActionCard href="/vaultx/distribution" title="Push the launch" body="Move finished content into tracked distribution paths for VaultX, Telegram, X.com, and external fan platforms." icon={<Globe className="h-5 w-5" />} cta="Open Distribution" />
-            <VaultXActionCard href="/god-mode" title="Command God Mode" body="Turn a creator goal into concrete revenue actions, compliant launch copy, and next-step planning." icon={<Sparkles className="h-5 w-5" />} cta="Open God Mode" />
-          </section>
         )}
 
-        <section className="rounded-[2rem] border border-white/10 bg-black/35 p-4 shadow-2xl shadow-black/30 sm:p-6">
-          {activeTab === "discover" && <DiscoverTab />}
-          {activeTab === "feed" && <ContentFeedTab userId={user.id} />}
-          {activeTab === "messages" && <MessagingTab userId={user.id} />}
-          {activeTab === "profile" && <MyProfileTab userId={user.id} />}
-          {activeTab === "telegram" && <TelegramTab userId={user.id} />}
-          {activeTab === "xcom" && <XComTab userId={user.id} />}
-          {activeTab === "earnings" && <EarningsTab userId={user.id} />}
-        </section>
+        {/* ── OTHER TABS ─────────────────────────────────────────────────── */}
+        {activeTab === "feed" && <ContentFeedTab userId={user.id} />}
+        {activeTab === "messages" && <MessagingTab userId={user.id} />}
+        {activeTab === "profile" && <MyProfileTab userId={user.id} />}
+        {activeTab === "telegram" && <TelegramTab userId={user.id} />}
+        {activeTab === "xcom" && <XComTab userId={user.id} />}
+        {activeTab === "earnings" && <EarningsTab userId={user.id} />}
+
       </main>
+
+      {/* Bottom nav — mobile */}
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.07] bg-[#080808]/95 backdrop-blur-xl">
+        <div className="mx-auto max-w-2xl px-4 py-2 grid grid-cols-4 gap-1">
+          {[
+            { id: "discover", label: "Home", icon: Flame },
+            { id: "messages", label: "Messages", icon: Inbox },
+            { id: "profile", label: "Profile", icon: Settings },
+            { id: "earnings", label: "Earnings", icon: DollarSign },
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id as any)}
+              className={`flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-black transition ${
+                activeTab === id ? "text-white" : "text-zinc-600"
+              }`}
+            >
+              <Icon className={`h-5 w-5 ${ activeTab === id ? "text-[#c9a84c]" : "" }`} />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

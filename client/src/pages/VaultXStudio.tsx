@@ -385,114 +385,11 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
 
   return (
     <section id="launch-console" className="rounded-[2rem] border border-[#C9A84C]/35 bg-[linear-gradient(135deg,#090909,#130f05_55%,#050505)] p-5 shadow-[0_0_60px_rgba(201,168,76,0.08)] md:p-6">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="mb-3 inline-flex rounded-full border border-[#C9A84C]/40 bg-black px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Body Cinema command rail</p>
-          <h2 className="text-3xl font-black text-white md:text-4xl">Build the cinematic preview, paid unlock, VIP ladder, and distribution route end to end.</h2>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-[#b8b8b8]">This command rail calls the live VaultX stack: governed intake, provider-backed generation, artifact polling, Stripe checkout attachment, and Telegram route publishing. Locked lanes expose real configuration gaps instead of pretending to work.</p>
-        </div>
-        <div className="rounded-[1.25rem] border border-white/10 bg-black/70 p-4 text-sm">
-          <p className="font-black text-white">Economics</p>
-          <p className="mt-1 text-[#999999]">Creator keeps <span className="font-black text-[#C9A84C]">85%</span>. Platform fee is <span className="font-black text-[#C9A84C]">15%</span>.</p>
-        </div>
-      </div>
-
-      <div className="mb-6 grid gap-3 md:grid-cols-5">
-        {launchChecklist.map((item) => (
-          <div key={item.label} className={`rounded-[1.25rem] border p-4 ${item.ready ? "border-emerald-500/25 bg-emerald-500/10" : "border-[#242424] bg-black/65"}`}>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-sm font-black text-white">{item.label}</p>
-              <StatusPill active={item.ready} text={item.ready ? "READY" : "GAP"} />
-            </div>
-            <p className="text-xs leading-5 text-[#999999]">{item.detail}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mb-6 grid gap-3 md:grid-cols-3 xl:grid-cols-5">
-        {providers.map((provider: any) => {
-          const canLaunch = providerCanLaunchBodyCinema(provider);
-          const active = selectedProvider === provider.id;
-          return (
-            <button
-              key={provider.id}
-              type="button"
-              onClick={() => setSelectedProvider(provider.id as ProviderChoice)}
-              className={`rounded-[1.25rem] border p-4 text-left transition active:scale-[0.98] ${active ? "border-[#C9A84C] bg-[#201705]" : "border-[#242424] bg-black/65 hover:border-[#C9A84C]/70"}`}
-            >
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <p className="font-black text-white">{provider.label}</p>
-                <StatusPill active={canLaunch} text={canLaunch ? "LAUNCH" : provider.configured ? "WIRED" : "LOCKED"} />
-              </div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#C9A84C]">{provider.tier}</p>
-              <p className="mt-2 text-xs leading-5 text-[#999999]">{provider.configured ? provider.capability : provider.unlockRequirement}</p>
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/50 p-3 text-xs leading-5 text-[#b8b8b8]">
-                <p>Recommended mode: <span className="font-black text-white">{provider.recommendedMode || "operator choice"}</span></p>
-                <p>Estimated BOOST spend: <span className="font-black text-white">{formatMoney(provider.estimatedCostCents?.BOOST || provider.estimatedCostCents?.default)}</span></p>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mb-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-[1.25rem] border border-[#242424] bg-black/70 p-4">
-          <p className="text-sm font-black text-white">Provider command board</p>
-              <p className="mt-2 text-sm leading-6 text-[#999999]">Selected lane: <span className="font-black text-[#C9A84C]">{selectedProviderProfile?.label || selectedProvider}</span>. Body Cinema generation only unlocks when the selected provider exposes the real package-generation endpoint; configured-but-unwired premium lanes remain honest instead of pretending to run.</p>
-              <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] text-[#C9A84C]">{launchReady ? "Launch room ready" : "Close every gap above before ignition"}</p>
-        </div>
-        <div className="rounded-[1.25rem] border border-[#242424] bg-black/70 p-4">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <label className="grid flex-1 gap-2 text-sm font-bold text-[#d6d6d6]">
-              Launch spend cap
-              <input value={budgetCap} onChange={(e) => setBudgetCap(e.target.value)} className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
-            </label>
-            <div className="min-w-44 rounded-2xl border border-white/10 bg-[#101010] p-3 text-xs leading-5 text-[#b8b8b8]">
-              <p>Estimated: <span className="font-black text-white">{formatMoney(estimatedCostCents)}</span></p>
-              <p>Guard: <span className={`font-black ${budgetAllowsLaunch ? "text-emerald-300" : "text-red-300"}`}>{budgetAllowsLaunch ? "inside cap" : "blocked"}</span></p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {packageWorkflow?.blockers?.length ? (
-        <div className="mb-6 rounded-[1.25rem] border border-amber-500/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
-          <p className="font-black text-white">Launch blockers detected</p>
-          <p className="mt-1">{packageWorkflow.blockers.join(" • ")}</p>
-        </div>
-      ) : null}
-
-      <div className="mb-6 rounded-[1.5rem] border border-[#242424] bg-black/70 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-[#C9A84C]">Official social presence</p>
-            <h3 className="mt-2 text-2xl font-black text-white">TikTok, Instagram, and Facebook readiness</h3>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#999999]">VaultX now exposes the real developer-console state for social distribution. Direct posting stays locked until official apps, OAuth callbacks, app review, and user/page tokens are present; no fake social reach is claimed.</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-[#101010] p-3 text-xs leading-5 text-[#b8b8b8]">
-            <p>Status: <span className="font-black text-white">{socialPresence?.status || "checking"}</span></p>
-            <p>Callback base: <span className="break-all font-black text-[#C9A84C]">{socialPresence?.callbackBase || "not configured"}</span></p>
-          </div>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {socialPlatforms.map((platform) => (
-            <div key={platform.id} className="rounded-[1.25rem] border border-white/10 bg-[#101010] p-4">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <p className="font-black text-white">{platform.label}</p>
-                <StatusPill active={Boolean(platform.configured)} text={platform.configured ? "APP READY" : "SETUP"} />
-              </div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#C9A84C]">{platform.status}</p>
-              <p className="mt-2 text-xs leading-5 text-[#999999]">{platform.creatorValue}</p>
-              <div className="mt-3 rounded-2xl border border-white/10 bg-black/50 p-3 text-xs leading-5 text-[#b8b8b8]">
-                <p className="font-black text-white">Next approval step</p>
-                <p>{platform.approvalChecklist?.[0] || "Complete official developer setup."}</p>
-              </div>
-            </div>
-          ))}
-          {!socialPlatforms.length ? (
-            <div className="rounded-[1.25rem] border border-white/10 bg-[#101010] p-4 text-sm leading-6 text-[#999999]">Social-platform readiness is loading from the backend capability matrix.</div>
-          ) : null}
-        </div>
+      {/* Creator-facing header — no developer panels, no GAP badges */}
+      <div className="mb-6">
+        <p className="mb-2 inline-flex rounded-full border border-[#C9A84C]/40 bg-black px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Body Cinema</p>
+        <h2 className="text-2xl font-black text-white md:text-3xl">Turn your video into a paid drop.</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#999999]">Paste your video URL below, pick a preset, set a price, and hit Launch. VaultX generates the cinematic version, attaches Stripe checkout, and publishes to Telegram automatically. You keep 85% of every sale.</p>
       </div>
 
       {/* ── BODY CINEMA PRESET PICKER ──────────────────────────────────── */}
@@ -786,10 +683,22 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               );
             })()}
 
+            {/* Creator-friendly launch status */}
+            {!launchReady && (
+              <div className="mb-4 rounded-2xl border border-[#242424] bg-black/50 p-4 text-sm text-[#999999]">
+                <p className="font-black text-white mb-2">Before you launch:</p>
+                <ul className="space-y-1">
+                  {!sourceMediaUrl.trim() && <li className="flex items-center gap-2"><span className="text-[#C9A84C]">→</span> Paste your video URL above</li>}
+                  {!adultContentFlag && <li className="flex items-center gap-2"><span className="text-[#C9A84C]">→</span> Check the adult content confirmation box</li>}
+                  {!consentConfirmed && <li className="flex items-center gap-2"><span className="text-[#C9A84C]">→</span> Confirm you own this content</li>}
+                  {moneyToCents(price) < 100 && <li className="flex items-center gap-2"><span className="text-[#C9A84C]">→</span> Set a price of at least $1.00</li>}
+                </ul>
+              </div>
+            )}
             <div className="flex flex-wrap gap-3">
               <button onClick={handleLaunch} disabled={working || !launchReady} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
                 {launchRevenuePath.isPending ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
-                {launchReady ? "Ignite Body Cinema generation" : "Close launch gaps first"}
+                {launchRevenuePath.isPending ? "Generating your drop..." : launchReady ? "Launch This Drop" : "Complete the steps above"}
               </button>
               <button onClick={handleFinalize} disabled={working || !packageId} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-[#C9A84C]/70 px-7 py-4 text-base font-black text-[#C9A84C] transition hover:bg-[#C9A84C] hover:text-black disabled:cursor-not-allowed disabled:opacity-60">
                 {finalizeRevenuePath.isPending ? <Loader2 size={18} className="animate-spin" /> : <Route size={18} />}

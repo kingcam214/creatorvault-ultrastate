@@ -160,6 +160,14 @@ function VaultXEditor() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
   const [fileMeta, setFileMeta] = useState("");
+  // First-time onboarding overlay
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try { return !window.localStorage.getItem("vaultx-editor-seen-v1"); } catch { return true; }
+  });
+  const dismissOnboarding = () => {
+    try { window.localStorage.setItem("vaultx-editor-seen-v1", "1"); } catch {}
+    setShowOnboarding(false);
+  };
   const [duration, setDuration] = useState(60);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -349,6 +357,40 @@ function VaultXEditor() {
 
   return (
     <main className="min-h-screen bg-[#050505] pb-24 text-white lg:pb-8">
+
+      {/* First-time onboarding overlay */}
+      {showOnboarding && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ maxWidth: 420, width: "100%", background: "#111", border: "1px solid rgba(242,177,91,0.3)", borderRadius: 20, padding: "28px 24px" }}>
+            <div style={{ fontSize: 11, color: "#F2B15B", fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 8 }}>VaultX Body Cinema Editor</div>
+            <h2 style={{ fontSize: 26, fontWeight: 900, margin: "0 0 12px", lineHeight: 1.2 }}>Trim your video.<br />Set a price. Get paid.</h2>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", lineHeight: 1.6, marginBottom: 20 }}>This editor turns your raw clip into a premium drop. Upload your video, pick a cinematic style, set your unlock price, and export. That's it.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+              {[
+                ["📤", "Upload", "Tap \"Upload clip\" to add your video"],
+                ["🎨", "Style", "Pick a cinematic look from the Style tab"],
+                ["💰", "Price", "Set your unlock price in the Publish tab"],
+                ["📦", "Export", "Hit \"Export drop package\" at the bottom"],
+              ].map(([emoji, title, desc]) => (
+                <div key={title} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>{emoji}</span>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 800, margin: 0 }}>{title}</p>
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", margin: "2px 0 0" }}>{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={dismissOnboarding}
+              style={{ width: "100%", padding: "14px", borderRadius: 12, background: "#F2B15B", color: "#000", fontWeight: 900, fontSize: 15, border: "none", cursor: "pointer" }}
+            >
+              Got it — let me upload my video
+            </button>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", textAlign: "center", marginTop: 10 }}>You won't see this again</p>
+          </div>
+        </div>
+      )}
       <div className="mx-auto max-w-7xl space-y-5 px-3 py-5 md:px-6">
         {/* Hero */}
         <Panel className="overflow-hidden p-4 md:p-6 lg:p-8">
