@@ -53,9 +53,37 @@ const FOCUS: Record<string, { cx: number; cy: number; zoom: number }> = {
 };
 
 // Transition vocabulary mapped to xfade modes (cycled across build cuts)
-const TRANSITIONS = ["fade", "fadeblack", "slideleft", "slideright", "wipeleft", "smoothleft", "circleopen", "dissolve"];
+const TRANSITIONS = ["fade", "fadeblack", "dissolve", "circleopen", "radial", "smoothleft", "smoothup"];
+
+// ─── Cinematic FX helpers ─────────────────────────────────────────────────────
+
+// Chromatic aberration: RGB channel split — the signature pro-trailer look.
+// Splits R/G/B channels by a few pixels, creating a subtle lens-distortion fringe.
+const CHROMA_ABERRATION = "split=3[r][g][b];[r]lutrgb=r=val:g=0:b=0[rv];[g]lutrgb=r=0:g=val:b=0[gv];[b]lutrgb=r=0:g=0:b=val[bv];[rv]pad=iw+8:ih:4:0[rp];[gv]pad=iw+8:ih:0:0[gp];[bv]pad=iw+8:ih:8:0[bp];[rp][gp]blend=all_mode=addition[rg];[rg][bp]blend=all_mode=addition,crop=iw-8:ih:4:0";
+
+// Light leak flash: a warm orange bloom that flashes at a cut (0.15s)
+// Applied as an overlay on the first frame of a segment.
+const LIGHT_LEAK = "fade=t=in:st=0:d=0.08:color=0xFF8C00,fade=t=out:st=0.08:d=0.12:color=0xFF8C00";
+
+// Letterbox: adds 2.35:1 cinematic black bars (top + bottom)
+function letterboxFilter(H: number): string {
+  const barH = Math.round(H * 0.105); // ~10.5% each side for 2.35:1 feel
+  return `drawbox=x=0:y=0:w=iw:h=${barH}:color=black:t=fill,drawbox=x=0:y=ih-${barH}:w=iw:h=${barH}:color=black:t=fill`;
+}
+
+// Glitch frame: horizontal offset + color shift for 2 frames at the hook cut
+const GLITCH = "geq=r='r(X+3,Y)':g='g(X,Y)':b='b(X-3,Y)',noise=alls=18:allf=t";
 
 export type TrailerVibe = "cinematic_heat" | "luxe_gold" | "neon_night" | "noir_afterdark" | "velvet_midnight";
+
+// ─── Creation modes ───────────────────────────────────────────────────────────
+// ai_full_shoot: upload 1 photo/clip → AI generates ALL shots → trailer from AI only
+// ai_remix:      upload clips → AI generates new angles → mix AI + original
+// original:      your footage only, no AI (fast, pure ffmpeg)
+// hybrid:        upload multiple clips → AI generates from each → max variety
+// photo_cinematic: upload a photo → AI animates into cinematic shots → trailer
+export type TrailerMode = "ai_full_shoot" | "ai_remix" | "original" | "hybrid" | "photo_cinematic";
+
 export interface TrailerClip { src: string; trimStart?: number; trimEnd?: number; }
 export interface TrailerRequest {
   clips: TrailerClip[];
@@ -72,8 +100,13 @@ export interface TrailerRequest {
   intensity?: "fast" | "medium" | "slow";
   polish?: boolean;        // film grain + bloom (default true)
   transitions?: boolean;   // xfade between cuts (default true)
-  aiRemix?: boolean;       // generate NEW AI camera angles from the upload and mix them in
+  chromaAberration?: boolean; // RGB channel split on cuts
+  lightLeaks?: boolean;    // warm light flash between cuts
+  letterbox?: boolean;     // 2.35:1 cinematic bars
+  glitch?: boolean;        // glitch frame on hook
+  aiRemix?: boolean;       // legacy: same as mode=ai_remix
   aiShotCount?: number;    // how many AI shots to generate (default 4)
+  mode?: TrailerMode;      // creation mode (default: original if no AI flags)
 }
 export interface TrailerJob {
   id: string; status: "queued" | "processing" | "succeeded" | "failed"; progress: number;
@@ -192,30 +225,48 @@ async function build(job: TrailerJob, req: TrailerRequest) {
   const fitChain = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1,fps=${fps}`;
   const XFADE = 0.28; // transition overlap seconds
 
+  const mode: TrailerMode = req.mode || (req.aiRemix ? "ai_remix" : "original");
+  const useChroma = req.chromaAberration ?? (mode !== "original");
+  const useLightLeaks = req.lightLeaks ?? (mode !== "original");
+  const useLetterbox = req.letterbox ?? false;
+  const useGlitch = req.glitch ?? (mode !== "original");
+
   try {
     let clips = (req.clips || []).filter(c => c && c.src);
     if (clips.length === 0) throw new Error("No clips provided");
 
-    // AI REMIX: generate brand-new camera angles/views from the upload via Pollo,
-    // then mix them with the original so the trailer looks nothing like the source.
-    if (req.aiRemix) {
-      upd(job, { progress: 6, stage: "AI is shooting new angles" });
+    // ─── MODE ROUTING ──────────────────────────────────────────────────────────
+    const needsAI = mode === "ai_full_shoot" || mode === "ai_remix" || mode === "hybrid" || mode === "photo_cinematic";
+    if (needsAI) {
+      upd(job, { progress: 5, stage: "AI is shooting new angles" });
       try {
-        const want = Math.max(2, Math.min(8, req.aiShotCount || 4));
+        const want = Math.max(2, Math.min(8, req.aiShotCount || (mode === "ai_full_shoot" || mode === "photo_cinematic" ? 6 : 4)));
         const ai = await generateAIShots(clips.map(c => ({ src: c.src })), want, {
           resolution: "720p",
-          onProgress: (d, t) => upd(job, { progress: 6 + Math.round((d / t) * 14), stage: `AI generating new shots (${d}/${t})` }),
+          onProgress: (d, t) => upd(job, { progress: 5 + Math.round((d / t) * 15), stage: `AI generating new shots (${d}/${t})` }),
         });
         if (ai.shots.length > 0) {
-          // Lead with AI shots, keep one original as an anchor for authenticity
           const aiClips = ai.shots.map(s => ({ src: s }));
-          clips = [...aiClips, clips[0]];
+          if (mode === "ai_full_shoot" || mode === "photo_cinematic") {
+            // AI ONLY — trailer is 100% AI-generated shots
+            clips = aiClips;
+          } else if (mode === "hybrid") {
+            // HYBRID — interleave AI shots with originals for max variety
+            const merged: typeof clips = [];
+            const maxLen = Math.max(aiClips.length, clips.length);
+            for (let i = 0; i < maxLen; i++) {
+              if (i < aiClips.length) merged.push(aiClips[i]);
+              if (i < clips.length) merged.push(clips[i]);
+            }
+            clips = merged;
+          } else {
+            // AI REMIX — AI leads, original anchors
+            clips = [...aiClips, clips[0]];
+          }
           // Override focus rotation with the body-specific focuses the AI used
           if (ai.bodyFocuses.length > 0) {
             const origFocuses = req.focusRotation && req.focusRotation.length ? req.focusRotation : ["face","chest","waist","abs","butt","legs"];
-            // Merge AI body focuses with original rotation for variety
-            const merged = [...ai.bodyFocuses, ...origFocuses.slice(0, 2)];
-            (req as any)._aiFocuses = merged;
+            (req as any)._aiFocuses = [...ai.bodyFocuses, ...origFocuses.slice(0, 2)];
           }
         }
       } catch { /* fall back to original clips if AI fails */ }
@@ -225,7 +276,7 @@ async function build(job: TrailerJob, req: TrailerRequest) {
     let segIdx = 0;
 
     // Render one beat segment: fit → focus → grade → speed-ramp → polish → text → flash
-    async function makeSegment(clip: TrailerClip, focusId: string, dur: number, opts: { speed?: number; ramp?: boolean; text?: string; flashIn?: boolean; punch?: boolean } = {}): Promise<{ path: string; dur: number }> {
+    async function makeSegment(clip: TrailerClip, focusId: string, dur: number, opts: { speed?: number; ramp?: boolean; text?: string; flashIn?: boolean; punch?: boolean; lightLeak?: boolean; glitch?: boolean } = {}): Promise<{ path: string; dur: number }> {
       const speed = opts.speed ?? 1.0;
       const localExt = isImage(clip.src) ? ".img" : ".mp4";
       const local = path.join(work, `raw-${segIdx}${localExt}`);
@@ -238,6 +289,8 @@ async function build(job: TrailerJob, req: TrailerRequest) {
       const polishPart = usePolish ? `,${POLISH}` : "";
       const textPart = opts.text ? animatedText(opts.text, W, H, dur) : "";
       const flashPart = opts.flashIn ? `,fade=t=in:st=0:d=0.12:color=white` : "";
+      const lightLeakPart = opts.lightLeak ? `,${LIGHT_LEAK}` : "";
+      const glitchPart = opts.glitch ? `,${GLITCH}` : "";
 
       // BODY-FOCUSED ZOOM-PUNCH: zooms toward the actual body region (cx,cy) not just center.
       // Uses zoompan with a body-part-aware x/y offset so the punch pushes INTO the feature.
@@ -254,7 +307,7 @@ async function build(job: TrailerJob, req: TrailerRequest) {
         // Ken-burns push toward the body focus point
         const cx = focusMeta.cx; const cy = focusMeta.cy;
         const d = Math.round(dur * fps);
-        const vf = `zoompan=z='min(zoom+0.0018,1.32)':d=${d}:x='iw*${cx.toFixed(3)}-(iw/zoom)*${cx.toFixed(3)}':y='ih*${cy.toFixed(3)}-(ih/zoom)*${cy.toFixed(3)}':s=${W}x${H}:fps=${fps}${focus}${gradePart}${polishPart}${textPart}${flashPart}`;
+        const vf = `zoompan=z='min(zoom+0.0018,1.32)':d=${d}:x='iw*${cx.toFixed(3)}-(iw/zoom)*${cx.toFixed(3)}':y='ih*${cy.toFixed(3)}-(ih/zoom)*${cy.toFixed(3)}':s=${W}x${H}:fps=${fps}${focus}${gradePart}${polishPart}${textPart}${flashPart}${lightLeakPart}${glitchPart}`;
         await ff(["-loop", "1", "-t", String(dur), "-i", local, "-f", "lavfi", "-t", String(dur), "-i", "anullsrc=cl=stereo:r=44100", "-vf", vf, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-shortest", out]);
       } else {
         const srcDur = probe(local) || 5;
@@ -303,7 +356,7 @@ async function build(job: TrailerJob, req: TrailerRequest) {
         // Standard (no ramp): flat speed
         setpts = speed !== 1.0 ? `,setpts=${(1/speed).toFixed(3)}*PTS` : "";
         ramp = speed < 1.0 ? `,tblend=all_mode=average` : "";
-        const vf = `${fitChain}${focus}${gradePart}${punch}${setpts}${ramp}${polishPart}${textPart}${flashPart}`;
+        const vf = `${fitChain}${focus}${gradePart}${punch}${setpts}${ramp}${polishPart}${textPart}${flashPart}${lightLeakPart}${glitchPart}`;
         await ff(["-ss", String(start), "-t", String(grab), "-i", local, "-f", "lavfi", "-t", String(dur), "-i", "anullsrc=cl=stereo:r=44100", "-vf", vf, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-t", String(dur), out]);
       }
       return { path: out, dur };
@@ -311,7 +364,7 @@ async function build(job: TrailerJob, req: TrailerRequest) {
 
     // 1. HOOK — strongest clip, zoom-punch, flash-in, animated hook text
     upd(job, { progress: 10, stage: "Cutting the hook" });
-    segments.push(await makeSegment(clips[0], focuses[0] || "none", Math.max(1.1, beat * 1.15), { text: req.hookText, flashIn: true, punch: true }));
+    segments.push(await makeSegment(clips[0], focuses[0] || "none", Math.max(1.1, beat * 1.15), { text: req.hookText, flashIn: true, punch: true, lightLeak: useLightLeaks, glitch: useGlitch }));
 
     // 2. BUILD — beat cuts with focus rotation + zoom-punch
     upd(job, { progress: 24, stage: "Building beat cuts" });
@@ -321,7 +374,7 @@ async function build(job: TrailerJob, req: TrailerRequest) {
       const focusId = focuses[(i + 1) % focuses.length];
       // accelerate: each cut slightly shorter
       const cutDur = Math.max(0.45, beat * (1 - i * 0.06));
-      segments.push(await makeSegment(clip, focusId, cutDur, { punch: i % 2 === 0 }));
+      segments.push(await makeSegment(clip, focusId, cutDur, { punch: i % 2 === 0, lightLeak: useLightLeaks && i % 3 === 0 }));
       upd(job, { progress: 24 + Math.round((i + 1) / buildCuts * 30) });
     }
 
@@ -375,6 +428,20 @@ async function build(job: TrailerJob, req: TrailerRequest) {
     fs.writeFileSync(withCtaList, [`file '${preCta}'`, `file '${ctaPath}'`].join("\n"));
     let current = path.join(work, "full.mp4");
     await ff(["-f", "concat", "-safe", "0", "-i", withCtaList, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-ar", "44100", current]);
+
+    // 6b. Cinematic post-processing: letterbox + chromatic aberration on the full trailer
+    if (useLetterbox || useChroma) {
+      const fxChain: string[] = [];
+      if (useLetterbox) fxChain.push(letterboxFilter(H));
+      if (useChroma) fxChain.push(CHROMA_ABERRATION);
+      if (fxChain.length) {
+        const fxOut = path.join(work, "fx.mp4");
+        try {
+          await ff(["-i", current, "-vf", fxChain.join(","), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy", fxOut]);
+          current = fxOut;
+        } catch { /* non-fatal: skip FX if filter chain fails */ }
+      }
+    }
 
     // 7. Watermark
     if (req.watermarkText) {

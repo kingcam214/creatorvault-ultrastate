@@ -107,6 +107,11 @@ export const trailerRouter = router({
       watermarkText: z.string().optional(),
       aiRemix: z.boolean().optional(),
       aiShotCount: z.number().min(2).max(8).optional(),
+      mode: z.enum(["ai_full_shoot", "ai_remix", "original", "hybrid", "photo_cinematic"]).optional(),
+      chromaAberration: z.boolean().optional(),
+      lightLeaks: z.boolean().optional(),
+      letterbox: z.boolean().optional(),
+      glitch: z.boolean().optional(),
     }))
     .mutation(({ input }) => {
       const job = startTrailer(input);
@@ -118,15 +123,21 @@ export const trailerRouter = router({
       templateId: z.string(),
       clips: z.array(clipSchema).min(1),
       title: z.string().optional(),
-      ctaSubText: z.string().optional(), // override CTA sub (e.g. price)
+      ctaSubText: z.string().optional(),
       aspect: z.enum(["9:16", "16:9", "1:1"]).default("9:16"),
       musicUrl: z.string().optional(),
       watermarkText: z.string().optional(),
-      aiRemix: z.boolean().optional(), // force AI remix on any template
+      mode: z.enum(["ai_full_shoot", "ai_remix", "original", "hybrid", "photo_cinematic"]).optional(),
+      chromaAberration: z.boolean().optional(),
+      lightLeaks: z.boolean().optional(),
+      letterbox: z.boolean().optional(),
+      glitch: z.boolean().optional(),
     }))
     .mutation(({ input }) => {
       const tpl = TRAILER_TEMPLATES.find(t => t.id === input.templateId);
       if (!tpl) throw new TRPCError({ code: "NOT_FOUND", message: `Trailer template ${input.templateId} not found` });
+      // Determine mode: explicit override > template default > legacy aiRemix flag
+      const resolvedMode = input.mode ?? (tpl.aiRemix ? "ai_remix" : "original");
       const job = startTrailer({
         clips: input.clips,
         title: input.title,
@@ -141,10 +152,14 @@ export const trailerRouter = router({
         watermarkText: input.watermarkText,
         polish: tpl.polish !== false,
         transitions: tpl.transitions !== false,
-        aiRemix: input.aiRemix ?? tpl.aiRemix ?? false,
-        aiShotCount: 4,
+        mode: resolvedMode,
+        aiShotCount: resolvedMode === "ai_full_shoot" || resolvedMode === "photo_cinematic" ? 6 : 4,
+        chromaAberration: input.chromaAberration,
+        lightLeaks: input.lightLeaks,
+        letterbox: input.letterbox,
+        glitch: input.glitch,
       });
-      return { jobId: job.id, status: job.status, templateApplied: tpl.name };
+      return { jobId: job.id, status: job.status, templateApplied: tpl.name, mode: resolvedMode };
     }),
 
   getStatus: protectedProcedure
