@@ -220,6 +220,8 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [presetCategory, setPresetCategory] = useState<string>("all");
   const [presetSearchOpen, setPresetSearchOpen] = useState(false);
+  const [aiStackResult, setAiStackResult] = useState<any>(null);
+  const [withNarration, setWithNarration] = useState(false);
 
   const statusQuery = trpc.vaultx.getPackageAssetStatus.useQuery(
     { packageId: packageId || 1, jobId: jobId || undefined },
@@ -345,7 +347,13 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
         resolution: telegramMode === "FULL" ? "1080p" : "720p",
         length: telegramMode === "FULL" ? "8" : telegramMode === "BOOST" ? "6" : "5",
         mode: telegramMode === "FAST" ? "std" : "pro",
+        presetId: selectedPresetId || undefined,
+        withNarration,
       });
+      // Store AI stack results if preset was used
+      if ((result as any).aiStack) {
+        setAiStackResult((result as any).aiStack);
+      }
       applyLaunchResult(result);
       await utils.vaultx.getLaunchCapabilityMatrix.invalidate();
       await statusQuery.refetch();
@@ -737,6 +745,47 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
                 </div>
               </div>
             )}
+            {/* Narration toggle — only show when preset is selected */}
+            {selectedPresetId && (
+              <label className="flex items-center gap-3 rounded-2xl border border-[#C9A84C]/25 bg-[#120d05] p-4 text-sm text-[#d6d6d6] cursor-pointer">
+                <input type="checkbox" checked={withNarration} onChange={(e) => setWithNarration(e.target.checked)} className="h-5 w-5 accent-[#C9A84C]" />
+                <div>
+                  <p className="font-black text-white">Generate KingCam voiceover narration</p>
+                  <p className="text-xs text-[#999] mt-0.5">ElevenLabs voice clone auto-writes and records a drop script tuned to this preset</p>
+                </div>
+              </label>
+            )}
+
+            {/* AI Stack preview — show when preset selected */}
+            {selectedPresetId && (() => {
+              const preset = presetsQuery.data?.presets?.find((p: any) => p.id === selectedPresetId)
+                || presetCategoriesQuery.data?.topConverting?.find((p: any) => p.id === selectedPresetId);
+              if (!preset) return null;
+              return (
+                <div className="rounded-2xl border border-[#C9A84C]/20 bg-[#0a0800] p-4">
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-[#C9A84C]">AI Stack Preview</p>
+                  <div className="grid gap-2 md:grid-cols-4 text-xs">
+                    <div className="rounded-2xl border border-white/10 bg-black/50 p-3">
+                      <p className="font-black text-white">GPT-4o Scene</p>
+                      <p className="text-emerald-300 mt-1">✓ Will enhance prompt</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/50 p-3">
+                      <p className="font-black text-white">Preset Prompt</p>
+                      <p className="text-emerald-300 mt-1">✓ {preset.name} locked</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/50 p-3">
+                      <p className="font-black text-white">Copy Auto-Pack</p>
+                      <p className="text-emerald-300 mt-1">✓ All platforms</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/50 p-3">
+                      <p className="font-black text-white">Conversion Est.</p>
+                      <p className="text-[#C9A84C] font-black mt-1">{preset.conversionScore}/10</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="flex flex-wrap gap-3">
               <button onClick={handleLaunch} disabled={working || !launchReady} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
                 {launchRevenuePath.isPending ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
@@ -774,6 +823,85 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               </a>
             ) : null}
           </div>
+
+          {/* AI Stack Results Panel */}
+          {aiStackResult && (
+            <div className="rounded-[1.5rem] border border-[#C9A84C]/35 bg-[#0a0800] p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="text-[#C9A84C]" />
+                  <h3 className="text-xl font-black text-white">AI Stack Results</h3>
+                </div>
+                {aiStackResult.conversionPreview && (
+                  <span className="rounded-full bg-[#C9A84C] px-4 py-1 text-sm font-black text-black">{aiStackResult.conversionPreview}/10 conversion</span>
+                )}
+              </div>
+
+              {/* Copy Pack */}
+              {aiStackResult.copyPack && (
+                <div className="mb-4">
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-[#C9A84C]">Auto-Generated Copy Pack</p>
+                  <div className="grid gap-2">
+                    {[
+                      { label: "TELEGRAM", text: aiStackResult.copyPack.telegramCaption },
+                      { label: "DM HOOK", text: aiStackResult.copyPack.dmHook },
+                      { label: "PPV UNLOCK", text: aiStackResult.copyPack.ppvUnlockLine },
+                      { label: "URGENCY", text: aiStackResult.copyPack.urgencyLine },
+                      { label: "TWITTER", text: aiStackResult.copyPack.twitterPost },
+                    ].map(({ label, text }) => text ? (
+                      <div key={label} className="rounded-2xl border border-white/10 bg-black/50 p-3">
+                        <div className="mb-1 flex items-center justify-between">
+                          <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[#C9A84C]">{label}</p>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(text)}
+                            className="text-[9px] font-black text-[#777] hover:text-white"
+                          >COPY</button>
+                        </div>
+                        <p className="text-xs leading-5 text-[#b8b8b8]">{text}</p>
+                      </div>
+                    ) : null)}
+                    {/* Hook variants */}
+                    {aiStackResult.copyPack.hookVariants?.length > 0 && (
+                      <div className="rounded-2xl border border-white/10 bg-black/50 p-3">
+                        <p className="mb-2 text-[9px] font-black uppercase tracking-[0.15em] text-[#C9A84C]">A/B HOOK VARIANTS</p>
+                        <div className="grid gap-1">
+                          {aiStackResult.copyPack.hookVariants.map((h: string, i: number) => (
+                            <div key={i} className="flex items-center justify-between gap-2">
+                              <p className="text-xs text-[#b8b8b8]">{i + 1}. {h}</p>
+                              <button onClick={() => navigator.clipboard.writeText(h)} className="text-[9px] font-black text-[#777] hover:text-white flex-shrink-0">COPY</button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Narration */}
+              {aiStackResult.narration?.audioUrl && (
+                <div className="mb-4">
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-[#C9A84C]">KingCam Voiceover Narration</p>
+                  <div className="rounded-2xl border border-white/10 bg-black/50 p-3">
+                    <p className="mb-2 text-xs leading-5 text-[#b8b8b8] italic">"{aiStackResult.narration.script}"</p>
+                    <audio src={aiStackResult.narration.audioUrl} controls className="w-full" />
+                  </div>
+                </div>
+              )}
+
+              {/* Stack log */}
+              {aiStackResult.stackLog?.length > 0 && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-[10px] font-black uppercase tracking-[0.12em] text-[#777] hover:text-white">Stack log</summary>
+                  <div className="mt-2 rounded-2xl border border-white/10 bg-black/50 p-3">
+                    {aiStackResult.stackLog.map((line: string, i: number) => (
+                      <p key={i} className="text-[10px] leading-5 text-[#777]">{line}</p>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </div>
+          )}
 
           <div className="rounded-[1.5rem] border border-[#242424] bg-black p-5">
             <div className="mb-4 flex items-center gap-3">

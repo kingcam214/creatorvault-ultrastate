@@ -22,6 +22,12 @@ import { enhanceSceneByScene } from "../services/sceneEnhancementService";
 import { buildPpvBundle, createTipUnlockContent, suggestContentPrice, getPpvProgress } from "../services/monetizationBundleService";
 import { generateRecutSuggestions, generateAbThumbnails, analyzeHookStrength } from "../services/analyticsEditingService";
 import { qualityGate } from "../services/qualityGate";
+import {
+  runBodyCinemaAIStack,
+  buildPresetPolloPrompt,
+  previewConversionScore,
+} from "../services/bodyCinemaAIStack.js";
+import { getPresetById } from "../services/bodyCinemaPresets.js";
 import { createAIDrop, sendDropToChannel } from "../services/telegramCampaign";
 import {
   assertReadyVaultxPackageArtifact,
@@ -2074,6 +2080,8 @@ export const vaultxRouter = router({
       resolution: z.enum(["540p", "720p", "1080p"]).default("720p"),
       length: z.enum(["5", "6", "8", "10"]).default("6"),
       mode: z.enum(["std", "pro"]).default("pro"),
+      presetId: z.string().optional(),
+      withNarration: z.boolean().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
       if (!input.adultContentFlag || !input.consentConfirmed) {
@@ -2112,7 +2120,33 @@ export const vaultxRouter = router({
       const pkg = pkgRows[0];
       if (!pkg) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "VaultX package row was not readable after creation." });
 
-      const prompt = buildVaultxPackagePolloPrompt(pkg);
+      // ── AI STACK: Run if preset selected, else use generic prompt ──────────
+      let prompt: string;
+      let aiStackResult: any = null;
+      if (input.presetId) {
+        try {
+          aiStackResult = await runBodyCinemaAIStack(
+            input.presetId,
+            input.title.trim(),
+            input.teaserDescription.trim(),
+            input.priceCents,
+            input.vipPriceCents || Math.round(input.priceCents * 2.5),
+            input.telegramMode,
+            input.withNarration
+          );
+          prompt = buildPresetPolloPrompt(
+            aiStackResult.enhancedPrompt,
+            input.telegramMode,
+            input.title.trim()
+          );
+        } catch (stackErr: any) {
+          // Fallback to generic prompt if AI stack fails
+          prompt = buildVaultxPackagePolloPrompt(pkg);
+          aiStackResult = { stackLog: [`AI stack failed: ${stackErr?.message || "unknown"}`] };
+        }
+      } else {
+        prompt = buildVaultxPackagePolloPrompt(pkg);
+      }
       const reusableAssets = await rawQuery(
         `SELECT taskId, videoUrl, status
          FROM pollo_generations
@@ -2319,6 +2353,14 @@ export const vaultxRouter = router({
           platformFeeCents: Math.round(Number(pkg.price_cents) * PLATFORM_FEE),
           creatorKeepCents: Math.max(0, Number(pkg.price_cents) - Math.round(Number(pkg.price_cents) * PLATFORM_FEE)),
         },
+        // AI Stack results — available immediately after launch
+        aiStack: aiStackResult ? {
+          copyPack: aiStackResult.copyPack || null,
+          narration: aiStackResult.narration || null,
+          conversionPreview: aiStackResult.conversionPreview || null,
+          stackLog: aiStackResult.stackLog || [],
+          presetUsed: aiStackResult.enhancedPrompt?.presetUsed || null,
+        } : null,
       };
     }),
 
