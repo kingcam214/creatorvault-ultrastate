@@ -216,6 +216,10 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   const [jobId, setJobId] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [launchReceipt, setLaunchReceipt] = useState<LaunchReceipt | null>(null);
+  // Body Cinema Presets
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+  const [presetCategory, setPresetCategory] = useState<string>("all");
+  const [presetSearchOpen, setPresetSearchOpen] = useState(false);
 
   const statusQuery = trpc.vaultx.getPackageAssetStatus.useQuery(
     { packageId: packageId || 1, jobId: jobId || undefined },
@@ -227,6 +231,23 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   // Body Cinema multi-model router integration
   const bodyCinemaProviders = trpc.bodyCinema.getProviders.useQuery(undefined, { retry: false, refetchInterval: 30000 });
   const bodyCinemaSubmit = trpc.bodyCinema.submitJob.useMutation();
+  // Body Cinema Presets
+  const presetsQuery = (trpc as any).bodyCinema.getPresets.useQuery(
+    presetCategory !== "all" ? { category: presetCategory } : {},
+    { retry: false }
+  );
+  const presetCategoriesQuery = (trpc as any).bodyCinema.getPresetCategories.useQuery(undefined, { retry: false });
+  const applyPresetMut = (trpc as any).bodyCinema.applyPreset.useMutation();
+
+  const applyPreset = (preset: any) => {
+    setSelectedPresetId(preset.id);
+    setTitle(preset.suggestedTitle || title);
+    setTeaserDescription(preset.teaserDescription || teaserDescription);
+    setPrice(String(preset.suggestedPrice || "29.00"));
+    setVipPrice(String(preset.suggestedVipPrice || "79.00"));
+    setPresetSearchOpen(false);
+    toast.success(`Preset applied: ${preset.name}`);
+  };
   // Compliance Vault integration
   const complianceCheck = trpc.compliance.checkEligibility.useQuery({ jurisdiction: "GLOBAL" }, { retry: false });
   const recordConsent = trpc.compliance.recordConsent.useMutation();
@@ -464,6 +485,180 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
             <div className="rounded-[1.25rem] border border-white/10 bg-[#101010] p-4 text-sm leading-6 text-[#999999]">Social-platform readiness is loading from the backend capability matrix.</div>
           ) : null}
         </div>
+      </div>
+
+      {/* ── BODY CINEMA PRESET PICKER ──────────────────────────────────── */}
+      <div className="mb-6 rounded-[1.5rem] border border-[#C9A84C]/35 bg-[#0a0800] p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Body Cinema Presets</p>
+            <h3 className="text-2xl font-black text-white">Choose a preset or build from scratch</h3>
+            <p className="mt-1 text-sm text-[#999]">Each preset is engineered for maximum conversion — prompts, motion, pricing, and copy all pre-loaded.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {presetCategoriesQuery.data?.stats && (
+              <div className="rounded-2xl border border-white/10 bg-black/50 px-4 py-2 text-xs text-[#b8b8b8]">
+                <span className="font-black text-[#C9A84C]">{presetCategoriesQuery.data.stats.total}</span> presets &nbsp;·&nbsp;
+                <span className="font-black text-[#C9A84C]">{presetCategoriesQuery.data.stats.ssGrade}</span> SS grade &nbsp;·&nbsp;
+                avg <span className="font-black text-[#C9A84C]">{presetCategoriesQuery.data.stats.avgConversionScore}</span>/10 conversion
+              </div>
+            )}
+            <button
+              onClick={() => setPresetSearchOpen(!presetSearchOpen)}
+              className={`inline-flex min-h-10 items-center gap-2 rounded-full px-5 py-2 text-sm font-black transition ${
+                presetSearchOpen ? "bg-[#C9A84C] text-black" : "border border-[#C9A84C] text-[#C9A84C] hover:bg-[#C9A84C] hover:text-black"
+              }`}
+            >
+              <Sparkles size={14} />
+              {presetSearchOpen ? "Close Presets" : "Browse Presets"}
+            </button>
+          </div>
+        </div>
+
+        {/* Selected preset display */}
+        {selectedPresetId && !presetSearchOpen && (() => {
+          const preset = presetsQuery.data?.presets?.find((p: any) => p.id === selectedPresetId)
+            || presetCategoriesQuery.data?.topConverting?.find((p: any) => p.id === selectedPresetId);
+          if (!preset) return null;
+          return (
+            <div className="rounded-[1.25rem] border border-[#C9A84C]/40 bg-[#130f05] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="rounded-full bg-[#C9A84C] px-3 py-1 text-xs font-black text-black">{preset.productionGrade} GRADE</span>
+                    <span className="rounded-full border border-white/10 bg-black/50 px-3 py-1 text-xs font-black text-white">Heat {preset.heatLevel}/5</span>
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-300">Conversion {preset.conversionScore}/10</span>
+                  </div>
+                  <h4 className="text-xl font-black text-white">{preset.name}</h4>
+                  <p className="mt-1 text-sm text-[#C9A84C]">{preset.tagline}</p>
+                  <p className="mt-2 text-xs leading-5 text-[#999]">{preset.teaserDescription}</p>
+                </div>
+                <div className="grid gap-2 text-xs">
+                  <div className="rounded-2xl border border-white/10 bg-black/50 px-4 py-2 text-center">
+                    <p className="font-black text-[#C9A84C]">${preset.suggestedPrice}</p>
+                    <p className="text-[#777]">PPV price</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/50 px-4 py-2 text-center">
+                    <p className="font-black text-[#C9A84C]">${preset.suggestedVipPrice}</p>
+                    <p className="text-[#777]">VIP price</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2 md:grid-cols-3">
+                <div className="rounded-2xl border border-white/10 bg-black/50 p-3">
+                  <p className="mb-1 text-xs font-black uppercase tracking-[0.12em] text-[#C9A84C]">Telegram Caption</p>
+                  <p className="text-xs leading-5 text-[#b8b8b8]">{preset.telegramCaption}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/50 p-3">
+                  <p className="mb-1 text-xs font-black uppercase tracking-[0.12em] text-[#C9A84C]">DM Hook</p>
+                  <p className="text-xs leading-5 text-[#b8b8b8]">{preset.dmHook}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/50 p-3">
+                  <p className="mb-1 text-xs font-black uppercase tracking-[0.12em] text-[#C9A84C]">PPV Unlock Line</p>
+                  <p className="text-xs leading-5 text-[#b8b8b8]">{preset.ppvUnlockLine}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedPresetId(null)}
+                className="mt-3 text-xs font-black text-[#777] hover:text-white"
+              >
+                Clear preset
+              </button>
+            </div>
+          );
+        })()}
+
+        {/* Preset browser */}
+        {presetSearchOpen && (
+          <div>
+            {/* Category filter */}
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button
+                onClick={() => setPresetCategory("all")}
+                className={`rounded-full px-4 py-2 text-xs font-black transition ${
+                  presetCategory === "all" ? "bg-[#C9A84C] text-black" : "border border-[#333] text-[#999] hover:border-[#C9A84C] hover:text-[#C9A84C]"
+                }`}
+              >
+                All Presets
+              </button>
+              {(presetCategoriesQuery.data?.categories || []).map((cat: any) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setPresetCategory(cat.id)}
+                  className={`rounded-full px-4 py-2 text-xs font-black transition ${
+                    presetCategory === cat.id ? "bg-[#C9A84C] text-black" : "border border-[#333] text-[#999] hover:border-[#C9A84C] hover:text-[#C9A84C]"
+                  }`}
+                >
+                  {cat.emoji} {cat.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Top converting banner */}
+            {presetCategory === "all" && presetCategoriesQuery.data?.topConverting?.length > 0 && (
+              <div className="mb-4">
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-[#C9A84C]">🔥 Top Converting</p>
+                <div className="grid gap-3 md:grid-cols-5">
+                  {presetCategoriesQuery.data.topConverting.map((preset: any) => (
+                    <button
+                      key={preset.id}
+                      onClick={() => applyPreset(preset)}
+                      className={`rounded-[1.25rem] border p-3 text-left transition hover:-translate-y-0.5 ${
+                        selectedPresetId === preset.id ? "border-[#C9A84C] bg-[#201705]" : "border-[#242424] bg-black/65 hover:border-[#C9A84C]/70"
+                      }`}
+                    >
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="rounded-full bg-[#C9A84C] px-2 py-0.5 text-[9px] font-black text-black">{preset.productionGrade}</span>
+                        <span className="text-[9px] font-black text-emerald-300">{preset.conversionScore}/10</span>
+                      </div>
+                      <p className="text-sm font-black text-white">{preset.name}</p>
+                      <p className="mt-1 text-[10px] text-[#C9A84C]">{preset.tagline}</p>
+                      <p className="mt-1 text-[10px] text-[#777]">${preset.suggestedPrice} PPV · Heat {preset.heatLevel}/5</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Full preset grid */}
+            <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
+              {(presetsQuery.data?.presets || []).map((preset: any) => (
+                <button
+                  key={preset.id}
+                  onClick={() => applyPreset(preset)}
+                  className={`rounded-[1.25rem] border p-4 text-left transition hover:-translate-y-0.5 ${
+                    selectedPresetId === preset.id ? "border-[#C9A84C] bg-[#201705] shadow-[0_0_20px_rgba(201,168,76,0.15)]" : "border-[#242424] bg-black/65 hover:border-[#C9A84C]/70"
+                  }`}
+                >
+                  <div className="mb-2 flex items-center justify-between gap-1">
+                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${
+                      preset.productionGrade === "SS" ? "bg-[#C9A84C] text-black" : "border border-[#C9A84C]/40 text-[#C9A84C]"
+                    }`}>{preset.productionGrade}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] text-[#777]">🔥</span>
+                      <span className="text-[9px] font-black text-[#999]">{preset.heatLevel}/5</span>
+                    </div>
+                  </div>
+                  <p className="text-sm font-black text-white">{preset.name}</p>
+                  <p className="mt-1 text-[10px] leading-4 text-[#C9A84C]">{preset.tagline}</p>
+                  <p className="mt-2 text-[10px] leading-4 text-[#777]">{preset.teaserDescription?.slice(0, 60)}...</p>
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-[#C9A84C]">${preset.suggestedPrice} PPV</span>
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black text-emerald-300">{preset.conversionScore}/10</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {(preset.tags || []).slice(0, 3).map((tag: string) => (
+                      <span key={tag} className="rounded-full border border-white/10 bg-black/50 px-2 py-0.5 text-[8px] text-[#777]">{tag}</span>
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
+            {presetsQuery.isLoading && (
+              <div className="py-8 text-center text-sm text-[#777]">Loading presets...</div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">

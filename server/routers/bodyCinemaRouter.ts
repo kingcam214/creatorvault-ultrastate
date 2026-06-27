@@ -2,11 +2,24 @@
  * Body Cinema tRPC Router — connects the multi-model provider router to the app
  */
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { BodyCinemaRouter, createDefaultProviderProfiles, generateOutputLadder } from "../services/bodyCinemaProviderRouter";
 import { complianceVault } from "../services/complianceVault";
 import { randomUUID } from "crypto";
+import {
+  BODY_CINEMA_PRESETS,
+  PRESET_CATEGORIES,
+  PRESET_STATS,
+  getPresetById,
+  getPresetsByCategory,
+  getPresetsByGoal,
+  getTopConvertingPresets,
+  getPresetsByPlatform,
+  getPresetsByHeatLevel,
+  type PresetCategory,
+  type PresetGoal,
+} from "../services/bodyCinemaPresets";
 
 const cinemaRouter = new BodyCinemaRouter();
 const configuredProviders: Record<string, boolean> = {
@@ -88,4 +101,130 @@ export const bodyCinemaRouter = router({
   getJobStatus: protectedProcedure.input(z.object({ jobId: z.string() })).query(({ input }) => {
     return cinemaRouter.getJobStatus(input.jobId) || { status: "not_found" };
   }),
+
+  // ── PRESET LIBRARY ──────────────────────────────────────────────────────────
+
+  /**
+   * getPresets — full preset library with optional filters
+   */
+  getPresets: protectedProcedure
+    .input(z.object({
+      category: z.string().optional(),
+      goal: z.string().optional(),
+      platform: z.string().optional(),
+      minHeatLevel: z.number().min(1).max(5).optional(),
+      maxHeatLevel: z.number().min(1).max(5).optional(),
+      topConverting: z.boolean().optional(),
+      limit: z.number().min(1).max(100).optional(),
+    }).default({}))
+    .query(({ input }) => {
+      let presets = [...BODY_CINEMA_PRESETS];
+
+      if (input.category) {
+        presets = presets.filter(p => p.category === input.category);
+      }
+      if (input.goal) {
+        presets = presets.filter(p => p.goal === input.goal);
+      }
+      if (input.platform) {
+        presets = presets.filter(p => p.platform === input.platform);
+      }
+      if (input.minHeatLevel) {
+        presets = presets.filter(p => p.heatLevel >= input.minHeatLevel!);
+      }
+      if (input.maxHeatLevel) {
+        presets = presets.filter(p => p.heatLevel <= input.maxHeatLevel!);
+      }
+      if (input.topConverting) {
+        presets = presets.sort((a, b) => b.conversionScore - a.conversionScore);
+      }
+      if (input.limit) {
+        presets = presets.slice(0, input.limit);
+      }
+
+      return {
+        presets,
+        total: presets.length,
+        categories: PRESET_CATEGORIES,
+        stats: PRESET_STATS,
+      };
+    }),
+
+  /**
+   * getPreset — single preset by ID
+   */
+  getPreset: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(({ input }) => {
+      const preset = getPresetById(input.id);
+      if (!preset) throw new TRPCError({ code: "NOT_FOUND", message: `Preset ${input.id} not found` });
+      return preset;
+    }),
+
+  /**
+   * getPresetCategories — all categories with metadata
+   */
+  getPresetCategories: protectedProcedure.query(() => {
+    return {
+      categories: PRESET_CATEGORIES,
+      stats: PRESET_STATS,
+      topConverting: getTopConvertingPresets(5),
+    };
+  }),
+
+  /**
+   * applyPreset — apply a preset to a job submission, filling all fields
+   */
+  applyPreset: protectedProcedure
+    .input(z.object({
+      presetId: z.string(),
+      sourceAssetUrl: z.string().url(),
+      sourceType: z.enum(["image", "video"]),
+      overrides: z.record(z.any()).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const preset = getPresetById(input.presetId);
+      if (!preset) throw new TRPCError({ code: "NOT_FOUND", message: `Preset ${input.presetId} not found` });
+
+      const eligibility = complianceVault.checkGenerationEligibility(String(ctx.user.id), "GLOBAL");
+      if (!eligibility.eligible) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Compliance check failed: " + eligibility.blockers.join("; ") });
+      }
+
+      const job = {
+        id: randomUUID(),
+        userId: String(ctx.user.id),
+        goal: preset.goal as any,
+        sourceAssetUrl: input.sourceAssetUrl,
+        sourceType: input.sourceType as any,
+        style: preset.style as any,
+        platform: preset.platform as any,
+        aspectRatio: preset.aspectRatio,
+        duration: preset.duration,
+        prompt: input.overrides?.prompt || preset.prompt,
+        negativePrompt: preset.negativePrompt,
+        motionDirective: input.overrides?.motionDirective || preset.motionDirective,
+        cameraMovement: input.overrides?.cameraMovement || preset.cameraMovement,
+        identityLock: true,
+        qualityThreshold: 75,
+        maxRetries: 2,
+        consentVerified: true,
+        ageVerified: true,
+        ...(input.overrides || {}),
+      };
+
+      const result = await cinemaRouter.submitJob(job);
+
+      return {
+        ...result,
+        preset,
+        suggestedTitle: input.overrides?.title || preset.suggestedTitle,
+        suggestedPrice: preset.suggestedPrice,
+        suggestedVipPrice: preset.suggestedVipPrice,
+        teaserDescription: preset.teaserDescription,
+        telegramCaption: preset.telegramCaption,
+        dmHook: preset.dmHook,
+        ppvUnlockLine: preset.ppvUnlockLine,
+      };
+    }),
 });
