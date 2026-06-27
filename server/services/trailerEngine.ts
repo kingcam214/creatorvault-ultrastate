@@ -181,7 +181,8 @@ async function build(job: TrailerJob, req: TrailerRequest) {
         // motion-smooth the slow-mo with tblend for that pro ramp feel
         const ramp = speed < 1.0 ? `,tblend=all_mode=average` : "";
         const vf = `${fitChain}${focus}${gradePart}${punch}${setpts}${ramp}${polishPart}${textPart}${flashPart}`;
-        await ff(["-ss", String(start), "-t", String(grab), "-i", local, "-vf", vf, "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-t", String(dur), out]);
+        // attach a silent stereo track so every segment has audio (required by xfade audio crossfade)
+        await ff(["-ss", String(start), "-t", String(grab), "-i", local, "-f", "lavfi", "-t", String(dur), "-i", "anullsrc=cl=stereo:r=44100", "-vf", vf, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-t", String(dur), out]);
       }
       return { path: out, dur };
     }
