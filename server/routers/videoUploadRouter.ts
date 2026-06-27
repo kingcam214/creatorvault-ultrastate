@@ -340,3 +340,23 @@ videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }
 });
+
+// ─── /direct — single-shot upload (tap-to-upload, no chunking, no URLs) ────────
+// The creator picks a file; this stores it and returns a real public HTTPS URL.
+// Used by VaultX Drop so creators never touch a URL.
+videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, res: Response) => {
+  try {
+    const f = (req as any).file;
+    if (!f || !f.buffer) return res.status(400).json({ error: "No file uploaded" });
+    const originalName = (f.originalname || "upload.mp4").replace(/[^a-zA-Z0-9._-]/g, "_");
+    const fileUuid = randomUUID();
+    const destDir = path.join(DURABLE_UPLOADS_DIR, fileUuid);
+    await mkdir(destDir, { recursive: true });
+    const destPath = path.join(destDir, originalName);
+    await writeFile(destPath, f.buffer);
+    const url = `https://creatorvault.live/uploads/content-vault/${fileUuid}/${encodeURIComponent(originalName)}`;
+    res.json({ url, filename: originalName, storageId: fileUuid, size: f.size, mime: getMimeType(originalName) });
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});

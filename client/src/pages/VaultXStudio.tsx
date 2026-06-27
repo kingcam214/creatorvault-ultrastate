@@ -205,6 +205,9 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   const [title, setTitle] = useState("VaultX premium trailer drop");
   const [teaserDescription, setTeaserDescription] = useState("A creator-owned premium teaser route built to turn one source asset into a cinematic preview, paid unlock, tracked fan click, follow-up, and VIP escalation lane.");
   const [sourceMediaUrl, setSourceMediaUrl] = useState("");
+  const [studioUploading, setStudioUploading] = useState(false);
+  const [studioUploadPct, setStudioUploadPct] = useState(0);
+  const [studioFileName, setStudioFileName] = useState("");
   const [price, setPrice] = useState("29.00");
   const [vipPrice, setVipPrice] = useState("79.00");
   const [telegramMode, setTelegramMode] = useState<TelegramMode>("BOOST");
@@ -271,7 +274,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   const liveVipPriceCents = moneyToCents(vipPrice);
   const launchChecklist = [
     { label: "Consent lock", detail: "Adult-content and creator authorization confirmed", ready: adultContentFlag && consentConfirmed },
-    { label: "Source asset", detail: "Creator-owned media URL is present", ready: Boolean(sourceMediaUrl.trim()) },
+    { label: "Source asset", detail: "Your video is uploaded and ready", ready: Boolean(sourceMediaUrl.trim()) },
     { label: "Economics", detail: `Paid unlock ${formatMoney(livePriceCents)} • VIP ${liveVipPriceCents >= 100 ? formatMoney(liveVipPriceCents) : "optional"}`, ready: livePriceCents >= 100 },
     { label: "Provider", detail: selectedProviderProfile?.label ? `${selectedProviderProfile.label} package endpoint` : "Select a launch provider", ready: providerLaunchReady },
     { label: "Spend guard", detail: `Estimated ${formatMoney(estimatedCostCents)} against ${formatMoney(budgetCapCents)} cap`, ready: budgetAllowsLaunch },
@@ -315,7 +318,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
       return;
     }
     if (!sourceMediaUrl.trim()) {
-      toast.error("Paste a real creator-owned source media URL before starting generation.");
+      toast.error("Upload your video before starting generation.");
       return;
     }
     const priceCents = moneyToCents(price);
@@ -581,11 +584,55 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               Package title
               <input value={title} onChange={(e) => setTitle(e.target.value)} className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
             </label>
-            <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
-              Real creator-owned source media URL
-              <input value={sourceMediaUrl} onChange={(e) => setSourceMediaUrl(e.target.value)} placeholder="https://.../approved-source.mp4" className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
-              <span className="text-xs font-medium leading-5 text-[#777]">Use only media the creator owns or has explicit authorization to transform, monetize, and distribute.</span>
-            </label>
+            <div className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
+              Your video
+              {!sourceMediaUrl ? (
+                <label className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#C9A84C]/40 bg-[#120d05] px-4 py-8 cursor-pointer text-center hover:border-[#C9A84C]">
+                  {studioUploading ? (
+                    <>
+                      <Loader2 size={22} className="animate-spin text-[#C9A84C]" />
+                      <span className="text-sm text-white">Uploading... {studioUploadPct}%</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={22} className="text-[#C9A84C]" />
+                      <span className="text-base font-black text-white">Tap to upload your video</span>
+                      <span className="text-xs font-medium text-[#777]">Straight from your phone or computer</span>
+                    </>
+                  )}
+                  <input type="file" accept="video/*,image/*" className="hidden" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setStudioFileName(file.name);
+                    setStudioUploading(true);
+                    setStudioUploadPct(0);
+                    try {
+                      const fd = new FormData();
+                      fd.append("file", file);
+                      const xhr = new XMLHttpRequest();
+                      const url: string = await new Promise((resolve, reject) => {
+                        xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) setStudioUploadPct(Math.round((ev.loaded/ev.total)*100)); };
+                        xhr.onload = () => { if (xhr.status>=200&&xhr.status<300) { try { resolve(JSON.parse(xhr.responseText).url); } catch { reject(new Error("parse")); } } else reject(new Error(`Upload failed (${xhr.status})`)); };
+                        xhr.onerror = () => reject(new Error("network"));
+                        xhr.open("POST", "/api/video/upload/direct");
+                        xhr.withCredentials = true;
+                        xhr.send(fd);
+                      });
+                      setSourceMediaUrl(url);
+                      toast.success("Video uploaded");
+                    } catch (err: any) {
+                      toast.error(err?.message || "Upload failed");
+                    } finally { setStudioUploading(false); }
+                  }} />
+                </label>
+              ) : (
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
+                  <span className="flex items-center gap-2 text-sm text-white"><Check size={16} className="text-emerald-300" /> {studioFileName || "Video"} — uploaded</span>
+                  <button type="button" onClick={() => { setSourceMediaUrl(""); setStudioFileName(""); setStudioUploadPct(0); }} className="text-xs font-black text-[#777] hover:text-white">Replace</button>
+                </div>
+              )}
+              <span className="text-xs font-medium leading-5 text-[#777]">Use only media you own or are authorized to transform, monetize, and distribute.</span>
+            </div>
             <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
               Teaser-to-unlock description
               <textarea value={teaserDescription} onChange={(e) => setTeaserDescription(e.target.value)} rows={4} placeholder="Describe the cinematic hook, preview promise, paid unlock, and VIP escalation in plain operator language." className="rounded-2xl border border-[#242424] bg-[#101010] px-4 py-3 text-white outline-none focus:border-[#C9A84C]" />
@@ -688,7 +735,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               <div className="mb-4 rounded-2xl border border-[#242424] bg-black/50 p-4 text-sm text-[#999999]">
                 <p className="font-black text-white mb-2">Before you launch:</p>
                 <ul className="space-y-1">
-                  {!sourceMediaUrl.trim() && <li className="flex items-center gap-2"><span className="text-[#C9A84C]">→</span> Paste your video URL above</li>}
+                  {!sourceMediaUrl.trim() && <li className="flex items-center gap-2"><span className="text-[#C9A84C]">→</span> Upload your video above</li>}
                   {!adultContentFlag && <li className="flex items-center gap-2"><span className="text-[#C9A84C]">→</span> Check the adult content confirmation box</li>}
                   {!consentConfirmed && <li className="flex items-center gap-2"><span className="text-[#C9A84C]">→</span> Confirm you own this content</li>}
                   {moneyToCents(price) < 100 && <li className="flex items-center gap-2"><span className="text-[#C9A84C]">→</span> Set a price of at least $1.00</li>}

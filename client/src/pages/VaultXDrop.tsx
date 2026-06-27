@@ -102,6 +102,10 @@ export default function VaultXDrop() {
   const [launching, setLaunching] = useState(false);
   const [launchStage, setLaunchStage] = useState("");
   const [result, setResult] = useState<any>(null);
+  // Upload state
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [hostedUrl, setHostedUrl] = useState<string | null>(null); // real public URL, never shown
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -110,22 +114,49 @@ export default function VaultXDrop() {
   const postTelegram = (trpc as any).contentCommand?.postToTelegram?.useMutation?.() || { mutateAsync: async () => {} };
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
-  const handleFileUpload = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+  // Tap-to-upload: show instant local preview, then upload to storage in the
+  // background. The creator never sees or touches a URL.
+  const handleFileUpload = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setVideoUrl(url);
+    // Instant local preview
+    const localPreview = URL.createObjectURL(file);
+    setVideoUrl(localPreview);
     setFileName(file.name);
     setStep("preset");
+    // Upload to storage in the background
+    setUploading(true);
+    setUploadProgress(0);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const xhr = new XMLHttpRequest();
+      const done = new Promise<string>((resolve, reject) => {
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try { resolve(JSON.parse(xhr.responseText).url); }
+            catch { reject(new Error("Upload parse error")); }
+          } else { reject(new Error(`Upload failed (${xhr.status})`)); }
+        };
+        xhr.onerror = () => reject(new Error("Upload network error"));
+        xhr.open("POST", "/api/video/upload/direct");
+        xhr.withCredentials = true;
+        xhr.send(fd);
+      });
+      const url = await done;
+      setHostedUrl(url);
+      setUploadProgress(100);
+      toast.success("Video uploaded ✓");
+    } catch (err: any) {
+      toast.error(err?.message || "Upload failed — try again");
+      setHostedUrl(null);
+    } finally {
+      setUploading(false);
+    }
   }, []);
-
-  const handlePasteUrl = useCallback(() => {
-    const url = pastedUrl.trim();
-    if (!url.startsWith("http")) { toast.error("Paste a valid video URL"); return; }
-    setVideoUrl(url);
-    setFileName(url.split("/").pop() || "video");
-    setStep("preset");
-  }, [pastedUrl]);
 
   const handleSelectPreset = useCallback((preset: typeof QUICK_PRESETS[0]) => {
     setSelectedPreset(preset);
@@ -135,15 +166,11 @@ export default function VaultXDrop() {
   }, []);
 
   const handleLaunch = useCallback(async () => {
-    if (!videoUrl && !pastedUrl) { toast.error("Upload or paste a video URL first"); return; }
     if (!consent) { toast.error("Confirm consent to launch"); return; }
+    if (!hostedUrl && uploading) { toast.info("Your video is still uploading — one moment..."); return; }
+    if (!hostedUrl) { toast.error("Upload your video first"); setStep("upload"); return; }
 
-    const sourceUrl = videoUrl?.startsWith("blob:") ? pastedUrl : (videoUrl || pastedUrl);
-    if (!sourceUrl || sourceUrl.startsWith("blob:")) {
-      toast.error("Paste your hosted video URL — local files can't be sent to Pollo");
-      setStep("configure");
-      return;
-    }
+    const sourceUrl = hostedUrl;
 
     setLaunching(true);
     setStep("launch");
@@ -192,7 +219,7 @@ export default function VaultXDrop() {
     } finally {
       setLaunching(false);
     }
-  }, [videoUrl, pastedUrl, consent, title, price, selectedPreset]);
+  }, [hostedUrl, uploading, consent, title, price, selectedPreset]);
 
   const handlePostTelegram = useCallback(async () => {
     const caption = result?.aiStack?.copyPack?.telegramCaption
@@ -211,6 +238,9 @@ export default function VaultXDrop() {
     setStep("upload");
     setVideoUrl(null);
     setPastedUrl("");
+    setHostedUrl(null);
+    setUploading(false);
+    setUploadProgress(0);
     setFileName("");
     setSelectedPreset(null);
     setTitle("");
@@ -274,51 +304,26 @@ export default function VaultXDrop() {
                 Drop your video.<br />We handle the rest.
               </h1>
               <p style={{ fontSize: 14, color: MUTED, marginTop: 10, lineHeight: 1.6 }}>
-                Upload or paste a URL. Pick a body preset. Set your price. Launch. Done.
+                Tap to upload your video. Pick a body preset. Set your price. Launch. Done.
               </p>
             </div>
 
             {/* Upload tap target */}
             <label style={{
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              gap: 12, padding: "40px 20px", borderRadius: 16,
+              gap: 12, padding: "56px 20px", borderRadius: 16,
               border: `2px dashed ${GOLD_BORDER}`, background: GOLD_DIM,
-              cursor: "pointer", marginBottom: 16, textAlign: "center",
+              cursor: "pointer", marginBottom: 24, textAlign: "center",
             }}>
-              <div style={{ width: 56, height: 56, borderRadius: 16, background: GOLD, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Upload size={24} color="#000" />
+              <div style={{ width: 64, height: 64, borderRadius: 18, background: GOLD, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Upload size={28} color="#000" />
               </div>
               <div>
-                <p style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Tap to upload your video</p>
-                <p style={{ fontSize: 13, color: MUTED, margin: "4px 0 0" }}>MP4, MOV — any size</p>
+                <p style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Tap to upload your video</p>
+                <p style={{ fontSize: 13, color: MUTED, margin: "4px 0 0" }}>Straight from your phone or computer — MP4, MOV, any size</p>
               </div>
               <input ref={fileInputRef} type="file" accept="video/*" style={{ display: "none" }} onChange={handleFileUpload} />
             </label>
-
-            {/* Divider */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-              <div style={{ flex: 1, height: 1, background: BORDER }} />
-              <span style={{ fontSize: 12, color: MUTED }}>or paste a hosted URL</span>
-              <div style={{ flex: 1, height: 1, background: BORDER }} />
-            </div>
-
-            {/* URL paste */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-              <input
-                value={pastedUrl}
-                onChange={e => setPastedUrl(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handlePasteUrl()}
-                placeholder="https://your-video-url.mp4"
-                style={{ flex: 1, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none" }}
-              />
-              <button
-                onClick={handlePasteUrl}
-                disabled={!pastedUrl.trim()}
-                style={{ padding: "12px 18px", borderRadius: 12, background: pastedUrl.trim() ? GOLD : CARD, color: pastedUrl.trim() ? "#000" : MUTED, fontWeight: 800, fontSize: 14, border: "none", cursor: pastedUrl.trim() ? "pointer" : "not-allowed" }}
-              >
-                Go
-              </button>
-            </div>
 
             {/* What happens next */}
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 16px" }}>
@@ -431,19 +436,31 @@ export default function VaultXDrop() {
               <p style={{ fontSize: 13, color: MUTED, marginTop: 6 }}>That's all you need. Everything else is handled.</p>
             </div>
 
-            {/* Source URL if uploaded locally */}
-            {videoUrl?.startsWith("blob:") && (
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 12, color: MUTED, display: "block", marginBottom: 6 }}>Hosted video URL (required for generation)</label>
-                <input
-                  value={pastedUrl}
-                  onChange={e => setPastedUrl(e.target.value)}
-                  placeholder="https://your-hosted-video.mp4"
-                  style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none", boxSizing: "border-box" }}
-                />
-                <p style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>Upload your video to a CDN or paste the URL from where it's hosted.</p>
-              </div>
-            )}
+            {/* Upload status — no URLs, just confirmation */}
+            <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 10, background: CARD, border: `1px solid ${hostedUrl ? "rgba(0,230,118,0.3)" : BORDER}`, borderRadius: 12, padding: "12px 14px" }}>
+              {uploading ? (
+                <>
+                  <Loader2 size={18} color={GOLD} style={{ animation: "spin 1s linear infinite" }} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>Uploading your video... {uploadProgress}%</p>
+                    <div style={{ height: 4, background: BORDER, borderRadius: 2, marginTop: 6, overflow: "hidden" }}>
+                      <div style={{ width: `${uploadProgress}%`, height: "100%", background: GOLD, transition: "width 0.2s" }} />
+                    </div>
+                  </div>
+                </>
+              ) : hostedUrl ? (
+                <>
+                  <Check size={18} color={GREEN} />
+                  <p style={{ fontSize: 13, fontWeight: 700, margin: 0, color: "#fff" }}>{fileName} — uploaded and ready</p>
+                </>
+              ) : (
+                <>
+                  <X size={18} color={MUTED} />
+                  <p style={{ fontSize: 13, margin: 0, color: MUTED }}>No video uploaded yet</p>
+                </>
+              )}
+            </div>
+            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
             {/* Title */}
             <div style={{ marginBottom: 14 }}>
