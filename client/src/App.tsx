@@ -665,7 +665,7 @@ function Router() {
       <Route path={"/king/flyer-design-studio"} component={FlyerDesignStudio} />
       <Route path={"/king/video-lab"} component={KingVideoLab} />
       <Route path={"/king/analytics"} component={KingAnalytics} />
-      <Route path={"/king/content"} component={KingContent} />
+      <Route path={"/king/content"} component={ContentCommand} />
       <Route path={"/king/waitlist"} component={KingWaitlist} />
       {/* <Route path={"/king/launch-command"} component={LaunchCommand} /> */}
       <Route path="/king/empire-doc" component={EmpireDocPrompt} />
@@ -806,7 +806,6 @@ function Router() {
       <Route path="/greatest-show/marielka-profile" component={MarielkaProfile} />
       <Route path="/greatest-show/subscribe-success" component={SubscribeSuccess} />
       <Route path="/king/clone-command" component={CloneCommand} />
-      <Route path="/king/content" component={ContentCommand} />
       <Route path="/clone/command-center" component={CloneCommandCenter} />
       <Route path="/clone" component={CloneCommandCenter} />
       <Route path="/king/clone-studio" component={CloneStudio} />
