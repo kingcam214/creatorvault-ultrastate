@@ -180,7 +180,7 @@ export const bodyCinemaRouter = router({
       presetId: z.string(),
       sourceAssetUrl: z.string().url(),
       sourceType: z.enum(["image", "video"]),
-      overrides: z.record(z.any()).optional(),
+      overrides: z.record(z.string(), z.any()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const preset = getPresetById(input.presetId);

@@ -444,11 +444,11 @@ export const cloneEngineRouter = router({
   updatePassport: protectedProcedure
     .input(z.object({
       cloneId: z.string().optional(),
-      identityProfile: z.record(z.any()).optional(),
-      voiceProfile: z.record(z.any()).optional(),
-      visualProfile: z.record(z.any()).optional(),
-      behavioralProfile: z.record(z.any()).optional(),
-      operatingRules: z.record(z.any()).optional(),
+      identityProfile: z.record(z.string(), z.any()).optional(),
+      voiceProfile: z.record(z.string(), z.any()).optional(),
+      visualProfile: z.record(z.string(), z.any()).optional(),
+      behavioralProfile: z.record(z.string(), z.any()).optional(),
+      operatingRules: z.record(z.string(), z.any()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -1265,7 +1265,7 @@ export const cloneEngineRouter = router({
     .input(z.object({
       generationType: z.enum(["image", "video", "voice", "talking_head", "training"]),
       provider: z.string(),
-      options: z.record(z.any()).default({}),
+      options: z.record(z.string(), z.any()).default({}),
     }))
     .query(({ input }) => {
       return estimateCost(input.generationType, input.provider, input.options);

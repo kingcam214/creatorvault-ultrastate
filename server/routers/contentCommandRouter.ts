@@ -299,7 +299,7 @@ export const contentCommandRouter = router({
   generateContent: protectedProcedure
     .input(z.object({
       contentType: z.enum(["clone_drop", "platform_trailer", "social_post", "creator_campaign", "telegram_blast", "custom"]),
-      brief: z.record(z.any()),
+      brief: z.record(z.string(), z.any()),
     }))
     .mutation(async ({ input, ctx }) => {
       ownerGuard(ctx.user.id);
@@ -619,7 +619,7 @@ export const contentCommandRouter = router({
   generateBatch: protectedProcedure
     .input(z.object({
       contentType: z.enum(["clone_drop", "social_post", "telegram_blast"]),
-      brief: z.record(z.any()),
+      brief: z.record(z.string(), z.any()),
       count: z.number().min(2).max(3).default(3),
     }))
     .mutation(async ({ input, ctx }) => {
@@ -741,9 +741,11 @@ export const contentCommandRouter = router({
         const whereType = input.contentType ? "AND content_type = ?" : "";
         const params: any[] = [ctx.user.id];
         if (input.contentType) params.push(input.contentType);
-        params.push(input.limit, input.offset);
-        const histRows = rows(await db.execute(
-          `SELECT id, content_type, outputs, created_at FROM content_command_history WHERE user_id = ? ${whereType} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+        // LIMIT/OFFSET inlined as validated integers — mysql2 prepared statements reject bound LIMIT params
+        const safeLimit = Math.max(1, Math.min(50, Math.floor(input.limit)));
+        const safeOffset = Math.max(0, Math.floor(input.offset));
+        const histRows = rows(await db.query(
+          `SELECT id, content_type, outputs, created_at FROM content_command_history WHERE user_id = ? ${whereType} ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`,
           params
         ));
         return histRows.map((r: any) => ({
