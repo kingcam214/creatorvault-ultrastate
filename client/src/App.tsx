@@ -456,6 +456,7 @@ import LirysMissedRevenue from "./pages/greatest-show/LirysMissedRevenue";
 import MarielkaProfile from "./pages/greatest-show/MarielkaProfile";
 import SubscribeSuccess from "./pages/greatest-show/SubscribeSuccess";
 import CloneCommand from "./pages/king/CloneCommand";
+import CloneCommandCenter from "./pages/CloneCommandCenter";
 import CloneStudio from "./pages/king/CloneStudio";
 import CloneTrainingLab from "./pages/king/CloneTrainingLab";
 import MediaVault from "./pages/king/MediaVault";
@@ -804,6 +805,8 @@ function Router() {
       <Route path="/greatest-show/marielka-profile" component={MarielkaProfile} />
       <Route path="/greatest-show/subscribe-success" component={SubscribeSuccess} />
       <Route path="/king/clone-command" component={CloneCommand} />
+      <Route path="/clone/command-center" component={CloneCommandCenter} />
+      <Route path="/clone" component={CloneCommandCenter} />
       <Route path="/king/clone-studio" component={CloneStudio} />
       <Route path="/king/clone-training-lab" component={CloneTrainingLab} />
       <Route path="/king/media-vault" component={MediaVault} />
