@@ -26,6 +26,8 @@ export interface TrailerTemplate {
   ctaSubText: string;
   bestFor: string;
   conversionScore: number; // 1..10
+  polish?: boolean;        // film grain + bloom
+  transitions?: boolean;   // xfade between cuts
 }
 
 export const TRAILER_TEMPLATES: TrailerTemplate[] = [
@@ -57,7 +59,22 @@ export const TRAILER_TEMPLATES: TrailerTemplate[] = [
   {
     id: "tiktok-hook", name: "TikTok Hook", emoji: "📱", tagline: "Scroll-stopping 1.5s hook + fast cuts tuned for the algorithm.",
     vibe: "cinematic_heat", intensity: "fast", focusRotation: ["face", "waist", "abs", "hips"],
-    hookText: "the full version is insane", ctaText: "FULL VIDEO IN BIO", ctaSubText: "🔗", bestFor: "TikTok/Reels reach", conversionScore: 9,
+    hookText: "the full version is insane", ctaText: "FULL VIDEO IN BIO", ctaSubText: "🔗", bestFor: "TikTok/Reels reach", conversionScore: 9, polish: true, transitions: true,
+  },
+  {
+    id: "luxury-film", name: "Luxury Film", emoji: "🥂", tagline: "Slow cinematic film look with smooth transitions — feels like a campaign.",
+    vibe: "luxe_gold", intensity: "slow", focusRotation: ["face", "silhouette", "waist", "back"],
+    hookText: undefined, ctaText: "ENTER THE SUITE", ctaSubText: "VIP access 🥂", bestFor: "High-ticket VIP", conversionScore: 9, polish: true, transitions: true,
+  },
+  {
+    id: "glitch-drop", name: "Glitch Drop", emoji: "⚡", tagline: "Hard, fast, high-energy cuts with punch-ins — maximum scroll-stop.",
+    vibe: "neon_night", intensity: "fast", focusRotation: ["face", "abs", "butt", "thighs", "hips", "waist"],
+    hookText: "you've never seen this", ctaText: "UNLOCK IT ALL", ctaSubText: "Tap the link ⚡", bestFor: "Max engagement", conversionScore: 10, polish: true, transitions: false,
+  },
+  {
+    id: "slow-burn", name: "Slow Burn", emoji: "🕯️", tagline: "Intimate, sensual pacing that builds to a single reveal.",
+    vibe: "velvet_midnight", intensity: "slow", focusRotation: ["face", "chest", "lowerback", "silhouette"],
+    hookText: "come closer", ctaText: "THE REST IS PRIVATE", ctaSubText: "Unlock me 🕯️", bestFor: "Intimate PPV", conversionScore: 9, polish: true, transitions: true,
   },
 ];
 
@@ -113,6 +130,8 @@ export const trailerRouter = router({
         intensity: tpl.intensity,
         musicUrl: input.musicUrl,
         watermarkText: input.watermarkText,
+        polish: tpl.polish !== false,
+        transitions: tpl.transitions !== false,
       });
       return { jobId: job.id, status: job.status, templateApplied: tpl.name };
     }),

@@ -107,6 +107,40 @@ function probe(file: string): number {
 }
 function esc(s: string) { return s.replace(/\\/g, "\\\\").replace(/:/g, "\\:").replace(/'/g, "\u2019").replace(/%/g, "\\%"); }
 
+// Estimate tempo (BPM) from a music file via ffmpeg loudness peaks → beat seconds.
+// No external deps: we sample the audio envelope and find the dominant inter-onset
+// spacing. Falls back gracefully. Returns seconds-per-beat (clamped to a usable cut length).
+function estimateBeatSeconds(musicLocal: string): number | null {
+  try {
+    // Export a coarse RMS envelope at 20Hz using astats per window
+    const raw = execSync(
+      `ffmpeg -hide_banner -i ${JSON.stringify(musicLocal)} -t 20 -af "aresample=8000,asetnsamples=400,astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.RMS_level" -f null - 2>&1`,
+      { encoding: "utf8", timeout: 30000 }
+    );
+    const vals: number[] = [];
+    for (const m of raw.matchAll(/RMS_level=(-?\d+(?:\.\d+)?)/g)) vals.push(parseFloat(m[1]));
+    if (vals.length < 8) return null;
+    // window = 400 samples / 8000Hz = 0.05s
+    const dt = 0.05;
+    // onset = rising energy above local average
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const onsets: number[] = [];
+    for (let i = 1; i < vals.length; i++) {
+      if (vals[i] > mean && vals[i] - vals[i - 1] > 3) onsets.push(i * dt);
+    }
+    if (onsets.length < 4) return null;
+    // median inter-onset interval
+    const iois = [];
+    for (let i = 1; i < onsets.length; i++) iois.push(onsets[i] - onsets[i - 1]);
+    iois.sort((a, b) => a - b);
+    let ioi = iois[Math.floor(iois.length / 2)];
+    // fold into a musical cut range (0.45..1.0s) — use half/double beats
+    while (ioi > 1.0) ioi /= 2;
+    while (ioi < 0.4) ioi *= 2;
+    return Math.max(0.45, Math.min(1.1, ioi));
+  } catch { return null; }
+}
+
 function focusChain(focusId: string, W: number, H: number): string {
   const f = FOCUS[focusId]; if (!f || f.zoom <= 1.01) return "";
   const cw = Math.round((W / f.zoom) / 2) * 2, ch = Math.round((H / f.zoom) / 2) * 2;
@@ -138,9 +172,19 @@ async function build(job: TrailerJob, req: TrailerRequest) {
   const grade = GRADES[req.vibe || "cinematic_heat"] || "";
   const usePolish = req.polish !== false;
   const useTransitions = req.transitions !== false;
-  const beat = Math.max(0.55, Math.min(1.8, req.beatSeconds || (req.intensity === "fast" ? 0.7 : req.intensity === "slow" ? 1.4 : 1.0)));
+  let beat = Math.max(0.55, Math.min(1.8, req.beatSeconds || (req.intensity === "fast" ? 0.7 : req.intensity === "slow" ? 1.4 : 1.0)));
   const focuses = req.focusRotation && req.focusRotation.length ? req.focusRotation : ["face", "chest", "waist", "abs", "butt", "legs"];
   const work = path.join(WORK_ROOT, job.id); fs.mkdirSync(work, { recursive: true });
+  // Beat-sync: if music is provided, detect tempo and align cut length to it
+  let musicLocal: string | null = null;
+  if (req.musicUrl) {
+    try {
+      musicLocal = path.join(work, "music.mp3");
+      await fetchLocal(req.musicUrl, musicLocal);
+      const detected = estimateBeatSeconds(musicLocal);
+      if (detected) { beat = detected; upd(job, { stage: `Synced to music (~${Math.round(60/detected)} BPM)` }); }
+    } catch { musicLocal = null; }
+  }
   if (!fs.existsSync(TRAILER_DIR)) fs.mkdirSync(TRAILER_DIR, { recursive: true });
   const fitChain = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1,fps=${fps}`;
   const XFADE = 0.28; // transition overlap seconds
@@ -263,11 +307,10 @@ async function build(job: TrailerJob, req: TrailerRequest) {
     }
 
     // 8. Music bed (ducked under the built audio)
-    if (req.musicUrl) {
+    if (musicLocal && fs.existsSync(musicLocal)) {
       try {
-        const m = path.join(work, "music.mp3"); await fetchLocal(req.musicUrl, m);
         const out = path.join(work, "music.mp4");
-        await ff(["-i", current, "-stream_loop", "-1", "-i", m, "-filter_complex", `[1:a]volume=0.65[mu];[0:a][mu]amix=inputs=2:duration=first:dropout_transition=2[a]`, "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-shortest", out]);
+        await ff(["-i", current, "-stream_loop", "-1", "-i", musicLocal, "-filter_complex", `[1:a]volume=0.65[mu];[0:a][mu]amix=inputs=2:duration=first:dropout_transition=2[a]`, "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-shortest", out]);
         current = out;
       } catch {}
     }
