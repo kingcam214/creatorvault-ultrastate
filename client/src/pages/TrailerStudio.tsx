@@ -8,6 +8,7 @@ import { useState, useCallback, useEffect, ChangeEvent } from "react";
 import { Link } from "wouter";
 import { Upload, Loader2, Check, X, Download, Film, Music, ChevronRight, Flame, Plus, Sparkles, Zap, Camera, Image, Layers } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useVaultXLang, VaultXLangSwitcher } from "@/lib/vaultxI18n";
 import { toast } from "sonner";
 
 const GOLD = "#F2B15B", GOLD_DIM = "rgba(242,177,91,0.12)", GOLD_BORDER = "rgba(242,177,91,0.35)";
@@ -55,6 +56,7 @@ export default function TrailerStudio() {
   const [stage, setStage] = useState("");
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
 
+  const { t } = useVaultXLang();
   const templatesQ = (trpc as any).trailer.getTemplates.useQuery(undefined, { retry: false });
   const buildMut = (trpc as any).trailer.buildFromTemplate.useMutation();
   const statusQ = (trpc as any).trailer.getStatus.useQuery({ jobId: jobId || "" }, { enabled: Boolean(jobId) && step === "building", refetchInterval: 3000, retry: false });
@@ -117,7 +119,8 @@ export default function TrailerStudio() {
         <div style={{ maxWidth: 800, margin: "0 auto", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Link href="/vault-x" style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 22, color: "#fff", textDecoration: "none" }}>Vault<span style={{ color: GOLD }}>X</span> Trailers</Link>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {step !== "mode" && <button onClick={reset} style={{ background: "transparent", border: "none", color: MUTED, cursor: "pointer", fontSize: 13 }}>Start over</button>}
+            <VaultXLangSwitcher style={{ marginRight: 8 }} />
+          {step !== "mode" && <button onClick={reset} style={{ background: "transparent", border: "none", color: MUTED, cursor: "pointer", fontSize: 13 }}>{t("trailer.start_over")}</button>}
             {step !== "mode" && step !== "building" && step !== "done" && (
               <div style={{ display: "flex", gap: 4 }}>
                 {["clips", "template", "fx"].map((s, i) => (
@@ -135,7 +138,7 @@ export default function TrailerStudio() {
         {step === "mode" && (
           <div>
             <p style={{ fontSize: 11, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 6 }}>VaultX · Viral Trailers</p>
-            <h1 style={{ fontSize: 34, fontFamily: "Bebas Neue, sans-serif", lineHeight: 1, margin: "0 0 8px" }}>Choose your creation mode.</h1>
+            <h1 style={{ fontSize: 34, fontFamily: "Bebas Neue, sans-serif", lineHeight: 1, margin: "0 0 8px" }}>{t("trailer.mode_title")}</h1>
             <p style={{ fontSize: 14, color: MUTED, marginBottom: 20, lineHeight: 1.6 }}>5 ways to create. From pure ffmpeg speed to full AI cinematography. Pick what fits your content.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {MODES.map(m => (
@@ -226,11 +229,11 @@ export default function TrailerStudio() {
         {/* ═══ FX & OPTIONS ═══ */}
         {step === "fx" && (
           <div>
-            <h2 style={{ fontSize: 26, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 6px" }}>Dial in your effects.</h2>
+            <h2 style={{ fontSize: 26, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 6px" }}>{t("trailer.fx_title")}</h2>
             <p style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>All optional. Every toggle adds a real ffmpeg effect to the final render.</p>
 
             {/* Vibe */}
-            <p style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>Color Vibe</p>
+            <p style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>{t("trailer.vibe")}</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
               {VIBES.map(v => (
                 <button key={v.id} onClick={() => setVibe(v.id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1px solid ${vibe === v.id ? GOLD : BORDER}`, background: vibe === v.id ? GOLD_DIM : CARD, cursor: "pointer" }}>
@@ -240,13 +243,13 @@ export default function TrailerStudio() {
             </div>
 
             {/* Aspect */}
-            <p style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>Aspect Ratio</p>
+            <p style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>{t("trailer.aspect")}</p>
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               {(["9:16", "16:9", "1:1"] as const).map(a => <button key={a} onClick={() => setAspect(a)} style={{ flex: 1, padding: "10px", borderRadius: 8, border: `1px solid ${aspect === a ? GOLD : BORDER}`, background: aspect === a ? GOLD_DIM : "transparent", color: aspect === a ? GOLD : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{a}</button>)}
             </div>
 
             {/* Cinematic FX toggles */}
-            <p style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>Cinematic Effects</p>
+            <p style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>{t("trailer.effects")}</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
               {[
                 { key: "chroma", val: chroma, set: setChroma, emoji: "🌈", label: "Chromatic Aberration", desc: "RGB lens split" },
@@ -309,15 +312,15 @@ export default function TrailerStudio() {
           <div>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
               <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(0,230,118,0.15)", border: `2px solid ${GREEN}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><Check size={24} color={GREEN} /></div>
-              <h2 style={{ fontSize: 28, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 4px" }}>Your trailer is ready.</h2>
+              <h2 style={{ fontSize: 28, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 4px" }}>{t("trailer.ready")}</h2>
               <p style={{ fontSize: 13, color: MUTED }}>Post it everywhere or attach it to a paid drop.</p>
             </div>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
               <video src={outputUrl} controls playsInline style={{ width: "100%", maxHeight: 440, borderRadius: 14, background: "#000", ...(aspect === "16:9" ? { maxWidth: 560 } : aspect === "1:1" ? { maxWidth: 360 } : { maxWidth: 280 }) }} />
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <a href={outputUrl} download style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "16px", borderRadius: 12, background: GOLD, color: "#000", fontWeight: 900, fontSize: 16, textDecoration: "none" }}><Download size={18} /> Download trailer</a>
-              <Link href="/vaultx/drop" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "16px", borderRadius: 12, background: CARD, border: `1px solid ${GOLD_BORDER}`, color: GOLD, fontWeight: 800, fontSize: 15, textDecoration: "none" }}>Turn this into a paid drop <ChevronRight size={16} /></Link>
+              <a href={outputUrl} download style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "16px", borderRadius: 12, background: GOLD, color: "#000", fontWeight: 900, fontSize: 16, textDecoration: "none" }}><Download size={18} /> {t("trailer.download")}</a>
+              <Link href="/vaultx/drop" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "16px", borderRadius: 12, background: CARD, border: `1px solid ${GOLD_BORDER}`, color: GOLD, fontWeight: 800, fontSize: 15, textDecoration: "none" }}>{t("trailer.paid_drop")} <ChevronRight size={16} /></Link>
               <button onClick={reset} style={{ padding: "14px", borderRadius: 12, border: `1px solid ${BORDER}`, background: "transparent", color: MUTED, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Make another trailer</button>
             </div>
           </div>
@@ -329,7 +332,7 @@ export default function TrailerStudio() {
         <div style={{ position: "fixed", inset: "auto 0 0 0", zIndex: 50, background: "rgba(8,8,8,0.96)", borderTop: `1px solid ${BORDER}`, backdropFilter: "blur(12px)", padding: "12px 16px" }}>
           <div style={{ maxWidth: 800, margin: "0 auto" }}>
             <button onClick={build} disabled={!templateId} style={{ width: "100%", padding: "16px", borderRadius: 12, background: templateId ? GOLD : CARD, color: templateId ? "#000" : MUTED, fontSize: 17, fontWeight: 900, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.08em", border: "none", cursor: templateId ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              <Flame size={18} /> BUILD VIRAL TRAILER
+              <Flame size={18} /> {t("trailer.build")}
             </button>
           </div>
         </div>

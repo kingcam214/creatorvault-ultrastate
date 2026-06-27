@@ -14,6 +14,7 @@ import {
   Sparkles, Type, Music, Droplet, Film, Volume2, VolumeX, Wand2, ChevronRight,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useVaultXLang, VaultXLangSwitcher } from "@/lib/vaultxI18n";
 import { toast } from "sonner";
 
 const GOLD = "#F2B15B";
@@ -36,6 +37,7 @@ function fmt(s: number) {
 }
 
 export default function VaultXEditor() {
+  const { t } = useVaultXLang();
   const [step, setStep] = useState<Step>("upload");
   const [clips, setClips] = useState<Clip[]>([]);
   const [activeClip, setActiveClip] = useState(0);

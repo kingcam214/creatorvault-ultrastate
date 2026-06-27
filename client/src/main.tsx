@@ -8,6 +8,7 @@ import App from "./App";
 import "./index.css";
 import { Toaster } from "@/components/ui/sonner";
 import { safeStorage } from "@/lib/safeStorage";
+import { VaultXI18nProvider } from "@/lib/vaultxI18n";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -80,8 +81,10 @@ const trpcClient = trpc.createClient({
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
-      <App />
-      <Toaster />
+      <VaultXI18nProvider>
+        <App />
+        <Toaster />
+      </VaultXI18nProvider>
     </QueryClientProvider>
   </trpc.Provider>
 );

@@ -21,6 +21,7 @@ import {
   Upload, Wand2, X, Zap, Copy, Volume2, VolumeX
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useVaultXLang, VaultXLangSwitcher } from "@/lib/vaultxI18n";
 import { toast } from "sonner";
 
 // ─── Design ──────────────────────────────────────────────────────────────────
@@ -88,6 +89,7 @@ function CopyCard({ label, text, accent = GOLD }: { label: string; text: string;
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function VaultXDrop() {
+  const { t } = useVaultXLang();
   // ─── State ────────────────────────────────────────────────────────────────
   const [step, setStep] = useState<Step>("upload");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -283,12 +285,12 @@ export default function VaultXDrop() {
 
           {step !== "upload" && step !== "result" && (
             <button onClick={reset} style={{ background: "transparent", border: "none", color: MUTED, cursor: "pointer", fontSize: 12 }}>
-              Start over
+              {t("common.cancel")}
             </button>
           )}
           {step === "result" && (
             <button onClick={reset} style={{ background: GOLD, border: "none", color: "#000", cursor: "pointer", fontSize: 12, fontWeight: 700, padding: "6px 14px", borderRadius: 20 }}>
-              New Drop
+              {t("drop.new_drop")}
             </button>
           )}
         </div>
@@ -302,10 +304,10 @@ export default function VaultXDrop() {
             <div style={{ marginBottom: 24 }}>
               <p style={{ fontSize: 11, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 6 }}>VaultX Drop</p>
               <h1 style={{ fontSize: 36, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.04em", lineHeight: 1, margin: 0 }}>
-                Drop your video.<br />We handle the rest.
+{t("drop.title")}
               </h1>
               <p style={{ fontSize: 14, color: MUTED, marginTop: 10, lineHeight: 1.6 }}>
-                Tap to upload your video. Pick a body preset. Set your price. Launch. Done.
+{t("drop.subtitle")}
               </p>
             </div>
 
@@ -320,7 +322,7 @@ export default function VaultXDrop() {
                 <Upload size={28} color="#000" />
               </div>
               <div>
-                <p style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Tap to upload your video</p>
+<p style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{t("drop.subtitle")}</p>
                 <p style={{ fontSize: 13, color: MUTED, margin: "4px 0 0" }}>Straight from your phone or computer — MP4, MOV, any size</p>
               </div>
               <input ref={fileInputRef} type="file" accept="video/*" style={{ display: "none" }} onChange={handleFileUpload} />
@@ -548,7 +550,7 @@ export default function VaultXDrop() {
               <Loader2 size={28} color={GOLD} style={{ animation: "spin 1s linear infinite" }} />
             </div>
             <h2 style={{ fontSize: 28, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.04em", margin: "0 0 8px" }}>
-              Building your drop...
+{t("drop.building")}
             </h2>
             <p style={{ fontSize: 14, color: MUTED, marginBottom: 32 }}>{launchStage}</p>
 
@@ -581,7 +583,7 @@ export default function VaultXDrop() {
               <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(0,230,118,0.15)", border: `2px solid ${GREEN}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
                 <Check size={24} color={GREEN} />
               </div>
-              <h2 style={{ fontSize: 28, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.04em", margin: "0 0 4px" }}>Drop is live.</h2>
+              <h2 style={{ fontSize: 28, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.04em", margin: "0 0 4px" }}>{t("drop.live")}</h2>
               <p style={{ fontSize: 13, color: MUTED }}>Package created · Checkout attached · Route published</p>
             </div>
 
@@ -615,14 +617,14 @@ export default function VaultXDrop() {
             {result.checkoutUrl && (
               <a href={result.checkoutUrl} target="_blank" rel="noreferrer"
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12, background: GOLD, color: "#000", fontWeight: 900, fontSize: 15, textDecoration: "none", marginBottom: 12 }}>
-                <DollarSign size={18} /> Open Checkout Link
+                <DollarSign size={18} /> {t("drop.checkout_link")}
               </a>
             )}
 
             {/* Telegram post button */}
             <button onClick={handlePostTelegram}
               style={{ width: "100%", padding: "14px", borderRadius: 12, background: "#0088CC", color: "#fff", fontWeight: 800, fontSize: 15, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 16 }}>
-              <Send size={18} /> Post to Telegram Channel
+              <Send size={18} /> {t("drop.post_telegram")}
             </button>
 
             {/* AI Stack copy pack */}

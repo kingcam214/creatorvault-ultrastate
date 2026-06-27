@@ -30,6 +30,7 @@ import {
   ChevronDown, X as XIcon, Clapperboard, Package
 } from "lucide-react";
 import { VaultXActionCard, VaultXLogo, VaultXWorkflow } from "@/components/vaultx/VaultXBrand";
+import { useVaultXLang, VaultXLangSwitcher } from "@/lib/vaultxI18n";
 
 // ============================================================================
 // TYPES
@@ -2578,6 +2579,8 @@ export default function VaultX() {
   ];
 
   // Creator-first home screen — no developer panels, no GAP badges, no config walls
+  const { t } = useVaultXLang();
+
   return (
     <div className="min-h-screen bg-[#080808] text-white">
 
@@ -2586,9 +2589,10 @@ export default function VaultX() {
         <div className="mx-auto max-w-2xl px-4 py-3 flex items-center justify-between">
           <a href="/vault-x" className="text-xl font-black tracking-tight" style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>VaultX</a>
           <div className="flex items-center gap-2">
-            <button onClick={() => setActiveTab("earnings")} className={`px-3 py-1.5 rounded-xl text-xs font-black transition ${ activeTab === "earnings" ? "bg-emerald-500/20 text-emerald-300" : "text-zinc-500 hover:text-white" }`}>Earnings</button>
-            <button onClick={() => setActiveTab("profile")} className={`px-3 py-1.5 rounded-xl text-xs font-black transition ${ activeTab === "profile" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-white" }`}>My Profile</button>
-            <button onClick={() => setActiveTab("messages")} className={`px-3 py-1.5 rounded-xl text-xs font-black transition ${ activeTab === "messages" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-white" }`}>Messages</button>
+            <VaultXLangSwitcher />
+            <button onClick={() => setActiveTab("earnings")} className={`px-3 py-1.5 rounded-xl text-xs font-black transition ${ activeTab === "earnings" ? "bg-emerald-500/20 text-emerald-300" : "text-zinc-500 hover:text-white" }`}>{t("hub.earnings")}</button>
+            <button onClick={() => setActiveTab("profile")} className={`px-3 py-1.5 rounded-xl text-xs font-black transition ${ activeTab === "profile" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-white" }`}>{t("hub.profile")}</button>
+            <button onClick={() => setActiveTab("messages")} className={`px-3 py-1.5 rounded-xl text-xs font-black transition ${ activeTab === "messages" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-white" }`}>{t("hub.messages")}</button>
           </div>
         </div>
       </div>
@@ -2601,7 +2605,7 @@ export default function VaultX() {
             {/* Welcome */}
             <div className="mb-8">
               <p className="text-xs font-black uppercase tracking-[0.2em] mb-2" style={{ color: "#c9a84c" }}>VaultX</p>
-              <h1 className="text-3xl font-black leading-tight mb-3">Turn your content into paid drops. Keep 85%.</h1>
+              <h1 className="text-3xl font-black leading-tight mb-3">{t("hub.tagline")}</h1>
               <p className="text-sm text-zinc-400 leading-relaxed">Upload a video. Pick a style. Set your price. VaultX generates the cinematic preview, attaches checkout, and publishes to Telegram — all in one flow.</p>
             </div>
 
@@ -2612,7 +2616,7 @@ export default function VaultX() {
               style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)", color: "#050505" }}
             >
               <div>
-                <p className="text-lg font-black">Create a Drop</p>
+                <p className="text-lg font-black">{t("hub.cta_create")}</p>
                 <p className="text-sm font-medium opacity-70">Upload → Pick style → Set price → Launch</p>
               </div>
               <div className="text-2xl">→</div>
