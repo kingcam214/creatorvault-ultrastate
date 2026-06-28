@@ -36,6 +36,22 @@ export interface RenderClip {
   trimStart?: number;     // seconds into the source to start
   trimEnd?: number;       // seconds into the source to end
   type?: "video" | "image";
+  speed?: number;         // playback speed: 0.25 = slow-mo, 2.0 = fast, 1.0 = normal
+  focus?: string;         // per-clip body focus (overrides global)
+  colorGrade?: string;    // per-clip color grade (overrides global)
+  caption?: string;       // per-clip caption text
+  captionStyle?: string;  // per-clip caption style
+  transition?: string;    // transition INTO this clip: "fade" | "flash" | "dissolve" | "none"
+}
+
+export interface TextOverlay {
+  text: string;
+  x?: number;   // 0..1 fraction of width (default 0.5 = center)
+  y?: number;   // 0..1 fraction of height (default 0.75)
+  fontSize?: number; // 0..1 fraction of width (default 0.05)
+  color?: string;    // hex color (default white)
+  startTime?: number; // seconds
+  endTime?: number;   // seconds
 }
 
 export interface RenderRequest {
@@ -51,6 +67,9 @@ export interface RenderRequest {
   watermarkText?: string;
   fadeInOut?: boolean;
   durationCap?: number;   // hard cap on total output seconds
+  transitions?: boolean;  // add xfade transitions between clips
+  textOverlays?: TextOverlay[]; // additional text/sticker layers
+  animatedCaptions?: boolean;   // animate caption (fade-in + drift)
 }
 
 // ─── Body-focus framing presets ───────────────────────────────────────────────
@@ -200,13 +219,29 @@ function escapeDrawText(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/:/g, "\\:").replace(/'/g, "\u2019").replace(/%/g, "\\%");
 }
 
-function captionFilter(text: string, style: string, W: number, H: number): string {
+function captionFilter(text: string, style: string, W: number, H: number, animated = false): string {
   const safe = escapeDrawText(text.slice(0, 120));
   const fs = Math.round(W * 0.052);
-  const base = `drawtext=fontfile=${FONT}:text='${safe}':fontcolor=white:fontsize=${fs}:box=1:boxcolor=black@0.45:boxborderw=${Math.round(fs*0.35)}:shadowcolor=black@0.7:shadowx=2:shadowy=2`;
+  const alpha = animated ? ":alpha='if(lt(t,0.4),t/0.4,1)'" : "";
+  const base = `drawtext=fontfile=${FONT}:text='${safe}':fontcolor=white:fontsize=${fs}:box=1:boxcolor=black@0.45:boxborderw=${Math.round(fs*0.35)}:shadowcolor=black@0.7:shadowx=2:shadowy=2${alpha}`;
   if (style === "minimal_top") return `${base}:x=(w-text_w)/2:y=h*0.08`;
   if (style === "lower_third")  return `${base}:x=(w-text_w)/2:y=h*0.80`;
   return `${base}:x=(w-text_w)/2:y=h*0.72`; // bold_center (default, lower-center)
+}
+
+function textOverlayFilter(overlay: TextOverlay, W: number, H: number): string {
+  const safe = escapeDrawText(overlay.text.slice(0, 120));
+  const fs = Math.round(W * (overlay.fontSize || 0.05));
+  const cx = overlay.x != null ? overlay.x : 0.5;
+  const cy = overlay.y != null ? overlay.y : 0.75;
+  const color = overlay.color || "white";
+  let timeExpr = "";
+  if (overlay.startTime != null || overlay.endTime != null) {
+    const st = overlay.startTime ?? 0;
+    const et = overlay.endTime ?? 9999;
+    timeExpr = `:enable='between(t,${st},${et})'`;
+  }
+  return `drawtext=fontfile=${FONT}:text='${safe}':fontcolor=${color}:fontsize=${fs}:x=(w-text_w)*${cx.toFixed(3)}:y=h*${cy.toFixed(3)}${timeExpr}`;
 }
 
 // ─── Main render ───────────────────────────────────────────────────────────────
@@ -275,25 +310,65 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
       } else {
         const ss = clip.trimStart != null ? ["-ss", String(clip.trimStart)] : [];
         const dur = (clip.trimEnd != null && clip.trimStart != null) ? ["-t", String(Math.max(0.5, clip.trimEnd - clip.trimStart))] : [];
+        // Per-clip focus and grade override global
+        const clipFocus = focusFilter(clip.focus || req.focus || "none", W, H);
+        const clipGrade = COLOR_GRADES[clip.colorGrade || req.colorGrade || "none"]?.filter || "";
         filters.push(fitChain);
-        if (focus) filters.push(focus);
-        if (grade) filters.push(grade);
+        if (clipFocus) filters.push(clipFocus);
+        if (clipGrade) filters.push(clipGrade);
+        // Per-clip speed ramp
+        const speed = clip.speed != null ? Math.max(0.1, Math.min(8, clip.speed)) : 1.0;
+        if (speed !== 1.0) {
+          filters.push(`setpts=${(1/speed).toFixed(4)}*PTS`);
+          if (speed < 1.0) filters.push("tblend=all_mode=average"); // motion blur for slow-mo
+        }
+        // Per-clip caption
+        if (clip.caption) filters.push(captionFilter(clip.caption, clip.captionStyle || "lower_third", W, H, req.animatedCaptions));
         const vf = filters.join(",");
+        const audioFilters = speed !== 1.0 ? ["-af", `atempo=${Math.max(0.5, Math.min(2.0, speed))}`] : ["-af", "aresample=44100"];
         await ff([
           ...ss, "-i", localSrc, ...dur,
           "-vf", vf, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps),
           "-c:a", "aac", "-ar", "44100", "-ac", "2",
-          "-af", "aresample=44100", outPart,
+          ...audioFilters, outPart,
         ]);
       }
       normalizedParts.push(outPart);
       update(job, { progress: 5 + Math.round((i + 1) / clips.length * 50) });
     }
 
-    // 2. Concat all normalized parts
+    // 2. Concat all normalized parts (with optional xfade transitions)
     let stitched = path.join(workDir, "stitched.mp4");
     if (normalizedParts.length === 1) {
       stitched = normalizedParts[0];
+    } else if (req.transitions && normalizedParts.length > 1) {
+      // xfade transitions between clips
+      const XFADE_DUR = 0.25;
+      const SAFE_MODES = ["fade", "fadeblack", "dissolve", "circleopen", "smoothleft"];
+      let acc = normalizedParts[0];
+      for (let i = 1; i < normalizedParts.length; i++) {
+        const mode = SAFE_MODES[(i - 1) % SAFE_MODES.length];
+        const accDur = probeDuration(acc) || 3;
+        const xf = Math.max(0.1, Math.min(XFADE_DUR, accDur - 0.15));
+        const offset = Math.max(0.05, accDur - xf);
+        const out = path.join(workDir, `xf-${i}.mp4`);
+        try {
+          await ff([
+            "-i", acc, "-i", normalizedParts[i],
+            "-filter_complex", `[0:v][1:v]xfade=transition=${mode}:duration=${xf.toFixed(3)}:offset=${offset.toFixed(3)}[v];[0:a][1:a]acrossfade=d=${xf.toFixed(3)}[a]`,
+            "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-ar", "44100", out,
+          ]);
+          acc = out;
+        } catch {
+          // fallback: hard concat this pair
+          const lf = path.join(workDir, `cc-${i}.txt`);
+          fs.writeFileSync(lf, [`file '${acc}'`, `file '${normalizedParts[i]}'`].join("\n"));
+          const out2 = path.join(workDir, `cc-${i}.mp4`);
+          await ff(["-f", "concat", "-safe", "0", "-i", lf, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-ar", "44100", out2]);
+          acc = out2;
+        }
+      }
+      stitched = acc;
     } else {
       const listFile = path.join(workDir, "concat.txt");
       fs.writeFileSync(listFile, normalizedParts.map(p => `file '${p}'`).join("\n"));
@@ -305,7 +380,13 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
     let current = stitched;
     const totalDur = probeDuration(stitched);
     const postFilters: string[] = [];
-    if (req.captionText) postFilters.push(captionFilter(req.captionText, req.captionStyle || "bold_center", W, H));
+    if (req.captionText) postFilters.push(captionFilter(req.captionText, req.captionStyle || "bold_center", W, H, req.animatedCaptions));
+    // Additional text/sticker overlays
+    if (req.textOverlays && req.textOverlays.length > 0) {
+      for (const overlay of req.textOverlays) {
+        postFilters.push(textOverlayFilter(overlay, W, H));
+      }
+    }
     if (req.watermarkText) {
       const wm = escapeDrawText(req.watermarkText.slice(0, 40));
       postFilters.push(`drawtext=fontfile=${FONT}:text='${wm}':fontcolor=white@0.55:fontsize=${Math.round(W*0.03)}:x=w-text_w-${Math.round(W*0.03)}:y=h-text_h-${Math.round(H*0.04)}`);

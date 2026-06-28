@@ -18,6 +18,22 @@ const clipSchema = z.object({
   trimStart: z.number().optional(),
   trimEnd: z.number().optional(),
   type: z.enum(["video", "image"]).optional(),
+  speed: z.number().min(0.1).max(8).optional(),
+  focus: z.string().optional(),
+  colorGrade: z.string().optional(),
+  caption: z.string().optional(),
+  captionStyle: z.string().optional(),
+  transition: z.string().optional(),
+});
+
+const textOverlaySchema = z.object({
+  text: z.string(),
+  x: z.number().min(0).max(1).optional(),
+  y: z.number().min(0).max(1).optional(),
+  fontSize: z.number().min(0.01).max(0.3).optional(),
+  color: z.string().optional(),
+  startTime: z.number().optional(),
+  endTime: z.number().optional(),
 });
 
 export const realEditorRouter = router({
@@ -47,10 +63,13 @@ export const realEditorRouter = router({
       focus: z.string().default("none"),
       captionText: z.string().optional(),
       captionStyle: z.enum(["bold_center", "lower_third", "minimal_top"]).default("bold_center"),
+      animatedCaptions: z.boolean().optional(),
+      transitions: z.boolean().optional(),
       musicUrl: z.string().optional(),
       musicVolume: z.number().min(0).max(1).optional(),
       watermarkText: z.string().optional(),
       fadeInOut: z.boolean().default(true),
+      textOverlays: z.array(textOverlaySchema).optional(),
     }))
     .mutation(({ input }) => {
       const job = startRender(input);

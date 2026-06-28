@@ -1,820 +1,535 @@
 /**
- * ============================================================================
- * KINGCAM CONTENT COMMAND CENTER — WEAPONIZED v2
- * /king/content — One page. One purpose. Generate anything. Distribute everywhere.
- *
- * Upgrades over v1:
- *   - 4 parallel images for Clone Drop (pick the best)
- *   - ElevenLabs voice narration on every video type
- *   - Full platform copy suite (TikTok + Instagram + Twitter + Telegram simultaneously)
- *   - 3 hook variants for A/B testing
- *   - Batch mode — generate 3 variations and compare
- *   - Auto-distribution panel — push to all channels in one click
- *   - DM sequence output for Creator Campaign
- *   - Posting schedule recommendation
- *   - Remix button on any output
- *   - History with full output recall
- * ============================================================================
+ * CONTENT FACTORY v3 — Rebuilt frontend
+ * 7 content types, real creative brief forms, full output display
  */
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useLocation } from "wouter";
+import { useState, useCallback } from "react";
+import { Link } from "wouter";
+import { Crown, Zap, Film, Send, Layers, Copy, Download, Check, Loader2, ChevronRight, ArrowLeft, RefreshCw, Flame } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
-const C = {
-  bg: "#0A0A0A",
-  surface: "#111111",
-  card: "#1A1A1A",
-  card2: "#141414",
-  border: "rgba(255,255,255,0.08)",
-  borderActive: "rgba(0,217,255,0.5)",
-  text: "#FFFFFF",
-  muted: "rgba(255,255,255,0.45)",
-  faint: "rgba(255,255,255,0.25)",
-  cyan: "#00D9FF",
-  cyanDim: "rgba(0,217,255,0.1)",
-  cyanGlow: "0 0 20px rgba(0,217,255,0.25)",
-  gold: "#C9A84C",
-  goldDim: "rgba(201,168,76,0.12)",
-  green: "#00E676",
-  greenDim: "rgba(0,230,118,0.12)",
-  red: "#FF4444",
-  purple: "#9C27B0",
-  purpleDim: "rgba(156,39,176,0.12)",
-};
+const GOLD = "#F2B15B", GOLD_DIM = "rgba(242,177,91,0.10)", GOLD_BORDER = "rgba(242,177,91,0.3)";
+const BG = "#080808", CARD = "#111", BORDER = "rgba(255,255,255,0.08)", MUTED = "rgba(255,255,255,0.45)";
+const GREEN = "#00E676", CYAN = "#00BCD4";
 
-// ─── Content types ────────────────────────────────────────────────────────────
-const CONTENT_TYPES = [
-  { id: "clone_drop",       icon: "👑", label: "Clone Drop",       desc: "4 parallel images → animated → full platform copy suite + voice", badge: "FLAGSHIP" },
-  { id: "platform_trailer", icon: "🎬", label: "Platform Trailer", desc: "Cinematic video + KingCam voiceover + full copy suite",           badge: "VOICE" },
-  { id: "social_post",      icon: "📱", label: "Social Post",      desc: "All 4 platforms simultaneously + 3 hook variants + schedule",     badge: "MULTI-PLATFORM" },
-  { id: "creator_campaign", icon: "💰", label: "Creator Campaign", desc: "Full drop pack + DM sequence + auto-post to Telegram",            badge: "AUTO-DISTRIBUTE" },
-  { id: "telegram_blast",   icon: "⚡", label: "Telegram Blast",   desc: "A/B message variants + media + live send to channels",           badge: "A/B TEST" },
-  { id: "custom",           icon: "⚙️", label: "Custom",           desc: "GPT-4o routes to correct pipeline, multi-step execution",        badge: "AI ROUTED" },
-] as const;
-type ContentTypeId = typeof CONTENT_TYPES[number]["id"];
+type ContentTypeId = "clone_drop" | "clone_series" | "body_cinema_drop" | "social_post" | "creator_campaign" | "telegram_blast" | "custom";
 
-const BADGE_COLORS: Record<string, string> = {
-  FLAGSHIP: C.gold,
-  VOICE: C.cyan,
-  "MULTI-PLATFORM": C.purple,
-  "AUTO-DISTRIBUTE": C.green,
-  "A/B TEST": "#FF6B35",
-  "AI ROUTED": C.cyan,
-};
+const CONTENT_TYPES: { id: ContentTypeId; icon: string; label: string; desc: string; badge: string; color: string }[] = [
+  { id: "clone_drop",       icon: "👑", label: "Clone Drop",       desc: "4 parallel KingCam images → animated → full copy suite", badge: "FLAGSHIP", color: GOLD },
+  { id: "clone_series",     icon: "🎬", label: "Clone Series",     desc: "6-scene narrative arc: hook → build → reveal → CTA", badge: "NEW", color: "#E040FB" },
+  { id: "body_cinema_drop", icon: "💎", label: "Body Cinema Drop", desc: "AI-enhanced body-specific cinematic generation", badge: "AI", color: "#FF4081" },
+  { id: "social_post",      icon: "📱", label: "Social Post",      desc: "All 4 platforms simultaneously + image + video", badge: "MULTI", color: CYAN },
+  { id: "creator_campaign", icon: "💰", label: "Creator Campaign", desc: "Full drop pack + DM sequence + auto-post to Telegram", badge: "AUTO", color: GREEN },
+  { id: "telegram_blast",   icon: "⚡", label: "Telegram Blast",   desc: "A/B message variants + live send to channels", badge: "LIVE", color: "#FF6B35" },
+  { id: "custom",           icon: "🧠", label: "Custom",           desc: "Describe anything — GPT-4o routes and executes", badge: "AI", color: "#7C4DFF" },
+];
 
-// ─── Stage messages ───────────────────────────────────────────────────────────
-const STAGES: Record<ContentTypeId, string[]> = {
-  clone_drop:        ["Firing 4 parallel image generations...", "Writing full platform copy suite...", "Animating best image with Pollo...", "Generating KingCam voice narration...", "Assembling the drop..."],
-  platform_trailer:  ["Generating cinematic video...", "Writing copy suite for all platforms...", "Generating KingCam voiceover...", "Assembling trailer package..."],
-  social_post:       ["Generating platform video...", "Writing TikTok, Instagram, Twitter, Telegram copy...", "Building 3 hook variants...", "Calculating posting schedule..."],
-  creator_campaign:  ["Generating teaser video...", "Writing full campaign copy pack...", "Building DM sequence...", "Preparing distribution..."],
-  telegram_blast:    ["Writing A/B message variants...", "Generating media...", "Sending to channels..."],
-  custom:            ["Analyzing request with GPT-4o...", "Routing to optimal pipeline...", "Generating content...", "Assembling output..."],
-};
+const BODY_FOCUSES = [
+  { id: "abs", label: "Abs", emoji: "💪" }, { id: "waist", label: "Waist", emoji: "⏳" },
+  { id: "butt", label: "Butt", emoji: "🍑" }, { id: "hips", label: "Hips", emoji: "💃" },
+  { id: "legs", label: "Legs", emoji: "👠" }, { id: "thighs", label: "Thighs", emoji: "🔥" },
+  { id: "chest", label: "Chest", emoji: "💎" }, { id: "back", label: "Back", emoji: "🖤" },
+  { id: "lowerback", label: "Lower Back", emoji: "💫" }, { id: "face", label: "Face", emoji: "👄" },
+  { id: "silhouette", label: "Silhouette", emoji: "✨" }, { id: "full", label: "Full Body", emoji: "🧍" },
+];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function Label({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize: 10, color: C.muted, fontFamily: "Space Mono, monospace", letterSpacing: "0.12em", marginBottom: 6, textTransform: "uppercase" }}>{children}</div>;
-}
+const VIBES = [
+  { id: "cinematic_heat", label: "Cinematic Heat", emoji: "🔥" },
+  { id: "luxe_gold",      label: "Luxe Gold",      emoji: "✨" },
+  { id: "neon_night",     label: "Neon Night",     emoji: "🌃" },
+  { id: "noir_afterdark", label: "After Dark Noir",emoji: "🖤" },
+  { id: "velvet_midnight",label: "Velvet Midnight",emoji: "🌙" },
+];
 
-function Pills({ options, value, onChange, multi = false }: { options: string[]; value: string | string[]; onChange: (v: any) => void; multi?: boolean }) {
-  const sel = Array.isArray(value) ? value : [value];
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-      {options.map(opt => {
-        const active = sel.includes(opt);
-        return (
-          <button key={opt} onClick={() => {
-            if (multi) { onChange(active ? sel.filter(s => s !== opt) : [...sel, opt]); }
-            else { onChange(opt); }
-          }} style={{ padding: "5px 13px", borderRadius: 20, border: `1px solid ${active ? C.cyan : C.border}`, background: active ? C.cyanDim : "transparent", color: active ? C.cyan : C.muted, fontSize: 12, fontFamily: "DM Sans, sans-serif", cursor: "pointer", transition: "all 0.12s" }}>
-            {opt}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+const PLATFORMS = ["OnlyFans", "Telegram", "TikTok", "Instagram", "Twitter", "VaultX", "All"];
 
-function TA({ placeholder, value, onChange, rows = 3 }: { placeholder: string; value: string; onChange: (v: string) => void; rows?: number }) {
-  return (
-    <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows}
-      style={{ width: "100%", background: "#0f0f0f", border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontFamily: "DM Sans, sans-serif", fontSize: 14, padding: "10px 12px", resize: "vertical", marginBottom: 12, boxSizing: "border-box" }} />
-  );
-}
-
-function TI({ placeholder, value, onChange, type = "text" }: { placeholder: string; value: string; onChange: (v: string) => void; type?: string }) {
-  return (
-    <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-      style={{ width: "100%", background: "#0f0f0f", border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontFamily: "DM Sans, sans-serif", fontSize: 14, padding: "10px 12px", marginBottom: 12, boxSizing: "border-box" }} />
-  );
-}
-
-function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-      <div onClick={() => onChange(!value)} style={{ width: 40, height: 22, borderRadius: 11, background: value ? C.cyan : C.border, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
-        <div style={{ position: "absolute", top: 3, left: value ? 21 : 3, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
-      </div>
-      <span style={{ fontSize: 13, color: C.muted, fontFamily: "DM Sans, sans-serif" }}>{label}</span>
-    </div>
-  );
-}
-
-function CopyBtn({ text, label = "COPY" }: { text: string; label?: string }) {
+function CopyBlock({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
+  const copy = () => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); };
   return (
-    <button onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-      style={{ padding: "4px 10px", fontSize: 9, borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: copied ? C.green : C.muted, cursor: "pointer", fontFamily: "Space Mono, monospace", letterSpacing: "0.08em" }}>
-      {copied ? "✓ COPIED" : label}
-    </button>
-  );
-}
-
-function CaptionCard({ label, text, accent = C.cyan }: { label: string; text: string; accent?: string }) {
-  return (
-    <div style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 8, padding: 14, borderLeft: `3px solid ${accent}` }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <span style={{ fontSize: 9, color: accent, fontFamily: "Space Mono, monospace", letterSpacing: "0.15em" }}>{label}</span>
-        <CopyBtn text={text} />
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <span style={{ fontSize: 10, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase" }}>{label}</span>
+        <button onClick={copy} style={{ background: "transparent", border: "none", color: copied ? GREEN : MUTED, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
+          {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copied" : "Copy"}
+        </button>
       </div>
-      <div style={{ fontSize: 13, color: C.text, fontFamily: "DM Sans, sans-serif", lineHeight: 1.6 }}>{text}</div>
+      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", margin: 0, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{value}</p>
     </div>
   );
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize: 10, color: C.cyan, fontFamily: "Space Mono, monospace", letterSpacing: "0.15em", marginBottom: 10, marginTop: 20, textTransform: "uppercase", borderBottom: `1px solid ${C.border}`, paddingBottom: 6 }}>{children}</div>;
-}
-
-function ActionBtn({ label, onClick, disabled, color = C.card, textColor = C.text }: { label: string; onClick: () => void; disabled?: boolean; color?: string; textColor?: string }) {
+function MediaOutput({ url, type }: { url: string; type: "image" | "video" }) {
   return (
-    <button onClick={onClick} disabled={disabled}
-      style={{ padding: "9px 16px", borderRadius: 6, border: `1px solid ${C.border}`, background: color, color: textColor, fontFamily: "DM Sans, sans-serif", fontSize: 12, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, transition: "opacity 0.15s" }}>
-      {label}
-    </button>
+    <div style={{ borderRadius: 12, overflow: "hidden", background: "#000", marginBottom: 12 }}>
+      {type === "video"
+        ? <video src={url} controls playsInline style={{ width: "100%", maxHeight: 400, display: "block" }} />
+        : <img src={url} alt="Generated" style={{ width: "100%", maxHeight: 400, objectFit: "contain", display: "block" }} />
+      }
+      <a href={url} download style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px", background: CARD, color: MUTED, textDecoration: "none", fontSize: 13 }}>
+        <Download size={14} /> Download
+      </a>
+    </div>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
 export default function ContentCommand() {
-  const { user, isLoading: authLoading } = useAuth();
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
-
-  const isOwner = user?.id === 6 || user?.id === 33;
-  useEffect(() => { if (!authLoading && !isOwner) setLocation("/dashboard"); }, [authLoading, isOwner]);
-
-  // ─── Phase state ──────────────────────────────────────────────────────────
+  const [selectedType, setSelectedType] = useState<ContentTypeId>("clone_drop");
   const [phase, setPhase] = useState<"select" | "brief" | "generating" | "output">("select");
-  const [selectedType, setSelectedType] = useState<ContentTypeId | null>(null);
-  const [stageIdx, setStageIdx] = useState(0);
-  const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState<any>(null);
-  const [batchResult, setBatchResult] = useState<any>(null);
-  const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [activeTab, setActiveTab] = useState<"output" | "copy" | "distribute" | "history">("output");
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const stageRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ─── Brief state ──────────────────────────────────────────────────────────
-  const [cloneBrief, setCloneBrief] = useState({ scenePrompt: "", motionPrompt: "", platform: "OnlyFans", imageCount: "2", withVoice: true });
-  const [trailerBrief, setTrailerBrief] = useState({ subject: "VaultX", tone: "Cinematic", keyMessage: "", duration: "5", withVoice: true });
-  const [socialBrief, setSocialBrief] = useState({ platform: "Twitter", hookStyle: "Statement", topic: "", ctaKeyword: "VAULT" });
-  const [campaignBrief, setCampaignBrief] = useState({ creatorName: "", contentType: "Video", assetUrl: "", ppvPrice: "29", platforms: ["VaultX", "Telegram"], autoPost: false });
-  const [telegramBrief, setTelegramBrief] = useState({ messageTopic: "", includeMedia: false, channel: "KingCam", sendNow: false, abTest: true });
-  const [customBrief, setCustomBrief] = useState({ description: "" });
+  // Brief state
+  const [scene, setScene] = useState("dark luxury throne room, dramatic spotlight, cinematic premium atmosphere");
+  const [platform, setPlatform] = useState("OnlyFans");
+  const [imageCount, setImageCount] = useState(4);
+  const [withVoice, setWithVoice] = useState(false);
+  const [bodyFocus, setBodyFocus] = useState("silhouette");
+  const [vibe, setVibe] = useState("cinematic_heat");
+  const [sourceImageUrl, setSourceImageUrl] = useState("");
+  const [price, setPrice] = useState("29");
+  const [topic, setTopic] = useState("");
+  const [theme, setTheme] = useState("luxury empire");
+  const [creatorName, setCreatorName] = useState("KingCam");
+  const [ppvPrice, setPpvPrice] = useState("29");
+  const [autoPost, setAutoPost] = useState(false);
+  const [message, setMessage] = useState("");
+  const [abTest, setAbTest] = useState(true);
+  const [channels, setChannels] = useState<string[]>(["kingcam"]);
+  const [customDesc, setCustomDesc] = useState("");
 
-  // ─── tRPC ─────────────────────────────────────────────────────────────────
-  // @ts-ignore
   const generateMut = (trpc as any).contentCommand.generateContent.useMutation();
-  // @ts-ignore
-  const batchMut = (trpc as any).contentCommand.generateBatch.useMutation();
-  // @ts-ignore
-  const postTelegramMut = (trpc as any).contentCommand.postToTelegram.useMutation();
-  // @ts-ignore
-  const distributeAllMut = (trpc as any).contentCommand.distributeAll.useMutation();
-  // @ts-ignore
-  const saveVaultMut = (trpc as any).contentCommand.saveToVault.useMutation();
-  // @ts-ignore
-  const remixMut = (trpc as any).contentCommand.remixContent.useMutation();
-  // @ts-ignore
-  const historyQuery = (trpc as any).contentCommand.getHistory.useQuery({}, { enabled: !!isOwner });
+  const postMut = (trpc as any).contentCommand.postToTelegram.useMutation();
+  const saveMut = (trpc as any).contentCommand.saveToVault.useMutation();
+  const historyQ = (trpc as any).contentCommand.getHistory.useQuery({ limit: 10 }, { retry: false });
 
-  // ─── Generation ───────────────────────────────────────────────────────────
+  const getBrief = () => {
+    switch (selectedType) {
+      case "clone_drop": return { scene, platform, imageCount, withVoice };
+      case "clone_series": return { theme, platform };
+      case "body_cinema_drop": return { bodyFocus, vibe, sourceImageUrl, price };
+      case "social_post": return { topic: topic || scene, platform, price };
+      case "creator_campaign": return { creatorName, contentType: "Video", ppvPrice, platforms: [platform, "Telegram"], autoPost };
+      case "telegram_blast": return { message: message || scene, channels, abTest, mediaType: "text" };
+      case "custom": return { description: customDesc };
+      default: return {};
+    }
+  };
+
   const handleGenerate = useCallback(async () => {
-    if (!selectedType) return;
-    const briefs: Record<ContentTypeId, any> = {
-      clone_drop: cloneBrief,
-      platform_trailer: trailerBrief,
-      social_post: socialBrief,
-      creator_campaign: campaignBrief,
-      telegram_blast: telegramBrief,
-      custom: customBrief,
-    };
-
     setPhase("generating");
-    setStageIdx(0);
-    setElapsed(0);
-    setBatchResult(null);
-
-    timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
-    const stages = STAGES[selectedType];
-    let si = 0;
-    stageRef.current = setInterval(() => {
-      si = Math.min(si + 1, stages.length - 2);
-      setStageIdx(si);
-    }, Math.floor(15000 / stages.length));
-
     try {
-      const res = await generateMut.mutateAsync({ contentType: selectedType, brief: briefs[selectedType] });
+      const res = await generateMut.mutateAsync({ contentType: selectedType, brief: getBrief() });
       setResult(res);
-      setStageIdx(stages.length - 1);
-      setSelectedImageIdx(0);
+      setPhase("output");
       setActiveTab("output");
-      setPhase("output");
-      void historyQuery.refetch();
-      toast({ title: "Content ready ✓" });
-    } catch (err: any) {
-      toast({ title: "Generation failed", description: err.message, variant: "destructive" });
+      toast.success("Content ready ✓");
+    } catch (e: any) {
+      toast.error(e?.message || "Generation failed");
       setPhase("brief");
-    } finally {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (stageRef.current) clearInterval(stageRef.current);
     }
-  }, [selectedType, cloneBrief, trailerBrief, socialBrief, campaignBrief, telegramBrief, customBrief]);
+  }, [selectedType, scene, platform, imageCount, withVoice, bodyFocus, vibe, sourceImageUrl, price, topic, theme, creatorName, ppvPrice, autoPost, message, abTest, channels, customDesc]);
 
-  const handleBatch = useCallback(async () => {
-    if (!selectedType || !["clone_drop", "social_post", "telegram_blast"].includes(selectedType)) return;
-    const briefs: Record<string, any> = { clone_drop: cloneBrief, social_post: socialBrief, telegram_blast: telegramBrief };
-    try {
-      const res = await batchMut.mutateAsync({ contentType: selectedType as any, brief: briefs[selectedType], count: 3 });
-      setBatchResult(res);
-      toast({ title: "Batch generated — pick the best" });
-    } catch (err: any) {
-      toast({ title: "Batch failed", description: err.message, variant: "destructive" });
-    }
-  }, [selectedType, cloneBrief, socialBrief, telegramBrief]);
-
-  const handlePostTelegram = useCallback(async (videoUrl?: string, imageUrl?: string, caption?: string, channel: "KingCam" | "Owner" | "Both" = "KingCam") => {
-    try {
-      await postTelegramMut.mutateAsync({ videoUrl, imageUrl, caption: caption || "", channel });
-      toast({ title: `Posted to ${channel} ✓` });
-    } catch (err: any) {
-      toast({ title: "Telegram failed", description: err.message, variant: "destructive" });
-    }
-  }, []);
-
-  const handleDistributeAll = useCallback(async () => {
+  const handlePost = async (channel: "kingcam" | "owner" | "both") => {
     if (!result) return;
-    const videoUrl = result.videoUrl;
-    const caption = result.copySuite?.telegram?.message || result.copySuite?.twitter?.caption || result.caption || result.messageA || "";
+    const caption = result.copySuite?.telegramBlast || result.campaignPack?.telegramBlast || result.messageA || result.plan?.copyPack?.telegramBlast || "";
+    const videoUrl = result.videoUrl || undefined;
+    const imageUrl = result.imageUrl || result.primaryImage || undefined;
     try {
-      const res = await distributeAllMut.mutateAsync({ videoUrl, caption, channels: ["KingCam", "Owner"] });
-      toast({ title: `Distributed to ${res.totalSent} channels ✓` });
-    } catch (err: any) {
-      toast({ title: "Distribution failed", description: err.message, variant: "destructive" });
-    }
-  }, [result]);
+      const r = await postMut.mutateAsync({ channel, caption, mediaUrl: videoUrl || imageUrl, isVideo: !!videoUrl });
+      toast.success(`Posted to ${r.totalSent} channel(s) ✓`);
+    } catch (e: any) { toast.error(e?.message || "Post failed"); }
+  };
 
-  const handleSaveVault = useCallback(async (url: string, assetType: "video" | "image" | "voice") => {
+  const handleSave = async (url: string, type: "video" | "image") => {
     try {
-      await saveVaultMut.mutateAsync({ url, assetType, contentType: selectedType || undefined });
-      toast({ title: "Saved to Vault ✓" });
-    } catch (err: any) {
-      toast({ title: "Save failed", description: err.message, variant: "destructive" });
-    }
-  }, [selectedType]);
+      await saveMut.mutateAsync({ url, assetType: type, contentType: selectedType });
+      toast.success("Saved to Vault ✓");
+    } catch (e: any) { toast.error(e?.message || "Save failed"); }
+  };
 
-  const handleRemix = useCallback(async (historyId: number) => {
-    try {
-      const res = await remixMut.mutateAsync({ historyId, variation: "Make it more aggressive and money-focused" });
-      setResult(res);
-      setPhase("output");
-      setActiveTab("copy");
-      toast({ title: "Remixed ✓" });
-    } catch (err: any) {
-      toast({ title: "Remix failed", description: err.message, variant: "destructive" });
-    }
-  }, []);
-
-  const reset = () => { setPhase("select"); setSelectedType(null); setResult(null); setBatchResult(null); };
-
-  if (authLoading || !isOwner) return <div style={{ minHeight: "100vh", background: C.bg }} />;
-
-  const stages = selectedType ? STAGES[selectedType] : [];
+  const selectedTypeInfo = CONTENT_TYPES.find(t => t.id === selectedType);
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "DM Sans, sans-serif" }}>
-
-      {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <header style={{ padding: "24px 28px 18px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 10, color: C.cyan, fontFamily: "Space Mono, monospace", letterSpacing: "0.2em", marginBottom: 4 }}>KINGCAM CONTENT FACTORY</div>
-          <h1 style={{ margin: 0, fontSize: 40, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.04em", lineHeight: 1 }}>CONTENT COMMAND</h1>
-          <p style={{ margin: "6px 0 0", fontSize: 14, color: C.muted }}>Describe what you want. The factory handles the rest.</p>
+    <div style={{ minHeight: "100vh", background: BG, color: "#fff", fontFamily: "DM Sans, sans-serif", paddingBottom: 120 }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(8,8,8,0.96)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(12px)" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {phase !== "select" && (
+              <button onClick={() => setPhase("select")} style={{ background: "transparent", border: "none", color: MUTED, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 13 }}>
+                <ArrowLeft size={16} /> Back
+              </button>
+            )}
+            <span style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 20 }}>👑 Content Factory</span>
+          </div>
+          {phase === "output" && (
+            <div style={{ display: "flex", gap: 6 }}>
+              {(["output", "copy", "distribute", "history"] as const).map(tab => (
+                <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${activeTab === tab ? GOLD : BORDER}`, background: activeTab === tab ? GOLD_DIM : "transparent", color: activeTab === tab ? GOLD : MUTED, fontSize: 11, fontWeight: 700, cursor: "pointer", textTransform: "capitalize" }}>{tab}</button>
+              ))}
+            </div>
+          )}
         </div>
-        {phase !== "select" && (
-          <button onClick={reset} style={{ padding: "8px 16px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", fontSize: 12, fontFamily: "DM Sans, sans-serif" }}>← New Content</button>
-        )}
-      </header>
+      </div>
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 20px" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 16px" }}>
 
-        {/* ═══ SELECT ═══════════════════════════════════════════════════════ */}
         {phase === "select" && (
-          <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 28 }}>
+          <div>
+            <p style={{ fontSize: 11, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 6 }}>KingCam Content Factory</p>
+            <h1 style={{ fontSize: 32, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 6px" }}>What are we building?</h1>
+            <p style={{ fontSize: 14, color: MUTED, marginBottom: 20 }}>7 content pipelines. Each one fires real AI, generates real media, and produces copy ready to post.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 10 }}>
               {CONTENT_TYPES.map(ct => (
-                <button key={ct.id} onClick={() => { setSelectedType(ct.id); setPhase("brief"); }}
-                  style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 18, textAlign: "left", cursor: "pointer", position: "relative", transition: "all 0.15s" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = C.borderActive; (e.currentTarget as HTMLElement).style.boxShadow = C.cyanGlow; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = C.border; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}>
-                  <div style={{ position: "absolute", top: 12, right: 12, fontSize: 9, padding: "2px 7px", borderRadius: 10, background: `${BADGE_COLORS[ct.badge]}20`, color: BADGE_COLORS[ct.badge], fontFamily: "Space Mono, monospace", letterSpacing: "0.08em" }}>{ct.badge}</div>
-                  <div style={{ fontSize: 26, marginBottom: 10 }}>{ct.icon}</div>
-                  <div style={{ fontSize: 18, fontFamily: "Bebas Neue, sans-serif", color: C.text, marginBottom: 5, letterSpacing: "0.04em" }}>{ct.label}</div>
-                  <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.5 }}>{ct.desc}</div>
+                <button key={ct.id} onClick={() => { setSelectedType(ct.id); setPhase("brief"); }} style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "16px", cursor: "pointer" }}>
+                  <span style={{ fontSize: 28, flexShrink: 0 }}>{ct.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <span style={{ fontSize: 15, fontWeight: 800 }}>{ct.label}</span>
+                      <span style={{ fontSize: 9, fontWeight: 900, color: ct.color, background: `${ct.color}18`, padding: "2px 6px", borderRadius: 5, letterSpacing: "0.06em" }}>{ct.badge}</span>
+                    </div>
+                    <p style={{ fontSize: 12, color: MUTED, margin: 0, lineHeight: 1.4 }}>{ct.desc}</p>
+                  </div>
+                  <ChevronRight size={16} color={MUTED} />
                 </button>
               ))}
             </div>
-
-            {/* History strip */}
-            {(historyQuery.data || []).length > 0 && (
-              <div>
-                <div style={{ fontSize: 10, color: C.muted, fontFamily: "Space Mono, monospace", letterSpacing: "0.1em", marginBottom: 10 }}>RECENT GENERATIONS</div>
+            {historyQ.data && historyQ.data.length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <p style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10 }}>Recent Generations</p>
                 <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
-                  {(historyQuery.data || []).slice(0, 10).map((h: any) => {
-                    const out = h.outputs || {};
-                    const thumb = out.primaryImageUrl || out.imageUrl || out.imageUrls?.[0] || null;
-                    return (
-                      <div key={h.id} onClick={() => { setResult(h.outputs); setSelectedType(h.contentType as ContentTypeId); setActiveTab("output"); setPhase("output"); }}
-                        style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, minWidth: 130, flexShrink: 0, cursor: "pointer", transition: "border-color 0.15s" }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = C.borderActive}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = C.border}>
-                        {thumb && <img src={thumb} alt="" style={{ width: "100%", height: 70, objectFit: "cover", borderRadius: 4, marginBottom: 6 }} />}
-                        <div style={{ fontSize: 9, color: C.cyan, fontFamily: "Space Mono, monospace", marginBottom: 3 }}>{h.contentType.replace("_", " ").toUpperCase()}</div>
-                        <div style={{ fontSize: 10, color: C.muted }}>{new Date(h.createdAt).toLocaleDateString()}</div>
-                      </div>
-                    );
-                  })}
+                  {historyQ.data.slice(0, 6).map((h: any) => (
+                    <button key={h.id} onClick={() => { setResult(h.outputs); setSelectedType(h.contentType); setPhase("output"); setActiveTab("output"); }} style={{ flexShrink: 0, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 14px", cursor: "pointer", textAlign: "left" }}>
+                      <p style={{ fontSize: 10, color: CYAN, fontFamily: "monospace", margin: "0 0 3px", textTransform: "uppercase" }}>{h.contentType.replace(/_/g, " ")}</p>
+                      <p style={{ fontSize: 12, color: "#ddd", margin: 0 }}>{new Date(h.createdAt).toLocaleDateString()}</p>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
 
-        {/* ═══ BRIEF ════════════════════════════════════════════════════════ */}
-        {phase === "brief" && selectedType && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, maxWidth: 900 }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-                <span style={{ fontSize: 26 }}>{CONTENT_TYPES.find(c => c.id === selectedType)?.icon}</span>
-                <div style={{ fontSize: 26, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.04em" }}>{CONTENT_TYPES.find(c => c.id === selectedType)?.label}</div>
+        {phase === "brief" && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <span style={{ fontSize: 28 }}>{selectedTypeInfo?.icon}</span>
+              <div>
+                <h2 style={{ fontSize: 26, fontFamily: "Bebas Neue, sans-serif", margin: 0 }}>{selectedTypeInfo?.label}</h2>
+                <p style={{ fontSize: 13, color: MUTED, margin: 0 }}>{selectedTypeInfo?.desc}</p>
               </div>
-
-              {/* Clone Drop */}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {selectedType === "clone_drop" && (
                 <>
-                  <Label>Scene Description</Label>
-                  <TA placeholder="dark penthouse throne room, velvet suit, gold chains, neon lighting, looking into camera" value={cloneBrief.scenePrompt} onChange={v => setCloneBrief(b => ({ ...b, scenePrompt: v }))} />
-                  <Label>Motion Description</Label>
-                  <TA placeholder="slow cinematic push toward camera, dramatic shadow shift, luxury presence" value={cloneBrief.motionPrompt} onChange={v => setCloneBrief(b => ({ ...b, motionPrompt: v }))} rows={2} />
-                  <Label>Primary Platform</Label>
-                  <Pills options={["OnlyFans", "Telegram", "Twitter", "Instagram"]} value={cloneBrief.platform} onChange={v => setCloneBrief(b => ({ ...b, platform: v }))} />
-                  <Label>Images to Generate</Label>
-                  <Pills options={["1", "2", "4"]} value={cloneBrief.imageCount} onChange={v => setCloneBrief(b => ({ ...b, imageCount: v }))} />
-                  <Toggle label="Generate KingCam voiceover" value={cloneBrief.withVoice} onChange={v => setCloneBrief(b => ({ ...b, withVoice: v }))} />
-                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 16, padding: "8px 12px", background: C.goldDim, borderRadius: 6, border: `1px solid ${C.gold}30` }}>
-                    Crown and hair locked automatically. Copy suite generated for all platforms simultaneously.
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Scene Description</label>
+                    <textarea value={scene} onChange={e => setScene(e.target.value)} rows={3} style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none", resize: "vertical", boxSizing: "border-box" }} placeholder="dark luxury throne room, dramatic spotlight..." />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Platform</label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {PLATFORMS.map(p => <button key={p} onClick={() => setPlatform(p)} style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${platform === p ? GOLD : BORDER}`, background: platform === p ? GOLD_DIM : "transparent", color: platform === p ? GOLD : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{p}</button>)}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Images to Generate</label>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {[1, 2, 4].map(n => <button key={n} onClick={() => setImageCount(n)} style={{ padding: "8px 20px", borderRadius: 8, border: `1px solid ${imageCount === n ? GOLD : BORDER}`, background: imageCount === n ? GOLD_DIM : "transparent", color: imageCount === n ? GOLD : MUTED, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{n}</button>)}
+                    </div>
+                  </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                    <input type="checkbox" checked={withVoice} onChange={e => setWithVoice(e.target.checked)} style={{ accentColor: GOLD, width: 16, height: 16 }} />
+                    <span style={{ fontSize: 14, color: "#ddd" }}>Generate KingCam voiceover (ElevenLabs)</span>
+                  </label>
+                </>
+              )}
+              {selectedType === "clone_series" && (
+                <>
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Series Theme</label>
+                    <input value={theme} onChange={e => setTheme(e.target.value)} style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none", boxSizing: "border-box" }} placeholder="luxury empire, street king, penthouse life..." />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Platform</label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {PLATFORMS.map(p => <button key={p} onClick={() => setPlatform(p)} style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${platform === p ? GOLD : BORDER}`, background: platform === p ? GOLD_DIM : "transparent", color: platform === p ? GOLD : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{p}</button>)}
+                    </div>
+                  </div>
+                  <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 14px" }}>
+                    <p style={{ fontSize: 13, color: MUTED, margin: 0 }}>GPT-4o writes a 6-scene arc (hook → intrigue → build → peak → tease → CTA), generates all 6 images, and animates scenes 1 and 4.</p>
                   </div>
                 </>
               )}
-
-              {/* Platform Trailer */}
-              {selectedType === "platform_trailer" && (
+              {selectedType === "body_cinema_drop" && (
                 <>
-                  <Label>Subject</Label>
-                  <Pills options={["CreatorVault", "VaultX", "Clone Engine", "Body Cinema", "Marketplace"]} value={trailerBrief.subject} onChange={v => setTrailerBrief(b => ({ ...b, subject: v }))} />
-                  <Label>Tone</Label>
-                  <Pills options={["Cinematic", "Hype", "Luxury", "Educational"]} value={trailerBrief.tone} onChange={v => setTrailerBrief(b => ({ ...b, tone: v }))} />
-                  <Label>Key Message</Label>
-                  <TA placeholder="The platform that turns content into campaigns" value={trailerBrief.keyMessage} onChange={v => setTrailerBrief(b => ({ ...b, keyMessage: v }))} rows={2} />
-                  <Label>Duration</Label>
-                  <Pills options={["5", "10"]} value={trailerBrief.duration} onChange={v => setTrailerBrief(b => ({ ...b, duration: v }))} />
-                  <Toggle label="Generate KingCam voiceover narration" value={trailerBrief.withVoice} onChange={v => setTrailerBrief(b => ({ ...b, withVoice: v }))} />
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Body Focus</label>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))", gap: 6 }}>
+                      {BODY_FOCUSES.map(f => (
+                        <button key={f.id} onClick={() => setBodyFocus(f.id)} style={{ padding: "8px 6px", borderRadius: 8, border: `1px solid ${bodyFocus === f.id ? "#FF4081" : BORDER}`, background: bodyFocus === f.id ? "rgba(255,64,129,0.12)" : "transparent", color: bodyFocus === f.id ? "#FF4081" : MUTED, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <span style={{ fontSize: 18 }}>{f.emoji}</span>{f.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Cinematic Vibe</label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {VIBES.map(v => <button key={v.id} onClick={() => setVibe(v.id)} style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid ${vibe === v.id ? "#FF4081" : BORDER}`, background: vibe === v.id ? "rgba(255,64,129,0.12)" : "transparent", color: vibe === v.id ? "#FF4081" : MUTED, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{v.emoji} {v.label}</button>)}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Source Image URL (optional)</label>
+                    <input value={sourceImageUrl} onChange={e => setSourceImageUrl(e.target.value)} style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none", boxSizing: "border-box" }} placeholder="https://... (leave blank to generate)" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>PPV Price ($)</label>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {["15", "19", "25", "29", "35", "49"].map(p => <button key={p} onClick={() => setPrice(p)} style={{ padding: "8px 14px", borderRadius: 8, border: `1px solid ${price === p ? GOLD : BORDER}`, background: price === p ? GOLD_DIM : "transparent", color: price === p ? GOLD : MUTED, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>${p}</button>)}
+                    </div>
+                  </div>
                 </>
               )}
-
-              {/* Social Post */}
               {selectedType === "social_post" && (
                 <>
-                  <Label>Primary Platform</Label>
-                  <Pills options={["TikTok", "Instagram", "Twitter", "Telegram"]} value={socialBrief.platform} onChange={v => setSocialBrief(b => ({ ...b, platform: v }))} />
-                  <Label>Hook Style</Label>
-                  <Pills options={["Pain Point", "Flex", "Question", "Statement", "Controversy"]} value={socialBrief.hookStyle} onChange={v => setSocialBrief(b => ({ ...b, hookStyle: v }))} />
-                  <Label>Topic</Label>
-                  <TA placeholder="Why creators are broke despite good content" value={socialBrief.topic} onChange={v => setSocialBrief(b => ({ ...b, topic: v }))} />
-                  <Label>CTA Keyword</Label>
-                  <Pills options={["VAULT", "VAULTX", "CLONE", "DEMO", "ACCESS", "LINK"]} value={socialBrief.ctaKeyword} onChange={v => setSocialBrief(b => ({ ...b, ctaKeyword: v }))} />
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Topic / Hook</label>
+                    <input value={topic} onChange={e => setTopic(e.target.value)} style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none", boxSizing: "border-box" }} placeholder="luxury lifestyle, new drop, behind the scenes..." />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Platform Focus</label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {PLATFORMS.map(p => <button key={p} onClick={() => setPlatform(p)} style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${platform === p ? GOLD : BORDER}`, background: platform === p ? GOLD_DIM : "transparent", color: platform === p ? GOLD : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{p}</button>)}
+                    </div>
+                  </div>
                 </>
               )}
-
-              {/* Creator Campaign */}
               {selectedType === "creator_campaign" && (
                 <>
-                  <Label>Creator Name</Label>
-                  <TI placeholder="Creator name" value={campaignBrief.creatorName} onChange={v => setCampaignBrief(b => ({ ...b, creatorName: v }))} />
-                  <Label>Content Type</Label>
-                  <Pills options={["Video", "Photo", "Reel", "Photo Set", "PPV Bundle"]} value={campaignBrief.contentType} onChange={v => setCampaignBrief(b => ({ ...b, contentType: v }))} />
-                  <Label>Direct Asset URL (optional)</Label>
-                  <TI placeholder="https://... (leave blank to auto-generate teaser)" value={campaignBrief.assetUrl} onChange={v => setCampaignBrief(b => ({ ...b, assetUrl: v }))} />
-                  <Label>PPV Price ($)</Label>
-                  <TI placeholder="29" type="number" value={campaignBrief.ppvPrice} onChange={v => setCampaignBrief(b => ({ ...b, ppvPrice: v }))} />
-                  <Label>Platform Targets</Label>
-                  <Pills options={["VaultX", "OnlyFans", "Fansly", "Telegram", "Twitter"]} value={campaignBrief.platforms} onChange={v => setCampaignBrief(b => ({ ...b, platforms: v }))} multi />
-                  <Toggle label="Auto-post teaser to Telegram on generation" value={campaignBrief.autoPost} onChange={v => setCampaignBrief(b => ({ ...b, autoPost: v }))} />
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Creator Name</label>
+                    <input value={creatorName} onChange={e => setCreatorName(e.target.value)} style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none", boxSizing: "border-box" }} placeholder="KingCam" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>PPV Price ($)</label>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {["19", "25", "29", "35", "49", "99"].map(p => <button key={p} onClick={() => setPpvPrice(p)} style={{ padding: "8px 14px", borderRadius: 8, border: `1px solid ${ppvPrice === p ? GOLD : BORDER}`, background: ppvPrice === p ? GOLD_DIM : "transparent", color: ppvPrice === p ? GOLD : MUTED, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>${p}</button>)}
+                    </div>
+                  </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                    <input type="checkbox" checked={autoPost} onChange={e => setAutoPost(e.target.checked)} style={{ accentColor: GOLD, width: 16, height: 16 }} />
+                    <span style={{ fontSize: 14, color: "#ddd" }}>Auto-post teaser to Telegram on generation</span>
+                  </label>
                 </>
               )}
-
-              {/* Telegram Blast */}
               {selectedType === "telegram_blast" && (
                 <>
-                  <Label>What to Broadcast</Label>
-                  <TA placeholder="New drop available. Exclusive content. Limited access." value={telegramBrief.messageTopic} onChange={v => setTelegramBrief(b => ({ ...b, messageTopic: v }))} />
-                  <Label>Channel</Label>
-                  <Pills options={["KingCam", "Owner", "Both"]} value={telegramBrief.channel} onChange={v => setTelegramBrief(b => ({ ...b, channel: v }))} />
-                  <Toggle label="Generate A/B variant for testing" value={telegramBrief.abTest} onChange={v => setTelegramBrief(b => ({ ...b, abTest: v }))} />
-                  <Toggle label="Include media (generates Pollo video)" value={telegramBrief.includeMedia} onChange={v => setTelegramBrief(b => ({ ...b, includeMedia: v }))} />
-                  <Toggle label="Send immediately on generation" value={telegramBrief.sendNow} onChange={v => setTelegramBrief(b => ({ ...b, sendNow: v }))} />
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Message Topic</label>
+                    <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none", resize: "vertical", boxSizing: "border-box" }} placeholder="New drop just landed. Link in bio." />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Send To</label>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {["kingcam", "owner"].map(ch => (
+                        <button key={ch} onClick={() => setChannels(prev => prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch])} style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${channels.includes(ch) ? GOLD : BORDER}`, background: channels.includes(ch) ? GOLD_DIM : "transparent", color: channels.includes(ch) ? GOLD : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer", textTransform: "capitalize" }}>{ch}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                    <input type="checkbox" checked={abTest} onChange={e => setAbTest(e.target.checked)} style={{ accentColor: GOLD, width: 16, height: 16 }} />
+                    <span style={{ fontSize: 14, color: "#ddd" }}>Generate A/B message variants</span>
+                  </label>
                 </>
               )}
-
-              {/* Custom */}
               {selectedType === "custom" && (
-                <>
-                  <Label>Describe What You Want Built</Label>
-                  <TA placeholder="Describe exactly what you want. GPT-4o analyzes the request, routes to the correct pipeline, and executes multi-step generation." value={customBrief.description} onChange={v => setCustomBrief({ description: v })} rows={6} />
-                </>
-              )}
-
-              {/* Generate button */}
-              <button onClick={handleGenerate} disabled={generateMut.isPending}
-                style={{ width: "100%", height: 52, background: C.cyan, color: C.bg, fontFamily: "Bebas Neue, sans-serif", fontSize: 20, letterSpacing: "0.12em", border: "none", borderRadius: 6, cursor: "pointer", marginTop: 4, boxShadow: generateMut.isPending ? "none" : C.cyanGlow }}>
-                BUILD THIS CONTENT
-              </button>
-
-              {/* Batch button for supported types */}
-              {["clone_drop", "social_post", "telegram_blast"].includes(selectedType) && (
-                <button onClick={handleBatch} disabled={batchMut.isPending}
-                  style={{ width: "100%", height: 40, background: "transparent", color: C.muted, fontFamily: "DM Sans, sans-serif", fontSize: 12, fontWeight: 600, border: `1px solid ${C.border}`, borderRadius: 6, cursor: "pointer", marginTop: 8 }}>
-                  {batchMut.isPending ? "Generating 3 variants..." : "Generate 3 Variants (Batch Mode)"}
-                </button>
-              )}
-            </div>
-
-            {/* Right side: batch results preview */}
-            <div>
-              {batchResult && (
                 <div>
-                  <div style={{ fontSize: 10, color: C.cyan, fontFamily: "Space Mono, monospace", letterSpacing: "0.12em", marginBottom: 10 }}>BATCH RESULTS — PICK THE BEST</div>
-                  {batchResult.imageUrls && batchResult.imageUrls.map((url: string, i: number) => (
-                    <div key={i} onClick={() => setCloneBrief(b => ({ ...b, scenePrompt: b.scenePrompt }))}
-                      style={{ marginBottom: 8, border: `2px solid ${selectedImageIdx === i ? C.cyan : C.border}`, borderRadius: 6, overflow: "hidden", cursor: "pointer" }}
-                      onClick={() => setSelectedImageIdx(i)}>
-                      <img src={url} alt={`Variant ${i + 1}`} style={{ width: "100%", display: "block" }} />
-                      <div style={{ padding: "6px 10px", fontSize: 10, color: C.muted, fontFamily: "Space Mono, monospace" }}>VARIANT {i + 1}</div>
-                    </div>
-                  ))}
-                  {batchResult.hooks && batchResult.hooks.map((h: string, i: number) => (
-                    <div key={i} style={{ marginBottom: 8, padding: "10px 12px", background: C.card2, border: `1px solid ${C.border}`, borderRadius: 6 }}>
-                      <div style={{ fontSize: 9, color: C.cyan, fontFamily: "Space Mono, monospace", marginBottom: 4 }}>HOOK VARIANT {i + 1}</div>
-                      <div style={{ fontSize: 13, color: C.text }}>{h}</div>
-                      <div style={{ marginTop: 6 }}><CopyBtn text={h} /></div>
-                    </div>
-                  ))}
-                  {batchResult.messages && batchResult.messages.map((m: string, i: number) => (
-                    <div key={i} style={{ marginBottom: 8, padding: "10px 12px", background: C.card2, border: `1px solid ${C.border}`, borderRadius: 6 }}>
-                      <div style={{ fontSize: 9, color: C.cyan, fontFamily: "Space Mono, monospace", marginBottom: 4 }}>MESSAGE VARIANT {i + 1}</div>
-                      <div style={{ fontSize: 12, color: C.text, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{m}</div>
-                      <div style={{ marginTop: 6 }}><CopyBtn text={m} /></div>
-                    </div>
-                  ))}
+                  <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Describe What You Want</label>
+                  <textarea value={customDesc} onChange={e => setCustomDesc(e.target.value)} rows={5} style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none", resize: "vertical", boxSizing: "border-box" }} placeholder="Describe exactly what you want. GPT-4o analyzes the request, routes to the correct pipeline, and executes multi-step generation." />
+                  <p style={{ fontSize: 12, color: MUTED, marginTop: 6 }}>GPT-4o will write the creative plan, generate images, animate, and produce copy — all in one shot.</p>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* ═══ GENERATING ═══════════════════════════════════════════════════ */}
         {phase === "generating" && (
-          <div style={{ textAlign: "center", padding: "80px 24px" }}>
-            <div key={stageIdx} style={{ fontSize: 28, fontFamily: "Bebas Neue, sans-serif", color: C.text, marginBottom: 12, animation: "fadeIn 0.4s ease", letterSpacing: "0.04em" }}>
-              {stages[stageIdx] || "Processing..."}
+          <div style={{ textAlign: "center", padding: "60px 20px" }}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: GOLD_DIM, border: `2px solid ${GOLD_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+              <Loader2 size={28} color={GOLD} style={{ animation: "spin 1s linear infinite" }} />
             </div>
-            <div style={{ fontSize: 11, color: C.faint, fontFamily: "Space Mono, monospace", marginBottom: 28 }}>{elapsed}s elapsed</div>
-            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 24 }}>
-              {stages.map((_, i) => (
-                <div key={i} style={{ width: i <= stageIdx ? 24 : 8, height: 4, borderRadius: 2, background: i <= stageIdx ? C.cyan : C.border, transition: "all 0.4s" }} />
-              ))}
-            </div>
-            <div style={{ fontSize: 11, color: C.faint, fontFamily: "DM Sans, sans-serif" }}>
-              {selectedType === "clone_drop" ? "Firing parallel Replicate predictions + Pollo animation + ElevenLabs voice + GPT copy suite" :
-               selectedType === "platform_trailer" ? "Generating Pollo video + ElevenLabs voiceover + multi-platform copy" :
-               selectedType === "social_post" ? "Generating video + writing TikTok, Instagram, Twitter, Telegram copy simultaneously" :
-               "Running full pipeline..."}
-            </div>
-            <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }`}</style>
+            <h2 style={{ fontSize: 28, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 8px" }}>Generating {selectedTypeInfo?.label}...</h2>
+            <p style={{ fontSize: 14, color: MUTED, maxWidth: 400, margin: "0 auto" }}>
+              {selectedType === "clone_drop" && "Firing Replicate in parallel → animating with Pollo → generating full copy suite..."}
+              {selectedType === "clone_series" && "GPT-4o writing 6-scene arc → generating all 6 images → animating hook and peak..."}
+              {selectedType === "body_cinema_drop" && "GPT-4o enhancing scene → generating image → animating with body-specific camera..."}
+              {selectedType === "social_post" && "Generating image → animating → writing copy for all 4 platforms..."}
+              {selectedType === "creator_campaign" && "Writing full campaign pack → generating image → animating → posting to Telegram..."}
+              {selectedType === "telegram_blast" && "Writing A/B message variants → sending to channels..."}
+              {selectedType === "custom" && "GPT-4o analyzing request → routing to pipeline → executing multi-step generation..."}
+            </p>
+            <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
           </div>
         )}
 
-        {/* ═══ OUTPUT ═══════════════════════════════════════════════════════ */}
         {phase === "output" && result && (
           <div>
-            {/* Output tab bar */}
-            <div style={{ display: "flex", gap: 0, borderBottom: `1px solid ${C.border}`, marginBottom: 20 }}>
-              {(["output", "copy", "distribute", "history"] as const).map(tab => (
-                <button key={tab} onClick={() => setActiveTab(tab)}
-                  style={{ padding: "10px 18px", fontSize: 11, fontFamily: "Space Mono, monospace", letterSpacing: "0.1em", textTransform: "uppercase", border: "none", background: "transparent", color: activeTab === tab ? C.cyan : C.muted, borderBottom: `2px solid ${activeTab === tab ? C.cyan : "transparent"}`, cursor: "pointer", transition: "all 0.15s" }}>
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            {/* ── OUTPUT TAB ─────────────────────────────────────────────── */}
             {activeTab === "output" && (
-              <div style={{ display: "grid", gridTemplateColumns: result.imageUrls?.length > 1 ? "1fr 200px" : "1fr", gap: 16 }}>
-                <div>
-                  {/* Video */}
-                  {result.videoUrl && (
-                    <video src={result.videoUrl} autoPlay muted loop playsInline controls
-                      style={{ width: "100%", borderRadius: 8, marginBottom: 12, border: `1px solid ${C.border}`, background: "#000" }} />
-                  )}
-                  {/* Primary image */}
-                  {(result.primaryImageUrl || result.imageUrl) && !result.videoUrl && (
-                    <img src={result.imageUrls?.[selectedImageIdx] || result.primaryImageUrl || result.imageUrl} alt="Output"
-                      style={{ width: "100%", borderRadius: 8, marginBottom: 12, border: `1px solid ${C.border}` }} />
-                  )}
-                  {/* Voice player */}
-                  {result.voiceUrl && (
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 10, color: C.cyan, fontFamily: "Space Mono, monospace", marginBottom: 6 }}>KINGCAM VOICEOVER</div>
-                      <audio src={result.voiceUrl} controls style={{ width: "100%" }} />
-                    </div>
-                  )}
-                  {/* Telegram message preview */}
-                  {result.type === "telegram_blast" && (
-                    <div style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 8, padding: 16, marginBottom: 12 }}>
-                      {result.sent && <div style={{ fontSize: 9, color: C.green, fontFamily: "Space Mono, monospace", marginBottom: 8 }}>● SENT TO {result.sentChannels?.join(", ") || result.channel}</div>}
-                      <div style={{ fontSize: 10, color: C.cyan, fontFamily: "Space Mono, monospace", marginBottom: 6 }}>MESSAGE A</div>
-                      <div style={{ fontSize: 14, color: C.text, lineHeight: 1.6, whiteSpace: "pre-wrap", marginBottom: 8 }}>{result.messageA}</div>
-                      <div style={{ fontSize: 10, color: C.muted, fontFamily: "Space Mono, monospace" }}>{result.messageA?.length || 0} chars</div>
-                    </div>
-                  )}
-                  {result.messageB && (
-                    <div style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 8, padding: 16, marginBottom: 12 }}>
-                      <div style={{ fontSize: 10, color: C.gold, fontFamily: "Space Mono, monospace", marginBottom: 6 }}>MESSAGE B (A/B VARIANT)</div>
-                      <div style={{ fontSize: 14, color: C.text, lineHeight: 1.6, whiteSpace: "pre-wrap", marginBottom: 8 }}>{result.messageB}</div>
-                      <div style={{ fontSize: 10, color: C.muted, fontFamily: "Space Mono, monospace" }}>{result.messageB?.length || 0} chars</div>
-                    </div>
-                  )}
-                  {/* Content plan for custom */}
-                  {result.contentPlan && (
-                    <div style={{ fontSize: 13, color: C.muted, padding: "10px 14px", background: C.card2, borderRadius: 6, border: `1px solid ${C.border}`, marginBottom: 12 }}>
-                      <span style={{ color: C.cyan, fontFamily: "Space Mono, monospace", fontSize: 9 }}>CONTENT PLAN: </span>{result.contentPlan}
-                    </div>
-                  )}
-                  {/* Action buttons */}
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-                    {result.videoUrl && <ActionBtn label="Post to Telegram" onClick={() => handlePostTelegram(result.videoUrl, undefined, result.copySuite?.telegram?.message || result.caption || result.messageA || "")} disabled={postTelegramMut.isPending} />}
-                    {(result.videoUrl || result.primaryImageUrl) && <ActionBtn label="Save to Vault" onClick={() => handleSaveVault(result.videoUrl || result.primaryImageUrl, result.videoUrl ? "video" : "image")} disabled={saveVaultMut.isPending} />}
-                    {result.voiceUrl && <ActionBtn label="Save Voice" onClick={() => handleSaveVault(result.voiceUrl, "voice")} disabled={saveVaultMut.isPending} />}
-                    {result.videoUrl && <a href={result.videoUrl} download style={{ padding: "9px 16px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.card, color: C.text, textDecoration: "none", fontSize: 12, fontWeight: 600 }}>Download</a>}
-                    <ActionBtn label="Build Another" onClick={reset} />
-                  </div>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <Check size={20} color={GREEN} />
+                  <h2 style={{ fontSize: 22, fontFamily: "Bebas Neue, sans-serif", margin: 0 }}>{selectedTypeInfo?.label} — Ready</h2>
                 </div>
-
-                {/* Image strip for clone drop */}
-                {result.imageUrls?.length > 1 && (
-                  <div>
-                    <div style={{ fontSize: 9, color: C.muted, fontFamily: "Space Mono, monospace", marginBottom: 8 }}>ALL IMAGES</div>
-                    {result.imageUrls.map((url: string, i: number) => (
-                      <div key={i} onClick={() => setSelectedImageIdx(i)}
-                        style={{ marginBottom: 8, border: `2px solid ${selectedImageIdx === i ? C.cyan : C.border}`, borderRadius: 6, overflow: "hidden", cursor: "pointer" }}>
-                        <img src={url} alt={`Image ${i + 1}`} style={{ width: "100%", display: "block" }} />
-                        <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", background: C.card2 }}>
-                          <span style={{ fontSize: 9, color: selectedImageIdx === i ? C.cyan : C.muted, fontFamily: "Space Mono, monospace" }}>#{i + 1}</span>
-                          <a href={url} download onClick={e => e.stopPropagation()} style={{ fontSize: 9, color: C.muted, textDecoration: "none" }}>↓</a>
-                        </div>
+                {result.videoUrl && <MediaOutput url={result.videoUrl} type="video" />}
+                {result.hookVideo && !result.videoUrl && <MediaOutput url={result.hookVideo} type="video" />}
+                {result.imageUrl && !result.videoUrl && <MediaOutput url={result.imageUrl} type="image" />}
+                {result.primaryImage && !result.imageUrl && !result.videoUrl && <MediaOutput url={result.primaryImage} type="image" />}
+                {result.images && result.images.length > 1 && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8, marginBottom: 12 }}>
+                    {result.images.map((url: string, i: number) => (
+                      <div key={i} style={{ borderRadius: 8, overflow: "hidden", position: "relative" }}>
+                        <img src={url} alt={`Image ${i + 1}`} style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", display: "block" }} />
+                        <a href={url} download style={{ position: "absolute", bottom: 4, right: 4, background: "rgba(0,0,0,0.7)", borderRadius: 6, padding: "4px 6px", color: "#fff", textDecoration: "none", fontSize: 10 }}>↓</a>
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* ── COPY TAB ───────────────────────────────────────────────── */}
-            {activeTab === "copy" && (
-              <div>
-                {/* Clone Drop copy suite */}
-                {result.copySuite && result.type === "clone_drop" && (
-                  <>
-                    <SectionTitle>Primary Copy</SectionTitle>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 4 }}>
-                      <CaptionCard label="HOOK" text={result.copySuite.hook} accent={C.cyan} />
-                      <CaptionCard label="CAPTION" text={result.copySuite.caption} accent={C.cyan} />
-                      <CaptionCard label="DM OPENER" text={result.copySuite.dmOpener} accent={C.gold} />
-                      <CaptionCard label="PPV TEASER" text={result.copySuite.ppvTeaser} accent={C.gold} />
-                    </div>
-                    <SectionTitle>Platform-Specific Copy</SectionTitle>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 4 }}>
-                      <CaptionCard label="TIKTOK HOOK" text={result.copySuite.tiktokHook} accent={C.purple} />
-                      <CaptionCard label="TWITTER POST" text={result.copySuite.twitterPost} accent="#1DA1F2" />
-                      <CaptionCard label="INSTAGRAM CAPTION" text={result.copySuite.instagramCaption} accent="#E1306C" />
-                      <CaptionCard label="TELEGRAM BLAST" text={result.copySuite.telegramBlast} accent="#0088CC" />
-                    </div>
-                    {result.copySuite.hookVariants?.length > 0 && (
-                      <>
-                        <SectionTitle>A/B Hook Variants</SectionTitle>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                          {result.copySuite.hookVariants.map((h: string, i: number) => (
-                            <CaptionCard key={i} label={`VARIANT ${i + 1}`} text={h} accent={C.muted} />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-
-                {/* Platform Trailer / Social Post copy suite */}
-                {result.copySuite && (result.type === "platform_trailer" || result.type === "social_post") && (
-                  <>
-                    <SectionTitle>TikTok</SectionTitle>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 4 }}>
-                      <CaptionCard label="HOOK" text={result.copySuite.tiktok?.hook || ""} accent={C.purple} />
-                      <CaptionCard label="CAPTION" text={result.copySuite.tiktok?.caption || ""} accent={C.purple} />
-                    </div>
-                    <SectionTitle>Instagram</SectionTitle>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 4 }}>
-                      <CaptionCard label="HOOK" text={result.copySuite.instagram?.hook || ""} accent="#E1306C" />
-                      <CaptionCard label="CAPTION" text={result.copySuite.instagram?.caption || ""} accent="#E1306C" />
-                    </div>
-                    <SectionTitle>Twitter / X</SectionTitle>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 4 }}>
-                      <CaptionCard label="HOOK" text={result.copySuite.twitter?.hook || ""} accent="#1DA1F2" />
-                      <CaptionCard label="POST" text={result.copySuite.twitter?.caption || ""} accent="#1DA1F2" />
-                    </div>
-                    <SectionTitle>Telegram</SectionTitle>
-                    <CaptionCard label="BLAST MESSAGE" text={result.copySuite.telegram?.message || ""} accent="#0088CC" />
-                    {result.copySuite.hookVariants?.length > 0 && (
-                      <>
-                        <SectionTitle>A/B Hook Variants</SectionTitle>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                          {result.copySuite.hookVariants.map((h: string, i: number) => (
-                            <CaptionCard key={i} label={`VARIANT ${i + 1}`} text={h} accent={C.muted} />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                    {result.copySuite.postingSchedule && (
-                      <div style={{ marginTop: 16, padding: "10px 14px", background: C.greenDim, borderRadius: 6, border: `1px solid ${C.green}30` }}>
-                        <span style={{ fontSize: 9, color: C.green, fontFamily: "Space Mono, monospace" }}>POSTING SCHEDULE: </span>
-                        <span style={{ fontSize: 12, color: C.text }}>{result.copySuite.postingSchedule}</span>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* Creator Campaign copy */}
-                {result.campaignPack && (
-                  <>
-                    <SectionTitle>Campaign Copy Pack</SectionTitle>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 4 }}>
-                      <CaptionCard label="HEADLINE" text={result.campaignPack.headline} accent={C.gold} />
-                      <CaptionCard label="TEASER CAPTION" text={result.campaignPack.teaserCaption} accent={C.gold} />
-                      <CaptionCard label="PPV UNLOCK LINE" text={result.campaignPack.ppvUnlockLine} accent={C.cyan} />
-                      <CaptionCard label="PRICING ANCHOR" text={result.campaignPack.pricingAnchor} accent={C.cyan} />
-                      <CaptionCard label="URGENCY LINE" text={result.campaignPack.urgencyLine} accent={C.red} />
-                      <CaptionCard label="TWITTER TEASER" text={result.campaignPack.twitterTeaser} accent="#1DA1F2" />
-                    </div>
-                    <CaptionCard label="TELEGRAM BLAST" text={result.campaignPack.telegramBlast} accent="#0088CC" />
-                    <CaptionCard label="INSTAGRAM CAPTION" text={result.campaignPack.instagramCaption} accent="#E1306C" />
-                    {result.campaignPack.dmSequence?.length > 0 && (
-                      <>
-                        <SectionTitle>DM Sequence (3 Messages)</SectionTitle>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                          {result.campaignPack.dmSequence.map((msg: string, i: number) => (
-                            <CaptionCard key={i} label={["DM OPENER", "FOLLOW-UP", "CLOSE"][i] || `DM ${i + 1}`} text={msg} accent={C.gold} />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                    {result.campaignPack.hookVariants?.length > 0 && (
-                      <>
-                        <SectionTitle>Hook Variants</SectionTitle>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                          {result.campaignPack.hookVariants.map((h: string, i: number) => (
-                            <CaptionCard key={i} label={`VARIANT ${i + 1}`} text={h} accent={C.muted} />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-
-                {/* Custom copy */}
-                {result.copy && result.type === "custom" && (
-                  <>
-                    <SectionTitle>Generated Copy</SectionTitle>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                      <CaptionCard label="HOOK" text={result.copy.hook} accent={C.cyan} />
-                      <CaptionCard label="CAPTION" text={result.copy.caption} accent={C.cyan} />
-                    </div>
-                    {result.recommendedPlatforms?.length > 0 && (
-                      <div style={{ marginTop: 12, padding: "8px 12px", background: C.cyanDim, borderRadius: 6 }}>
-                        <span style={{ fontSize: 9, color: C.cyan, fontFamily: "Space Mono, monospace" }}>RECOMMENDED PLATFORMS: </span>
-                        <span style={{ fontSize: 12, color: C.text }}>{result.recommendedPlatforms.join(", ")}</span>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* ── DISTRIBUTE TAB ─────────────────────────────────────────── */}
-            {activeTab === "distribute" && (
-              <div style={{ maxWidth: 600 }}>
-                <SectionTitle>Distribution Control</SectionTitle>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
-                  {[
-                    { label: "KingCam Channel", ch: "KingCam" as const, icon: "👑" },
-                    { label: "Owner DMs", ch: "Owner" as const, icon: "🔑" },
-                    { label: "Both Channels", ch: "Both" as const, icon: "⚡" },
-                  ].map(({ label, ch, icon }) => (
-                    <button key={ch} onClick={() => handlePostTelegram(result.videoUrl, result.primaryImageUrl || result.imageUrl, result.copySuite?.telegram?.message || result.campaignPack?.telegramBlast || result.messageA || result.caption || "", ch)}
-                      disabled={postTelegramMut.isPending}
-                      style={{ padding: "14px 16px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.text, cursor: "pointer", textAlign: "left", fontFamily: "DM Sans, sans-serif" }}>
-                      <div style={{ fontSize: 20, marginBottom: 6 }}>{icon}</div>
-                      <div style={{ fontSize: 13, fontWeight: 700 }}>Post to {label}</div>
-                      <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Telegram</div>
-                    </button>
-                  ))}
-                </div>
-
-                <button onClick={handleDistributeAll} disabled={distributeAllMut.isPending}
-                  style={{ width: "100%", padding: "14px", borderRadius: 8, border: `1px solid ${C.cyan}`, background: C.cyanDim, color: C.cyan, fontFamily: "Bebas Neue, sans-serif", fontSize: 18, letterSpacing: "0.1em", cursor: "pointer", marginBottom: 20 }}>
-                  {distributeAllMut.isPending ? "DISTRIBUTING..." : "DISTRIBUTE TO ALL CHANNELS"}
-                </button>
-
-                {result.videoUrl && (
-                  <div style={{ padding: "14px 16px", background: C.card2, borderRadius: 8, border: `1px solid ${C.border}` }}>
-                    <div style={{ fontSize: 10, color: C.muted, fontFamily: "Space Mono, monospace", marginBottom: 8 }}>ASSET URLS</div>
-                    <div style={{ fontSize: 11, color: C.cyan, wordBreak: "break-all", marginBottom: 6 }}>{result.videoUrl}</div>
-                    <CopyBtn text={result.videoUrl} label="COPY VIDEO URL" />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── HISTORY TAB ────────────────────────────────────────────── */}
-            {activeTab === "history" && (
-              <div>
-                <SectionTitle>Generation History</SectionTitle>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
-                  {(historyQuery.data || []).map((h: any) => {
-                    const out = h.outputs || {};
-                    const thumb = out.primaryImageUrl || out.imageUrl || out.imageUrls?.[0] || null;
-                    return (
-                      <div key={h.id} style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
-                        {thumb && <img src={thumb} alt="" style={{ width: "100%", height: 80, objectFit: "cover" }} />}
-                        <div style={{ padding: "8px 10px" }}>
-                          <div style={{ fontSize: 9, color: C.cyan, fontFamily: "Space Mono, monospace", marginBottom: 3 }}>{h.contentType.replace("_", " ").toUpperCase()}</div>
-                          <div style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>{new Date(h.createdAt).toLocaleDateString()}</div>
-                          <div style={{ display: "flex", gap: 4 }}>
-                            <button onClick={() => { setResult(h.outputs); setSelectedType(h.contentType as ContentTypeId); setActiveTab("output"); }}
-                              style={{ flex: 1, padding: "5px 0", fontSize: 9, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, borderRadius: 4, cursor: "pointer", fontFamily: "Space Mono, monospace" }}>
-                              VIEW
-                            </button>
-                            <button onClick={() => handleRemix(h.id)} disabled={remixMut.isPending}
-                              style={{ flex: 1, padding: "5px 0", fontSize: 9, border: `1px solid ${C.cyan}`, background: C.cyanDim, color: C.cyan, borderRadius: 4, cursor: "pointer", fontFamily: "Space Mono, monospace" }}>
-                              REMIX
-                            </button>
+                {result.scenes && (
+                  <div style={{ marginBottom: 16 }}>
+                    <p style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10 }}>6-Scene Series</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 8 }}>
+                      {result.scenes.map((s: any) => (
+                        <div key={s.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, overflow: "hidden" }}>
+                          {s.imageUrl && <img src={s.imageUrl} alt={s.name} style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", display: "block" }} />}
+                          <div style={{ padding: "8px 10px" }}>
+                            <p style={{ fontSize: 11, fontWeight: 800, margin: "0 0 3px", color: GOLD }}>Scene {s.id}: {s.name}</p>
+                            <p style={{ fontSize: 10, color: MUTED, margin: 0, lineHeight: 1.4 }}>{s.caption}</p>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {(historyQuery.data || []).length === 0 && (
-                  <div style={{ textAlign: "center", color: C.muted, fontSize: 13, padding: "40px 0" }}>No history yet. Generate something.</div>
+                      ))}
+                    </div>
+                  </div>
                 )}
+                {(result.copySuite?.hook || result.campaignPack?.headline || result.plan?.copyPack?.hook || result.messageA) && (
+                  <CopyBlock label="Primary Hook" value={result.copySuite?.hook || result.campaignPack?.headline || result.plan?.copyPack?.hook || result.messageA || ""} />
+                )}
+              </div>
+            )}
+
+            {activeTab === "copy" && (
+              <div>
+                <h3 style={{ fontSize: 20, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 14px" }}>Full Copy Suite</h3>
+                {result.copySuite && (
+                  <>
+                    <CopyBlock label="Hook" value={result.copySuite.hook || ""} />
+                    <CopyBlock label="Caption" value={result.copySuite.caption || ""} />
+                    <CopyBlock label="Telegram Blast" value={result.copySuite.telegramBlast || ""} />
+                    <CopyBlock label="TikTok Hook" value={result.copySuite.tiktokHook || ""} />
+                    <CopyBlock label="Instagram Caption" value={result.copySuite.instagramCaption || ""} />
+                    <CopyBlock label="Twitter Post" value={result.copySuite.twitterPost || ""} />
+                    <CopyBlock label="DM Opener" value={result.copySuite.dmOpener || ""} />
+                    <CopyBlock label="PPV Teaser" value={result.copySuite.ppvTeaser || ""} />
+                    <CopyBlock label="Urgency Line" value={result.copySuite.urgencyLine || ""} />
+                    <CopyBlock label="Pricing Anchor" value={result.copySuite.pricingAnchor || ""} />
+                    {result.copySuite.hookVariants?.map((v: string, i: number) => <CopyBlock key={i} label={`Hook Variant ${i + 1}`} value={v} />)}
+                  </>
+                )}
+                {result.campaignPack && (
+                  <>
+                    <CopyBlock label="Headline" value={result.campaignPack.headline || ""} />
+                    <CopyBlock label="Teaser Caption" value={result.campaignPack.teaserCaption || ""} />
+                    <CopyBlock label="Telegram Blast" value={result.campaignPack.telegramBlast || ""} />
+                    <CopyBlock label="Twitter Teaser" value={result.campaignPack.twitterTeaser || ""} />
+                    <CopyBlock label="Instagram Caption" value={result.campaignPack.instagramCaption || ""} />
+                    <CopyBlock label="PPV Unlock Line" value={result.campaignPack.ppvUnlockLine || ""} />
+                    <CopyBlock label="Pricing Anchor" value={result.campaignPack.pricingAnchor || ""} />
+                    <CopyBlock label="Urgency Line" value={result.campaignPack.urgencyLine || ""} />
+                    {result.campaignPack.dmSequence?.map((msg: string, i: number) => <CopyBlock key={i} label={`DM ${i + 1}`} value={msg} />)}
+                    {result.campaignPack.hookVariants?.map((v: string, i: number) => <CopyBlock key={i} label={`Hook Variant ${i + 1}`} value={v} />)}
+                  </>
+                )}
+                {result.plan?.copyPack && (
+                  <>
+                    <CopyBlock label="Hook" value={result.plan.copyPack.hook || ""} />
+                    <CopyBlock label="Caption" value={result.plan.copyPack.caption || ""} />
+                    <CopyBlock label="Telegram Blast" value={result.plan.copyPack.telegramBlast || ""} />
+                    <CopyBlock label="DM Opener" value={result.plan.copyPack.dmOpener || ""} />
+                    <CopyBlock label="PPV Teaser" value={result.plan.copyPack.ppvTeaser || ""} />
+                    {result.plan.recommendations?.map((r: string, i: number) => (
+                      <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6 }}><span style={{ color: GOLD }}>→</span><span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>{r}</span></div>
+                    ))}
+                  </>
+                )}
+                {result.messageA && <CopyBlock label="Message A" value={result.messageA} />}
+                {result.messageB && <CopyBlock label="Message B (A/B)" value={result.messageB} />}
+              </div>
+            )}
+
+            {activeTab === "distribute" && (
+              <div>
+                <h3 style={{ fontSize: 20, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 14px" }}>Distribute</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <button onClick={() => handlePost("kingcam")} style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderRadius: 12, border: `1px solid ${BORDER}`, background: CARD, color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
+                    <Send size={18} color={CYAN} /> Post to KingCam Channel
+                  </button>
+                  <button onClick={() => handlePost("owner")} style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderRadius: 12, border: `1px solid ${BORDER}`, background: CARD, color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
+                    <Send size={18} color={GOLD} /> Post to Owner DMs
+                  </button>
+                  <button onClick={() => handlePost("both")} style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderRadius: 12, border: `1px solid ${GOLD_BORDER}`, background: GOLD_DIM, color: GOLD, cursor: "pointer", fontSize: 14, fontWeight: 900 }}>
+                    <Zap size={18} /> DISTRIBUTE TO ALL
+                  </button>
+                  {(result.videoUrl || result.imageUrl || result.primaryImage) && (
+                    <button onClick={() => handleSave(result.videoUrl || result.imageUrl || result.primaryImage, result.videoUrl ? "video" : "image")} style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderRadius: 12, border: `1px solid ${BORDER}`, background: CARD, color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
+                      <Layers size={18} color={GREEN} /> Save to Vault
+                    </button>
+                  )}
+                  <Link href="/vaultx/drop" style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderRadius: 12, border: `1px solid ${GOLD_BORDER}`, background: "transparent", color: GOLD, textDecoration: "none", fontSize: 14, fontWeight: 700 }}>
+                    <Film size={18} /> Turn into a Paid Drop →
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "history" && (
+              <div>
+                <h3 style={{ fontSize: 20, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 14px" }}>Generation History</h3>
+                {historyQ.data?.map((h: any) => (
+                  <button key={h.id} onClick={() => { setResult(h.outputs); setSelectedType(h.contentType); setActiveTab("output"); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
+                    <span style={{ fontSize: 22 }}>{CONTENT_TYPES.find(t => t.id === h.contentType)?.icon || "📄"}</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 800, margin: "0 0 2px", textTransform: "capitalize" }}>{h.contentType.replace(/_/g, " ")}</p>
+                      <p style={{ fontSize: 11, color: MUTED, margin: 0 }}>{new Date(h.createdAt).toLocaleString()}</p>
+                    </div>
+                    <RefreshCw size={14} color={MUTED} />
+                  </button>
+                ))}
               </div>
             )}
           </div>
         )}
       </div>
+
+      {phase === "brief" && (
+        <div style={{ position: "fixed", inset: "auto 0 0 0", zIndex: 50, background: "rgba(8,8,8,0.96)", borderTop: `1px solid ${BORDER}`, backdropFilter: "blur(12px)", padding: "12px 16px" }}>
+          <div style={{ maxWidth: 900, margin: "0 auto" }}>
+            <button onClick={handleGenerate} disabled={generateMut.isPending} style={{ width: "100%", padding: "16px", borderRadius: 12, background: GOLD, color: "#000", fontSize: 17, fontWeight: 900, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.08em", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <Flame size={18} /> BUILD THIS CONTENT
+            </button>
+          </div>
+        </div>
+      )}
+
+      {phase === "output" && (
+        <div style={{ position: "fixed", inset: "auto 0 0 0", zIndex: 50, background: "rgba(8,8,8,0.96)", borderTop: `1px solid ${BORDER}`, backdropFilter: "blur(12px)", padding: "12px 16px" }}>
+          <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", gap: 8 }}>
+            <button onClick={() => { setPhase("select"); setResult(null); }} style={{ flex: 1, padding: "14px", borderRadius: 12, border: `1px solid ${BORDER}`, background: "transparent", color: MUTED, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>New Content</button>
+            <button onClick={() => setPhase("brief")} style={{ flex: 1, padding: "14px", borderRadius: 12, border: `1px solid ${GOLD_BORDER}`, background: GOLD_DIM, color: GOLD, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <RefreshCw size={14} /> Regenerate
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
