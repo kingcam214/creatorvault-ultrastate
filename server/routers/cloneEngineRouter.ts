@@ -481,14 +481,14 @@ export const cloneEngineRouter = router({
   generateImage: protectedProcedure
     .input(z.object({
       cloneId: z.string().optional(),
-      prompt: z.string().min(1).max(2000),
-      negativePrompt: z.string().max(2000).optional(),
+      prompt: z.string().min(1).max(5000),
+      negativePrompt: z.string().max(5000).optional(),
       provider: z.enum(["replicate-fluxdevcam", "replicate-flux-dev"]).default("replicate-fluxdevcam"),
-      width: z.number().min(256).max(1536).default(1024),
-      height: z.number().min(256).max(1536).default(1024),
-      numOutputs: z.number().min(1).max(4).default(1),
-      guidanceScale: z.number().min(0).max(20).default(3.5),
-      numInferenceSteps: z.number().min(1).max(50).default(28),
+      width: z.number().min(256).max(2048).default(1024),
+      height: z.number().min(256).max(2048).default(1024),
+      numOutputs: z.number().min(1).max(8).default(1),
+      guidanceScale: z.number().min(0).max(30).default(3.5),
+      numInferenceSteps: z.number().min(1).max(100).default(28),
       seed: z.number().optional(),
       modelVersion: z.string().optional(),
       previewOnly: z.boolean().default(false),
@@ -676,7 +676,7 @@ export const cloneEngineRouter = router({
       stability: z.number().min(0).max(1).default(0.5),
       similarityBoost: z.number().min(0).max(1).default(0.85),
       style: z.number().min(0).max(1).default(0.35),
-      speed: z.number().min(0.5).max(2).default(0.95),
+      speed: z.number().min(0.25).max(4).default(0.95),
       language: z.string().default("en"),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -931,7 +931,7 @@ export const cloneEngineRouter = router({
     .input(z.object({
       cloneId: z.string().optional(),
       type: z.enum(["all", "image", "video", "voice", "talking_head"]).default("all"),
-      limit: z.number().min(1).max(100).default(20),
+      limit: z.number().min(1).max(1000).default(20),
       offset: z.number().min(0).default(0),
     }))
     .query(async ({ ctx, input }) => {
@@ -1028,9 +1028,9 @@ export const cloneEngineRouter = router({
       triggerWord: z.string().min(2).max(50),
       datasetId: z.string().optional(),
       samples: z.array(z.string()).optional(),
-      steps: z.number().min(100).max(4000).default(1000),
+      steps: z.number().min(100).max(10000).default(2000),
       learningRate: z.number().default(0.0004),
-      loraRank: z.number().min(4).max(128).default(16),
+      loraRank: z.number().min(4).max(256).default(32),
       provider: z.enum(["replicate", "local"]).default("replicate"),
     }))
     .mutation(async ({ ctx, input }) => {

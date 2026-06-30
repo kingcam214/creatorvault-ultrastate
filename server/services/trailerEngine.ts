@@ -208,7 +208,7 @@ async function build(job: TrailerJob, req: TrailerRequest) {
   const grade = GRADES[req.vibe || "cinematic_heat"] || "";
   const usePolish = req.polish !== false;
   const useTransitions = req.transitions !== false;
-  let beat = Math.max(0.55, Math.min(1.8, req.beatSeconds || (req.intensity === "fast" ? 0.7 : req.intensity === "slow" ? 1.4 : 1.0)));
+  let beat = Math.max(0.35, Math.min(2.5, req.beatSeconds || (req.intensity === "ultra" ? 0.45 : req.intensity === "fast" ? 0.65 : req.intensity === "slow" ? 1.4 : req.intensity === "minimal" ? 2.0 : 0.95)));
   const focuses = (req as any)._aiFocuses || (req.focusRotation && req.focusRotation.length ? req.focusRotation : ["face", "chest", "waist", "abs", "butt", "legs"]);
   const work = path.join(WORK_ROOT, job.id); fs.mkdirSync(work, { recursive: true });
   // Beat-sync: if music is provided, detect tempo and align cut length to it
@@ -240,7 +240,7 @@ async function build(job: TrailerJob, req: TrailerRequest) {
     if (needsAI) {
       upd(job, { progress: 5, stage: "AI is shooting new angles" });
       try {
-        const want = Math.max(2, Math.min(8, req.aiShotCount || (mode === "ai_full_shoot" || mode === "photo_cinematic" ? 6 : 4)));
+        const want = Math.max(2, Math.min(16, req.aiShotCount || (mode === "ai_full_shoot" || mode === "photo_cinematic" ? 8 : 6)));
         const ai = await generateAIShots(clips.map(c => ({ src: c.src })), want, {
           resolution: "720p",
           onProgress: (d, t) => upd(job, { progress: 5 + Math.round((d / t) * 15), stage: `AI generating new shots (${d}/${t})` }),
@@ -368,7 +368,7 @@ async function build(job: TrailerJob, req: TrailerRequest) {
 
     // 2. BUILD — beat cuts with focus rotation + zoom-punch
     upd(job, { progress: 24, stage: "Building beat cuts" });
-    const buildCuts = req.intensity === "fast" ? 6 : req.intensity === "slow" ? 3 : 4;
+    const buildCuts = req.intensity === "fast" ? 10 : req.intensity === "ultra" ? 14 : req.intensity === "slow" ? 5 : req.intensity === "minimal" ? 2 : 7;
     for (let i = 0; i < buildCuts; i++) {
       const clip = clips[(i + 1) % clips.length];
       const focusId = focuses[(i + 1) % focuses.length];

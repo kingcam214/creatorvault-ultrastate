@@ -38,6 +38,13 @@ export const AI_CAMERA_SHOTS: { id: string; label: string; bodyFocus: string; pr
   { id: "face_closeup",  label: "Face Close-Up",    bodyFocus: "face",      prompt: "extreme close-up orbit around the jawline and lips, dramatic side light, soft skin glow, cinematic intimacy" },
   { id: "silhouette",    label: "Silhouette",       bodyFocus: "silhouette",prompt: "full-body silhouette with strong backlight, 360-degree orbit, cinematic noir, every curve visible against the light" },
   { id: "dolly_reveal",  label: "Dolly Reveal",     bodyFocus: "none",      prompt: "slow dolly-out reveal from a tight body detail to a full-frame wide shot, dramatic falloff lighting, premium cinematic grade" },
+  { id: "360_orbit",     label: "360 Orbit",        bodyFocus: "silhouette",prompt: "full 360-degree orbital camera move around the subject, maintaining eye level, cinematic rim lighting throughout, premium editorial" },
+  { id: "extreme_close", label: "Extreme Close-Up",  bodyFocus: "face",      prompt: "extreme macro close-up of skin texture and curves, shallow depth of field, warm intimate lighting, cinematic beauty grade" },
+  { id: "dutch_angle",   label: "Dutch Angle",       bodyFocus: "full",      prompt: "dramatic dutch angle camera tilt, dynamic composition, high contrast noir lighting, cinematic tension" },
+  { id: "floor_level",   label: "Floor Level Push",  bodyFocus: "legs",      prompt: "floor-level camera push looking up the full length of the body, extreme low angle, dramatic upward perspective, luxury lighting" },
+  { id: "whip_pan",      label: "Whip Pan Reveal",   bodyFocus: "none",      prompt: "fast whip pan transitioning to a slow reveal of the subject, motion blur into sharp focus, cinematic energy" },
+  { id: "mirror_shot",   label: "Mirror Reflection", bodyFocus: "full",      prompt: "subject reflected in a mirror or reflective surface, dual perspective, moody atmospheric lighting, cinematic luxury" },
+  { id: "shadow_reveal", label: "Shadow Reveal",     bodyFocus: "silhouette",prompt: "dramatic shadow play with subject emerging from darkness into light, film noir aesthetic, cinematic tension and reveal" },
 ];
 
 function ffSync(args: string[], timeoutMs = 60000): void {
@@ -147,7 +154,7 @@ export async function generateAIShots(
     const out: string[] = [];
     const outFocuses: string[] = [];
     let done = 0;
-    const CONC = 3;
+    const CONC = 6;
     for (let i = 0; i < jobs.length; i += CONC) {
       const batch = jobs.slice(i, i + CONC);
       const results = await Promise.all(batch.map(j => polloShot(j.frame, j.prompt, res, 5)));

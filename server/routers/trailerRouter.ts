@@ -82,6 +82,21 @@ export const TRAILER_TEMPLATES: TrailerTemplate[] = [
     vibe: "cinematic_heat", intensity: "fast", focusRotation: ["face", "chest", "waist", "abs", "butt", "legs"],
     hookText: "made by AI", ctaText: "UNLOCK THE FULL DROP", ctaSubText: "Only on the link 🔓", bestFor: "Maximum wow-factor", conversionScore: 10, polish: true, transitions: true, aiRemix: true,
   },
+  {
+    id: "ultra-blitz", name: "Ultra Blitz", emoji: "⚡⚡", tagline: "Maximum speed, maximum cuts, maximum energy. 14 cuts in 8 seconds.",
+    vibe: "neon_night", intensity: "ultra", focusRotation: ["face", "abs", "butt", "thighs", "waist", "hips", "legs", "chest", "back", "lowerback", "silhouette", "face"],
+    hookText: "brace yourself", ctaText: "UNLOCK IT ALL", ctaSubText: "You're not ready ⚡", bestFor: "Maximum scroll-stop", conversionScore: 10, polish: true, transitions: false,
+  },
+  {
+    id: "cinematic-opus", name: "Cinematic Opus", emoji: "🎭", tagline: "The most cinematic trailer possible. Slow, deliberate, every frame a work of art.",
+    vibe: "velvet_midnight", intensity: "minimal", focusRotation: ["silhouette", "face", "back", "lowerback"],
+    hookText: undefined, ctaText: "ENTER IF YOU DARE", ctaSubText: "The full opus awaits 🎭", bestFor: "High-art premium content", conversionScore: 9, polish: true, transitions: true,
+  },
+  {
+    id: "full-spectrum", name: "Full Spectrum", emoji: "🌈", tagline: "Every body feature, every angle, every vibe. The complete showcase.",
+    vibe: "luxe_gold", intensity: "fast", focusRotation: ["face", "chest", "waist", "abs", "hips", "butt", "thighs", "legs", "back", "lowerback", "silhouette", "face"],
+    hookText: "the full picture", ctaText: "SEE EVERYTHING", ctaSubText: "Full access inside 🌈", bestFor: "Complete body showcase", conversionScore: 10, polish: true, transitions: true,
+  },
 ];
 
 const clipSchema = z.object({ src: z.string(), trimStart: z.number().optional(), trimEnd: z.number().optional() });
@@ -102,11 +117,11 @@ export const trailerRouter = router({
       ctaText: z.string().optional(),
       ctaSubText: z.string().optional(),
       focusRotation: z.array(z.string()).optional(),
-      intensity: z.enum(["fast", "medium", "slow"]).default("fast"),
+      intensity: z.enum(["ultra", "fast", "medium", "slow", "minimal"]).default("fast"),
       musicUrl: z.string().optional(),
       watermarkText: z.string().optional(),
       aiRemix: z.boolean().optional(),
-      aiShotCount: z.number().min(2).max(8).optional(),
+      aiShotCount: z.number().min(1).max(16).optional(),
       mode: z.enum(["ai_full_shoot", "ai_remix", "original", "hybrid", "photo_cinematic"]).optional(),
       chromaAberration: z.boolean().optional(),
       lightLeaks: z.boolean().optional(),

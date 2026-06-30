@@ -317,7 +317,7 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
         if (clipFocus) filters.push(clipFocus);
         if (clipGrade) filters.push(clipGrade);
         // Per-clip speed ramp
-        const speed = clip.speed != null ? Math.max(0.1, Math.min(8, clip.speed)) : 1.0;
+        const speed = clip.speed != null ? Math.max(0.05, Math.min(32, clip.speed)) : 1.0;
         if (speed !== 1.0) {
           filters.push(`setpts=${(1/speed).toFixed(4)}*PTS`);
           if (speed < 1.0) filters.push("tblend=all_mode=average"); // motion blur for slow-mo

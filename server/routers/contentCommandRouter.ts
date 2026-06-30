@@ -49,18 +49,27 @@ function buildIdentityPrompt(scene: string): string {
 }
 
 const BODY_CAMERA_PROMPTS: Record<string, string> = {
-  abs:       "slow cinematic push tight on toned midsection, abs as hero, low angle looking up, dramatic side lighting, shallow depth of field",
-  waist:     "smooth orbital camera circling hourglass waist, side-light accentuating the curve, slow 180-degree arc, cinematic rim lighting",
-  butt:      "low-angle push from behind, rear curves as hero, backlight creating halo silhouette on the arch, slow push in, cinematic heat grade",
-  legs:      "slow vertical tilt from ankle up the full length of legs, elongating low angle, soft glamour lighting",
-  thighs:    "lateral tracking shot at thigh level, tight framing on inner thighs, soft boudoir lighting, shallow focus",
-  chest:     "slow tilt from collarbone down to chest, rack focus pulling onto decollete, rose-warm lighting",
-  back:      "slow tilt down the spine from nape to lower back, backlight edge glow, cinematic noir grade",
-  lowerback: "tight close-up push on lower back dimples, warm backlight halo, slow push in, cinematic luxury grade",
-  hips:      "side tracking shot following hip sway in motion, parallax, neon-warm lighting, cinematic energy",
-  face:      "extreme close-up orbit around jawline and lips, dramatic side light, soft skin glow, cinematic intimacy",
-  silhouette:"full-body silhouette with strong backlight, 360-degree orbit, cinematic noir, every curve visible",
-  full:      "slow dolly-out reveal from tight body detail to full-frame wide shot, dramatic falloff lighting",
+  abs:        "slow cinematic push tight on toned midsection, abs as hero, low angle looking up, dramatic side lighting, shallow depth of field, luxury film grade",
+  waist:      "smooth orbital camera circling hourglass waist, side-light accentuating the curve, slow 180-degree arc, cinematic rim lighting, premium editorial",
+  butt:       "low-angle push from behind, rear curves as hero, backlight creating halo silhouette on the arch, slow push in, cinematic heat grade",
+  legs:       "slow vertical tilt from ankle up the full length of legs, elongating low angle, soft glamour lighting, premium film look",
+  thighs:     "lateral tracking shot at thigh level, tight framing on inner thighs, soft boudoir lighting, shallow focus, intimate cinematic warmth",
+  chest:      "slow tilt from collarbone down to chest, rack focus pulling onto decollete, rose-warm lighting, cinematic editorial quality",
+  back:       "slow tilt down the spine from nape to lower back, backlight edge glow, cinematic noir grade, intimate reveal",
+  lowerback:  "tight close-up push on lower back dimples, warm backlight halo, slow push in, cinematic luxury grade",
+  hips:       "side tracking shot following hip sway in motion, parallax, neon-warm lighting, cinematic energy",
+  face:       "extreme close-up orbit around jawline and lips, dramatic side light, soft skin glow, cinematic intimacy",
+  silhouette: "full-body silhouette with strong backlight, 360-degree orbit, cinematic noir, every curve visible against the light",
+  full:       "slow dolly-out reveal from tight body detail to full-frame wide shot, dramatic falloff lighting, premium cinematic grade",
+  // Extended body features
+  neck:       "slow tilt from jawline down the neck, intimate close-up, warm side lighting, cinematic beauty grade",
+  shoulders:  "wide shot emphasizing shoulder line and posture, dramatic backlighting, editorial fashion aesthetic",
+  stomach:    "tight close-up on stomach and navel area, warm cinematic lighting, shallow depth of field, intimate reveal",
+  ankles:     "floor-level shot of ankles and feet, slow tilt up, elongating perspective, luxury editorial",
+  hands:      "extreme close-up of hands and fingers, macro focus, warm intimate lighting, cinematic detail shot",
+  lips:       "extreme macro close-up of lips, shallow focus, warm rose lighting, cinematic beauty grade",
+  eyes:       "extreme close-up of eyes, dramatic side lighting, shallow depth of field, cinematic intimacy",
+  curves:     "full-body shot emphasizing natural curves, side lighting, slow orbital camera, luxury editorial grade",
 };
 
 async function gptText(system: string, user: string, maxTokens = 600): Promise<string> {
@@ -155,15 +164,33 @@ interface FullCopySuite {
   hook: string; caption: string; dmOpener: string; ppvTeaser: string;
   tiktokHook: string; instagramCaption: string; twitterPost: string; telegramBlast: string;
   hookVariants: string[]; postingSchedule: string; urgencyLine: string; pricingAnchor: string;
+  // Extended outputs
+  smsBlast?: string; emailSubject?: string; storyCaption?: string; redditPost?: string;
 }
 
 async function generateCopySuite(context: string, platform = "all", price = 29): Promise<FullCopySuite> {
   return gptJson<FullCopySuite>(
     `You are an elite adult creator content strategist. Generate a complete multi-platform copy suite that converts.
-     Tone: premium, direct, money-aware, luxury boss energy.
-     Return JSON with exactly these keys: hook, caption, dmOpener, ppvTeaser, tiktokHook, instagramCaption, twitterPost, telegramBlast, hookVariants (array of 3 strings), postingSchedule, urgencyLine, pricingAnchor`,
-    `Context: ${context}. Platform: ${platform}. Price: $${price}. Make every line convert.`,
-    1200
+     Tone: premium, direct, money-aware, luxury boss energy. Every line should stop the scroll and drive action.
+     Return JSON with exactly these keys:
+     hook (punchy under 80 chars),
+     caption (2-3 sentences premium tone),
+     dmOpener (DM message under 150 chars),
+     ppvTeaser (PPV unlock teaser under 100 chars),
+     tiktokHook (TikTok-optimized under 80 chars),
+     instagramCaption (3-4 sentences + hashtags),
+     twitterPost (under 280 chars),
+     telegramBlast (bold, emoji, 300-500 chars, ends with CTA),
+     hookVariants (array of 5 alternative hooks for A/B testing — not 3, FIVE),
+     postingSchedule (best times to post, 2-3 sentences),
+     urgencyLine (scarcity/urgency under 80 chars),
+     pricingAnchor (price justification under 100 chars),
+     smsBlast (SMS-optimized under 160 chars),
+     emailSubject (email subject line under 60 chars),
+     storyCaption (Instagram/Snapchat story caption under 50 chars),
+     redditPost (Reddit-style post title under 100 chars)`,
+    `Context: ${context}. Platform: ${platform}. Price: $${price}. Make every line convert. Be specific, not generic.`,
+    1800
   );
 }
 
@@ -191,7 +218,7 @@ export const contentCommandRouter = router({
         case "clone_drop": {
           const scene = String(brief.scene || "dark luxury throne room, dramatic spotlight, cinematic premium atmosphere");
           const platform = String(brief.platform || "OnlyFans");
-          const imageCount = Math.min(4, Math.max(1, parseInt(String(brief.imageCount || "4"))));
+          const imageCount = Math.min(8, Math.max(1, parseInt(String(brief.imageCount || "4"))));
           const withVoice = Boolean(brief.withVoice);
           const [images, copySuite] = await Promise.all([
             generateImages(scene, imageCount),
@@ -350,7 +377,7 @@ export const contentCommandRouter = router({
     .input(z.object({
       contentType: z.enum(["clone_drop", "social_post", "telegram_blast"]),
       brief: z.record(z.string(), z.any()).default({}),
-      count: z.number().min(1).max(3).default(3),
+      count: z.number().min(1).max(10).default(3),
     }))
     .mutation(async ({ input, ctx }) => {
       ownerGuard(ctx.user.id);
@@ -389,7 +416,7 @@ export const contentCommandRouter = router({
     }),
 
   getHistory: protectedProcedure
-    .input(z.object({ limit: z.number().min(1).max(50).default(20), offset: z.number().min(0).default(0), contentType: z.string().optional() }).default({}))
+    .input(z.object({ limit: z.number().min(1).max(500).default(20), offset: z.number().min(0).default(0), contentType: z.string().optional() }).default({}))
     .query(async ({ ctx, input }) => {
       ownerGuard(ctx.user.id);
       const db = await getDb();
@@ -397,7 +424,7 @@ export const contentCommandRouter = router({
         const whereType = input.contentType ? "AND content_type = ?" : "";
         const params: any[] = [ctx.user.id];
         if (input.contentType) params.push(input.contentType);
-        const safeLimit = Math.max(1, Math.min(50, Math.floor(input.limit)));
+        const safeLimit = Math.max(1, Math.min(500, Math.floor(input.limit)));
         const safeOffset = Math.max(0, Math.floor(input.offset));
         const histRows = rows(await db.query(`SELECT id, content_type, outputs, created_at FROM content_command_history WHERE user_id = ? ${whereType} ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`, params));
         return histRows.map((r: any) => ({ id: r.id, contentType: r.content_type, outputs: typeof r.outputs === "string" ? JSON.parse(r.outputs) : r.outputs, createdAt: r.created_at }));
