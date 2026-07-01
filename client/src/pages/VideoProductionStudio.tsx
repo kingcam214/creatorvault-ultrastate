@@ -285,7 +285,7 @@ function GeneratorSection() {
             <Input
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://..."
+              placeholder="Tap to upload"
               style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.text, borderRadius: 3 }}
             />
           </div>

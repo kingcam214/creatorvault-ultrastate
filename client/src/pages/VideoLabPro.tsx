@@ -24,6 +24,7 @@
  */
 import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { MediaUpload } from "@/components/MediaUpload";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import {
@@ -265,7 +266,7 @@ function HighlightsMode() {
         <Input
           value={videoUrl}
           onChange={(e) => setVideoUrl(e.target.value)}
-          placeholder="https://..."
+          placeholder="Tap to upload"
           style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.text, borderRadius: 3 }}
         />
       </div>

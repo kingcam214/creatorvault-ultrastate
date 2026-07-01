@@ -20,6 +20,7 @@
  */
 
 import { useState } from "react";
+import { MediaUpload } from "@/components/MediaUpload";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -481,7 +482,7 @@ export default function UnifiedContentPublisher() {
                     <Label htmlFor="mediaUrl">Media URL (Optional)</Label>
                     <Input
                       id="mediaUrl"
-                      placeholder="https://..."
+                      placeholder="Tap to upload"
                       value={mediaUrl}
                       onChange={(e) => setMediaUrl(e.target.value)}
                     />

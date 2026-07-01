@@ -9,6 +9,7 @@
  */
 
 import { useState } from "react";
+import { MediaUpload } from "@/components/MediaUpload";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -283,7 +284,7 @@ export default function CreatorVideoStudio() {
                   </div>
                   <Input
                     id="baseImage"
-                    placeholder="https://i.pinimg.com/736x/c5/5e/8c/c55e8c9f14116f2d2392a1805428fa93.jpg"
+                    placeholder="Tap to upload reference image"
                     value={baseImageUrl}
                     onChange={(e) => setBaseImageUrl(e.target.value)}
                   />

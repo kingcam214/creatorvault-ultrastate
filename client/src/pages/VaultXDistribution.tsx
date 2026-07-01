@@ -14,6 +14,7 @@
  */
 
 import { useState } from "react";
+import { MediaUpload } from "@/components/MediaUpload";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { VaultXLogo } from "@/components/vaultx/VaultXBrand";
@@ -701,7 +702,7 @@ function ComposeTab() {
           <label className="text-gray-400 text-xs block mb-1">Asset URL (must be public HTTPS)</label>
           <input
             className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm font-mono focus:outline-none focus:border-rose-500"
-            placeholder="https://creatorvault.live/uploads/..."
+            placeholder="Tap to upload media"
             value={form.assetUrl}
             onChange={e => setForm(f => ({ ...f, assetUrl: e.target.value }))}
           />
@@ -720,7 +721,7 @@ function ComposeTab() {
           <label className="text-gray-400 text-xs block mb-1">Destination URL (where the CTA link goes)</label>
           <input
             className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm font-mono focus:outline-none focus:border-rose-500"
-            placeholder="https://creatorvault.live/vaultx"
+            placeholder="Your VaultX link"
             value={form.destinationUrl}
             onChange={e => setForm(f => ({ ...f, destinationUrl: e.target.value }))}
           />

@@ -6,6 +6,7 @@ import { useState, useCallback } from "react";
 import { Link } from "wouter";
 import { Crown, Zap, Film, Send, Layers, Copy, Download, Check, Loader2, ChevronRight, ArrowLeft, RefreshCw, Flame } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { MediaUpload } from "@/components/MediaUpload";
 import { toast } from "sonner";
 
 const GOLD = "#F2B15B", GOLD_DIM = "rgba(242,177,91,0.10)", GOLD_BORDER = "rgba(242,177,91,0.3)";
@@ -280,8 +281,15 @@ export default function ContentCommand() {
                     </div>
                   </div>
                   <div>
-                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Source Image URL (optional)</label>
-                    <input value={sourceImageUrl} onChange={e => setSourceImageUrl(e.target.value)} style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none", boxSizing: "border-box" }} placeholder="https://... (leave blank to generate)" />
+                    <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Source Photo (optional — leave empty to generate)</label>
+                    <MediaUpload
+                      value={sourceImageUrl || undefined}
+                      onChange={url => setSourceImageUrl(url || "")}
+                      accept="image/*"
+                      label="Upload a photo"
+                      sublabel="JPG, PNG, or any image — or skip to let AI generate"
+                      compact={true}
+                    />
                   </div>
                   <div>
                     <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>PPV Price ($)</label>

@@ -10,6 +10,7 @@
  */
 
 import { useState } from "react";
+import { MediaUpload } from "@/components/MediaUpload";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -455,7 +456,7 @@ export default function PodcastStudio() {
               <Input
                 value={episodeAudioUrl}
                 onChange={(e) => setEpisodeAudioUrl(e.target.value)}
-                placeholder="https://storage.example.com/episode1.mp3"
+                placeholder="Tap to upload audio"
               />
             </div>
 

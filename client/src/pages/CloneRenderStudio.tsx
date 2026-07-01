@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { MediaUpload } from "@/components/MediaUpload";
 import { trpc } from "@/lib/trpc";
 import { Video, Zap, Play, Download, Clock, CheckCircle, AlertCircle, Loader, Film, Mic, Image } from "lucide-react";
 
@@ -91,7 +92,7 @@ export default function CloneRenderStudio() {
             {mode === "image-to-video" && (
               <div>
                 <label className="text-sm text-gray-400 mb-1 block font-medium">Source Image URL</label>
-                <input value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://..." className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500" />
+                <MediaUpload value={imageUrl || undefined} onChange={url => setImageUrl(url || "")} accept="image/*" label="Upload your photo" compact={true} />
               </div>
             )}
 

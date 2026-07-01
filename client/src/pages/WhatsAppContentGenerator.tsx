@@ -7,6 +7,7 @@
  * ============================================================================
  */
 import { useState, useEffect, useRef } from "react";
+import { MediaUpload } from "@/components/MediaUpload";
 import { trpc } from "../lib/trpc";
 import {
   Video, Image, Mic, MessageSquare, Calendar, Settings,
@@ -299,7 +300,7 @@ function VideoTab() {
         <input
           value={firstFrameUrl}
           onChange={e => setFirstFrameUrl(e.target.value)}
-          placeholder="https://... (image URL to use as first frame)"
+          placeholder="Tap to upload image"
           className="w-full bg-[#0d0d1a] border border-[#25d366]/20 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#25d366]/60"
         />
       </div>
@@ -393,7 +394,7 @@ function CloneTab() {
           <input
             value={refImageUrl}
             onChange={e => setRefImageUrl(e.target.value)}
-            placeholder="https://... (reference photo URL)"
+            placeholder="Tap to upload reference photo"
             className="w-full bg-[#0d0d1a] border border-[#25d366]/20 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#25d366]/60"
           />
         </div>
@@ -525,7 +526,7 @@ function ImageTab() {
           <input
             value={refImageUrl}
             onChange={e => setRefImageUrl(e.target.value)}
-            placeholder="https://... (reference photo)"
+            placeholder="Tap to upload reference photo"
             className="w-full bg-[#0d0d1a] border border-[#25d366]/20 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#25d366]/60"
           />
         </div>

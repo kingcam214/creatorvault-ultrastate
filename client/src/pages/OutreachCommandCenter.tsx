@@ -4,6 +4,7 @@
  * AI Chat Assistant for creator replies | Automated Director status
  */
 import { useState, useEffect } from "react";
+import { MediaUpload } from "@/components/MediaUpload";
 import { trpc } from "../lib/trpc";
 import { useToast } from "../hooks/use-toast";
 
@@ -654,7 +655,7 @@ export default function OutreachCommandCenter() {
               <input
                 value={directorImageUrl}
                 onChange={e => setDirectorImageUrl(e.target.value)}
-                placeholder="Creator image URL (https://...)"
+                placeholder="Tap to upload creator photo"
                 style={{
                   flex: 1,
                   padding: "12px 16px",

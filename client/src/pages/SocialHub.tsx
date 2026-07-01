@@ -6,6 +6,7 @@
  * 4 Tabs: CONNECT · POST · SCHEDULE · AUTOPILOT
  */
 import { useState, useEffect } from "react";
+import { MediaUpload } from "@/components/MediaUpload";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "../hooks/use-toast";
 import { useCreatorMode, CreatorModeSwitcher } from "@/contexts/CreatorModeContext";
@@ -442,7 +443,7 @@ function PostTab() {
             type="url"
             value={mediaUrl}
             onChange={e => setMediaUrl(e.target.value)}
-            placeholder="https://cdn.creatorvault.live/..."
+            placeholder="Tap to upload"
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
           />
         </div>
@@ -645,7 +646,7 @@ function ScheduleTab() {
             type="url"
             value={mediaUrls}
             onChange={e => setMediaUrls(e.target.value)}
-            placeholder="https://cdn.creatorvault.live/..."
+            placeholder="Tap to upload"
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
           />
         </div>
