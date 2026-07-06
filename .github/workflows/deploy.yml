@@ -69,7 +69,17 @@ jobs:
           sudo bash ./deploy_work_to_prod.sh
 
           # Verify release stamp (full SHA or short SHA prefix both accepted)
-          node -e "const r=require('fs').readFileSync('/root/creatorvault/dist/public/release.json','utf8'); const parsed=JSON.parse(r); const commit=process.env.COMMIT; if(parsed.commit !== commit && !commit.startsWith(parsed.commit) && !parsed.commit.startsWith(commit)) { console.error('Release mismatch:', r); process.exit(1); } console.log('release-stamp-ok', r);"
+          DEPLOY_SHA="${{ github.sha }}"
+          node -e "
+            const r=require('fs').readFileSync('/root/creatorvault/dist/public/release.json','utf8');
+            const parsed=JSON.parse(r);
+            const commit='${{ github.sha }}';
+            if(parsed.commit !== commit && !commit.startsWith(parsed.commit) && !parsed.commit.startsWith(commit)) {
+              console.error('Release mismatch:', r);
+              process.exit(1);
+            }
+            console.log('release-stamp-ok', r);
+          "
 
           # Reload app
           sudo pm2 reload creatorvault --update-env || sudo pm2 restart creatorvault --update-env
