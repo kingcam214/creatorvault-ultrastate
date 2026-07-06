@@ -13,7 +13,7 @@
  *   RESULT    → video ready, copy pack, Telegram button, checkout link
  * ============================================================================
  */
-import { useState, useRef, useCallback, ChangeEvent } from "react";
+import { useState, useRef, useCallback, useEffect, ChangeEvent } from "react";
 import { Link } from "wouter";
 import {
   ArrowRight, Check, ChevronDown, Download, DollarSign,
@@ -110,11 +110,63 @@ export default function VaultXDrop() {
   const [hostedUrl, setHostedUrl] = useState<string | null>(null); // real public URL, never shown
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // ─── Polling state ────────────────────────────────────────────────────────
+  const [pollingPackageId, setPollingPackageId] = useState<number | null>(null);
+  const [pollingJobId, setPollingJobId] = useState<string | null>(null);
+  const [pollingStatus, setPollingStatus] = useState<string>("waiting");
+  const [pollingDots, setPollingDots] = useState(0);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ─── tRPC ─────────────────────────────────────────────────────────────────
   const launchRevenuePath = trpc.vaultx.launchRevenuePath.useMutation();
   const confirmEligibility = (trpc as any).compliance?.confirmEligibility?.useMutation?.() || { mutateAsync: async () => {} };
   const postTelegram = (trpc as any).contentCommand?.postToTelegram?.useMutation?.() || { mutateAsync: async () => {} };
+  const getPackageAssetStatus = (trpc as any).vaultx?.getPackageAssetStatus?.useQuery;
+
+  // ─── Polling effect ───────────────────────────────────────────────────────
+  // When Pollo is still generating (generationStatus !== 'succeed'), poll every
+  // 5 seconds until the asset is ready, then update the result.
+  useEffect(() => {
+    if (!pollingPackageId || !pollingJobId) return;
+    if (pollingStatus === "succeed" || pollingStatus === "failed") return;
+
+    // Animated dots
+    const dotsTimer = setInterval(() => setPollingDots(d => (d + 1) % 4), 600);
+
+    // Poll every 5 seconds
+    const poll = async () => {
+      try {
+        const statusRes = await (trpc as any).vaultx.getPackageAssetStatus.query({
+          packageId: pollingPackageId,
+          jobId: pollingJobId,
+        });
+        setPollingStatus(statusRes.status);
+        if (statusRes.status === "succeed" || statusRes.videoUrl) {
+          // Asset is ready — update the result with checkout info
+          setResult((prev: any) => ({
+            ...prev,
+            generationStatus: "succeed",
+            videoUrl: statusRes.videoUrl,
+            artifact: statusRes.artifact,
+          }));
+          // Stop polling
+          if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+          setPollingPackageId(null);
+          setPollingJobId(null);
+          toast.success("Video asset ready ✓");
+        }
+      } catch (_) { /* ignore transient errors */ }
+    };
+
+    poll(); // immediate first check
+    pollingIntervalRef.current = setInterval(poll, 5000);
+
+    return () => {
+      clearInterval(dotsTimer);
+      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+    };
+  }, [pollingPackageId, pollingJobId, pollingStatus]);
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
   // Tap-to-upload: show instant local preview, then upload to storage in the
@@ -215,6 +267,12 @@ export default function VaultXDrop() {
       setResult(res);
       setStep("result");
       toast.success("Drop launched ✓");
+      // If Pollo is still generating, start polling for completion
+      if (res.generationStatus !== "succeed" && res.packageId && res.jobId) {
+        setPollingPackageId(res.packageId);
+        setPollingJobId(res.jobId);
+        setPollingStatus(res.generationStatus || "waiting");
+      }
     } catch (err: any) {
       clearInterval(stageTimer);
       toast.error(err?.message || "Launch failed");
@@ -600,9 +658,18 @@ export default function VaultXDrop() {
                 </div>
                 <div>
                   <p style={{ fontSize: 10, color: MUTED, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 3px" }}>Status</p>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: GREEN, margin: 0 }}>
-                    {result.generationStatus === "succeed" ? "Asset ready" : "Generating"}
-                  </p>
+                  {pollingPackageId ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <Loader2 size={13} color={GOLD} style={{ animation: "spin 1s linear infinite" }} />
+                      <p style={{ fontSize: 12, fontWeight: 700, color: GOLD, margin: 0 }}>
+                        Generating video{".".repeat(pollingDots + 1)}
+                      </p>
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: 13, fontWeight: 700, color: GREEN, margin: 0 }}>
+                      {result.generationStatus === "succeed" ? "Asset ready ✓" : "Generating"}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p style={{ fontSize: 10, color: MUTED, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 3px" }}>You keep</p>
@@ -613,8 +680,19 @@ export default function VaultXDrop() {
               </div>
             </div>
 
-            {/* Checkout link */}
-            {result.checkoutUrl && (
+            {/* Generating video banner — shown while Pollo is still working */}
+            {pollingPackageId && (
+              <div style={{ background: "rgba(201,168,76,0.08)", border: `1px solid ${GOLD_BORDER}`, borderRadius: 12, padding: "14px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
+                <Loader2 size={20} color={GOLD} style={{ animation: "spin 1s linear infinite", flexShrink: 0 }} />
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: GOLD, margin: "0 0 2px" }}>Generating your video{".".repeat(pollingDots + 1)}</p>
+                  <p style={{ fontSize: 11, color: MUTED, margin: 0 }}>Pollo AI is processing. Checkout link will appear when ready.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Checkout link — only shown when asset is ready */}
+            {result.checkoutUrl && !pollingPackageId && (
               <a href={result.checkoutUrl} target="_blank" rel="noreferrer"
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12, background: GOLD, color: "#000", fontWeight: 900, fontSize: 15, textDecoration: "none", marginBottom: 12 }}>
                 <DollarSign size={18} /> {t("drop.checkout_link")}
