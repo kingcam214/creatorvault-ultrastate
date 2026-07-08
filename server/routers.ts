@@ -1,4 +1,7 @@
 import { loyaltyRouter } from "./routers/loyaltyRouter";
+import bcryptjs from "bcryptjs";
+import { randomUUID } from "crypto";
+import mysql from "mysql2/promise";
 import { agentExecutorRouter } from "./routers/agentExecutorRouter";
 import * as db from "./db";
 import * as dbFGH from "./db-fgh";
@@ -322,12 +325,30 @@ export const appRouter = router({
     me: publicProcedure.query(opts => opts.ctx.user),
     signup: publicProcedure.input(z.object({
       email: z.string().email(),
-      username: z.string(),
+      username: z.string().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
       password: z.string().min(6),
       name: z.string().optional(),
+      role: z.enum(["user", "creator"]).optional().default("creator"),
     })).mutation(async ({ input }) => {
-      // Registration handled by session-based auth; return success for UI
-      return { success: true, username: input.username };
+      const dbUrl = process.env.DATABASE_URL ?? "";
+      const m = dbUrl.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+      if (!m) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not configured" });
+      const pool = mysql.createPool({ host: m[3], port: parseInt(m[4]), user: m[1], password: m[2], database: m[5], connectionLimit: 3 });
+      try {
+        const [emailRows] = await pool.execute<mysql.RowDataPacket[]>("SELECT id FROM users WHERE email = ? LIMIT 1", [input.email.trim().toLowerCase()]);
+        if ((emailRows as mysql.RowDataPacket[]).length > 0) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists" });
+        const [userRows] = await pool.execute<mysql.RowDataPacket[]>("SELECT id FROM users WHERE username = ? LIMIT 1", [input.username.trim()]);
+        if ((userRows as mysql.RowDataPacket[]).length > 0) throw new TRPCError({ code: "CONFLICT", message: "Username is already taken" });
+        const passwordHash = await bcryptjs.hash(input.password, 12);
+        const openId = randomUUID();
+        await pool.execute(
+          "INSERT INTO users (openId, email, username, name, password, role, is_active, loginMethod, creator_status) VALUES (?, ?, ?, ?, ?, ?, 1, 'email', 'pending')",
+          [openId, input.email.trim().toLowerCase(), input.username.trim(), input.name ?? input.username.trim(), passwordHash, input.role ?? "creator"]
+        );
+        return { success: true, username: input.username.trim() };
+      } finally {
+        await pool.end();
+      }
     }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);

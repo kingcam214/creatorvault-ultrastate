@@ -529,6 +529,50 @@ Pick the lane that matches you: studio, platform, distributor, indie creator, so
     }
     // ── End VaultX Command Handler ────────────────────────────────────────────
 
+    // ── Plain-text keyword triggers ───────────────────────────────────────────
+    // Fires when user types a keyword (not a /command) into the bot.
+    if (text) {
+      const kw = text.trim().toUpperCase();
+      const FRONTEND_KW = process.env.VITE_FRONTEND_FORGE_API_URL?.replace("/api", "") || "https://creatorvault.live";
+      const sendKwMsg = async (msgText: string, buttons: Array<Array<{text: string; url: string}>>) => {
+        const approvedKw = qualityGate.check(msgText, { surface: "telegram-dm", recipientKey: chatId, hasActionElement: true, requireCreatorVaultPositioning: true });
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: chatId, text: approvedKw, parse_mode: "HTML", reply_markup: { inline_keyboard: buttons } }),
+        });
+      };
+      if (kw === "VAULT" || kw === "VAULTX") {
+        await sendKwMsg(
+          `🔐 <b>VaultX — Premium Creator Content</b>\n\nThe exclusive platform where top creators drop their best content.\n\n💎 Browse drops, unlock PPV, go VIP.\n\nTap below to enter 👇`,
+          [[{ text: "🎬 Enter VaultX", url: `${FRONTEND_KW}/vault-x/drop` }], [{ text: "💎 Go VIP", url: `${FRONTEND_KW}/vault-x/drop` }, { text: "🔓 Unlock Drop", url: `${FRONTEND_KW}/vault-x/drop` }]]
+        );
+        return res.sendStatus(200);
+      }
+      if (kw === "CLONE") {
+        await sendKwMsg(
+          `🤖 <b>AI Clone Studio</b>\n\nCreate your AI twin — your voice, your face, your brand — generating content 24/7 while you sleep.\n\n⚡ Clone yourself in minutes.`,
+          [[{ text: "🤖 Build My Clone", url: `${FRONTEND_KW}/king/clone-studio` }], [{ text: "📋 See How It Works", url: `${FRONTEND_KW}/king/clone-studio` }]]
+        );
+        return res.sendStatus(200);
+      }
+      if (kw === "DEMO") {
+        await sendKwMsg(
+          `🎬 <b>Live Demo</b>\n\nSee CreatorVault in action — real tools, real results, no fluff.\n\nWatch the demo and decide 👇`,
+          [[{ text: "▶️ Watch Demo", url: `${FRONTEND_KW}/vault-x/drop` }], [{ text: "💬 Talk To Us", url: `${FRONTEND_KW}/` }]]
+        );
+        return res.sendStatus(200);
+      }
+      if (kw === "ACCESS") {
+        await sendKwMsg(
+          `🚀 <b>Get Access</b>\n\nReady to join CreatorVault? Create your account and start earning 85% of every sale.\n\nSign up in 60 seconds 👇`,
+          [[{ text: "✅ Create Account", url: `${FRONTEND_KW}/signup` }], [{ text: "🔑 Already have one? Sign In", url: `${FRONTEND_KW}/login` }]]
+        );
+        return res.sendStatus(200);
+      }
+    }
+    // ── End keyword triggers ──────────────────────────────────────────────────
+
     // Route message through Adult Sales Bot
     try {
       const botResponse = await handleInboundMessage(

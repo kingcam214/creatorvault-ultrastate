@@ -19,6 +19,7 @@ import Home from "./pages/Home";
 // import AICardDesigner from "./pages/AICardDesigner";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import SignupPage from "./pages/SignupPage";
 import Dashboard from "./pages/Dashboard";
 import CreatorHome from "./pages/CreatorHome";
 import KingHome from "./pages/KingHome";
@@ -496,7 +497,8 @@ function Router() {
       <Route path={"/__release"} component={ReleaseInfo} />
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
-      <Route path={"/signup"} component={Waitlist} />
+      <Route path={"/signup"} component={SignupPage} />
+      <Route path={"/waitlist"} component={Waitlist} />
       <Route path={"/terms"} component={TermsPage} />
       <Route path={"/privacy"} component={PrivacyPage} />
       <Route path={"/dmca"} component={DmcaPage} />
@@ -820,6 +822,7 @@ function Router() {
       <Route path="/king/clone-training-lab" component={CloneTrainingLab} />
       <Route path="/king/media-vault" component={MediaVault} />
       <Route path="/king/challenge-story" component={ChallengeStoryEngine} />
+      <Route path="/king/challenge" component={ChallengeStoryEngine} />
       <Route path="/tools/viral-optimizer-v2" component={ViralOptimizerV2} />
       <Route path="/videoeditor/vaultx">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
       <Route path="/videoeditor/vaultx-projects">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
