@@ -26,6 +26,7 @@ import { startReactivationCron } from "../services/telegramBuyerReactivation";
 import { startVaultXAcquisitionCron } from "../services/vaultxAutonomousAcquisitionOperator";
 import { startChallengeAutomationCron } from "../routers/challengeAutomationRouter";
 import { startCreatorVaultOvernightRevenueCron } from "../services/creatorVaultOvernightRevenue";
+import { startPostScheduler } from "../services/postScheduler";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -49,6 +50,8 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   // Run startup tasks (schema bootstrap, etc)
   await runStartupTasks();
+  // Start post scheduler — fires pending scheduled_posts every minute
+  startPostScheduler();
   if (process.env.TELEGRAM_DAILY_DROP_AUTORUN === "true") {
     startDailyDropCron();
   } else {
