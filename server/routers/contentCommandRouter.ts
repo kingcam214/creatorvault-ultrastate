@@ -416,7 +416,7 @@ export const contentCommandRouter = router({
     }),
 
   getHistory: protectedProcedure
-    .input(z.object({ limit: z.number().min(1).max(500).default(20), offset: z.number().min(0).default(0), contentType: z.string().optional() }).default({}))
+    .input(z.object({ limit: z.number().min(1).max(500).default(20), offset: z.number().min(0).default(0), contentType: z.string().optional() }).default({ limit: 20, offset: 0 }))
     .query(async ({ ctx, input }) => {
       ownerGuard(ctx.user.id);
       const db = await getDb();

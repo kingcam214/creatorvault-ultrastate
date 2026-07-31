@@ -677,7 +677,7 @@ export const cloneEngineRouter = router({
       similarityBoost: z.number().min(0).max(1).default(0.85),
       style: z.number().min(0).max(1).default(0.35),
       speed: z.number().min(0.25).max(4).default(0.95),
-      language: z.string().default("en"),
+      language: z.enum(["en", "es-DO", "es"]).default("en"),
     }))
     .mutation(async ({ ctx, input }) => {
       const cost = estimateCost("voice", "elevenlabs-voice", {});

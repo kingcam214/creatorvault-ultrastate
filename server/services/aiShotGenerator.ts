@@ -126,7 +126,7 @@ export async function generateAIShots(
   count: number,
   opts: { resolution?: "540p" | "720p"; onProgress?: (done: number, total: number) => void } = {}
 ): Promise<AIShotResult> {
-  if (!POLLO_KEY()) return { shots: [], framesUsed: 0 };
+  if (!POLLO_KEY()) return { shots: [], bodyFocuses: [], framesUsed: 0 };
   fs.mkdirSync(SHOTS_DIR, { recursive: true });
   const work = path.join("/tmp/vaultx-aishots", randomUUID());
   fs.mkdirSync(work, { recursive: true });
@@ -139,7 +139,7 @@ export async function generateAIShots(
       const fs2 = await extractKeyframes(sourceClips[i].src, framesPerClip, work, `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}`);
       frames = frames.concat(fs2);
     }
-    if (frames.length === 0) return { shots: [], framesUsed: 0 };
+    if (frames.length === 0) return { shots: [], bodyFocuses: [], framesUsed: 0 };
 
     // 2. Build (frame, camera) jobs up to `count`
     const jobs: { frame: string; prompt: string }[] = [];

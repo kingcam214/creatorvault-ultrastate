@@ -11,7 +11,7 @@ import Stripe from "stripe";
 import { db } from "../db";
 import { users } from "../../drizzle/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { execSync, spawn } from "child_process";
@@ -28,6 +28,12 @@ import {
   previewConversionScore,
 } from "../services/bodyCinemaAIStack.js";
 import { getPresetById } from "../services/bodyCinemaPresets.js";
+import {
+  buildBodyCinemaGenerationLookup,
+  buildVaultxCheckoutIdempotencyKey,
+  hasCompleteVaultxCheckout,
+  normaliseBodyCinemaGenerationStatus as normalisePolloStatus,
+} from "../services/bodyCinemaReliability";
 import { createAIDrop, sendDropToChannel } from "../services/telegramCampaign";
 import {
   assertReadyVaultxPackageArtifact,
@@ -57,18 +63,31 @@ const POLLO_API_KEY = process.env.POLLO_API_KEY || "";
 const POLLO_API_URL = "https://pollo.ai/api/platform/generation/pollo/pollo-v1-6";
 const POLLO_BASE_URL = "https://pollo.ai/api/platform";
 const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-02-25.clover" })
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-12-15.clover" })
   : null;
 
 type VaultxPackageMode = "FAST" | "BOOST" | "FULL";
 type VaultxPackageContentType = "photo" | "video" | "audio";
 
-function normalisePolloStatus(status: string | undefined | null): "waiting" | "processing" | "succeed" | "failed" {
-  const value = String(status || "").toLowerCase();
-  if (["succeed", "success", "completed", "complete", "done"].includes(value)) return "succeed";
-  if (["failed", "error", "cancelled", "canceled"].includes(value)) return "failed";
-  if (["processing", "running", "generating", "in_progress"].includes(value)) return "processing";
-  return "waiting";
+async function findMatchingPolloGeneration(input: {
+  userId: number;
+  imageUrl: string;
+  prompt: string;
+  resolution: string;
+  length: string;
+  mode: string;
+  state: "ready" | "in_flight";
+}): Promise<any | null> {
+  const { stateClause, params } = buildBodyCinemaGenerationLookup(input);
+  const rows = await rawQuery(
+    `SELECT taskId, videoUrl, status
+     FROM pollo_generations
+     WHERE userId = ? AND imageUrl = ? AND prompt = ? AND resolution = ? AND length = ? AND mode = ? AND ${stateClause}
+     ORDER BY updatedAt DESC, id DESC
+     LIMIT 1`,
+    params
+  );
+  return rows[0] || null;
 }
 
 async function ensureVaultxRevenuePackageSchema(): Promise<void> {
@@ -118,33 +137,40 @@ function isVideoSource(url: string): boolean {
 }
 
 async function extractFrameToPublicImage(videoUrl: string): Promise<string> {
-  const frameUuid = randomUUID();
-  // Public uploads dir served at /uploads (process.cwd()/../uploads)
+  const frameKey = createHash("sha256").update(videoUrl).digest("hex").slice(0, 32);
   const publicRoot = path.resolve(process.cwd(), "..", "uploads");
-  const frameDir = path.join(publicRoot, "body-cinema-frames", frameUuid);
-  fs.mkdirSync(frameDir, { recursive: true });
-  const localSource = path.join(frameDir, "source.bin");
-  // Download or copy the source video
-  const localUpload = normalizeLocalUploadPath(videoUrl);
-  if (localUpload && fs.existsSync(localUpload)) {
-    fs.copyFileSync(localUpload, localSource);
-  } else {
-    const resp = await fetch(videoUrl);
-    if (!resp.ok) throw new Error(`Unable to fetch source video (${resp.status})`);
-    fs.writeFileSync(localSource, Buffer.from(await resp.arrayBuffer()));
-  }
-  // Extract a frame ~1s in (skips black intro frames), high quality
+  const frameDir = path.join(publicRoot, "body-cinema-frames", frameKey);
   const framePath = path.join(frameDir, "frame.jpg");
+  const publicFrameUrl = `${FRONTEND_BASE_URL}/uploads/body-cinema-frames/${frameKey}/frame.jpg`;
+  if (fs.existsSync(framePath) && fs.statSync(framePath).size > 0) return publicFrameUrl;
+
+  fs.mkdirSync(frameDir, { recursive: true });
+  const attemptId = randomUUID();
+  const localSource = path.join(frameDir, `source-${attemptId}.bin`);
+  const candidateFrame = path.join(frameDir, `frame-${attemptId}.jpg`);
   try {
-    execSync(`ffmpeg -y -ss 00:00:01 -i ${JSON.stringify(localSource)} -frames:v 1 -q:v 2 ${JSON.stringify(framePath)}`, { stdio: "ignore", timeout: 60000 });
-  } catch {
-    // Fallback: grab the very first frame if 1s seek fails (short clips)
-    execSync(`ffmpeg -y -i ${JSON.stringify(localSource)} -frames:v 1 -q:v 2 ${JSON.stringify(framePath)}`, { stdio: "ignore", timeout: 60000 });
+    const localUpload = normalizeLocalUploadPath(videoUrl);
+    if (localUpload && fs.existsSync(localUpload)) {
+      fs.copyFileSync(localUpload, localSource);
+    } else {
+      const resp = await fetch(videoUrl);
+      if (!resp.ok) throw new Error(`Unable to fetch source video (${resp.status})`);
+      fs.writeFileSync(localSource, Buffer.from(await resp.arrayBuffer()));
+    }
+    try {
+      execSync(`ffmpeg -y -ss 00:00:01 -i ${JSON.stringify(localSource)} -frames:v 1 -q:v 2 ${JSON.stringify(candidateFrame)}`, { stdio: "ignore", timeout: 60000 });
+    } catch {
+      execSync(`ffmpeg -y -i ${JSON.stringify(localSource)} -frames:v 1 -q:v 2 ${JSON.stringify(candidateFrame)}`, { stdio: "ignore", timeout: 60000 });
+    }
+    if (!fs.existsSync(candidateFrame) || fs.statSync(candidateFrame).size < 1) {
+      throw new Error("Frame extraction produced no image.");
+    }
+    fs.renameSync(candidateFrame, framePath);
+    return publicFrameUrl;
+  } finally {
+    try { fs.unlinkSync(localSource); } catch {}
+    try { fs.unlinkSync(candidateFrame); } catch {}
   }
-  if (!fs.existsSync(framePath)) throw new Error("Frame extraction produced no image.");
-  // Clean up the source copy to save disk
-  try { fs.unlinkSync(localSource); } catch {}
-  return `${FRONTEND_BASE_URL}/uploads/body-cinema-frames/${frameUuid}/frame.jpg`;
 }
 
 function buildVaultxPackagePublicCopy(input: {
@@ -1854,15 +1880,15 @@ export const vaultxRouter = router({
       const prompt = buildVaultxPackagePolloPrompt(pkg);
       qualityGate.checkVisual(sourceMediaUrl, { prompt, publicPost: true });
 
-      const reusableAssets = await rawQuery(
-        `SELECT taskId, videoUrl, status
-         FROM pollo_generations
-         WHERE imageUrl = ? AND status IN ('succeed', 'success', 'succeeded') AND videoUrl IS NOT NULL AND videoUrl <> ''
-         ORDER BY updatedAt DESC, id DESC
-         LIMIT 1`,
-        [sourceMediaUrl]
-      );
-      const reusable = reusableAssets[0];
+      const reusable = await findMatchingPolloGeneration({
+        userId: Number(ctx.user.id),
+        imageUrl: sourceMediaUrl,
+        prompt,
+        resolution: input.resolution,
+        length: input.length,
+        mode: input.mode,
+        state: "ready",
+      });
       if (reusable?.videoUrl) {
         qualityGate.checkVisual(reusable.videoUrl, { prompt, publicPost: true });
         const artifact = await persistReadyVaultxArtifact({
@@ -1883,6 +1909,37 @@ export const vaultxRouter = router({
           [sourceMediaUrl, prompt, reusable.taskId, artifact.output_url || reusable.videoUrl, input.packageId]
         );
         return { jobId: reusable.taskId, status: "succeed", videoUrl: artifact.output_url || reusable.videoUrl, artifact: publicArtifactPayload(artifact), reusedExistingPolloAsset: true, packageId: input.packageId, success: true };
+      }
+
+      const inFlight = await findMatchingPolloGeneration({
+        userId: Number(ctx.user.id),
+        imageUrl: sourceMediaUrl,
+        prompt,
+        resolution: input.resolution,
+        length: input.length,
+        mode: input.mode,
+        state: "in_flight",
+      });
+      if (inFlight?.taskId) {
+        const status = normalisePolloStatus(inFlight.status);
+        const artifact = await createVaultxArtifact({
+          creatorId: Number(pkg.creator_id),
+          packageId: input.packageId,
+          kind: "package",
+          stage: "package_asset_generation_reuse",
+          provider: "pollo",
+          providerJobId: inFlight.taskId,
+          sourceUrl: sourceMediaUrl,
+          status: "queued",
+          metadata: { prompt, resolution: input.resolution, length: input.length, mode: input.mode, reusedInFlightGeneration: true },
+        });
+        await rawExec(
+          `UPDATE vaultx_revenue_packages
+           SET source_media_url = ?, asset_prompt = ?, pollo_job_id = ?, asset_status = ?, status = 'asset_generating'
+           WHERE id = ?`,
+          [sourceMediaUrl, prompt, inFlight.taskId, status, input.packageId]
+        );
+        return { jobId: inFlight.taskId, status, packageId: input.packageId, artifact: publicArtifactPayload(artifact), reusedInFlightGeneration: true, success: true };
       }
 
       const generationController = new AbortController();
@@ -2021,6 +2078,15 @@ export const vaultxRouter = router({
         throw readinessGateError(err);
       }
       if (!stripe) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe checkout is not configured for VaultX package unlocks." });
+      if (hasCompleteVaultxCheckout(pkg)) {
+        return {
+          checkoutUrl: pkg.checkout_url,
+          checkoutSessionId: pkg.stripe_checkout_session_id,
+          artifact: publicArtifactPayload(readyArtifact),
+          reusedExistingCheckout: true,
+          success: true,
+        };
+      }
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         line_items: [{
@@ -2040,7 +2106,7 @@ export const vaultxRouter = router({
           creatorKeepPercent: "85",
           vaultxArtifactId: String(readyArtifact.id),
         },
-      });
+      }, { idempotencyKey: buildVaultxCheckoutIdempotencyKey(Number(pkg.id)) });
       await rawExec(
         `UPDATE vaultx_revenue_packages
          SET checkout_url = ?, stripe_checkout_session_id = ?, status = 'checkout_attached'
@@ -2061,7 +2127,7 @@ export const vaultxRouter = router({
       } catch (err: any) {
         throw readinessGateError(err);
       }
-      if (!pkg.checkout_url) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Attach a real checkout before publishing a VaultX Telegram route." });
+      if (!hasCompleteVaultxCheckout(pkg)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Approve and attach checkout before publishing this tracked route." });
       const publicCopy = qualityGate.check(pkg.public_teaser_copy || buildVaultxPackagePublicCopy({
         title: pkg.title,
         teaserDescription: pkg.teaser_description,
@@ -2089,21 +2155,61 @@ export const vaultxRouter = router({
         contentId = (contentResult as any).insertId;
         await rawExec("UPDATE vaultx_revenue_packages SET vaultx_content_id = ? WHERE id = ?", [contentId, pkg.id]);
       }
-      const campaign = await createAIDrop({
-        contentId: Number(contentId),
-        creatorId: Number(pkg.creator_id),
-        campaignMode: pkg.telegram_mode as VaultxPackageMode,
-        campaignType: "PPV_DROP",
-        overridePrice: Number(pkg.price_cents) / 100,
-      });
-      await rawExec(
+      let campaignId = pkg.telegram_campaign_id ? Number(pkg.telegram_campaign_id) : null;
+      let trackingCode = pkg.telegram_tracking_code ? String(pkg.telegram_tracking_code) : null;
+      if (campaignId && trackingCode && pkg.status === "telegram_published") {
+        return {
+          campaignId,
+          trackingCode,
+          trackedUrl: `${FRONTEND_BASE_URL}/r/${encodeURIComponent(trackingCode)}`,
+          artifact: publicArtifactPayload(readyArtifact),
+          reusedExistingPublication: true,
+          success: true,
+        };
+      }
+      if (!campaignId || !trackingCode) {
+        const campaign = await createAIDrop({
+          contentId: Number(contentId),
+          creatorId: Number(pkg.creator_id),
+          campaignMode: pkg.telegram_mode as VaultxPackageMode,
+          campaignType: "PPV_DROP",
+          overridePrice: Number(pkg.price_cents) / 100,
+        });
+        campaignId = Number(campaign.campaignId);
+        trackingCode = String(campaign.trackingCode);
+        await rawExec(
+          `UPDATE vaultx_revenue_packages
+           SET telegram_campaign_id = ?, telegram_tracking_code = ?, status = 'telegram_route_created'
+           WHERE id = ?`,
+          [campaignId, trackingCode, pkg.id]
+        );
+        await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId: Number(pkg.creator_id), packageId: pkg.id, eventType: "telegram.route_created", status: "ready", payload: { campaignId, trackingCode } });
+      }
+
+      const publishClaim = await rawExec(
         `UPDATE vaultx_revenue_packages
-         SET telegram_campaign_id = ?, telegram_tracking_code = ?, status = 'telegram_route_created'
-         WHERE id = ?`,
-        [campaign.campaignId, campaign.trackingCode, pkg.id]
+         SET status = 'telegram_publishing'
+         WHERE id = ? AND status NOT IN ('telegram_publishing', 'telegram_published')`,
+        [pkg.id]
       );
-      await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId: Number(pkg.creator_id), packageId: pkg.id, eventType: "telegram.route_created", status: "ready", payload: { campaignId: campaign.campaignId, trackingCode: campaign.trackingCode } });
-      const sent = await sendDropToChannel(campaign.campaignId);
+      if (Number((publishClaim as any)?.affectedRows || 0) < 1) {
+        const currentRows = await rawQuery("SELECT status, telegram_campaign_id, telegram_tracking_code FROM vaultx_revenue_packages WHERE id = ? LIMIT 1", [pkg.id]);
+        const current = currentRows[0];
+        if (current?.status === "telegram_published") {
+          const currentCode = String(current.telegram_tracking_code || trackingCode);
+          return {
+            campaignId: Number(current.telegram_campaign_id || campaignId),
+            trackingCode: currentCode,
+            trackedUrl: `${FRONTEND_BASE_URL}/r/${encodeURIComponent(currentCode)}`,
+            artifact: publicArtifactPayload(readyArtifact),
+            reusedExistingPublication: true,
+            success: true,
+          };
+        }
+        throw new TRPCError({ code: "CONFLICT", message: "This drop is already being published. Wait for the current attempt to finish." });
+      }
+
+      const sent = await sendDropToChannel(Number(campaignId));
       await rawExec(
         `UPDATE vaultx_revenue_packages
          SET status = ?
@@ -2111,8 +2217,8 @@ export const vaultxRouter = router({
         [sent.success ? "telegram_published" : "telegram_failed", pkg.id]
       );
       if (!sent.success) throw new TRPCError({ code: "BAD_GATEWAY", message: sent.error || "Telegram publish failed." });
-      await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId: Number(pkg.creator_id), packageId: pkg.id, eventType: "telegram.published", status: "ready", payload: { campaignId: campaign.campaignId, trackedUrl: sent.trackedUrl } });
-      return { campaignId: campaign.campaignId, trackingCode: campaign.trackingCode, trackedUrl: sent.trackedUrl, artifact: publicArtifactPayload(readyArtifact), success: true };
+      await recordVaultxArtifactEvent({ artifactId: readyArtifact.id, creatorId: Number(pkg.creator_id), packageId: pkg.id, eventType: "telegram.published", status: "ready", payload: { campaignId, trackedUrl: sent.trackedUrl } });
+      return { campaignId, trackingCode, trackedUrl: sent.trackedUrl, artifact: publicArtifactPayload(readyArtifact), success: true };
     }),
 
   launchRevenuePath: protectedProcedure
@@ -2131,13 +2237,13 @@ export const vaultxRouter = router({
       mode: z.enum(["std", "pro"]).default("pro"),
       presetId: z.string().optional(),
       withNarration: z.boolean().default(false),
+      reviewOnly: z.boolean().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
       if (!input.adultContentFlag || !input.consentConfirmed) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "VaultX launch requires adult-content opt-in and creator consent confirmation." });
       }
       if (!POLLO_API_KEY) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "POLLO_API_KEY is not configured for VaultX media generation." });
-      if (!stripe) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "STRIPE_SECRET_KEY is not configured for VaultX checkout creation." });
       await ensureVaultxRevenuePackageSchema();
       await ensureVaultxArtifactSchema();
 
@@ -2210,15 +2316,15 @@ export const vaultxRouter = router({
       } else {
         prompt = buildVaultxPackagePolloPrompt(pkg);
       }
-      const reusableAssets = await rawQuery(
-        `SELECT taskId, videoUrl, status
-         FROM pollo_generations
-         WHERE imageUrl = ? AND status IN ('succeed', 'success', 'succeeded') AND videoUrl IS NOT NULL AND videoUrl <> ''
-         ORDER BY updatedAt DESC, id DESC
-         LIMIT 1`,
-        [polloImageUrl]
-      );
-      const reusable = reusableAssets[0];
+      const reusable = await findMatchingPolloGeneration({
+        userId: Number(ctx.user.id),
+        imageUrl: polloImageUrl,
+        prompt,
+        resolution: input.resolution,
+        length: input.length,
+        mode: input.mode,
+        state: "ready",
+      });
       let jobId = "";
       let generationStatus: string = "waiting";
       let readyArtifact: any = null;
@@ -2248,45 +2354,70 @@ export const vaultxRouter = router({
           [input.sourceMediaUrl, prompt, jobId, readyArtifact.output_url || reusable.videoUrl, packageId]
         );
       } else {
-        const generationController = new AbortController();
-        const generationTimeout = setTimeout(() => generationController.abort(), 30000);
-        const response = await fetch(POLLO_API_URL, {
-          method: "POST",
-          headers: { "x-api-key": POLLO_API_KEY, "Content-Type": "application/json" },
-          signal: generationController.signal,
-          body: JSON.stringify({
-            input: {
-              image: polloImageUrl,
-              prompt,
-              resolution: input.resolution,
-              length: Number(input.length),
-              mode: input.mode === "pro" ? "pro" : "basic",
-            },
-          }),
-        }).finally(() => clearTimeout(generationTimeout));
-        const data = await response.json() as any;
-        if (!response.ok || (data?.code && data.code !== "SUCCESS")) {
-          throw new TRPCError({ code: "BAD_GATEWAY", message: data?.message || data?.error || `Pollo generation failed to start: ${JSON.stringify(data).slice(0, 500)}` });
-        }
-        jobId = data?.data?.taskId || data?.taskId || data?.id;
-        if (!jobId) throw new TRPCError({ code: "BAD_GATEWAY", message: "Pollo did not return a task id." });
-        generationStatus = normalisePolloStatus(data?.data?.status || data?.status);
-        await rawExec(
-          `INSERT INTO pollo_generations (userId, taskId, imageUrl, prompt, resolution, length, mode, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [ctx.user.id, jobId, polloImageUrl, prompt, input.resolution, input.length, input.mode, generationStatus]
-        );
-        queuedArtifact = await createVaultxArtifact({
-          creatorId: Number(pkg.creator_id),
-          packageId,
-          kind: "package",
-          stage: "end_to_end_package_asset_generation",
-          provider: "pollo",
-          providerJobId: jobId,
-          sourceUrl: input.sourceMediaUrl,
-          status: generationStatus === "failed" ? "failed" : "queued",
-          metadata: { prompt, resolution: input.resolution, length: input.length, mode: input.mode, polloResponse: data, launchMode: "end_to_end" },
+        const inFlight = await findMatchingPolloGeneration({
+          userId: Number(ctx.user.id),
+          imageUrl: polloImageUrl,
+          prompt,
+          resolution: input.resolution,
+          length: input.length,
+          mode: input.mode,
+          state: "in_flight",
         });
+        if (inFlight?.taskId) {
+          jobId = inFlight.taskId;
+          generationStatus = normalisePolloStatus(inFlight.status);
+          queuedArtifact = await createVaultxArtifact({
+            creatorId: Number(pkg.creator_id),
+            packageId,
+            kind: "package",
+            stage: "end_to_end_package_asset_generation_reuse",
+            provider: "pollo",
+            providerJobId: jobId,
+            sourceUrl: input.sourceMediaUrl,
+            status: "queued",
+            metadata: { prompt, resolution: input.resolution, length: input.length, mode: input.mode, reusedInFlightGeneration: true, launchMode: "end_to_end" },
+          });
+        } else {
+          const generationController = new AbortController();
+          const generationTimeout = setTimeout(() => generationController.abort(), 30000);
+          const response = await fetch(POLLO_API_URL, {
+            method: "POST",
+            headers: { "x-api-key": POLLO_API_KEY, "Content-Type": "application/json" },
+            signal: generationController.signal,
+            body: JSON.stringify({
+              input: {
+                image: polloImageUrl,
+                prompt,
+                resolution: input.resolution,
+                length: Number(input.length),
+                mode: input.mode === "pro" ? "pro" : "basic",
+              },
+            }),
+          }).finally(() => clearTimeout(generationTimeout));
+          const data = await response.json() as any;
+          if (!response.ok || (data?.code && data.code !== "SUCCESS")) {
+            throw new TRPCError({ code: "BAD_GATEWAY", message: data?.message || data?.error || `Pollo generation failed to start: ${JSON.stringify(data).slice(0, 500)}` });
+          }
+          jobId = data?.data?.taskId || data?.taskId || data?.id;
+          if (!jobId) throw new TRPCError({ code: "BAD_GATEWAY", message: "Pollo did not return a task id." });
+          generationStatus = normalisePolloStatus(data?.data?.status || data?.status);
+          await rawExec(
+            `INSERT INTO pollo_generations (userId, taskId, imageUrl, prompt, resolution, length, mode, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [ctx.user.id, jobId, polloImageUrl, prompt, input.resolution, input.length, input.mode, generationStatus]
+          );
+          queuedArtifact = await createVaultxArtifact({
+            creatorId: Number(pkg.creator_id),
+            packageId,
+            kind: "package",
+            stage: "end_to_end_package_asset_generation",
+            provider: "pollo",
+            providerJobId: jobId,
+            sourceUrl: input.sourceMediaUrl,
+            status: generationStatus === "failed" ? "failed" : "queued",
+            metadata: { prompt, resolution: input.resolution, length: input.length, mode: input.mode, polloResponse: data, launchMode: "end_to_end" },
+          });
+        }
         await rawExec(
           `UPDATE vaultx_revenue_packages
            SET source_media_url = ?, asset_prompt = ?, pollo_job_id = ?, asset_status = ?, status = 'asset_generating'
@@ -2316,6 +2447,7 @@ export const vaultxRouter = router({
           generationStatus,
           artifact: publicArtifactPayload(queuedArtifact),
           artifacts: queuedArtifact ? [publicArtifactPayload(queuedArtifact)] : [],
+          videoUrl: null,
           checkoutUrl: null,
           checkoutSessionId: null,
           campaignId: null,
@@ -2323,10 +2455,55 @@ export const vaultxRouter = router({
           trackedUrl: null,
           vaultxContentId: null,
           reusedExistingPolloAsset,
-          message: "Pollo accepted the Body Cinema job. Checkout and Telegram distribution stay locked until a ready artifact is persisted.",
+          reviewRequired: true,
+          aiStack: aiStackResult ? {
+            copyPack: aiStackResult.copyPack || null,
+            narration: aiStackResult.narration || null,
+            conversionPreview: aiStackResult.conversionPreview || null,
+            stackLog: aiStackResult.stackLog || [],
+            presetUsed: aiStackResult.enhancedPrompt?.presetUsed || null,
+          } : null,
+          message: "Body Cinema accepted the generation job. Checkout and external publication stay locked until the artifact is ready and you approve it.",
         };
       }
 
+      if (input.reviewOnly) {
+        const artifacts = await listVaultxPackageArtifacts(Number(pkg.creator_id), packageId);
+        return {
+          success: true,
+          complete: true,
+          status: "review_required",
+          packageId,
+          jobId,
+          generationStatus,
+          videoUrl: readyArtifact.output_url || reusable?.videoUrl || null,
+          artifact: publicArtifactPayload(readyArtifact),
+          artifacts: artifacts.map(publicArtifactPayload),
+          checkoutUrl: null,
+          checkoutSessionId: null,
+          campaignId: null,
+          trackingCode: null,
+          trackedUrl: null,
+          vaultxContentId: null,
+          reusedExistingPolloAsset,
+          reviewRequired: true,
+          revenue: {
+            priceCents: Number(pkg.price_cents),
+            platformFeeCents: Math.round(Number(pkg.price_cents) * PLATFORM_FEE),
+            creatorKeepCents: Math.max(0, Number(pkg.price_cents) - Math.round(Number(pkg.price_cents) * PLATFORM_FEE)),
+          },
+          aiStack: aiStackResult ? {
+            copyPack: aiStackResult.copyPack || null,
+            narration: aiStackResult.narration || null,
+            conversionPreview: aiStackResult.conversionPreview || null,
+            stackLog: aiStackResult.stackLog || [],
+            presetUsed: aiStackResult.enhancedPrompt?.presetUsed || null,
+          } : null,
+          message: "Artifact ready for creator review. Checkout and publication remain locked until you approve them.",
+        };
+      }
+
+      if (!stripe) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "STRIPE_SECRET_KEY is not configured for VaultX checkout creation." });
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         line_items: [{
@@ -2347,7 +2524,7 @@ export const vaultxRouter = router({
           creatorKeepPercent: "85",
           vaultxArtifactId: String(readyArtifact.id),
         },
-      });
+      }, { idempotencyKey: buildVaultxCheckoutIdempotencyKey(Number(packageId)) });
       await rawExec(
         `UPDATE vaultx_revenue_packages
          SET checkout_url = ?, stripe_checkout_session_id = ?, status = 'checkout_attached'
@@ -2527,7 +2704,7 @@ export const vaultxRouter = router({
             creatorKeepPercent: "85",
             vaultxArtifactId: String(readyArtifact.id),
           },
-        });
+        }, { idempotencyKey: buildVaultxCheckoutIdempotencyKey(Number(packageId)) });
         checkoutUrl = session.url;
         checkoutSessionId = session.id;
         await rawExec(

@@ -19,7 +19,7 @@ export interface TrailerTemplate {
   emoji: string;
   tagline: string;
   vibe: "cinematic_heat" | "luxe_gold" | "neon_night" | "noir_afterdark" | "velvet_midnight";
-  intensity: "fast" | "medium" | "slow";
+  intensity: "ultra" | "fast" | "medium" | "slow" | "minimal";
   focusRotation: string[];
   hookText?: string;
   ctaText: string;

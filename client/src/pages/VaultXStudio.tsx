@@ -1,4 +1,4 @@
-import { Fragment, ReactNode, useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { ArrowRight, BadgeDollarSign, Camera, Check, Clapperboard, Crown, Film, Image, Library, Loader2, RadioTower, Route, Settings, ShieldCheck, Sparkles, Upload, Wand2, Zap } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 const accent = "#F2B15B";
 
-type NavItem = "make" | "edit" | "sell" | "earn" | "settings";
 type MakeChoice = "Body Cinema" | "Clone Video" | "Promo Trailer" | "Photo Set";
 type TelegramMode = "FAST" | "BOOST" | "FULL";
 type ProviderChoice = "pollo" | "replicate" | "runway" | "kling" | "clone";
@@ -393,7 +392,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
       <div className="mb-6">
         <p className="mb-2 inline-flex rounded-full border border-[#C9A84C]/40 bg-black px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Body Cinema</p>
         <h2 className="text-2xl font-black text-white md:text-3xl">Turn your video into a paid drop.</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#999999]">Paste your video URL below, pick a preset, set a price, and hit Launch. VaultX generates the cinematic version, attaches Stripe checkout, and publishes to Telegram automatically. You keep 85% of every sale.</p>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#999999]">Tap to upload from your phone or computer, choose the creative direction, set your price, and launch. CreatorVault prepares the cinematic version and your sales package in one flow. You keep 85% of every sale.</p>
       </div>
 
       {/* ── BODY CINEMA PRESET PICKER ──────────────────────────────────── */}
@@ -585,7 +584,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               Package title
               <input value={title} onChange={(e) => setTitle(e.target.value)} className="min-h-12 rounded-2xl border border-[#242424] bg-[#101010] px-4 text-white outline-none focus:border-[#C9A84C]" />
             </label>
-            <div className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
+            <div id="creator-source-upload" className="scroll-mt-32 grid gap-2 text-sm font-bold text-[#d6d6d6]">
               Your video
               {!sourceMediaUrl ? (
                 <label className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#C9A84C]/40 bg-[#120d05] px-4 py-8 cursor-pointer text-center hover:border-[#C9A84C]">
@@ -601,7 +600,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
                       <span className="text-xs font-medium text-[#777]">Straight from your phone or computer</span>
                     </>
                   )}
-                  <input type="file" accept="video/*,image/*" className="hidden" onChange={async (e) => {
+                  <input type="file" accept="video/*" className="hidden" onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
                     setStudioFileName(file.name);
@@ -613,7 +612,19 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
                       const xhr = new XMLHttpRequest();
                       const url: string = await new Promise((resolve, reject) => {
                         xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) setStudioUploadPct(Math.round((ev.loaded/ev.total)*100)); };
-                        xhr.onload = () => { if (xhr.status>=200&&xhr.status<300) { try { resolve(JSON.parse(xhr.responseText).url); } catch { reject(new Error("parse")); } } else reject(new Error(`Upload failed (${xhr.status})`)); };
+                        xhr.onload = () => {
+                          let response: any = null;
+                          try { response = JSON.parse(xhr.responseText); } catch {}
+                          if (xhr.status >= 200 && xhr.status < 300 && response?.url) {
+                            resolve(response.url);
+                          } else if (xhr.status === 401) {
+                            reject(new Error("Sign in to upload your content."));
+                          } else if (xhr.status === 403) {
+                            reject(new Error(response?.error || "Your Creator HQ needs upload access."));
+                          } else {
+                            reject(new Error(response?.error || "Upload failed. Please try again."));
+                          }
+                        };
                         xhr.onerror = () => reject(new Error("network"));
                         xhr.open("POST", "/api/video/upload/direct");
                         xhr.withCredentials = true;
@@ -1058,172 +1069,52 @@ function SettingsPanel() {
 }
 
 export default function VaultXStudio() {
-  const [nav, setNav] = useState<NavItem>("make");
-  const [selectedMake, setSelectedMake] = useState<MakeChoice>("Body Cinema");
-
-  // Guided flow state — tracks where the creator is in the 3-step flow
-  const [guidedStep, setGuidedStep] = useState<1 | 2 | 3>(1);
-
-  const STEPS = [
-    { n: 1, label: "Upload or Edit", icon: <Upload size={16} />, desc: "Bring your video" },
-    { n: 2, label: "Pick a Preset", icon: <Sparkles size={16} />, desc: "Choose your look" },
-    { n: 3, label: "Launch", icon: <Zap size={16} />, desc: "Set price and go live" },
-  ];
+  const [showMoney, setShowMoney] = useState(false);
+  const selectedMake: MakeChoice = "Body Cinema";
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a] pb-24 text-white">
-
-      {/* Sticky header with step tracker */}
+    <main className="min-h-screen bg-[#0a0a0a] pb-16 text-white">
       <header className="sticky top-0 z-30 border-b border-[#1f1f1f] bg-[#0a0a0a]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-3 md:px-6">
-          <div className="flex items-center justify-between">
-            <Link href="/vault-x" className="text-xl font-black tracking-tight text-white">
-              Vault<span style={{ color: accent }}>X</span>
-            </Link>
-            {/* Step tracker */}
-            <div className="flex items-center gap-1">
-              {STEPS.map((s, i) => (
-                <Fragment key={s.n}>
-                  <button
-                    onClick={() => setGuidedStep(s.n as 1 | 2 | 3)}
-                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black transition ${
-                      guidedStep === s.n
-                        ? "bg-[#C9A84C] text-black"
-                        : guidedStep > s.n
-                        ? "bg-emerald-500/20 text-emerald-300"
-                        : "bg-white/5 text-zinc-500"
-                    }`}
-                  >
-                    {guidedStep > s.n ? <Check size={12} /> : s.icon}
-                    <span className="hidden sm:block">{s.label}</span>
-                    <span className="sm:hidden">{s.n}</span>
-                  </button>
-                  {i < STEPS.length - 1 && (
-                    <div className={`h-px w-4 ${ guidedStep > s.n ? "bg-emerald-500" : "bg-zinc-700" }`} />
-                  )}
-                </Fragment>
-              ))}
-            </div>
-            {/* Advanced nav */}
-            <button
-              onClick={() => setNav(nav === "earn" ? "make" : "earn")}
-              className="text-xs font-black text-zinc-500 hover:text-white"
-            >
-              {nav === "earn" ? "← Back" : "Money →"}
-            </button>
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 md:px-6">
+          <Link href="/vault-x" className="text-xl font-black tracking-tight text-white">
+            Vault<span style={{ color: accent }}>X</span>
+          </Link>
+          <div className="hidden items-center gap-2 text-xs font-black text-zinc-400 sm:flex">
+            <span className="rounded-full bg-[#C9A84C] px-3 py-1.5 text-black">1 Upload</span>
+            <ArrowRight size={12} />
+            <span>2 Direct</span>
+            <ArrowRight size={12} />
+            <span>3 Launch</span>
           </div>
+          <button
+            onClick={() => setShowMoney((current) => !current)}
+            className="text-xs font-black text-zinc-500 hover:text-white"
+          >
+            {showMoney ? "← Back to Body Cinema" : "Money →"}
+          </button>
         </div>
       </header>
 
       <div className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-5 md:px-6">
-
-        {/* ═══ STEP 1: UPLOAD OR EDIT ═══════════════════════════════════════ */}
-        {guidedStep === 1 && (
-          <div>
-            <div className="mb-5">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Step 1 of 3</p>
-              <h1 className="mt-1 text-3xl font-black text-white">Bring your video.</h1>
-              <p className="mt-1 text-sm text-zinc-400">Upload a clip to the editor, or use an existing URL. Your video is the source — everything else builds from it.</p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {/* Option A: Go to Editor */}
-              <Link
-                href="/vaultx/editor"
-                className="flex flex-col items-start gap-3 rounded-[1.5rem] border border-[#C9A84C]/40 bg-[#130f05] p-6 transition hover:border-[#C9A84C] hover:shadow-[0_0_30px_rgba(201,168,76,0.1)]"
+        {showMoney ? (
+          <EarnPanel />
+        ) : (
+          <>
+            <section className="rounded-[1.75rem] border border-[#C9A84C]/30 bg-[radial-gradient(circle_at_top_right,rgba(201,168,76,0.16),transparent_45%),#101010] p-5 md:p-7">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Body Cinema</p>
+              <h1 className="mt-2 max-w-3xl text-3xl font-black leading-tight text-white md:text-5xl">Upload once. Build a premium drop.</h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400 md:text-base">Start with a video from your phone or computer. No hosted link, no pasted URL, and no leaving CreatorVault. Upload it, choose the creative direction, set the offer, and prepare the result for sale.</p>
+              <a
+                href="#creator-source-upload"
+                className="mt-5 inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 active:scale-[0.98]"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#C9A84C] text-black">
-                  <Film size={22} />
-                </div>
-                <div>
-                  <p className="text-lg font-black text-white">Open Editor</p>
-                  <p className="mt-1 text-sm text-zinc-400">Upload your clip, trim it, pick a style, set a price — then come back here to launch.</p>
-                </div>
-                <div className="mt-auto flex items-center gap-2 text-sm font-black text-[#C9A84C]">
-                  Go to Editor <ArrowRight size={16} />
-                </div>
-              </Link>
-
-              {/* Option B: Paste URL directly */}
-              <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[#242424] bg-[#141414] p-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-[#C9A84C]">
-                  <Upload size={22} />
-                </div>
-                <div>
-                  <p className="text-lg font-black text-white">Paste a video URL</p>
-                  <p className="mt-1 text-sm text-zinc-400">Already have a hosted video? Paste the URL and go straight to launch.</p>
-                </div>
-                <button
-                  onClick={() => setGuidedStep(2)}
-                  className="mt-auto inline-flex items-center gap-2 rounded-full border border-[#C9A84C] px-4 py-2 text-sm font-black text-[#C9A84C] hover:bg-[#C9A84C] hover:text-black"
-                >
-                  Skip to preset picker <ArrowRight size={14} />
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setGuidedStep(2)}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#C9A84C] py-4 text-base font-black text-black"
-            >
-              I have my video — Next: Pick a Preset <ArrowRight size={18} />
-            </button>
-          </div>
-        )}
-
-        {/* ═══ STEP 2: PICK A PRESET ════════════════════════════════════════ */}
-        {guidedStep === 2 && (
-          <div>
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Step 2 of 3</p>
-                <h1 className="mt-1 text-3xl font-black text-white">Pick a preset.</h1>
-                <p className="mt-1 text-sm text-zinc-400">Each preset controls the lighting, motion, camera, and copy for your drop. Pick one — it fills everything in automatically.</p>
-              </div>
-              <button onClick={() => setGuidedStep(3)} className="flex-shrink-0 rounded-full border border-zinc-700 px-4 py-2 text-sm font-black text-zinc-400 hover:text-white">Skip →</button>
-            </div>
-
-            {/* Preset picker lives inside LaunchConsole — show full console here */}
+                <Upload size={18} />
+                Upload From My Device
+              </a>
+            </section>
             <LaunchConsole selectedMake={selectedMake} />
-          </div>
+          </>
         )}
-
-        {/* ═══ STEP 3: LAUNCH ═══════════════════════════════════════════════ */}
-        {guidedStep === 3 && (
-          <div>
-            <div className="mb-5">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Step 3 of 3</p>
-              <h1 className="mt-1 text-3xl font-black text-white">Launch it.</h1>
-              <p className="mt-1 text-sm text-zinc-400">Paste your video URL, confirm the price, check consent — then hit Ignite. The AI stack runs, Pollo generates, Stripe attaches, Telegram publishes.</p>
-            </div>
-            <LaunchConsole selectedMake={selectedMake} />
-          </div>
-        )}
-
-        {/* Advanced panels — accessible from nav */}
-        {nav === "edit" && <EditPanel />}
-        {nav === "sell" && <SellPanel />}
-        {nav === "earn" && <EarnPanel />}
-        {nav === "settings" && <SettingsPanel />}
-
-      </div>
-
-      {/* Bottom nav — always visible on mobile */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#1f1f1f] bg-[#0a0a0a]/95 backdrop-blur-xl lg:hidden">
-        <div className="mx-auto grid max-w-5xl grid-cols-3 gap-1 p-2">
-          {STEPS.map(s => (
-            <button
-              key={s.n}
-              onClick={() => setGuidedStep(s.n as 1 | 2 | 3)}
-              className={`flex flex-col items-center gap-0.5 rounded-2xl py-2 text-[10px] font-black transition ${
-                guidedStep === s.n ? "bg-[#C9A84C] text-black" : "text-zinc-500"
-              }`}
-            >
-              {s.icon}
-              {s.label}
-            </button>
-          ))}
-        </div>
       </div>
     </main>
   );

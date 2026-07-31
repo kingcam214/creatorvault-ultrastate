@@ -12,7 +12,7 @@ import { ENV } from "../_core/env";
 // Initialize Stripe ONLY if configured
 const stripe = ENV.stripeSecretKey 
   ? new Stripe(ENV.stripeSecretKey, {
-      apiVersion: "2026-02-25.clover",
+      apiVersion: "2025-12-15.clover",
     })
   : null;
 
