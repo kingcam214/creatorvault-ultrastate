@@ -88,26 +88,18 @@ async function replicatePollUntilDone(predictionId: string, maxWaitMs = 600_000)
   throw new Error(`Replicate job ${predictionId} timed out after ${maxWaitMs / 1000}s`);
 }
 
-// ─── Pollo credit check ───────────────────────────────────────────────────────
+// ─── Pollo capability status ─────────────────────────────────────────────────
+//
+// Never submit a "test" generation to discover credit availability. A POST to a
+// generation endpoint is a billable action, so status views must remain entirely
+// zero-spend. The governed media control plane performs an approved preflight and
+// records the resulting reservation before any paid request is allowed.
 async function checkPolloCredits(): Promise<{ available: boolean; reason: string }> {
   if (!POLLO_API_KEY) return { available: false, reason: "POLLO_API_KEY not configured" };
-  try {
-    const resp = await fetch("https://pollo.ai/api/platform/generation/pollo/pollo-v1-6", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": POLLO_API_KEY },
-      body: JSON.stringify({ input: { image: "https://example.com/test.jpg", prompt: "test", resolution: "480p", length: 5, mode: "basic" } }),
-    });
-    const data = await resp.json() as any;
-    if (data?.code === "FORBIDDEN" && data?.message?.includes("credits")) {
-      return { available: false, reason: "Pollo AI account has insufficient credits — add credits at pollo.ai" };
-    }
-    if (resp.status === 401 || data?.code === "UNAUTHORIZED") {
-      return { available: false, reason: "POLLO_API_KEY is invalid" };
-    }
-    return { available: true, reason: "ok" };
-  } catch {
-    return { available: false, reason: "Pollo AI unreachable" };
-  }
+  return {
+    available: false,
+    reason: "Live Pollo credit checks are disabled to prevent chargeable test generations. Submit an approved governed request instead.",
+  };
 }
 
 // ─── FFmpeg utility helpers ───────────────────────────────────────────────────

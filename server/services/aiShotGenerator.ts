@@ -16,6 +16,7 @@ import { spawn, execSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
+import { assertLegacyPolloExecutionAllowed } from "./polloEmergencyFreeze.js";
 
 const PUBLIC_ROOT = "/root/uploads";
 const SHOTS_DIR = path.join(PUBLIC_ROOT, "ai-shots");
@@ -87,6 +88,7 @@ async function extractKeyframes(srcUrl: string, n: number, dir: string, idPrefix
 
 // Call Pollo image-to-video for one frame + camera prompt. Returns the video URL.
 async function polloShot(imageUrl: string, prompt: string, resolution = "720p", length = 5): Promise<string | null> {
+  assertLegacyPolloExecutionAllowed({ operation: "aiShotGenerator.polloShot" });
   try {
     const res = await fetch(POLLO_URL, {
       method: "POST",
@@ -127,6 +129,7 @@ export async function generateAIShots(
   opts: { resolution?: "540p" | "720p"; onProgress?: (done: number, total: number) => void } = {}
 ): Promise<AIShotResult> {
   if (!POLLO_KEY()) return { shots: [], bodyFocuses: [], framesUsed: 0 };
+  assertLegacyPolloExecutionAllowed({ operation: "aiShotGenerator.generateAIShots" });
   fs.mkdirSync(SHOTS_DIR, { recursive: true });
   const work = path.join("/tmp/vaultx-aishots", randomUUID());
   fs.mkdirSync(work, { recursive: true });

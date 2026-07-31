@@ -276,6 +276,7 @@ import { kingcamAIRouter } from "./routers/kingcamAIRouter";
 import { agentTelemetryRouter } from "./routers/agentTelemetryRouter";
 import { challengeAutomationRouter } from "./routers/challengeAutomationRouter";
 import { polloRouter } from "./routers/polloRouter";
+import { governedPolloRouter } from "./routers/governedPolloRouter";
 import { distributionRouter } from "./routers/distributionRouter";
 // import { contentProtectionRouter } from "./routers/contentProtection"; // service stubs not implemented
 // import { safetyFeaturesRouter } from "./routers/safetyFeatures"; // service stubs not implemented
@@ -1057,6 +1058,7 @@ export const appRouter = router({
   teaserEngine: teaserEngineRouter,
   aiChatter: aiChatterRouter,
   pollo: polloRouter,
+  governedPollo: governedPolloRouter,
   distribution: distributionRouter,
 });
 

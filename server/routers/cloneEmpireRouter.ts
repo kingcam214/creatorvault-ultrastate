@@ -12,6 +12,7 @@ import crypto from "crypto";
 import path from "path";
 import fs from "fs";
 import { generateSpeech } from "../_core/tts.js";
+import { assertLegacyPolloExecutionAllowed } from "../services/polloEmergencyFreeze.js";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 async function getDb() {
@@ -101,7 +102,13 @@ function buildCloneImagePrompt(prompt: string, style: string): string {
   ].join(", ");
 }
 
+// Legacy clone rendering is intentionally non-executable until it is migrated to governed jobs.
+function legacyCloneRenderExecutionEnabled(): boolean {
+  return false;
+}
+
 async function getCloneVideo(imageUrl: string): Promise<string> {
+  assertLegacyPolloExecutionAllowed({ operation: "cloneEmpireRouter.getCloneVideo" });
   const res = await fetch("https://pollo.ai/api/platform/generation/pollo/pollo-v1-6", {
     method: "POST",
     headers: {
@@ -235,6 +242,12 @@ export const cloneEmpireRouter = router({
     style: z.enum(["studio", "street", "course", "sales", "tour"]).default("studio"),
     title: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
+    if (!legacyCloneRenderExecutionEnabled()) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Legacy Clone Empire rendering is retired for credit safety. Create and approve a governed media request before any source, audio, or video work can begin.",
+      });
+    }
     ensureDirs();
     const videoId = crypto.randomUUID();
     const db = await getDb();
@@ -275,6 +288,12 @@ export const cloneEmpireRouter = router({
     style: z.enum(["studio", "street", "course", "sales", "tour"]).default("studio"),
     title: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
+    if (!legacyCloneRenderExecutionEnabled()) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Legacy Clone Empire rendering is retired for credit safety. Create and approve a governed media request before any source, audio, or video work can begin.",
+      });
+    }
     ensureDirs();
     const videoId = crypto.randomUUID();
     const db = await getDb();
