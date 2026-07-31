@@ -42,6 +42,7 @@ import mysql from "mysql2/promise";
 import OpenAI from "openai";
 import crypto from "crypto";
 import { generateSpeech } from "../_core/tts.js";
+import { assertLegacyPaidMediaExecutionBlocked, assertLegacyPolloExecutionAllowed } from "../services/polloEmergencyFreeze.js";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -194,6 +195,7 @@ async function replicateGet(predictionId: string): Promise<any> {
 async function polloPost(path: string, body: object): Promise<any> {
   const key = process.env.POLLO_API_KEY;
   if (!key) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "POLLO_API_KEY not configured" });
+  assertLegacyPolloExecutionAllowed({ operation: "cloneEngineRouter.polloPost" });
   const resp = await fetch(`https://pollo.ai/api/platform${path}`, {
     method: "POST",
     headers: { "x-api-key": key, "Content-Type": "application/json" },
@@ -494,6 +496,7 @@ export const cloneEngineRouter = router({
       previewOnly: z.boolean().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
+      assertLegacyPaidMediaExecutionBlocked({ operation: "cloneEngineRouter.generateImage", actorUserId: ctx.user.id });
       const providerConfig = PROVIDERS.find(p => p.id === input.provider);
       if (!providerConfig) throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown provider" });
 
@@ -573,6 +576,7 @@ export const cloneEngineRouter = router({
       mode: z.enum(["basic", "pro"]).default("pro"),
     }))
     .mutation(async ({ ctx, input }) => {
+      assertLegacyPaidMediaExecutionBlocked({ operation: "cloneEngineRouter.generateVideo", actorUserId: ctx.user.id });
       const finalPrompt = input.prompt?.trim() || MOTION_PRESETS[input.motionStyle];
       const durationSeconds = input.length === "10s" ? 10 : 5;
       const cost = estimateCost("video", input.provider, { length: input.length });
@@ -680,6 +684,7 @@ export const cloneEngineRouter = router({
       language: z.enum(["en", "es-DO", "es"]).default("en"),
     }))
     .mutation(async ({ ctx, input }) => {
+      assertLegacyPaidMediaExecutionBlocked({ operation: "cloneEngineRouter.generateVoice", actorUserId: ctx.user.id });
       const cost = estimateCost("voice", "elevenlabs-voice", {});
 
       const result = await generateSpeech(input.script, {
@@ -729,6 +734,7 @@ export const cloneEngineRouter = router({
       videoProvider: z.enum(["pollo-v1-6", "runway-gen3", "luma-dream-machine"]).default("pollo-v1-6"),
     }))
     .mutation(async ({ ctx, input }) => {
+      assertLegacyPaidMediaExecutionBlocked({ operation: "cloneEngineRouter.generateTalkingHead", actorUserId: ctx.user.id });
       const jobId = crypto.randomUUID();
       const cost = estimateCost("talking_head", "composite", {});
 

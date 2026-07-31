@@ -50,32 +50,47 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   // Run startup tasks (schema bootstrap, etc)
   await runStartupTasks();
-  // Start post scheduler — fires pending scheduled_posts every minute
-  startPostScheduler();
-  if (process.env.TELEGRAM_DAILY_DROP_AUTORUN === "true") {
+  // Outbound publication stays disabled until the governed media control plane
+  // explicitly authorizes a worker. This prevents historical scheduled posts from
+  // publishing while credit and attribution controls are being recovered.
+  const allowGovernedOutboundAutomation =
+    process.env.CREATORVAULT_GOVERNED_MEDIA_AUTORUN === "enabled" &&
+    process.env.CREATORVAULT_OUTBOUND_PUBLISH_AUTORUN === "enabled";
+  if (allowGovernedOutboundAutomation) {
+    startPostScheduler();
+  } else {
+    console.log("[CreatorVaultSafety] outbound post scheduler disabled until explicitly governed");
+  }
+  if (allowGovernedOutboundAutomation && process.env.TELEGRAM_DAILY_DROP_AUTORUN === "true") {
     startDailyDropCron();
   } else {
     console.log("[TelegramLockdown] daily drop cron disabled by default");
   }
-  if (process.env.TELEGRAM_REACTIVATION_AUTORUN === "true") {
+  if (allowGovernedOutboundAutomation && process.env.TELEGRAM_REACTIVATION_AUTORUN === "true") {
     startReactivationCron();
   } else {
     console.log("[TelegramLockdown] buyer reactivation cron disabled by default");
   }
-  if (process.env.VAULTX_ACQUISITION_AUTORUN === "true") {
+  if (allowGovernedOutboundAutomation && process.env.VAULTX_ACQUISITION_AUTORUN === "true") {
     startVaultXAcquisitionCron().catch(error => console.error("[VaultX Acquisition] failed to start autonomous operator", error));
   } else {
     console.log("[TelegramLockdown] VaultX acquisition cron disabled by default");
   }
-  if (process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN === "true") {
+  if (allowGovernedOutboundAutomation && process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN === "true") {
     startChallengeAutomationCron().catch(error => console.error("[VaultX Challenge Agents] failed to start autonomous challenge-agent loop", error));
   } else {
     console.log("[TelegramLockdown] challenge-agent loop disabled by default");
   }
-  if (process.env.CREATORVAULT_VIDEO_REVENUE_AUTORUN === "true" || process.env.CV_REVENUE_LOOP === "true") {
+  // The legacy revenue loop can generate Pollo video and publish a Telegram drop
+  // from a timer. It remains hard-disabled until a governed worker and an explicit
+  // owner-controlled automation switch are deployed together.
+  const allowGovernedRevenueAutomation =
+    process.env.CREATORVAULT_GOVERNED_MEDIA_AUTORUN === "enabled" &&
+    process.env.CREATORVAULT_REVENUE_AUTORUN === "enabled";
+  if (allowGovernedRevenueAutomation) {
     startCreatorVaultOvernightRevenueCron();
   } else {
-    console.log("[CreatorVaultRevenue] native video revenue loop disabled by default");
+    console.log("[CreatorVaultSafety] revenue automation disabled until explicitly governed");
   }
   
   const app = express();
@@ -251,6 +266,7 @@ async function startServer() {
     // Process due funnel steps, drip sequences, and re-engagement triggers
     // Runs every 60 seconds
     setInterval(async () => {
+      if (!allowGovernedOutboundAutomation) return;
       try {
         const mysql2 = await import("mysql2/promise");
         const dbUrl = process.env.DATABASE_URL || "mysql://creatorvault:KingCam214CreatorVault@127.0.0.1:3306/creatorvault";

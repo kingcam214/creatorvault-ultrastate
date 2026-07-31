@@ -34,6 +34,7 @@ import {
   hasCompleteVaultxCheckout,
   normaliseBodyCinemaGenerationStatus as normalisePolloStatus,
 } from "../services/bodyCinemaReliability";
+import { assertLegacyPolloExecutionAllowed } from "../services/polloEmergencyFreeze.js";
 import { createAIDrop, sendDropToChannel } from "../services/telegramCampaign";
 import {
   assertReadyVaultxPackageArtifact,
@@ -1942,6 +1943,10 @@ export const vaultxRouter = router({
         return { jobId: inFlight.taskId, status, packageId: input.packageId, artifact: publicArtifactPayload(artifact), reusedInFlightGeneration: true, success: true };
       }
 
+      assertLegacyPolloExecutionAllowed({
+        operation: "vaultxRouter.createPackageAsset",
+        actorUserId: ctx.user.id,
+      });
       const generationController = new AbortController();
       const generationTimeout = setTimeout(() => generationController.abort(), 30000);
       const response = await fetch(POLLO_API_URL, {
@@ -2378,6 +2383,10 @@ export const vaultxRouter = router({
             metadata: { prompt, resolution: input.resolution, length: input.length, mode: input.mode, reusedInFlightGeneration: true, launchMode: "end_to_end" },
           });
         } else {
+          assertLegacyPolloExecutionAllowed({
+            operation: "vaultxRouter.launchRevenuePath",
+            actorUserId: ctx.user.id,
+          });
           const generationController = new AbortController();
           const generationTimeout = setTimeout(() => generationController.abort(), 30000);
           const response = await fetch(POLLO_API_URL, {

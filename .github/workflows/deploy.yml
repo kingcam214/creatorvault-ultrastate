@@ -51,7 +51,9 @@ jobs:
           export PATH="$PNPM_HOME:$PATH"
           COMMIT="${{ github.sha }}"
 
-          # Copy built dist to production app directory (using sudo for root-owned dir)
+          # Stage built dist atomically in the root-owned application directory.
+          # Remove an interrupted prior stage so cp cannot nest the next release.
+          sudo rm -rf /root/creatorvault/dist.new 2>/dev/null || true
           sudo cp -r dist /root/creatorvault/dist.new
           sudo rm -rf /root/creatorvault/dist.old 2>/dev/null || true
           sudo mv /root/creatorvault/dist /root/creatorvault/dist.old 2>/dev/null || true
@@ -60,17 +62,16 @@ jobs:
           # Copy package files
           sudo cp package.json pnpm-lock.yaml /root/creatorvault/
 
-          # Install production deps
-          cd /root/creatorvault
-          sudo pnpm install --frozen-lockfile
+          # Install production deps inside the root-owned application directory.
+          # The self-hosted runner cannot cd into /root before sudo.
+          sudo env PATH="$PATH" bash -c 'cd /root/creatorvault && pnpm install --frozen-lockfile'
 
-          # Run deploy script
-          sudo chmod +x ./deploy_work_to_prod.sh
-          sudo bash ./deploy_work_to_prod.sh
+          # Run the committed production entrypoint from the application directory.
+          sudo env PATH="$PATH" bash -c 'cd /root/creatorvault && chmod +x ./deploy_work_to_prod.sh && ./deploy_work_to_prod.sh'
 
           # Verify release stamp (full SHA or short SHA prefix both accepted)
           DEPLOY_SHA="${{ github.sha }}"
-          node -e "
+          sudo env PATH="$PATH" node -e "
             const r=require('fs').readFileSync('/root/creatorvault/dist/public/release.json','utf8');
             const parsed=JSON.parse(r);
             const commit='${{ github.sha }}';

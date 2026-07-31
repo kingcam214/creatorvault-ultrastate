@@ -669,7 +669,7 @@ function Router() {
       <Route path={"/king/flyer-design-studio"} component={FlyerDesignStudio} />
       <Route path={"/king/video-lab"} component={KingVideoLab} />
       <Route path={"/king/analytics"} component={KingAnalytics} />
-      <Route path={"/king/content"} component={ContentCommand} />
+      <Route path={"/king/content"} component={VaultXDrop} />
       <Route path={"/king/waitlist"} component={KingWaitlist} />
       {/* <Route path={"/king/launch-command"} component={LaunchCommand} /> */}
       <Route path="/king/empire-doc" component={EmpireDocPrompt} />
@@ -797,7 +797,7 @@ function Router() {
       <Route path="/vaultx/studio" component={VaultXDrop} />
       <Route path="/vaultx/distribution" component={VaultXDistribution} />
       <Route path="/vault-x/studio" component={VaultXDrop} />
-      <Route path="/vaultx/studio-advanced" component={VaultXStudio} />
+      <Route path="/vaultx/studio-advanced" component={VaultXDrop} />
       <Route path="/vault-x/editor" component={VaultXEditor} />
       <Route path="/vaultx/editor" component={VaultXEditor} />
       <Route path="/vaultx/capcut" component={VaultXEditor} />
@@ -815,9 +815,9 @@ function Router() {
       <Route path="/greatest-show/lirys-missed-revenue" component={LirysMissedRevenue} />
       <Route path="/greatest-show/marielka-profile" component={MarielkaProfile} />
       <Route path="/greatest-show/subscribe-success" component={SubscribeSuccess} />
-      <Route path="/king/clone-command" component={CloneCommand} />
-      <Route path="/clone/command-center" component={CloneCommandCenter} />
-      <Route path="/clone" component={CloneCommandCenter} />
+      <Route path="/king/clone-command" component={VaultXDrop} />
+      <Route path="/clone/command-center" component={VaultXDrop} />
+      <Route path="/clone" component={VaultXDrop} />
       <Route path="/king/clone-studio" component={CloneStudio} />
       <Route path="/king/clone-training-lab" component={CloneTrainingLab} />
       <Route path="/king/media-vault" component={MediaVault} />

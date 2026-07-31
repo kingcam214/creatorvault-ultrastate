@@ -10,6 +10,7 @@ import { TRPCError } from "@trpc/server";
 import mysql from "mysql2/promise";
 import OpenAI from "openai";
 import { generateSpeech } from "../_core/tts.js";
+import { assertLegacyPolloExecutionAllowed } from "../services/polloEmergencyFreeze.js";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -29,6 +30,11 @@ function rows(r: any): any[] {
 const OWNER_IDS = [6, 33];
 function ownerGuard(userId: number) {
   if (!OWNER_IDS.includes(userId)) throw new TRPCError({ code: "FORBIDDEN", message: "Owner only" });
+}
+
+// Legacy paths are intentionally non-executable. New media requests must use the governed router.
+function legacyContentCommandExecutionEnabled(): boolean {
+  return false;
 }
 
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN || "";
@@ -125,6 +131,7 @@ async function generateImages(scene: string, count = 4, w = 768, h = 1344): Prom
 // Pollo image-to-video — the ONLY working Pollo path
 async function polloAnimate(imageUrl: string, motionPrompt: string, resolution = "720p", secs = 5): Promise<string> {
   if (!POLLO_KEY) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "POLLO_API_KEY not configured" });
+  assertLegacyPolloExecutionAllowed({ operation: "contentCommandRouter.polloAnimate" });
   const r = await fetch(`${POLLO_BASE}/generation/pollo/pollo-v1-6`, {
     method: "POST",
     headers: { "x-api-key": POLLO_KEY, "Content-Type": "application/json" },
@@ -211,6 +218,14 @@ export const contentCommandRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       ownerGuard(ctx.user.id);
+      // This legacy command surface can fan out into Replicate, Pollo, TTS, and Telegram.
+      // It is deliberately disabled rather than partially degrading into untracked paid work.
+      if (!legacyContentCommandExecutionEnabled()) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Legacy Content Command media generation is retired for credit safety. Create a governed media request, record cost evidence, obtain owner approval, and use the governed worker instead.",
+        });
+      }
       const { contentType, brief } = input;
 
       switch (contentType) {
@@ -396,12 +411,12 @@ export const contentCommandRouter = router({
       mediaUrl: z.string().optional(),
       isVideo: z.boolean().default(false),
     }))
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ ctx }) => {
       ownerGuard(ctx.user.id);
-      const results: Record<string, boolean> = {};
-      if (input.channel === "kingcam" || input.channel === "both") results.kingcam = await sendTelegram(TELEGRAM_KINGCAM, input.caption, input.mediaUrl, input.isVideo);
-      if (input.channel === "owner" || input.channel === "both") results.owner = await sendTelegram(TELEGRAM_OWNER, input.caption, input.mediaUrl, input.isVideo);
-      return { results, totalSent: Object.values(results).filter(Boolean).length };
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Legacy direct Telegram publication is retired. Accepted governed media must use the tracked campaign workflow with explicit owner approval.",
+      });
     }),
 
   saveToVault: protectedProcedure

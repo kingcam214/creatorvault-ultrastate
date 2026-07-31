@@ -45,6 +45,8 @@
  * ============================================================================
  */
 
+import { assertLegacyPolloExecutionAllowed } from "./polloEmergencyFreeze.js";
+
 // ─── ENV ─────────────────────────────────────────────────────────────────────
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN ?? "";
 const POLLO_KEY = process.env.POLLO_API_KEY ?? "";
@@ -256,6 +258,7 @@ async function polloGenerate(
   input: Record<string, unknown>
 ): Promise<string> {
   if (!POLLO_KEY) throw new Error("POLLO_API_KEY not configured");
+  assertLegacyPolloExecutionAllowed({ operation: "kingcamAI.polloGenerate" });
   const startRes = await fetch(`${POLLO_BASE}/generation/${modelPath}`, {
     method: "POST",
     headers: {
@@ -404,6 +407,9 @@ export async function generateKingCamVideo(
   } = options;
 
   if (!POLLO_KEY) throw new Error("POLLO_API_KEY not configured");
+  assertLegacyPolloExecutionAllowed({
+    operation: "kingcamAI.generateKingCamVideo",
+  });
 
   const finalPrompt = injectDNA
     ? injectKingCamDNA(prompt, { styleLevel: "cinematic" })

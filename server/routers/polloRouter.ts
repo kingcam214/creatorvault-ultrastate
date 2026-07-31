@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc.js";
 import mysql from "mysql2/promise";
+import { assertLegacyPolloExecutionAllowed } from "../services/polloEmergencyFreeze.js";
 
 // Owner gate middleware - only userId 6 or 33
 const ownerOnlyProcedure = protectedProcedure.use(async ({ ctx, next }) => {
@@ -55,6 +56,10 @@ export const polloRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      assertLegacyPolloExecutionAllowed({
+        operation: "polloRouter.generateVideo",
+        actorUserId: ctx.user.id,
+      });
       const conn = await getDbConnection();
       try {
         // Parse length to integer seconds (API requires numeric)

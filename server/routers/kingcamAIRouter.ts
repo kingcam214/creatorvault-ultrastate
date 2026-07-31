@@ -35,9 +35,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import {
   generateKingCamImage,
-  generateKingCamVideo,
   generateCloneThumbnail,
-  generateFullBodyCloneVideo,
   generateFlyerImage,
   generateApparelMockup,
   generateThumbnail,
@@ -45,14 +43,12 @@ import {
   generatePresentationSlideVisual,
   generateVideoSceneImage,
   generateSocialPostVisual,
-  generateAnimatedFlyer,
   generateColorVariantCollection,
   triggerModelRetraining,
   buildCrossFeatureAsset,
   type VideoModel,
 } from "../services/kingcamAI";
 import { getDb } from "../db";
-import { runKingCamFactory, runFastDrop, runBoostDrop, runFullProduction, type FactoryMode, type ContentVertical } from "../services/kingcamMediaFactory";
 import { storagePut } from "../storage";
 
 // ─── SHARED SCHEMAS ───────────────────────────────────────────────────────────
@@ -66,6 +62,10 @@ const videoModelSchema = z.enum([
 const aspectRatioImageSchema = z.enum(["1:1", "16:9", "9:16", "4:3", "3:4"]).default("1:1");
 const aspectRatioVideoSchema = z.enum(["16:9", "9:16", "1:1"]).default("16:9");
 const styleLevelSchema = z.enum(["editorial", "cinematic", "product", "social", "presentation"]).default("editorial");
+
+function legacyVideoGenerationRetired(feature: string): never {
+  throw new Error(`${feature} is retired for credit safety. Create a governed media draft, record a cost cap, obtain owner approval, and submit it through governedPollo instead.`);
+}
 
 // ─── IMAGE ROUTER ─────────────────────────────────────────────────────────────
 const imageRouter = router({
@@ -203,19 +203,7 @@ const videoRouter = router({
       mode: z.enum(["pro", "standard"]).default("pro"),
       vertical: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
-      const result = await generateKingCamVideo({
-        prompt: input.prompt,
-        model: input.model as VideoModel,
-        injectDNA: input.injectDNA,
-        imageUrl: input.imageUrl,
-        aspectRatio: input.aspectRatio,
-        duration: input.duration,
-        mode: input.mode,
-      });
-      const asset = buildCrossFeatureAsset(result, input.prompt, [input.vertical ?? "video"]);
-      return { ...result, asset };
-    }),
+    .mutation(async () => legacyVideoGenerationRetired("KingCam video.generate")),
 
   /** Clone Lab: Full-body motion video */
   fullBodyClone: protectedProcedure
@@ -225,16 +213,7 @@ const videoRouter = router({
       model: videoModelSchema,
       duration: z.union([z.literal(5), z.literal(10)]).default(5),
     }))
-    .mutation(async ({ input }) => {
-      const result = await generateFullBodyCloneVideo({
-        prompt: input.prompt,
-        referenceImageUrl: input.referenceImageUrl,
-        model: input.model as VideoModel,
-        duration: input.duration,
-      });
-      const asset = buildCrossFeatureAsset(result, input.prompt, ["clone_lab", "full_body"]);
-      return { ...result, asset };
-    }),
+    .mutation(async () => legacyVideoGenerationRetired("KingCam video.fullBodyClone")),
 
   /** Flyer Studio: Animate a flyer image into video */
   animateFlyer: protectedProcedure
@@ -243,15 +222,7 @@ const videoRouter = router({
       animationPrompt: z.string().optional(),
       model: videoModelSchema,
     }))
-    .mutation(async ({ input }) => {
-      const result = await generateAnimatedFlyer({
-        flyerImageUrl: input.flyerImageUrl,
-        animationPrompt: input.animationPrompt,
-        model: input.model as VideoModel,
-      });
-      const asset = buildCrossFeatureAsset(result, input.animationPrompt ?? "animated flyer", ["flyer", "animated"]);
-      return { ...result, asset };
-    }),
+    .mutation(async () => legacyVideoGenerationRetired("KingCam video.animateFlyer")),
 
   /** Video Studio: Generate a scene image for multi-scene video */
   generateScene: protectedProcedure
@@ -372,29 +343,14 @@ const factoryRouter = router({
       referenceImageUrl: z.string().url().optional(),
       targetDuration: z.number().int().min(15).max(300).default(60),
     }))
-    .mutation(async ({ input, ctx }) => {
-      const result = await runKingCamFactory({
-        topic: input.topic,
-        mode: input.mode as FactoryMode,
-        vertical: input.vertical as ContentVertical,
-        userId: ctx.user.id,
-        suitColor: input.suitColor,
-        aspectRatio: input.aspectRatio as "16:9" | "9:16" | "1:1",
-        videoModel: input.videoModel as any,
-        referenceImageUrl: input.referenceImageUrl,
-        targetDuration: input.targetDuration,
-      });
-      return result;
-    }),
+    .mutation(async () => legacyVideoGenerationRetired("KingCam factory.run")),
   /** Quick FAST drop — image + script only */
   fastDrop: protectedProcedure
     .input(z.object({
       topic: z.string().min(1),
       vertical: z.enum(["clone_lab", "dominican", "adult", "general", "telegram_drop"]).default("telegram_drop"),
     }))
-    .mutation(async ({ input, ctx }) => {
-      return runFastDrop({ topic: input.topic, userId: ctx.user.id, vertical: input.vertical as ContentVertical });
-    }),
+    .mutation(async () => legacyVideoGenerationRetired("KingCam factory.fastDrop")),
   /** BOOST drop — image + 5s video + voice */
   boostDrop: protectedProcedure
     .input(z.object({
@@ -402,9 +358,7 @@ const factoryRouter = router({
       vertical: z.enum(["clone_lab", "dominican", "adult", "general", "telegram_drop"]).default("clone_lab"),
       suitColor: z.string().optional(),
     }))
-    .mutation(async ({ input, ctx }) => {
-      return runBoostDrop({ topic: input.topic, userId: ctx.user.id, vertical: input.vertical as ContentVertical, suitColor: input.suitColor });
-    }),
+    .mutation(async () => legacyVideoGenerationRetired("KingCam factory.boostDrop")),
   /** FULL production — complete pipeline */
   fullProduction: protectedProcedure
     .input(z.object({
@@ -414,16 +368,7 @@ const factoryRouter = router({
       referenceImageUrl: z.string().url().optional(),
       targetDuration: z.number().int().min(15).max(300).default(60),
     }))
-    .mutation(async ({ input, ctx }) => {
-      return runFullProduction({
-        topic: input.topic,
-        userId: ctx.user.id,
-        vertical: input.vertical as ContentVertical,
-        suitColor: input.suitColor,
-        referenceImageUrl: input.referenceImageUrl,
-        targetDuration: input.targetDuration,
-      });
-    }),
+    .mutation(async () => legacyVideoGenerationRetired("KingCam factory.fullProduction")),
 });
 
 // ─── MAIN ROUTER ──────────────────────────────────────────────────────────────

@@ -17,6 +17,7 @@ import { z } from "zod";
 import { router, protectedProcedure, publicProcedure } from "../_core/trpc.js";
 import { TRPCError } from "@trpc/server";
 import mysql from "mysql2/promise";
+import { assertLegacyPolloExecutionAllowed } from "../services/polloEmergencyFreeze.js";
 
 // ─── DB ───────────────────────────────────────────────────────────────────────
 async function getDb() {
@@ -314,6 +315,7 @@ export const cloneCommandRouter = router({
 
       const durationSeconds = input.length === "10s" ? 10 : 5;
       const finalPrompt = buildCloneMotionPrompt(input);
+      assertLegacyPolloExecutionAllowed({ operation: "cloneCommandRouter.generateCloneVideo" });
 
       const response = await fetch(`${POLLO_BASE_URL}/generation/pollo/pollo-v1-6`, {
         method: "POST",
