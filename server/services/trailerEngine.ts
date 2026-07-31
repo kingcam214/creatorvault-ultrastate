@@ -97,7 +97,7 @@ export interface TrailerRequest {
   beatSeconds?: number;
   musicUrl?: string;
   watermarkText?: string;
-  intensity?: "fast" | "medium" | "slow";
+  intensity?: "ultra" | "fast" | "medium" | "slow" | "minimal";
   polish?: boolean;        // film grain + bloom (default true)
   transitions?: boolean;   // xfade between cuts (default true)
   chromaAberration?: boolean; // RGB channel split on cuts

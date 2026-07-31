@@ -1,755 +1,681 @@
-/**
- * ============================================================================
- * VAULTX DROP — The elite unified creator drop flow
- *
- * One page. Upload to launched drop. No navigation. No confusion.
- * Mobile-first. Every step reveals the next only when the current is done.
- *
- * Flow:
- *   UPLOAD    → tap to upload or paste URL, video previews immediately
- *   PRESET    → body feature presets shown as visual cards, tap to apply
- *   CONFIGURE → title, price, consent — minimal, only what's needed
- *   LAUNCH    → one button, AI stack runs, Pollo generates, Stripe attaches
- *   RESULT    → video ready, copy pack, Telegram button, checkout link
- * ============================================================================
- */
-import { useState, useRef, useCallback, useEffect, ChangeEvent } from "react";
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import {
-  ArrowRight, Check, ChevronDown, Download, DollarSign,
-  Loader2, Play, Pause, Send, ShieldCheck, Sparkles,
-  Upload, Wand2, X, Zap, Copy, Volume2, VolumeX
+  ArrowLeft,
+  Check,
+  Copy,
+  DollarSign,
+  Download,
+  ExternalLink,
+  FileVideo,
+  Film,
+  Loader2,
+  Pause,
+  Play,
+  RotateCcw,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Upload,
+  Volume2,
+  VolumeX,
+  Wand2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { useVaultXLang, VaultXLangSwitcher } from "@/lib/vaultxI18n";
 import { toast } from "sonner";
 
-// ─── Design ──────────────────────────────────────────────────────────────────
-const GOLD = "#C9A84C";
-const GOLD_DIM = "rgba(201,168,76,0.12)";
-const GOLD_BORDER = "rgba(201,168,76,0.35)";
-const BG = "#080808";
+const GOLD = "#D5B760";
+const GOLD_DIM = "rgba(213,183,96,0.12)";
+const GOLD_BORDER = "rgba(213,183,96,0.38)";
+const BG = "#070707";
 const CARD = "#111111";
-const CARD2 = "#161616";
-const BORDER = "rgba(255,255,255,0.08)";
-const MUTED = "rgba(255,255,255,0.45)";
-const GREEN = "#00E676";
-const CYAN = "#00D9FF";
+const CARD_SOFT = "#171717";
+const BORDER = "rgba(255,255,255,0.09)";
+const MUTED = "rgba(255,255,255,0.55)";
+const GREEN = "#45E38A";
+const CYAN = "#63D9F5";
+const RED = "#FF7C7C";
 
-// ─── Step definitions ─────────────────────────────────────────────────────────
-type Step = "upload" | "preset" | "configure" | "launch" | "result";
+type Step = "upload" | "preset" | "configure" | "create" | "review";
+type UploadReceipt = {
+  id: string;
+  sha256: string;
+  verified: boolean;
+  ownerBound: boolean;
+  createdAt: string;
+  codec: string;
+  width: number;
+  height: number;
+  durationSec: number;
+};
 
-const STEP_ORDER: Step[] = ["upload", "preset", "configure", "launch", "result"];
+type QuickPreset = {
+  id: string;
+  name: string;
+  direction: string;
+  focus: string;
+  price: number;
+};
 
-function stepIndex(s: Step) { return STEP_ORDER.indexOf(s); }
+const STEP_ORDER: Step[] = ["upload", "preset", "configure", "create", "review"];
+const STEP_LABELS: Record<Step, string> = {
+  upload: "Source",
+  preset: "Treatment",
+  configure: "Terms",
+  create: "Create",
+  review: "Review",
+};
 
-// ─── Body feature presets (top converting, body-specific) ────────────────────
-const QUICK_PRESETS = [
-  { id: "body-curves-360",       emoji: "🌀", name: "360 Curves",    heat: 5, score: 10, price: 49 },
-  { id: "body-butt-arch",        emoji: "🍑", name: "The Arch",      heat: 5, score: 10, price: 39 },
-  { id: "body-waist-curve",      emoji: "⏳", name: "The Waist",     heat: 4, score: 10, price: 35 },
-  { id: "body-abs-definition",   emoji: "💪", name: "Abs Drop",      heat: 4, score: 10, price: 29 },
-  { id: "body-thigh-close",      emoji: "🔥", name: "Inner Thigh",   heat: 5, score: 10, price: 35 },
-  { id: "body-full-silhouette",  emoji: "✨", name: "Silhouette",    heat: 4, score: 10, price: 39 },
-  { id: "body-lower-back-dimples", emoji: "💫", name: "Lower Back",  heat: 5, score: 10, price: 35 },
-  { id: "body-hips-sway",        emoji: "💃", name: "Hip Sway",      heat: 4, score: 10, price: 25 },
-  { id: "body-legs-full",        emoji: "👠", name: "Leg Day",       heat: 3, score: 9,  price: 29 },
-  { id: "body-back-spine",       emoji: "🖤", name: "The Back",      heat: 4, score: 9,  price: 35 },
-  { id: "body-chest-decollete",  emoji: "💎", name: "Décolleté",     heat: 3, score: 9,  price: 29 },
-  { id: "heat-mirror-moment",    emoji: "🪞", name: "Mirror Moment", heat: 5, score: 10, price: 35 },
-  { id: "heat-wet-editorial",    emoji: "💧", name: "Wet Editorial", heat: 5, score: 10, price: 45 },
-  { id: "ppv-door-tease",        emoji: "🚪", name: "Door Tease",    heat: 4, score: 10, price: 29 },
-  { id: "ppv-countdown",         emoji: "⏱️", name: "Countdown",     heat: 5, score: 10, price: 35 },
+const QUICK_PRESETS: QuickPreset[] = [
+  { id: "body-curves-360", name: "360 Curves", direction: "Controlled orbit with full-body continuity", focus: "Full form", price: 49 },
+  { id: "body-butt-arch", name: "The Arch", direction: "Sculpted side light and deliberate tension", focus: "Lower form", price: 39 },
+  { id: "body-waist-curve", name: "The Waist", direction: "Editorial framing with a restrained push-in", focus: "Waistline", price: 35 },
+  { id: "body-abs-definition", name: "Abs Drop", direction: "Harder definition with clean highlight control", focus: "Core", price: 29 },
+  { id: "body-thigh-close", name: "Inner Thigh", direction: "Tight composition and measured slow motion", focus: "Leg line", price: 35 },
+  { id: "body-full-silhouette", name: "Silhouette", direction: "Backlight, negative space, and graphic shape", focus: "Outline", price: 39 },
+  { id: "body-lower-back-dimples", name: "Lower Back", direction: "Low-key light with intimate detail", focus: "Back line", price: 35 },
+  { id: "body-hips-sway", name: "Hip Sway", direction: "Rhythmic lateral motion with stable framing", focus: "Hip line", price: 25 },
+  { id: "body-legs-full", name: "Leg Day", direction: "Long vertical framing and runway pacing", focus: "Full legs", price: 29 },
+  { id: "body-back-spine", name: "The Back", direction: "Noir edge light with restrained movement", focus: "Back", price: 35 },
+  { id: "body-chest-decollete", name: "Décolleté", direction: "Soft editorial light with controlled detail", focus: "Upper form", price: 29 },
+  { id: "heat-mirror-moment", name: "Mirror Moment", direction: "Reflections, depth, and a private-campaign feel", focus: "Reflection", price: 35 },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function CopyButton({ text }: { text: string }) {
+function stepIndex(step: Step) {
+  return STEP_ORDER.indexOf(step);
+}
+
+function formatSeconds(value?: number) {
+  if (!Number.isFinite(value)) return "—";
+  return `${Number(value).toFixed(value && value < 10 ? 1 : 0)}s`;
+}
+
+function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
   const [done, setDone] = useState(false);
   return (
     <button
-      onClick={() => { navigator.clipboard.writeText(text); setDone(true); setTimeout(() => setDone(false), 1500); }}
-      style={{ padding: "3px 10px", borderRadius: 4, border: `1px solid ${BORDER}`, background: "transparent", color: done ? GREEN : MUTED, fontSize: 10, cursor: "pointer", fontFamily: "monospace", letterSpacing: "0.06em" }}
+      type="button"
+      onClick={async () => {
+        await navigator.clipboard.writeText(text);
+        setDone(true);
+        window.setTimeout(() => setDone(false), 1500);
+      }}
+      style={{
+        minHeight: 32,
+        padding: "5px 10px",
+        borderRadius: 8,
+        border: `1px solid ${BORDER}`,
+        background: "transparent",
+        color: done ? GREEN : MUTED,
+        fontSize: 11,
+        cursor: "pointer",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+      }}
     >
-      {done ? "✓" : "COPY"}
+      {done ? <Check size={13} /> : <Copy size={13} />}
+      {done ? "Copied" : label}
     </button>
   );
 }
 
-function CopyCard({ label, text, accent = GOLD }: { label: string; text: string; accent?: string }) {
+function CopyCard({ label, text, accent = GOLD }: { label: string; text?: string | null; accent?: string }) {
+  if (!text) return null;
   return (
-    <div style={{ background: CARD2, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${accent}`, borderRadius: 8, padding: "10px 12px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontSize: 9, color: accent, fontFamily: "monospace", letterSpacing: "0.14em", textTransform: "uppercase" }}>{label}</span>
+    <div style={{ background: CARD_SOFT, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${accent}`, borderRadius: 12, padding: "12px 14px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 8 }}>
+        <span style={{ fontSize: 10, color: accent, fontFamily: "monospace", letterSpacing: "0.14em", textTransform: "uppercase" }}>{label}</span>
         <CopyButton text={text} />
       </div>
-      <p style={{ fontSize: 13, color: "#fff", lineHeight: 1.55, margin: 0 }}>{text}</p>
+      <p style={{ fontSize: 13, color: "#fff", lineHeight: 1.6, margin: 0 }}>{text}</p>
     </div>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+function StatusRow({ label, value, state }: { label: string; value: string; state: "ready" | "working" | "locked" | "failed" }) {
+  const color = state === "ready" ? GREEN : state === "working" ? GOLD : state === "failed" ? RED : MUTED;
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "10px 0", borderBottom: `1px solid ${BORDER}` }}>
+      <span style={{ fontSize: 12, color: MUTED }}>{label}</span>
+      <span style={{ fontSize: 12, color, fontWeight: 800, textAlign: "right", display: "inline-flex", alignItems: "center", gap: 6 }}>
+        {state === "working" && <Loader2 size={13} className="body-cinema-spin" />}
+        {state === "ready" && <Check size={13} />}
+        {value}
+      </span>
+    </div>
+  );
+}
+
 export default function VaultXDrop() {
-  const { t } = useVaultXLang();
-  // ─── State ────────────────────────────────────────────────────────────────
   const [step, setStep] = useState<Step>("upload");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [pastedUrl, setPastedUrl] = useState("");
+  const [hostedUrl, setHostedUrl] = useState<string | null>(null);
+  const [uploadReceipt, setUploadReceipt] = useState<UploadReceipt | null>(null);
   const [fileName, setFileName] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
-  const [selectedPreset, setSelectedPreset] = useState<typeof QUICK_PRESETS[0] | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<QuickPreset | null>(null);
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("29");
   const [consent, setConsent] = useState(false);
-  const [launching, setLaunching] = useState(false);
-  const [launchStage, setLaunchStage] = useState("");
-  const [result, setResult] = useState<any>(null);
-  // Upload state
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [hostedUrl, setHostedUrl] = useState<string | null>(null); // real public URL, never shown
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  // ─── Polling state ────────────────────────────────────────────────────────
+  const [creating, setCreating] = useState(false);
+  const [createStage, setCreateStage] = useState("");
+  const [result, setResult] = useState<any>(null);
   const [pollingPackageId, setPollingPackageId] = useState<number | null>(null);
   const [pollingJobId, setPollingJobId] = useState<string | null>(null);
-  const [pollingStatus, setPollingStatus] = useState<string>("waiting");
+  const [pollingStatus, setPollingStatus] = useState("waiting");
   const [pollingDots, setPollingDots] = useState(0);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ─── tRPC ─────────────────────────────────────────────────────────────────
+  const utils = trpc.useUtils();
   const launchRevenuePath = trpc.vaultx.launchRevenuePath.useMutation();
-  const confirmEligibility = (trpc as any).compliance?.confirmEligibility?.useMutation?.() || { mutateAsync: async () => {} };
-  const postTelegram = (trpc as any).contentCommand?.postToTelegram?.useMutation?.() || { mutateAsync: async () => {} };
-  const getPackageAssetStatus = (trpc as any).vaultx?.getPackageAssetStatus?.useQuery;
+  const attachPackageCheckout = trpc.vaultx.attachPackageCheckout.useMutation();
+  const publishPackageTelegramRoute = trpc.vaultx.publishPackageTelegramRoute.useMutation();
+  const confirmEligibility = (trpc as any).compliance?.confirmEligibility?.useMutation?.() || { mutateAsync: async () => undefined };
 
-  // ─── Polling effect ───────────────────────────────────────────────────────
-  // When Pollo is still generating (generationStatus !== 'succeed'), poll every
-  // 5 seconds until the asset is ready, then update the result.
   useEffect(() => {
     if (!pollingPackageId || !pollingJobId) return;
-    if (pollingStatus === "succeed" || pollingStatus === "failed") return;
+    if (["succeed", "failed"].includes(pollingStatus)) return;
 
-    // Animated dots
-    const dotsTimer = setInterval(() => setPollingDots(d => (d + 1) % 4), 600);
-
-    // Poll every 5 seconds
+    const dotsTimer = window.setInterval(() => setPollingDots(value => (value + 1) % 4), 600);
     const poll = async () => {
       try {
-        const statusRes = await (trpc as any).vaultx.getPackageAssetStatus.query({
+        const statusRes = await (utils as any).vaultx.getPackageAssetStatus.fetch({
           packageId: pollingPackageId,
           jobId: pollingJobId,
         });
-        setPollingStatus(statusRes.status);
-        if (statusRes.status === "succeed" || statusRes.videoUrl) {
-          // Asset is ready — update the result with checkout info
-          setResult((prev: any) => ({
-            ...prev,
-            generationStatus: "succeed",
-            videoUrl: statusRes.videoUrl,
-            artifact: statusRes.artifact,
-          }));
-          // Stop polling
+        const nextStatus = String(statusRes.status || "waiting");
+        setPollingStatus(nextStatus);
+        if (nextStatus === "failed") {
           if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
           setPollingPackageId(null);
           setPollingJobId(null);
-          toast.success("Video asset ready ✓");
+          toast.error("The review asset could not be completed. Your source remains saved for another attempt.");
+          return;
         }
-      } catch (_) { /* ignore transient errors */ }
+        if (statusRes.videoUrl || nextStatus === "succeed") {
+          setResult((previous: any) => ({
+            ...previous,
+            generationStatus: "succeed",
+            status: "review_required",
+            complete: true,
+            reviewRequired: true,
+            videoUrl: statusRes.videoUrl || previous?.videoUrl,
+            artifact: statusRes.artifact || previous?.artifact,
+            artifacts: statusRes.artifacts || previous?.artifacts,
+          }));
+          if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+          setPollingPackageId(null);
+          setPollingJobId(null);
+          toast.success("Review asset is ready.");
+        }
+      } catch {
+        // Transient status failures are retried by the bounded polling interval.
+      }
     };
 
-    poll(); // immediate first check
-    pollingIntervalRef.current = setInterval(poll, 5000);
-
+    void poll();
+    pollingIntervalRef.current = setInterval(() => void poll(), 5000);
     return () => {
       clearInterval(dotsTimer);
       if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
     };
-  }, [pollingPackageId, pollingJobId, pollingStatus]);
+  }, [pollingJobId, pollingPackageId, pollingStatus, utils]);
 
-  // ─── Handlers ─────────────────────────────────────────────────────────────
-  // Tap-to-upload: show instant local preview, then upload to storage in the
-  // background. The creator never sees or touches a URL.
-  const handleFileUpload = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  useEffect(() => () => {
+    if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
+  }, [videoUrl]);
+
+  const handleFileUpload = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
-    // Instant local preview
+    if (!file.type.startsWith("video/")) {
+      toast.error("Choose a video file.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("Choose a video up to 100 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
     const localPreview = URL.createObjectURL(file);
     setVideoUrl(localPreview);
     setFileName(file.name);
-    setStep("preset");
-    // Upload to storage in the background
-    setUploading(true);
+    setHostedUrl(null);
+    setUploadReceipt(null);
     setUploadProgress(0);
+    setUploading(true);
+    setStep("preset");
+
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const xhr = new XMLHttpRequest();
-      const done = new Promise<string>((resolve, reject) => {
-        xhr.upload.onprogress = (ev) => {
-          if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+      const form = new FormData();
+      form.append("file", file);
+      const payload = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.onprogress = progressEvent => {
+          if (progressEvent.lengthComputable) setUploadProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
         };
         xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try { resolve(JSON.parse(xhr.responseText).url); }
-            catch { reject(new Error("Upload parse error")); }
-          } else { reject(new Error(`Upload failed (${xhr.status})`)); }
+          let body: any = null;
+          try { body = JSON.parse(xhr.responseText); } catch { /* handled below */ }
+          if (xhr.status >= 200 && xhr.status < 300 && body?.url && body?.uploadReceipt?.verified) resolve(body);
+          else reject(new Error(body?.error || `Upload failed (${xhr.status})`));
         };
         xhr.onerror = () => reject(new Error("Upload network error"));
         xhr.open("POST", "/api/video/upload/direct");
         xhr.withCredentials = true;
-        xhr.send(fd);
+        xhr.send(form);
       });
-      const url = await done;
-      setHostedUrl(url);
+      setHostedUrl(payload.url);
+      setUploadReceipt(payload.uploadReceipt);
       setUploadProgress(100);
-      toast.success("Video uploaded ✓");
-    } catch (err: any) {
-      toast.error(err?.message || "Upload failed — try again");
+      toast.success("Source verified and saved to your vault.");
+    } catch (error: any) {
       setHostedUrl(null);
+      setUploadReceipt(null);
+      setVideoUrl(null);
+      setFileName("");
+      setStep("upload");
+      toast.error(error?.message || "Upload verification failed.");
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  }, []);
+  }, [videoUrl]);
 
-  const handleSelectPreset = useCallback((preset: typeof QUICK_PRESETS[0]) => {
+  const handleSelectPreset = useCallback((preset: QuickPreset) => {
     setSelectedPreset(preset);
     setPrice(String(preset.price));
-    setTitle(`${preset.name} — Exclusive Drop`);
+    setTitle(`${preset.name} — Private Release`);
     setStep("configure");
   }, []);
 
-  const handleLaunch = useCallback(async () => {
-    if (!consent) { toast.error("Confirm consent to launch"); return; }
-    if (!hostedUrl && uploading) { toast.info("Your video is still uploading — one moment..."); return; }
-    if (!hostedUrl) { toast.error("Upload your video first"); setStep("upload"); return; }
+  const handleConsentChange = useCallback(async (checked: boolean) => {
+    setConsent(checked);
+    if (!checked) return;
+    try {
+      await confirmEligibility.mutateAsync();
+    } catch {
+      toast.info("Your confirmation is saved for this release. Additional eligibility checks may appear before publication.");
+    }
+  }, [confirmEligibility]);
 
-    const sourceUrl = hostedUrl;
+  const handleCreateReviewAsset = useCallback(async () => {
+    if (!hostedUrl || !uploadReceipt?.verified) {
+      toast.error(uploading ? "Your source is still being verified." : "Upload and verify a source video first.");
+      return;
+    }
+    if (!selectedPreset) {
+      toast.error("Choose a cinematic treatment.");
+      setStep("preset");
+      return;
+    }
+    if (!consent) {
+      toast.error("Confirm ownership and consent before creating the review asset.");
+      return;
+    }
 
-    setLaunching(true);
-    setStep("launch");
-
+    setCreating(true);
+    setStep("create");
     const stages = [
-      "Running AI stack...",
-      "GPT-4o enhancing your preset...",
-      "Submitting to Pollo...",
-      "Attaching Stripe checkout...",
-      "Publishing Telegram route...",
+      "Validating your creator-owned source…",
+      "Building the cinematic direction…",
+      "Creating the review render…",
+      "Securing the durable artifact…",
     ];
-    let si = 0;
-    setLaunchStage(stages[0]);
-    const stageTimer = setInterval(() => {
-      si = Math.min(si + 1, stages.length - 1);
-      setLaunchStage(stages[si]);
-    }, 8000);
+    let stageIndex = 0;
+    setCreateStage(stages[0]);
+    const stageTimer = window.setInterval(() => {
+      stageIndex = Math.min(stageIndex + 1, stages.length - 1);
+      setCreateStage(stages[stageIndex]);
+    }, 6500);
 
     try {
-      const res = await launchRevenuePath.mutateAsync({
-        title: title || `${selectedPreset?.name || "Drop"} — Exclusive`,
+      const response = await launchRevenuePath.mutateAsync({
+        title: title.trim() || `${selectedPreset.name} — Private Release`,
         contentType: "video",
         adultContentFlag: true,
         consentConfirmed: true,
-        teaserDescription: selectedPreset
-          ? `${selectedPreset.name} drop. ${selectedPreset.emoji} Exclusive content. Unlock for $${price}.`
-          : `Premium drop. Exclusive content. Unlock for $${price}.`,
-        priceCents: Math.round(parseFloat(price) * 100) || 2900,
+        teaserDescription: `${selectedPreset.name}. ${selectedPreset.direction}. Private release available after creator approval.`,
+        priceCents: Math.round((Number.parseFloat(price) || selectedPreset.price) * 100),
         telegramMode: "BOOST",
-        sourceMediaUrl: sourceUrl,
+        sourceMediaUrl: hostedUrl,
         resolution: "720p",
         length: "6",
         mode: "pro",
-        presetId: selectedPreset?.id || undefined,
+        presetId: selectedPreset.id,
         withNarration: false,
+        reviewOnly: true,
       });
-
-      clearInterval(stageTimer);
-      setResult(res);
-      setStep("result");
-      toast.success("Drop launched ✓");
-      // If Pollo is still generating, start polling for completion
-      if (res.generationStatus !== "succeed" && res.packageId && res.jobId) {
-        setPollingPackageId(res.packageId);
-        setPollingJobId(res.jobId);
-        setPollingStatus(res.generationStatus || "waiting");
+      setResult(response);
+      setStep("review");
+      if (response.generationStatus !== "succeed" && response.packageId && response.jobId) {
+        setPollingPackageId(response.packageId);
+        setPollingJobId(response.jobId);
+        setPollingStatus(response.generationStatus || "waiting");
+        toast.success("Generation accepted. Checkout and publication remain locked.");
+      } else {
+        toast.success("Review asset is ready. Nothing has been published.");
       }
-    } catch (err: any) {
-      clearInterval(stageTimer);
-      toast.error(err?.message || "Launch failed");
+    } catch (error: any) {
       setStep("configure");
+      toast.error(error?.message || "The review asset could not be created.");
     } finally {
-      setLaunching(false);
+      clearInterval(stageTimer);
+      setCreating(false);
     }
-  }, [hostedUrl, uploading, consent, title, price, selectedPreset]);
+  }, [consent, hostedUrl, launchRevenuePath, price, selectedPreset, title, uploadReceipt, uploading]);
 
-  const handlePostTelegram = useCallback(async () => {
-    const caption = result?.aiStack?.copyPack?.telegramCaption
-      || selectedPreset?.name
-      || "New drop just landed. Link is live.";
-    const videoSrc = result?.aiStack?.narration?.audioUrl || undefined;
+  const handleAttachCheckout = useCallback(async () => {
+    if (!result?.packageId) return;
     try {
-      await postTelegram.mutateAsync({ caption, channel: "KingCam" });
-      toast.success("Posted to Telegram ✓");
-    } catch (err: any) {
-      toast.error(err?.message || "Telegram post failed");
+      const response = await attachPackageCheckout.mutateAsync({ packageId: Number(result.packageId) });
+      setResult((previous: any) => ({ ...previous, ...response }));
+      toast.success(response.reusedExistingCheckout ? "Existing checkout restored." : "Checkout attached. Publication is still locked.");
+    } catch (error: any) {
+      toast.error(error?.message || "Checkout could not be attached.");
     }
-  }, [result, selectedPreset]);
+  }, [attachPackageCheckout, result?.packageId]);
 
-  const reset = () => {
-    setStep("upload");
-    setVideoUrl(null);
-    setPastedUrl("");
-    setHostedUrl(null);
-    setUploading(false);
-    setUploadProgress(0);
-    setFileName("");
+  const handlePublish = useCallback(async () => {
+    if (!result?.packageId || !result?.checkoutUrl) return;
+    try {
+      const response = await publishPackageTelegramRoute.mutateAsync({ packageId: Number(result.packageId) });
+      setResult((previous: any) => ({ ...previous, ...response, status: "published" }));
+      toast.success(response.reusedExistingPublication ? "Existing tracked route restored." : "Tracked route published.");
+    } catch (error: any) {
+      toast.error(error?.message || "The tracked route could not be published.");
+    }
+  }, [publishPackageTelegramRoute, result?.checkoutUrl, result?.packageId]);
+
+  const handleDownload = useCallback(() => {
+    if (!result?.videoUrl) return;
+    const anchor = document.createElement("a");
+    anchor.href = result.videoUrl;
+    anchor.target = "_blank";
+    anchor.rel = "noreferrer";
+    anchor.download = `${(title || "body-cinema").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.mp4`;
+    anchor.click();
+  }, [result?.videoUrl, title]);
+
+  const reuseSource = useCallback(() => {
     setSelectedPreset(null);
     setTitle("");
     setPrice("29");
     setConsent(false);
     setResult(null);
-    setLaunchStage("");
-  };
+    setPollingPackageId(null);
+    setPollingJobId(null);
+    setPollingStatus("waiting");
+    setStep("preset");
+    toast.info("Source retained. Choose another treatment.");
+  }, []);
 
-  const completedSteps = STEP_ORDER.slice(0, stepIndex(step));
+  const reset = useCallback(() => {
+    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+    if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
+    setStep("upload");
+    setVideoUrl(null);
+    setHostedUrl(null);
+    setUploadReceipt(null);
+    setFileName("");
+    setSelectedPreset(null);
+    setTitle("");
+    setPrice("29");
+    setConsent(false);
+    setUploading(false);
+    setUploadProgress(0);
+    setCreating(false);
+    setCreateStage("");
+    setResult(null);
+    setPollingPackageId(null);
+    setPollingJobId(null);
+    setPollingStatus("waiting");
+  }, [videoUrl]);
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  const assetReady = Boolean(result?.videoUrl || result?.artifact?.status === "ready" || result?.generationStatus === "succeed") && !pollingPackageId;
+  const checkoutAttached = Boolean(result?.checkoutUrl && result?.checkoutSessionId);
+  const published = Boolean(result?.trackedUrl && result?.campaignId);
+  const keepAmount = ((Number.parseFloat(price) || 0) * 0.85).toFixed(2);
+
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: "#fff", fontFamily: "DM Sans, sans-serif", paddingBottom: 100 }}>
+    <div style={{ minHeight: "100vh", background: BG, color: "#fff", fontFamily: "DM Sans, sans-serif", paddingBottom: 96 }}>
+      <style>{`
+        @keyframes body-cinema-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .body-cinema-spin { animation: body-cinema-spin 1s linear infinite; }
+        .body-cinema-button { transition: transform 150ms cubic-bezier(0.23,1,0.32,1), border-color 150ms cubic-bezier(0.23,1,0.32,1), background 150ms cubic-bezier(0.23,1,0.32,1); }
+        .body-cinema-button:active:not(:disabled) { transform: scale(0.975); }
+        .body-cinema-button:focus-visible { outline: 2px solid ${GOLD}; outline-offset: 3px; }
+        @media (prefers-reduced-motion: reduce) { .body-cinema-spin { animation: none; } .body-cinema-button { transition: none; } }
+      `}</style>
 
-      {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <header style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(8,8,8,0.96)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(12px)" }}>
-        <div style={{ maxWidth: 560, margin: "0 auto", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href="/vault-x" style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 22, color: "#fff", textDecoration: "none", letterSpacing: "0.04em" }}>
-            Vault<span style={{ color: GOLD }}>X</span>
+      <header style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(7,7,7,0.94)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(16px)" }}>
+        <div style={{ maxWidth: 620, margin: "0 auto", padding: "12px 16px", display: "flex", alignItems: "center", gap: 14 }}>
+          <Link href="/vault-x" aria-label="Back to VaultX" style={{ color: MUTED, display: "inline-flex", alignItems: "center" }}>
+            <ArrowLeft size={19} />
           </Link>
-
-          {/* Progress dots */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {(["upload", "preset", "configure", "launch", "result"] as Step[]).map((s, i) => {
-              const done = stepIndex(step) > i;
-              const active = step === s;
-              return (
-                <div key={s} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{
-                    width: active ? 28 : 8, height: 8, borderRadius: 4,
-                    background: done ? GREEN : active ? GOLD : BORDER,
-                    transition: "all 0.3s",
-                  }} />
-                </div>
-              );
-            })}
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontFamily: "Bebas Neue, sans-serif", fontSize: 21, letterSpacing: "0.06em" }}>Body <span style={{ color: GOLD }}>Cinema</span></p>
+            <p style={{ margin: "1px 0 0", color: MUTED, fontSize: 10 }}>Create. Review. Approve. Publish.</p>
           </div>
-
-          {step !== "upload" && step !== "result" && (
-            <button onClick={reset} style={{ background: "transparent", border: "none", color: MUTED, cursor: "pointer", fontSize: 12 }}>
-              {t("common.cancel")}
-            </button>
-          )}
-          {step === "result" && (
-            <button onClick={reset} style={{ background: GOLD, border: "none", color: "#000", cursor: "pointer", fontSize: 12, fontWeight: 700, padding: "6px 14px", borderRadius: 20 }}>
-              {t("drop.new_drop")}
+          {step === "review" && (
+            <button type="button" className="body-cinema-button" onClick={reset} style={{ border: `1px solid ${BORDER}`, background: "transparent", color: "#fff", borderRadius: 999, padding: "7px 11px", fontSize: 11, cursor: "pointer" }}>
+              New source
             </button>
           )}
         </div>
+        <div style={{ maxWidth: 620, margin: "0 auto", padding: "0 16px 11px", display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
+          {STEP_ORDER.map((item, index) => {
+            const active = item === step;
+            const complete = stepIndex(step) > index;
+            return (
+              <div key={item} aria-current={active ? "step" : undefined}>
+                <div style={{ height: 3, borderRadius: 3, background: complete ? GREEN : active ? GOLD : BORDER, marginBottom: 5 }} />
+                <p style={{ margin: 0, textAlign: "center", fontSize: 9, color: active ? "#fff" : complete ? GREEN : MUTED }}>{STEP_LABELS[item]}</p>
+              </div>
+            );
+          })}
+        </div>
       </header>
 
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "20px 16px" }}>
-
-        {/* ═══ UPLOAD ════════════════════════════════════════════════════════ */}
+      <main style={{ maxWidth: 620, margin: "0 auto", padding: "24px 16px" }}>
         {step === "upload" && (
-          <div>
-            <div style={{ marginBottom: 24 }}>
-              <p style={{ fontSize: 11, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 6 }}>VaultX Drop</p>
-              <h1 style={{ fontSize: 36, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.04em", lineHeight: 1, margin: 0 }}>
-{t("drop.title")}
-              </h1>
-              <p style={{ fontSize: 14, color: MUTED, marginTop: 10, lineHeight: 1.6 }}>
-{t("drop.subtitle")}
-              </p>
-            </div>
+          <section>
+            <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 8px" }}>Creator-owned intake</p>
+            <h1 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 42, letterSpacing: "0.025em", lineHeight: 0.98, margin: 0 }}>Create the asset first.<br /><span style={{ color: GOLD }}>Sell it after review.</span></h1>
+            <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.65, margin: "14px 0 24px" }}>Choose a video from your device. Body Cinema verifies and saves the source directly to your vault. No URL entry is required.</p>
 
-            {/* Upload tap target */}
-            <label style={{
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              gap: 12, padding: "56px 20px", borderRadius: 16,
-              border: `2px dashed ${GOLD_BORDER}`, background: GOLD_DIM,
-              cursor: "pointer", marginBottom: 24, textAlign: "center",
-            }}>
-              <div style={{ width: 64, height: 64, borderRadius: 18, background: GOLD, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Upload size={28} color="#000" />
+            <label className="body-cinema-button" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 13, minHeight: 270, padding: 24, borderRadius: 20, border: `1px dashed ${GOLD_BORDER}`, background: `radial-gradient(circle at 50% 0%, rgba(213,183,96,0.18), transparent 55%), ${CARD}`, cursor: "pointer", textAlign: "center" }}>
+              <div style={{ width: 66, height: 66, borderRadius: 20, background: GOLD, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 18px 60px rgba(213,183,96,0.2)" }}>
+                <Upload size={29} color="#080808" />
               </div>
               <div>
-<p style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{t("drop.subtitle")}</p>
-                <p style={{ fontSize: 13, color: MUTED, margin: "4px 0 0" }}>Straight from your phone or computer — MP4, MOV, any size</p>
+                <p style={{ fontSize: 19, fontWeight: 900, margin: 0 }}>Tap to choose a video</p>
+                <p style={{ fontSize: 12, color: MUTED, margin: "6px 0 0" }}>MP4, MOV, WebM, MKV, AVI, or M4V · up to 100 MB</p>
               </div>
-              <input ref={fileInputRef} type="file" accept="video/*" style={{ display: "none" }} onChange={handleFileUpload} />
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 7, color: GREEN, fontSize: 11, fontWeight: 800 }}><ShieldCheck size={15} /> Ownership-bound receipt after verification</div>
+              <input ref={fileInputRef} type="file" accept="video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-msvideo,video/x-m4v" style={{ display: "none" }} onChange={handleFileUpload} />
             </label>
 
-            {/* What happens next */}
-            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 16px" }}>
-              <p style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>What happens next</p>
+            <div style={{ marginTop: 16, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "16px" }}>
+              <p style={{ fontSize: 10, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", margin: "0 0 12px" }}>What happens next</p>
               {[
-                ["🎬", "Pick a body preset", "Abs, curves, silhouette — one tap fills everything in"],
-                ["💰", "Set your price", "We suggest the right price based on your preset"],
-                ["🚀", "Hit Launch", "AI enhances your prompt, Pollo generates, Stripe attaches, Telegram publishes"],
-              ].map(([icon, title, desc]) => (
-                <div key={title} style={{ display: "flex", gap: 12, marginBottom: 10 }}>
-                  <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
-                  <div>
-                    <p style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>{title}</p>
-                    <p style={{ fontSize: 12, color: MUTED, margin: "2px 0 0" }}>{desc}</p>
+                [Wand2, "Choose a treatment", "Select the intended camera, lighting, and motion direction."],
+                [Film, "Inspect the render", "Nothing is called ready until a durable video artifact exists."],
+                [DollarSign, "Approve checkout", "Monetization is a separate, explicit creator action."],
+                [Send, "Publish a tracked route", "External distribution stays locked until you approve it."],
+              ].map(([Icon, label, description], index) => {
+                const ItemIcon = Icon as typeof Wand2;
+                return (
+                  <div key={String(label)} style={{ display: "flex", gap: 12, padding: index === 0 ? "0 0 11px" : "11px 0", borderTop: index ? `1px solid ${BORDER}` : "none" }}>
+                    <ItemIcon size={18} color={GOLD} style={{ flexShrink: 0, marginTop: 1 }} />
+                    <div><p style={{ fontSize: 13, fontWeight: 800, margin: 0 }}>{String(label)}</p><p style={{ fontSize: 12, color: MUTED, margin: "3px 0 0", lineHeight: 1.5 }}>{String(description)}</p></div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* ═══ PRESET ════════════════════════════════════════════════════════ */}
         {step === "preset" && (
-          <div>
-            {/* Video preview thumbnail */}
+          <section>
             {videoUrl && (
-              <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", marginBottom: 20, background: "#000", aspectRatio: "9/16", maxHeight: 240 }}>
-                <video
-                  ref={videoRef}
-                  src={videoUrl}
-                  muted={isMuted}
-                  playsInline
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                />
-                <div style={{ position: "absolute", bottom: 8, left: 8, display: "flex", gap: 6 }}>
-                  <button onClick={() => { isPlaying ? videoRef.current?.pause() : videoRef.current?.play(); }}
-                    style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.7)", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-                  </button>
-                  <button onClick={() => { setIsMuted(!isMuted); if (videoRef.current) videoRef.current.muted = !isMuted; }}
-                    style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.7)", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                  </button>
-                </div>
-                <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.7)", borderRadius: 8, padding: "4px 8px", fontSize: 11, color: "#fff" }}>
-                  {fileName.slice(0, 20)}
+              <div style={{ position: "relative", borderRadius: 18, overflow: "hidden", marginBottom: 20, background: "#000", aspectRatio: "16/9", maxHeight: 290, border: `1px solid ${BORDER}` }}>
+                <video ref={videoRef} src={videoUrl} muted={isMuted} playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} />
+                <div style={{ position: "absolute", inset: "auto 10px 10px 10px", display: "flex", alignItems: "center", gap: 7 }}>
+                  <button type="button" aria-label={isPlaying ? "Pause source preview" : "Play source preview"} onClick={() => isPlaying ? videoRef.current?.pause() : void videoRef.current?.play()} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(0,0,0,0.74)", border: `1px solid ${BORDER}`, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{isPlaying ? <Pause size={15} /> : <Play size={15} />}</button>
+                  <button type="button" aria-label={isMuted ? "Unmute source preview" : "Mute source preview"} onClick={() => { const next = !isMuted; setIsMuted(next); if (videoRef.current) videoRef.current.muted = next; }} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(0,0,0,0.74)", border: `1px solid ${BORDER}`, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}</button>
+                  <div style={{ marginLeft: "auto", background: "rgba(0,0,0,0.74)", border: `1px solid ${BORDER}`, borderRadius: 999, padding: "7px 10px", fontSize: 10, color: uploadReceipt ? GREEN : GOLD, display: "inline-flex", alignItems: "center", gap: 6 }}>{uploadReceipt ? <Check size={12} /> : <Loader2 size={12} className="body-cinema-spin" />}{uploadReceipt ? "Source verified" : `Verifying ${uploadProgress}%`}</div>
                 </div>
               </div>
             )}
 
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 11, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>Step 2 of 4</p>
-              <h2 style={{ fontSize: 28, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.04em", margin: 0 }}>Pick your preset.</h2>
-              <p style={{ fontSize: 13, color: MUTED, marginTop: 6 }}>Each preset controls lighting, motion, camera, and copy. One tap fills everything in.</p>
-            </div>
+            <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 6px" }}>Treatment direction</p>
+            <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 34, letterSpacing: "0.035em", margin: 0 }}>Choose the intended look.</h2>
+            <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, margin: "8px 0 18px" }}>Treatments define creative intent. The finished asset still has to pass your review.</p>
 
-            {/* Preset grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
               {QUICK_PRESETS.map(preset => (
-                <button
-                  key={preset.id}
-                  onClick={() => handleSelectPreset(preset)}
-                  style={{
-                    background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12,
-                    padding: "12px 8px", textAlign: "center", cursor: "pointer",
-                    transition: "all 0.15s",
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = GOLD_BORDER; (e.currentTarget as HTMLElement).style.background = GOLD_DIM; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = BORDER; (e.currentTarget as HTMLElement).style.background = CARD; }}
-                >
-                  <div style={{ fontSize: 24, marginBottom: 4 }}>{preset.emoji}</div>
-                  <p style={{ fontSize: 11, fontWeight: 800, margin: 0, lineHeight: 1.3 }}>{preset.name}</p>
-                  <p style={{ fontSize: 10, color: MUTED, margin: "3px 0 0" }}>${preset.price} · {"🔥".repeat(Math.min(preset.heat, 3))}</p>
+                <button key={preset.id} type="button" className="body-cinema-button" onClick={() => handleSelectPreset(preset)} style={{ minHeight: 146, padding: "15px", textAlign: "left", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 15, color: "#fff", cursor: "pointer" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 18 }}><span style={{ fontSize: 9, color: GOLD, fontFamily: "monospace", letterSpacing: "0.11em", textTransform: "uppercase" }}>{preset.focus}</span><span style={{ fontSize: 11, color: MUTED }}>${preset.price}</span></div>
+                  <p style={{ fontSize: 15, fontWeight: 900, margin: "0 0 6px" }}>{preset.name}</p>
+                  <p style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, margin: 0 }}>{preset.direction}</p>
                 </button>
               ))}
             </div>
-
-            {/* Skip option */}
-            <button
-              onClick={() => setStep("configure")}
-              style={{ width: "100%", padding: "12px", borderRadius: 12, border: `1px solid ${BORDER}`, background: "transparent", color: MUTED, fontSize: 13, cursor: "pointer" }}
-            >
-              Skip preset — configure manually
-            </button>
-          </div>
+          </section>
         )}
 
-        {/* ═══ CONFIGURE ═════════════════════════════════════════════════════ */}
         {step === "configure" && (
-          <div>
-            {/* Selected preset badge */}
-            {selectedPreset && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, background: GOLD_DIM, border: `1px solid ${GOLD_BORDER}`, borderRadius: 12, padding: "10px 14px", marginBottom: 20 }}>
-                <span style={{ fontSize: 24 }}>{selectedPreset.emoji}</span>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 13, fontWeight: 800, margin: 0 }}>{selectedPreset.name} preset applied</p>
-                  <p style={{ fontSize: 11, color: MUTED, margin: "2px 0 0" }}>Prompt, motion, camera, and copy pre-loaded</p>
-                </div>
-                <button onClick={() => setStep("preset")} style={{ background: "transparent", border: "none", color: MUTED, cursor: "pointer" }}>
-                  <X size={16} />
-                </button>
-              </div>
-            )}
-
-            <div style={{ marginBottom: 20 }}>
-              <p style={{ fontSize: 11, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>Step 3 of 4</p>
-              <h2 style={{ fontSize: 28, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.04em", margin: 0 }}>Set your price.</h2>
-              <p style={{ fontSize: 13, color: MUTED, marginTop: 6 }}>That's all you need. Everything else is handled.</p>
+          <section>
+            <button type="button" onClick={() => setStep("preset")} style={{ border: "none", background: "transparent", color: MUTED, padding: 0, marginBottom: 18, display: "inline-flex", alignItems: "center", gap: 7, cursor: "pointer", fontSize: 12 }}><ArrowLeft size={15} /> Change treatment</button>
+            <div style={{ background: GOLD_DIM, border: `1px solid ${GOLD_BORDER}`, borderRadius: 16, padding: "14px", marginBottom: 20 }}>
+              <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", margin: "0 0 5px" }}>{selectedPreset?.focus || "Custom"} treatment</p>
+              <p style={{ fontSize: 16, fontWeight: 900, margin: "0 0 4px" }}>{selectedPreset?.name || "Custom direction"}</p>
+              <p style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, margin: 0 }}>{selectedPreset?.direction || "A restrained cinematic treatment."}</p>
             </div>
 
-            {/* Upload status — no URLs, just confirmation */}
-            <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 10, background: CARD, border: `1px solid ${hostedUrl ? "rgba(0,230,118,0.3)" : BORDER}`, borderRadius: 12, padding: "12px 14px" }}>
-              {uploading ? (
-                <>
-                  <Loader2 size={18} color={GOLD} style={{ animation: "spin 1s linear infinite" }} />
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>Uploading your video... {uploadProgress}%</p>
-                    <div style={{ height: 4, background: BORDER, borderRadius: 2, marginTop: 6, overflow: "hidden" }}>
-                      <div style={{ width: `${uploadProgress}%`, height: "100%", background: GOLD, transition: "width 0.2s" }} />
-                    </div>
-                  </div>
-                </>
-              ) : hostedUrl ? (
-                <>
-                  <Check size={18} color={GREEN} />
-                  <p style={{ fontSize: 13, fontWeight: 700, margin: 0, color: "#fff" }}>{fileName} — uploaded and ready</p>
-                </>
-              ) : (
-                <>
-                  <X size={18} color={MUTED} />
-                  <p style={{ fontSize: 13, margin: 0, color: MUTED }}>No video uploaded yet</p>
-                </>
-              )}
-            </div>
-            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+            <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 34, letterSpacing: "0.035em", margin: "0 0 6px" }}>Set the release terms.</h2>
+            <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, margin: "0 0 18px" }}>The price is a preview. No checkout is created and nothing is published during generation.</p>
 
-            {/* Title */}
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, color: MUTED, display: "block", marginBottom: 6 }}>Drop title</label>
-              <input
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder={selectedPreset ? `${selectedPreset.name} — Exclusive Drop` : "My exclusive drop"}
-                style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none", boxSizing: "border-box" }}
-              />
+            <div style={{ background: CARD, border: `1px solid ${uploadReceipt ? "rgba(69,227,138,0.28)" : BORDER}`, borderRadius: 15, padding: "14px", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+                {uploading ? <Loader2 size={19} color={GOLD} className="body-cinema-spin" /> : uploadReceipt ? <ShieldCheck size={19} color={GREEN} /> : <FileVideo size={19} color={MUTED} />}
+                <div style={{ flex: 1, minWidth: 0 }}><p style={{ fontSize: 13, fontWeight: 800, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{fileName || "No source"}</p><p style={{ fontSize: 11, color: uploadReceipt ? GREEN : GOLD, margin: "3px 0 0" }}>{uploading ? `Verifying and saving… ${uploadProgress}%` : uploadReceipt ? `${uploadReceipt.width}×${uploadReceipt.height} · ${formatSeconds(uploadReceipt.durationSec)} · ownership-bound` : "Verification required"}</p></div>
+              </div>
+              {uploading && <div style={{ height: 4, background: BORDER, borderRadius: 4, overflow: "hidden", marginTop: 11 }}><div style={{ width: `${uploadProgress}%`, height: "100%", background: GOLD }} /></div>}
+              {uploadReceipt && <p style={{ fontSize: 9, color: MUTED, fontFamily: "monospace", margin: "10px 0 0", wordBreak: "break-all" }}>Receipt {uploadReceipt.id.slice(0, 12)} · SHA-256 {uploadReceipt.sha256.slice(0, 16)}…</p>}
             </div>
 
-            {/* Price */}
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 12, color: MUTED, display: "block", marginBottom: 6 }}>Unlock price</label>
-              <div style={{ position: "relative" }}>
-                <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: GOLD, fontSize: 18, fontWeight: 800 }}>$</span>
-                <input
-                  value={price}
-                  onChange={e => setPrice(e.target.value.replace(/[^0-9.]/g, ""))}
-                  inputMode="decimal"
-                  style={{ width: "100%", background: CARD, border: `1px solid ${GOLD_BORDER}`, borderRadius: 12, color: "#fff", fontSize: 24, fontWeight: 800, padding: "14px 14px 14px 32px", outline: "none", boxSizing: "border-box" }}
-                />
-              </div>
-              {/* Quick price pills */}
-              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                {["19", "29", "35", "49"].map(p => (
-                  <button key={p} onClick={() => setPrice(p)}
-                    style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1px solid ${price === p ? GOLD : BORDER}`, background: price === p ? GOLD_DIM : "transparent", color: price === p ? GOLD : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                    ${p}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Consent — ticking this records age attestation + all consents so launch is never blocked */}
-            <label style={{ display: "flex", alignItems: "flex-start", gap: 12, background: CARD, border: `1px solid ${consent ? "rgba(0,230,118,0.3)" : BORDER}`, borderRadius: 12, padding: "14px", cursor: "pointer", marginBottom: 20 }}>
-              <div
-                onClick={async () => {
-                  const next = !consent;
-                  setConsent(next);
-                  if (next) {
-                    try { await confirmEligibility.mutateAsync(); }
-                    catch { /* non-blocking; launch will surface any real issue */ }
-                  }
-                }}
-                style={{ width: 22, height: 22, borderRadius: 6, background: consent ? GREEN : "transparent", border: `2px solid ${consent ? GREEN : BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}
-              >
-                {consent && <Check size={14} color="#000" />}
-              </div>
-              <p style={{ fontSize: 13, color: consent ? "#fff" : MUTED, lineHeight: 1.5, margin: 0 }}>
-                I am 18 or older, I own this content, and I consent to AI transformation, monetization, and distribution through VaultX.
-              </p>
+            <label style={{ display: "block", marginBottom: 14 }}>
+              <span style={{ fontSize: 12, color: MUTED, display: "block", marginBottom: 6 }}>Release title</span>
+              <input value={title} onChange={event => setTitle(event.target.value)} maxLength={120} placeholder="Private release" style={{ width: "100%", boxSizing: "border-box", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, color: "#fff", fontSize: 14, padding: "13px 14px", outline: "none" }} />
             </label>
 
-            {/* Launch button */}
-            <button
-              onClick={handleLaunch}
-              disabled={!consent || launching}
-              style={{
-                width: "100%", padding: "18px", borderRadius: 14,
-                background: consent ? GOLD : CARD,
-                color: consent ? "#000" : MUTED,
-                fontSize: 18, fontWeight: 900, fontFamily: "Bebas Neue, sans-serif",
-                letterSpacing: "0.1em", border: "none", cursor: consent ? "pointer" : "not-allowed",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                boxShadow: consent ? `0 0 30px rgba(201,168,76,0.3)` : "none",
-                transition: "all 0.2s",
-              }}
-            >
-              <Zap size={20} /> LAUNCH THIS DROP
-            </button>
+            <label style={{ display: "block", marginBottom: 18 }}>
+              <span style={{ fontSize: 12, color: MUTED, display: "block", marginBottom: 6 }}>Unlock price preview</span>
+              <div style={{ position: "relative" }}><span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: GOLD, fontSize: 20, fontWeight: 900 }}>$</span><input value={price} onChange={event => setPrice(event.target.value.replace(/[^0-9.]/g, ""))} inputMode="decimal" style={{ width: "100%", boxSizing: "border-box", background: CARD, border: `1px solid ${GOLD_BORDER}`, borderRadius: 12, color: "#fff", fontSize: 24, fontWeight: 900, padding: "13px 14px 13px 34px", outline: "none" }} /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 7, marginTop: 8 }}>{["19", "29", "35", "49"].map(value => <button key={value} type="button" className="body-cinema-button" onClick={() => setPrice(value)} style={{ padding: "8px 0", borderRadius: 9, border: `1px solid ${price === value ? GOLD : BORDER}`, background: price === value ? GOLD_DIM : "transparent", color: price === value ? GOLD : MUTED, fontWeight: 800, cursor: "pointer" }}>${value}</button>)}</div>
+            </label>
 
-            <p style={{ fontSize: 11, color: MUTED, textAlign: "center", marginTop: 10 }}>
-              Creator keeps 85% · Platform fee 15%
-            </p>
-          </div>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 12, background: CARD, border: `1px solid ${consent ? "rgba(69,227,138,0.3)" : BORDER}`, borderRadius: 14, padding: "14px", cursor: "pointer", marginBottom: 18 }}>
+              <input type="checkbox" checked={consent} onChange={event => void handleConsentChange(event.target.checked)} style={{ width: 20, height: 20, accentColor: GREEN, marginTop: 2, flexShrink: 0 }} />
+              <span style={{ fontSize: 12, color: consent ? "#fff" : MUTED, lineHeight: 1.55 }}>I am 18 or older, I own this source, and I consent to its AI transformation. Checkout and distribution will still require separate approval after review.</span>
+            </label>
+
+            <button type="button" className="body-cinema-button" onClick={() => void handleCreateReviewAsset()} disabled={!consent || !uploadReceipt?.verified || creating || uploading} style={{ width: "100%", minHeight: 56, borderRadius: 14, border: "none", background: consent && uploadReceipt?.verified && !uploading ? GOLD : CARD_SOFT, color: consent && uploadReceipt?.verified && !uploading ? "#090909" : MUTED, fontFamily: "Bebas Neue, sans-serif", fontSize: 18, letterSpacing: "0.1em", fontWeight: 900, cursor: consent && uploadReceipt?.verified && !uploading ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 9 }}><Sparkles size={19} /> Create review asset</button>
+            <p style={{ textAlign: "center", color: MUTED, fontSize: 10, lineHeight: 1.5, margin: "10px 18px 0" }}>May use one paid generation job. Checkout and external publication remain off.</p>
+          </section>
         )}
 
-        {/* ═══ LAUNCH (generating) ═══════════════════════════════════════════ */}
-        {step === "launch" && (
-          <div style={{ textAlign: "center", padding: "60px 20px" }}>
-            <div style={{ width: 64, height: 64, borderRadius: "50%", background: GOLD_DIM, border: `2px solid ${GOLD_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
-              <Loader2 size={28} color={GOLD} style={{ animation: "spin 1s linear infinite" }} />
+        {step === "create" && (
+          <section style={{ paddingTop: 36, textAlign: "center" }}>
+            <div style={{ width: 74, height: 74, borderRadius: 24, background: GOLD_DIM, border: `1px solid ${GOLD_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}><Loader2 size={31} color={GOLD} className="body-cinema-spin" /></div>
+            <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 35, letterSpacing: "0.04em", margin: "0 0 7px" }}>Creating your review asset.</h2>
+            <p style={{ fontSize: 13, color: GOLD, minHeight: 20, margin: "0 0 24px" }}>{createStage}</p>
+            <div style={{ textAlign: "left", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "8px 16px" }}>
+              <StatusRow label="Creator-owned source" value="Verified" state="ready" />
+              <StatusRow label="Cinematic direction" value="Prepared" state="ready" />
+              <StatusRow label="Review render" value={creating ? "In progress" : "Accepted"} state="working" />
+              <StatusRow label="Checkout" value="Locked" state="locked" />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "10px 0" }}><span style={{ fontSize: 12, color: MUTED }}>External publication</span><span style={{ fontSize: 12, color: MUTED, fontWeight: 800 }}>Locked</span></div>
             </div>
-            <h2 style={{ fontSize: 28, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.04em", margin: "0 0 8px" }}>
-{t("drop.building")}
-            </h2>
-            <p style={{ fontSize: 14, color: MUTED, marginBottom: 32 }}>{launchStage}</p>
-
-            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "16px", textAlign: "left" }}>
-              {[
-                ["GPT-4o Scene Enhancer", "Optimizing your preset prompt"],
-                ["Pollo AI Generation", "Creating your cinematic video"],
-                ["Stripe Checkout", "Attaching paid unlock"],
-                ["Telegram Route", "Publishing distribution"],
-              ].map(([label, desc], i) => (
-                <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: i < 3 ? 12 : 0 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: GOLD, flexShrink: 0, opacity: 0.6 + i * 0.1 }} />
-                  <div>
-                    <p style={{ fontSize: 12, fontWeight: 700, margin: 0 }}>{label}</p>
-                    <p style={{ fontSize: 11, color: MUTED, margin: 0 }}>{desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-          </div>
+          </section>
         )}
 
-        {/* ═══ RESULT ════════════════════════════════════════════════════════ */}
-        {step === "result" && result && (
-          <div>
-            {/* Success header */}
-            <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(0,230,118,0.15)", border: `2px solid ${GREEN}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                <Check size={24} color={GREEN} />
-              </div>
-              <h2 style={{ fontSize: 28, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.04em", margin: "0 0 4px" }}>{t("drop.live")}</h2>
-              <p style={{ fontSize: 13, color: MUTED }}>Package created · Checkout attached · Route published</p>
+        {step === "review" && result && (
+          <section>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ width: 58, height: 58, borderRadius: 19, background: published ? "rgba(69,227,138,0.13)" : assetReady ? GOLD_DIM : CARD, border: `1px solid ${published ? "rgba(69,227,138,0.42)" : assetReady ? GOLD_BORDER : BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>{published ? <Check size={25} color={GREEN} /> : assetReady ? <Film size={25} color={GOLD} /> : <Loader2 size={25} color={GOLD} className="body-cinema-spin" />}</div>
+              <p style={{ fontSize: 10, color: published ? GREEN : GOLD, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", margin: "0 0 6px" }}>{published ? "Published after approval" : assetReady ? "Creator review required" : "Generation in progress"}</p>
+              <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 35, letterSpacing: "0.035em", margin: "0 0 7px" }}>{published ? "Your tracked route is live." : assetReady ? "Inspect the finished asset." : `Your render is still working${".".repeat(pollingDots + 1)}`}</h2>
+              <p style={{ color: MUTED, fontSize: 12, lineHeight: 1.55, margin: 0 }}>{published ? "The checkout and campaign share the same package lineage." : "Nothing is published until you approve the checkout and the tracked route below."}</p>
             </div>
 
-            {/* Package details */}
-            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
-                  <p style={{ fontSize: 10, color: MUTED, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 3px" }}>Package ID</p>
-                  <p style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>{result.packageId || "—"}</p>
-                </div>
-                <div>
-                  <p style={{ fontSize: 10, color: MUTED, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 3px" }}>Price</p>
-                  <p style={{ fontSize: 14, fontWeight: 800, color: GOLD, margin: 0 }}>${price}</p>
-                </div>
-                <div>
-                  <p style={{ fontSize: 10, color: MUTED, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 3px" }}>Status</p>
-                  {pollingPackageId ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <Loader2 size={13} color={GOLD} style={{ animation: "spin 1s linear infinite" }} />
-                      <p style={{ fontSize: 12, fontWeight: 700, color: GOLD, margin: 0 }}>
-                        Generating video{".".repeat(pollingDots + 1)}
-                      </p>
-                    </div>
-                  ) : (
-                    <p style={{ fontSize: 13, fontWeight: 700, color: GREEN, margin: 0 }}>
-                      {result.generationStatus === "succeed" ? "Asset ready ✓" : "Generating"}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <p style={{ fontSize: 10, color: MUTED, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 3px" }}>You keep</p>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: GREEN, margin: 0 }}>
-                    ${((parseFloat(price) || 0) * 0.85).toFixed(2)}
-                  </p>
-                </div>
-              </div>
+            <div style={{ position: "relative", borderRadius: 18, overflow: "hidden", background: "#000", aspectRatio: "9/16", maxHeight: 560, margin: "0 auto 16px", border: `1px solid ${BORDER}` }}>
+              <video src={result.videoUrl || videoUrl || undefined} controls={assetReady} muted={!assetReady} autoPlay={false} playsInline style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              {!assetReady && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 24 }}><div><Loader2 size={26} color={GOLD} className="body-cinema-spin" style={{ marginBottom: 10 }} /><p style={{ margin: 0, fontSize: 12, color: "#fff", fontWeight: 800 }}>Source preview</p><p style={{ margin: "4px 0 0", fontSize: 11, color: MUTED }}>The finished render replaces this view when the artifact is durable.</p></div></div>}
             </div>
 
-            {/* Generating video banner — shown while Pollo is still working */}
-            {pollingPackageId && (
-              <div style={{ background: "rgba(201,168,76,0.08)", border: `1px solid ${GOLD_BORDER}`, borderRadius: 12, padding: "14px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
-                <Loader2 size={20} color={GOLD} style={{ animation: "spin 1s linear infinite", flexShrink: 0 }} />
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: GOLD, margin: "0 0 2px" }}>Generating your video{".".repeat(pollingDots + 1)}</p>
-                  <p style={{ fontSize: 11, color: MUTED, margin: 0 }}>Pollo AI is processing. Checkout link will appear when ready.</p>
-                </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 16 }}>
+              <button type="button" className="body-cinema-button" onClick={handleDownload} disabled={!assetReady} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${assetReady ? GOLD_BORDER : BORDER}`, background: assetReady ? GOLD_DIM : CARD, color: assetReady ? GOLD : MUTED, fontWeight: 800, cursor: assetReady ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><Download size={16} /> Download</button>
+              <button type="button" className="body-cinema-button" onClick={reuseSource} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${BORDER}`, background: CARD, color: "#fff", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><RotateCcw size={16} /> Reuse source</button>
+            </div>
+
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "6px 15px", marginBottom: 16 }}>
+              <StatusRow label="Source receipt" value="Verified" state="ready" />
+              <StatusRow label="Review asset" value={assetReady ? "Ready" : pollingStatus === "failed" ? "Failed" : "Generating"} state={assetReady ? "ready" : pollingStatus === "failed" ? "failed" : "working"} />
+              <StatusRow label="Checkout" value={checkoutAttached ? "Attached" : "Locked"} state={checkoutAttached ? "ready" : "locked"} />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "10px 0" }}><span style={{ fontSize: 12, color: MUTED }}>Tracked publication</span><span style={{ fontSize: 12, color: published ? GREEN : MUTED, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6 }}>{published && <Check size={13} />}{published ? "Published" : "Locked"}</span></div>
+            </div>
+
+            <div style={{ background: `linear-gradient(145deg, ${CARD_SOFT}, ${CARD})`, border: `1px solid ${GOLD_BORDER}`, borderRadius: 18, padding: "16px", marginBottom: 16 }}>
+              <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.14em", textTransform: "uppercase", margin: "0 0 5px" }}>Approval sequence</p>
+              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.55, margin: "0 0 14px" }}>You keep ${keepAmount} at the displayed ${price} price before applicable payment processing. The platform split is 85% creator / 15% platform.</p>
+
+              <button type="button" className="body-cinema-button" onClick={() => void handleAttachCheckout()} disabled={!assetReady || attachPackageCheckout.isPending || checkoutAttached} style={{ width: "100%", minHeight: 50, borderRadius: 12, border: "none", background: checkoutAttached ? "rgba(69,227,138,0.12)" : assetReady ? GOLD : CARD, color: checkoutAttached ? GREEN : assetReady ? "#090909" : MUTED, fontWeight: 900, cursor: assetReady && !checkoutAttached ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 9 }}>{attachPackageCheckout.isPending ? <Loader2 size={17} className="body-cinema-spin" /> : checkoutAttached ? <Check size={17} /> : <DollarSign size={17} />}{checkoutAttached ? "Checkout attached" : "1. Approve and attach checkout"}</button>
+
+              {checkoutAttached && result.checkoutUrl && <a href={result.checkoutUrl} target="_blank" rel="noreferrer" style={{ minHeight: 42, borderRadius: 11, border: `1px solid ${BORDER}`, color: CYAN, textDecoration: "none", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginBottom: 9 }}><ExternalLink size={15} /> Open checkout preview</a>}
+
+              <button type="button" className="body-cinema-button" onClick={() => void handlePublish()} disabled={!checkoutAttached || publishPackageTelegramRoute.isPending || published} style={{ width: "100%", minHeight: 50, borderRadius: 12, border: `1px solid ${published ? "rgba(69,227,138,0.32)" : checkoutAttached ? "rgba(99,217,245,0.38)" : BORDER}`, background: published ? "rgba(69,227,138,0.12)" : checkoutAttached ? "rgba(99,217,245,0.1)" : CARD, color: published ? GREEN : checkoutAttached ? CYAN : MUTED, fontWeight: 900, cursor: checkoutAttached && !published ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>{publishPackageTelegramRoute.isPending ? <Loader2 size={17} className="body-cinema-spin" /> : published ? <Check size={17} /> : <Send size={17} />}{published ? "Tracked route published" : "2. Publish tracked route"}</button>
+            </div>
+
+            {result.trackedUrl && (
+              <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "13px 14px", marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 7 }}><p style={{ margin: 0, fontSize: 10, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase" }}>Tracked route</p><CopyButton text={result.trackedUrl} /></div>
+                <p style={{ color: CYAN, fontSize: 11, wordBreak: "break-all", margin: 0 }}>{result.trackedUrl}</p>
               </div>
             )}
 
-            {/* Checkout link — only shown when asset is ready */}
-            {result.checkoutUrl && !pollingPackageId && (
-              <a href={result.checkoutUrl} target="_blank" rel="noreferrer"
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12, background: GOLD, color: "#000", fontWeight: 900, fontSize: 15, textDecoration: "none", marginBottom: 12 }}>
-                <DollarSign size={18} /> {t("drop.checkout_link")}
-              </a>
-            )}
-
-            {/* Telegram post button */}
-            <button onClick={handlePostTelegram}
-              style={{ width: "100%", padding: "14px", borderRadius: 12, background: "#0088CC", color: "#fff", fontWeight: 800, fontSize: 15, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 16 }}>
-              <Send size={18} /> {t("drop.post_telegram")}
-            </button>
-
-            {/* AI Stack copy pack */}
             {result.aiStack?.copyPack && (
               <div style={{ marginBottom: 16 }}>
-                <p style={{ fontSize: 11, color: GOLD, fontFamily: "monospace", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 10 }}>Ready-to-use copy</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <CopyCard label="Telegram" text={result.aiStack.copyPack.telegramCaption} accent="#0088CC" />
-                  <CopyCard label="DM Hook" text={result.aiStack.copyPack.dmHook} accent={GOLD} />
-                  <CopyCard label="PPV Unlock" text={result.aiStack.copyPack.ppvUnlockLine} accent={GREEN} />
-                  {result.aiStack.copyPack.hookVariants?.slice(0, 2).map((h: string, i: number) => (
-                    <CopyCard key={i} label={`Hook ${i + 1}`} text={h} accent={MUTED} />
-                  ))}
+                <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.14em", textTransform: "uppercase", margin: "0 0 10px" }}>Prepared release copy</p>
+                <div style={{ display: "grid", gap: 9 }}>
+                  <CopyCard label="Channel caption" text={result.aiStack.copyPack.telegramCaption} accent={CYAN} />
+                  <CopyCard label="Direct-message hook" text={result.aiStack.copyPack.dmHook} />
+                  <CopyCard label="Paid-unlock line" text={result.aiStack.copyPack.ppvUnlockLine} accent={GREEN} />
+                  {result.aiStack.copyPack.hookVariants?.slice(0, 2).map((hook: string, index: number) => <CopyCard key={`${hook}-${index}`} label={`Hook ${index + 1}`} text={hook} accent={MUTED} />)}
                 </div>
               </div>
             )}
 
-            {/* Narration */}
-            {result.aiStack?.narration?.audioUrl && (
-              <div style={{ marginBottom: 16 }}>
-                <p style={{ fontSize: 11, color: GOLD, fontFamily: "monospace", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8 }}>KingCam voiceover</p>
-                <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "12px 14px" }}>
-                  <p style={{ fontSize: 12, color: MUTED, fontStyle: "italic", marginBottom: 8 }}>"{result.aiStack.narration.script}"</p>
-                  <audio src={result.aiStack.narration.audioUrl} controls style={{ width: "100%" }} />
-                </div>
-              </div>
-            )}
-
-            {/* Tracked URL */}
-            {result.trackedUrl && (
-              <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <p style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", margin: 0 }}>Tracked Route</p>
-                  <CopyButton text={result.trackedUrl} />
-                </div>
-                <p style={{ fontSize: 12, color: CYAN, wordBreak: "break-all", margin: 0 }}>{result.trackedUrl}</p>
-              </div>
-            )}
-
-            {/* New drop button */}
-            <button onClick={reset}
-              style={{ width: "100%", padding: "14px", borderRadius: 12, border: `1px solid ${BORDER}`, background: "transparent", color: MUTED, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-              Create another drop
-            </button>
-          </div>
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "12px 14px", color: MUTED, fontSize: 10, lineHeight: 1.55 }}>
+              Package {result.packageId || "—"} · protected generation lineage · source receipt {uploadReceipt?.id.slice(0, 8) || "verified"}
+            </div>
+          </section>
         )}
-      </div>
+      </main>
     </div>
   );
 }

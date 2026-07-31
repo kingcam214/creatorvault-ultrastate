@@ -5,17 +5,23 @@
  * Returns persistent CDN URL. No local disk storage for final files.
  * ============================================================================
  */
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 // @ts-ignore
 import multer from "multer";
 import { writeFile, readFile, unlink, mkdir, rmdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 import os from "os";
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import { sql } from "drizzle-orm";
 import { db } from "../db";
 import { sdk } from "../_core/sdk";
+import {
+  isSupportedBodyCinemaVideoSelection,
+  sanitiseBodyCinemaUploadFilename,
+} from "../services/bodyCinemaReliability";
 
 // ─── Helper: mime type from filename ─────────────────────────────────────────
 function getMimeType(filename: string): string {
@@ -34,6 +40,35 @@ function getMimeType(filename: string): string {
 // storagePut (Manus CDN proxy) is unavailable from VPS — write directly to
 // /root/uploads/content-vault/{uuid}/{filename} and return a public HTTPS URL.
 const DURABLE_UPLOADS_DIR = "/root/uploads/content-vault";
+const PRIVATE_UPLOAD_RECEIPTS_DIR = "/root/uploads/content-vault-receipts";
+const execFileAsync = promisify(execFile);
+
+async function validateDirectVideo(filePath: string): Promise<{ codec: string; width: number; height: number; durationSec: number }> {
+  const { stdout } = await execFileAsync(
+    "ffprobe",
+    [
+      "-v", "error",
+      "-select_streams", "v:0",
+      "-show_entries", "stream=codec_name,width,height,duration:format=duration",
+      "-of", "json",
+      filePath,
+    ],
+    { timeout: 15_000, maxBuffer: 1024 * 1024, encoding: "utf8" }
+  );
+  const probe = JSON.parse(String(stdout || "{}"));
+  const stream = probe?.streams?.[0];
+  const durationSec = Number(probe?.format?.duration ?? stream?.duration);
+  const width = Number(stream?.width);
+  const height = Number(stream?.height);
+  if (!stream?.codec_name || !Number.isFinite(width) || width < 16 || !Number.isFinite(height) || height < 16) {
+    throw new Error("The selected file does not contain a readable video stream.");
+  }
+  if (!Number.isFinite(durationSec) || durationSec < 0.1 || durationSec > 600) {
+    throw new Error("Body Cinema accepts verified videos between 0.1 seconds and 10 minutes.");
+  }
+  return { codec: String(stream.codec_name), width, height, durationSec: Number(durationSec.toFixed(3)) };
+}
+
 async function assembleAndUpload(sessionDir: string, meta: any): Promise<{ url: string; filename: string; storageId: string; directory: string }> {
   const chunks: Buffer[] = [];
   for (let i = 0; i < meta.totalChunks; i++) {
@@ -144,6 +179,30 @@ export const videoUploadRouter = Router();
 
 const UPLOAD_DIR = path.join(os.tmpdir(), "vaultx-uploads");
 const OWNER_IDS = [6, 33];
+
+async function requireCreatorUploadAccess(req: Request, res: Response, next: NextFunction) {
+  let user: any;
+  try {
+    user = await sdk.authenticateRequest(req);
+  } catch {
+    return res.status(401).json({ error: "Sign in to upload content." });
+  }
+
+  try {
+    const userId = Number(user.id);
+    const creatorId = await getCreatorId(userId);
+    if (!creatorId && !OWNER_IDS.includes(userId)) {
+      return res.status(403).json({ error: "An active creator profile is required to upload content." });
+    }
+    (req as any).authenticatedCreatorId = creatorId || userId;
+    return next();
+  } catch (error) {
+    console.error("[VaultX Upload] Creator access check failed:", error);
+    return res.status(500).json({ error: "We could not verify your Creator HQ. Please try again." });
+  }
+}
+
+videoUploadRouter.use(requireCreatorUploadAccess);
 
 async function rawQuery(query: string, params: any[] = []): Promise<any[]> {
   const pool = (db as any).$client || (db as any).client;
@@ -345,18 +404,65 @@ videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
 // The creator picks a file; this stores it and returns a real public HTTPS URL.
 // Used by VaultX Drop so creators never touch a URL.
 videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, res: Response) => {
+  let destPath: string | null = null;
+  let receiptPath: string | null = null;
   try {
     const f = (req as any).file;
-    if (!f || !f.buffer) return res.status(400).json({ error: "No file uploaded" });
-    const originalName = (f.originalname || "upload.mp4").replace(/[^a-zA-Z0-9._-]/g, "_");
+    if (!f || !f.buffer || f.size < 1) return res.status(400).json({ error: "Choose a non-empty video file." });
+
+    const originalName = sanitiseBodyCinemaUploadFilename(f.originalname);
+    const suppliedMime = String(f.mimetype || "").toLowerCase();
+    if (!isSupportedBodyCinemaVideoSelection(originalName, suppliedMime)) {
+      return res.status(415).json({ error: "Body Cinema accepts verified MP4, MOV, WebM, MKV, AVI, or M4V video files." });
+    }
+
     const fileUuid = randomUUID();
     const destDir = path.join(DURABLE_UPLOADS_DIR, fileUuid);
     await mkdir(destDir, { recursive: true });
-    const destPath = path.join(destDir, originalName);
+    destPath = path.join(destDir, originalName);
     await writeFile(destPath, f.buffer);
+
+    const media = await validateDirectVideo(destPath);
+    const sha256 = createHash("sha256").update(f.buffer).digest("hex");
+    const createdAt = new Date().toISOString();
     const url = `https://creatorvault.live/uploads/content-vault/${fileUuid}/${encodeURIComponent(originalName)}`;
-    res.json({ url, filename: originalName, storageId: fileUuid, size: f.size, mime: getMimeType(originalName) });
+    const creatorId = Number((req as any).authenticatedCreatorId);
+
+    await mkdir(PRIVATE_UPLOAD_RECEIPTS_DIR, { recursive: true });
+    receiptPath = path.join(PRIVATE_UPLOAD_RECEIPTS_DIR, `${fileUuid}.json`);
+    await writeFile(receiptPath, JSON.stringify({
+      id: fileUuid,
+      creatorId,
+      url,
+      filename: originalName,
+      size: Number(f.size),
+      mime: getMimeType(originalName),
+      sha256,
+      media,
+      verified: true,
+      createdAt,
+    }, null, 2));
+
+    return res.json({
+      url,
+      filename: originalName,
+      storageId: fileUuid,
+      size: Number(f.size),
+      mime: getMimeType(originalName),
+      uploadReceipt: {
+        id: fileUuid,
+        sha256,
+        verified: true,
+        ownerBound: true,
+        createdAt,
+        ...media,
+      },
+    });
   } catch (e) {
-    res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+    if (destPath) await unlink(destPath).catch(() => undefined);
+    if (receiptPath) await unlink(receiptPath).catch(() => undefined);
+    const message = e instanceof Error ? e.message : String(e);
+    const status = /readable video stream|accepts verified videos/i.test(message) ? 422 : 500;
+    return res.status(status).json({ error: message });
   }
 });
