@@ -27,6 +27,7 @@ import { startVaultXAcquisitionCron } from "../services/vaultxAutonomousAcquisit
 import { startChallengeAutomationCron } from "../routers/challengeAutomationRouter";
 import { startCreatorVaultOvernightRevenueCron } from "../services/creatorVaultOvernightRevenue";
 import { startPostScheduler } from "../services/postScheduler";
+import { verifyGovernedPolloSchema } from "../services/governedPolloService";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -48,6 +49,10 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // This performs idempotent schema DDL and information-schema inspection only; it never submits paid media work.
+  const governedMediaSchema = await verifyGovernedPolloSchema();
+  console.log(JSON.stringify({ event: "governed_media_schema_verified", tables: governedMediaSchema.tables }));
+
   // Run startup tasks (schema bootstrap, etc)
   await runStartupTasks();
   // Outbound publication stays disabled until the governed media control plane
