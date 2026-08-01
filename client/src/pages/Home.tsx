@@ -696,11 +696,11 @@ export default function Home() {
         )}
         <div style={{ position: "relative", zIndex: 10, flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 28px 72px" }}>
           <p className="cv-kicker" style={{ animation: "fadeUp .6s ease .1s both" }}>The creator empire operating system</p>
-          <h1 className="cv-title cv-hero-title" style={{ fontSize: "clamp(64px,12vw,130px)", color: "#fff", marginBottom: 20, maxWidth: 900, animation: "fadeUp .7s ease .2s both" }}>One upload.<br />A week of income.</h1>
-          <p className="cv-hero-sub" style={{ color: "rgba(255,255,255,.72)", fontSize: 18, lineHeight: 1.65, maxWidth: 520, marginBottom: 36, animation: "fadeUp .7s ease .35s both" }}>Upload one video. Walk away with a Telegram drop, a PPV trailer, an Instagram Reel, and a paid offer — all running while you sleep.</p>
+          <h1 className="cv-title cv-hero-title" style={{ fontSize: "clamp(64px,12vw,130px)", color: "#fff", marginBottom: 20, maxWidth: 900, animation: "fadeUp .7s ease .2s both" }}>YOUR BODY.<br />YOUR CONTENT.<br /><span style={{ color: "#D4A017" }}>YOUR EMPIRE.</span></h1>
+          <p className="cv-hero-sub" style={{ color: "rgba(255,255,255,.72)", fontSize: 18, lineHeight: 1.65, maxWidth: 520, marginBottom: 36, animation: "fadeUp .7s ease .35s both" }}>The operating system for creators who are serious about getting paid. Upload once. Monetize everywhere. While you sleep.</p>
           <div className="cv-hero-actions" style={{ display: "flex", gap: 12, flexWrap: "wrap", animation: "fadeUp .7s ease .48s both" }}>
-            <GoldButton href="#access">I want this</GoldButton>
-            <GoldButton href="#cinema" ghost>See it in motion</GoldButton>
+            <GoldButton href="#access">REQUEST VIP ACCESS</GoldButton>
+            <GoldButton href="#cinema" ghost>See the engine</GoldButton>
           </div>
         </div>
         <div style={{ position: "absolute", bottom: 22, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, opacity: 0.6, zIndex: 10 }}>
@@ -713,8 +713,8 @@ export default function Home() {
         <div className="cv-shell">
           <div className={`cv-reveal ${uploadRef.visible ? "in" : ""}`}>
             <p className="cv-kicker">What actually happens</p>
-            <h2 className="cv-title" style={{ fontSize: "clamp(44px,8vw,88px)", color: "#fff", marginBottom: 16, maxWidth: 700 }}>You upload once.<br />This is what comes out.</h2>
-            <p style={{ color: "rgba(255,255,255,.6)", fontSize: 17, lineHeight: 1.7, marginBottom: 64, maxWidth: 540 }}>No editing. No captioning. No scheduling. No figuring out what to post where. It's already done.</p>
+            <h2 className="cv-title" style={{ fontSize: "clamp(44px,8vw,88px)", color: "#fff", marginBottom: 16, maxWidth: 700 }}>STOP LEAVING MONEY<br /><span style={{ color: "#D4A017" }}>ON THE TABLE.</span></h2>
+            <p style={{ color: "rgba(255,255,255,.6)", fontSize: 17, lineHeight: 1.7, marginBottom: 64, maxWidth: 540 }}>You do the hard work. We build the factory. Turn one raw video into a Telegram drop, a PPV trailer, an Instagram Reel, and an exclusive subscriber cut. Automatically.</p>
           </div>
           <div className="cv-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40, alignItems: "start" }}>
             <div className={`cv-reveal ${uploadRef.visible ? "in" : ""}`} style={{ transitionDelay: ".1s" }}><UploadFlow active={uploadRef.visible} /></div>
@@ -755,9 +755,9 @@ export default function Home() {
         <div className="cv-shell">
           <div className="cv-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}>
             <div className={`cv-reveal ${telegramRef.visible ? "in" : ""}`}>
-              <p className="cv-kicker">Telegram drops</p>
-              <h2 className="cv-title" style={{ fontSize: "clamp(44px,7vw,80px)", color: "#fff", marginBottom: 24 }}>Sell while<br />you sleep.</h2>
-              <p style={{ color: "rgba(255,255,255,.65)", fontSize: 17, lineHeight: 1.72, marginBottom: 32 }}>Every drop goes out with a tracking link. Every tap is logged. Every purchase is attributed. You wake up to receipts, not questions.</p>
+              <p className="cv-kicker">Revenue Control</p>
+              <h2 className="cv-title" style={{ fontSize: "clamp(44px,7vw,80px)", color: "#fff", marginBottom: 24 }}>OWN YOUR<br /><span style={{ color: "#D4A017" }}>REVENUE.</span></h2>
+              <p style={{ color: "rgba(255,255,255,.65)", fontSize: 17, lineHeight: 1.72, marginBottom: 32 }}>OnlyFans keeps 20%. Agencies take half. CreatorVault gives you the tools to own your audience and keep your money. Every tap logged, every purchase attributed.</p>
               {["Drop staged → you approve → it fires", "Every link tracked back to the exact message", "Revenue attributed per drop, per channel, per day", "Subscribers scored by purchase history and buy likelihood"].map((line, index) => (
                 <div key={line} className={`cv-reveal ${telegramRef.visible ? "in" : ""}`} style={{ transitionDelay: `${0.1 + index * 0.08}s`, display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 14 }}><span style={{ color: GOLD, marginTop: 2, flexShrink: 0 }}>◆</span><p style={{ margin: 0, color: "rgba(255,255,255,.75)", fontSize: 15, lineHeight: 1.5 }}>{line}</p></div>
               ))}
@@ -806,9 +806,9 @@ export default function Home() {
         <div className={`cv-shell cv-access-grid cv-reveal ${accessRef.visible ? "in" : ""}`} style={{ position: "relative", display: "grid", gridTemplateColumns: "minmax(0,600px) minmax(300px,480px)", gap: 48, alignItems: "center" }}>
           <div>
             <p className="cv-kicker">Get access</p>
-            <h2 className="cv-title" style={{ fontSize: "clamp(48px,9vw,90px)", color: "#fff", marginBottom: 24 }}>You already have<br />everything you need.</h2>
-            <p style={{ color: "rgba(255,255,255,.65)", fontSize: 17, lineHeight: 1.72, marginBottom: 36, maxWidth: 520 }}>One phone. One video. That's the raw material. CreatorVault handles everything after the upload — the edit, the drop, the sale, the repeat.</p>
-            {["For creators who want to look bigger than their current team.", "For premium models and studios who need better drops, faster.", "For builders who want every platform covered from one place."].map((line) => (
+            <h2 className="cv-title" style={{ fontSize: "clamp(48px,9vw,90px)", color: "#fff", marginBottom: 24 }}>REAL CREATORS.<br /><span style={{ color: "#D4A017" }}>REAL POWER.</span></h2>
+            <p style={{ color: "rgba(255,255,255,.65)", fontSize: 17, lineHeight: 1.72, marginBottom: 36, maxWidth: 520 }}>CreatorVault is currently invite-only. We partner with top-tier creators who are ready to scale their empires and stop settling for standard cuts.</p>
+            {["For creators who treat their content as a serious business.", "For premium models who demand ownership and higher margins.", "For those ready to scale without relying on predatory agencies."].map((line) => (
               <p key={line} style={{ margin: "0 0 14px", color: "rgba(255,255,255,.72)", lineHeight: 1.5, display: "flex", alignItems: "flex-start", gap: 10 }}><span style={{ color: GOLD, flexShrink: 0, marginTop: 2 }}>◆</span>{line}</p>
             ))}
           </div>
@@ -835,7 +835,7 @@ export default function Home() {
                 {CREATOR_TYPES.map((option) => <option key={option.value} value={option.value} style={{ background: "#0a0806" }}>{option.label}</option>)}
               </select>
             </label>
-            <GoldButton submit disabled={signupMutation.isPending}>{signupMutation.isPending ? "Sending…" : "I want in"}</GoldButton>
+            <GoldButton submit disabled={signupMutation.isPending}>{signupMutation.isPending ? "Sending…" : "APPLY FOR THE VAULT"}</GoldButton>
             {signupMutation.isSuccess && <p style={{ margin: 0, color: "#4ade80", fontSize: 13, textAlign: "center" }}>✓ You're in. We'll be in touch.</p>}
             {signupMutation.isError && <p style={{ margin: 0, color: "#f87171", fontSize: 13, textAlign: "center" }}>{signupMutation.error?.message?.includes("already") ? "Already registered — we have you." : "Something went wrong. Try again."}</p>}
             <p style={{ margin: 0, color: "rgba(255,255,255,.35)", fontSize: 11, lineHeight: 1.5, textAlign: "center" }}>Early access only. 18+ creators, studios, and partners.</p>
