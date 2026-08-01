@@ -27,7 +27,7 @@ import { startVaultXAcquisitionCron } from "../services/vaultxAutonomousAcquisit
 import { startChallengeAutomationCron } from "../routers/challengeAutomationRouter";
 import { startCreatorVaultOvernightRevenueCron } from "../services/creatorVaultOvernightRevenue";
 import { startPostScheduler } from "../services/postScheduler";
-import { verifyGovernedPolloSchema } from "../services/governedPolloService";
+import { isGovernedPolloExecutionEnabled, verifyGovernedPolloSchema } from "../services/governedPolloService";
 
 let governedMediaSchemaAttestation: {
   verified: boolean;
@@ -249,6 +249,7 @@ async function startServer() {
       builtAt: process.env.RELEASE_BUILT_AT || release.builtAt || release.built_at || null,
       deployedAt: process.env.RELEASE_DEPLOYED_AT || release.deployedAt || release.deployed_at || null,
       governedMediaSchema: governedMediaSchemaAttestation,
+      governedMediaExecutionEnabled: isGovernedPolloExecutionEnabled(),
       ...release,
     });
   });
