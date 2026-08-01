@@ -29,6 +29,16 @@ import { startCreatorVaultOvernightRevenueCron } from "../services/creatorVaultO
 import { startPostScheduler } from "../services/postScheduler";
 import { verifyGovernedPolloSchema } from "../services/governedPolloService";
 
+let governedMediaSchemaAttestation: {
+  verified: boolean;
+  tables: string[];
+  verifiedAt: string | null;
+} = {
+  verified: false,
+  tables: [],
+  verifiedAt: null,
+};
+
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer();
@@ -51,7 +61,12 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   // This performs idempotent schema DDL and information-schema inspection only; it never submits paid media work.
   const governedMediaSchema = await verifyGovernedPolloSchema();
-  console.log(JSON.stringify({ event: "governed_media_schema_verified", tables: governedMediaSchema.tables }));
+  governedMediaSchemaAttestation = {
+    verified: true,
+    tables: governedMediaSchema.tables,
+    verifiedAt: new Date().toISOString(),
+  };
+  console.log(JSON.stringify({ event: "governed_media_schema_verified", ...governedMediaSchemaAttestation }));
 
   // Run startup tasks (schema bootstrap, etc)
   await runStartupTasks();
@@ -233,6 +248,7 @@ async function startServer() {
       gitSha: process.env.RELEASE_GIT_SHA || release.gitSha || release.git_sha || null,
       builtAt: process.env.RELEASE_BUILT_AT || release.builtAt || release.built_at || null,
       deployedAt: process.env.RELEASE_DEPLOYED_AT || release.deployedAt || release.deployed_at || null,
+      governedMediaSchema: governedMediaSchemaAttestation,
       ...release,
     });
   });
