@@ -413,6 +413,37 @@ export async function ensureGovernedPolloSchema(): Promise<void> {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
 }
 
+export async function verifyGovernedPolloSchema(): Promise<{ tables: string[] }> {
+  await ensureGovernedPolloSchema();
+
+  const requiredTables = [
+    "governed_media_jobs",
+    "governed_media_approvals",
+    "governed_media_budget_ledger",
+    "governed_media_events",
+  ];
+  const placeholders = requiredTables.map(() => "?").join(", ");
+  const rows = await rawQuery(
+    `SELECT table_name
+       FROM information_schema.tables
+      WHERE table_schema = DATABASE()
+        AND table_name IN (${placeholders})
+      ORDER BY table_name`,
+    requiredTables,
+  );
+  const tables = rows
+    .map((row) => String(row.TABLE_NAME ?? row.table_name ?? ""))
+    .filter(Boolean)
+    .sort();
+  const missing = requiredTables.filter((table) => !tables.includes(table));
+
+  if (missing.length > 0) {
+    throw new Error(`Governed media schema verification failed; missing table(s): ${missing.join(", ")}`);
+  }
+
+  return { tables };
+}
+
 export async function getGovernedPolloJob(jobId: number): Promise<GovernedPolloJob | null> {
   await ensureGovernedPolloSchema();
   const rows = await rawQuery("SELECT * FROM governed_media_jobs WHERE id = ? LIMIT 1", [jobId]);
