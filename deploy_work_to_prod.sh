@@ -9,6 +9,7 @@ APP_ENTRY="${CREATORVAULT_APP_ENTRY:-dist/index.js}"
 APP_PORT="${PORT:-3000}"
 HEALTH_PATH="${CREATORVAULT_HEALTH_PATH:-/api/health}"
 RELEASE_FILE="public/release.json"
+GOVERNED_MEDIA_SCHEMA_VERIFIER="${CREATORVAULT_GOVERNED_MEDIA_SCHEMA_VERIFIER:-dist/ensure-governed-media-schema.js}"
 
 log() {
   printf '[creatorvault-deploy] %s\n' "$*"
@@ -32,7 +33,12 @@ fi
 
 [ -f package.json ] || fail "package.json missing; wrong working directory"
 [ -f "$APP_ENTRY" ] || fail "$APP_ENTRY missing; pnpm build must complete before deployment"
+[ -f "$GOVERNED_MEDIA_SCHEMA_VERIFIER" ] || fail "$GOVERNED_MEDIA_SCHEMA_VERIFIER missing; governed media safety verification cannot proceed"
 [ -f "$RELEASE_FILE" ] || log "$RELEASE_FILE not found; continuing without release stamp"
+
+# This verifier performs only idempotent schema DDL and information-schema inspection; it never submits media work.
+log "verifying governed media schema before the application reload"
+node "$GOVERNED_MEDIA_SCHEMA_VERIFIER"
 
 mkdir -p logs uploads tmp
 
