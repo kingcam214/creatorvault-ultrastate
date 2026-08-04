@@ -71,6 +71,18 @@ const ALLOWLISTS = {
     'scripts/create-vaultx-homepage-audio.py',
     'scripts/route-owner.js',
     'scripts/scope-guard.js'
+  ],
+  'body-cinema': [
+    'client/src/lib/bodyCinemaPerception.ts',
+    'client/src/pages/VaultXStudio.tsx',
+    'server/routers/bodyCinemaRouter.ts',
+    'server/routers/vaultxRouter.ts',
+    'server/services/bodyCinemaEvidenceService.ts',
+    'server/services/bodyCinemaEvidence.test.ts',
+    'server/services/bodyCinemaOutputReviewService.ts',
+    'package.json',
+    'pnpm-lock.yaml',
+    'scripts/scope-guard.js'
   ]
 };
 

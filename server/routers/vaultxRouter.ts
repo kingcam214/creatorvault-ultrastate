@@ -35,6 +35,8 @@ import {
   normaliseBodyCinemaGenerationStatus as normalisePolloStatus,
 } from "../services/bodyCinemaReliability";
 import { assertLegacyPolloExecutionAllowed } from "../services/polloEmergencyFreeze.js";
+import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } from "../services/bodyCinemaEvidenceService";
+import { assertAcceptedBodyCinemaOutputReview } from "../services/bodyCinemaOutputReviewService";
 import { createAIDrop, sendDropToChannel } from "../services/telegramCampaign";
 import {
   assertReadyVaultxPackageArtifact,
@@ -1905,7 +1907,7 @@ export const vaultxRouter = router({
         });
         await rawExec(
           `UPDATE vaultx_revenue_packages
-           SET source_media_url = ?, asset_prompt = ?, pollo_job_id = ?, asset_status = 'succeed', asset_url = ?, asset_quality_passed = 1, status = 'asset_ready'
+           SET source_media_url = ?, asset_prompt = ?, pollo_job_id = ?, asset_status = 'succeed', asset_url = ?, asset_quality_passed = 0, status = 'asset_ready_pending_review'
            WHERE id = ?`,
           [sourceMediaUrl, prompt, reusable.taskId, artifact.output_url || reusable.videoUrl, input.packageId]
         );
@@ -2052,7 +2054,7 @@ export const vaultxRouter = router({
           }
           await rawExec(
             `UPDATE vaultx_revenue_packages
-             SET asset_status = ?, asset_url = COALESCE(?, asset_url), asset_quality_passed = CASE WHEN ? IS NULL THEN asset_quality_passed ELSE 1 END, status = CASE WHEN ? IS NULL THEN status ELSE 'asset_ready' END
+             SET asset_status = ?, asset_url = COALESCE(?, asset_url), asset_quality_passed = 0, status = CASE WHEN ? IS NULL THEN status ELSE 'asset_ready_pending_review' END
              WHERE id = ?`,
             [status, readyArtifact?.output_url || videoUrl, readyArtifact?.output_url || videoUrl, readyArtifact?.output_url || videoUrl, input.packageId]
           );
@@ -2068,12 +2070,16 @@ export const vaultxRouter = router({
         videoUrl: readyArtifact?.output_url || row?.videoUrl || pkg.asset_url || null,
         artifact: publicArtifactPayload(readyArtifact),
         artifacts: refreshedArtifacts.map(publicArtifactPayload),
-        qualityPassed: Boolean(pkg.asset_quality_passed || readyArtifact || row?.videoUrl),
+        qualityPassed: Boolean(pkg.asset_quality_passed),
       };
     }),
 
   attachPackageCheckout: protectedProcedure
-    .input(z.object({ packageId: z.number().int().positive() }))
+    .input(z.object({
+      packageId: z.number().int().positive(),
+      evidenceId: z.string().uuid().optional(),
+      outputReviewId: z.string().uuid().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
       const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
       let readyArtifact;
@@ -2081,6 +2087,17 @@ export const vaultxRouter = router({
         readyArtifact = await assertReadyVaultxPackageArtifact(Number(pkg.creator_id), input.packageId);
       } catch (err: any) {
         throw readinessGateError(err);
+      }
+      try {
+        if (!input.evidenceId || !input.outputReviewId) throw new Error("An accepted Body Cinema output review must be supplied before checkout attachment.");
+        await assertAcceptedBodyCinemaOutputReview({
+          creatorId: Number(pkg.creator_id),
+          evidenceId: input.evidenceId,
+          outputReviewId: input.outputReviewId,
+          sourceMediaUrl: String(pkg.source_media_url || ""),
+        });
+      } catch (reviewError: any) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: reviewError?.message || "An accepted Body Cinema output review is required before checkout attachment." });
       }
       if (!stripe) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe checkout is not configured for VaultX package unlocks." });
       if (hasCompleteVaultxCheckout(pkg)) {
@@ -2123,7 +2140,11 @@ export const vaultxRouter = router({
     }),
 
   publishPackageTelegramRoute: protectedProcedure
-    .input(z.object({ packageId: z.number().int().positive() }))
+    .input(z.object({
+      packageId: z.number().int().positive(),
+      evidenceId: z.string().uuid().optional(),
+      outputReviewId: z.string().uuid().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
       const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
       let readyArtifact;
@@ -2131,6 +2152,17 @@ export const vaultxRouter = router({
         readyArtifact = await assertReadyVaultxPackageArtifact(Number(pkg.creator_id), input.packageId);
       } catch (err: any) {
         throw readinessGateError(err);
+      }
+      try {
+        if (!input.evidenceId || !input.outputReviewId) throw new Error("An accepted Body Cinema output review must be supplied before publication.");
+        await assertAcceptedBodyCinemaOutputReview({
+          creatorId: Number(pkg.creator_id),
+          evidenceId: input.evidenceId,
+          outputReviewId: input.outputReviewId,
+          sourceMediaUrl: String(pkg.source_media_url || ""),
+        });
+      } catch (reviewError: any) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: reviewError?.message || "An accepted Body Cinema output review is required before publication." });
       }
       if (!hasCompleteVaultxCheckout(pkg)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Approve and attach checkout before publishing this tracked route." });
       const publicCopy = qualityGate.check(pkg.public_teaser_copy || buildVaultxPackagePublicCopy({
@@ -2237,6 +2269,7 @@ export const vaultxRouter = router({
       vipPriceCents: z.number().int().min(100).optional(),
       telegramMode: z.enum(["FAST", "BOOST", "FULL"]).default("BOOST"),
       sourceMediaUrl: z.string().url(),
+      evidenceId: z.string().uuid(),
       resolution: z.enum(["540p", "720p", "1080p"]).default("720p"),
       length: z.enum(["5", "6", "8", "10"]).default("6"),
       mode: z.enum(["std", "pro"]).default("pro"),
@@ -2268,6 +2301,20 @@ export const vaultxRouter = router({
 
       const creatorId = await getCreatorId(ctx.user.id);
       const cid = creatorId || ctx.user.id;
+      let evidenceContext: Awaited<ReturnType<typeof assertBodyCinemaEvidenceReady>>;
+      try {
+        evidenceContext = await assertBodyCinemaEvidenceReady({
+          creatorId: Number(ctx.user.id),
+          evidenceId: input.evidenceId,
+          sourceMediaUrl: input.sourceMediaUrl,
+        });
+      } catch (evidenceError: any) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: evidenceError?.message || "Verified Body Cinema source evidence is required before provider generation.",
+        });
+      }
+      const evidenceBackedDirection = buildEvidenceBackedDirectionPrompt(evidenceContext.direction);
       const publicTeaserCopy = qualityGate.check(buildVaultxPackagePublicCopy(input), {
         surface: "vaultx-drop",
         context: "vaultx",
@@ -2308,18 +2355,21 @@ export const vaultxRouter = router({
             input.telegramMode,
             input.withNarration
           );
-          prompt = buildPresetPolloPrompt(
-            aiStackResult.enhancedPrompt,
-            input.telegramMode,
-            input.title.trim()
-          );
+          prompt = [
+            buildPresetPolloPrompt(
+              aiStackResult.enhancedPrompt,
+              input.telegramMode,
+              input.title.trim()
+            ),
+            evidenceBackedDirection,
+          ].join(" ");
         } catch (stackErr: any) {
           // Fallback to generic prompt if AI stack fails
-          prompt = buildVaultxPackagePolloPrompt(pkg);
+          prompt = [buildVaultxPackagePolloPrompt(pkg), evidenceBackedDirection].join(" ");
           aiStackResult = { stackLog: [`AI stack failed: ${stackErr?.message || "unknown"}`] };
         }
       } else {
-        prompt = buildVaultxPackagePolloPrompt(pkg);
+        prompt = [buildVaultxPackagePolloPrompt(pkg), evidenceBackedDirection].join(" ");
       }
       const reusable = await findMatchingPolloGeneration({
         userId: Number(ctx.user.id),
@@ -2354,7 +2404,7 @@ export const vaultxRouter = router({
         reusedExistingPolloAsset = true;
         await rawExec(
           `UPDATE vaultx_revenue_packages
-           SET source_media_url = ?, asset_prompt = ?, pollo_job_id = ?, asset_status = 'succeed', asset_url = ?, asset_quality_passed = 1, status = 'asset_ready'
+           SET source_media_url = ?, asset_prompt = ?, pollo_job_id = ?, asset_status = 'succeed', asset_url = ?, asset_quality_passed = 0, status = 'asset_ready_pending_review'
            WHERE id = ?`,
           [input.sourceMediaUrl, prompt, jobId, readyArtifact.output_url || reusable.videoUrl, packageId]
         );
@@ -2614,7 +2664,11 @@ export const vaultxRouter = router({
     }),
 
   finalizeRevenuePath: protectedProcedure
-    .input(z.object({ packageId: z.number().int().positive() }))
+    .input(z.object({
+      packageId: z.number().int().positive(),
+      evidenceId: z.string().uuid().optional(),
+      outputReviewId: z.string().uuid().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
       if (!stripe) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "STRIPE_SECRET_KEY is not configured for VaultX checkout creation." });
       await ensureVaultxRevenuePackageSchema();
@@ -2676,7 +2730,7 @@ export const vaultxRouter = router({
           });
           await rawExec(
             `UPDATE vaultx_revenue_packages
-             SET asset_status = ?, asset_url = ?, asset_quality_passed = 1, status = 'asset_ready'
+             SET asset_status = ?, asset_url = ?, asset_quality_passed = 0, status = 'asset_ready_pending_review'
              WHERE id = ?`,
             [generationStatus, readyArtifact.output_url || videoUrl, packageId]
           );
@@ -2687,6 +2741,21 @@ export const vaultxRouter = router({
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message: `VaultX package ${packageId} is not ready for checkout/Telegram finalization. Current Pollo status: ${generationStatus || "waiting"}; jobId: ${jobId || "missing"}.`,
+        });
+      }
+
+      try {
+        if (!input.evidenceId || !input.outputReviewId) throw new Error("An accepted Body Cinema output review must be supplied before finalization.");
+        await assertAcceptedBodyCinemaOutputReview({
+          creatorId,
+          evidenceId: input.evidenceId,
+          outputReviewId: input.outputReviewId,
+          sourceMediaUrl: String(pkg.source_media_url || ""),
+        });
+      } catch (reviewError: any) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: reviewError?.message || "An accepted Body Cinema output review is required before finalization.",
         });
       }
 
