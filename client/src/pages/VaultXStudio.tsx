@@ -2,6 +2,7 @@ import { ReactNode, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { ArrowRight, BadgeDollarSign, Camera, Check, Clapperboard, Crown, Film, Image, Library, Loader2, RadioTower, Route, Settings, ShieldCheck, Sparkles, Upload, Wand2, Zap } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { analyzeBodyCinemaSourceLocally } from "@/lib/bodyCinemaPerception";
 import { toast } from "sonner";
 
 const accent = "#F2B15B";
@@ -204,6 +205,9 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   const [title, setTitle] = useState("VaultX premium trailer drop");
   const [teaserDescription, setTeaserDescription] = useState("A creator-owned premium teaser route built to turn one source asset into a cinematic preview, paid unlock, tracked fan click, follow-up, and VIP escalation lane.");
   const [sourceMediaUrl, setSourceMediaUrl] = useState("");
+  const [sourceEvidence, setSourceEvidence] = useState<any>(null);
+  const [sourceAnalysisState, setSourceAnalysisState] = useState<"idle" | "analyzing" | "rejected" | "ready">("idle");
+  const [selectedDirectionId, setSelectedDirectionId] = useState<string | null>(null);
   const [studioUploading, setStudioUploading] = useState(false);
   const [studioUploadPct, setStudioUploadPct] = useState(0);
   const [studioFileName, setStudioFileName] = useState("");
@@ -235,6 +239,8 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   // Body Cinema multi-model router integration
   const bodyCinemaProviders = trpc.bodyCinema.getProviders.useQuery(undefined, { retry: false, refetchInterval: 30000 });
   const bodyCinemaSubmit = trpc.bodyCinema.submitJob.useMutation();
+  const analyzeBodyCinemaSource = (trpc as any).bodyCinema.analyzeSource.useMutation();
+  const approveBodyCinemaDirection = (trpc as any).bodyCinema.approveDirection.useMutation();
   // Body Cinema Presets
   const presetsQuery = (trpc as any).bodyCinema.getPresets.useQuery(
     presetCategory !== "all" ? { category: presetCategory } : {},
@@ -275,6 +281,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
   const launchChecklist = [
     { label: "Consent lock", detail: "Adult-content and creator authorization confirmed", ready: adultContentFlag && consentConfirmed },
     { label: "Source asset", detail: "Your video is uploaded and ready", ready: Boolean(sourceMediaUrl.trim()) },
+    { label: "Evidence gate", detail: "Local source analysis verified and one supported treatment approved", ready: sourceEvidence?.analysisStatus === "verified" && sourceEvidence?.reviewStatus === "ready" && Boolean(sourceEvidence?.selectedDirectionId) },
     { label: "Economics", detail: `Paid unlock ${formatMoney(livePriceCents)} • VIP ${liveVipPriceCents >= 100 ? formatMoney(liveVipPriceCents) : "optional"}`, ready: livePriceCents >= 100 },
     { label: "Provider", detail: selectedProviderProfile?.label ? `${selectedProviderProfile.label} package endpoint` : "Select a launch provider", ready: providerLaunchReady },
     { label: "Spend guard", detail: `Estimated ${formatMoney(estimatedCostCents)} against ${formatMoney(budgetCapCents)} cap`, ready: budgetAllowsLaunch },
@@ -312,6 +319,45 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
     });
   };
 
+  const runSourceAnalysis = async (file: File, uploadedUrl: string) => {
+    setSourceAnalysisState("analyzing");
+    setSourceEvidence(null);
+    setSelectedDirectionId(null);
+    try {
+      const localEvidence = await analyzeBodyCinemaSourceLocally(file);
+      const persisted = await analyzeBodyCinemaSource.mutateAsync({
+        sourceMediaUrl: uploadedUrl,
+        sourceType: "video",
+        sourceFingerprint: localEvidence.sourceFingerprint,
+        analysisVersion: localEvidence.analyzer,
+        frameEvidence: localEvidence.frameEvidence,
+      });
+      setSourceEvidence(persisted);
+      setSourceAnalysisState(persisted.analysisStatus === "verified" ? "ready" : "rejected");
+      if (persisted.analysisStatus === "verified") {
+        toast.success("Source evidence verified. Pick one treatment backed by the detected pose evidence.");
+      } else {
+        toast.error("Body Cinema could not verify this source safely. See the evidence report and replace the clip if needed.");
+      }
+    } catch (error: any) {
+      setSourceAnalysisState("rejected");
+      setSourceEvidence(null);
+      toast.error(error?.message || "Local source analysis failed before any provider request.");
+    }
+  };
+
+  const chooseEvidenceBackedDirection = async (directionId: string) => {
+    if (!sourceEvidence?.id) return;
+    try {
+      const approved = await approveBodyCinemaDirection.mutateAsync({ evidenceId: sourceEvidence.id, directionId });
+      setSourceEvidence(approved);
+      setSelectedDirectionId(directionId);
+      toast.success("Treatment approved from the observed source evidence. Provider launch remains locked until every other gate is ready.");
+    } catch (error: any) {
+      toast.error(error?.message || "This treatment could not be approved from the available source evidence.");
+    }
+  };
+
   const handleLaunch = async () => {
     if (!adultContentFlag || !consentConfirmed) {
       toast.error("VaultX requires adult-content opt-in and creator consent before launch.");
@@ -319,6 +365,10 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
     }
     if (!sourceMediaUrl.trim()) {
       toast.error("Upload your video before starting generation.");
+      return;
+    }
+    if (sourceEvidence?.analysisStatus !== "verified" || sourceEvidence?.reviewStatus !== "ready" || !sourceEvidence?.selectedDirectionId) {
+      toast.error("Run local source analysis and approve one evidence-backed treatment before requesting any provider generation.");
       return;
     }
     const priceCents = moneyToCents(price);
@@ -347,6 +397,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
         vipPriceCents: vipPriceCents >= 100 ? vipPriceCents : undefined,
         telegramMode,
         sourceMediaUrl: sourceMediaUrl.trim(),
+        evidenceId: sourceEvidence.id,
         resolution: telegramMode === "FULL" ? "1080p" : "720p",
         length: telegramMode === "FULL" ? "8" : telegramMode === "BOOST" ? "6" : "5",
         mode: telegramMode === "FAST" ? "std" : "pro",
@@ -631,7 +682,8 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
                         xhr.send(fd);
                       });
                       setSourceMediaUrl(url);
-                      toast.success("Video uploaded");
+                      toast.success("Video uploaded. Verifying source evidence locally before any generation path can unlock.");
+                      await runSourceAnalysis(file, url);
                     } catch (err: any) {
                       toast.error(err?.message || "Upload failed");
                     } finally { setStudioUploading(false); }
@@ -640,11 +692,79 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               ) : (
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
                   <span className="flex items-center gap-2 text-sm text-white"><Check size={16} className="text-emerald-300" /> {studioFileName || "Video"} — uploaded</span>
-                  <button type="button" onClick={() => { setSourceMediaUrl(""); setStudioFileName(""); setStudioUploadPct(0); }} className="text-xs font-black text-[#777] hover:text-white">Replace</button>
+                  <button type="button" onClick={() => { setSourceMediaUrl(""); setStudioFileName(""); setStudioUploadPct(0); setSourceEvidence(null); setSelectedDirectionId(null); setSourceAnalysisState("idle"); }} className="text-xs font-black text-[#777] hover:text-white">Replace</button>
                 </div>
               )}
               <span className="text-xs font-medium leading-5 text-[#777]">Use only media you own or are authorized to transform, monetize, and distribute.</span>
             </div>
+
+            {sourceMediaUrl && (
+              <div className="rounded-[1.5rem] border border-[#C9A84C]/30 bg-[#0a0906] p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-[#C9A84C]">Source evidence gate</p>
+                    <h3 className="mt-1 text-lg font-black text-white">
+                      {sourceAnalysisState === "analyzing" ? "Analyzing actual source frames locally…" : sourceEvidence?.analysisStatus === "verified" ? "Verified source map — choose one treatment" : "Source analysis needs a clearer clip"}
+                    </h3>
+                    <p className="mt-1 max-w-2xl text-xs leading-5 text-[#999]">Pose landmarks are sampled locally in this browser. No provider generation request is sent during this step. The selected treatment will be bound to the observed source evidence.</p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-xs font-black ${sourceAnalysisState === "analyzing" ? "bg-amber-500/15 text-amber-200" : sourceEvidence?.analysisStatus === "verified" ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}>
+                    {sourceAnalysisState === "analyzing" ? "LOCAL ANALYSIS" : sourceEvidence?.analysisStatus === "verified" ? "EVIDENCE VERIFIED" : "NOT READY"}
+                  </span>
+                </div>
+
+                {sourceAnalysisState === "analyzing" && <div className="mt-4 flex items-center gap-2 text-sm text-[#d6d6d6]"><Loader2 className="animate-spin text-[#C9A84C]" size={16} /> Sampling frame landmarks and motion evidence…</div>}
+
+                {sourceEvidence?.rejectionReasons?.length > 0 && (
+                  <div className="mt-4 rounded-2xl border border-red-500/25 bg-red-500/10 p-3 text-xs leading-5 text-red-100">
+                    {sourceEvidence.rejectionReasons.map((reason: string) => <p key={reason}>• {reason}</p>)}
+                  </div>
+                )}
+
+                {sourceEvidence?.analysisStatus === "verified" && (
+                  <>
+                    <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                      {Object.entries(sourceEvidence.bodyMap || {}).filter(([key]) => !["motion", "frameCoverage"].includes(key)).map(([region, confidence]: any) => (
+                        <div key={region} className="rounded-xl border border-white/10 bg-black/40 px-3 py-2">
+                          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#777]">{region}</p>
+                          <p className="mt-1 text-sm font-black text-white">{Math.round(Number(confidence) * 100)}% visible</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 grid gap-3 xl:grid-cols-3">
+                      {(sourceEvidence.directions || []).map((direction: any) => {
+                        const isSelected = sourceEvidence.selectedDirectionId === direction.id || selectedDirectionId === direction.id;
+                        const supported = Number(direction.confidence) >= 40;
+                        return (
+                          <div key={direction.id} className={`rounded-2xl border p-4 ${isSelected ? "border-[#C9A84C] bg-[#1c1607]" : "border-white/10 bg-black/40"}`}>
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-black text-white">{direction.label}</p>
+                                <p className="mt-1 text-xs font-semibold text-[#C9A84C]">{direction.confidence}% source support</p>
+                              </div>
+                              {isSelected && <Check size={18} className="text-[#C9A84C]" />}
+                            </div>
+                            <p className="mt-3 text-xs leading-5 text-[#d6d6d6]"><span className="font-black text-white">Camera:</span> {direction.camera}</p>
+                            <p className="mt-2 text-xs leading-5 text-[#d6d6d6]"><span className="font-black text-white">Movement:</span> {direction.movement}</p>
+                            <p className="mt-2 text-xs leading-5 text-[#999]"><span className="font-black text-[#d6d6d6]">Different because:</span> {direction.distinction}</p>
+                            <div className="mt-3 space-y-1 text-[11px] text-[#999]">{(direction.evidence || []).map((item: string) => <p key={item}>• {item}</p>)}</div>
+                            <button
+                              type="button"
+                              disabled={!supported || approveBodyCinemaDirection.isPending || isSelected}
+                              onClick={() => chooseEvidenceBackedDirection(direction.id)}
+                              className="mt-4 w-full rounded-full border border-[#C9A84C] px-4 py-2 text-xs font-black text-[#C9A84C] transition hover:bg-[#C9A84C] hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              {isSelected ? "Treatment approved" : supported ? "Use this evidence-backed treatment" : "Insufficient source support"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             <label className="grid gap-2 text-sm font-bold text-[#d6d6d6]">
               Teaser-to-unlock description
               <textarea value={teaserDescription} onChange={(e) => setTeaserDescription(e.target.value)} rows={4} placeholder="Describe the cinematic hook, preview promise, paid unlock, and VIP escalation in plain operator language." className="rounded-2xl border border-[#242424] bg-[#101010] px-4 py-3 text-white outline-none focus:border-[#C9A84C]" />
