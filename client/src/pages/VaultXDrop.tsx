@@ -98,6 +98,21 @@ const QUICK_PRESETS: QuickPreset[] = [
   { id: "heat-mirror-moment", name: "Mirror Moment", direction: "Reflections, depth, and a private-campaign editorial finish.", focus: "Reflection" },
 ];
 
+const TREATMENT_PREVIEW: Record<string, string> = {
+  "body-curves-360": "/assets/preview-curves-360.mp4",
+  "body-butt-arch": "/assets/preview-arch.mp4",
+  "body-waist-curve": "/assets/preview-waist.mp4",
+  "body-abs-definition": "/assets/preview-abs.mp4",
+  "body-thigh-close": "/assets/preview-thigh.mp4",
+  "body-full-silhouette": "/assets/preview-silhouette.mp4",
+  "body-lower-back-dimples": "/assets/preview-lower-back.mp4",
+  "body-hips-sway": "/assets/preview-hips.mp4",
+  "body-legs-full": "/assets/preview-legs.mp4",
+  "body-back-spine": "/assets/preview-back.mp4",
+  "body-chest-decollete": "/assets/preview-decollete.mp4",
+  "heat-mirror-moment": "/assets/preview-mirror.mp4",
+};
+
 function stepIndex(step: Step) {
   return STEP_ORDER.indexOf(step);
 }
@@ -417,6 +432,33 @@ export default function VaultXDrop() {
               <div style={{ display: "inline-flex", alignItems: "center", gap: 7, color: GREEN, fontSize: 11, fontWeight: 800, marginTop: 4 }}><ShieldCheck size={14} /> 100% Creator Owned & Protected</div>
               <input ref={fileInputRef} type="file" accept="video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-msvideo,video/x-m4v" style={{ display: "none" }} onChange={handleFileUpload} />
             </label>
+
+            <div style={{ margin: "44px -16px 0", padding: "32px 16px", background: "linear-gradient(180deg, rgba(213,183,96,0.06), transparent)", borderTop: `1px solid ${BORDER}` }}>
+              <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", textAlign: "center", margin: "0 0 10px" }}>See the treatments move</p>
+              <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 38, lineHeight: 0.95, letterSpacing: "0.03em", textAlign: "center", margin: "0 0 12px" }}>Pick a world.<br /><span style={{ color: GOLD }}>We build the drop.</span></h2>
+              <p style={{ maxWidth: 440, margin: "0 auto 24px", color: MUTED, fontSize: 13, lineHeight: 1.55, textAlign: "center" }}>Every look begins as a moving treatment—your clip, your identity, your version of the result.</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+                {QUICK_PRESETS.map(preset => (
+                  <div key={`showcase-${preset.id}`} style={{ position: "relative", overflow: "hidden", aspectRatio: "3 / 4", borderRadius: 16, background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 8px 20px rgba(0,0,0,0.35)" }}>
+                    <video src={TREATMENT_PREVIEW[preset.id]} autoPlay loop muted playsInline preload="metadata" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 65%)" }} />
+                    <div style={{ position: "absolute", left: 12, right: 12, bottom: 12 }}>
+                      <p style={{ margin: 0, color: "#fff", fontSize: 15, fontWeight: 900, textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>{preset.name}</p>
+                      <p style={{ margin: "3px 0 0", color: GOLD, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 800 }}>{preset.focus}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ position: "relative", overflow: "hidden", borderRadius: 20, marginTop: 20, aspectRatio: "9 / 16", maxHeight: 520, background: "#000", border: `1px solid ${GOLD_BORDER}`, boxShadow: "0 14px 36px rgba(213,183,96,0.12)" }}>
+                <video src="/assets/final-drop.mp4" autoPlay loop muted playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.05) 65%)" }} />
+                <div style={{ position: "absolute", left: 20, right: 20, bottom: 20 }}>
+                  <p style={{ margin: 0, color: GOLD, fontSize: 10, fontFamily: "monospace", letterSpacing: "0.16em", textTransform: "uppercase" }}>Finished Drop Preview</p>
+                  <p style={{ margin: "8px 0 0", color: "#fff", fontSize: 24, fontWeight: 900, lineHeight: 1.05 }}>This is the energy your fans unlock.</p>
+                  <p style={{ margin: "8px 0 0", color: "rgba(255,255,255,0.75)", fontSize: 12, lineHeight: 1.45 }}>A premium teaser, built around the footage you own and the treatment you choose.</p>
+                </div>
+              </div>
+            </div>
           </section>
         )}
 
@@ -463,7 +505,7 @@ export default function VaultXDrop() {
             
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
               {QUICK_PRESETS.map(preset => {
-                const videoSrc = `/assets/preview-${preset.id.replace('body-', '').replace('heat-', '')}.mp4`;
+                const videoSrc = TREATMENT_PREVIEW[preset.id];
                 return (
                   <button key={preset.id} type="button" className="body-cinema-button" onClick={() => void handleSelectPreset(preset)} disabled={analyzingSource || sourceEvidence?.analysisStatus !== "verified"} style={{ position: "relative", overflow: "hidden", minHeight: 240, padding: 0, textAlign: "left", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, color: "#fff", cursor: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? "not-allowed" : "pointer", opacity: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? 0.4 : 1, boxShadow: "0 4px 15px rgba(0,0,0,0.3)" }}>
                     <video src={videoSrc} autoPlay loop muted playsInline style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.6 }} />
