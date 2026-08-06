@@ -18,15 +18,28 @@ function makeLandmarks(offset = 0) {
 }
 
 function makeFrames(fingerprint: string): BodyCinemaFrameEvidence[] {
-  return [0, 1000, 2000, 3000].map((timestampMs, index) => ({
-    timestampMs,
-    width: 1080,
-    height: 1920,
-    frameFingerprint: index < 2 ? fingerprint : fingerprint.split("").reverse().join(""),
-    brightness: 0.56,
-    sharpness: 0.88,
-    landmarks: makeLandmarks(index * 0.004),
-  }));
+  return Array.from({ length: 12 }, (_, index) => {
+    const timestampMs = index * 700;
+    return {
+      timestampMs,
+      width: 1080,
+      height: 1920,
+      frameFingerprint: index < 4 ? fingerprint : index < 8 ? fingerprint.split("").reverse().join("") : fingerprint.slice(4) + fingerprint.slice(0, 4),
+      brightness: 0.44 + (index % 4) * 0.07,
+      contrast: 0.42 + (index % 5) * 0.09,
+      sharpness: 0.58 + (index % 4) * 0.09,
+      colorWarmth: 0.35 + (index % 4) * 0.1,
+      subjectCoverage: 0.2 + (index % 7) * 0.08,
+      face: {
+        present: index % 4 !== 0,
+        centerX: 0.46 + (index % 3) * 0.03,
+        centerY: 0.27 + (index % 2) * 0.02,
+        coverage: 0.025 + ((index + 2) % 5) * 0.014,
+        expressionSignals: { mouthSmileLeft: 0.1 + (index % 3) * 0.05 },
+      },
+      landmarks: makeLandmarks(index * 0.004),
+    };
+  });
 }
 
 function sourceEvidence(): BodyCinemaEvidenceRecord {
@@ -38,6 +51,7 @@ function sourceEvidence(): BodyCinemaEvidenceRecord {
     sourceMediaUrl: "https://creatorvault.live/uploads/source.mp4",
     sourceType: "video",
     sourceFingerprint: "1".repeat(64),
+    analysisVersion: "adaptive-video-source-intelligence/v2",
     analysisStatus: "verified",
     reviewStatus: "ready",
     selectedDirectionId: "portrait-command",
@@ -52,19 +66,26 @@ function sourceEvidence(): BodyCinemaEvidenceRecord {
 }
 
 describe("Body Cinema no-spend source intelligence", () => {
-  it("derives durable scene boundaries, pose-ranked source shots, and three materially distinct direction plans", () => {
+  it("derives durable scene boundaries, multi-signal shot ranks, and three timecoded treatment plans", () => {
     const analysis = deriveBodyCinemaDirections(makeFrames("1234567890abcdef"));
 
     expect(analysis.scenes.length).toBeGreaterThanOrEqual(1);
-    expect(analysis.shotRankings).toHaveLength(4);
-    expect(analysis.shotRankings[0].score).toBeGreaterThanOrEqual(65);
+    expect(analysis.shotRankings).toHaveLength(12);
+    expect(analysis.shotRankings[0].score).toBeGreaterThanOrEqual(55);
+    expect(analysis.shotRankings[0]).toMatchObject({
+      faceSupport: expect.any(Number),
+      subjectCoverage: expect.any(Number),
+      cropSafety: expect.any(Number),
+    });
     expect(analysis.directions.map((direction) => direction.id)).toEqual([
       "portrait-command",
       "silhouette-control",
       "motion-tension",
     ]);
     expect(new Set(analysis.directions.map((direction) => direction.distinction)).size).toBe(3);
-    expect(analysis.directions.every((direction) => direction.evidence.some((item) => item.includes("Best source shot")))).toBe(true);
+    expect(analysis.directions.every((direction) => direction.timeline.length === 5)).toBe(true);
+    const treatmentShotSequences = analysis.directions.map((direction) => direction.timeline.map((beat) => beat.sourceTimestampMs).join(","));
+    expect(new Set(treatmentShotSequences).size).toBe(3);
   });
 
   it("accepts a sufficiently different, source-supported treatment and records why", () => {

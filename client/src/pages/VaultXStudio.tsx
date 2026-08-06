@@ -412,9 +412,9 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
       await utils.vaultx.getLaunchCapabilityMatrix.invalidate();
       await statusQuery.refetch();
       if ((result as any).complete) {
-        toast.success("VaultX Body Cinema package generated, checkout attached, and Telegram route published.");
+        toast.success("The review package is ready. Checkout and distribution remain locked until an accepted output review and explicit finalization.");
       } else {
-        toast.success("Pollo accepted the Body Cinema job. Checkout and Telegram will unlock when the artifact is ready.");
+        toast.success("The provider job is queued for review. Checkout and distribution remain locked until an accepted output review and explicit finalization.");
       }
     } catch (error: any) {
       toast.error(error?.message || "VaultX launch failed.");
@@ -431,7 +431,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
       applyLaunchResult(result);
       await utils.vaultx.getLaunchCapabilityMatrix.invalidate();
       await statusQuery.refetch();
-      toast.success("VaultX checkout, content row, Telegram route, and proof events are live.");
+      toast.success("Finalization completed after the required review controls were accepted.");
     } catch (error: any) {
       toast.error(error?.message || "VaultX finalization failed.");
     }
@@ -442,8 +442,8 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
       {/* Creator-facing header — no developer panels, no GAP badges */}
       <div className="mb-6">
         <p className="mb-2 inline-flex rounded-full border border-[#C9A84C]/40 bg-black px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Body Cinema</p>
-        <h2 className="text-2xl font-black text-white md:text-3xl">Turn your video into a paid drop.</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#999999]">Tap to upload from your phone or computer, choose the creative direction, set your price, and launch. CreatorVault prepares the cinematic version and your sales package in one flow. You keep 85% of every sale.</p>
+        <h2 className="text-2xl font-black text-white md:text-3xl">Plan a review-ready paid drop.</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#999999]">Tap to upload from your phone or computer, choose the creative direction, set your price, and launch. CreatorVault builds a source-backed treatment and review package. A separate accepted output review is required before any checkout or distribution decision. You keep 85% of every sale.</p>
       </div>
 
       {/* ── BODY CINEMA PRESET PICKER ──────────────────────────────────── */}
@@ -452,14 +452,13 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
           <div>
             <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-[#C9A84C]">Body Cinema Presets</p>
             <h3 className="text-2xl font-black text-white">Choose a preset or build from scratch</h3>
-            <p className="mt-1 text-sm text-[#999]">Each preset is engineered for maximum conversion — prompts, motion, pricing, and copy all pre-loaded.</p>
+            <p className="mt-1 text-sm text-[#999]">Templates define a starting editorial language. Source evidence determines whether a treatment is supported; pricing and publishing remain creator decisions.</p>
           </div>
           <div className="flex items-center gap-3">
             {presetCategoriesQuery.data?.stats && (
               <div className="rounded-2xl border border-white/10 bg-black/50 px-4 py-2 text-xs text-[#b8b8b8]">
-                <span className="font-black text-[#C9A84C]">{presetCategoriesQuery.data.stats.total}</span> presets &nbsp;·&nbsp;
-                <span className="font-black text-[#C9A84C]">{presetCategoriesQuery.data.stats.ssGrade}</span> SS grade &nbsp;·&nbsp;
-                avg <span className="font-black text-[#C9A84C]">{presetCategoriesQuery.data.stats.avgConversionScore}</span>/10 conversion
+                <span className="font-black text-[#C9A84C]">{presetCategoriesQuery.data.stats.total}</span> treatment templates &nbsp;·&nbsp;
+                outcome evidence <span className="font-black text-[#C9A84C]">not yet measured</span>
               </div>
             )}
             <button
@@ -477,7 +476,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
         {/* Selected preset display */}
         {selectedPresetId && !presetSearchOpen && (() => {
           const preset = presetsQuery.data?.presets?.find((p: any) => p.id === selectedPresetId)
-            || presetCategoriesQuery.data?.topConverting?.find((p: any) => p.id === selectedPresetId);
+            || presetCategoriesQuery.data?.featuredTemplates?.find((p: any) => p.id === selectedPresetId);
           if (!preset) return null;
           return (
             <div className="rounded-[1.25rem] border border-[#C9A84C]/40 bg-[#130f05] p-4">
@@ -486,7 +485,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
                   <div className="mb-1 flex items-center gap-2">
                     <span className="rounded-full bg-[#C9A84C] px-3 py-1 text-xs font-black text-black">{preset.productionGrade} GRADE</span>
                     <span className="rounded-full border border-white/10 bg-black/50 px-3 py-1 text-xs font-black text-white">Heat {preset.heatLevel}/5</span>
-                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-300">Conversion {preset.conversionScore}/10</span>
+                    <span className="rounded-full border border-[#C9A84C]/30 bg-[#C9A84C]/10 px-3 py-1 text-xs font-black text-[#C9A84C]">Outcome evidence: unmeasured</span>
                   </div>
                   <h4 className="text-xl font-black text-white">{preset.name}</h4>
                   <p className="mt-1 text-sm text-[#C9A84C]">{preset.tagline}</p>
@@ -554,11 +553,11 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
             </div>
 
             {/* Top converting banner */}
-            {presetCategory === "all" && presetCategoriesQuery.data?.topConverting?.length > 0 && (
+            {presetCategory === "all" && presetCategoriesQuery.data?.featuredTemplates?.length > 0 && (
               <div className="mb-4">
-                <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-[#C9A84C]">🔥 Top Converting</p>
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-[#C9A84C]">Featured Treatment Templates</p>
                 <div className="grid gap-3 md:grid-cols-5">
-                  {presetCategoriesQuery.data.topConverting.map((preset: any) => (
+                  {presetCategoriesQuery.data.featuredTemplates.map((preset: any) => (
                     <button
                       key={preset.id}
                       onClick={() => applyPreset(preset)}
@@ -568,7 +567,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
                     >
                       <div className="mb-2 flex items-center justify-between">
                         <span className="rounded-full bg-[#C9A84C] px-2 py-0.5 text-[9px] font-black text-black">{preset.productionGrade}</span>
-                        <span className="text-[9px] font-black text-emerald-300">{preset.conversionScore}/10</span>
+                        <span className="text-[9px] font-black text-[#C9A84C]">Template</span>
                       </div>
                       <p className="text-sm font-black text-white">{preset.name}</p>
                       <p className="mt-1 text-[10px] text-[#C9A84C]">{preset.tagline}</p>
@@ -603,7 +602,7 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
                   <p className="mt-2 text-[10px] leading-4 text-[#777]">{preset.teaserDescription?.slice(0, 60)}...</p>
                   <div className="mt-3 flex items-center justify-between">
                     <span className="text-[10px] font-black text-[#C9A84C]">${preset.suggestedPrice} PPV</span>
-                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black text-emerald-300">{preset.conversionScore}/10</span>
+                    <span className="rounded-full border border-[#C9A84C]/30 bg-[#C9A84C]/10 px-2 py-0.5 text-[9px] font-black text-[#C9A84C]">Template</span>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {(preset.tags || []).slice(0, 3).map((tag: string) => (
@@ -760,6 +759,48 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
                         );
                       })}
                     </div>
+
+                    <div className="mt-4 rounded-2xl border border-white/10 bg-black/35 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#C9A84C]">Shot Intelligence Graph</p>
+                          <p className="mt-1 text-xs leading-5 text-[#999]">Measured locally from source frames. These are production signals—not an attractiveness, audience-desire, or conversion prediction.</p>
+                        </div>
+                        <div className="flex gap-2 text-[10px] font-black uppercase tracking-[0.1em] text-[#d6d6d6]">
+                          <span className="rounded-full border border-white/10 px-2 py-1">{sourceEvidence?.frameEvidence?.length || 0} sampled frames</span>
+                          <span className="rounded-full border border-white/10 px-2 py-1">{sourceEvidence?.scenes?.length || 0} detected scenes</span>
+                        </div>
+                      </div>
+                      <div className="mt-3 grid gap-2 md:grid-cols-2">
+                        {(sourceEvidence?.shotRankings || []).slice(0, 5).map((shot: any, index: number) => (
+                          <div key={`${shot.timestampMs}-${index}`} className="rounded-xl border border-white/10 bg-black/45 px-3 py-2 text-xs text-[#b8b8b8]">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="font-black text-white">#{index + 1} · {Math.round(Number(shot.timestampMs || 0) / 100) / 10}s</span>
+                              <span className="font-black text-[#C9A84C]">{Number(shot.score || 0)}/100</span>
+                            </div>
+                            <p className="mt-1 leading-5 text-[#777]">{shot.reason}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 xl:grid-cols-3">
+                      {(sourceEvidence.directions || []).filter((direction: any) => Number(direction.confidence) >= 40).map((direction: any) => (
+                        <div key={`${direction.id}-timeline`} className="rounded-2xl border border-white/10 bg-black/35 p-4">
+                          <p className="text-xs font-black uppercase tracking-[0.12em] text-[#C9A84C]">{direction.label} plan</p>
+                          <div className="mt-3 space-y-2">
+                            {(direction.timeline || []).map((beat: any) => (
+                              <div key={beat.id} className="rounded-xl border border-white/10 bg-black/50 px-3 py-2">
+                                <div className="flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[0.1em] text-white">
+                                  <span>{beat.id}</span><span>{Math.round(Number(beat.sourceTimestampMs || 0) / 100) / 10}s source</span>
+                                </div>
+                                <p className="mt-1 text-[11px] leading-5 text-[#999]">{beat.direction}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </>
                 )}
               </div>
@@ -827,8 +868,8 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
               <label className="flex items-center gap-3 rounded-2xl border border-[#C9A84C]/25 bg-[#120d05] p-4 text-sm text-[#d6d6d6] cursor-pointer">
                 <input type="checkbox" checked={withNarration} onChange={(e) => setWithNarration(e.target.checked)} className="h-5 w-5 accent-[#C9A84C]" />
                 <div>
-                  <p className="font-black text-white">Generate KingCam voiceover narration</p>
-                  <p className="text-xs text-[#999] mt-0.5">ElevenLabs voice clone auto-writes and records a drop script tuned to this preset</p>
+                  <p className="font-black text-white">Prepare KingCam voiceover narration</p>
+                  <p className="text-xs text-[#999] mt-0.5">Optional narration is prepared for creator review; no voice or provider request is sent without a separate authorized execution.</p>
                 </div>
               </label>
             )}
@@ -836,27 +877,27 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
             {/* AI Stack preview — show when preset selected */}
             {selectedPresetId && (() => {
               const preset = presetsQuery.data?.presets?.find((p: any) => p.id === selectedPresetId)
-                || presetCategoriesQuery.data?.topConverting?.find((p: any) => p.id === selectedPresetId);
+                || presetCategoriesQuery.data?.featuredTemplates?.find((p: any) => p.id === selectedPresetId);
               if (!preset) return null;
               return (
                 <div className="rounded-2xl border border-[#C9A84C]/20 bg-[#0a0800] p-4">
-                  <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-[#C9A84C]">AI Stack Preview</p>
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-[#C9A84C]">Treatment Package Preview</p>
                   <div className="grid gap-2 md:grid-cols-4 text-xs">
                     <div className="rounded-2xl border border-white/10 bg-black/50 p-3">
-                      <p className="font-black text-white">GPT-4o Scene</p>
-                      <p className="text-emerald-300 mt-1">✓ Will enhance prompt</p>
+                      <p className="font-black text-white">Source Intelligence</p>
+                      <p className="text-emerald-300 mt-1">✓ Local evidence will constrain the treatment</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-black/50 p-3">
-                      <p className="font-black text-white">Preset Prompt</p>
-                      <p className="text-emerald-300 mt-1">✓ {preset.name} locked</p>
+                      <p className="font-black text-white">Treatment Template</p>
+                      <p className="text-emerald-300 mt-1">✓ {preset.name} selected as a starting template</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-black/50 p-3">
-                      <p className="font-black text-white">Copy Auto-Pack</p>
-                      <p className="text-emerald-300 mt-1">✓ All platforms</p>
+                      <p className="font-black text-white">Package Draft</p>
+                      <p className="text-emerald-300 mt-1">✓ Creator review required before distribution</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-black/50 p-3">
-                      <p className="font-black text-white">Conversion Est.</p>
-                      <p className="text-[#C9A84C] font-black mt-1">{preset.conversionScore}/10</p>
+                      <p className="font-black text-white">Outcome Evidence</p>
+                      <p className="text-[#C9A84C] font-black mt-1">Not measured yet</p>
                     </div>
                   </div>
                 </div>
@@ -878,11 +919,11 @@ function LaunchConsole({ selectedMake }: { selectedMake: MakeChoice }) {
             <div className="flex flex-wrap gap-3">
               <button onClick={handleLaunch} disabled={working || !launchReady} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#C9A84C] px-7 py-4 text-base font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
                 {launchRevenuePath.isPending ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
-                {launchRevenuePath.isPending ? "Generating your drop..." : launchReady ? "Launch This Drop" : "Complete the steps above"}
+                {launchRevenuePath.isPending ? "Creating review package..." : launchReady ? "Create review package" : "Complete the steps above"}
               </button>
               <button onClick={handleFinalize} disabled={working || !packageId} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-[#C9A84C]/70 px-7 py-4 text-base font-black text-[#C9A84C] transition hover:bg-[#C9A84C] hover:text-black disabled:cursor-not-allowed disabled:opacity-60">
                 {finalizeRevenuePath.isPending ? <Loader2 size={18} className="animate-spin" /> : <Route size={18} />}
-                Finalize checkout + Telegram
+                Finalize after accepted review
               </button>
             </div>
           </div>

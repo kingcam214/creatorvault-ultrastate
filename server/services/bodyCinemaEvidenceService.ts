@@ -16,7 +16,11 @@ export type BodyCinemaFrameEvidence = {
   sceneId?: number;
   frameFingerprint?: string;
   brightness?: number;
+  contrast?: number;
   sharpness?: number;
+  colorWarmth?: number;
+  subjectCoverage?: number;
+  face?: { present: boolean; centerX?: number; centerY?: number; coverage?: number; expressionSignals?: Record<string, number> };
   landmarks: BodyCinemaLandmark[];
   worldLandmarks?: Array<{ x: number; y: number; z?: number; visibility?: number }>;
 };
@@ -27,6 +31,20 @@ export type BodyCinemaShotRanking = {
   score: number;
   reason: string;
   visibleLandmarks: number;
+  faceSupport: number;
+  subjectCoverage: number;
+  cropSafety: number;
+};
+
+export type BodyCinemaTimelineBeat = {
+  id: "hook" | "build" | "restraint" | "payoff" | "loop";
+  startMs: number;
+  endMs: number;
+  sourceTimestampMs: number;
+  crop: string;
+  grade: string;
+  direction: string;
+  supportedBy: string[];
 };
 
 export type BodyCinemaDirection = {
@@ -39,6 +57,7 @@ export type BodyCinemaDirection = {
   evidence: string[];
   confidence: number;
   distinction: string;
+  timeline: BodyCinemaTimelineBeat[];
 };
 
 export type BodyCinemaEvidenceRecord = {
@@ -70,8 +89,8 @@ export type SourceEvidenceInput = {
   frameEvidence: BodyCinemaFrameEvidence[];
 };
 
-const EVIDENCE_VERSION = "pose-landmarker-web/v1";
-const MIN_FRAME_COUNT = 3;
+const EVIDENCE_VERSION = "adaptive-video-source-intelligence/v2";
+const MIN_FRAME_COUNT = 6;
 const MIN_VISIBLE_LANDMARKS = 8;
 const MIN_CONFIDENCE = 0.55;
 
@@ -244,17 +263,58 @@ export function deriveScenesAndShotRankings(frames: BodyCinemaFrameEvidence[]): 
       .reduce((total, value) => total + value, 0) / 3;
     const brightness = typeof frame.brightness === "number" ? clamp(1 - Math.abs(frame.brightness - 0.55) * 1.6) : 0.65;
     const sharpness = typeof frame.sharpness === "number" ? clamp(frame.sharpness) : 0.5;
-    const score = Math.round(clamp(poseCoverage * 0.4 + regionSupport * 0.3 + sharpness * 0.2 + brightness * 0.1) * 100);
+    const faceSupport = frame.face?.present ? clamp((frame.face.coverage || 0) * 12 + (1 - Math.abs((frame.face.centerX ?? 0.5) - 0.5) * 1.5)) : poseCoverage * 0.35;
+    const subjectCoverage = clamp(frame.subjectCoverage ?? poseCoverage);
+    const cropSafety = clamp(1 - Math.max(0, Math.abs((frame.face?.centerX ?? 0.5) - 0.5) - 0.25) * 2);
+    const contrast = typeof frame.contrast === "number" ? clamp(frame.contrast) : 0.5;
+    const score = Math.round(clamp(poseCoverage * 0.2 + regionSupport * 0.2 + sharpness * 0.18 + brightness * 0.1 + faceSupport * 0.14 + subjectCoverage * 0.1 + cropSafety * 0.05 + contrast * 0.03) * 100);
     return {
       timestampMs: frame.timestampMs,
       sceneId: frameSceneIds.get(frame.timestampMs) || 0,
       score,
       visibleLandmarks: visible,
-      reason: `Pose coverage ${Math.round(poseCoverage * 100)}%, body-region support ${Math.round(regionSupport * 100)}%, sharpness ${Math.round(sharpness * 100)}%, balanced exposure ${Math.round(brightness * 100)}%.`,
+      faceSupport: Number(faceSupport.toFixed(3)),
+      subjectCoverage: Number(subjectCoverage.toFixed(3)),
+      cropSafety: Number(cropSafety.toFixed(3)),
+      reason: `Pose ${Math.round(poseCoverage * 100)}%, face framing ${Math.round(faceSupport * 100)}%, subject coverage ${Math.round(subjectCoverage * 100)}%, crop safety ${Math.round(cropSafety * 100)}%, sharpness ${Math.round(sharpness * 100)}%.`,
     };
   }).sort((left, right) => right.score - left.score);
 
   return { scenes, shotRankings };
+}
+
+function chooseRankedShot(rankings: BodyCinemaShotRanking[], score: (shot: BodyCinemaShotRanking) => number, used: Set<number>): BodyCinemaShotRanking | null {
+  const available = rankings.filter((shot) => !used.has(shot.timestampMs));
+  const pool = available.length ? available : rankings;
+  const selected = [...pool].sort((left, right) => score(right) - score(left))[0] || null;
+  if (selected) used.add(selected.timestampMs);
+  return selected;
+}
+
+function compileTreatmentTimeline(treatment: BodyCinemaDirection["id"], rankings: BodyCinemaShotRanking[], sourceDurationMs: number): BodyCinemaTimelineBeat[] {
+  const used = new Set<number>();
+  const portrait = () => chooseRankedShot(rankings, (shot) => shot.faceSupport * 0.55 + shot.cropSafety * 0.25 + shot.score / 100 * 0.2, used);
+  const silhouette = () => chooseRankedShot(rankings, (shot) => shot.subjectCoverage * 0.4 + shot.cropSafety * 0.3 + shot.score / 100 * 0.3, used);
+  const motion = () => chooseRankedShot(rankings, (shot) => (shot.timestampMs / Math.max(1, sourceDurationMs)) * 0.2 + shot.score / 100 * 0.8, used);
+  const select = treatment === "portrait-command" ? portrait : treatment === "silhouette-control" ? silhouette : motion;
+  const fallback: BodyCinemaShotRanking = rankings[0] || { timestampMs: 0, score: 0, reason: "No ranked source shot is available.", sceneId: 0, visibleLandmarks: 0, faceSupport: 0, subjectCoverage: 0, cropSafety: 0 };
+  const shots = Array.from({ length: 5 }, () => select() || fallback);
+  const recipe = treatment === "portrait-command"
+    ? { crop: "Chest-up center-safe crop; retain face and shoulder line.", grade: "Neutral skin-preserving contrast with subtle warm highlights.", directions: ["Open on face-framed source shot.", "Hold a composed three-quarter frame.", "Use a restrained push toward the expression-supported frame.", "Return to the clearest face-and-shoulder frame.", "End on a stable face-led hold for loop continuity."] }
+    : treatment === "silhouette-control"
+      ? { crop: "Mid-shot composition that protects subject-mask edges and negative space.", grade: "Controlled high-contrast editorial grade with background separation.", directions: ["Open on the clearest subject-mask separation.", "Move to the strongest structural full-body framing.", "Hold the silhouette-supported frame without artificial zoom.", "Reserve the highest crop-safety composition for the paid payoff.", "Loop through the cleanest structural exit frame."] }
+      : { crop: "Tracked medium crop with directional room ahead of observed motion.", grade: "Crisp motion-led contrast with restrained color bias.", directions: ["Open on the earliest stable motion frame.", "Build through an observed gesture or torso path.", "Use the most dynamic supported frame as the restraint beat.", "Deliver the highest-quality moving composition as paid payoff.", "Close on a motion-compatible frame that can loop without a jump."] };
+  const beatIds: BodyCinemaTimelineBeat["id"][] = ["hook", "build", "restraint", "payoff", "loop"];
+  return beatIds.map((id, index) => ({
+    id,
+    startMs: index * 1100,
+    endMs: (index + 1) * 1100,
+    sourceTimestampMs: shots[index].timestampMs,
+    crop: recipe.crop,
+    grade: recipe.grade,
+    direction: recipe.directions[index],
+    supportedBy: [`Source shot ${Math.round(shots[index].timestampMs / 100) / 10}s`, `Scene ${shots[index].sceneId + 1}`, `Shot score ${shots[index].score}/100`, shots[index].reason],
+  }));
 }
 
 export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
@@ -341,6 +401,7 @@ export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
   ].map((direction) => ({
     ...direction,
     bodyFocus: direction.bodyFocus.length ? direction.bodyFocus : features.slice(0, 2),
+    timeline: compileTreatmentTimeline(direction.id, shotRankings, Math.max(1, ...frames.map((frame) => frame.timestampMs))),
   }));
 
   if (directions.some((direction) => direction.confidence < 40)) {
@@ -473,13 +534,17 @@ export async function assertBodyCinemaEvidenceReady(input: {
 }
 
 export function buildEvidenceBackedDirectionPrompt(direction: BodyCinemaDirection): string {
+  const beatPlan = direction.timeline
+    .map((beat) => `${beat.id} [source ${Math.round(beat.sourceTimestampMs / 100) / 10}s]: ${beat.direction} Crop: ${beat.crop} Grade: ${beat.grade}`)
+    .join(" | ");
   return [
     `Evidence-backed Body Cinema treatment: ${direction.label}.`,
     `Camera: ${direction.camera}`,
     `Movement: ${direction.movement}`,
     `Composition: ${direction.composition}`,
     `Supported visible regions: ${direction.bodyFocus.join(", ") || "source-defined safe regions"}.`,
-    `Do not invent choreography, body regions, or a crop that contradicts this source evidence.`,
+    `Approved timecoded editorial plan: ${beatPlan}.`,
+    `Do not invent choreography, body regions, a shot order, or a crop that contradicts this source evidence.`,
   ].join(" ");
 }
 
