@@ -74,6 +74,7 @@ const ALLOWLISTS = {
   ],
   'body-cinema': [
     'CREATORVAULT_STANDARD.md',
+    'BODY_CINEMA_VISUAL_INVENTORY.md',
     'client/src/lib/bodyCinemaPerception.ts',
     'client/src/pages/VaultXStudio.tsx',
     'client/src/pages/VaultXDrop.tsx',

@@ -401,13 +401,20 @@ export default function VaultXDrop() {
       <main style={{ maxWidth: 620, margin: "0 auto", padding: "24px 16px" }}>
         {step === "upload" && (
           <section style={{ animation: "fadeIn 0.6s cubic-bezier(0.23,1,0.32,1)" }}>
-            <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 8px" }}>Cinematic Intelligence</p>
-            <h1 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 48, letterSpacing: "0.025em", lineHeight: 0.98, margin: 0 }}>Your Body.<br /><span style={{ color: GOLD }}>Your Empire.</span></h1>
-            <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.65, margin: "16px 0 28px" }}>Upload a clip. We analyze the motion, lock your identity, and prepare a cinematic PPV drop that fans actually pay for. You keep 85%.</p>
-            <label className="body-cinema-button" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, minHeight: 320, padding: 32, borderRadius: 24, border: `1px solid ${GOLD_BORDER}`, background: `radial-gradient(circle at 50% 0%, rgba(213,183,96,0.15), transparent 65%), ${CARD}`, cursor: "pointer", textAlign: "center", boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }}>
-              <div style={{ width: 80, height: 80, borderRadius: 24, background: `linear-gradient(135deg, ${GOLD}, #b09140)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(213,183,96,0.25)" }}><Upload size={34} color="#080808" /></div>
-              <div><p style={{ fontSize: 22, fontWeight: 900, margin: 0, letterSpacing: "-0.02em" }}>Tap to upload your source</p><p style={{ fontSize: 13, color: MUTED, margin: "8px 0 0" }}>High quality video works best · up to 100 MB</p></div>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 7, color: GREEN, fontSize: 12, fontWeight: 800, marginTop: 8, padding: "6px 12px", background: "rgba(69,227,138,0.1)", borderRadius: 999 }}><ShieldCheck size={15} /> 100% Creator Owned & Protected</div>
+            <div style={{ position: "relative", borderRadius: 24, overflow: "hidden", marginBottom: 32, border: `1px solid ${BORDER}`, boxShadow: "0 20px 40px rgba(0,0,0,0.6)" }}>
+              <video src="/assets/hero-transformation.mp4" autoPlay loop muted playsInline style={{ width: "100%", display: "block" }} />
+              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 24, background: "linear-gradient(to top, rgba(0,0,0,0.9), transparent)" }}>
+                <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 8px", textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>Cinematic Intelligence</p>
+                <h1 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 48, letterSpacing: "0.025em", lineHeight: 0.98, margin: 0, textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>Your Body.<br /><span style={{ color: GOLD }}>Your Empire.</span></h1>
+              </div>
+            </div>
+            
+            <p style={{ fontSize: 16, color: "#fff", lineHeight: 1.65, margin: "0 0 28px", textAlign: "center", fontWeight: 500 }}>Upload a raw clip. We analyze the motion, lock your identity, and prepare a cinematic PPV drop that fans actually pay for. You keep 85%.</p>
+            
+            <label className="body-cinema-button" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, minHeight: 220, padding: 24, borderRadius: 24, border: `1px solid ${GOLD_BORDER}`, background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, cursor: "pointer", textAlign: "center", boxShadow: "0 8px 30px rgba(213,183,96,0.1)" }}>
+              <div style={{ width: 64, height: 64, borderRadius: 20, background: `linear-gradient(135deg, ${GOLD}, #b09140)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(213,183,96,0.25)" }}><Upload size={28} color="#080808" /></div>
+              <div><p style={{ fontSize: 20, fontWeight: 900, margin: 0, letterSpacing: "-0.01em", color: "#fff" }}>Tap to upload your source</p><p style={{ fontSize: 13, color: MUTED, margin: "6px 0 0" }}>High quality video works best · up to 100 MB</p></div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 7, color: GREEN, fontSize: 11, fontWeight: 800, marginTop: 4 }}><ShieldCheck size={14} /> 100% Creator Owned & Protected</div>
               <input ref={fileInputRef} type="file" accept="video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-msvideo,video/x-m4v" style={{ display: "none" }} onChange={handleFileUpload} />
             </label>
           </section>
@@ -427,7 +434,25 @@ export default function VaultXDrop() {
             <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 40, letterSpacing: "0.035em", margin: 0 }}>Set the vibe.</h2>
             <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, margin: "8px 0 20px" }}>Choose the editorial treatment. We map the motion and lighting to fit your exact source.</p>
             
-            {analyzingSource && <div style={{ background: `linear-gradient(90deg, ${CARD}, ${GOLD_DIM})`, border: `1px solid ${GOLD_BORDER}`, borderRadius: 16, padding: 20, marginBottom: 20, display: "flex", alignItems: "center", gap: 14, color: GOLD, fontSize: 14, fontWeight: 800, boxShadow: "0 4px 20px rgba(213,183,96,0.1)" }}><Loader2 size={22} className="body-cinema-spin" /> <span style={{ letterSpacing: "-0.01em" }}>Analyzing motion and locking identity...</span></div>}
+            {analyzingSource && (
+              <div style={{ background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, border: `1px solid ${GOLD_BORDER}`, borderRadius: 20, padding: 24, marginBottom: 24, boxShadow: "0 8px 30px rgba(213,183,96,0.15)", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", inset: 0, opacity: 0.15, backgroundImage: "linear-gradient(to right, transparent 0%, rgba(213,183,96,0.2) 50%, transparent 100%)", animation: "scan 2s linear infinite" }} />
+                <style>{`@keyframes scan { from { transform: translateX(-100%); } to { transform: translateX(100%); } }`}</style>
+                <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "flex-start", gap: 20 }}>
+                  <div style={{ width: 60, height: 60, borderRadius: 16, background: "rgba(213,183,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid rgba(213,183,96,0.3)` }}>
+                    <Sparkles size={28} color={GOLD} className="body-cinema-spin" style={{ animationDuration: '3s' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 18, fontWeight: 900, color: "#fff", margin: "0 0 12px", letterSpacing: "-0.01em" }}>Cinematic Intelligence Active</p>
+                    <div style={{ display: "grid", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: MUTED }}><Check size={14} color={GREEN} /> <span>Detecting strongest moments...</span></div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: MUTED }}><Check size={14} color={GREEN} /> <span>Mapping body movement...</span></div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#fff", fontWeight: 600 }}><Loader2 size={14} color={GOLD} className="body-cinema-spin" /> <span>Finding highest-converting hook...</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {sourceEvidence?.analysisStatus === "verified" && <div style={{ background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, border: `1px solid rgba(69,227,138,0.35)`, borderRadius: 20, padding: 20, marginBottom: 24, boxShadow: "0 8px 30px rgba(69,227,138,0.08)" }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}><div><p style={{ fontSize: 11, color: GREEN, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", margin: 0, display: "flex", alignItems: "center", gap: 6 }}><Sparkles size={14} /> Source locked & ready</p><p style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, margin: "6px 0 0" }}>We found the strongest moments in your clip. The treatments below are mapped to your actual movement and framing.</p></div></div>
@@ -437,12 +462,22 @@ export default function VaultXDrop() {
             {sourceEvidence?.analysisStatus === "rejected" && <div style={{ background: "rgba(255,124,124,0.1)", border: "1px solid rgba(255,124,124,0.3)", borderRadius: 16, padding: 16, marginBottom: 20, color: RED, fontSize: 13, lineHeight: 1.5 }}>{(sourceEvidence.rejectionReasons || ["We need a clearer clip to build a high-quality drop."]).map((reason: string) => <p key={reason} style={{ margin: "4px 0" }}>{reason}</p>)}</div>}
             
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-              {QUICK_PRESETS.map(preset => <button key={preset.id} type="button" className="body-cinema-button" onClick={() => void handleSelectPreset(preset)} disabled={analyzingSource || sourceEvidence?.analysisStatus !== "verified"} style={{ position: "relative", overflow: "hidden", minHeight: 160, padding: "20px", textAlign: "left", background: `linear-gradient(180deg, ${CARD_SOFT}, ${CARD})`, border: `1px solid ${BORDER}`, borderRadius: 20, color: "#fff", cursor: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? "not-allowed" : "pointer", opacity: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? 0.4 : 1, boxShadow: "0 4px 15px rgba(0,0,0,0.3)" }}>
-                <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "40%", background: `radial-gradient(circle at 100% 50%, rgba(213,183,96,0.08), transparent)`, pointerEvents: "none" }} />
-                <div style={{ marginBottom: 20 }}><span style={{ display: "inline-block", background: "rgba(0,0,0,0.5)", border: `1px solid ${BORDER}`, padding: "4px 10px", borderRadius: 999, fontSize: 9, color: GOLD, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase" }}>{preset.focus}</span></div>
-                <p style={{ fontSize: 18, fontWeight: 900, margin: "0 0 8px", letterSpacing: "-0.01em" }}>{preset.name}</p>
-                <p style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, margin: 0, paddingRight: "10%" }}>{preset.direction}</p>
-              </button>)}
+              {QUICK_PRESETS.map(preset => {
+                const videoSrc = `/assets/preview-${preset.id.replace('body-', '').replace('heat-', '')}.mp4`;
+                return (
+                  <button key={preset.id} type="button" className="body-cinema-button" onClick={() => void handleSelectPreset(preset)} disabled={analyzingSource || sourceEvidence?.analysisStatus !== "verified"} style={{ position: "relative", overflow: "hidden", minHeight: 240, padding: 0, textAlign: "left", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, color: "#fff", cursor: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? "not-allowed" : "pointer", opacity: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? 0.4 : 1, boxShadow: "0 4px 15px rgba(0,0,0,0.3)" }}>
+                    <video src={videoSrc} autoPlay loop muted playsInline style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.6 }} />
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.6) 100%)" }} />
+                    <div style={{ position: "relative", zIndex: 1, padding: 20, height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                      <div><span style={{ display: "inline-block", background: "rgba(0,0,0,0.7)", border: `1px solid ${BORDER}`, padding: "4px 10px", borderRadius: 999, fontSize: 9, color: GOLD, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", backdropFilter: "blur(4px)" }}>{preset.focus}</span></div>
+                      <div>
+                        <p style={{ fontSize: 20, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.01em", textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>{preset.name}</p>
+                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", lineHeight: 1.4, margin: 0, textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}>{preset.direction}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </section>
         )}
