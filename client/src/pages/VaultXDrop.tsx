@@ -427,26 +427,25 @@ export default function VaultXDrop() {
               {!acceptedAsset && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 24 }}><div><Film size={26} color={GOLD} style={{ marginBottom: 10 }} /><p style={{ margin: 0, fontSize: 12, color: "#fff", fontWeight: 800 }}>Protected source preview</p><p style={{ margin: "4px 0 0", fontSize: 11, color: MUTED }}>A finished artifact appears only after one approved render and a passed quality review.</p></div></div>}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 16 }}><button type="button" className="body-cinema-button" onClick={handleDownload} disabled={!acceptedAsset} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${acceptedAsset ? GOLD_BORDER : BORDER}`, background: acceptedAsset ? GOLD_DIM : CARD, color: acceptedAsset ? GOLD : MUTED, fontWeight: 800, cursor: acceptedAsset ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><Download size={16} /> Download</button><button type="button" className="body-cinema-button" onClick={reuseSource} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${BORDER}`, background: CARD, color: "#fff", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><RotateCcw size={16} /> Reuse source</button></div>
-            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "6px 15px", marginBottom: 16 }}>
-              <StatusRow label="Source receipt" value="Verified" state="ready" />
-              <StatusRow label="Governed request" value={currentJob.state.replace(/_/g, " ")} state={currentStatus.tone} />
-              <StatusRow label="Maximum credit cap" value={currentJob.estimatedCostCredits ? `${currentJob.estimatedCostCredits} credits` : "Not set"} state={currentJob.estimatedCostCredits ? "working" : "locked"} />
-              <StatusRow label="Provider task" value={currentJob.providerJobId ? "Recorded" : "Not submitted"} state={currentJob.providerJobId ? "working" : "locked"} />
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "10px 0" }}><span style={{ fontSize: 12, color: MUTED }}>Checkout and publication</span><span style={{ fontSize: 12, color: MUTED, fontWeight: 800 }}>Blocked until accepted, then separately approved</span></div>
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, padding: "10px 20px", marginBottom: 20, boxShadow: "0 4px 15px rgba(0,0,0,0.2)" }}>
+              <StatusRow label="Source Ownership" value="Verified & Bound" state="ready" />
+              <StatusRow label="Production Status" value={currentJob.state.replace(/_/g, " ")} state={currentStatus.tone} />
+              <StatusRow label="Cost Cap" value={currentJob.estimatedCostCredits ? `${currentJob.estimatedCostCredits} credits` : "Awaiting Approval"} state={currentJob.estimatedCostCredits ? "working" : "locked"} />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "14px 0" }}><span style={{ fontSize: 13, color: MUTED }}>Sales & Distribution</span><span style={{ fontSize: 13, color: MUTED, fontWeight: 800 }}>Requires Final Creator Review</span></div>
             </div>
-            <div style={{ background: `linear-gradient(145deg, ${CARD_SOFT}, ${CARD})`, border: `1px solid ${GOLD_BORDER}`, borderRadius: 18, padding: "16px", marginBottom: 16 }}>
-              <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.14em", textTransform: "uppercase", margin: "0 0 5px" }}>Controlled execution record</p>
-              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.55, margin: "0 0 14px" }}>This request has a fixed source checksum, treatment, render settings, and fingerprint. Any change requires a new request. There is no automatic retry and no hidden provider health test.</p>
-              <div style={{ display: "grid", gap: 9, fontSize: 11, color: MUTED }}>
-                <div><span style={{ color: "#fff", fontWeight: 800 }}>Request ID: </span><span style={{ wordBreak: "break-all" }}>{currentJob.requestId}</span></div>
-                <div><span style={{ color: "#fff", fontWeight: 800 }}>Fingerprint: </span><span style={{ wordBreak: "break-all" }}>{currentJob.fingerprint}</span></div>
-                {currentJob.costEvidenceReference && <div><span style={{ color: "#fff", fontWeight: 800 }}>Cost evidence: </span>{currentJob.costEvidenceReference}</div>}
-                {currentJob.qualityReason && <div><span style={{ color: "#fff", fontWeight: 800 }}>Quality review: </span>{currentJob.qualityReason}</div>}
-                {currentJob.failureMessage && <div style={{ color: RED }}><span style={{ fontWeight: 800 }}>Safe failure: </span>{currentJob.failureMessage}</div>}
+            
+            <div style={{ background: `linear-gradient(145deg, ${CARD_SOFT}, ${CARD})`, border: `1px solid ${GOLD_BORDER}`, borderRadius: 20, padding: "20px", marginBottom: 20, boxShadow: "0 8px 24px rgba(213,183,96,0.08)" }}>
+              <p style={{ fontSize: 11, color: GOLD, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", margin: "0 0 8px", display: "flex", alignItems: "center", gap: 6 }}><ShieldCheck size={14} /> Immutable Production Record</p>
+              <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, margin: "0 0 16px" }}>This production plan is locked. Your identity, source framing, and chosen cinematic treatment cannot be altered or retried without your explicit consent.</p>
+              <div style={{ display: "grid", gap: 10, fontSize: 12, color: MUTED, background: "rgba(0,0,0,0.4)", padding: 16, borderRadius: 12, border: `1px solid ${BORDER}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff", fontWeight: 800 }}>Plan ID</span><span style={{ fontFamily: "monospace", color: GOLD }}>{currentJob.requestId.slice(0, 12)}...</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff", fontWeight: 800 }}>Security Fingerprint</span><span style={{ fontFamily: "monospace", color: GOLD }}>{currentJob.fingerprint.slice(0, 12)}...</span></div>
+                {currentJob.costEvidenceReference && <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff", fontWeight: 800 }}>Cost Evidence</span><span style={{ fontFamily: "monospace", color: GREEN }}>Verified</span></div>}
+                {currentJob.qualityReason && <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}><span style={{ color: "#fff", fontWeight: 800, display: "block", marginBottom: 4 }}>Quality Review</span>{currentJob.qualityReason}</div>}
+                {currentJob.failureMessage && <div style={{ color: RED, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}><span style={{ fontWeight: 800, display: "block", marginBottom: 4 }}>Safe Failure</span>{currentJob.failureMessage}</div>}
               </div>
-              <div style={{ marginTop: 12 }}><CopyButton text={currentJob.requestId} label="Copy request ID" /></div>
+              <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}><CopyButton text={currentJob.requestId} label="Copy Plan ID" /></div>
             </div>
-            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "12px 14px", color: MUTED, fontSize: 10, lineHeight: 1.55 }}>Governed job {currentJob.id} · source receipt {uploadReceipt?.id.slice(0, 8) || "verified"} · model {currentJob.providerModelPath}</div>
           </section>
         )}
       </main>
