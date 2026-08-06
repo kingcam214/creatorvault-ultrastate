@@ -75,7 +75,9 @@ const ALLOWLISTS = {
   'body-cinema': [
     'client/src/lib/bodyCinemaPerception.ts',
     'client/src/pages/VaultXStudio.tsx',
+    'client/src/pages/VaultXDrop.tsx',
     'server/routers/bodyCinemaRouter.ts',
+    'server/routers/governedPolloRouter.ts',
     'server/routers/vaultxRouter.ts',
     'server/services/bodyCinemaEvidenceService.ts',
     'server/services/bodyCinemaEvidence.test.ts',

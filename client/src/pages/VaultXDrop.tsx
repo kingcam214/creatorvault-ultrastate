@@ -19,6 +19,7 @@ import {
   Wand2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { analyzeBodyCinemaSourceLocally } from "@/lib/bodyCinemaPerception";
 import { toast } from "sonner";
 
 const GOLD = "#D5B760";
@@ -170,10 +171,14 @@ export default function VaultXDrop() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [creating, setCreating] = useState(false);
   const [governedJob, setGovernedJob] = useState<GovernedJob | null>(null);
+  const [sourceEvidence, setSourceEvidence] = useState<any>(null);
+  const [analyzingSource, setAnalyzingSource] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const createDraft = trpc.governedPollo.createDraft.useMutation();
+  const analyzeSource = (trpc as any).bodyCinema.analyzeSource.useMutation();
+  const approveDirection = (trpc as any).bodyCinema.approveDirection.useMutation();
   const jobQuery = trpc.governedPollo.job.useQuery(
     { jobId: governedJob?.id ?? 1 },
     { enabled: Boolean(governedJob?.id), refetchInterval: governedJob && ["approved", "queued", "submitted", "provider_complete", "quality_review"].includes(governedJob.state) ? 8000 : false },
@@ -207,6 +212,7 @@ export default function VaultXDrop() {
     setHostedUrl(null);
     setUploadReceipt(null);
     setGovernedJob(null);
+    setSourceEvidence(null);
     setUploadProgress(0);
     setUploading(true);
     setStep("preset");
@@ -233,7 +239,24 @@ export default function VaultXDrop() {
       setHostedUrl(payload.url);
       setUploadReceipt(payload.uploadReceipt);
       setUploadProgress(100);
-      toast.success("Source verified and saved to your vault.");
+      setAnalyzingSource(true);
+      try {
+        const localAnalysis = await analyzeBodyCinemaSourceLocally(file);
+        const evidence = await analyzeSource.mutateAsync({
+          sourceMediaUrl: payload.url,
+          sourceType: "video",
+          sourceFingerprint: localAnalysis.sourceFingerprint,
+          analysisVersion: localAnalysis.analyzer,
+          frameEvidence: localAnalysis.frameEvidence,
+        });
+        setSourceEvidence(evidence);
+        toast.success("Source verified and analyzed locally. Choose a treatment supported by the observed frames.");
+      } catch (analysisError: any) {
+        setSourceEvidence(null);
+        toast.error(analysisError?.message || "Source uploaded, but local evidence analysis could not verify enough usable frames.");
+      } finally {
+        setAnalyzingSource(false);
+      }
     } catch (error: any) {
       setHostedUrl(null);
       setUploadReceipt(null);
@@ -247,19 +270,30 @@ export default function VaultXDrop() {
     }
   }, [videoUrl]);
 
-  const handleSelectPreset = useCallback((preset: QuickPreset) => {
-    setSelectedPreset(preset);
-    setTitle(`${preset.name} — Private Release`);
-    setStep("configure");
-  }, []);
+  const handleSelectPreset = useCallback(async (preset: QuickPreset) => {
+    if (!sourceEvidence?.id || sourceEvidence?.analysisStatus !== "verified") {
+      toast.error("A verified local source analysis is required before choosing a treatment.");
+      return;
+    }
+    const directionId = preset.id.includes("silhouette") ? "silhouette-control" : preset.id.includes("hip") || preset.id.includes("arch") || preset.id.includes("leg") ? "motion-tension" : "portrait-command";
+    try {
+      const evidence = await approveDirection.mutateAsync({ evidenceId: sourceEvidence.id, directionId });
+      setSourceEvidence(evidence);
+      setSelectedPreset(preset);
+      setTitle(`${preset.name} — Private Release`);
+      setStep("configure");
+    } catch (error: any) {
+      toast.error(error?.message || "This treatment is not supported by the verified source evidence.");
+    }
+  }, [approveDirection, sourceEvidence]);
 
   const handleCreateGovernedDraft = useCallback(async () => {
     if (!hostedUrl || !uploadReceipt?.verified) {
       toast.error(uploading ? "Your source is still being verified." : "Upload and verify a source video first.");
       return;
     }
-    if (!selectedPreset) {
-      toast.error("Choose a cinematic treatment.");
+    if (!selectedPreset || !sourceEvidence?.id || !sourceEvidence?.selectedDirectionId) {
+      toast.error("Choose and approve an evidence-backed treatment first.");
       setStep("preset");
       return;
     }
@@ -272,6 +306,7 @@ export default function VaultXDrop() {
       const response = await createDraft.mutateAsync({
         sourceUrl: hostedUrl,
         sourceChecksum: uploadReceipt.sha256,
+        evidenceId: sourceEvidence.id,
         prompt: `${selectedPreset.name}: ${selectedPreset.direction} Preserve the creator-owned source identity, natural anatomy, and stable cinematic motion.`,
         providerModelPath: "pollo/pollo-v1-6",
         resolution: "720p",
@@ -297,7 +332,7 @@ export default function VaultXDrop() {
     } finally {
       setCreating(false);
     }
-  }, [consent, createDraft, hostedUrl, selectedPreset, title, uploadReceipt, uploading]);
+  }, [consent, createDraft, hostedUrl, selectedPreset, sourceEvidence, title, uploadReceipt, uploading]);
 
   const handleDownload = useCallback(() => {
     if (!currentJob?.artifactUrl) return;
@@ -390,9 +425,15 @@ export default function VaultXDrop() {
             </div>}
             <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 6px" }}>Treatment direction</p>
             <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 34, letterSpacing: "0.035em", margin: 0 }}>Choose the intended look.</h2>
-            <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, margin: "8px 0 18px" }}>Treatments define intent. Selecting one creates no provider job and spends no credits.</p>
+            <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, margin: "8px 0 14px" }}>Treatments define intent. Selecting one creates no provider job and spends no credits.</p>
+            {analyzingSource && <div style={{ background: GOLD_DIM, border: `1px solid ${GOLD_BORDER}`, borderRadius: 14, padding: 13, marginBottom: 14, display: "flex", alignItems: "center", gap: 9, color: GOLD, fontSize: 12, fontWeight: 800 }}><Loader2 size={15} className="body-cinema-spin" /> Building the local Shot Intelligence Graph…</div>}
+            {sourceEvidence?.analysisStatus === "verified" && <div style={{ background: CARD, border: `1px solid rgba(69,227,138,0.28)`, borderRadius: 15, padding: 14, marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}><div><p style={{ fontSize: 10, color: GREEN, fontFamily: "monospace", letterSpacing: "0.13em", textTransform: "uppercase", margin: 0 }}>Local source intelligence verified</p><p style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, margin: "5px 0 0" }}>Frame, pose, face-framing, subject-coverage, crop-safety, exposure, and sharpness signals are recorded locally. They are not an attractiveness or conversion prediction.</p></div><span style={{ color: GREEN, fontSize: 11, fontWeight: 900, whiteSpace: "nowrap" }}>{sourceEvidence.frameEvidence?.length || 0} frames</span></div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginTop: 12 }}>{(sourceEvidence.shotRankings || []).slice(0, 4).map((shot: any, index: number) => <div key={`${shot.timestampMs}-${index}`} style={{ border: `1px solid ${BORDER}`, borderRadius: 10, padding: "8px 9px", background: CARD_SOFT }}><p style={{ margin: 0, color: "#fff", fontSize: 11, fontWeight: 900 }}>#{index + 1} · {Math.round(Number(shot.timestampMs || 0) / 100) / 10}s <span style={{ color: GOLD }}>{shot.score}/100</span></p><p style={{ margin: "4px 0 0", color: MUTED, fontSize: 9, lineHeight: 1.35 }}>{shot.reason}</p></div>)}</div>
+            </div>}
+            {sourceEvidence?.analysisStatus === "rejected" && <div style={{ background: "rgba(255,124,124,0.1)", border: "1px solid rgba(255,124,124,0.3)", borderRadius: 14, padding: 13, marginBottom: 14, color: RED, fontSize: 12, lineHeight: 1.5 }}>{(sourceEvidence.rejectionReasons || ["This source did not produce enough stable local evidence for a truthful treatment plan."]).map((reason: string) => <p key={reason} style={{ margin: "3px 0" }}>{reason}</p>)}</div>}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-              {QUICK_PRESETS.map(preset => <button key={preset.id} type="button" className="body-cinema-button" onClick={() => handleSelectPreset(preset)} style={{ minHeight: 146, padding: "15px", textAlign: "left", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 15, color: "#fff", cursor: "pointer" }}><div style={{ marginBottom: 18 }}><span style={{ fontSize: 9, color: GOLD, fontFamily: "monospace", letterSpacing: "0.11em", textTransform: "uppercase" }}>{preset.focus}</span></div><p style={{ fontSize: 15, fontWeight: 900, margin: "0 0 6px" }}>{preset.name}</p><p style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, margin: 0 }}>{preset.direction}</p></button>)}
+              {QUICK_PRESETS.map(preset => <button key={preset.id} type="button" className="body-cinema-button" onClick={() => void handleSelectPreset(preset)} disabled={analyzingSource || sourceEvidence?.analysisStatus !== "verified"} style={{ minHeight: 146, padding: "15px", textAlign: "left", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 15, color: "#fff", cursor: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? "not-allowed" : "pointer", opacity: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? 0.5 : 1 }}><div style={{ marginBottom: 18 }}><span style={{ fontSize: 9, color: GOLD, fontFamily: "monospace", letterSpacing: "0.11em", textTransform: "uppercase" }}>{preset.focus}</span></div><p style={{ fontSize: 15, fontWeight: 900, margin: "0 0 6px" }}>{preset.name}</p><p style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, margin: 0 }}>{preset.direction}</p></button>)}
             </div>
           </section>
         )}

@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { BodyCinemaRouter, createDefaultProviderProfiles, generateOutputLadder } from "../services/bodyCinemaProviderRouter";
+import { BodyCinemaRouter, createDefaultProviderProfiles } from "../services/bodyCinemaProviderRouter";
 import { complianceVault } from "../services/complianceVault";
 import { randomUUID } from "crypto";
 import {
@@ -14,7 +14,6 @@ import {
   getPresetById,
   getPresetsByCategory,
   getPresetsByGoal,
-  getTopConvertingPresets,
   getPresetsByPlatform,
   getPresetsByHeatLevel,
   type PresetCategory,
@@ -55,7 +54,17 @@ const frameEvidenceInput = z.object({
   sceneId: z.number().int().min(0).optional(),
   frameFingerprint: z.string().regex(/^[0-9a-f]{16,256}$/i).optional(),
   brightness: z.number().min(0).max(1).optional(),
+  contrast: z.number().min(0).max(1).optional(),
   sharpness: z.number().min(0).max(1).optional(),
+  colorWarmth: z.number().min(0).max(1).optional(),
+  subjectCoverage: z.number().min(0).max(1).optional(),
+  face: z.object({
+    present: z.boolean(),
+    centerX: z.number().min(0).max(1).optional(),
+    centerY: z.number().min(0).max(1).optional(),
+    coverage: z.number().min(0).max(1).optional(),
+    expressionSignals: z.record(z.string(), z.number().min(0).max(1)).optional(),
+  }).optional(),
   landmarks: z.array(landmarkInput).min(1).max(33),
   worldLandmarks: z.array(landmarkInput).max(33).optional(),
 });
@@ -83,7 +92,7 @@ export const bodyCinemaRouter = router({
     sourceType: z.enum(["image", "video"]),
     sourceFingerprint: z.string().min(16).max(128),
     analysisVersion: z.string().min(1).max(96),
-    frameEvidence: z.array(frameEvidenceInput).min(1).max(12),
+    frameEvidence: z.array(frameEvidenceInput).min(1).max(24),
   })).mutation(async ({ ctx, input }) => {
     const evidence = await persistBodyCinemaSourceEvidence(Number(ctx.user.id), input);
     return evidence;
@@ -110,7 +119,7 @@ export const bodyCinemaRouter = router({
     evidenceId: z.string().uuid(),
     outputAssetUrl: z.string().url(),
     outputFingerprint: z.string().regex(/^[0-9a-f]{64}$/i),
-    frameEvidence: z.array(frameEvidenceInput).min(1).max(12),
+    frameEvidence: z.array(frameEvidenceInput).min(1).max(24),
   })).mutation(async ({ ctx, input }) => {
     try {
       return await reviewBodyCinemaOutput(Number(ctx.user.id), input);
@@ -176,10 +185,26 @@ export const bodyCinemaRouter = router({
   generateOutputLadder: protectedProcedure.input(z.object({
     sourceAssetUrl: z.string().url(),
     sourceType: z.enum(["image", "video"]),
-    style: z.string(),
-  })).mutation(({ ctx, input }) => {
-    const jobs = generateOutputLadder(String(ctx.user.id), input.sourceAssetUrl, input.sourceType, input.style as any);
-    return { jobCount: jobs.length, jobs: jobs.slice(0, 5) };
+    evidenceId: z.string().uuid(),
+    style: z.string().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    let evidenceContext: { evidence: any; direction: any };
+    try {
+      evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId: Number(ctx.user.id), evidenceId: input.evidenceId, sourceMediaUrl: input.sourceAssetUrl });
+    } catch (error: any) {
+      throw evidencePrecondition(error?.message || "Verified source evidence and an approved treatment are required before planning a Body Cinema package.");
+    }
+    return {
+      status: "planning_only" as const,
+      message: "CreatorVault prepared a review-only treatment package. No provider job, paid request, checkout, campaign, or publication was created.",
+      evidenceId: evidenceContext.evidence.id,
+      treatment: evidenceContext.direction,
+      package: {
+        publicPreview: evidenceContext.direction.timeline.filter((beat: any) => ["hook", "build", "restraint"].includes(beat.id)),
+        paidPayoff: evidenceContext.direction.timeline.filter((beat: any) => ["payoff", "loop"].includes(beat.id)),
+        creatorDecisionRequired: true,
+      },
+    };
   }),
 
   getJobStatus: protectedProcedure.input(z.object({ jobId: z.string() })).query(({ input }) => {
@@ -219,9 +244,9 @@ export const bodyCinemaRouter = router({
       if (input.maxHeatLevel) {
         presets = presets.filter(p => p.heatLevel <= input.maxHeatLevel!);
       }
-      if (input.topConverting) {
-        presets = presets.sort((a, b) => b.conversionScore - a.conversionScore);
-      }
+      // Preset metadata is not creator-specific performance evidence. Until outcome
+      // records exist, templates remain an unranked library.
+      void input.topConverting;
       if (input.limit) {
         presets = presets.slice(0, input.limit);
       }
@@ -251,13 +276,15 @@ export const bodyCinemaRouter = router({
   getPresetCategories: protectedProcedure.query(() => {
     return {
       categories: PRESET_CATEGORIES,
-      stats: PRESET_STATS,
-      topConverting: getTopConvertingPresets(5),
+      stats: { ...PRESET_STATS, performanceStatus: "unmeasured" as const },
+      featuredTemplates: BODY_CINEMA_PRESETS.slice(0, 5),
+      performanceStatus: "unmeasured" as const,
     };
   }),
 
   /**
-   * applyPreset — apply a preset to a job submission, filling all fields
+   * applyPreset — select a preset as a review-only treatment template.
+   * This endpoint deliberately does not submit a provider job.
    */
   applyPreset: protectedProcedure
     .input(z.object({
@@ -271,12 +298,7 @@ export const bodyCinemaRouter = router({
       const preset = getPresetById(input.presetId);
       if (!preset) throw new TRPCError({ code: "NOT_FOUND", message: `Preset ${input.presetId} not found` });
 
-      const eligibility = complianceVault.checkGenerationEligibility(String(ctx.user.id), "GLOBAL");
-      if (!eligibility.eligible) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Compliance check failed: " + eligibility.blockers.join("; ") });
-      }
-
-      let evidenceContext: { direction: { camera: string; movement: string } };
+      let evidenceContext: { direction: any };
       try {
         evidenceContext = await assertBodyCinemaEvidenceReady({
           creatorId: Number(ctx.user.id),
@@ -284,39 +306,18 @@ export const bodyCinemaRouter = router({
           sourceMediaUrl: input.sourceAssetUrl,
         });
       } catch (error: any) {
-        throw evidencePrecondition(error?.message || "Body Cinema source evidence is required before preset submission.");
+        throw evidencePrecondition(error?.message || "Body Cinema source evidence and an approved treatment are required before applying a template.");
       }
-      const evidencePrompt = buildEvidenceBackedDirectionPrompt(evidenceContext.direction as any);
-      const job = {
-        id: randomUUID(),
-        userId: String(ctx.user.id),
-        goal: preset.goal as any,
-        sourceAssetUrl: input.sourceAssetUrl,
-        sourceType: input.sourceType as any,
-        style: preset.style as any,
-        platform: preset.platform as any,
-        aspectRatio: preset.aspectRatio,
-        duration: preset.duration,
-        prompt: [evidencePrompt, input.overrides?.prompt || preset.prompt].filter(Boolean).join(" "),
-        negativePrompt: preset.negativePrompt,
-        motionDirective: [evidenceContext.direction.movement, input.overrides?.motionDirective || preset.motionDirective].filter(Boolean).join(" "),
-        cameraMovement: [evidenceContext.direction.camera, input.overrides?.cameraMovement || preset.cameraMovement].filter(Boolean).join(" "),
-        identityLock: true,
-        qualityThreshold: 75,
-        maxRetries: 2,
-        consentVerified: true,
-        ageVerified: true,
-        ...(input.overrides || {}),
-      };
-
-      const result = await cinemaRouter.submitJob(job);
 
       return {
-        ...result,
+        status: "planning_only" as const,
+        message: "Template applied to a review-only treatment package. No provider job, paid request, checkout, campaign, or publication was created.",
         preset,
+        treatment: evidenceContext.direction,
+        promptPreview: [buildEvidenceBackedDirectionPrompt(evidenceContext.direction), input.overrides?.prompt || preset.prompt].filter(Boolean).join(" "),
         suggestedTitle: input.overrides?.title || preset.suggestedTitle,
-        suggestedPrice: preset.suggestedPrice,
-        suggestedVipPrice: preset.suggestedVipPrice,
+        startingPriceReference: preset.suggestedPrice,
+        startingVipPriceReference: preset.suggestedVipPrice,
         teaserDescription: preset.teaserDescription,
         telegramCaption: preset.telegramCaption,
         dmHook: preset.dmHook,

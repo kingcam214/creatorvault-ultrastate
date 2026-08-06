@@ -9,12 +9,19 @@ export type LocalBodyCinemaFrameEvidence = {
   timestampMs: number;
   width: number;
   height: number;
+  frameFingerprint?: string;
+  brightness?: number;
+  contrast?: number;
+  sharpness?: number;
+  colorWarmth?: number;
+  subjectCoverage?: number;
+  face?: { present: boolean; centerX?: number; centerY?: number; coverage?: number; expressionSignals?: Record<string, number> };
   landmarks: LocalBodyCinemaLandmark[];
   worldLandmarks?: Array<{ x: number; y: number; z: number; visibility?: number }>;
 };
 
 export type LocalBodyCinemaAnalysis = {
-  analyzer: "pose-landmarker-web/v1";
+  analyzer: "adaptive-video-source-intelligence/v2";
   sourceFingerprint: string;
   frameEvidence: LocalBodyCinemaFrameEvidence[];
   sampleCount: number;
@@ -91,11 +98,13 @@ function sanitizeWorldLandmarks(points: any[] | undefined): Array<{ x: number; y
 
 function uniqueSampleTimes(durationSeconds: number): number[] {
   const safeDuration = Math.max(0.25, durationSeconds || 0.25);
-  const fractions = [0.12, 0.36, 0.62, 0.88];
-  return [...new Set(fractions.map((fraction) => Number(Math.min(safeDuration - 0.02, Math.max(0, safeDuration * fraction)).toFixed(3))))];
+  const count = safeDuration <= 30 ? 12 : safeDuration <= 90 ? 18 : 24;
+  const leadIn = Math.min(0.2, safeDuration * 0.02);
+  const tail = Math.max(leadIn, safeDuration - 0.05);
+  return Array.from({ length: count }, (_, index) => Number((leadIn + (tail - leadIn) * (index / (count - 1))).toFixed(3)));
 }
 
-function frameVisualDiagnostics(video: HTMLVideoElement): { frameFingerprint: string; brightness: number; sharpness: number } {
+function frameVisualDiagnostics(video: HTMLVideoElement): { frameFingerprint: string; brightness: number; contrast: number; sharpness: number; colorWarmth: number } {
   const width = 32;
   const height = 32;
   const canvas = document.createElement("canvas");
@@ -107,13 +116,17 @@ function frameVisualDiagnostics(video: HTMLVideoElement): { frameFingerprint: st
   const pixels = context.getImageData(0, 0, width, height).data;
   const luminance = new Array<number>(width * height);
   let total = 0;
+  let warmthTotal = 0;
   for (let index = 0; index < luminance.length; index += 1) {
     const offset = index * 4;
     const value = (pixels[offset] * 0.2126 + pixels[offset + 1] * 0.7152 + pixels[offset + 2] * 0.0722) / 255;
     luminance[index] = value;
     total += value;
+    warmthTotal += Math.max(0, pixels[offset] - pixels[offset + 2]) / 255;
   }
   const brightness = total / luminance.length;
+  const variance = luminance.reduce((sum, value) => sum + (value - brightness) ** 2, 0) / luminance.length;
+  const contrast = Math.max(0, Math.min(1, Math.sqrt(variance) / 0.28));
   let edgeTotal = 0;
   let edgeCount = 0;
   for (let y = 0; y < height - 1; y += 1) {
@@ -145,7 +158,25 @@ function frameVisualDiagnostics(video: HTMLVideoElement): { frameFingerprint: st
       while (fingerprint.length < Math.floor(bitIndex / 4) + 1) fingerprint += "0";
     }
   }
-  return { frameFingerprint: fingerprint.padEnd(16, "0"), brightness, sharpness };
+  return { frameFingerprint: fingerprint.padEnd(16, "0"), brightness, contrast, sharpness, colorWarmth: Math.max(0, Math.min(1, warmthTotal / luminance.length)) };
+}
+
+function poseCompositionDiagnostics(landmarks: LocalBodyCinemaLandmark[]): Pick<LocalBodyCinemaFrameEvidence, "subjectCoverage" | "face"> {
+  const visible = landmarks.filter((point) => (point.visibility ?? 1) >= 0.5);
+  if (!visible.length) return { subjectCoverage: 0, face: { present: false } };
+  const xValues = visible.map((point) => point.x);
+  const yValues = visible.map((point) => point.y);
+  const left = Math.max(0, Math.min(...xValues));
+  const right = Math.min(1, Math.max(...xValues));
+  const top = Math.max(0, Math.min(...yValues));
+  const bottom = Math.min(1, Math.max(...yValues));
+  const facePoints = landmarks.slice(0, 11).filter((point) => (point.visibility ?? 1) >= 0.5);
+  const faceX = facePoints.length ? facePoints.reduce((sum, point) => sum + point.x, 0) / facePoints.length : undefined;
+  const faceY = facePoints.length ? facePoints.reduce((sum, point) => sum + point.y, 0) / facePoints.length : undefined;
+  return {
+    subjectCoverage: Math.max(0, Math.min(1, (right - left) * (bottom - top))),
+    face: facePoints.length >= 4 ? { present: true, centerX: faceX, centerY: faceY, coverage: Math.max(0, Math.min(1, (right - left) * Math.max(0.03, (faceY || top) - top + 0.03))) } : { present: false },
+  };
 }
 
 export async function fingerprintBodyCinemaSource(file: File): Promise<string> {
@@ -188,6 +219,7 @@ export async function analyzeBodyCinemaSourceLocally(file: File): Promise<LocalB
         width: video.videoWidth || 1,
         height: video.videoHeight || 1,
         ...frameVisualDiagnostics(video),
+        ...poseCompositionDiagnostics(landmarks),
         landmarks,
         worldLandmarks: sanitizeWorldLandmarks(result.worldLandmarks?.[0]),
       });
@@ -198,7 +230,7 @@ export async function analyzeBodyCinemaSourceLocally(file: File): Promise<LocalB
     }
 
     return {
-      analyzer: "pose-landmarker-web/v1",
+      analyzer: "adaptive-video-source-intelligence/v2",
       sourceFingerprint: await fingerprintBodyCinemaSource(file),
       frameEvidence,
       sampleCount: frameEvidence.length,

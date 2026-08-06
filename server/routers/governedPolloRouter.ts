@@ -14,6 +14,7 @@ import {
   setGovernedPolloCostEstimate,
   submitGovernedPolloJob,
 } from "../services/governedPolloService";
+import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } from "../services/bodyCinemaEvidenceService";
 
 const OWNER_IDS = new Set([6, 33]);
 
@@ -38,6 +39,7 @@ const draftInput = z.object({
   creatorId: z.number().int().positive().optional(),
   sourceUrl: z.string().url().max(4000),
   sourceChecksum: z.string().trim().max(128).optional().nullable(),
+  evidenceId: z.string().uuid(),
   prompt: z.string().trim().min(8).max(6000),
   providerModelPath: z.string().trim().min(5).max(128).optional(),
   resolution: z.enum(["480p", "720p", "1080p"]),
@@ -57,12 +59,17 @@ export const governedPolloRouter = router({
     const creatorId = input.creatorId ?? ctx.user.id;
     if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
     try {
+      const evidenceContext = await assertBodyCinemaEvidenceReady({
+        creatorId,
+        evidenceId: input.evidenceId,
+        sourceMediaUrl: input.sourceUrl,
+      });
       return await createGovernedPolloDraft({
         creatorId,
         requestedBy: ctx.user.id,
         sourceUrl: input.sourceUrl,
         sourceChecksum: input.sourceChecksum,
-        prompt: input.prompt,
+        prompt: [buildEvidenceBackedDirectionPrompt(evidenceContext.direction), input.prompt].join(" "),
         providerModelPath: input.providerModelPath,
         resolution: input.resolution,
         durationSeconds: input.durationSeconds,
@@ -74,7 +81,12 @@ export const governedPolloRouter = router({
         ownershipConfirmed: input.ownershipConfirmed,
         consentConfirmed: input.consentConfirmed,
         idempotencyKey: input.idempotencyKey,
-        metadata: input.metadata,
+        metadata: {
+          ...(input.metadata || {}),
+          bodyCinemaEvidenceId: evidenceContext.evidence.id,
+          bodyCinemaDirectionId: evidenceContext.direction.id,
+          bodyCinemaTimeline: evidenceContext.direction.timeline,
+        },
       });
     } catch (error) {
       return asPrecondition(error);

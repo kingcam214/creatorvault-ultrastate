@@ -2275,9 +2275,15 @@ export const vaultxRouter = router({
       mode: z.enum(["std", "pro"]).default("pro"),
       presetId: z.string().optional(),
       withNarration: z.boolean().default(false),
-      reviewOnly: z.boolean().default(false),
+      reviewOnly: z.boolean().default(true),
     }))
     .mutation(async ({ ctx, input }) => {
+      if (!input.reviewOnly) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "VaultX launch is review-only. A separate accepted output review and explicit finalization are required before checkout, campaign creation, or publication.",
+        });
+      }
       if (!input.adultContentFlag || !input.consentConfirmed) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "VaultX launch requires adult-content opt-in and creator consent confirmation." });
       }
