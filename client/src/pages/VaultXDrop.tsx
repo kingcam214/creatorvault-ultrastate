@@ -509,9 +509,22 @@ export default function VaultXDrop() {
               <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 35, letterSpacing: "0.035em", margin: "0 0 7px" }}>{acceptedAsset ? "Asset accepted." : "Your request is protected."}</h2>
               <p style={{ color: MUTED, fontSize: 12, lineHeight: 1.55, margin: 0 }}>{currentStatus.detail}</p>
             </div>
-            <div style={{ position: "relative", borderRadius: 18, overflow: "hidden", background: "#000", aspectRatio: "9/16", maxHeight: 560, margin: "0 auto 16px", border: `1px solid ${BORDER}` }}>
-              <video src={currentJob.artifactUrl || currentJob.outputUrl || videoUrl || undefined} controls={acceptedAsset} muted={!acceptedAsset} playsInline style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-              {!acceptedAsset && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 24 }}><div><Film size={26} color={GOLD} style={{ marginBottom: 10 }} /><p style={{ margin: 0, fontSize: 12, color: "#fff", fontWeight: 800 }}>Protected source preview</p><p style={{ margin: "4px 0 0", fontSize: 11, color: MUTED }}>A finished artifact appears only after one approved render and a passed quality review.</p></div></div>}
+            <div style={{ position: "relative", borderRadius: 24, overflow: "hidden", background: "#000", aspectRatio: "9/16", maxHeight: 560, margin: "0 auto 24px", border: `1px solid ${BORDER}`, boxShadow: "0 20px 40px rgba(0,0,0,0.6)" }}>
+              <video src={currentJob.artifactUrl || currentJob.outputUrl || (acceptedAsset ? undefined : "/assets/final-drop.mp4")} autoPlay={!acceptedAsset} loop={!acceptedAsset} controls={acceptedAsset} muted={!acceptedAsset} playsInline style={{ width: "100%", height: "100%", objectFit: "cover", opacity: acceptedAsset ? 1 : 0.7 }} />
+              {!acceptedAsset && (
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.7) 100%)", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 24 }}>
+                  <div style={{ alignSelf: "flex-start", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", padding: "6px 12px", borderRadius: 999, border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: GOLD, animation: "pulse 2s infinite" }} />
+                    <style>{`@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }`}</style>
+                    <span style={{ fontSize: 10, color: "#fff", fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase" }}>Simulated Outcome</span>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <Film size={32} color={GOLD} style={{ marginBottom: 12, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} />
+                    <p style={{ margin: 0, fontSize: 18, color: "#fff", fontWeight: 900, textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}>Preparing your drop</p>
+                    <p style={{ margin: "6px 0 0", fontSize: 13, color: "rgba(255,255,255,0.8)", lineHeight: 1.5, textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>This is a preview of the cinematic quality you can expect once the render is approved.</p>
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 16 }}><button type="button" className="body-cinema-button" onClick={handleDownload} disabled={!acceptedAsset} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${acceptedAsset ? GOLD_BORDER : BORDER}`, background: acceptedAsset ? GOLD_DIM : CARD, color: acceptedAsset ? GOLD : MUTED, fontWeight: 800, cursor: acceptedAsset ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><Download size={16} /> Download</button><button type="button" className="body-cinema-button" onClick={reuseSource} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${BORDER}`, background: CARD, color: "#fff", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><RotateCcw size={16} /> Reuse source</button></div>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, padding: "10px 20px", marginBottom: 20, boxShadow: "0 4px 15px rgba(0,0,0,0.2)" }}>
