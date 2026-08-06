@@ -73,6 +73,7 @@ const ALLOWLISTS = {
     'scripts/scope-guard.js'
   ],
   'body-cinema': [
+    'CREATORVAULT_STANDARD.md',
     'client/src/lib/bodyCinemaPerception.ts',
     'client/src/pages/VaultXStudio.tsx',
     'client/src/pages/VaultXDrop.tsx',
