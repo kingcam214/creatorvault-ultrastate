@@ -629,13 +629,18 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   const providerResponse = await parseProviderJson(response);
   if (!response.ok) throw new Error(`Pollo source-video quote returned ${response.status}: ${safeErrorMessage(providerResponse.responseText ?? providerResponse.message ?? "unknown error")}`);
   const quote = providerResponse.data && typeof providerResponse.data === "object" ? providerResponse.data as Record<string, any> : providerResponse;
-  const quotedCredits = requirePositiveAmount(Number(quote.discountCost ?? quote.cost ?? quote.totalCost ?? quote.credit), "Pollo quoted credits");
-  const quotedCostUsd = requirePositiveAmount(Number(quote.discountCostUsd ?? quote.costUsd ?? quote.totalCostUsd ?? quote.usd), "Pollo quoted USD cost");
+  const quotedCreditsRaw = quote.discountCost ?? quote.cost ?? quote.totalCost ?? quote.credit ?? quote.credits ?? quote.amount ?? quote.price;
+  const quotedCostUsdRaw = quote.discountCostUsd ?? quote.costUsd ?? quote.totalCostUsd ?? quote.usd ?? quote.amountUsd ?? quote.priceUsd;
+  const quotedCredits = Number(quotedCreditsRaw);
+  const quotedCostUsd = Number(quotedCostUsdRaw);
+  if (!Number.isFinite(quotedCredits) || quotedCredits <= 0 || !Number.isFinite(quotedCostUsd) || quotedCostUsd <= 0) {
+    throw new Error(`Pollo provider estimate omitted a usable positive quote: ${safeErrorMessage(JSON.stringify({ providerResponse, quote }))}`);
+  }
   return {
     providerModelPath: SOURCE_VIDEO_REFERENCE_MODEL_PATH,
     providerApiPath: SOURCE_VIDEO_REFERENCE_API_PATH,
-    quotedCredits,
-    quotedCostUsd,
+    quotedCredits: requirePositiveAmount(quotedCredits, "Pollo quoted credits"),
+    quotedCostUsd: requirePositiveAmount(quotedCostUsd, "Pollo quoted USD cost"),
     quotedAt: new Date().toISOString(),
     providerResponse,
   };
