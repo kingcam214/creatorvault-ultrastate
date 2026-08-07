@@ -38,7 +38,7 @@ type ExistingVideoAsset = {
   sourceUrl: string;
   storagePath: string | null;
   fileName: string;
-  ownershipBasis: "media_asset_record" | "content_record" | "vaultx_content_record" | "verified_upload_receipt";
+  ownershipBasis: "media_asset_record" | "content_record" | "vaultx_content_record" | "clone_training_record" | "verified_upload_receipt";
   declaredChecksum: string | null;
   durationSeconds: number | null;
   width: number | null;
@@ -189,6 +189,34 @@ async function listCreatorContentVideos(): Promise<ExistingVideoAsset[]> {
   });
 }
 
+async function listCloneTrainingVideos(): Promise<ExistingVideoAsset[]> {
+  const placeholders = OWNER_CREATOR_IDS.map(() => "?").join(", ");
+  const rows = await queryRows<any>(
+    `SELECT id, user_id, original_filename, storage_path, storage_url, mime_type, duration_seconds, width, height, uploaded_at
+       FROM clone_training_uploads
+      WHERE user_id IN (${placeholders})
+        AND source_type = 'video'
+        AND storage_url IS NOT NULL
+        AND storage_url <> ''
+      ORDER BY uploaded_at DESC
+      LIMIT ${MAX_CANDIDATES}`,
+    OWNER_CREATOR_IDS,
+  );
+  return rows.map((row) => ({
+    id: `clone-training-${String(row.id)}`,
+    creatorId: Number(row.user_id),
+    sourceUrl: String(row.storage_url),
+    storagePath: row.storage_path && path.isAbsolute(String(row.storage_path)) ? String(row.storage_path) : null,
+    fileName: String(row.original_filename || path.basename(new URL(String(row.storage_url)).pathname) || `clone-training-${row.id}.mp4`),
+    ownershipBasis: "clone_training_record" as const,
+    declaredChecksum: null,
+    durationSeconds: Number.isFinite(Number(row.duration_seconds)) ? Number(row.duration_seconds) : null,
+    width: Number.isFinite(Number(row.width)) ? Number(row.width) : null,
+    height: Number.isFinite(Number(row.height)) ? Number(row.height) : null,
+    createdAt: row.uploaded_at ? String(row.uploaded_at) : null,
+  }));
+}
+
 async function listVaultxCreatorVideos(): Promise<ExistingVideoAsset[]> {
   const placeholders = OWNER_CREATOR_IDS.map(() => "?").join(", ");
   const rows = await queryRows<any>(
@@ -269,9 +297,9 @@ function isSupportedReceiptVideo(fileName: string, mime: unknown): boolean {
 }
 
 async function listAllExistingCreatorVideos(): Promise<ExistingVideoAsset[]> {
-  const [mediaAssets, contentAssets, vaultxContentAssets, receiptAssets] = await Promise.all([listExistingCreatorVideos(), listCreatorContentVideos(), listVaultxCreatorVideos(), listVerifiedDirectUploadVideos()]);
+  const [mediaAssets, contentAssets, cloneTrainingAssets, vaultxContentAssets, receiptAssets] = await Promise.all([listExistingCreatorVideos(), listCreatorContentVideos(), listCloneTrainingVideos(), listVaultxCreatorVideos(), listVerifiedDirectUploadVideos()]);
   const seen = new Set<string>();
-  return [...mediaAssets, ...contentAssets, ...vaultxContentAssets, ...receiptAssets]
+  return [...mediaAssets, ...contentAssets, ...cloneTrainingAssets, ...vaultxContentAssets, ...receiptAssets]
     .sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))
     .filter((asset) => {
       const key = `${asset.creatorId}:${asset.sourceUrl}`;
@@ -587,7 +615,9 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
                 ? "content.user_id matches governed creator_id"
                 : asset.ownershipBasis === "vaultx_content_record"
                   ? "vaultx_content.creator_id matches governed creator_id"
-                  : "media_assets.user_id matches governed creator_id",
+                  : asset.ownershipBasis === "clone_training_record"
+                    ? "clone_training_uploads.user_id matches governed creator_id"
+                    : "media_assets.user_id matches governed creator_id",
             consentBasis: "creator-owned existing CreatorVault upload selected for the owner-directed no-spend Body Cinema proof",
             identityRequirements: "Preserve the exact source subject; no identity, facial-feature, body-proportion, or choreography fabrication.",
             outputPurpose: "Body Cinema pre-provider proof; render remains disabled until governed paid execution is explicitly enabled.",
