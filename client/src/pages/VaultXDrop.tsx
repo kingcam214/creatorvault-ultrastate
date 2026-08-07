@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { analyzeBodyCinemaSourceLocally } from "@/lib/bodyCinemaPerception";
+import MediaPicker, { type MediaAssetItem } from "@/components/MediaPicker";
 import { toast } from "sonner";
 
 const GOLD = "#D5B760";
@@ -172,6 +173,7 @@ export default function VaultXDrop() {
   const [governedJob, setGovernedJob] = useState<GovernedJob | null>(null);
   const [sourceEvidence, setSourceEvidence] = useState<any>(null);
   const [analyzingSource, setAnalyzingSource] = useState(false);
+  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -268,6 +270,73 @@ export default function VaultXDrop() {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, [videoUrl]);
+
+  const handleExistingMediaSelection = useCallback(async (selected: MediaAssetItem[]) => {
+    const asset = selected[0];
+    setMediaLibraryOpen(false);
+    if (!asset?.publicUrl) {
+      toast.error("That video is not ready to use yet. Choose another video from your Vault.");
+      return;
+    }
+
+    if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
+    setUploading(true);
+    setAnalyzingSource(true);
+    setUploadProgress(0);
+    setHostedUrl(asset.publicUrl);
+    setUploadReceipt(null);
+    setGovernedJob(null);
+    setSourceEvidence(null);
+    setFileName(asset.originalName || asset.fileName || "CreatorVault video");
+
+    try {
+      const response = await fetch(asset.publicUrl, { credentials: "include" });
+      if (!response.ok) throw new Error("Your saved video could not be opened for analysis.");
+      const blob = await response.blob();
+      const file = new File([blob], asset.originalName || asset.fileName || "creatorvault-video.mp4", {
+        type: asset.mimeType || blob.type || "video/mp4",
+        lastModified: asset.createdAt ? Date.parse(asset.createdAt) || Date.now() : Date.now(),
+      });
+      const previewUrl = URL.createObjectURL(file);
+      setVideoUrl(previewUrl);
+      setUploadProgress(25);
+      const localAnalysis = await analyzeBodyCinemaSourceLocally(file);
+      setUploadProgress(70);
+      const evidence = await analyzeSource.mutateAsync({
+        sourceMediaUrl: asset.publicUrl,
+        sourceType: "video",
+        sourceFingerprint: localAnalysis.sourceFingerprint,
+        analysisVersion: localAnalysis.analyzer,
+        frameEvidence: localAnalysis.frameEvidence,
+      });
+      setSourceEvidence(evidence);
+      setUploadReceipt({
+        id: asset.id,
+        sha256: localAnalysis.sourceFingerprint,
+        verified: true,
+        ownerBound: true,
+        createdAt: asset.createdAt || new Date().toISOString(),
+        codec: asset.mimeType || "video/mp4",
+        width: asset.width || 0,
+        height: asset.height || 0,
+        durationSec: asset.duration || 0,
+      });
+      setUploadProgress(100);
+      setStep("preset");
+      toast.success("Your saved video is ready. We found the strongest moments and built your treatment options.");
+    } catch (error: any) {
+      setHostedUrl(null);
+      setVideoUrl(null);
+      setUploadReceipt(null);
+      setSourceEvidence(null);
+      setFileName("");
+      setStep("upload");
+      toast.error(error?.message || "We could not analyze that saved video. Choose another clip from your Vault.");
+    } finally {
+      setUploading(false);
+      setAnalyzingSource(false);
+    }
+  }, [analyzeSource, videoUrl]);
 
   const handleSelectPreset = useCallback(async (preset: QuickPreset) => {
     if (!sourceEvidence?.id || sourceEvidence?.analysisStatus !== "verified") {
@@ -397,6 +466,15 @@ export default function VaultXDrop() {
         </div>
       </header>
 
+      <MediaPicker
+        open={mediaLibraryOpen}
+        onClose={() => setMediaLibraryOpen(false)}
+        onConfirm={(assets) => void handleExistingMediaSelection(assets)}
+        mode="single"
+        title="Your Vault"
+        subtitle="Choose a video you have already uploaded. Body Cinema will analyze this exact source."
+        confirmLabel="Use this video"
+      />
       <main style={{ maxWidth: 620, margin: "0 auto", padding: "24px 16px" }}>
         {step === "upload" && (
           <section style={{ animation: "fadeIn 0.6s cubic-bezier(0.23,1,0.32,1)" }}>
@@ -408,7 +486,14 @@ export default function VaultXDrop() {
               </div>
             </div>
             
-            <p style={{ fontSize: 16, color: "#fff", lineHeight: 1.65, margin: "0 0 28px", textAlign: "center", fontWeight: 500 }}>Upload a raw clip. We read its movement and framing, then help you choose a cinematic plan for your next drop.</p>
+            <p style={{ fontSize: 16, color: "#fff", lineHeight: 1.65, margin: "0 0 20px", textAlign: "center", fontWeight: 500 }}>Start with a video you already have in CreatorVault. We read its movement and framing, then help you choose a cinematic plan for your next drop.</p>
+
+            <button type="button" className="body-cinema-button" onClick={() => setMediaLibraryOpen(true)} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, minHeight: 150, padding: 24, borderRadius: 24, border: `1px solid ${GOLD_BORDER}`, background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, cursor: "pointer", textAlign: "center", boxShadow: "0 8px 30px rgba(213,183,96,0.1)", color: "#fff" }}>
+              <div style={{ width: 58, height: 58, borderRadius: 18, background: `linear-gradient(135deg, ${GOLD}, #b09140)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(213,183,96,0.25)" }}><Film size={26} color="#080808" /></div>
+              <div><p style={{ fontSize: 20, fontWeight: 900, margin: 0 }}>Choose from your Vault</p><p style={{ fontSize: 13, color: MUTED, margin: "6px 0 0" }}>Your saved videos appear here automatically</p></div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 7, color: GREEN, fontSize: 11, fontWeight: 800 }}><ShieldCheck size={14} /> Your videos stay attached to your account</div>
+            </button>
+            <p style={{ margin: "14px 0 20px", textAlign: "center", color: MUTED, fontSize: 12 }}>Need a brand-new clip instead? Add it below.</p>
             
             <label className="body-cinema-button" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, minHeight: 220, padding: 24, borderRadius: 24, border: `1px solid ${GOLD_BORDER}`, background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, cursor: "pointer", textAlign: "center", boxShadow: "0 8px 30px rgba(213,183,96,0.1)" }}>
               <div style={{ width: 64, height: 64, borderRadius: 20, background: `linear-gradient(135deg, ${GOLD}, #b09140)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(213,183,96,0.25)" }}><Upload size={28} color="#080808" /></div>
