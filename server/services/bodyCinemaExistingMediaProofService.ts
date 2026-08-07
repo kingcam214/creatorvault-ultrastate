@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import { promises as fs } from "node:fs";
+import { createReadStream, promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -28,6 +28,7 @@ type ExistingVideoAsset = {
   id: string;
   creatorId: number;
   sourceUrl: string;
+  storagePath: string | null;
   fileName: string;
   durationSeconds: number | null;
   width: number | null;
@@ -41,6 +42,7 @@ type PreProviderAttestation = {
   creatorId: number | null;
   sourceAssetId: string | null;
   sourceFingerprint: string | null;
+  sourceReadOrigin: "durable_storage" | "public_url" | null;
   evidenceId: string | null;
   treatmentId: string | null;
   governedJobId: number | null;
@@ -55,6 +57,7 @@ let attestation: PreProviderAttestation = {
   creatorId: null,
   sourceAssetId: null,
   sourceFingerprint: null,
+  sourceReadOrigin: null,
   evidenceId: null,
   treatmentId: null,
   governedJobId: null,
@@ -104,7 +107,7 @@ async function queryRows<T = any>(query: string, values: unknown[] = []): Promis
 async function listExistingCreatorVideos(): Promise<ExistingVideoAsset[]> {
   const placeholders = OWNER_CREATOR_IDS.map(() => "?").join(", ");
   const rows = await queryRows<any>(
-    `SELECT id, user_id, public_url, file_name, original_name, duration, width, height, created_at
+    `SELECT id, user_id, public_url, storage_path, file_name, original_name, duration, width, height, created_at
        FROM media_assets
       WHERE user_id IN (${placeholders})
         AND status = 'ready'
@@ -119,6 +122,7 @@ async function listExistingCreatorVideos(): Promise<ExistingVideoAsset[]> {
     id: String(row.id),
     creatorId: Number(row.user_id),
     sourceUrl: String(row.public_url),
+    storagePath: row.storage_path ? String(row.storage_path) : null,
     fileName: String(row.original_name || row.file_name || `creatorvault-${row.id}.mp4`),
     durationSeconds: row.duration === null || row.duration === undefined ? null : Number(row.duration),
     width: row.width === null || row.width === undefined ? null : Number(row.width),
@@ -132,17 +136,46 @@ function safeExtension(name: string): string {
   return [".mp4", ".mov", ".webm", ".mkv", ".avi", ".m4v"].includes(extension) ? extension : ".mp4";
 }
 
-async function downloadSource(asset: ExistingVideoAsset, directory: string): Promise<{ localPath: string; sourceChecksum: string }> {
+async function checksumFile(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = createHash("sha256");
+    const stream = createReadStream(filePath);
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("error", reject);
+    stream.on("end", () => resolve(hash.digest("hex")));
+  });
+}
+
+function isDurableLocalMediaPath(value: string | null): value is string {
+  return Boolean(value && path.isAbsolute(value) && !value.includes("\u0000"));
+}
+
+async function downloadSource(asset: ExistingVideoAsset, directory: string): Promise<{ localPath: string; sourceChecksum: string; sourceReadOrigin: "durable_storage" | "public_url" }> {
+  const localPath = path.join(directory, `${asset.id}${safeExtension(asset.fileName)}`);
+  if (isDurableLocalMediaPath(asset.storagePath)) {
+    try {
+      const stat = await fs.stat(asset.storagePath);
+      if (!stat.isFile()) throw new Error("storage path is not a file");
+      if (stat.size < 1) throw new Error("storage file is empty");
+      if (stat.size > MAX_SOURCE_BYTES) throw new Error("storage file exceeds the safe source-analysis size limit");
+      await fs.copyFile(asset.storagePath, localPath);
+      return { localPath, sourceChecksum: await checksumFile(localPath), sourceReadOrigin: "durable_storage" };
+    } catch (error: any) {
+      if (!error || !["ENOENT", "EACCES", "EPERM"].includes(error.code)) throw error;
+    }
+  }
+
   const response = await fetch(asset.sourceUrl, { redirect: "follow" });
   if (!response.ok || !response.body) throw new Error(`Stored CreatorVault video could not be read (${response.status}).`);
   const declaredLength = Number(response.headers.get("content-length") || 0);
   if (declaredLength > MAX_SOURCE_BYTES) throw new Error("Stored CreatorVault video exceeds the safe source-analysis size limit.");
+  const declaredType = String(response.headers.get("content-type") || "").toLowerCase();
+  if (declaredType && !declaredType.includes("video/")) throw new Error(`Stored CreatorVault media URL did not return video data (${declaredType}).`);
   const buffer = Buffer.from(await response.arrayBuffer());
   if (!buffer.length) throw new Error("Stored CreatorVault video is empty.");
   if (buffer.length > MAX_SOURCE_BYTES) throw new Error("Stored CreatorVault video exceeds the safe source-analysis size limit.");
-  const localPath = path.join(directory, `${asset.id}${safeExtension(asset.fileName)}`);
   await fs.writeFile(localPath, buffer);
-  return { localPath, sourceChecksum: createHash("sha256").update(buffer).digest("hex") };
+  return { localPath, sourceChecksum: createHash("sha256").update(buffer).digest("hex"), sourceReadOrigin: "public_url" };
 }
 
 async function probeVideo(localPath: string): Promise<{ durationSeconds: number; width: number; height: number }> {
@@ -334,7 +367,7 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
     try {
     for (const asset of candidates) {
       try {
-        const { localPath, sourceChecksum } = await downloadSource(asset, workspace);
+        const { localPath, sourceChecksum, sourceReadOrigin } = await downloadSource(asset, workspace);
         const video = await probeVideo(localPath);
         const frameEvidence = await buildFrameEvidence(localPath, video);
         const evidence = await persistBodyCinemaSourceEvidence(asset.creatorId, {
@@ -378,6 +411,7 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
           idempotencyKey,
           metadata: {
             sourceAssetId: asset.id,
+            sourceReadOrigin,
             sourceFileName: asset.fileName,
             sourceCreatedAt: asset.createdAt,
             sourceOwnershipBasis: "media_assets.user_id matches governed creator_id",
@@ -401,6 +435,7 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
           creatorId: asset.creatorId,
           sourceAssetId: asset.id,
           sourceFingerprint: sourceChecksum,
+          sourceReadOrigin,
           evidenceId: approvedEvidence.id,
           treatmentId: direction.id,
           governedJobId: draft.job.id,
