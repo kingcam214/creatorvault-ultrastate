@@ -350,9 +350,10 @@ export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
   const bodyMap = buildBodyMap(frames);
   const { scenes, shotRankings } = deriveScenesAndShotRankings(frames);
   const rejectionReasons: string[] = [];
-  const averageVisible = frames.length
-    ? frames.reduce((sum, frame) => sum + visibleCount(frame), 0) / frames.length
-    : 0;
+  const visibleLandmarkCounts = frames.map((frame) => visibleCount(frame));
+  const averageVisible = average(visibleLandmarkCounts);
+  const strongestVisible = Math.max(0, ...visibleLandmarkCounts);
+  const supportedFrameCount = visibleLandmarkCounts.filter((count) => count >= MIN_VISIBLE_LANDMARKS).length;
   const features = availableFeatures(bodyMap);
 
   const editorFindings: BodyCinemaEditorFindings = {
@@ -369,8 +370,8 @@ export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
   };
 
   if (frames.length < MIN_FRAME_COUNT) rejectionReasons.push(`Analyze at least ${MIN_FRAME_COUNT} sampled frames before planning a Body Cinema direction.`);
-  if (averageVisible < MIN_VISIBLE_LANDMARKS) rejectionReasons.push("Pose confidence was too low to identify enough source landmarks. Use a clearer, unobstructed source frame.");
-  if (features.length < 2) rejectionReasons.push("The source does not expose enough reliable body regions to support a truthful cinematic plan.");
+  if (strongestVisible < MIN_VISIBLE_LANDMARKS) rejectionReasons.push("Pose confidence was too low to identify enough source landmarks in any sampled frame. Use a clearer, unobstructed source frame.");
+  if (features.length < 1) rejectionReasons.push("The source does not expose a reliable visible region to support a truthful cinematic plan.");
 
   const sourceScore = clamp(
     bodyMap.frameCoverage * 0.45 +
@@ -455,8 +456,11 @@ export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
     timeline: compileTreatmentTimeline(direction.id, shotRankings, Math.max(1, ...frames.map((frame) => frame.timestampMs))),
   }));
 
-  if (directions.some((direction) => direction.confidence < 40)) {
-    rejectionReasons.push("One or more proposed directions is unsupported by the observed source evidence; only directions above the review threshold may be approved.");
+  if (!directions.some((direction) => direction.confidence >= 40)) {
+    rejectionReasons.push("No proposed direction is supported by enough observed source evidence to be approved.");
+  }
+  if (supportedFrameCount < 1) {
+    rejectionReasons.push("No sampled frame reached the visible-landmark evidence threshold needed for a truthful treatment plan.");
   }
 
   return { bodyMap, scenes, shotRankings, directions, analysisScore, rejectionReasons, editorFindings };
