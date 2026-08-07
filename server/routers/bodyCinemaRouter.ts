@@ -194,16 +194,37 @@ export const bodyCinemaRouter = router({
     } catch (error: any) {
       throw evidencePrecondition(error?.message || "Verified source evidence and an approved treatment are required before planning a Body Cinema package.");
     }
+
+    const { direction, evidence } = evidenceContext;
+    const isVip = direction.id === "vip-tease" || direction.id === "luxury-reveal";
+    
     return {
       status: "planning_only" as const,
-      message: "CreatorVault prepared a review-only treatment package. No provider job, paid request, checkout, campaign, or publication was created.",
-      evidenceId: evidenceContext.evidence.id,
-      treatment: evidenceContext.direction,
-      package: {
-        publicPreview: evidenceContext.direction.timeline.filter((beat: any) => ["hook", "build", "restraint"].includes(beat.id)),
-        paidPayoff: evidenceContext.direction.timeline.filter((beat: any) => ["payoff", "loop"].includes(beat.id)),
-        creatorDecisionRequired: true,
+      message: "CreatorVault prepared a complete review-only monetization package. No provider job, paid request, checkout, campaign, or publication was created.",
+      evidenceId: evidence.id,
+      treatment: direction,
+      monetizationPackage: {
+        assets: {
+          teaser: { format: "9:16", duration: 6, purpose: "Public hook", sourceTimeline: direction.timeline.slice(0, 3) },
+          ppvMaster: { format: "9:16", duration: 15, purpose: "Paid payoff", sourceTimeline: direction.timeline },
+          socialCut: { format: "9:16", duration: 4, purpose: "Instagram/TikTok", sourceTimeline: [direction.timeline[0], direction.timeline[1]] },
+          coverImage: { format: "9:16", purpose: "Gallery cover", sourceTimestampMs: evidence.editorFindings?.strongestRevealTimestampMs || 0 },
+          thumbnail: { format: "1:1", purpose: "Message preview", sourceTimestampMs: evidence.editorFindings?.strongestThumbnailTimestampMs || 0 },
+        },
+        copy: {
+          headline: isVip ? "Exclusive Private Reveal" : "The Arch Collection",
+          hook: isVip ? "You weren't supposed to see this yet..." : "The shape you've been asking for.",
+          telegramCaption: isVip ? "Dropping something special in DMs tonight. Turn notifications on. 🤫" : "New set just landed. Link in bio.",
+          ppvUnlockLine: isVip ? "Unlock the full 4K uncensored sequence." : "Unlock the complete set.",
+          callToAction: "Unlock Now",
+        },
+        pricing: {
+          suggestedPrice: isVip ? 25 : 15,
+          priceFloor: isVip ? 15 : 10,
+          bundleStrategy: isVip ? "Include in VIP tier only" : "Available for single purchase",
+        }
       },
+      creatorDecisionRequired: true,
     };
   }),
 

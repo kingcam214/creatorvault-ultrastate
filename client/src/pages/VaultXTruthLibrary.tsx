@@ -107,6 +107,33 @@ export default function VaultXTruthLibrary() {
           </section>
 
           <section style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}><FileVideo size={17} color={GOLD} /><h3 style={{ margin: 0, fontSize: 18 }}>Editor decisions</h3></div>
+            {!evidence?.editorFindings && <p style={{ color: MUTED, margin: 0 }}>No editor decisions have been recorded for this source.</p>}
+            {evidence?.editorFindings && (
+              <div style={{ display: "grid", gap: 12, fontSize: 13 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: MUTED }}>Strongest Hook</span><span style={{ color: "#fff" }}>{seconds(evidence.editorFindings.strongestHookTimestampMs)}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: MUTED }}>Best Thumbnail</span><span style={{ color: "#fff" }}>{seconds(evidence.editorFindings.strongestThumbnailTimestampMs)}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: MUTED }}>Peak Commercial Moment</span><span style={{ color: "#fff" }}>{seconds(evidence.editorFindings.strongestCommercialTimestampMs)}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: MUTED }}>Weakest Section (Cut)</span><span style={{ color: "#fff" }}>{seconds(evidence.editorFindings.weakestSectionStartMs)} - {seconds(evidence.editorFindings.weakestSectionEndMs)}</span></div>
+              </div>
+            )}
+          </section>
+
+          <section style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}><LockKeyhole size={17} color={GOLD} /><h3 style={{ margin: 0, fontSize: 18 }}>Monetization package</h3></div>
+            {!selectedDirection && <p style={{ color: MUTED, margin: 0 }}>No direction has been approved for this source.</p>}
+            {selectedDirection && (
+              <div style={{ display: "grid", gap: 12, fontSize: 13 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: MUTED }}>PPV Master</span><span style={{ color: "#fff" }}>15s • 9:16 • Paid payoff</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: MUTED }}>Social Teaser</span><span style={{ color: "#fff" }}>6s • 9:16 • Public hook</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: MUTED }}>Cover Image</span><span style={{ color: "#fff" }}>Gallery cover from reveal</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: MUTED }}>Headline</span><span style={{ color: "#fff" }}>{selectedDirection.id === "vip-tease" || selectedDirection.id === "luxury-reveal" ? "Exclusive Private Reveal" : "The Arch Collection"}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: MUTED }}>Suggested Price</span><span style={{ color: GOLD, fontWeight: 800 }}>${selectedDirection.id === "vip-tease" || selectedDirection.id === "luxury-reveal" ? "25" : "15"}</span></div>
+              </div>
+            )}
+          </section>
+
+          <section style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}><Clock3 size={17} color={GOLD} /><h3 style={{ margin: 0, fontSize: 18 }}>Decision history</h3></div>
             {(eventsQuery.data as any[] | undefined)?.length ? <div style={{ display: "grid", gap: 12 }}>{(eventsQuery.data as any[]).map((event: any) => <div key={event.id} style={{ display: "flex", gap: 10, borderTop: `1px solid ${BORDER}`, paddingTop: 12 }}><ShieldCheck size={16} color={GOLD} /><div><p style={{ margin: 0, fontSize: 12, fontWeight: 900 }}>{String(event.eventType).replaceAll("_", " ")}</p><p style={{ margin: "4px 0 0", color: MUTED, fontSize: 11 }}>{timestamp(event.createdAt)}</p></div></div>)}</div> : <p style={{ color: MUTED, margin: 0 }}>No additional decisions have been recorded.</p>}
           </section>

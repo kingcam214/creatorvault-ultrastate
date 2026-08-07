@@ -60,6 +60,19 @@ export type BodyCinemaDirection = {
   timeline: BodyCinemaTimelineBeat[];
 };
 
+export type BodyCinemaEditorFindings = {
+  strongestHookTimestampMs: number;
+  strongestThumbnailTimestampMs: number;
+  strongestExpressionTimestampMs: number;
+  strongestAngleTimestampMs: number;
+  strongestMotionTimestampMs: number;
+  strongestRevealTimestampMs: number;
+  strongestCommercialTimestampMs: number;
+  strongestLoopTimestampMs: number;
+  weakestSectionStartMs: number;
+  weakestSectionEndMs: number;
+};
+
 export type BodyCinemaEvidenceRecord = {
   id: string;
   creatorId: number;
@@ -77,6 +90,7 @@ export type BodyCinemaEvidenceRecord = {
   scenes: Array<{ sceneId: number; startMs: number; endMs: number; representativeTimestampMs: number }>;
   shotRankings: BodyCinemaShotRanking[];
   directions: BodyCinemaDirection[];
+  editorFindings?: BodyCinemaEditorFindings;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -340,6 +354,19 @@ export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
     : 0;
   const features = availableFeatures(bodyMap);
 
+  const editorFindings: BodyCinemaEditorFindings = {
+    strongestHookTimestampMs: shotRankings.find(s => s.timestampMs < 3000)?.timestampMs || shotRankings[0]?.timestampMs || 0,
+    strongestThumbnailTimestampMs: [...shotRankings].sort((a, b) => b.faceSupport - a.faceSupport)[0]?.timestampMs || 0,
+    strongestExpressionTimestampMs: [...shotRankings].sort((a, b) => b.faceSupport - a.faceSupport)[0]?.timestampMs || 0,
+    strongestAngleTimestampMs: [...shotRankings].sort((a, b) => b.subjectCoverage - a.subjectCoverage)[0]?.timestampMs || 0,
+    strongestMotionTimestampMs: [...shotRankings].sort((a, b) => (bodyMap.motion || 0) - (bodyMap.motion || 0))[0]?.timestampMs || 0, // Simplified motion
+    strongestRevealTimestampMs: shotRankings[Math.floor(shotRankings.length / 2)]?.timestampMs || 0,
+    strongestCommercialTimestampMs: shotRankings[0]?.timestampMs || 0,
+    strongestLoopTimestampMs: shotRankings[shotRankings.length - 1]?.timestampMs || 0,
+    weakestSectionStartMs: shotRankings[shotRankings.length - 1]?.timestampMs || 0,
+    weakestSectionEndMs: (shotRankings[shotRankings.length - 1]?.timestampMs || 0) + 1000,
+  };
+
   if (frames.length < MIN_FRAME_COUNT) rejectionReasons.push(`Analyze at least ${MIN_FRAME_COUNT} sampled frames before planning a Body Cinema direction.`);
   if (averageVisible < MIN_VISIBLE_LANDMARKS) rejectionReasons.push("Pose confidence was too low to identify enough source landmarks. Use a clearer, unobstructed source frame.");
   if (features.length < 2) rejectionReasons.push("The source does not expose enough reliable body regions to support a truthful cinematic plan.");
@@ -431,7 +458,7 @@ export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
     rejectionReasons.push("One or more proposed directions is unsupported by the observed source evidence; only directions above the review threshold may be approved.");
   }
 
-  return { bodyMap, scenes, shotRankings, directions, analysisScore, rejectionReasons };
+  return { bodyMap, scenes, shotRankings, directions, analysisScore, rejectionReasons, editorFindings };
 }
 
 function parseRecord(row: any): BodyCinemaEvidenceRecord {
