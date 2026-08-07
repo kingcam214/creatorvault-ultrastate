@@ -446,6 +446,7 @@ import VaultMarket from "./pages/VaultMarket";
 import VaultXOnboarding from "./pages/VaultXOnboarding";
 import VaultXStudio from "./pages/VaultXStudio";
 import VaultXDrop from "./pages/VaultXDrop";
+import VaultXTruthLibrary from "./pages/VaultXTruthLibrary";
 import TrailerStudio from "./pages/TrailerStudio";
 import VaultXDistribution from "@/pages/VaultXDistribution";
 import VaultXEditor from "./pages/VaultXEditor";
@@ -797,6 +798,7 @@ function Router() {
       <Route path="/vaultx/studio" component={VaultXDrop} />
       <Route path="/vaultx/distribution" component={VaultXDistribution} />
       <Route path="/vault-x/studio" component={VaultXDrop} />
+      <Route path="/vault-x/library/:jobId" component={VaultXTruthLibrary} />
       <Route path="/vaultx/studio-advanced" component={VaultXDrop} />
       <Route path="/vault-x/editor" component={VaultXEditor} />
       <Route path="/vaultx/editor" component={VaultXEditor} />

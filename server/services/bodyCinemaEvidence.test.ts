@@ -54,7 +54,7 @@ function sourceEvidence(): BodyCinemaEvidenceRecord {
     analysisVersion: "adaptive-video-source-intelligence/v2",
     analysisStatus: "verified",
     reviewStatus: "ready",
-    selectedDirectionId: "portrait-command",
+    selectedDirectionId: "luxury-reveal",
     analysisScore: derived.analysisScore,
     rejectionReasons: [],
     bodyMap: derived.bodyMap,
@@ -66,7 +66,7 @@ function sourceEvidence(): BodyCinemaEvidenceRecord {
 }
 
 describe("Body Cinema no-spend source intelligence", () => {
-  it("derives durable scene boundaries, multi-signal shot ranks, and three timecoded treatment plans", () => {
+  it("derives durable scene boundaries, multi-signal shot ranks, and four materially distinct timecoded treatment plans", () => {
     const analysis = deriveBodyCinemaDirections(makeFrames("1234567890abcdef"));
 
     expect(analysis.scenes.length).toBeGreaterThanOrEqual(1);
@@ -78,14 +78,15 @@ describe("Body Cinema no-spend source intelligence", () => {
       cropSafety: expect.any(Number),
     });
     expect(analysis.directions.map((direction) => direction.id)).toEqual([
-      "portrait-command",
-      "silhouette-control",
-      "motion-tension",
+      "the-arch",
+      "silhouette",
+      "luxury-reveal",
+      "vip-tease",
     ]);
-    expect(new Set(analysis.directions.map((direction) => direction.distinction)).size).toBe(3);
+    expect(new Set(analysis.directions.map((direction) => direction.distinction)).size).toBe(4);
     expect(analysis.directions.every((direction) => direction.timeline.length === 5)).toBe(true);
     const treatmentShotSequences = analysis.directions.map((direction) => direction.timeline.map((beat) => beat.sourceTimestampMs).join(","));
-    expect(new Set(treatmentShotSequences).size).toBe(3);
+    expect(new Set(treatmentShotSequences).size).toBe(4);
   });
 
   it("accepts a sufficiently different, source-supported treatment and records why", () => {
@@ -98,7 +99,7 @@ describe("Body Cinema no-spend source intelligence", () => {
     expect(review.status).toBe("accepted");
     expect(review.treatmentScore).toBeGreaterThanOrEqual(60);
     expect(review.bodyIntegrityScore).toBeGreaterThanOrEqual(65);
-    expect(review.reasons.join(" ")).toContain("Accepted: treatment portrait-command");
+    expect(review.reasons.join(" ")).toContain("Accepted: treatment luxury-reveal");
   });
 
   it("rejects an output that is identical to the uploaded source or duplicates a prior treatment", () => {

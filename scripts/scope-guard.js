@@ -97,6 +97,8 @@ const ALLOWLISTS = {
     'client/src/lib/bodyCinemaPerception.ts',
     'client/src/pages/VaultXStudio.tsx',
     'client/src/pages/VaultXDrop.tsx',
+    'client/src/pages/VaultXTruthLibrary.tsx',
+    'client/src/App.tsx',
     'server/routers/bodyCinemaRouter.ts',
     'server/routers/governedPolloRouter.ts',
     'server/routers/vaultxRouter.ts',
