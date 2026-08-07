@@ -103,6 +103,7 @@ const ALLOWLISTS = {
     'server/_core/index.ts',
     'server/routers/bodyCinemaRouter.ts',
     'server/routers/governedPolloRouter.ts',
+    'server/routers/videoUploadRouter.ts',
     'server/routers/vaultxRouter.ts',
     'server/services/bodyCinemaEvidenceService.ts',
     'server/services/bodyCinemaExistingMediaProofService.ts',

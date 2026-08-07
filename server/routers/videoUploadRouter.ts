@@ -8,8 +8,8 @@
 import { Router, Request, Response, NextFunction } from "express";
 // @ts-ignore
 import multer from "multer";
-import { writeFile, readFile, unlink, mkdir, rmdir } from "fs/promises";
-import { existsSync } from "fs";
+import { writeFile, readFile, unlink, mkdir, rmdir, stat } from "fs/promises";
+import { createReadStream, existsSync } from "fs";
 import path from "path";
 import os from "os";
 import { createHash, randomUUID } from "crypto";
@@ -67,6 +67,45 @@ async function validateDirectVideo(filePath: string): Promise<{ codec: string; w
     throw new Error("Body Cinema accepts verified videos between 0.1 seconds and 10 minutes.");
   }
   return { codec: String(stream.codec_name), width, height, durationSec: Number(durationSec.toFixed(3)) };
+}
+
+function checksumFile(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = createHash("sha256");
+    const stream = createReadStream(filePath);
+    stream.on("error", reject);
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("end", () => resolve(hash.digest("hex")));
+  });
+}
+
+async function writeVerifiedUploadReceipt(input: {
+  storageId: string;
+  creatorId: number;
+  url: string;
+  filename: string;
+  filePath: string;
+}): Promise<{ id: string; sha256: string; verified: true; createdAt: string; codec: string; width: number; height: number; durationSec: number }> {
+  const [media, fileStat, sha256] = await Promise.all([
+    validateDirectVideo(input.filePath),
+    stat(input.filePath),
+    checksumFile(input.filePath),
+  ]);
+  const createdAt = new Date().toISOString();
+  await mkdir(PRIVATE_UPLOAD_RECEIPTS_DIR, { recursive: true });
+  await writeFile(path.join(PRIVATE_UPLOAD_RECEIPTS_DIR, `${input.storageId}.json`), JSON.stringify({
+    id: input.storageId,
+    creatorId: input.creatorId,
+    url: input.url,
+    filename: input.filename,
+    size: Number(fileStat.size),
+    mime: getMimeType(input.filename),
+    sha256,
+    media,
+    verified: true,
+    createdAt,
+  }, null, 2));
+  return { id: input.storageId, sha256, verified: true, createdAt, ...media };
 }
 
 async function assembleAndUpload(sessionDir: string, meta: any): Promise<{ url: string; filename: string; storageId: string; directory: string }> {
@@ -364,12 +403,20 @@ videoUploadRouter.post("/chunk", upload.single("chunk"), async (req: Request, re
     // Auto-finalize when all chunks received — push to CDN
     if (meta.receivedChunks >= meta.totalChunks) {
       const { url, filename: finalFilename, storageId, directory } = await assembleAndUpload(sessionDir, meta);
+      const uploadReceipt = await writeVerifiedUploadReceipt({
+        storageId,
+        creatorId: Number((req as any).authenticatedCreatorId),
+        url,
+        filename: finalFilename,
+        filePath: path.join(directory, finalFilename),
+      });
       const file = { url, filename: finalFilename, storageId, directory };
       const paidContent = meta.registerPaidContent === false ? null : await registerUploadedPaidContent(req, file, meta);
       return res.json({
         uploadId, chunkIndex, received: meta.receivedChunks, total: meta.totalChunks,
         complete: true,
         file,
+        uploadReceipt,
         paidContent,
       });
     }
@@ -392,9 +439,16 @@ videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
     const meta = JSON.parse(await readFile(path.join(sessionDir, "meta.json"), "utf-8"));
     if (filename) meta.filename = filename;
     const { url, filename: finalFilename, storageId, directory } = await assembleAndUpload(sessionDir, meta);
+    const uploadReceipt = await writeVerifiedUploadReceipt({
+      storageId,
+      creatorId: Number((req as any).authenticatedCreatorId),
+      url,
+      filename: finalFilename,
+      filePath: path.join(directory, finalFilename),
+    });
     const file = { url, filename: finalFilename, storageId, directory };
     const paidContent = meta.registerPaidContent === false ? null : await registerUploadedPaidContent(req, file, meta);
-    res.json({ url, filename: finalFilename, file, paidContent });
+    res.json({ url, filename: finalFilename, file, uploadReceipt, paidContent });
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }
