@@ -23,6 +23,8 @@ const OWNER_CREATOR_IDS = [6, 33];
 const MAX_CANDIDATES = 24;
 const SAMPLE_COUNT = 12;
 const MAX_SOURCE_BYTES = 750 * 1024 * 1024;
+const DIRECT_UPLOADS_DIR = "/root/uploads/content-vault";
+const DIRECT_UPLOAD_RECEIPTS_DIR = "/root/uploads/content-vault-receipts";
 
 type ExistingVideoAsset = {
   id: string;
@@ -30,6 +32,8 @@ type ExistingVideoAsset = {
   sourceUrl: string;
   storagePath: string | null;
   fileName: string;
+  ownershipBasis: "media_asset_record" | "verified_upload_receipt";
+  declaredChecksum: string | null;
   durationSeconds: number | null;
   width: number | null;
   height: number | null;
@@ -124,11 +128,86 @@ async function listExistingCreatorVideos(): Promise<ExistingVideoAsset[]> {
     sourceUrl: String(row.public_url),
     storagePath: row.storage_path ? String(row.storage_path) : null,
     fileName: String(row.original_name || row.file_name || `creatorvault-${row.id}.mp4`),
+    ownershipBasis: "media_asset_record",
+    declaredChecksum: null,
     durationSeconds: row.duration === null || row.duration === undefined ? null : Number(row.duration),
     width: row.width === null || row.width === undefined ? null : Number(row.width),
     height: row.height === null || row.height === undefined ? null : Number(row.height),
     createdAt: row.created_at ? String(row.created_at) : null,
   }));
+}
+
+type DirectUploadReceipt = {
+  id?: unknown;
+  creatorId?: unknown;
+  url?: unknown;
+  filename?: unknown;
+  size?: unknown;
+  mime?: unknown;
+  sha256?: unknown;
+  media?: { codec?: unknown; width?: unknown; height?: unknown; durationSec?: unknown };
+  verified?: unknown;
+  createdAt?: unknown;
+};
+
+async function listVerifiedDirectUploadVideos(): Promise<ExistingVideoAsset[]> {
+  let receiptNames: string[];
+  try {
+    receiptNames = (await fs.readdir(DIRECT_UPLOAD_RECEIPTS_DIR)).filter((name) => name.endsWith(".json")).slice(-MAX_CANDIDATES * 4);
+  } catch (error: any) {
+    if (error?.code === "ENOENT") return [];
+    throw error;
+  }
+
+  const assets: ExistingVideoAsset[] = [];
+  for (const receiptName of receiptNames) {
+    try {
+      const receipt = JSON.parse(await fs.readFile(path.join(DIRECT_UPLOAD_RECEIPTS_DIR, receiptName), "utf8")) as DirectUploadReceipt;
+      const id = typeof receipt.id === "string" && /^[a-f0-9-]{36}$/i.test(receipt.id) ? receipt.id : null;
+      const creatorId = Number(receipt.creatorId);
+      const fileName = typeof receipt.filename === "string" ? path.basename(receipt.filename) : null;
+      const sourceUrl = typeof receipt.url === "string" && receipt.url.startsWith("https://creatorvault.live/uploads/content-vault/") ? receipt.url : null;
+      const declaredChecksum = typeof receipt.sha256 === "string" && /^[a-f0-9]{64}$/i.test(receipt.sha256) ? receipt.sha256.toLowerCase() : null;
+      if (!id || !OWNER_CREATOR_IDS.includes(creatorId) || !fileName || !sourceUrl || !declaredChecksum || receipt.verified !== true) continue;
+      if (!isSupportedReceiptVideo(fileName, receipt.mime)) continue;
+      assets.push({
+        id,
+        creatorId,
+        sourceUrl,
+        storagePath: path.join(DIRECT_UPLOADS_DIR, id, fileName),
+        fileName,
+        ownershipBasis: "verified_upload_receipt",
+        declaredChecksum,
+        durationSeconds: Number.isFinite(Number(receipt.media?.durationSec)) ? Number(receipt.media?.durationSec) : null,
+        width: Number.isFinite(Number(receipt.media?.width)) ? Number(receipt.media?.width) : null,
+        height: Number.isFinite(Number(receipt.media?.height)) ? Number(receipt.media?.height) : null,
+        createdAt: typeof receipt.createdAt === "string" ? receipt.createdAt : null,
+      });
+    } catch {
+      // A malformed receipt can never become source evidence; continue to the next verified record.
+    }
+  }
+  return assets;
+}
+
+function isSupportedReceiptVideo(fileName: string, mime: unknown): boolean {
+  const extension = safeExtension(fileName);
+  const mimeType = typeof mime === "string" ? mime.toLowerCase() : "";
+  return [".mp4", ".mov", ".webm", ".mkv", ".avi", ".m4v"].includes(extension) && (!mimeType || mimeType.startsWith("video/"));
+}
+
+async function listAllExistingCreatorVideos(): Promise<ExistingVideoAsset[]> {
+  const [mediaAssets, receiptAssets] = await Promise.all([listExistingCreatorVideos(), listVerifiedDirectUploadVideos()]);
+  const seen = new Set<string>();
+  return [...mediaAssets, ...receiptAssets]
+    .sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))
+    .filter((asset) => {
+      const key = `${asset.creatorId}:${asset.sourceUrl}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, MAX_CANDIDATES);
 }
 
 function safeExtension(name: string): string {
@@ -159,7 +238,9 @@ async function downloadSource(asset: ExistingVideoAsset, directory: string): Pro
       if (stat.size < 1) throw new Error("storage file is empty");
       if (stat.size > MAX_SOURCE_BYTES) throw new Error("storage file exceeds the safe source-analysis size limit");
       await fs.copyFile(asset.storagePath, localPath);
-      return { localPath, sourceChecksum: await checksumFile(localPath), sourceReadOrigin: "durable_storage" };
+      const sourceChecksum = await checksumFile(localPath);
+      if (asset.declaredChecksum && asset.declaredChecksum !== sourceChecksum) throw new Error("Verified upload receipt checksum does not match the durable source file.");
+      return { localPath, sourceChecksum, sourceReadOrigin: "durable_storage" };
     } catch (error: any) {
       if (!error || !["ENOENT", "EACCES", "EPERM"].includes(error.code)) throw error;
     }
@@ -356,7 +437,7 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
   updateAttestation({ state: "running", rejectionSummary: null });
   try {
     await ensureGovernedPolloSchema();
-    const candidates = await listExistingCreatorVideos();
+    const candidates = await listAllExistingCreatorVideos();
     if (!candidates.length) {
       updateAttestation({ state: "no_usable_source", rejectionSummary: "No ready creator-owned videos were found in the existing media library." });
       return getBodyCinemaPreProviderAttestation();
@@ -414,7 +495,9 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
             sourceReadOrigin,
             sourceFileName: asset.fileName,
             sourceCreatedAt: asset.createdAt,
-            sourceOwnershipBasis: "media_assets.user_id matches governed creator_id",
+            sourceOwnershipBasis: asset.ownershipBasis === "verified_upload_receipt"
+              ? "verified direct-upload receipt creatorId matches governed creator_id and receipt checksum matches durable source bytes"
+              : "media_assets.user_id matches governed creator_id",
             consentBasis: "creator-owned existing CreatorVault upload selected for the owner-directed no-spend Body Cinema proof",
             identityRequirements: "Preserve the exact source subject; no identity, facial-feature, body-proportion, or choreography fabrication.",
             outputPurpose: "Body Cinema pre-provider proof; render remains disabled until governed paid execution is explicitly enabled.",
