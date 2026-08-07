@@ -477,28 +477,32 @@ export default function VaultXDrop() {
             <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, margin: "8px 0 20px" }}>Choose the editorial treatment. We map the motion and lighting to fit your exact source.</p>
             
             {analyzingSource && (
-              <div style={{ background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, border: `1px solid ${GOLD_BORDER}`, borderRadius: 20, padding: 24, marginBottom: 24, boxShadow: "0 8px 30px rgba(213,183,96,0.15)", position: "relative", overflow: "hidden" }}>
-                <div style={{ position: "absolute", inset: 0, opacity: 0.15, backgroundImage: "linear-gradient(to right, transparent 0%, rgba(213,183,96,0.2) 50%, transparent 100%)", animation: "scan 2s linear infinite" }} />
-                <style>{`@keyframes scan { from { transform: translateX(-100%); } to { transform: translateX(100%); } }`}</style>
-                <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "flex-start", gap: 20 }}>
-                  <div style={{ width: 60, height: 60, borderRadius: 16, background: "rgba(213,183,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid rgba(213,183,96,0.3)` }}>
-                    <Sparkles size={28} color={GOLD} className="body-cinema-spin" style={{ animationDuration: '3s' }} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 18, fontWeight: 900, color: "#fff", margin: "0 0 12px", letterSpacing: "-0.01em" }}>Finding the usable moments</p>
-                    <div style={{ display: "grid", gap: 8 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: MUTED }}><Check size={14} color={GREEN} /> <span>Detecting strongest moments...</span></div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: MUTED }}><Check size={14} color={GREEN} /> <span>Mapping body movement...</span></div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#fff", fontWeight: 600 }}><Loader2 size={14} color={GOLD} className="body-cinema-spin" /> <span>Finding a strong opening moment...</span></div>
-                    </div>
-                  </div>
+              <div style={{ background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 24, marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>
+                <Loader2 size={24} color={GOLD} className="body-cinema-spin" />
+                <div>
+                  <p style={{ fontSize: 15, fontWeight: 900, color: "#fff", margin: 0 }}>Reading source movement...</p>
+                  <p style={{ fontSize: 12, color: MUTED, margin: "4px 0 0" }}>Mapping framing and exposure locally.</p>
                 </div>
               </div>
             )}
             
             {sourceEvidence?.analysisStatus === "verified" && <div style={{ background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, border: `1px solid rgba(69,227,138,0.35)`, borderRadius: 20, padding: 20, marginBottom: 24, boxShadow: "0 8px 30px rgba(69,227,138,0.08)" }}>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}><div><p style={{ fontSize: 11, color: GREEN, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", margin: 0, display: "flex", alignItems: "center", gap: 6 }}><Sparkles size={14} /> Source locked & ready</p><p style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, margin: "6px 0 0" }}>Your clip has passed this planning check. The treatment options below use its movement and framing as a starting point.</p></div></div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, marginTop: 16 }}>{(sourceEvidence.shotRankings || []).slice(0, 4).map((shot: any, index: number) => <div key={`${shot.timestampMs}-${index}`} style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: "10px 12px", background: "rgba(0,0,0,0.4)" }}><p style={{ margin: 0, color: "#fff", fontSize: 12, fontWeight: 900 }}>Shot {index + 1} · {Math.round(Number(shot.timestampMs || 0) / 100) / 10}s</p><p style={{ margin: "4px 0 0", color: GOLD, fontSize: 10, fontWeight: 800 }}>{shot.score} Planning Score</p></div>)}</div>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}><div><p style={{ fontSize: 11, color: GREEN, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", margin: 0, display: "flex", alignItems: "center", gap: 6 }}><Sparkles size={14} /> Analysis Complete</p><p style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, margin: "6px 0 0" }}>We found the strongest moments in your clip. The treatments below are mapped to your actual movement and framing.</p></div></div>
+              <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
+                {sourceEvidence.directions?.map((dir: any) => (
+                  <div key={dir.id} style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${BORDER}`, borderRadius: 12, padding: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <p style={{ margin: 0, color: "#fff", fontSize: 14, fontWeight: 900 }}>{dir.label}</p>
+                      <span style={{ background: "rgba(213,183,96,0.15)", color: GOLD, padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 800 }}>{dir.confidence}% Match</span>
+                    </div>
+                    <div style={{ display: "grid", gap: 6 }}>
+                      {dir.evidence?.map((ev: string, i: number) => (
+                        <p key={i} style={{ margin: 0, color: MUTED, fontSize: 11, display: "flex", gap: 6 }}><span style={{ color: GOLD }}>•</span> {ev}</p>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>}
             
             {sourceEvidence?.analysisStatus === "rejected" && <div style={{ background: "rgba(255,124,124,0.1)", border: "1px solid rgba(255,124,124,0.3)", borderRadius: 16, padding: 16, marginBottom: 20, color: RED, fontSize: 13, lineHeight: 1.5 }}>{(sourceEvidence.rejectionReasons || ["We need a clearer clip to build a high-quality drop."]).map((reason: string) => <p key={reason} style={{ margin: "4px 0" }}>{reason}</p>)}</div>}
@@ -533,6 +537,13 @@ export default function VaultXDrop() {
             
             <div style={{ background: `linear-gradient(180deg, ${CARD_SOFT}, ${CARD})`, border: `1px solid ${uploadReceipt ? "rgba(69,227,138,0.3)" : BORDER}`, borderRadius: 20, padding: 20, marginBottom: 20, boxShadow: uploadReceipt ? "0 8px 24px rgba(69,227,138,0.05)" : "none" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>{uploading ? <Loader2 size={24} color={GOLD} className="body-cinema-spin" /> : uploadReceipt ? <div style={{ background: "rgba(69,227,138,0.15)", padding: 10, borderRadius: 12 }}><ShieldCheck size={22} color={GREEN} /></div> : <FileVideo size={24} color={MUTED} />}<div style={{ flex: 1, minWidth: 0 }}><p style={{ fontSize: 15, fontWeight: 900, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{fileName || "No source selected"}</p><p style={{ fontSize: 12, color: uploadReceipt ? GREEN : GOLD, margin: "4px 0 0", fontWeight: 600 }}>{uploading ? `Securing upload… ${uploadProgress}%` : uploadReceipt ? `Verified · ${formatSeconds(uploadReceipt.durationSec)}` : "Waiting for video"}</p></div></div>
+              {uploadReceipt?.verified && (
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${BORDER}`, display: "grid", gap: 10, fontSize: 12, color: MUTED }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Render Purpose</span><span>Premium PPV Teaser</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Expected Output</span><span>6-second cinematic loop</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Estimated Cost</span><span style={{ color: GOLD, fontWeight: 800 }}>45 Credits</span></div>
+                </div>
+              )}
             </div>
             
             <label style={{ display: "block", marginBottom: 24 }}><span style={{ fontSize: 13, color: "#fff", fontWeight: 800, display: "block", marginBottom: 8 }}>Release Title</span><input value={title} onChange={event => setTitle(event.target.value)} maxLength={120} placeholder="e.g. Midnight Arch Drop" style={{ width: "100%", boxSizing: "border-box", background: "#000", border: `1px solid ${BORDER}`, borderRadius: 16, color: "#fff", fontSize: 16, padding: "16px 18px", outline: "none", transition: "border-color 0.2s", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.5)" }} onFocus={e => e.target.style.borderColor = GOLD} onBlur={e => e.target.style.borderColor = BORDER} /></label>
@@ -586,7 +597,10 @@ export default function VaultXDrop() {
                 {currentJob.qualityReason && <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}><span style={{ color: "#fff", fontWeight: 800, display: "block", marginBottom: 4 }}>Quality Review</span>{currentJob.qualityReason}</div>}
                 {currentJob.failureMessage && <div style={{ color: RED, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}><span style={{ fontWeight: 800, display: "block", marginBottom: 4 }}>Safe Failure</span>{currentJob.failureMessage}</div>}
               </div>
-              <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}><CopyButton text={currentJob.requestId} label="Copy Plan ID" /></div>
+              <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <a href={`/vault-x/library/${currentJob.requestId}`} style={{ color: GOLD, fontSize: 11, fontWeight: 800, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}><ShieldCheck size={12} /> View Truth Library Record</a>
+                <CopyButton text={currentJob.requestId} label="Copy Plan ID" />
+              </div>
             </div>
           </section>
         )}
