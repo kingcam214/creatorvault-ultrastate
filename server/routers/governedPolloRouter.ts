@@ -14,6 +14,7 @@ import {
   setGovernedPolloCostEstimate,
   submitGovernedPolloJob,
   quoteGovernedPolloSourceVideoReference,
+  createQuotedGovernedPolloSourceVideoDraft,
   authorizeSingleUseGovernedPolloSubmission,
 } from "../services/governedPolloService";
 import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } from "../services/bodyCinemaEvidenceService";
@@ -57,6 +58,48 @@ const draftInput = z.object({
 });
 
 export const governedPolloRouter = router({
+  createQuotedSourceVideoDraft: protectedProcedure.input(z.object({
+    creatorId: z.number().int().positive().optional(),
+    sourceUrl: z.string().url().max(4000),
+    sourceChecksum: z.string().trim().max(128).optional().nullable(),
+    evidenceId: z.string().uuid(),
+    prompt: z.string().trim().min(8).max(6000),
+    resolution: z.enum(["480p", "720p", "1080p"]),
+    durationSeconds: z.number().int().min(4).max(15),
+    aspectRatio: z.enum(["9:16", "16:9", "1:1"]),
+    ownershipConfirmed: z.literal(true),
+    consentConfirmed: z.literal(true),
+    idempotencyKey: z.string().trim().min(12).max(191).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  })).mutation(async ({ ctx, input }) => {
+    const creatorId = input.creatorId ?? ctx.user.id;
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    try {
+      const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
+      return await createQuotedGovernedPolloSourceVideoDraft({
+        creatorId,
+        requestedBy: ctx.user.id,
+        sourceUrl: input.sourceUrl,
+        sourceChecksum: input.sourceChecksum,
+        prompt: [buildEvidenceBackedDirectionPrompt(evidenceContext.direction), input.prompt].join(" "),
+        resolution: input.resolution,
+        durationSeconds: input.durationSeconds,
+        aspectRatio: input.aspectRatio,
+        ownershipConfirmed: input.ownershipConfirmed,
+        consentConfirmed: input.consentConfirmed,
+        idempotencyKey: input.idempotencyKey,
+        metadata: {
+          ...(input.metadata || {}),
+          bodyCinemaEvidenceId: evidenceContext.evidence.id,
+          bodyCinemaDirectionId: evidenceContext.direction.id,
+          bodyCinemaTimeline: evidenceContext.direction.timeline,
+        },
+      });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
   createDraft: protectedProcedure.input(draftInput).mutation(async ({ ctx, input }) => {
     const creatorId = input.creatorId ?? ctx.user.id;
     if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
@@ -188,7 +231,7 @@ export const governedPolloRouter = router({
   authorizeSingleUseSubmission: protectedProcedure.input(z.object({
     jobId: z.number().int().positive(),
     fingerprint: z.string().length(64),
-    hardCreditCap: z.number().positive().max(1_000_000),
+    hardCreditCap: z.number().min(0).max(1_000_000),
     reason: z.string().trim().min(3).max(1200),
     expiresInMinutes: z.number().int().min(1).max(30).optional(),
   })).mutation(async ({ ctx, input }) => {

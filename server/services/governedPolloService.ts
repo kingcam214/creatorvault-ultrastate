@@ -109,9 +109,9 @@ export type GovernedPolloProviderQuote = {
 };
 
 const DEFAULT_MODEL_PATH = "pollo/pollo-v1-6";
-const SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/pollo-v2-6";
+const SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/pollo-v3-0";
 const SOURCE_VIDEO_REFERENCE_MODE = "body-cinema-source-video-ref";
-const SOURCE_VIDEO_REFERENCE_API_PATH = "v1/generation/pollo-ai/pollo-v2-6/video";
+const SOURCE_VIDEO_REFERENCE_API_PATH = "v1/generation/pollo-ai/pollo-v3-0/video";
 const OWNER_IDS = new Set([6, 33]);
 const ACTIVE_LEASE_STATES: GovernedPolloJobState[] = ["queued", "submitted", "submission_unknown", "provider_complete", "quality_review"];
 const TERMINAL_STATES: GovernedPolloJobState[] = ["accepted", "rejected", "failed", "cancelled"];
@@ -167,6 +167,12 @@ function requirePositiveAmount(value: number | null | undefined, label: string):
   return Math.round(normalized * 100) / 100;
 }
 
+function requireNonNegativeAmount(value: number | null | undefined, label: string): number {
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized) || normalized < 0) throw new Error(`${label} must be a non-negative amount.`);
+  return Math.round(normalized * 100) / 100;
+}
+
 function requireNonEmpty(value: string | null | undefined, label: string): string {
   const normalized = String(value ?? "").trim();
   if (!normalized) throw new Error(`${label} is required.`);
@@ -200,6 +206,14 @@ function isSourceVideoReferenceJob(job: Pick<GovernedPolloJob, "providerModelPat
   return job.providerModelPath === SOURCE_VIDEO_REFERENCE_MODEL_PATH && job.mode === SOURCE_VIDEO_REFERENCE_MODE;
 }
 
+function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
+  const quote = job.metadata.providerQuote;
+  return isSourceVideoReferenceJob(job)
+    && Number(job.estimatedCostCredits) === 0
+    && job.metadata.verifiedProviderQuote === true
+    && Boolean(quote && typeof quote === "object");
+}
+
 function buildSourceVideoReferenceInput(input: {
   sourceUrl: string;
   prompt: string;
@@ -220,6 +234,7 @@ function buildSourceVideoReferenceInput(input: {
       duration: input.durationSeconds,
       resolution: input.resolution,
       aspectRatio: input.aspectRatio,
+      mode: "basic",
       generateAudio: false,
     },
   };
@@ -545,11 +560,22 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
   if (!providerModelPath.startsWith("pollo/")) {
     throw new Error("Only approved Pollo platform model paths may be requested through the governed workflow.");
   }
-  const estimatedCostCredits = input.estimatedCostCredits === null || input.estimatedCostCredits === undefined
+  const requestedEstimate = input.estimatedCostCredits === null || input.estimatedCostCredits === undefined
     ? null
-    : requirePositiveAmount(input.estimatedCostCredits, "Estimated credit cost");
+    : Number(input.estimatedCostCredits);
+  const sourceVideoQuote = input.metadata?.providerQuote;
+  const verifiedZeroProviderQuote = providerModelPath === SOURCE_VIDEO_REFERENCE_MODEL_PATH
+    && input.mode === SOURCE_VIDEO_REFERENCE_MODE
+    && requestedEstimate === 0
+    && input.metadata?.verifiedProviderQuote === true
+    && Boolean(sourceVideoQuote && typeof sourceVideoQuote === "object");
+  const estimatedCostCredits = requestedEstimate === null
+    ? null
+    : verifiedZeroProviderQuote
+      ? requireNonNegativeAmount(requestedEstimate, "Verified provider quote")
+      : requirePositiveAmount(requestedEstimate, "Estimated credit cost");
   const costEvidenceReference = input.costEvidenceReference ? String(input.costEvidenceReference).trim() : null;
-  const state: GovernedPolloJobState = estimatedCostCredits && costEvidenceReference ? "awaiting_approval" : "cost_pending";
+  const state: GovernedPolloJobState = estimatedCostCredits !== null && costEvidenceReference ? "awaiting_approval" : "cost_pending";
   const fingerprint = createFingerprint({ ...input, sourceUrl, prompt, providerModelPath, durationSeconds, outputCount, estimatedCostCredits, costEvidenceReference });
   const idempotencyKey = String(input.idempotencyKey || `governed-pollo:${input.creatorId}:${fingerprint}`).slice(0, 191);
 
@@ -632,14 +658,14 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   const quotedCostUsdRaw = quote.discountCostUsd ?? quote.costUsd ?? quote.totalCostUsd ?? quote.usd ?? quote.amountUsd ?? quote.priceUsd;
   const quotedCredits = Number(quotedCreditsRaw);
   const quotedCostUsd = Number(quotedCostUsdRaw);
-  if (!Number.isFinite(quotedCredits) || quotedCredits <= 0 || !Number.isFinite(quotedCostUsd) || quotedCostUsd <= 0) {
-    throw new Error(`Pollo provider estimate omitted a usable positive quote: ${safeErrorMessage(JSON.stringify({ providerResponse, quote }))}`);
+  if (!Number.isFinite(quotedCredits) || quotedCredits < 0 || !Number.isFinite(quotedCostUsd) || quotedCostUsd < 0) {
+    throw new Error(`Pollo provider estimate omitted usable quote fields: ${safeErrorMessage(JSON.stringify({ providerResponse, quote }))}`);
   }
   return {
     providerModelPath: SOURCE_VIDEO_REFERENCE_MODEL_PATH,
     providerApiPath: SOURCE_VIDEO_REFERENCE_API_PATH,
-    quotedCredits: requirePositiveAmount(quotedCredits, "Pollo quoted credits"),
-    quotedCostUsd: requirePositiveAmount(quotedCostUsd, "Pollo quoted USD cost"),
+    quotedCredits: requireNonNegativeAmount(quotedCredits, "Pollo quoted credits"),
+    quotedCostUsd: requireNonNegativeAmount(quotedCostUsd, "Pollo quoted USD cost"),
     quotedAt: new Date().toISOString(),
     providerResponse,
   };
@@ -660,8 +686,11 @@ export async function authorizeSingleUseGovernedPolloSubmission(params: {
   if (!isSourceVideoReferenceJob(job)) throw new Error("Single-use execution permits are restricted to the source-video reference contract.");
   if (job.state !== "approved") throw new Error(`Job in state ${job.state} cannot receive a single-use execution permit.`);
   if (job.fingerprint !== params.expectedFingerprint) throw new Error("Single-use permit fingerprint does not match the approved governed request.");
-  const hardCreditCap = requirePositiveAmount(params.hardCreditCap, "Single-use hard credit cap");
-  if (!job.estimatedCostCredits || Number(job.estimatedCostCredits) !== hardCreditCap) throw new Error("Single-use hard credit cap must equal the recorded provider quote exactly.");
+  const hardCreditCap = requireNonNegativeAmount(params.hardCreditCap, "Single-use hard credit cap");
+  if (job.estimatedCostCredits === null || job.estimatedCostCredits === undefined || Number(job.estimatedCostCredits) !== hardCreditCap) {
+    throw new Error("Single-use hard credit cap must equal the recorded provider quote exactly.");
+  }
+  if (hardCreditCap === 0 && !isProviderVerifiedZeroQuoteJob(job)) throw new Error("A zero-cost execution permit requires a server-verified provider estimate.");
   const expiresInMinutes = Math.max(1, Math.min(30, Number(params.expiresInMinutes ?? 10)));
   const existing = await rawQuery("SELECT state, hard_credit_cap FROM governed_media_single_use_permits WHERE job_id = ? LIMIT 1", [job.id]);
   if (existing[0]) {
@@ -684,6 +713,44 @@ export async function authorizeSingleUseGovernedPolloSubmission(params: {
     detail: { hardCreditCap, expiresInMinutes, reason: params.reason },
   });
   return (await getGovernedPolloJob(job.id))!;
+}
+
+export async function createQuotedGovernedPolloSourceVideoDraft(input: {
+  creatorId: number;
+  requestedBy: number;
+  sourceUrl: string;
+  sourceChecksum?: string | null;
+  prompt: string;
+  resolution: "480p" | "720p" | "1080p";
+  durationSeconds: number;
+  aspectRatio: "9:16" | "16:9" | "1:1";
+  ownershipConfirmed: boolean;
+  consentConfirmed: boolean;
+  idempotencyKey?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<{ job: GovernedPolloJob; reused: boolean; quote: GovernedPolloProviderQuote }> {
+  const quote = await quoteGovernedPolloSourceVideoReference({
+    sourceUrl: input.sourceUrl,
+    prompt: input.prompt,
+    durationSeconds: input.durationSeconds,
+    resolution: input.resolution,
+    aspectRatio: input.aspectRatio,
+  });
+  const costEvidenceReference = `Pollo live estimate ${quote.providerApiPath} at ${quote.quotedAt}: ${quote.quotedCredits} credits / $${quote.quotedCostUsd}`;
+  const draft = await createGovernedPolloDraft({
+    ...input,
+    providerModelPath: quote.providerModelPath,
+    mode: SOURCE_VIDEO_REFERENCE_MODE,
+    outputCount: 1,
+    estimatedCostCredits: quote.quotedCredits,
+    costEvidenceReference,
+    metadata: {
+      ...(input.metadata || {}),
+      verifiedProviderQuote: true,
+      providerQuote: quote,
+    },
+  });
+  return { ...draft, quote };
 }
 
 export async function setGovernedPolloCostEstimate(params: { jobId: number; ownerId: number; estimatedCostCredits: number; costEvidenceReference: string; reason?: string | null }): Promise<GovernedPolloJob> {
@@ -749,6 +816,7 @@ async function getReservedCredits(scope: string, creatorId?: number): Promise<nu
 }
 
 async function reserveBudget(job: GovernedPolloJob, approverId: number): Promise<void> {
+  if (isProviderVerifiedZeroQuoteJob(job)) return;
   const estimated = requirePositiveAmount(job.estimatedCostCredits, "Estimated credit cost");
   const config = getGovernedPolloConfig();
   if (config.perRequestCreditCap <= 0 || config.perUserDailyCreditCap <= 0 || config.globalDailyCreditCap <= 0 || config.maxConcurrentJobs <= 0) {
@@ -788,7 +856,12 @@ export async function approveGovernedPolloJob(params: { jobId: number; approverI
   if (initial.fingerprint !== params.expectedFingerprint) throw new Error("Approval fingerprint does not match the immutable governed media request.");
   if (initial.state === "approved" || initial.state === "queued" || initial.state === "submitted") return initial;
   if (initial.state !== "awaiting_approval") throw new Error(`Job in state ${initial.state} cannot be approved.`);
-  if (!initial.estimatedCostCredits || !initial.costEvidenceReference) throw new Error("A positive estimate and cost-evidence reference are required before approval.");
+  if ((initial.estimatedCostCredits === null || initial.estimatedCostCredits === undefined || initial.estimatedCostCredits < 0) || !initial.costEvidenceReference) {
+    throw new Error("A provider quote and cost-evidence reference are required before approval.");
+  }
+  if (Number(initial.estimatedCostCredits) === 0 && !isProviderVerifiedZeroQuoteJob(initial)) {
+    throw new Error("A zero-cost job requires a server-verified provider estimate.");
+  }
 
   const lockName = `governed_pollo_approval:${initial.creatorId}:${new Date().toISOString().slice(0, 10)}`;
   return withNamedLock(lockName, async () => {
