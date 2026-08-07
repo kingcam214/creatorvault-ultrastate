@@ -109,9 +109,9 @@ export type GovernedPolloProviderQuote = {
 };
 
 const DEFAULT_MODEL_PATH = "pollo/pollo-v1-6";
-const SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/pollo-v3-0";
+const SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/pollo-v2-6";
 const SOURCE_VIDEO_REFERENCE_MODE = "body-cinema-source-video-ref";
-const SOURCE_VIDEO_REFERENCE_API_PATH = "v1/generation/pollo-ai/pollo-v3-0/video";
+const SOURCE_VIDEO_REFERENCE_API_PATH = "v1/generation/pollo-ai/pollo-v2-6/video";
 const OWNER_IDS = new Set([6, 33]);
 const ACTIVE_LEASE_STATES: GovernedPolloJobState[] = ["queued", "submitted", "submission_unknown", "provider_complete", "quality_review"];
 const TERMINAL_STATES: GovernedPolloJobState[] = ["accepted", "rejected", "failed", "cancelled"];
@@ -220,7 +220,6 @@ function buildSourceVideoReferenceInput(input: {
       duration: input.durationSeconds,
       resolution: input.resolution,
       aspectRatio: input.aspectRatio,
-      mode: "basic",
       generateAudio: false,
     },
   };
