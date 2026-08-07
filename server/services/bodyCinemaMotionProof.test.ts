@@ -10,19 +10,10 @@ const routePath = resolve(projectRoot, "client/src/pages/VaultXDrop.tsx");
 const requiredAssets = [
   "final-drop.mp4",
   "hero-transformation.mp4",
-  "intelligence-overlay.mp4",
-  "preview-abs.mp4",
   "preview-arch.mp4",
-  "preview-back.mp4",
   "preview-curves-360.mp4",
-  "preview-decollete.mp4",
-  "preview-hips.mp4",
-  "preview-legs.mp4",
-  "preview-lower-back.mp4",
   "preview-mirror.mp4",
   "preview-silhouette.mp4",
-  "preview-thigh.mp4",
-  "preview-waist.mp4",
 ] as const;
 
 function assetPath(name: string) {
@@ -47,11 +38,11 @@ describe("Body Cinema motion proof package", () => {
     expect(hashes.size, "no two claimed Body Cinema motion assets may be byte-for-byte duplicates").toBe(requiredAssets.length);
   });
 
-  it("maps all twelve named treatments to explicit looping preview files", () => {
+  it("maps the four named treatments to explicit looping preview files", () => {
     const route = readFileSync(routePath, "utf8");
     const treatmentAssets = requiredAssets.filter((name) => name.startsWith("preview-"));
 
-    expect(treatmentAssets).toHaveLength(12);
+    expect(treatmentAssets).toHaveLength(4);
     expect(route).toContain("const TREATMENT_PREVIEW");
     expect(route).toContain("autoPlay loop muted playsInline");
 

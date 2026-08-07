@@ -48,7 +48,7 @@ export type BodyCinemaTimelineBeat = {
 };
 
 export type BodyCinemaDirection = {
-  id: "portrait-command" | "silhouette-control" | "motion-tension";
+  id: "the-arch" | "silhouette" | "luxury-reveal" | "vip-tease";
   label: string;
   camera: string;
   movement: string;
@@ -105,6 +105,10 @@ const BODY_GROUPS: Record<string, number[]> = {
 
 function clamp(value: number, min = 0, max = 1): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function average(values: number[]): number {
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
 }
 
 function rawClient<T = any>(query: string, params: any[] = []): Promise<T[]> {
@@ -293,17 +297,20 @@ function chooseRankedShot(rankings: BodyCinemaShotRanking[], score: (shot: BodyC
 
 function compileTreatmentTimeline(treatment: BodyCinemaDirection["id"], rankings: BodyCinemaShotRanking[], sourceDurationMs: number): BodyCinemaTimelineBeat[] {
   const used = new Set<number>();
-  const portrait = () => chooseRankedShot(rankings, (shot) => shot.faceSupport * 0.55 + shot.cropSafety * 0.25 + shot.score / 100 * 0.2, used);
-  const silhouette = () => chooseRankedShot(rankings, (shot) => shot.subjectCoverage * 0.4 + shot.cropSafety * 0.3 + shot.score / 100 * 0.3, used);
-  const motion = () => chooseRankedShot(rankings, (shot) => (shot.timestampMs / Math.max(1, sourceDurationMs)) * 0.2 + shot.score / 100 * 0.8, used);
-  const select = treatment === "portrait-command" ? portrait : treatment === "silhouette-control" ? silhouette : motion;
+  const arch = () => chooseRankedShot(rankings, (shot) => shot.subjectCoverage * 0.34 + shot.cropSafety * 0.28 + shot.score / 100 * 0.24 + (shot.timestampMs / Math.max(1, sourceDurationMs)) * 0.14, used);
+  const silhouette = () => chooseRankedShot(rankings, (shot) => shot.subjectCoverage * 0.42 + shot.cropSafety * 0.34 + shot.score / 100 * 0.24, used);
+  const luxury = () => chooseRankedShot(rankings, (shot) => shot.faceSupport * 0.4 + shot.cropSafety * 0.32 + shot.score / 100 * 0.28, used);
+  const vip = () => chooseRankedShot(rankings, (shot) => shot.faceSupport * 0.3 + shot.score / 100 * 0.45 + (1 - shot.timestampMs / Math.max(1, sourceDurationMs)) * 0.25, used);
+  const select = treatment === "the-arch" ? arch : treatment === "silhouette" ? silhouette : treatment === "luxury-reveal" ? luxury : vip;
   const fallback: BodyCinemaShotRanking = rankings[0] || { timestampMs: 0, score: 0, reason: "No ranked source shot is available.", sceneId: 0, visibleLandmarks: 0, faceSupport: 0, subjectCoverage: 0, cropSafety: 0 };
   const shots = Array.from({ length: 5 }, () => select() || fallback);
-  const recipe = treatment === "portrait-command"
-    ? { crop: "Chest-up center-safe crop; retain face and shoulder line.", grade: "Neutral skin-preserving contrast with subtle warm highlights.", directions: ["Open on face-framed source shot.", "Hold a composed three-quarter frame.", "Use a restrained push toward the expression-supported frame.", "Return to the clearest face-and-shoulder frame.", "End on a stable face-led hold for loop continuity."] }
-    : treatment === "silhouette-control"
-      ? { crop: "Mid-shot composition that protects subject-mask edges and negative space.", grade: "Controlled high-contrast editorial grade with background separation.", directions: ["Open on the clearest subject-mask separation.", "Move to the strongest structural full-body framing.", "Hold the silhouette-supported frame without artificial zoom.", "Reserve the highest crop-safety composition for the paid payoff.", "Loop through the cleanest structural exit frame."] }
-      : { crop: "Tracked medium crop with directional room ahead of observed motion.", grade: "Crisp motion-led contrast with restrained color bias.", directions: ["Open on the earliest stable motion frame.", "Build through an observed gesture or torso path.", "Use the most dynamic supported frame as the restraint beat.", "Deliver the highest-quality moving composition as paid payoff.", "Close on a motion-compatible frame that can loop without a jump."] };
+  const recipe = treatment === "the-arch"
+    ? { crop: "Three-quarter medium crop that protects torso and hip geometry.", grade: "Sculpted side-light contrast with controlled shadow detail.", directions: ["Open on the clearest structural body line.", "Let the frame hold before movement begins.", "Use the strongest supported hip or torso transition as the tension beat.", "Delay the cleanest full-form composition for the payoff.", "Close on a stable structural frame that loops without a jump."] }
+    : treatment === "silhouette"
+      ? { crop: "Mid-shot composition that protects subject-mask edges and negative space.", grade: "Controlled high-contrast editorial grade with background separation.", directions: ["Open on the clearest subject-mask separation.", "Move to the strongest structural full-body framing.", "Hold the silhouette-supported frame without artificial zoom.", "Reserve the highest crop-safety composition for the payoff.", "Loop through the cleanest structural exit frame."] }
+      : treatment === "luxury-reveal"
+        ? { crop: "Face-and-shoulder safe crop that reveals detail gradually.", grade: "Warm private-campaign grade with retained texture and soft highlights.", directions: ["Begin on a composed, low-pressure frame.", "Build through the clearest face-and-shoulder detail.", "Pause before the reveal instead of accelerating.", "Use the strongest polished framing as the reveal.", "Return to a quiet, stable final hold."] }
+        : { crop: "Tight early-hook crop with safe room for a rapid vertical teaser.", grade: "Crisp high-contrast teaser grade with a decisive first second.", directions: ["Lead with the earliest high-quality visual hook.", "Move immediately to the most legible supporting frame.", "Create a short tension hold before the payoff.", "Give the clearest high-score frame the private-access payoff.", "End with a deliberate cliffhanger frame, not a full resolution."] };
   const beatIds: BodyCinemaTimelineBeat["id"][] = ["hook", "build", "restraint", "payoff", "loop"];
   return beatIds.map((id, index) => ({
     id,
@@ -351,52 +358,68 @@ export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
 
   const directions: BodyCinemaDirection[] = [
     {
-      id: "portrait-command" as const,
-      label: "Portrait Command",
-      camera: "Controlled slow push-in from a chest-up, three-quarter frame.",
-      movement: "Minimal head-and-shoulder shift; reserve movement for one deliberate glance or shoulder turn.",
+      id: "the-arch" as const,
+      label: "The Arch",
+      camera: "A measured three-quarter medium frame that follows the strongest supported body line.",
+      movement: "One controlled torso or hip transition; no invented choreography.",
+      bodyFocus: ["torso", "hips", "legs"].filter((region) => bodyMap[region] >= 0.35),
+      composition: "Protect torso geometry and leave room for the side-lit structural line.",
+      evidence: [
+        `Torso confidence ${Math.round(bodyMap.torso * 100)}%.`,
+        `Hip confidence ${Math.round(bodyMap.hips * 100)}%.`,
+        `Observed motion energy ${Math.round(bodyMap.motion * 100)}%.`,
+        bestShotEvidence,
+      ],
+      confidence: Math.round(clamp(bodyMap.torso * 0.35 + bodyMap.hips * 0.35 + bodyMap.legs * 0.15 + bodyMap.motion * 0.15) * 100),
+      distinction: "A sculpted body-line reveal with a delayed payoff—not a silhouette, a face-led edit, or a fast teaser.",
+    },
+    {
+      id: "silhouette" as const,
+      label: "Silhouette",
+      camera: "A slow lateral glide through the clearest full-form framing and negative space.",
+      movement: "Keep the pose restrained; let shape, separation, and stillness carry the frame.",
+      bodyFocus: ["torso", "hips", "legs"].filter((region) => bodyMap[region] >= 0.35),
+      composition: "Preserve subject edges and structural negative space; protect hands and knees from crop edges.",
+      evidence: [
+        `Subject coverage ${Math.round(average(frames.map((frame) => Number(frame.subjectCoverage || 0))) * 100)}%.`,
+        `Torso confidence ${Math.round(bodyMap.torso * 100)}%.`,
+        `Leg confidence ${Math.round(bodyMap.legs * 100)}%.`,
+        bestShotEvidence,
+      ],
+      confidence: Math.round(clamp(bodyMap.torso * 0.4 + bodyMap.hips * 0.3 + bodyMap.legs * 0.2 + bodyMap.frameCoverage * 0.1) * 100),
+      distinction: "A graphic shape-and-light composition with a full-form hold—not The Arch, a polished reveal, or a teaser hook.",
+    },
+    {
+      id: "luxury-reveal" as const,
+      label: "Luxury Reveal",
+      camera: "A face-and-shoulder-led reveal that moves from calm detail toward a polished private-campaign payoff.",
+      movement: "Slow, controlled movement with one deliberate reveal; texture and framing matter more than speed.",
       bodyFocus: ["face", "shoulders", "torso"].filter((region) => bodyMap[region] >= 0.35),
-      composition: "Keep the face and shoulder line within the center safe zone; no artificial crop below the waist.",
+      composition: "Keep the face and shoulder line in the safe center frame while protecting natural texture.",
       evidence: [
         `Face confidence ${Math.round(bodyMap.face * 100)}%.`,
         `Shoulder confidence ${Math.round(bodyMap.shoulders * 100)}%.`,
         `Center-frame coverage ${Math.round(bodyMap.frameCoverage * 100)}%.`,
         bestShotEvidence,
       ],
-      confidence: Math.round(clamp(bodyMap.face * 0.45 + bodyMap.shoulders * 0.35 + bodyMap.torso * 0.2) * 100),
-      distinction: "Identity-led close framing and micro-expression, not a silhouette or motion treatment.",
+      confidence: Math.round(clamp(bodyMap.face * 0.45 + bodyMap.shoulders * 0.3 + bodyMap.torso * 0.15 + bodyMap.frameCoverage * 0.1) * 100),
+      distinction: "A gradual, detail-led private campaign reveal—not a body-line composition, silhouette, or rapid-access teaser.",
     },
     {
-      id: "silhouette-control" as const,
-      label: "Silhouette Control",
-      camera: "Slow lateral glide around a stable three-quarter mid-shot with rim light separating the body from the background.",
-      movement: "Keep the pose still; use one measured hip or torso transition rather than a full-body performance.",
-      bodyFocus: ["torso", "hips", "legs"].filter((region) => bodyMap[region] >= 0.35),
-      composition: "Preserve torso and hip geometry inside the frame; protect hands and knees from edge clipping.",
+      id: "vip-tease" as const,
+      label: "VIP Tease",
+      camera: "A tight vertical teaser built around the earliest high-quality visual hook and a clear cliffhanger ending.",
+      movement: "Short, decisive progression: hook, tension, private payoff, then an unresolved exit.",
+      bodyFocus: ["face", "arms", "torso"].filter((region) => bodyMap[region] >= 0.35),
+      composition: "Use the clearest safe crop in the first second, then reserve the best-supported frame for a private-access payoff.",
       evidence: [
-        `Torso confidence ${Math.round(bodyMap.torso * 100)}%.`,
-        `Hip confidence ${Math.round(bodyMap.hips * 100)}%.`,
-        `Leg confidence ${Math.round(bodyMap.legs * 100)}%.`,
-        bestShotEvidence,
-      ],
-      confidence: Math.round(clamp(bodyMap.torso * 0.45 + bodyMap.hips * 0.35 + bodyMap.legs * 0.2) * 100),
-      distinction: "Shape-and-light composition with a lateral camera line, not a face-led close-up or motion beat.",
-    },
-    {
-      id: "motion-tension" as const,
-      label: "Motion Tension",
-      camera: "Tracked medium frame with a restrained forward drift and a visible gesture path.",
-      movement: "Build around the observed arm/hand path or torso shift; do not invent complex choreography the source does not support.",
-      bodyFocus: ["arms", "torso", "legs"].filter((region) => bodyMap[region] >= 0.35),
-      composition: "Leave directional space ahead of the observed gesture and maintain the strongest visible regions in frame.",
-      evidence: [
+        `Earliest usable frame quality ${Math.round((shotRankings[shotRankings.length - 1]?.score || 0))}/100.`,
         `Arm confidence ${Math.round(bodyMap.arms * 100)}%.`,
-        `Observed torso-motion energy ${Math.round(bodyMap.motion * 100)}%.`,
-        `Frame coverage ${Math.round(bodyMap.frameCoverage * 100)}%.`,
+        `Observed motion energy ${Math.round(bodyMap.motion * 100)}%.`,
         bestShotEvidence,
       ],
-      confidence: Math.round(clamp(bodyMap.arms * 0.45 + bodyMap.torso * 0.3 + bodyMap.motion * 0.25) * 100),
-      distinction: "Gesture and motion-led treatment with tracked camera energy, not a static portrait or sculptural silhouette.",
+      confidence: Math.round(clamp(bodyMap.arms * 0.25 + bodyMap.torso * 0.25 + bodyMap.motion * 0.3 + bodyMap.frameCoverage * 0.2) * 100),
+      distinction: "A fast access-hook sequence with an intentional cliffhanger—not a gradual luxury reveal, a structural arch, or a still silhouette.",
     },
   ].map((direction) => ({
     ...direction,

@@ -84,33 +84,17 @@ const STEP_LABELS: Record<Step, string> = {
 };
 
 const QUICK_PRESETS: QuickPreset[] = [
-  { id: "body-curves-360", name: "360 Curves", direction: "Controlled orbit with full-body continuity and stable framing.", focus: "Full form" },
-  { id: "body-butt-arch", name: "The Arch", direction: "Sculpted side light and deliberate tension with stable detail.", focus: "Lower form" },
-  { id: "body-waist-curve", name: "The Waist", direction: "Editorial framing with a restrained push-in and protected skin detail.", focus: "Waistline" },
-  { id: "body-abs-definition", name: "Abs Drop", direction: "Clean definition with controlled highlights and no crushed shadows.", focus: "Core" },
-  { id: "body-thigh-close", name: "Inner Thigh", direction: "Tight composition, measured slow motion, and stable anatomy.", focus: "Leg line" },
-  { id: "body-full-silhouette", name: "Silhouette", direction: "Backlight, negative space, and a graphic but legible shape.", focus: "Outline" },
-  { id: "body-lower-back-dimples", name: "Lower Back", direction: "Low-key light with intimate detail and gentle movement.", focus: "Back line" },
-  { id: "body-hips-sway", name: "Hip Sway", direction: "Rhythmic lateral motion with stable framing and natural flow.", focus: "Hip line" },
-  { id: "body-legs-full", name: "Leg Day", direction: "Long vertical framing and runway pacing with clean geometry.", focus: "Full legs" },
-  { id: "body-back-spine", name: "The Back", direction: "Noir edge light with restrained camera movement and preserved detail.", focus: "Back" },
-  { id: "body-chest-decollete", name: "Décolleté", direction: "Soft editorial light, controlled texture, and restrained motion.", focus: "Upper form" },
-  { id: "heat-mirror-moment", name: "Mirror Moment", direction: "Reflections, depth, and a private-campaign editorial finish.", focus: "Reflection" },
+  { id: "the-arch", name: "The Arch", direction: "Sculpted side light, a controlled body line, and a delayed payoff.", focus: "Structural reveal" },
+  { id: "silhouette", name: "Silhouette", direction: "Backlight, negative space, and a clear graphic outline.", focus: "Shape & light" },
+  { id: "luxury-reveal", name: "Luxury Reveal", direction: "Warm private-campaign detail that unfolds slowly into a polished reveal.", focus: "Private campaign" },
+  { id: "vip-tease", name: "VIP Tease", direction: "A decisive first second, a measured hold, and an unresolved private-access finish.", focus: "Access hook" },
 ];
 
 const TREATMENT_PREVIEW: Record<string, string> = {
-  "body-curves-360": "/assets/preview-curves-360.mp4",
-  "body-butt-arch": "/assets/preview-arch.mp4",
-  "body-waist-curve": "/assets/preview-waist.mp4",
-  "body-abs-definition": "/assets/preview-abs.mp4",
-  "body-thigh-close": "/assets/preview-thigh.mp4",
-  "body-full-silhouette": "/assets/preview-silhouette.mp4",
-  "body-lower-back-dimples": "/assets/preview-lower-back.mp4",
-  "body-hips-sway": "/assets/preview-hips.mp4",
-  "body-legs-full": "/assets/preview-legs.mp4",
-  "body-back-spine": "/assets/preview-back.mp4",
-  "body-chest-decollete": "/assets/preview-decollete.mp4",
-  "heat-mirror-moment": "/assets/preview-mirror.mp4",
+  "the-arch": "/assets/preview-arch.mp4",
+  "silhouette": "/assets/preview-silhouette.mp4",
+  "luxury-reveal": "/assets/preview-mirror.mp4",
+  "vip-tease": "/assets/preview-curves-360.mp4",
 };
 
 function stepIndex(step: Step) {
@@ -290,7 +274,7 @@ export default function VaultXDrop() {
       toast.error("A verified local source analysis is required before choosing a treatment.");
       return;
     }
-    const directionId = preset.id.includes("silhouette") ? "silhouette-control" : preset.id.includes("hip") || preset.id.includes("arch") || preset.id.includes("leg") ? "motion-tension" : "portrait-command";
+    const directionId = preset.id;
     try {
       const evidence = await approveDirection.mutateAsync({ evidenceId: sourceEvidence.id, directionId });
       setSourceEvidence(evidence);
@@ -541,7 +525,8 @@ export default function VaultXDrop() {
                 <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${BORDER}`, display: "grid", gap: 10, fontSize: 12, color: MUTED }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Render Purpose</span><span>Premium PPV Teaser</span></div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Expected Output</span><span>6-second cinematic loop</span></div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Estimated Cost</span><span style={{ color: GOLD, fontWeight: 800 }}>45 Credits</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Estimated Cost</span><span style={{ color: GOLD, fontWeight: 800 }}>Not approved yet</span></div>
+                  <p style={{ margin: 0, color: MUTED, fontSize: 11, lineHeight: 1.5 }}>No render can start until an owner records a real credit estimate and you can see the approved cap.</p>
                 </div>
               )}
             </div>
@@ -598,7 +583,7 @@ export default function VaultXDrop() {
                 {currentJob.failureMessage && <div style={{ color: RED, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}><span style={{ fontWeight: 800, display: "block", marginBottom: 4 }}>Safe Failure</span>{currentJob.failureMessage}</div>}
               </div>
               <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <a href={`/vault-x/library/${currentJob.requestId}`} style={{ color: GOLD, fontSize: 11, fontWeight: 800, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}><ShieldCheck size={12} /> View Truth Library Record</a>
+                <a href={`/vault-x/library/${currentJob.id}`} style={{ color: GOLD, fontSize: 11, fontWeight: 800, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}><ShieldCheck size={12} /> View Truth Library Record</a>
                 <CopyButton text={currentJob.requestId} label="Copy Plan ID" />
               </div>
             </div>

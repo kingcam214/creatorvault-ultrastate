@@ -106,7 +106,7 @@ export const bodyCinemaRouter = router({
 
   approveDirection: protectedProcedure.input(z.object({
     evidenceId: z.string().uuid(),
-    directionId: z.enum(["portrait-command", "silhouette-control", "motion-tension"]),
+    directionId: z.enum(["the-arch", "silhouette", "luxury-reveal", "vip-tease"]),
   })).mutation(async ({ ctx, input }) => {
     try {
       return await approveBodyCinemaDirection(Number(ctx.user.id), input.evidenceId, input.directionId);

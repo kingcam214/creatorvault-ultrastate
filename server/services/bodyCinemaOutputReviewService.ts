@@ -133,7 +133,7 @@ function selectedDirectionSupport(source: BodyCinemaEvidenceRecord, outputBodyMa
   const sourceSupport = average(requiredRegions.map((region) => Number(source.bodyMap[region] || 0)));
   const outputSupport = average(requiredRegions.map((region) => Number(outputBodyMap[region] || 0)));
   const regionalContinuity = clamp(outputSupport / Math.max(0.01, sourceSupport));
-  if (direction.id === "motion-tension") {
+  if (direction.id === "the-arch" || direction.id === "vip-tease") {
     const sourceMotion = Number(source.bodyMap.motion || 0);
     const outputMotion = Number(outputBodyMap.motion || 0);
     return clamp(regionalContinuity * 0.7 + clamp(outputMotion / Math.max(0.03, sourceMotion || 0.03)) * 0.3);
