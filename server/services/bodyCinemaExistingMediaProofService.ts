@@ -13,10 +13,11 @@ import { db } from "../db";
 import {
   approveBodyCinemaDirection,
   buildEvidenceBackedDirectionPrompt,
+  getBodyCinemaSourceEvidence,
   type BodyCinemaFrameEvidence,
   persistBodyCinemaSourceEvidence,
 } from "./bodyCinemaEvidenceService";
-import { createGovernedPolloDraft, ensureGovernedPolloSchema } from "./governedPolloService";
+import { createGovernedPolloDraft, ensureGovernedPolloSchema, listGovernedPolloJobs } from "./governedPolloService";
 
 const execFileAsync = promisify(execFile);
 const OWNER_CREATOR_IDS = [6, 33];
@@ -550,6 +551,36 @@ function chooseDirection(record: Awaited<ReturnType<typeof persistBodyCinemaSour
   return [...record.directions].sort((left, right) => right.confidence - left.confidence)[0] || null;
 }
 
+async function restorePersistedPreProviderAttestation(): Promise<boolean> {
+  const jobs = (await Promise.all(OWNER_CREATOR_IDS.map((creatorId) => listGovernedPolloJobs({ creatorId, limit: 50 })))).flat()
+    .filter((job) => job.mode === "body-cinema-pre-provider-proof" && ["draft", "cost_pending", "awaiting_approval"].includes(job.state))
+    .sort((left, right) => right.id - left.id);
+
+  for (const job of jobs) {
+    const evidenceId = typeof job.metadata.bodyCinemaEvidenceId === "string" ? job.metadata.bodyCinemaEvidenceId : null;
+    const treatmentId = typeof job.metadata.bodyCinemaDirectionId === "string" ? job.metadata.bodyCinemaDirectionId : null;
+    const sourceAssetId = typeof job.metadata.sourceAssetId === "string" ? job.metadata.sourceAssetId : null;
+    if (!evidenceId || !treatmentId || !sourceAssetId || !job.sourceChecksum) continue;
+    const evidence = await getBodyCinemaSourceEvidence(job.creatorId, evidenceId);
+    if (!evidence || evidence.analysisStatus !== "verified" || evidence.reviewStatus !== "ready" || evidence.selectedDirectionId !== treatmentId) continue;
+    if (evidence.sourceMediaUrl !== job.sourceUrl || evidence.sourceFingerprint !== job.sourceChecksum) continue;
+    updateAttestation({
+      state: "ready",
+      creatorId: job.creatorId,
+      sourceAssetId,
+      sourceFingerprint: job.sourceChecksum,
+      sourceReadOrigin: "durable_storage",
+      evidenceId,
+      treatmentId,
+      governedJobId: job.id,
+      governedState: job.state,
+      rejectionSummary: null,
+    });
+    return true;
+  }
+  return false;
+}
+
 function aspectRatio(asset: ExistingVideoAsset, video: { width: number; height: number }): "9:16" | "16:9" | "1:1" {
   const width = asset.width || video.width;
   const height = asset.height || video.height;
@@ -562,6 +593,7 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
   updateAttestation({ state: "running", rejectionSummary: null });
   try {
     await ensureGovernedPolloSchema();
+    if (await restorePersistedPreProviderAttestation()) return getBodyCinemaPreProviderAttestation();
     const candidates = await listAllExistingCreatorVideos();
     if (!candidates.length) {
       updateAttestation({ state: "no_usable_source", rejectionSummary: "No ready creator-owned videos were found in the existing media library." });
