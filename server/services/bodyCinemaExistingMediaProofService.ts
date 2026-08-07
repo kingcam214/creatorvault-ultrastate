@@ -38,7 +38,7 @@ type ExistingVideoAsset = {
   sourceUrl: string;
   storagePath: string | null;
   fileName: string;
-  ownershipBasis: "media_asset_record" | "content_record" | "verified_upload_receipt";
+  ownershipBasis: "media_asset_record" | "content_record" | "vaultx_content_record" | "verified_upload_receipt";
   declaredChecksum: string | null;
   durationSeconds: number | null;
   width: number | null;
@@ -189,6 +189,39 @@ async function listCreatorContentVideos(): Promise<ExistingVideoAsset[]> {
   });
 }
 
+async function listVaultxCreatorVideos(): Promise<ExistingVideoAsset[]> {
+  const placeholders = OWNER_CREATOR_IDS.map(() => "?").join(", ");
+  const rows = await queryRows<any>(
+    `SELECT id, creator_id, uncensored_url, title, content_type, created_at
+       FROM vaultx_content
+      WHERE creator_id IN (${placeholders})
+        AND status = 'active'
+        AND content_type = 'video'
+        AND uncensored_url IS NOT NULL
+        AND uncensored_url <> ''
+      ORDER BY created_at DESC
+      LIMIT ${MAX_CANDIDATES}`,
+    OWNER_CREATOR_IDS,
+  );
+  return rows.map((row) => {
+    const sourceUrl = String(row.uncensored_url);
+    const fileName = path.basename(new URL(sourceUrl).pathname) || `${String(row.title || "creatorvault-vaultx")}.mp4`;
+    return {
+      id: `vaultx-content-${String(row.id)}`,
+      creatorId: Number(row.creator_id),
+      sourceUrl,
+      storagePath: null,
+      fileName,
+      ownershipBasis: "vaultx_content_record" as const,
+      declaredChecksum: null,
+      durationSeconds: null,
+      width: null,
+      height: null,
+      createdAt: row.created_at ? String(row.created_at) : null,
+    };
+  });
+}
+
 async function listVerifiedDirectUploadVideos(): Promise<ExistingVideoAsset[]> {
   let receiptNames: string[];
   try {
@@ -236,9 +269,9 @@ function isSupportedReceiptVideo(fileName: string, mime: unknown): boolean {
 }
 
 async function listAllExistingCreatorVideos(): Promise<ExistingVideoAsset[]> {
-  const [mediaAssets, contentAssets, receiptAssets] = await Promise.all([listExistingCreatorVideos(), listCreatorContentVideos(), listVerifiedDirectUploadVideos()]);
+  const [mediaAssets, contentAssets, vaultxContentAssets, receiptAssets] = await Promise.all([listExistingCreatorVideos(), listCreatorContentVideos(), listVaultxCreatorVideos(), listVerifiedDirectUploadVideos()]);
   const seen = new Set<string>();
-  return [...mediaAssets, ...contentAssets, ...receiptAssets]
+  return [...mediaAssets, ...contentAssets, ...vaultxContentAssets, ...receiptAssets]
     .sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))
     .filter((asset) => {
       const key = `${asset.creatorId}:${asset.sourceUrl}`;
@@ -552,7 +585,9 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
               ? "verified direct-upload receipt creatorId matches governed creator_id and receipt checksum matches durable source bytes"
               : asset.ownershipBasis === "content_record"
                 ? "content.user_id matches governed creator_id"
-                : "media_assets.user_id matches governed creator_id",
+                : asset.ownershipBasis === "vaultx_content_record"
+                  ? "vaultx_content.creator_id matches governed creator_id"
+                  : "media_assets.user_id matches governed creator_id",
             consentBasis: "creator-owned existing CreatorVault upload selected for the owner-directed no-spend Body Cinema proof",
             identityRequirements: "Preserve the exact source subject; no identity, facial-feature, body-proportion, or choreography fabrication.",
             outputPurpose: "Body Cinema pre-provider proof; render remains disabled until governed paid execution is explicitly enabled.",
