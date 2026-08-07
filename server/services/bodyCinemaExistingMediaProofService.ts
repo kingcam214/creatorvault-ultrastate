@@ -25,6 +25,12 @@ const SAMPLE_COUNT = 12;
 const MAX_SOURCE_BYTES = 750 * 1024 * 1024;
 const DIRECT_UPLOADS_DIR = "/root/uploads/content-vault";
 const DIRECT_UPLOAD_RECEIPTS_DIR = "/root/uploads/content-vault-receipts";
+const LEGACY_MEDIA_ROOTS = [
+  "/root/creatorvault/storage/uploads",
+  "/root/creatorvault/uploads",
+  "/root/uploads",
+  "/root/uploads/content-vault",
+];
 
 type ExistingVideoAsset = {
   id: string;
@@ -229,15 +235,29 @@ function isDurableLocalMediaPath(value: string | null): value is string {
   return Boolean(value && path.isAbsolute(value) && !value.includes("\u0000"));
 }
 
+function localSourceCandidates(asset: ExistingVideoAsset): string[] {
+  const basename = path.basename(asset.fileName);
+  const extension = safeExtension(asset.fileName);
+  const candidates = [
+    asset.storagePath,
+    ...LEGACY_MEDIA_ROOTS.flatMap((root) => [
+      path.join(root, basename),
+      path.join(root, `${asset.id}${extension}`),
+      path.join(root, asset.id, basename),
+    ]),
+  ].filter(isDurableLocalMediaPath);
+  return [...new Set(candidates)];
+}
+
 async function downloadSource(asset: ExistingVideoAsset, directory: string): Promise<{ localPath: string; sourceChecksum: string; sourceReadOrigin: "durable_storage" | "public_url" }> {
   const localPath = path.join(directory, `${asset.id}${safeExtension(asset.fileName)}`);
-  if (isDurableLocalMediaPath(asset.storagePath)) {
+  for (const candidatePath of localSourceCandidates(asset)) {
     try {
-      const stat = await fs.stat(asset.storagePath);
-      if (!stat.isFile()) throw new Error("storage path is not a file");
-      if (stat.size < 1) throw new Error("storage file is empty");
+      const stat = await fs.stat(candidatePath);
+      if (!stat.isFile()) continue;
+      if (stat.size < 1) continue;
       if (stat.size > MAX_SOURCE_BYTES) throw new Error("storage file exceeds the safe source-analysis size limit");
-      await fs.copyFile(asset.storagePath, localPath);
+      await fs.copyFile(candidatePath, localPath);
       const sourceChecksum = await checksumFile(localPath);
       if (asset.declaredChecksum && asset.declaredChecksum !== sourceChecksum) throw new Error("Verified upload receipt checksum does not match the durable source file.");
       return { localPath, sourceChecksum, sourceReadOrigin: "durable_storage" };
