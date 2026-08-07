@@ -200,3 +200,24 @@ Ok to proceed? (y)
 - 2026-06-09: Added root SSH authorized key fingerprint SHA256:v79rQ+7rvF+v/rFnIgaNht0G08ts4UDrm1ZlPSjnWZE for Manus sandbox deployment access to install the pushed VaultX copy release.
 
 - 2026-06-25: VaultX hero media deployment required restoring PM2 from stale pnpm command to repository-defined ecosystem.config.cjs/start.sh using pm2 delete creatorvault; pm2 start ecosystem.config.cjs --update-env; pm2 save --force. Public /vault-x returned 200 OK afterward.
+
+## Permanent Non-Interruptive Execution Order
+
+### Browser and connector prohibition
+- Do not use My Browser, browser connectors, browser authorization, browser takeover, browser installation prompts, or browser verification prompts for CreatorVault work.
+- Do not navigate a browser as part of a CreatorVault task. A browser-only check is never a reason to pause, request user action, or interrupt the work.
+- Do not enable, modify, or save any browser connector configuration for this project.
+
+### Build and verification separation
+- **Task A — Build and release:** complete repository changes, scoped tests, builds, and production deployment through the server-side GitHub Actions runner. Do not use a browser.
+- **Task B — Non-browser verification:** verify only with the authoritative commit, completed deployment run, and public release metadata endpoint. Do not use a browser.
+- If visual verification is genuinely required and cannot be satisfied from already available non-browser evidence, mark only that verification item **BLOCKED — browser prohibited**. Complete all remaining work and state the precise limitation without asking the user to connect, authorize, install, or take over anything.
+
+### No-interruption rule
+- A missing browser session, authorization card, connector prompt, or verification prompt is not an acceptable stopping condition.
+- Continue automatically through every repository, deployment, server-side, production-route, media-library, Pollo, and governed-media path that remains available.
+- Never ask the user to locate files, select a technical setting, set credits, or repair access that the platform should already provide.
+
+### Evidence rule
+- Do not declare a creator feature complete from a description, code change, static preview, local test, or screenshot. A capability remains unproven until it has watchable evidence from the claimed source and output path.
+- Distinguish repository truth, production metadata truth, and watchable creator-result proof in every final delivery.

@@ -73,6 +73,7 @@ const ALLOWLISTS = {
     'scripts/scope-guard.js'
   ],
   'body-cinema': [
+    'AGENTS.md',
     'CREATORVAULT_STANDARD.md',
     'BODY_CINEMA_EVIDENCE_STANDARD.md',
     'BODY_CINEMA_EVIDENCE_LEDGER.md',
