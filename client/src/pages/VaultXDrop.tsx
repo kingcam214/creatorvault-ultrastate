@@ -180,6 +180,11 @@ export default function VaultXDrop() {
   const createDraft = trpc.governedPollo.createDraft.useMutation();
   const analyzeSource = (trpc as any).bodyCinema.analyzeSource.useMutation();
   const approveDirection = (trpc as any).bodyCinema.approveDirection.useMutation();
+  const existingVideosQuery = (trpc as any).mediaAssets.list.useQuery(
+    { filter: "videos", limit: 40 },
+    { staleTime: 30_000 },
+  );
+  const autoSelectedMediaIdRef = useRef<string | null>(null);
   const jobQuery = trpc.governedPollo.job.useQuery(
     { jobId: governedJob?.id ?? 1 },
     { enabled: Boolean(governedJob?.id), refetchInterval: governedJob && ["approved", "queued", "submitted", "provider_complete", "quality_review"].includes(governedJob.state) ? 8000 : false },
@@ -338,6 +343,14 @@ export default function VaultXDrop() {
     }
   }, [analyzeSource, videoUrl]);
 
+  useEffect(() => {
+    const videos = Array.isArray(existingVideosQuery.data) ? existingVideosQuery.data as MediaAssetItem[] : [];
+    const newestUsableVideo = videos.find((asset) => asset.publicUrl && (asset.assetType === "video" || asset.mimeType?.startsWith("video/")));
+    if (!newestUsableVideo || autoSelectedMediaIdRef.current || uploading || videoUrl || sourceEvidence) return;
+    autoSelectedMediaIdRef.current = newestUsableVideo.id;
+    void handleExistingMediaSelection([newestUsableVideo]);
+  }, [existingVideosQuery.data, handleExistingMediaSelection, sourceEvidence, uploading, videoUrl]);
+
   const handleSelectPreset = useCallback(async (preset: QuickPreset) => {
     if (!sourceEvidence?.id || sourceEvidence?.analysisStatus !== "verified") {
       toast.error("A verified local source analysis is required before choosing a treatment.");
@@ -423,6 +436,7 @@ export default function VaultXDrop() {
 
   const reset = useCallback(() => {
     if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
+    autoSelectedMediaIdRef.current = null;
     setStep("upload");
     setVideoUrl(null);
     setHostedUrl(null);
@@ -487,6 +501,8 @@ export default function VaultXDrop() {
             </div>
             
             <p style={{ fontSize: 16, color: "#fff", lineHeight: 1.65, margin: "0 0 20px", textAlign: "center", fontWeight: 500 }}>Start with a video you already have in CreatorVault. We read its movement and framing, then help you choose a cinematic plan for your next drop.</p>
+            {existingVideosQuery.isLoading && <p style={{ color: GOLD, fontSize: 12, textAlign: "center", margin: "-8px 0 20px" }}>Finding your saved videos…</p>}
+            {!existingVideosQuery.isLoading && Array.isArray(existingVideosQuery.data) && existingVideosQuery.data.length > 0 && <p style={{ color: GREEN, fontSize: 12, textAlign: "center", margin: "-8px 0 20px" }}>Your newest saved video is selected automatically. You can choose another below.</p>}
 
             <button type="button" className="body-cinema-button" onClick={() => setMediaLibraryOpen(true)} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, minHeight: 150, padding: 24, borderRadius: 24, border: `1px solid ${GOLD_BORDER}`, background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, cursor: "pointer", textAlign: "center", boxShadow: "0 8px 30px rgba(213,183,96,0.1)", color: "#fff" }}>
               <div style={{ width: 58, height: 58, borderRadius: 18, background: `linear-gradient(135deg, ${GOLD}, #b09140)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(213,183,96,0.25)" }}><Film size={26} color="#080808" /></div>
