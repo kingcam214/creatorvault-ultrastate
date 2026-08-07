@@ -345,6 +345,7 @@ export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
   directions: BodyCinemaDirection[];
   analysisScore: number;
   rejectionReasons: string[];
+  editorFindings: BodyCinemaEditorFindings;
 } {
   const bodyMap = buildBodyMap(frames);
   const { scenes, shotRankings } = deriveScenesAndShotRankings(frames);
@@ -481,6 +482,7 @@ function parseRecord(row: any): BodyCinemaEvidenceRecord {
     scenes: evidence.scenes || [],
     shotRankings: evidence.shotRankings || [],
     directions: evidence.directions || [],
+    editorFindings: evidence.editorFindings || undefined,
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined,
     updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : undefined,
   };
@@ -503,6 +505,7 @@ export async function persistBodyCinemaSourceEvidence(creatorId: number, input: 
     scenes: derived.scenes,
     shotRankings: derived.shotRankings,
     directions: derived.directions,
+    editorFindings: derived.editorFindings,
     sourceDiagnostics: {
       analyzer: input.analysisVersion || EVIDENCE_VERSION,
       landmarkCount: input.frameEvidence.reduce((total, frame) => total + frame.landmarks.length, 0),

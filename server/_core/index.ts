@@ -28,6 +28,7 @@ import { startChallengeAutomationCron } from "../routers/challengeAutomationRout
 import { startCreatorVaultOvernightRevenueCron } from "../services/creatorVaultOvernightRevenue";
 import { startPostScheduler } from "../services/postScheduler";
 import { isGovernedPolloExecutionEnabled, verifyGovernedPolloSchema } from "../services/governedPolloService";
+import { getBodyCinemaPreProviderAttestation, runBodyCinemaExistingMediaPreProviderProof } from "../services/bodyCinemaExistingMediaProofService";
 
 let governedMediaSchemaAttestation: {
   verified: boolean;
@@ -250,6 +251,7 @@ async function startServer() {
       deployedAt: process.env.RELEASE_DEPLOYED_AT || release.deployedAt || release.deployed_at || null,
       governedMediaSchema: governedMediaSchemaAttestation,
       governedMediaExecutionEnabled: isGovernedPolloExecutionEnabled(),
+      bodyCinemaPreProviderProof: getBodyCinemaPreProviderAttestation(),
       ...release,
     });
   });
@@ -281,6 +283,10 @@ async function startServer() {
 
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // This path analyzes existing owned media and prepares a governed draft only; it cannot submit a provider job.
+    void runBodyCinemaExistingMediaPreProviderProof().catch(error =>
+      console.log("[BodyCinema] pre-provider proof deferred:", error instanceof Error ? error.message : String(error)),
+    );
     
     // Initialize simulated bots (no owner dependencies)
 

@@ -33,8 +33,9 @@ function statusTone(state?: string) {
 }
 
 export default function VaultXTruthLibrary() {
-  const [matched, params] = useRoute("/vault-x/library/:jobId");
-  const jobId = Number(params?.jobId || 0);
+  const [matched, params] = useRoute<{ jobId: string }>("/vault-x/library/:jobId");
+  const routeJobId = matched && params ? params.jobId : "0";
+  const jobId = Number(routeJobId);
   const validJobId = matched && Number.isInteger(jobId) && jobId > 0;
   const jobQuery = trpc.governedPollo.job.useQuery({ jobId: validJobId ? jobId : 1 }, { enabled: validJobId });
   const eventsQuery = trpc.governedPollo.events.useQuery({ jobId: validJobId ? jobId : 1 }, { enabled: validJobId });
