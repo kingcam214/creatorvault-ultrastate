@@ -99,7 +99,19 @@ export type GovernedPolloEvent = {
   createdAt: string;
 };
 
+export type GovernedPolloProviderQuote = {
+  providerModelPath: string;
+  providerApiPath: string;
+  quotedCredits: number;
+  quotedCostUsd: number;
+  quotedAt: string;
+  providerResponse: Record<string, unknown>;
+};
+
 const DEFAULT_MODEL_PATH = "pollo/pollo-v1-6";
+const SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/pollo-v3-0";
+const SOURCE_VIDEO_REFERENCE_MODE = "body-cinema-source-video-ref";
+const SOURCE_VIDEO_REFERENCE_API_PATH = "v1/generation/pollo-ai/pollo-v3-0/video";
 const OWNER_IDS = new Set([6, 33]);
 const ACTIVE_LEASE_STATES: GovernedPolloJobState[] = ["queued", "submitted", "submission_unknown", "provider_complete", "quality_review"];
 const TERMINAL_STATES: GovernedPolloJobState[] = ["accepted", "rejected", "failed", "cancelled"];
@@ -149,6 +161,12 @@ function requirePositiveInteger(value: number | null | undefined, label: string)
   return Number(value);
 }
 
+function requirePositiveAmount(value: number | null | undefined, label: string): number {
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized) || normalized <= 0) throw new Error(`${label} must be a positive amount.`);
+  return Math.round(normalized * 100) / 100;
+}
+
 function requireNonEmpty(value: string | null | undefined, label: string): string {
   const normalized = String(value ?? "").trim();
   if (!normalized) throw new Error(`${label} is required.`);
@@ -176,6 +194,47 @@ function parseJson(value: unknown): Record<string, unknown> {
 function safeErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error ?? "Unknown error");
   return message.replace(/x-api-key\s*[:=]\s*[^\s,]+/gi, "x-api-key=[redacted]").slice(0, 1200);
+}
+
+function isSourceVideoReferenceJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode">): boolean {
+  return job.providerModelPath === SOURCE_VIDEO_REFERENCE_MODEL_PATH && job.mode === SOURCE_VIDEO_REFERENCE_MODE;
+}
+
+function buildSourceVideoReferenceInput(input: {
+  sourceUrl: string;
+  prompt: string;
+  durationSeconds: number;
+  resolution: string;
+  aspectRatio: string;
+}): Record<string, unknown> {
+  if (!/^https:\/\//i.test(input.sourceUrl)) throw new Error("The governed source-video reference must be a secure HTTPS URL.");
+  if (!Number.isInteger(input.durationSeconds) || input.durationSeconds < 4 || input.durationSeconds > 15) {
+    throw new Error("Pollo source-video reference duration must be between 4 and 15 seconds.");
+  }
+  if (!["480p", "720p", "1080p"].includes(input.resolution)) throw new Error("Unsupported Pollo source-video reference resolution.");
+  if (!["9:16", "16:9", "1:1", "4:3", "3:4", "21:9"].includes(input.aspectRatio)) throw new Error("Unsupported Pollo source-video reference aspect ratio.");
+  return {
+    input: {
+      prompt: input.prompt,
+      refs: [{ url: input.sourceUrl, type: "video" }],
+      duration: input.durationSeconds,
+      resolution: input.resolution,
+      aspectRatio: input.aspectRatio,
+      mode: "basic",
+      generateAudio: false,
+    },
+  };
+}
+
+async function parseProviderJson(response: Response): Promise<Record<string, any>> {
+  const text = await response.text().catch(() => "");
+  if (!text) return {};
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === "object" ? parsed as Record<string, any> : { responseText: text.slice(0, 1200) };
+  } catch {
+    return { responseText: text.slice(0, 1200) };
+  }
 }
 
 function createFingerprint(input: Omit<CreateGovernedPolloDraftInput, "metadata" | "idempotencyKey"> & { providerModelPath: string }): string {
@@ -343,8 +402,8 @@ export async function ensureGovernedPolloSchema(): Promise<void> {
     aspect_ratio VARCHAR(16) NOT NULL,
     render_mode VARCHAR(64) NOT NULL,
     output_count INT NOT NULL DEFAULT 1,
-    estimated_cost_credits INT NULL,
-    actual_cost_credits INT NULL,
+    estimated_cost_credits DECIMAL(12,2) NULL,
+    actual_cost_credits DECIMAL(12,2) NULL,
     cost_evidence_reference TEXT NULL,
     provider_job_id VARCHAR(191) NULL,
     provider_response_json LONGTEXT NULL,
@@ -376,7 +435,7 @@ export async function ensureGovernedPolloSchema(): Promise<void> {
     approver_id BIGINT NOT NULL,
     fingerprint CHAR(64) NOT NULL,
     decision VARCHAR(32) NOT NULL,
-    estimated_cost_credits INT NOT NULL,
+    estimated_cost_credits DECIMAL(12,2) NOT NULL,
     reason TEXT NULL,
     created_at DATETIME NOT NULL,
     UNIQUE KEY governed_media_approvals_job_decision (job_id, decision),
@@ -389,7 +448,7 @@ export async function ensureGovernedPolloSchema(): Promise<void> {
     creator_id BIGINT NOT NULL,
     scope VARCHAR(32) NOT NULL,
     entry_type VARCHAR(32) NOT NULL,
-    credits INT NOT NULL,
+    credits DECIMAL(12,2) NOT NULL,
     reference VARCHAR(191) NOT NULL,
     detail_json LONGTEXT NULL,
     created_at DATETIME NOT NULL,
@@ -411,6 +470,22 @@ export async function ensureGovernedPolloSchema(): Promise<void> {
     KEY governed_media_events_job (job_id, created_at),
     KEY governed_media_events_correlation (correlation_id, created_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await rawExec(`CREATE TABLE IF NOT EXISTS governed_media_single_use_permits (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    job_id BIGINT NOT NULL,
+    owner_id BIGINT NOT NULL,
+    hard_credit_cap DECIMAL(12,2) NOT NULL,
+    state VARCHAR(32) NOT NULL,
+    reason TEXT NULL,
+    created_at DATETIME NOT NULL,
+    expires_at DATETIME NOT NULL,
+    consumed_at DATETIME NULL,
+    UNIQUE KEY governed_media_single_use_permits_job (job_id),
+    KEY governed_media_single_use_permits_state (state, expires_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await rawExec("ALTER TABLE governed_media_jobs MODIFY COLUMN estimated_cost_credits DECIMAL(12,2) NULL, MODIFY COLUMN actual_cost_credits DECIMAL(12,2) NULL");
+  await rawExec("ALTER TABLE governed_media_approvals MODIFY COLUMN estimated_cost_credits DECIMAL(12,2) NOT NULL");
+  await rawExec("ALTER TABLE governed_media_budget_ledger MODIFY COLUMN credits DECIMAL(12,2) NOT NULL");
 }
 
 export async function verifyGovernedPolloSchema(): Promise<{ tables: string[] }> {
@@ -421,6 +496,7 @@ export async function verifyGovernedPolloSchema(): Promise<{ tables: string[] }>
     "governed_media_approvals",
     "governed_media_budget_ledger",
     "governed_media_events",
+    "governed_media_single_use_permits",
   ];
   const placeholders = requiredTables.map(() => "?").join(", ");
   const rows = await rawQuery(
@@ -472,7 +548,7 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
   }
   const estimatedCostCredits = input.estimatedCostCredits === null || input.estimatedCostCredits === undefined
     ? null
-    : requirePositiveInteger(input.estimatedCostCredits, "Estimated credit cost");
+    : requirePositiveAmount(input.estimatedCostCredits, "Estimated credit cost");
   const costEvidenceReference = input.costEvidenceReference ? String(input.costEvidenceReference).trim() : null;
   const state: GovernedPolloJobState = estimatedCostCredits && costEvidenceReference ? "awaiting_approval" : "cost_pending";
   const fingerprint = createFingerprint({ ...input, sourceUrl, prompt, providerModelPath, durationSeconds, outputCount, estimatedCostCredits, costEvidenceReference });
@@ -535,6 +611,76 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
   return { job, reused: false };
 }
 
+export async function quoteGovernedPolloSourceVideoReference(input: {
+  sourceUrl: string;
+  prompt: string;
+  durationSeconds: number;
+  resolution: "480p" | "720p" | "1080p";
+  aspectRatio: string;
+}): Promise<GovernedPolloProviderQuote> {
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!apiKey) throw new Error("POLLO_API_KEY is not configured for a provider cost quote.");
+  const requestBody = buildSourceVideoReferenceInput(input);
+  const response = await fetch(`https://pollo.ai/api/platform/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
+    method: "POST",
+    headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify(requestBody),
+  });
+  const providerResponse = await parseProviderJson(response);
+  if (!response.ok) throw new Error(`Pollo source-video quote returned ${response.status}: ${safeErrorMessage(providerResponse.responseText ?? providerResponse.message ?? "unknown error")}`);
+  const quotedCredits = requirePositiveAmount(Number(providerResponse.discountCost ?? providerResponse.cost), "Pollo quoted credits");
+  const quotedCostUsd = requirePositiveAmount(Number(providerResponse.discountCostUsd ?? providerResponse.costUsd), "Pollo quoted USD cost");
+  return {
+    providerModelPath: SOURCE_VIDEO_REFERENCE_MODEL_PATH,
+    providerApiPath: SOURCE_VIDEO_REFERENCE_API_PATH,
+    quotedCredits,
+    quotedCostUsd,
+    quotedAt: new Date().toISOString(),
+    providerResponse,
+  };
+}
+
+export async function authorizeSingleUseGovernedPolloSubmission(params: {
+  jobId: number;
+  ownerId: number;
+  expectedFingerprint: string;
+  hardCreditCap: number;
+  reason: string;
+  expiresInMinutes?: number;
+}): Promise<GovernedPolloJob> {
+  requireOwner(params.ownerId);
+  await ensureGovernedPolloSchema();
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job) throw new Error("Governed media job was not found.");
+  if (!isSourceVideoReferenceJob(job)) throw new Error("Single-use execution permits are restricted to the source-video reference contract.");
+  if (job.state !== "approved") throw new Error(`Job in state ${job.state} cannot receive a single-use execution permit.`);
+  if (job.fingerprint !== params.expectedFingerprint) throw new Error("Single-use permit fingerprint does not match the approved governed request.");
+  const hardCreditCap = requirePositiveAmount(params.hardCreditCap, "Single-use hard credit cap");
+  if (!job.estimatedCostCredits || Number(job.estimatedCostCredits) !== hardCreditCap) throw new Error("Single-use hard credit cap must equal the recorded provider quote exactly.");
+  const expiresInMinutes = Math.max(1, Math.min(30, Number(params.expiresInMinutes ?? 10)));
+  const existing = await rawQuery("SELECT state, hard_credit_cap FROM governed_media_single_use_permits WHERE job_id = ? LIMIT 1", [job.id]);
+  if (existing[0]) {
+    if (String(existing[0].state) === "consumed") throw new Error("The single-use execution permit for this job has already been consumed.");
+    if (String(existing[0].state) !== "authorized" || Number(existing[0].hard_credit_cap) !== hardCreditCap) throw new Error("A conflicting single-use execution permit already exists for this job.");
+    return job;
+  }
+  await rawExec(
+    `INSERT INTO governed_media_single_use_permits (job_id, owner_id, hard_credit_cap, state, reason, created_at, expires_at)
+     VALUES (?, ?, ?, 'authorized', ?, NOW(), DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
+    [job.id, params.ownerId, hardCreditCap, params.reason.slice(0, 1200), expiresInMinutes],
+  );
+  await appendEvent({
+    jobId: job.id,
+    eventType: "single_use_execution_authorized",
+    fromState: job.state,
+    toState: job.state,
+    actorId: params.ownerId,
+    correlationId: job.requestId,
+    detail: { hardCreditCap, expiresInMinutes, reason: params.reason },
+  });
+  return (await getGovernedPolloJob(job.id))!;
+}
+
 export async function setGovernedPolloCostEstimate(params: { jobId: number; ownerId: number; estimatedCostCredits: number; costEvidenceReference: string; reason?: string | null }): Promise<GovernedPolloJob> {
   requireOwner(params.ownerId);
   await ensureGovernedPolloSchema();
@@ -543,7 +689,7 @@ export async function setGovernedPolloCostEstimate(params: { jobId: number; owne
   if (!["draft", "cost_pending", "awaiting_approval"].includes(job.state)) {
     throw new Error(`Job in state ${job.state} cannot receive a new cost estimate.`);
   }
-  const estimatedCostCredits = requirePositiveInteger(params.estimatedCostCredits, "Estimated credit cost");
+  const estimatedCostCredits = requirePositiveAmount(params.estimatedCostCredits, "Estimated credit cost");
   const costEvidenceReference = requireNonEmpty(params.costEvidenceReference, "Cost-evidence reference");
   const fingerprint = createFingerprint({
     creatorId: job.creatorId,
@@ -598,7 +744,7 @@ async function getReservedCredits(scope: string, creatorId?: number): Promise<nu
 }
 
 async function reserveBudget(job: GovernedPolloJob, approverId: number): Promise<void> {
-  const estimated = requirePositiveInteger(job.estimatedCostCredits, "Estimated credit cost");
+  const estimated = requirePositiveAmount(job.estimatedCostCredits, "Estimated credit cost");
   const config = getGovernedPolloConfig();
   if (config.perRequestCreditCap <= 0 || config.perUserDailyCreditCap <= 0 || config.globalDailyCreditCap <= 0 || config.maxConcurrentJobs <= 0) {
     throw new Error("Governed Pollo budgets are frozen. Set explicit positive caps only after reviewing the requested job.");
@@ -701,14 +847,51 @@ export async function releaseGovernedPolloBudget(params: { jobId: number; actorI
 
 export async function claimGovernedPolloJob(params: { jobId: number; workerId: string }): Promise<GovernedPolloJob> {
   await ensureGovernedPolloSchema();
-  if (!isGovernedPolloExecutionEnabled()) {
-    throw new Error("Governed Pollo execution remains frozen. No chargeable request was sent.");
-  }
   const job = await getGovernedPolloJob(params.jobId);
   if (!job) throw new Error("Governed media job was not found.");
   if (job.state !== "approved") throw new Error(`Job in state ${job.state} cannot be leased for submission.`);
 
   const config = getGovernedPolloConfig();
+  if (isSourceVideoReferenceJob(job)) {
+    return withNamedLock(`governed_pollo_single_use:${job.id}`, async () => {
+      const locked = await getGovernedPolloJob(job.id);
+      if (!locked || locked.state !== "approved") throw new Error("The single-use governed job is no longer approval-ready.");
+      const lease = await rawExec(
+        `UPDATE governed_media_jobs
+         SET state = 'queued', lease_owner = ?, lease_expires_at = DATE_ADD(NOW(), INTERVAL ? SECOND), updated_at = NOW()
+         WHERE id = ? AND state = 'approved' AND lease_expires_at IS NULL`,
+        [params.workerId.slice(0, 191), config.leaseSeconds, locked.id],
+      );
+      if (!affectedRows(lease)) throw new Error("The governed single-use job could not be leased.");
+      const permit = await rawExec(
+        `UPDATE governed_media_single_use_permits
+         SET state = 'consumed', consumed_at = NOW()
+         WHERE job_id = ? AND state = 'authorized' AND expires_at > NOW() AND hard_credit_cap >= ?`,
+        [locked.id, locked.estimatedCostCredits],
+      );
+      if (!affectedRows(permit)) {
+        await rawExec(
+          `UPDATE governed_media_jobs SET state = 'approved', lease_owner = NULL, lease_expires_at = NULL, updated_at = NOW()
+           WHERE id = ? AND state = 'queued' AND lease_owner = ?`,
+          [locked.id, params.workerId.slice(0, 191)],
+        );
+        throw new Error("No valid unconsumed single-use execution permit exists. No chargeable request was sent.");
+      }
+      await appendEvent({
+        jobId: locked.id,
+        eventType: "single_use_permit_consumed",
+        fromState: "approved",
+        toState: "queued",
+        correlationId: locked.requestId,
+        detail: { workerId: params.workerId, leaseSeconds: config.leaseSeconds },
+      });
+      return (await getGovernedPolloJob(locked.id))!;
+    });
+  }
+
+  if (!isGovernedPolloExecutionEnabled()) {
+    throw new Error("Governed Pollo execution remains frozen. No chargeable request was sent.");
+  }
   const update = await rawExec(
     `UPDATE governed_media_jobs
      SET state = 'queued', lease_owner = ?, lease_expires_at = DATE_ADD(NOW(), INTERVAL ? SECOND), updated_at = NOW()
@@ -807,41 +990,52 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
     return failGovernedPolloJob({ jobId: leased.id, code: "provider_key_missing", error: new Error("POLLO_API_KEY is not configured"), releaseBudget: true });
   }
 
+  const requestBody = isSourceVideoReferenceJob(leased)
+    ? buildSourceVideoReferenceInput({
+      sourceUrl: leased.sourceUrl,
+      prompt: leased.prompt,
+      durationSeconds: leased.durationSeconds,
+      resolution: leased.resolution,
+      aspectRatio: leased.aspectRatio,
+    })
+    : {
+      input: {
+        image: leased.sourceUrl,
+        prompt: leased.prompt,
+        resolution: leased.resolution,
+        length: leased.durationSeconds,
+        mode: leased.mode,
+        aspect_ratio: leased.aspectRatio,
+      },
+    };
+  const providerUrl = isSourceVideoReferenceJob(leased)
+    ? `https://pollo.ai/api/platform/${SOURCE_VIDEO_REFERENCE_API_PATH}`
+    : `https://pollo.ai/api/platform/generation/${leased.providerModelPath}`;
+
   let response: Response;
   try {
-    response = await fetch(`https://pollo.ai/api/platform/generation/${leased.providerModelPath}`, {
+    response = await fetch(providerUrl, {
       method: "POST",
       headers: { "x-api-key": apiKey, "Content-Type": "application/json", "X-CreatorVault-Request-Id": leased.requestId },
-      body: JSON.stringify({
-        input: {
-          image: leased.sourceUrl,
-          prompt: leased.prompt,
-          resolution: leased.resolution,
-          length: leased.durationSeconds,
-          mode: leased.mode,
-          aspect_ratio: leased.aspectRatio,
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
   } catch (error) {
     return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId: params.workerId, error });
   }
 
-  const responseText = await response.text().catch(() => "");
-  let responseJson: any = {};
-  try { responseJson = responseText ? JSON.parse(responseText) : {}; } catch { responseJson = { responseText: responseText.slice(0, 1200) }; }
+  const responseJson = await parseProviderJson(response);
   if (!response.ok) {
     if (response.status >= 500 || response.status === 408 || response.status === 429) {
       return markGovernedPolloSubmissionUnknown({
         jobId: leased.id,
         workerId: params.workerId,
-        error: new Error(`Pollo submission returned ${response.status}: ${responseText.slice(0, 800)}`),
+        error: new Error(`Pollo submission returned ${response.status}: ${safeErrorMessage(responseJson.responseText ?? responseJson.message ?? "unknown error")}`),
       });
     }
     return failGovernedPolloJob({
       jobId: leased.id,
       code: `provider_http_${response.status}`,
-      error: new Error(`Pollo submission returned ${response.status}: ${responseText.slice(0, 800)}`),
+      error: new Error(`Pollo submission returned ${response.status}: ${safeErrorMessage(responseJson.responseText ?? responseJson.message ?? "unknown error")}`),
       releaseBudget: true,
     });
   }

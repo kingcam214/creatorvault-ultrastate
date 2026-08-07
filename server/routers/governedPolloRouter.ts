@@ -13,6 +13,8 @@ import {
   reviewGovernedPolloOutput,
   setGovernedPolloCostEstimate,
   submitGovernedPolloJob,
+  quoteGovernedPolloSourceVideoReference,
+  authorizeSingleUseGovernedPolloSubmission,
 } from "../services/governedPolloService";
 import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } from "../services/bodyCinemaEvidenceService";
 
@@ -129,9 +131,34 @@ export const governedPolloRouter = router({
     return listGovernedPolloJobs({ creatorId: input?.creatorId, limit: input?.limit });
   }),
 
+  quoteSourceVideoReference: protectedProcedure.input(z.object({
+    creatorId: z.number().int().positive().optional(),
+    evidenceId: z.string().uuid(),
+    sourceUrl: z.string().url().max(4000),
+    prompt: z.string().trim().min(8).max(6000),
+    resolution: z.enum(["480p", "720p", "1080p"]),
+    durationSeconds: z.number().int().min(4).max(15),
+    aspectRatio: z.enum(["9:16", "16:9", "1:1"]),
+  })).mutation(async ({ ctx, input }) => {
+    const creatorId = input.creatorId ?? ctx.user.id;
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    try {
+      const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
+      return await quoteGovernedPolloSourceVideoReference({
+        sourceUrl: input.sourceUrl,
+        prompt: [buildEvidenceBackedDirectionPrompt(evidenceContext.direction), input.prompt].join(" "),
+        durationSeconds: input.durationSeconds,
+        resolution: input.resolution,
+        aspectRatio: input.aspectRatio,
+      });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
   setCostEstimate: protectedProcedure.input(z.object({
     jobId: z.number().int().positive(),
-    estimatedCostCredits: z.number().int().positive().max(1_000_000),
+    estimatedCostCredits: z.number().positive().max(1_000_000),
     costEvidenceReference: z.string().trim().min(3).max(3000),
     reason: z.string().trim().max(1200).optional(),
   })).mutation(async ({ ctx, input }) => {
@@ -153,6 +180,28 @@ export const governedPolloRouter = router({
     ownerOnly(ctx.user.id);
     try {
       return await approveGovernedPolloJob({ jobId: input.jobId, approverId: ctx.user.id, expectedFingerprint: input.fingerprint, reason: input.reason });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  authorizeSingleUseSubmission: protectedProcedure.input(z.object({
+    jobId: z.number().int().positive(),
+    fingerprint: z.string().length(64),
+    hardCreditCap: z.number().positive().max(1_000_000),
+    reason: z.string().trim().min(3).max(1200),
+    expiresInMinutes: z.number().int().min(1).max(30).optional(),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await authorizeSingleUseGovernedPolloSubmission({
+        jobId: input.jobId,
+        ownerId: ctx.user.id,
+        expectedFingerprint: input.fingerprint,
+        hardCreditCap: input.hardCreditCap,
+        reason: input.reason,
+        expiresInMinutes: input.expiresInMinutes,
+      });
     } catch (error) {
       return asPrecondition(error);
     }

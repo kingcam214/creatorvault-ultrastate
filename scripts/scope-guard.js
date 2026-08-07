@@ -107,6 +107,7 @@ const ALLOWLISTS = {
     'server/routers/vaultxRouter.ts',
     'server/services/bodyCinemaEvidenceService.ts',
     'server/services/bodyCinemaExistingMediaProofService.ts',
+    'server/services/governedPolloService.ts',
     'server/services/bodyCinemaEvidence.test.ts',
     'server/services/bodyCinemaMotionProof.test.ts',
     'server/services/bodyCinemaOutputReviewService.ts',
