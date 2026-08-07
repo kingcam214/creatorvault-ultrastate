@@ -74,6 +74,9 @@ const ALLOWLISTS = {
   ],
   'body-cinema': [
     'CREATORVAULT_STANDARD.md',
+    'BODY_CINEMA_EVIDENCE_STANDARD.md',
+    'BODY_CINEMA_EVIDENCE_LEDGER.md',
+    'BODY_CINEMA_GOLD_STANDARD_LIBRARY.md',
     'BODY_CINEMA_VISUAL_INVENTORY.md',
     'BODY_CINEMA_STORY_DESIGN.md',
     'client/public/assets/final-drop.mp4',
@@ -99,6 +102,7 @@ const ALLOWLISTS = {
     'server/routers/vaultxRouter.ts',
     'server/services/bodyCinemaEvidenceService.ts',
     'server/services/bodyCinemaEvidence.test.ts',
+    'server/services/bodyCinemaMotionProof.test.ts',
     'server/services/bodyCinemaOutputReviewService.ts',
     'package.json',
     'pnpm-lock.yaml',

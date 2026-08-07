@@ -400,7 +400,7 @@ export default function VaultXDrop() {
           <Link href="/vault-x" aria-label="Back to VaultX" style={{ color: MUTED, display: "inline-flex", alignItems: "center" }}><ArrowLeft size={19} /></Link>
           <div style={{ flex: 1 }}>
             <p style={{ margin: 0, fontFamily: "Bebas Neue, sans-serif", fontSize: 21, letterSpacing: "0.06em" }}>Body <span style={{ color: GOLD }}>Cinema</span></p>
-            <p style={{ margin: "1px 0 0", color: MUTED, fontSize: 10 }}>Turn your video into a cinematic paid drop.</p>
+            <p style={{ margin: "1px 0 0", color: MUTED, fontSize: 10 }}>Shape your video into a cinematic drop plan.</p>
           </div>
           {step === "review" && <button type="button" className="body-cinema-button" onClick={reset} style={{ border: `1px solid ${BORDER}`, background: "transparent", color: "#fff", borderRadius: 999, padding: "7px 11px", fontSize: 11, cursor: "pointer" }}>New source</button>}
         </div>
@@ -419,12 +419,12 @@ export default function VaultXDrop() {
             <div style={{ position: "relative", borderRadius: 24, overflow: "hidden", marginBottom: 32, border: `1px solid ${BORDER}`, boxShadow: "0 20px 40px rgba(0,0,0,0.6)" }}>
               <video src="/assets/hero-transformation.mp4" autoPlay loop muted playsInline style={{ width: "100%", display: "block" }} />
               <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 24, background: "linear-gradient(to top, rgba(0,0,0,0.9), transparent)" }}>
-                <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 8px", textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>Cinematic Intelligence</p>
+                <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 8px", textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>Your Footage, Refined</p>
                 <h1 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 48, letterSpacing: "0.025em", lineHeight: 0.98, margin: 0, textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>Your Body.<br /><span style={{ color: GOLD }}>Your Empire.</span></h1>
               </div>
             </div>
             
-            <p style={{ fontSize: 16, color: "#fff", lineHeight: 1.65, margin: "0 0 28px", textAlign: "center", fontWeight: 500 }}>Upload a raw clip. We analyze the motion, lock your identity, and prepare a cinematic PPV drop that fans actually pay for. You keep 85%.</p>
+            <p style={{ fontSize: 16, color: "#fff", lineHeight: 1.65, margin: "0 0 28px", textAlign: "center", fontWeight: 500 }}>Upload a raw clip. We read its movement and framing, then help you choose a cinematic plan for your next drop.</p>
             
             <label className="body-cinema-button" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, minHeight: 220, padding: 24, borderRadius: 24, border: `1px solid ${GOLD_BORDER}`, background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, cursor: "pointer", textAlign: "center", boxShadow: "0 8px 30px rgba(213,183,96,0.1)" }}>
               <div style={{ width: 64, height: 64, borderRadius: 20, background: `linear-gradient(135deg, ${GOLD}, #b09140)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(213,183,96,0.25)" }}><Upload size={28} color="#080808" /></div>
@@ -435,8 +435,8 @@ export default function VaultXDrop() {
 
             <div style={{ margin: "44px -16px 0", padding: "32px 16px", background: "linear-gradient(180deg, rgba(213,183,96,0.06), transparent)", borderTop: `1px solid ${BORDER}` }}>
               <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", textAlign: "center", margin: "0 0 10px" }}>See the treatments move</p>
-              <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 38, lineHeight: 0.95, letterSpacing: "0.03em", textAlign: "center", margin: "0 0 12px" }}>Pick a world.<br /><span style={{ color: GOLD }}>We build the drop.</span></h2>
-              <p style={{ maxWidth: 440, margin: "0 auto 24px", color: MUTED, fontSize: 13, lineHeight: 1.55, textAlign: "center" }}>Every look begins as a moving treatment—your clip, your identity, your version of the result.</p>
+              <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 38, lineHeight: 0.95, letterSpacing: "0.03em", textAlign: "center", margin: "0 0 12px" }}>Pick a world.<br /><span style={{ color: GOLD }}>Start the plan.</span></h2>
+              <p style={{ maxWidth: 440, margin: "0 auto 24px", color: MUTED, fontSize: 13, lineHeight: 1.55, textAlign: "center" }}>Every look begins as a moving treatment—your clip, your identity, your version of the plan.</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
                 {QUICK_PRESETS.map(preset => (
                   <div key={`showcase-${preset.id}`} style={{ position: "relative", overflow: "hidden", aspectRatio: "3 / 4", borderRadius: 16, background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 8px 20px rgba(0,0,0,0.35)" }}>
@@ -453,8 +453,8 @@ export default function VaultXDrop() {
                 <video src="/assets/final-drop.mp4" autoPlay loop muted playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.05) 65%)" }} />
                 <div style={{ position: "absolute", left: 20, right: 20, bottom: 20 }}>
-                  <p style={{ margin: 0, color: GOLD, fontSize: 10, fontFamily: "monospace", letterSpacing: "0.16em", textTransform: "uppercase" }}>Finished Drop Preview</p>
-                  <p style={{ margin: "8px 0 0", color: "#fff", fontSize: 24, fontWeight: 900, lineHeight: 1.05 }}>This is the energy your fans unlock.</p>
+                  <p style={{ margin: 0, color: GOLD, fontSize: 10, fontFamily: "monospace", letterSpacing: "0.16em", textTransform: "uppercase" }}>Demo Drop Preview</p>
+                  <p style={{ margin: "8px 0 0", color: "#fff", fontSize: 24, fontWeight: 900, lineHeight: 1.05 }}>This is one example of the energy a finished drop can carry.</p>
                   <p style={{ margin: "8px 0 0", color: "rgba(255,255,255,0.75)", fontSize: 12, lineHeight: 1.45 }}>A premium teaser, built around the footage you own and the treatment you choose.</p>
                 </div>
               </div>
@@ -485,11 +485,11 @@ export default function VaultXDrop() {
                     <Sparkles size={28} color={GOLD} className="body-cinema-spin" style={{ animationDuration: '3s' }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 18, fontWeight: 900, color: "#fff", margin: "0 0 12px", letterSpacing: "-0.01em" }}>Cinematic Intelligence Active</p>
+                    <p style={{ fontSize: 18, fontWeight: 900, color: "#fff", margin: "0 0 12px", letterSpacing: "-0.01em" }}>Finding the usable moments</p>
                     <div style={{ display: "grid", gap: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: MUTED }}><Check size={14} color={GREEN} /> <span>Detecting strongest moments...</span></div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: MUTED }}><Check size={14} color={GREEN} /> <span>Mapping body movement...</span></div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#fff", fontWeight: 600 }}><Loader2 size={14} color={GOLD} className="body-cinema-spin" /> <span>Finding highest-converting hook...</span></div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#fff", fontWeight: 600 }}><Loader2 size={14} color={GOLD} className="body-cinema-spin" /> <span>Finding a strong opening moment...</span></div>
                     </div>
                   </div>
                 </div>
@@ -497,8 +497,8 @@ export default function VaultXDrop() {
             )}
             
             {sourceEvidence?.analysisStatus === "verified" && <div style={{ background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, border: `1px solid rgba(69,227,138,0.35)`, borderRadius: 20, padding: 20, marginBottom: 24, boxShadow: "0 8px 30px rgba(69,227,138,0.08)" }}>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}><div><p style={{ fontSize: 11, color: GREEN, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", margin: 0, display: "flex", alignItems: "center", gap: 6 }}><Sparkles size={14} /> Source locked & ready</p><p style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, margin: "6px 0 0" }}>We found the strongest moments in your clip. The treatments below are mapped to your actual movement and framing.</p></div></div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, marginTop: 16 }}>{(sourceEvidence.shotRankings || []).slice(0, 4).map((shot: any, index: number) => <div key={`${shot.timestampMs}-${index}`} style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: "10px 12px", background: "rgba(0,0,0,0.4)" }}><p style={{ margin: 0, color: "#fff", fontSize: 12, fontWeight: 900 }}>Shot {index + 1} · {Math.round(Number(shot.timestampMs || 0) / 100) / 10}s</p><p style={{ margin: "4px 0 0", color: GOLD, fontSize: 10, fontWeight: 800 }}>{shot.score} Quality Score</p></div>)}</div>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}><div><p style={{ fontSize: 11, color: GREEN, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", margin: 0, display: "flex", alignItems: "center", gap: 6 }}><Sparkles size={14} /> Source locked & ready</p><p style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, margin: "6px 0 0" }}>Your clip has passed this planning check. The treatment options below use its movement and framing as a starting point.</p></div></div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, marginTop: 16 }}>{(sourceEvidence.shotRankings || []).slice(0, 4).map((shot: any, index: number) => <div key={`${shot.timestampMs}-${index}`} style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: "10px 12px", background: "rgba(0,0,0,0.4)" }}><p style={{ margin: 0, color: "#fff", fontSize: 12, fontWeight: 900 }}>Shot {index + 1} · {Math.round(Number(shot.timestampMs || 0) / 100) / 10}s</p><p style={{ margin: "4px 0 0", color: GOLD, fontSize: 10, fontWeight: 800 }}>{shot.score} Planning Score</p></div>)}</div>
             </div>}
             
             {sourceEvidence?.analysisStatus === "rejected" && <div style={{ background: "rgba(255,124,124,0.1)", border: "1px solid rgba(255,124,124,0.3)", borderRadius: 16, padding: 16, marginBottom: 20, color: RED, fontSize: 13, lineHeight: 1.5 }}>{(sourceEvidence.rejectionReasons || ["We need a clearer clip to build a high-quality drop."]).map((reason: string) => <p key={reason} style={{ margin: "4px 0" }}>{reason}</p>)}</div>}
