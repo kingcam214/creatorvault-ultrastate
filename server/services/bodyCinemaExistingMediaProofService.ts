@@ -559,7 +559,16 @@ async function restorePersistedPreProviderAttestation(): Promise<boolean> {
   for (const job of jobs) {
     const evidenceId = typeof job.metadata.bodyCinemaEvidenceId === "string" ? job.metadata.bodyCinemaEvidenceId : null;
     const treatmentId = typeof job.metadata.bodyCinemaDirectionId === "string" ? job.metadata.bodyCinemaDirectionId : null;
-    const sourceAssetId = typeof job.metadata.sourceAssetId === "string" ? job.metadata.sourceAssetId : null;
+    const metadataSourceAssetId = typeof job.metadata.sourceAssetId === "string" ? job.metadata.sourceAssetId : null;
+    const urlSourceAssetId = (() => {
+      try {
+        const match = new URL(job.sourceUrl).pathname.match(/^\/uploads\/content-vault\/([a-f0-9-]{36})\//i);
+        return match?.[1] || null;
+      } catch {
+        return null;
+      }
+    })();
+    const sourceAssetId = metadataSourceAssetId || urlSourceAssetId;
     if (!evidenceId || !treatmentId || !sourceAssetId || !job.sourceChecksum) continue;
     const evidence = await getBodyCinemaSourceEvidence(job.creatorId, evidenceId);
     if (!evidence || evidence.analysisStatus !== "verified" || evidence.reviewStatus !== "ready" || evidence.selectedDirectionId !== treatmentId) continue;
