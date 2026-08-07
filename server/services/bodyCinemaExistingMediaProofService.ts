@@ -253,7 +253,18 @@ async function listVaultxCreatorVideos(): Promise<ExistingVideoAsset[]> {
 async function listVerifiedDirectUploadVideos(): Promise<ExistingVideoAsset[]> {
   let receiptNames: string[];
   try {
-    receiptNames = (await fs.readdir(DIRECT_UPLOAD_RECEIPTS_DIR)).filter((name) => name.endsWith(".json")).slice(-MAX_CANDIDATES * 4);
+    const receiptEntries = await Promise.all(
+      (await fs.readdir(DIRECT_UPLOAD_RECEIPTS_DIR))
+        .filter((name) => name.endsWith(".json"))
+        .map(async (name) => ({
+          name,
+          modifiedAt: (await fs.stat(path.join(DIRECT_UPLOAD_RECEIPTS_DIR, name))).mtimeMs,
+        })),
+    );
+    receiptNames = receiptEntries
+      .sort((left, right) => right.modifiedAt - left.modifiedAt)
+      .slice(0, MAX_CANDIDATES * 4)
+      .map((entry) => entry.name);
   } catch (error: any) {
     if (error?.code === "ENOENT") return [];
     throw error;
