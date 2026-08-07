@@ -628,8 +628,9 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   });
   const providerResponse = await parseProviderJson(response);
   if (!response.ok) throw new Error(`Pollo source-video quote returned ${response.status}: ${safeErrorMessage(providerResponse.responseText ?? providerResponse.message ?? "unknown error")}`);
-  const quotedCredits = requirePositiveAmount(Number(providerResponse.discountCost ?? providerResponse.cost), "Pollo quoted credits");
-  const quotedCostUsd = requirePositiveAmount(Number(providerResponse.discountCostUsd ?? providerResponse.costUsd), "Pollo quoted USD cost");
+  const quote = providerResponse.data && typeof providerResponse.data === "object" ? providerResponse.data as Record<string, any> : providerResponse;
+  const quotedCredits = requirePositiveAmount(Number(quote.discountCost ?? quote.cost ?? quote.totalCost ?? quote.credit), "Pollo quoted credits");
+  const quotedCostUsd = requirePositiveAmount(Number(quote.discountCostUsd ?? quote.costUsd ?? quote.totalCostUsd ?? quote.usd), "Pollo quoted USD cost");
   return {
     providerModelPath: SOURCE_VIDEO_REFERENCE_MODEL_PATH,
     providerApiPath: SOURCE_VIDEO_REFERENCE_API_PATH,
