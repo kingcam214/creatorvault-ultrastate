@@ -82,6 +82,7 @@ function checksumFile(filePath: string): Promise<string> {
 async function writeVerifiedUploadReceipt(input: {
   storageId: string;
   creatorId: number;
+  creatorProfileId?: number;
   url: string;
   filename: string;
   filePath: string;
@@ -96,6 +97,7 @@ async function writeVerifiedUploadReceipt(input: {
   await writeFile(path.join(PRIVATE_UPLOAD_RECEIPTS_DIR, `${input.storageId}.json`), JSON.stringify({
     id: input.storageId,
     creatorId: input.creatorId,
+    creatorProfileId: input.creatorProfileId || null,
     url: input.url,
     filename: input.filename,
     size: Number(fileStat.size),
@@ -233,6 +235,7 @@ async function requireCreatorUploadAccess(req: Request, res: Response, next: Nex
     if (!creatorId && !OWNER_IDS.includes(userId)) {
       return res.status(403).json({ error: "An active creator profile is required to upload content." });
     }
+    (req as any).authenticatedUserId = userId;
     (req as any).authenticatedCreatorId = creatorId || userId;
     return next();
   } catch (error) {
@@ -405,7 +408,8 @@ videoUploadRouter.post("/chunk", upload.single("chunk"), async (req: Request, re
       const { url, filename: finalFilename, storageId, directory } = await assembleAndUpload(sessionDir, meta);
       const uploadReceipt = await writeVerifiedUploadReceipt({
         storageId,
-        creatorId: Number((req as any).authenticatedCreatorId),
+        creatorId: Number((req as any).authenticatedUserId),
+        creatorProfileId: Number((req as any).authenticatedCreatorId),
         url,
         filename: finalFilename,
         filePath: path.join(directory, finalFilename),
@@ -441,7 +445,8 @@ videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
     const { url, filename: finalFilename, storageId, directory } = await assembleAndUpload(sessionDir, meta);
     const uploadReceipt = await writeVerifiedUploadReceipt({
       storageId,
-      creatorId: Number((req as any).authenticatedCreatorId),
+      creatorId: Number((req as any).authenticatedUserId),
+      creatorProfileId: Number((req as any).authenticatedCreatorId),
       url,
       filename: finalFilename,
       filePath: path.join(directory, finalFilename),
@@ -480,13 +485,15 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
     const sha256 = createHash("sha256").update(f.buffer).digest("hex");
     const createdAt = new Date().toISOString();
     const url = `https://creatorvault.live/uploads/content-vault/${fileUuid}/${encodeURIComponent(originalName)}`;
-    const creatorId = Number((req as any).authenticatedCreatorId);
+    const creatorId = Number((req as any).authenticatedUserId);
+    const creatorProfileId = Number((req as any).authenticatedCreatorId);
 
     await mkdir(PRIVATE_UPLOAD_RECEIPTS_DIR, { recursive: true });
     receiptPath = path.join(PRIVATE_UPLOAD_RECEIPTS_DIR, `${fileUuid}.json`);
     await writeFile(receiptPath, JSON.stringify({
       id: fileUuid,
       creatorId,
+      creatorProfileId,
       url,
       filename: originalName,
       size: Number(f.size),
