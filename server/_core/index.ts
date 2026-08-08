@@ -29,6 +29,11 @@ import { startCreatorVaultOvernightRevenueCron } from "../services/creatorVaultO
 import { startPostScheduler } from "../services/postScheduler";
 import { isGovernedPolloExecutionEnabled, verifyGovernedPolloSchema } from "../services/governedPolloService";
 import { getBodyCinemaPreProviderAttestation, runBodyCinemaExistingMediaPreProviderProof } from "../services/bodyCinemaExistingMediaProofService";
+import {
+  buildPolloCapabilitySummary,
+  getLatestPolloCapabilitySnapshot,
+  refreshPolloCapabilitySnapshot,
+} from "../services/polloCapabilityRegistryService";
 
 let governedMediaSchemaAttestation: {
   verified: boolean;
@@ -39,6 +44,38 @@ let governedMediaSchemaAttestation: {
   tables: [],
   verifiedAt: null,
 };
+
+let providerCapabilityAttestation = {
+  summary: buildPolloCapabilitySummary(null),
+  auditedAt: null as string | null,
+  auditError: null as string | null,
+  auditOnly: true as const,
+  providerGenerationCalled: false as const,
+};
+
+async function refreshProviderCapabilityAttestation(): Promise<void> {
+  try {
+    const snapshot = await refreshPolloCapabilitySnapshot(6);
+    providerCapabilityAttestation = {
+      summary: buildPolloCapabilitySummary(snapshot),
+      auditedAt: snapshot.checkedAt,
+      auditError: null,
+      auditOnly: true,
+      providerGenerationCalled: false,
+    };
+    console.log(JSON.stringify({ event: "provider_capability_audit_refreshed", ...providerCapabilityAttestation }));
+  } catch (error) {
+    const latest = await getLatestPolloCapabilitySnapshot().catch(() => null);
+    providerCapabilityAttestation = {
+      summary: buildPolloCapabilitySummary(latest),
+      auditedAt: latest?.checkedAt ?? null,
+      auditError: error instanceof Error ? error.message : String(error),
+      auditOnly: true,
+      providerGenerationCalled: false,
+    };
+    console.log(JSON.stringify({ event: "provider_capability_audit_deferred", ...providerCapabilityAttestation }));
+  }
+}
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -251,6 +288,7 @@ async function startServer() {
       deployedAt: process.env.RELEASE_DEPLOYED_AT || release.deployedAt || release.deployed_at || null,
       governedMediaSchema: governedMediaSchemaAttestation,
       governedMediaExecutionEnabled: isGovernedPolloExecutionEnabled(),
+      providerCapabilityAudit: providerCapabilityAttestation,
       bodyCinemaPreProviderProof: getBodyCinemaPreProviderAttestation(),
       ...release,
     });
@@ -287,6 +325,8 @@ async function startServer() {
     void runBodyCinemaExistingMediaPreProviderProof().catch(error =>
       console.log("[BodyCinema] pre-provider proof deferred:", error instanceof Error ? error.message : String(error)),
     );
+    // This audit calls only public catalog and read-only account endpoints. It never creates or submits a provider task.
+    void refreshProviderCapabilityAttestation();
     
     // Initialize simulated bots (no owner dependencies)
 
