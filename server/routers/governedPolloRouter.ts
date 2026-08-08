@@ -18,6 +18,12 @@ import {
   authorizeSingleUseGovernedPolloSubmission,
 } from "../services/governedPolloService";
 import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } from "../services/bodyCinemaEvidenceService";
+import {
+  buildPolloCapabilitySummary,
+  getLatestPolloCapabilitySnapshot,
+  preflightBodyCinemaSourceVideo,
+  refreshPolloCapabilitySnapshot,
+} from "../services/polloCapabilityRegistryService";
 
 const OWNER_IDS = new Set([6, 33]);
 
@@ -167,6 +173,50 @@ export const governedPolloRouter = router({
   ownerDashboard: protectedProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     return getGovernedPolloDashboard();
+  }),
+
+  capabilitySnapshot: protectedProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    const snapshot = await getLatestPolloCapabilitySnapshot();
+    return {
+      snapshot,
+      summary: buildPolloCapabilitySummary(snapshot),
+      executionEnabled: false,
+      auditOnly: true,
+    };
+  }),
+
+  refreshCapabilitySnapshot: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      const snapshot = await refreshPolloCapabilitySnapshot(ctx.user.id);
+      return {
+        snapshot,
+        summary: buildPolloCapabilitySummary(snapshot),
+        executionEnabled: false,
+        auditOnly: true,
+      };
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  preflightSourceVideo: protectedProcedure.input(z.object({
+    creatorId: z.number().int().positive().optional(),
+    evidenceId: z.string().uuid(),
+    sourceUrl: z.string().url().max(4000),
+  })).query(async ({ ctx, input }) => {
+    const creatorId = input.creatorId ?? ctx.user.id;
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    try {
+      return await preflightBodyCinemaSourceVideo({
+        creatorId,
+        evidenceId: input.evidenceId,
+        sourceMediaUrl: input.sourceUrl,
+      });
+    } catch (error) {
+      return asPrecondition(error);
+    }
   }),
 
   ownerJobs: protectedProcedure.input(z.object({ creatorId: z.number().int().positive().optional(), limit: z.number().int().min(1).max(200).optional() }).optional()).query(async ({ ctx, input }) => {
