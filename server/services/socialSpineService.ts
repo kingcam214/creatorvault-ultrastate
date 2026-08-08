@@ -563,7 +563,7 @@ export async function listNativeFeed(userId: number, input: { cursor?: number; l
            (SELECT COUNT(*) FROM social_post_saves s WHERE s.post_id = p.id AND s.user_id = ?) AS saved_by_viewer
     FROM social_native_posts p
     JOIN users u ON u.id = p.creator_user_id
-    LEFT JOIN media_assets ma ON CAST(ma.id AS CHAR) = p.source_media_asset_id
+    LEFT JOIN media_assets ma ON BINARY CAST(ma.id AS CHAR) = BINARY p.source_media_asset_id
     ${followingJoin}
     WHERE p.status = 'published' AND p.visibility = 'public' ${cursorPredicate}
     ORDER BY p.published_at DESC, p.id DESC
