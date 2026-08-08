@@ -557,6 +557,8 @@ function Router() {
       <Route path={"/onboard/creator"} component={CreatorOnboarding} />
       <Route path={"/influencer"} component={InfluencerDashboard} />
       <Route path="/social-hub" component={SocialHub} />
+      <Route path="/social-audit" component={SocialHub} />
+      <Route path="/social-autoposter" component={SocialHub} />
       <Route path="/outreach" component={OutreachCommandCenter} />
       <Route path="/vaultx-challenges" component={VaultXChallenges} />
       <Route path="/ai-agent-challenge" component={ChallengeStoryEngine} />
@@ -587,6 +589,7 @@ function Router() {
       <Route path={"/king/presentation-builder"} component={PresentationBuilder} />
       <Route path={"/presentation-builder"} component={PresentationBuilder} />
       <Route path="/king/telegram-hub" component={TelegramMoneyHub} />
+      <Route path="/telegram-hub" component={TelegramMoneyHub} />
       <Route path={"/king/backoffice"} component={KingBackOffice} />
       <Route path="/king/command-center" component={KingCamCommandCenter} />
       <Route path="/king/episodes-3d" component={KingCamEpisodeTheater3D} />
@@ -792,12 +795,14 @@ function Router() {
       <Route path="/vaultx/onboarding" component={VaultXOnboarding} />
       <Route path="/vaultx/drop" component={VaultXDrop} />
       <Route path="/vaultx/trailers" component={TrailerStudio} />
+      <Route path="/trailer-maker" component={TrailerStudio} />
       <Route path="/vault-x/trailers" component={TrailerStudio} />
       <Route path="/trailers" component={TrailerStudio} />
       <Route path="/drop" component={VaultXDrop} />
       <Route path="/vaultx/studio" component={VaultXDrop} />
       <Route path="/vaultx/distribution" component={VaultXDistribution} />
       <Route path="/vault-x/studio" component={VaultXDrop} />
+      <Route path="/body-cinema" component={VaultXDrop} />
       <Route path="/vault-x/library/:jobId" component={VaultXTruthLibrary} />
       <Route path="/vaultx/studio-advanced" component={VaultXDrop} />
       <Route path="/vault-x/editor" component={VaultXEditor} />

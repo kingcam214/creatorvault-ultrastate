@@ -2176,25 +2176,8 @@ export function RealmToggle() {
 
 
 function VaultXPublicLanding() {
-  const offerParams = new URLSearchParams(window.location.search);
-  const offerSlug = offerParams.get("offer") || "body-cinema";
-  const offerPrice = Number(offerParams.get("price") || "0");
-  const offerRef = offerParams.get("ref") || "direct";
-  const vaultXOfferCheckout = trpc.stripeCheckout.createVaultXOfferCheckout.useMutation({
-    onSuccess: (result) => {
-      window.location.href = result.url;
-    },
-    onError: (error) => {
-      toast.error(error.message || "VaultX is not available right now.");
-    },
-  });
-
-  const startVaultXOfferCheckout = () => {
-    vaultXOfferCheckout.mutate({
-      offer: offerSlug,
-      price: Number.isFinite(offerPrice) ? offerPrice : 0,
-      ref: offerRef,
-    });
+  const startVaultXOnboarding = () => {
+    window.location.href = "/signup?vertical=vaultx";
   };
 
   const featureCards = [
@@ -2212,7 +2195,7 @@ function VaultXPublicLanding() {
     },
     {
       title: "Multi-Platform Publishing",
-      body: "Post once. Push everywhere. TikTok, Telegram, X — all from one dashboard.",
+      body: "Prepare tracked, approval-controlled drafts for the channels your creator has actually connected.",
     },
   ];
 
@@ -2229,10 +2212,10 @@ function VaultXPublicLanding() {
       <div className="absolute inset-0 pointer-events-none opacity-[.05]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
 
       <nav className="vx-shell relative z-10 flex items-center justify-between py-5 md:py-7">
-        <a href="/vault-x" className="text-2xl font-black tracking-[-.04em] vx-gold">VaultX</a>
+        <a href="/" className="text-2xl font-black tracking-[-.04em] vx-gold">CreatorVault <span className="text-white/45">/</span> VaultX</a>
         <div className="flex items-center gap-2 md:gap-4">
           <a href="/login" className="px-4 py-2.5 rounded-xl text-sm font-bold border border-white/10 text-white/70 hover:text-white hover:bg-white/5">Sign In</a>
-          <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn px-4 md:px-6 py-3 rounded-2xl text-sm font-black">Get Started</button>
+          <button onClick={startVaultXOnboarding} className="vx-btn px-4 md:px-6 py-3 rounded-2xl text-sm font-black">Get Started</button>
         </div>
       </nav>
 
@@ -2337,13 +2320,12 @@ function VaultXPublicLanding() {
                 margin: "0 0 32px 0",
               }}
             >
-              The platform built for adult creators who are serious about getting paid.
+              CreatorVault’s private-sales vertical for adult creators who want ownership, access, and revenue paths in one governed workflow.
             </p>
 
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
               <button
-                onClick={startVaultXOfferCheckout}
-                disabled={vaultXOfferCheckout.isPending}
+                onClick={startVaultXOnboarding}
                 style={{
                   fontFamily: "Bebas Neue, sans-serif",
                   fontSize: "17px",
@@ -2352,10 +2334,10 @@ function VaultXPublicLanding() {
                   color: "#0A0A0A",
                   border: "none",
                   padding: "14px 32px",
-                  cursor: vaultXOfferCheckout.isPending ? "wait" : "pointer",
+                  cursor: "pointer",
                 }}
               >
-                Start Earning
+                Explore VaultX
               </button>
               <a
                 href="#body-cinema"
@@ -2385,13 +2367,13 @@ function VaultXPublicLanding() {
                 Leave with a launchable product.
               </h2>
               <p className="text-base md:text-lg leading-8 mb-8" style={{ color: "#b8b8b8" }}>
-                Body Cinema turns creator-owned media into a cinematic teaser, paid unlock, VIP upsell, checkout path, and tracked distribution route. It is not a disconnected edit button; it is the VaultX revenue workflow in one launch room.
+                Body Cinema begins with creator-owned media, consent, and a recorded treatment. Any provider use, cost, output, and quality decision stays visible before a moment can become a commercial draft. It is the governed production lane inside the VaultX vertical.
               </p>
               <div className="grid gap-3 mb-8 md:grid-cols-3" style={{ color: "#f5f0e8" }}>
                 {[
                   ["Governed intake", "Consent, ownership, adult-content gating, and source-media readiness come first."],
-                  ["Premium packaging", "The teaser, unlock, price, VIP ladder, and provider route are built together."],
-                  ["Revenue routing", "Checkout, Telegram tracking, and proof receipts stay visible instead of hidden."],
+                  ["Commercial preparation", "A reviewed moment can become an offer, access draft, price decision, and approval-controlled distribution package."],
+                  ["Record-backed delivery", "Checkout, channel attribution, and delivery receipts appear only when their corresponding records exist."],
                 ].map(([title, body]) => (
                   <div key={title} className="rounded-[1.25rem] border border-white/10 bg-white/[.035] p-4">
                     <p className="text-sm font-black text-white">{title}</p>
@@ -2412,8 +2394,8 @@ function VaultXPublicLanding() {
               <div className="absolute inset-x-4 bottom-4 space-y-3">
                 {[
                   { step: "01", title: "Approved source", detail: "Creator-owned media, consent, 18+ gate, launch readiness." },
-                  { step: "02", title: "Body Cinema package", detail: "Teaser, paid unlock, VIP ladder, captions, price." },
-                  { step: "03", title: "Fans pay for access", detail: "PPV, subscription, Telegram route, receipt proof." },
+                  { step: "02", title: "Reviewed commercial draft", detail: "Treatment evidence, offer structure, captions, price decision, and approval boundary." },
+                  { step: "03", title: "Access is recorded", detail: "PPV, subscriptions, channel drafts, and receipts appear only when the corresponding action completes." },
                 ].map((item) => (
                   <div key={item.step} className="flex gap-3 rounded-[1.35rem] border border-white/10 bg-black/70 p-3 backdrop-blur-xl">
                     <div className="flex h-10 w-10 flex-none items-center justify-center rounded-2xl bg-[#c9a84c] text-sm font-black text-black">{item.step}</div>
@@ -2435,16 +2417,16 @@ function VaultXPublicLanding() {
         <section className="vx-shell pb-16 md:pb-24">
           <div className="rounded-[2rem] p-7 md:p-12" style={{ background: "linear-gradient(180deg,rgba(20,20,20,.86),rgba(10,10,10,.76))", border: "1px solid rgba(201,168,76,.18)", boxShadow: "0 24px 80px rgba(0,0,0,.48)" }}>
             <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">
-              You keep 85%.<br />
-              Always.
+              Revenue rules stay visible.<br />
+              Always reviewable.
             </h2>
             <p className="text-base md:text-lg leading-8 max-w-3xl mb-8" style={{ color: "#b8b8b8" }}>
-              OnlyFans keeps 20% of everything you make. VaultX keeps 15%.
+              VaultX keeps offer, checkout, payout, and attribution decisions attached to the creator record instead of hiding the money path behind a dashboard claim.
             </p>
             <p className="text-base md:text-lg leading-8 max-w-3xl mb-8" style={{ color: "#b8b8b8" }}>
-              On $5,000 a month that's $500 more in your pocket every month for doing the exact same work you're already doing.
+              Earnings appear when real transactions and settlement records exist. CreatorVault does not promise a fixed outcome or present an estimated result as earned money.
             </p>
-            <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Create Your Free Profile</button>
+            <button onClick={startVaultXOnboarding} className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Create Your Free Profile</button>
           </div>
         </section>
 
@@ -2464,19 +2446,19 @@ function VaultXPublicLanding() {
 
         <section className="vx-shell pb-16 md:pb-24">
           <div className="max-w-3xl">
-            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">Real creators. Real earnings.</h2>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">Creator-owned work. Record-backed outcomes.</h2>
             <p className="text-base md:text-lg leading-8 mb-8" style={{ color: "#b8b8b8" }}>
-              VaultX is invite-only right now. The first creators on the platform are already earning. You can be next.
+              VaultX gives adult creators a focused CreatorVault lane for private storefronts, controlled access, and source-backed commercial preparation. No earnings or delivery outcome is claimed before its record exists.
             </p>
-            <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Request Your Invite</button>
+            <button onClick={startVaultXOnboarding} className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Request Your Invite</button>
           </div>
         </section>
 
         <section className="px-5 pb-20 md:pb-28">
           <div className="max-w-5xl mx-auto text-center rounded-[2rem] p-7 md:p-12" style={{ background: "linear-gradient(135deg,rgba(201,168,76,.22),rgba(6,182,212,.10),rgba(239,68,68,.10))", border: "1px solid rgba(201,168,76,.25)" }}>
-            <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">Stop leaving money on the table.</h2>
-            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>Join the platform that was built specifically for you.</p>
-            <button onClick={startVaultXOfferCheckout} disabled={vaultXOfferCheckout.isPending} className="vx-btn inline-flex items-center justify-center rounded-2xl px-9 py-4 font-black">Get Started Free</button>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">Own the creator relationship.</h2>
+            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>Enter CreatorVault, then open the VaultX vertical when your business needs private access, premium offers, and accountable delivery.</p>
+            <button onClick={startVaultXOnboarding} className="vx-btn inline-flex items-center justify-center rounded-2xl px-9 py-4 font-black">Get Started Free</button>
           </div>
         </section>
       </main>

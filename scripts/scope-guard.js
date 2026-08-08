@@ -83,6 +83,15 @@ const ALLOWLISTS = {
     'scripts/route-owner.js',
     'scripts/scope-guard.js'
   ],
+  coherence: [
+    'client/src/App.tsx',
+    'client/src/components/AppHeader.tsx',
+    'client/src/lib/productArchitecture.ts',
+    'client/src/pages/Home.tsx',
+    'client/src/pages/PublicCreatorLanding.tsx',
+    'client/src/pages/VaultX.tsx',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',
