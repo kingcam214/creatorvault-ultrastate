@@ -10,6 +10,7 @@ import {
   ensureKingcamPersonalChannel,
   getKingcamActivationInventory,
   getSocialCommandSummary,
+  upsertManualSocialAccountMap,
   linkVerifiedFanIdentity,
   listNativeFeed,
   listSocialNotifications,
@@ -63,6 +64,16 @@ export const socialSpineRouter = router({
   ensureKingcamPersonalChannel: creatorProcedure.mutation(async ({ ctx }) => {
     return ensureKingcamPersonalChannel(ctx.user.id);
   }),
+
+  upsertManualAccountMap: creatorProcedure
+    .input(z.object({
+      channelIdentityId: z.number().int().positive(),
+      platform: z.enum(["instagram", "tiktok", "facebook", "youtube", "telegram", "whatsapp", "onlyfans", "twitter"]),
+      username: z.string().trim().min(1).max(255).optional(),
+      displayName: z.string().trim().min(1).max(255).optional(),
+      provenance: z.enum(["owner_declared_existing", "recovered_legacy_record"]),
+    }))
+    .mutation(async ({ ctx, input }) => upsertManualSocialAccountMap({ userId: ctx.user.id, ...input })),
 
   bridgeLegacyAccounts: creatorProcedure.mutation(async ({ ctx }) => {
     return bridgeLegacyPlatformCredentials(ctx.user.id);

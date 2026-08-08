@@ -777,14 +777,8 @@ export async function ensureKingcamPersonalChannel(userId: number): Promise<{ ch
   );
   if (existing.length) return { channelId: Number(existing[0].id), created: false };
 
-  const identity = await rawQuery(
-    `SELECT COALESCE(vc.display_name, u.name, 'KingCam') AS display_name
-     FROM users u LEFT JOIN vaultx_creators vc ON vc.user_id = u.id
-     WHERE u.id = ? LIMIT 1`,
-    [userId],
-  );
-  const displayName = String(identity[0]?.display_name || "KingCam").slice(0, 255);
-  const slug = `${displayName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "kingcam"}-${randomBytes(3).toString("hex")}`;
+  const displayName = "KingCam";
+  const slug = `kingcam-${randomBytes(3).toString("hex")}`;
   const result = await rawExec(
     `INSERT INTO channel_identities
      (owner_type, owner_id, display_name, slug, brand_lane, channel_type, content_safety_level, is_active)
@@ -792,4 +786,51 @@ export async function ensureKingcamPersonalChannel(userId: number): Promise<{ ch
     [userId, displayName, slug],
   );
   return { channelId: Number((result as any).insertId), created: true };
+}
+
+
+export async function upsertManualSocialAccountMap(input: {
+  userId: number;
+  channelIdentityId: number;
+  platform: "instagram" | "tiktok" | "facebook" | "youtube" | "telegram" | "whatsapp" | "onlyfans" | "twitter";
+  username?: string;
+  displayName?: string;
+  provenance: "owner_declared_existing" | "recovered_legacy_record";
+}): Promise<{ accountId: number; created: boolean; connectionStatus: "manual" }> {
+  const channelRows = await rawQuery(
+    `SELECT id FROM channel_identities
+     WHERE id = ? AND (owner_id = ? OR owner_type IN ('vaultx_brand', 'creatorvault_brand')) LIMIT 1`,
+    [input.channelIdentityId, input.userId],
+  );
+  if (!channelRows.length) throw new Error("Canonical social identity is not accessible to this owner");
+
+  const capabilityRows = await rawQuery(`SELECT platform FROM platform_capabilities WHERE platform = ? LIMIT 1`, [input.platform]);
+  if (!capabilityRows.length) throw new Error(`Platform capability record is unavailable for ${input.platform}`);
+
+  const existing = await rawQuery(
+    `SELECT id FROM connected_accounts WHERE channel_identity_id = ? AND platform = ? ORDER BY id ASC LIMIT 1`,
+    [input.channelIdentityId, input.platform],
+  );
+  if (existing.length) {
+    const accountId = Number(existing[0].id);
+    await rawExec(
+      `UPDATE connected_accounts
+       SET username = COALESCE(?, username), display_name = COALESCE(?, display_name),
+           connection_status = 'manual', can_post = 0, can_schedule = 0, can_send_dm = 0,
+           can_read_analytics = 0, can_trigger_funnel = 0, automation_enabled = 0, requires_approval = 1
+       WHERE id = ?`,
+      [input.username || null, input.displayName || null, accountId],
+    );
+    return { accountId, created: false, connectionStatus: "manual" };
+  }
+
+  const result = await rawExec(
+    `INSERT INTO connected_accounts
+     (channel_identity_id, platform, username, display_name, connection_status,
+      can_post, can_schedule, can_send_dm, can_read_analytics, can_trigger_funnel,
+      automation_enabled, requires_approval)
+     VALUES (?, ?, ?, ?, 'manual', 0, 0, 0, 0, 0, 0, 1)`,
+    [input.channelIdentityId, input.platform, input.username || null, input.displayName || null],
+  );
+  return { accountId: Number((result as any).insertId), created: true, connectionStatus: "manual" };
 }
