@@ -93,6 +93,11 @@ const ALLOWLISTS = {
     'client/src/pages/VaultX.tsx',
     'scripts/scope-guard.js'
   ],
+  'visual-world': [
+    'client/src/pages/Home.tsx',
+    'client/src/pages/VaultX.tsx',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',

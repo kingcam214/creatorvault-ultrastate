@@ -2363,11 +2363,11 @@ function VaultXPublicLanding() {
             <div className="max-w-3xl">
               <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#c9a84c" }}>BODY CINEMA</div>
               <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">
-                Upload approved source media.<br />
-                Leave with a launchable product.
+                Choose creator-owned media.<br />
+                Prepare a product with direction.
               </h2>
               <p className="text-base md:text-lg leading-8 mb-8" style={{ color: "#b8b8b8" }}>
-                Body Cinema begins with creator-owned media, consent, and a recorded treatment. Any provider use, cost, output, and quality decision stays visible before a moment can become a commercial draft. It is the governed production lane inside the VaultX vertical.
+                Body Cinema begins with creator-owned media, consent, and a recorded direction. Any paid cinematic creation, cost, finished piece, and quality decision stays visible before a moment can become a commercial draft. It is the protected production lane inside the VaultX vertical.
               </p>
               <div className="grid gap-3 mb-8 md:grid-cols-3" style={{ color: "#f5f0e8" }}>
                 {[
@@ -2383,34 +2383,24 @@ function VaultXPublicLanding() {
               </div>
               <a href="/vault-x/studio" className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Open Body Cinema Studio</a>
             </div>
-            <div className="relative overflow-hidden rounded-[2rem] border border-[#c9a84c]/25 bg-black/70 shadow-2xl shadow-black/50" aria-label="Body Cinema women creator launch workflow">
-              <img
-                src="/images/vaultx/vaultx-business-presenter-mobile.png"
-                alt="Woman creator using VaultX mobile monetization workflow"
-                className="h-[620px] w-full object-cover object-center opacity-90"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/10" />
-              <div className="absolute inset-x-4 bottom-4 space-y-3">
+            <figure className="relative min-h-[620px] overflow-hidden rounded-[2rem] border border-[#c9a84c]/25 bg-black shadow-2xl shadow-black/50" aria-label="Body Cinema silhouette direction reference">
+              <video aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-center opacity-90" src="/assets/preview-silhouette.mp4" autoPlay loop muted playsInline preload="metadata" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.22)_36%,rgba(0,0,0,.94))]" />
+              <div className="absolute inset-x-4 top-4 flex flex-wrap items-center gap-2"><span className="rounded-full border border-white/20 bg-black/55 px-3 py-2 text-[10px] font-black uppercase tracking-[.18em] text-white backdrop-blur">Silhouette style reference</span><span className="rounded-full border border-[#c9a84c]/40 bg-[#c9a84c]/15 px-3 py-2 text-[10px] font-black uppercase tracking-[.18em] text-[#f5df98] backdrop-blur">Library motion</span></div>
+              <figcaption className="absolute inset-x-4 bottom-4 space-y-3">
+                <div className="rounded-[1.35rem] border border-white/10 bg-black/70 p-4 backdrop-blur-xl"><p className="text-lg font-black text-white">See the direction before you choose it.</p><p className="mt-2 text-xs leading-5 text-zinc-300">This looping library piece demonstrates the Silhouette editorial language. It is not presented as a result from a creator’s current source.</p></div>
                 {[
-                  { step: "01", title: "Approved source", detail: "Creator-owned media, consent, 18+ gate, launch readiness." },
-                  { step: "02", title: "Reviewed commercial draft", detail: "Treatment evidence, offer structure, captions, price decision, and approval boundary." },
-                  { step: "03", title: "Access is recorded", detail: "PPV, subscriptions, channel drafts, and receipts appear only when the corresponding action completes." },
+                  { step: "01", title: "Owned source", detail: "Choose a saved CreatorVault video. Consent and readiness come first." },
+                  { step: "02", title: "Direction with receipts", detail: "The chosen visual direction, offer plan, and spend control stay connected." },
+                  { step: "03", title: "A result earns its place", detail: "A finished piece appears for sale only after it clears its quality decision." },
                 ].map((item) => (
                   <div key={item.step} className="flex gap-3 rounded-[1.35rem] border border-white/10 bg-black/70 p-3 backdrop-blur-xl">
                     <div className="flex h-10 w-10 flex-none items-center justify-center rounded-2xl bg-[#c9a84c] text-sm font-black text-black">{item.step}</div>
-                    <div>
-                      <p className="text-sm font-black text-white">{item.title}</p>
-                      <p className="mt-1 text-xs leading-5 text-zinc-300">{item.detail}</p>
-                    </div>
+                    <div><p className="text-sm font-black text-white">{item.title}</p><p className="mt-1 text-xs leading-5 text-zinc-300">{item.detail}</p></div>
                   </div>
                 ))}
-                <div className="rounded-[1.35rem] border border-red-300/20 bg-red-500/15 p-4 backdrop-blur-xl">
-                  <p className="text-sm font-black text-red-100">Women-led adult creator monetization.</p>
-                  <p className="mt-1 text-xs leading-5 text-red-100/75">The visual stays on the creator and the money path: teaser, unlock, VIP, checkout, proof.</p>
-                </div>
-              </div>
-            </div>
+              </figcaption>
+            </figure>
           </div>
         </section>
 
