@@ -584,6 +584,7 @@ export async function listNativeFeed(userId: number, input: { cursor?: number; l
 }
 
 export async function getSocialCommandSummary(userId: number): Promise<any> {
+  const creatorId = await getCreatorId(userId);
   const [accounts, distribution, money, audience, packages] = await Promise.all([
     rawQuery(`SELECT platform, connection_status, can_post, can_schedule, can_read_analytics, automation_enabled,
                      requires_approval, updated_at FROM connected_accounts ca
@@ -593,10 +594,10 @@ export async function getSocialCommandSummary(userId: number): Promise<any> {
               LEFT JOIN vaultx_creators vc ON vc.id = dj.creator_id
               WHERE vc.user_id = ? OR dj.creator_id = ? GROUP BY status`, [userId, userId]).catch(() => []),
     rawQuery(`SELECT COALESCE(SUM(creator_share_cents), 0) AS creator_earnings_cents, COUNT(*) AS paid_unlocks
-              FROM transactions WHERE creator_id = ? AND status = 'completed'`, [userId]).catch(() => []),
+              FROM transactions WHERE creator_id = ? AND status = 'completed'`, [creatorId]).catch(() => []),
     rawQuery(`SELECT (SELECT COUNT(*) FROM social_follows WHERE creator_user_id = ?) AS followers,
                      (SELECT COUNT(*) FROM subscriptions WHERE creator_id = ? AND status = 'active') AS subscribers,
-                     (SELECT COUNT(*) FROM conversations WHERE creator_id = ?) AS conversations`, [userId, userId, userId]).catch(() => []),
+                     (SELECT COUNT(*) FROM conversations WHERE creator_id = ?) AS conversations`, [userId, creatorId, userId]).catch(() => []),
     rawQuery(`SELECT state, COUNT(*) AS count FROM social_packages WHERE creator_user_id = ? GROUP BY state`, [userId]).catch(() => []),
   ]);
   return { version: SOCIAL_SPINE_VERSION, accounts, distribution, money: money[0] || {}, audience: audience[0] || {}, packages };
