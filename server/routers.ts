@@ -278,6 +278,7 @@ import { challengeAutomationRouter } from "./routers/challengeAutomationRouter";
 import { polloRouter } from "./routers/polloRouter";
 import { governedPolloRouter } from "./routers/governedPolloRouter";
 import { distributionRouter } from "./routers/distributionRouter";
+import { socialSpineRouter } from "./routers/socialSpineRouter";
 // import { contentProtectionRouter } from "./routers/contentProtection"; // service stubs not implemented
 // import { safetyFeaturesRouter } from "./routers/safetyFeatures"; // service stubs not implemented
 // import { recruiterCommissionsRouter } from "./routers/recruiterCommissions"; // service stubs not implemented
@@ -1060,6 +1061,7 @@ export const appRouter = router({
   pollo: polloRouter,
   governedPollo: governedPolloRouter,
   distribution: distributionRouter,
+  socialSpine: socialSpineRouter,
 });
 
 export type AppRouter = typeof appRouter;

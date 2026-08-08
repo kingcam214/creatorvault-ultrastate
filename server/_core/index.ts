@@ -34,6 +34,7 @@ import {
   getLatestPolloCapabilitySnapshot,
   refreshPolloCapabilitySnapshot,
 } from "../services/polloCapabilityRegistryService";
+import { ensureSocialSpineSchema } from "../services/socialSpineService";
 
 let governedMediaSchemaAttestation: {
   verified: boolean;
@@ -51,6 +52,18 @@ let providerCapabilityAttestation = {
   auditError: null as string | null,
   auditOnly: true as const,
   providerGenerationCalled: false as const,
+};
+
+let socialEmpireAttestation: {
+  verified: boolean;
+  tables: string[];
+  verifiedAt: string | null;
+  outboundAutomationEnabled: boolean;
+} = {
+  verified: false,
+  tables: [],
+  verifiedAt: null,
+  outboundAutomationEnabled: false,
 };
 
 async function refreshProviderCapabilityAttestation(): Promise<void> {
@@ -105,6 +118,19 @@ async function startServer() {
     verifiedAt: new Date().toISOString(),
   };
   console.log(JSON.stringify({ event: "governed_media_schema_verified", ...governedMediaSchemaAttestation }));
+
+  // Idempotent Social Empire schema bootstrap. This creates only canonical bridge,
+  // package, native-social, and notification records; it never starts a worker.
+  const socialSpineSchema = await ensureSocialSpineSchema();
+  socialEmpireAttestation = {
+    verified: true,
+    tables: socialSpineSchema.tables,
+    verifiedAt: new Date().toISOString(),
+    outboundAutomationEnabled:
+      process.env.CREATORVAULT_GOVERNED_MEDIA_AUTORUN === "enabled" &&
+      process.env.CREATORVAULT_OUTBOUND_PUBLISH_AUTORUN === "enabled",
+  };
+  console.log(JSON.stringify({ event: "social_spine_schema_verified", ...socialEmpireAttestation }));
 
   // Run startup tasks (schema bootstrap, etc)
   await runStartupTasks();
@@ -290,6 +316,7 @@ async function startServer() {
       governedMediaExecutionEnabled: isGovernedPolloExecutionEnabled(),
       providerCapabilityAudit: providerCapabilityAttestation,
       bodyCinemaPreProviderProof: getBodyCinemaPreProviderAttestation(),
+      socialEmpire: socialEmpireAttestation,
       ...release,
     });
   });

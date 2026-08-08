@@ -60,6 +60,17 @@ const ALLOWLISTS = {
     'client/src/pages/TelegramMoneyHub.tsx',
     'scripts/scope-guard.js'
   ],
+  'social-empire': [
+    'client/src/pages/SocialHub.tsx',
+    'server/_core/index.ts',
+    'server/routers.ts',
+    'server/routers/socialSpineRouter.ts',
+    'server/routers/followRouter.ts',
+    'server/routers/notificationRouter.ts',
+    'server/services/socialSpineService.ts',
+    'server/services/socialSpineService.test.ts',
+    'scripts/scope-guard.js'
+  ],
   credibility: [
     'client/src/App.tsx',
     'client/src/components/AgeGate.tsx',
