@@ -1,115 +1,53 @@
-import { useAuth } from "@/contexts/AuthContext";
-import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
-import { DollarSign, Users, Video, Star, ArrowRight, Zap, Smartphone } from "lucide-react";
+import { ArrowUpRight, BarChart3, Clapperboard, Crown, Layers3, Radio, Sparkles, WalletCards } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/contexts/AuthContext";
+import { CreatorVaultRoute } from "@/lib/productArchitecture";
+
+const lanes = [
+  { id: "create", eyebrow: "01 · CREATE", title: "Work from what you own", copy: "Choose existing creator media, plan a treatment, and keep source evidence attached.", href: CreatorVaultRoute.bodyCinema, icon: Clapperboard, accent: "from-fuchsia-400/25 to-violet-900/15" },
+  { id: "package", eyebrow: "02 · PACKAGE", title: "Turn a moment into access", copy: "Build a private offer, storefront path, and commercial draft inside the VaultX vertical.", href: CreatorVaultRoute.vaultX, icon: Crown, accent: "from-amber-300/20 to-orange-900/10" },
+  { id: "reach", eyebrow: "03 · REACH", title: "Build audience with intent", copy: "Create native social moments and prepare approval-controlled channel drafts with attribution.", href: CreatorVaultRoute.socialEmpire, icon: Radio, accent: "from-cyan-300/20 to-blue-900/10" },
+  { id: "earn", eyebrow: "04 · EARN", title: "Keep the money path visible", copy: "Review offers, transactions, subscriptions, and the records that support each outcome.", href: CreatorVaultRoute.creatorMoney, icon: WalletCards, accent: "from-emerald-300/20 to-emerald-900/10" },
+  { id: "learn", eyebrow: "05 · LEARN", title: "Learn from what happened", copy: "Use delivery, audience, and earnings records to decide the next creator move.", href: CreatorVaultRoute.creatorIntelligence, icon: BarChart3, accent: "from-indigo-300/20 to-indigo-900/10" },
+];
+
+function recordLabel(value: unknown, singular: string, plural = `${singular}s`) {
+  const count = Number(value);
+  if (!Number.isFinite(count) || count < 1) return `No ${plural.toLowerCase()} recorded yet`;
+  return `${count} ${count === 1 ? singular : plural}`;
+}
 
 export default function CreatorHome() {
   const { user } = useAuth();
-  const { data: stats } = (trpc.vaultAnalytics as any).getOverview?.useQuery(undefined, { retry: false });
-
-  const tools = [
-    { label: "Edit a drop", href: "/vault-x/editor", icon: "🎬", desc: "Cut clips, package teasers, and prep paid content from your phone." },
-    { label: "Make motion", href: "/vault-x/studio?mode=ai-video-generator#pollo", icon: "⚡", desc: "Turn a strong image into a scroll-stopping video." },
-    { label: "Write the script", href: "/king/script-writer", icon: "✍️", desc: "Create captions, scene ideas, and sales messages fast." },
-    { label: "Broadcast to fans", href: "/king/telegram-hub", icon: "📱", desc: "Send updates and offers without hunting through menus." },
-    { label: "Clone studio", href: "/king/clone-command", icon: "👑", desc: "Create clone images, then turn the best shot into motion." },
-    { label: "Challenge tracker", href: "/king/challenge-story", icon: "💰", desc: "See the next money move and what still needs attention." },
-    { label: "Performance", href: "/creator/analytics", icon: "📊", desc: "Track what is getting views, fans, and revenue." },
-    { label: "Sell products", href: "/marketplace", icon: "🛒", desc: "Package offers and make them easier to buy." },
-    { label: "Brand deals", href: "/brand-deals", icon: "🤝", desc: "Organize sponsorship opportunities and creator offers." },
-    { label: "Viral boost", href: "/tools/viral-optimizer", icon: "🔥", desc: "Tighten hooks, captions, and reach before posting." },
-    { label: "Podcast studio", href: "/podcast-studio", icon: "🎙️", desc: "Record, package, and distribute longer-form content." },
-    { label: "Auto-post", href: "/social-autoposter", icon: "📲", desc: "Queue finished content across your channels." },
-  ];
+  const socialSummary = (trpc as any).socialSpine.commandSummary.useQuery(undefined, { retry: false, staleTime: 30_000 });
+  const mediaLibrary = (trpc as any).mediaAssets.list.useQuery({ filter: "videos", limit: 4 }, { retry: false, staleTime: 30_000 });
+  const summary = socialSummary.data as any;
+  const mediaItems = (mediaLibrary.data?.items || mediaLibrary.data || []) as unknown[];
+  const nativePosts = summary?.native?.posts ?? summary?.posts ?? 0;
+  const distributionDrafts = summary?.distribution?.drafts ?? summary?.distribution?.ready ?? 0;
+  const packages = summary?.packages?.count ?? summary?.packages ?? 0;
 
   return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden">
-      <video src="/videos/platform/dashboard-hero.mp4" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-[.3] pointer-events-none" muted autoPlay loop playsInline preload="metadata" />
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/60 via-black/78 to-black" />
-      <div className="relative z-10 overflow-hidden bg-gradient-to-br from-black/65 via-yellow-950/25 to-black/75 border-b border-yellow-500/20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-black font-bold text-lg shrink-0">
-              {user?.name?.[0] || "C"}
-            </div>
-            <div>
-              <p className="text-yellow-400 text-xs sm:text-sm font-semibold tracking-[0.16em] uppercase">Creator launchpad</p>
-              <h1 className="text-2xl sm:text-3xl font-bold">Welcome back, {user?.name || "Creator"}</h1>
-            </div>
-          </div>
-          <p className="text-gray-300 max-w-2xl leading-relaxed">Everything here is built for a phone-first creator: make the asset, polish the drop, send it to fans, and track what earns.</p>
+    <main className="min-h-screen bg-[#08080d] px-4 pb-16 pt-24 text-white sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_12%_0%,rgba(216,180,254,.22),transparent_35%),radial-gradient(circle_at_90%_30%,rgba(34,211,238,.12),transparent_30%),linear-gradient(145deg,#15111d,#08080d_64%)] p-6 shadow-2xl shadow-black/35 sm:p-10">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl"><div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/25 px-3 py-2 text-[10px] font-black uppercase tracking-[.2em] text-fuchsia-100"><Sparkles className="h-3.5 w-3.5" /> CreatorVault / Creator OS</div><h1 className="mt-5 text-4xl font-black tracking-[-.06em] sm:text-6xl">Welcome back, {user?.name || "Creator"}.</h1><p className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-300 sm:text-base">This is the daily operating loop. Make a source-backed moment, package access, build audience, record money, and learn from the result—without losing the thread between them.</p></div>
+          <div className="grid min-w-[280px] grid-cols-3 gap-2 text-center"><RecordCard label="Owned video" value={recordLabel(mediaItems.length, "asset")} /><RecordCard label="Native posts" value={recordLabel(nativePosts, "post")} /><RecordCard label="Social drafts" value={recordLabel(distributionDrafts, "draft")} /></div>
         </div>
-      </div>
+      </section>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="mb-6 rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/15 via-white/5 to-purple-500/10 p-5 sm:p-6">
-          <div className="flex items-start gap-3">
-            <div className="w-11 h-11 rounded-xl bg-yellow-400 text-black flex items-center justify-center shrink-0">
-              <Smartphone className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-yellow-300 font-bold text-lg">Start on your phone</p>
-              <p className="text-gray-300 text-sm leading-relaxed mt-1">Use this as a simple daily flow: create the visual, edit the drop, then broadcast or sell it. No laptop should be required for the core moves.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 text-sm">
-                {["1. Create a shot", "2. Package the drop", "3. Send or sell"].map((step) => (
-                  <div key={step} className="rounded-xl bg-black/30 border border-white/10 px-3 py-3 text-gray-200 font-semibold">{step}</div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+      <section className="mx-auto mt-7 max-w-7xl"><div className="mb-4 flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-zinc-500">Your operating loop</p><h2 className="mt-1 text-2xl font-black tracking-tight">Choose the next real move.</h2></div><Link href={CreatorVaultRoute.mediaVault}><a className="inline-flex items-center gap-2 text-sm font-black text-cyan-200 hover:text-white">Open owned media <ArrowUpRight className="h-4 w-4" /></a></Link></div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{lanes.map((lane) => { const Icon = lane.icon; return <Link key={lane.id} href={lane.href}><a className={`group flex min-h-64 flex-col rounded-[1.65rem] border border-white/10 bg-gradient-to-br ${lane.accent} p-5 transition hover:-translate-y-1 hover:border-white/30`}><div className="flex items-start justify-between"><span className="text-[10px] font-black tracking-[.16em] text-zinc-400">{lane.eyebrow}</span><Icon className="h-5 w-5 text-white" /></div><h3 className="mt-10 text-xl font-black tracking-tight">{lane.title}</h3><p className="mt-3 text-sm leading-relaxed text-zinc-300">{lane.copy}</p><span className="mt-auto inline-flex items-center gap-2 pt-7 text-sm font-black text-white">Open lane <ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></span></a></Link>; })}</div>
+      </section>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-10">
-          {[
-            { label: "Revenue", value: stats?.totalRevenue ? `$${stats.totalRevenue.toFixed(2)}` : "$0.00", icon: DollarSign, color: "text-green-400" },
-            { label: "Subscribers", value: stats?.totalSubscribers ?? 0, icon: Users, color: "text-blue-400" },
-            { label: "Content", value: stats?.totalContent ?? 0, icon: Video, color: "text-purple-400" },
-            { label: "Empire Score", value: stats?.empireScore ?? "—", icon: Star, color: "text-yellow-400" },
-          ].map((s) => (
-            <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4 min-h-[112px]">
-              <s.icon className={`w-5 h-5 ${s.color} mb-2`} />
-              <p className="text-xl sm:text-2xl font-bold">{s.value}</p>
-              <p className="text-gray-400 text-sm">{s.label}</p>
-            </div>
-          ))}
-        </div>
-
-        <h2 className="text-lg font-semibold text-yellow-400 mb-4 flex items-center gap-2">
-          <Zap className="w-5 h-5" /> Creator tools
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {tools.map((tool) => (
-            <Link key={tool.href} href={tool.href}>
-              <div className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-yellow-500/40 rounded-xl p-4 min-h-[116px] cursor-pointer transition-all group">
-                <div className="text-2xl mb-2">{tool.icon}</div>
-                <p className="font-semibold text-sm group-hover:text-yellow-400 transition-colors">{tool.label}</p>
-                <p className="text-gray-400 text-xs mt-1 leading-relaxed">{tool.desc}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Link href="/king/clone-command">
-            <div className="bg-gradient-to-r from-cyan-500/20 to-yellow-500/10 border border-cyan-500/40 rounded-xl p-5 min-h-[92px] cursor-pointer hover:border-cyan-400/70 transition-all flex items-center justify-between gap-4">
-              <div>
-                <p className="font-bold text-cyan-300">Open Clone Command Studio</p>
-                <p className="text-gray-300 text-sm mt-1">Create the shot, then make it move.</p>
-              </div>
-              <ArrowRight className="w-5 h-5 text-cyan-300 shrink-0" />
-            </div>
-          </Link>
-          <Link href="/vault-x/editor">
-            <div className="bg-gradient-to-r from-purple-500/25 via-pink-500/15 to-yellow-500/10 border border-purple-500/40 rounded-xl p-5 min-h-[92px] cursor-pointer hover:border-pink-500/70 transition-all flex items-center justify-between gap-4">
-              <div>
-                <p className="font-bold text-purple-300">Package a finished drop</p>
-                <p className="text-gray-300 text-sm mt-1">Cut, polish, export, and prep content for sales.</p>
-              </div>
-              <ArrowRight className="w-5 h-5 text-purple-300 shrink-0" />
-            </div>
-          </Link>
-        </div>
-      </div>
-    </div>
+      <section className="mx-auto mt-7 grid max-w-7xl gap-4 lg:grid-cols-[1.15fr_.85fr]"><div className="rounded-[1.75rem] border border-white/10 bg-white/[.035] p-6"><div className="flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-zinc-500">Real working set</p><h2 className="mt-1 text-xl font-black">Owned media and commercial preparation</h2></div><Layers3 className="h-5 w-5 text-fuchsia-200" /></div><p className="mt-3 text-sm leading-relaxed text-zinc-400">{mediaItems.length ? "Your next move can start from media already in CreatorVault. No re-upload is required to enter Body Cinema or prepare a Social Empire package." : "No video record is available in this session yet. Creator OS will show owned media here when it is recorded in the library."}</p><div className="mt-5 flex flex-wrap gap-2"><Link href={CreatorVaultRoute.bodyCinema}><a className="rounded-xl bg-white px-4 py-3 text-sm font-black text-black hover:bg-fuchsia-100">Start with Body Cinema</a></Link><Link href={CreatorVaultRoute.socialEmpire}><a className="rounded-xl border border-white/15 px-4 py-3 text-sm font-black text-white hover:bg-white/10">Prepare an audience moment</a></Link></div></div>
+        <div className="rounded-[1.75rem] border border-cyan-200/15 bg-cyan-200/[.045] p-6"><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">Social Empire record</p><h2 className="mt-2 text-xl font-black">{recordLabel(packages, "package")}</h2><p className="mt-3 text-sm leading-relaxed text-zinc-300">Native posts and external drafts stay separate. External delivery remains approval-controlled even when a package is ready.</p><Link href={CreatorVaultRoute.socialEmpire}><a className="mt-6 inline-flex items-center gap-2 text-sm font-black text-cyan-100 hover:text-white">Open Social Empire <ArrowUpRight className="h-4 w-4" /></a></Link></div>
+      </section>
+    </main>
   );
+}
+
+function RecordCard({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-3"><p className="text-[10px] font-black uppercase tracking-[.13em] text-zinc-500">{label}</p><p className="mt-2 text-xs font-bold leading-tight text-white">{value}</p></div>;
 }

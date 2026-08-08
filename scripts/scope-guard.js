@@ -86,6 +86,7 @@ const ALLOWLISTS = {
   coherence: [
     'client/src/App.tsx',
     'client/src/components/AppHeader.tsx',
+    'client/src/pages/CreatorHome.tsx',
     'client/src/lib/productArchitecture.ts',
     'client/src/pages/Home.tsx',
     'client/src/pages/PublicCreatorLanding.tsx',
