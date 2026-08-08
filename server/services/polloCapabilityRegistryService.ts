@@ -221,7 +221,11 @@ async function fetchJson(url: string, headers: Record<string, string> = {}): Pro
   try {
     const response = await fetch(url, {
       method: "GET",
-      headers,
+      headers: {
+        Accept: "application/json, text/plain;q=0.9, */*;q=0.8",
+        "User-Agent": "CreatorVault-Provider-Capability-Audit/1.0",
+        ...headers,
+      },
       signal: controller.signal,
     });
     const text = await response.text().catch(() => "");
