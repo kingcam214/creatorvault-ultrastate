@@ -21,7 +21,7 @@ export const followRouter = router({
   }),
   getFollowers: protectedProcedure.query(async ({ ctx }) => {
     const followers = await socialSpineInternals.rawQuery(
-      `SELECT u.id, u.name, u.username, u.avatar, f.created_at
+      `SELECT u.id, u.name, CAST(u.id AS CHAR) AS username, NULL AS avatar, f.created_at
        FROM social_follows f JOIN users u ON u.id = f.follower_user_id
        WHERE f.creator_user_id = ? ORDER BY f.created_at DESC LIMIT 200`,
       [ctx.user.id],
@@ -30,7 +30,7 @@ export const followRouter = router({
   }),
   getFollowing: protectedProcedure.query(async ({ ctx }) => {
     const following = await socialSpineInternals.rawQuery(
-      `SELECT u.id, u.name, u.username, u.avatar, f.created_at
+      `SELECT u.id, u.name, CAST(u.id AS CHAR) AS username, NULL AS avatar, f.created_at
        FROM social_follows f JOIN users u ON u.id = f.creator_user_id
        WHERE f.follower_user_id = ? ORDER BY f.created_at DESC LIMIT 200`,
       [ctx.user.id],

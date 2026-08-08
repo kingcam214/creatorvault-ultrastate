@@ -552,7 +552,9 @@ export async function listNativeFeed(userId: number, input: { cursor?: number; l
   const query = `
     SELECT p.id, p.creator_user_id, p.source_media_asset_id, p.social_package_id, p.body, p.visibility,
            p.access_tier, p.cta_type, p.cta_payload_json, p.published_at,
-           u.name AS creator_name, u.username AS creator_username, u.avatar AS creator_avatar,
+           COALESCE(u.name, CONCAT('Creator ', u.id)) AS creator_name,
+           CAST(u.id AS CHAR) AS creator_username,
+           NULL AS creator_avatar,
            ma.public_url, ma.thumbnail_url, ma.duration, ma.width, ma.height,
            (SELECT COUNT(*) FROM social_post_reactions r WHERE r.post_id = p.id) AS reaction_count,
            (SELECT COUNT(*) FROM social_post_comments c WHERE c.post_id = p.id AND c.status = 'visible') AS comment_count,
