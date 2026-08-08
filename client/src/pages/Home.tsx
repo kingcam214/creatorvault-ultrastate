@@ -1,68 +1,100 @@
 import { Link } from "wouter";
-import { ArrowUpRight, CheckCircle2, Clapperboard, Crown, Layers3, LockKeyhole, Radio, ShieldCheck, Sparkles, TrendingUp, Users, Wand2 } from "lucide-react";
-import { CreatorVaultRoute, PRODUCT_DOMAINS } from "@/lib/productArchitecture";
+import { ArrowUpRight, Crown, Radio, Wand2 } from "lucide-react";
+import { CreatorVaultRoute } from "@/lib/productArchitecture";
 
-const operatingLoop = [
-  { number: "01", title: "Create from what you own", copy: "Start with creator-owned media, a real persona, and a purpose—not an empty prompt or a duplicate upload.", icon: Clapperboard, href: CreatorVaultRoute.creatorOS, label: "Open Creator OS" },
-  { number: "02", title: "Make the moment sellable", copy: "VaultX turns a finished moment into offers, access, subscriptions, and private creator storefronts.", icon: Crown, href: CreatorVaultRoute.vaultX, label: "Explore VaultX" },
-  { number: "03", title: "Treat every visual with proof", copy: "Body Cinema reads an owned source, records treatment evidence, and keeps rendering under governed review.", icon: Wand2, href: CreatorVaultRoute.bodyCinema, label: "Open Body Cinema" },
-  { number: "04", title: "Build audience with control", copy: "Social Empire creates native moments and approval-controlled external drafts with durable attribution paths.", icon: Radio, href: CreatorVaultRoute.socialEmpire, label: "Open Social Empire" },
+const creatorBenefits = [
+  {
+    number: "01",
+    title: "Control your drops",
+    copy: "Turn your media into premium unlocks, VIP subscriptions, and private storefronts without giving up ownership.",
+    icon: Crown,
+  },
+  {
+    number: "02",
+    title: "Upgrade your visuals",
+    copy: "Apply high-end cinematic treatments to your existing videos so every release earns a premium.",
+    icon: Wand2,
+  },
+  {
+    number: "03",
+    title: "Own your audience",
+    copy: "Manage your Telegram, social channels, and private community from one place.",
+    icon: Radio,
+  },
 ];
-
-const proofRules = ["Owned source before treatment", "Evidence before provider spend", "Quality review before sale or release", "Approval before external delivery"];
 
 export default function Home() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#07070b] text-white selection:bg-fuchsia-400/40">
-      <section className="relative isolate overflow-hidden border-b border-white/10">
-        <video aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-25" src="/videos/kingcam-hero-cam.mp4" autoPlay loop muted playsInline preload="metadata" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_12%,rgba(216,180,254,.23),transparent_31%),radial-gradient(circle_at_77%_22%,rgba(34,211,238,.15),transparent_29%),linear-gradient(180deg,rgba(7,7,11,.44),#07070b_92%)]" />
-        <div className="relative mx-auto max-w-7xl px-5 pb-20 pt-20 sm:px-8 sm:pb-28 sm:pt-28 lg:px-12">
-          <div className="max-w-4xl">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-fuchsia-200 backdrop-blur"><Sparkles className="h-3.5 w-3.5" /> CreatorVault operating system</div>
-            <h1 className="max-w-4xl text-5xl font-black leading-[.91] tracking-[-0.065em] sm:text-7xl lg:text-8xl">Create the moment.<span className="block bg-gradient-to-r from-fuchsia-300 via-violet-200 to-cyan-200 bg-clip-text text-transparent">Own the whole loop.</span></h1>
-            <p className="mt-7 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">CreatorVault is the operating system for creators who need one place to make premium drops, package access, reach the right people, earn from the result, and learn from what is real.</p>
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row"><Link href={CreatorVaultRoute.creatorOS}><a className="inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-sm font-black text-black transition hover:bg-fuchsia-100">Enter Creator OS <ArrowUpRight className="h-4 w-4" /></a></Link><Link href={CreatorVaultRoute.vaultX}><a className="inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-black/30 px-6 py-4 text-sm font-black text-white backdrop-blur transition hover:border-fuchsia-300 hover:bg-white/10">Explore VaultX <Crown className="h-4 w-4" /></a></Link></div>
+    <main className="min-h-screen overflow-hidden bg-[#090909] text-white selection:bg-white/30">
+      <section className="relative isolate min-h-[100svh] overflow-hidden bg-black" aria-label="KingCam creator hero">
+        <video
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full scale-110 object-cover object-center opacity-30 blur-2xl"
+          src="/videos/kingcam-hero-cam.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+        />
+        <div className="absolute inset-0 bg-black/25" />
+        <video
+          aria-label="KingCam creator hero video"
+          className="absolute inset-0 h-full w-full object-contain object-center"
+          src="/videos/kingcam-hero-cam.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+        />
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-24 lg:px-12">
+        <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+          <div>
+            <div className="text-xs font-black uppercase tracking-[0.22em] text-zinc-500">CreatorVault</div>
+            <h1 className="mt-3 text-5xl font-black leading-[0.92] tracking-[-0.06em] sm:text-6xl">Your Content.<br />Your Empire.</h1>
           </div>
-          <div className="mt-16 grid gap-3 sm:grid-cols-3 lg:mt-24"><HeroFact icon={ShieldCheck} title="Evidence-first" copy="Creator-owned sources, durable records, and visible approval boundaries." /><HeroFact icon={TrendingUp} title="Money-aware" copy="Offers, access, attribution, and earnings stay connected to the creator loop." /><HeroFact icon={Users} title="Audience-owned" copy="Native social, direct relationships, and external drafts stay under creator control." /></div>
+          <p className="max-w-2xl text-lg leading-relaxed text-zinc-300 sm:text-xl">The private platform for creators who want to turn their media into high-end drops, control their distribution, and keep the money they earn.</p>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Link href="/signup">
+            <a className="inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl bg-white px-8 py-4 text-base font-black text-black transition hover:bg-zinc-200">
+              Create Your Vault <ArrowUpRight className="h-4 w-4" />
+            </a>
+          </Link>
+          <Link href={CreatorVaultRoute.creatorOS}><a className="px-3 py-3 text-sm font-bold text-zinc-400 transition hover:text-white">Sign In</a></Link>
+          <Link href={CreatorVaultRoute.vaultX}><a className="px-3 py-3 text-sm font-bold text-zinc-400 transition hover:text-white">Explore Features</a></Link>
+        </div>
+
+        <div className="mt-16 grid gap-4 md:grid-cols-3">
+          {creatorBenefits.map((benefit) => {
+            const Icon = benefit.icon;
+            return (
+              <div key={benefit.number} className="flex min-h-64 flex-col rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-8 transition hover:border-white/30 hover:bg-white/[0.06]">
+                <div className="flex items-start justify-between">
+                  <span className="text-xs font-black tracking-[0.22em] text-zinc-500">{benefit.number}</span>
+                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-black"><Icon className="h-6 w-6" /></div>
+                </div>
+                <h2 className="mt-12 text-2xl font-black tracking-tight">{benefit.title}</h2>
+                <p className="mt-4 text-base leading-relaxed text-zinc-400">{benefit.copy}</p>
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-18 sm:px-8 sm:py-24 lg:px-12">
-        <div className="grid gap-8 lg:grid-cols-[.75fr_1.25fr] lg:items-end"><div><div className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">One system. Clear lanes.</div><h2 className="mt-3 text-4xl font-black tracking-[-0.05em] sm:text-5xl">The creator operating loop.</h2></div><p className="max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">CreatorVault is the product home. VaultX is its specialized adult-creator vertical. Body Cinema is the governed premium-video engine inside VaultX. Social Empire is the audience and distribution control layer—not a separate platform competing for attention.</p></div>
-        <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">{operatingLoop.map((step) => { const Icon = step.icon; return <Link key={step.number} href={step.href}><a className="group flex min-h-72 flex-col rounded-[1.75rem] border border-white/10 bg-gradient-to-b from-white/[.06] to-white/[.02] p-6 transition hover:-translate-y-1 hover:border-fuchsia-300/50 hover:bg-white/[.08]"><div className="flex items-start justify-between"><span className="text-xs font-black tracking-[0.22em] text-zinc-500">{step.number}</span><div className="grid h-10 w-10 place-items-center rounded-xl bg-white text-black"><Icon className="h-5 w-5" /></div></div><h3 className="mt-11 text-2xl font-black tracking-tight">{step.title}</h3><p className="mt-3 text-sm leading-relaxed text-zinc-400">{step.copy}</p><span className="mt-auto inline-flex items-center gap-2 pt-8 text-sm font-black text-fuchsia-200">{step.label}<ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></span></a></Link>; })}</div>
-      </section>
-
-      <section className="border-y border-white/10 bg-[radial-gradient(circle_at_78%_14%,rgba(34,211,238,.12),transparent_34%),radial-gradient(circle_at_12%_90%,rgba(232,121,249,.12),transparent_33%),#09090e]">
-        <div className="mx-auto grid max-w-7xl gap-10 px-5 py-18 sm:px-8 lg:grid-cols-[.88fr_1.12fr] lg:items-center lg:px-12 lg:py-24">
-          <div className="max-w-xl">
-            <div className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.22em] text-cyan-200"><Clapperboard className="h-4 w-4" /> Proof in motion</div>
-            <h2 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Every premium move starts with a moment you already own.</h2>
-            <p className="mt-5 text-sm leading-relaxed text-zinc-400 sm:text-base">CreatorVault gives that moment a business role: a stronger opening, a clearer offer, and a decision trail that stays tied to the work. The point is not more noise. The point is a moment with direction.</p>
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              {[['01', 'Own the moment'], ['02', 'Choose the revenue role'], ['03', 'Move with the record beside it']].map(([number, label]) => <div key={number} className="rounded-2xl border border-white/10 bg-white/[.035] p-4"><div className="text-[10px] font-black tracking-[0.2em] text-fuchsia-200">{number}</div><div className="mt-3 text-sm font-black leading-tight text-white">{label}</div></div>)}
-            </div>
-            <Link href={CreatorVaultRoute.bodyCinema}><a className="mt-8 inline-flex min-h-13 items-center gap-2 rounded-2xl border border-cyan-200/30 bg-cyan-200/10 px-6 py-4 text-sm font-black text-cyan-50 transition hover:border-cyan-200 hover:bg-cyan-100 hover:text-black">Explore Body Cinema <ArrowUpRight className="h-4 w-4" /></a></Link>
+      <section className="border-t border-white/10 bg-black">
+        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
+          <div className="max-w-2xl">
+            <div className="text-xs font-black uppercase tracking-[0.22em] text-zinc-500">Your next move</div>
+            <h2 className="mt-4 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Build the version of your business that pays you back.</h2>
+            <Link href="/signup"><a className="mt-8 inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl bg-white px-8 py-4 text-base font-black text-black transition hover:bg-zinc-200">Create Your Vault <ArrowUpRight className="h-4 w-4" /></a></Link>
           </div>
-          <figure className="relative min-h-[29rem] overflow-hidden rounded-[2rem] border border-white/10 bg-black shadow-[0_34px_100px_rgba(0,0,0,.52)] sm:min-h-[35rem]">
-            <video aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" src="/assets/hero-transformation.mp4" autoPlay loop muted playsInline preload="metadata" />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,7,11,.05),rgba(7,7,11,.1)_42%,rgba(7,7,11,.92))]" />
-            <div className="absolute inset-x-5 top-5 flex items-start justify-between gap-4 sm:inset-x-7 sm:top-7"><div className="rounded-full border border-white/20 bg-black/45 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-white backdrop-blur">Editorial motion reference</div><div className="rounded-full border border-fuchsia-200/25 bg-fuchsia-300/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-100 backdrop-blur">Creator-owned first</div></div>
-            <figcaption className="absolute inset-x-5 bottom-5 max-w-md sm:inset-x-7 sm:bottom-7"><div className="text-2xl font-black tracking-tight text-white">Direction you can feel before you build the drop.</div><p className="mt-2 text-xs leading-relaxed text-zinc-300">Visual-library reference only. It illustrates an editorial direction, not a creator-specific result; the original source ownership and consent for this pre-existing asset have not been independently verified.</p></figcaption>
-          </figure>
         </div>
       </section>
-
-      <section className="border-y border-white/10 bg-white/[.025]"><div className="mx-auto grid max-w-7xl gap-10 px-5 py-18 sm:px-8 lg:grid-cols-[1.05fr_.95fr] lg:px-12 lg:py-24">
-        <div className="rounded-[2rem] border border-violet-400/20 bg-[radial-gradient(circle_at_20%_10%,rgba(216,180,254,.18),transparent_37%),#101017] p-7 sm:p-10"><div className="flex items-center gap-3 text-fuchsia-200"><Layers3 className="h-5 w-5" /><span className="text-xs font-black uppercase tracking-[0.2em]">Product architecture</span></div><h2 className="mt-6 text-4xl font-black tracking-[-0.05em]">Every layer has one job.</h2><div className="mt-8 space-y-4">{PRODUCT_DOMAINS.slice(0, 5).map((domain) => <Link key={domain.id} href={domain.route}><a className="group flex gap-4 rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-cyan-200/40 hover:bg-black/30"><div className="mt-0.5 h-2.5 w-2.5 rounded-full bg-gradient-to-br from-fuchsia-300 to-cyan-300" /><div><div className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">{domain.eyebrow}</div><div className="mt-1 text-base font-black">{domain.label}</div><p className="mt-1 text-xs leading-relaxed text-zinc-400">{domain.role}</p></div><ArrowUpRight className="ml-auto h-4 w-4 shrink-0 text-zinc-500 transition group-hover:text-white" /></a></Link>)}</div></div>
-        <div className="flex flex-col justify-between rounded-[2rem] border border-white/10 bg-black/30 p-7 sm:p-10"><div><div className="flex items-center gap-3 text-cyan-200"><LockKeyhole className="h-5 w-5" /><span className="text-xs font-black uppercase tracking-[0.2em]">Proof before power</span></div><h2 className="mt-6 text-4xl font-black tracking-[-0.05em]">No shortcut gets to become a claim.</h2><p className="mt-4 max-w-lg text-sm leading-relaxed text-zinc-400">CreatorVault keeps the full chain visible. A source, treatment, spend, delivery, audience action, or revenue outcome only earns its place when the corresponding record exists.</p><div className="mt-8 space-y-3">{proofRules.map((rule) => <div key={rule} className="flex items-center gap-3 text-sm font-bold text-zinc-200"><CheckCircle2 className="h-4 w-4 text-emerald-300" />{rule}</div>)}</div></div><Link href={CreatorVaultRoute.socialEmpire}><a className="mt-10 inline-flex items-center justify-between rounded-2xl bg-white px-5 py-4 text-sm font-black text-black transition hover:bg-cyan-100">See the audience control layer <ArrowUpRight className="h-4 w-4" /></a></Link></div>
-      </div></section>
-
-      <section className="mx-auto max-w-7xl px-5 py-18 sm:px-8 sm:py-24 lg:px-12"><div className="rounded-[2rem] border border-white/10 bg-gradient-to-r from-fuchsia-950/45 via-[#14111a] to-cyan-950/30 px-7 py-10 sm:px-12 sm:py-14"><div className="max-w-3xl"><div className="text-xs font-black uppercase tracking-[0.22em] text-fuchsia-200">Built for the next move</div><h2 className="mt-4 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Make something worth owning. Then move it with intention.</h2><p className="mt-5 text-sm leading-relaxed text-zinc-300 sm:text-base">Start inside the Creator OS, open the vertical that fits your business, and keep every growth action tied to a real source, a real audience path, and a real decision record.</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><Link href="/signup"><a className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-sm font-black text-black hover:bg-fuchsia-100">Create your CreatorVault <ArrowUpRight className="h-4 w-4" /></a></Link><Link href={CreatorVaultRoute.bodyCinema}><a className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 px-6 py-4 text-sm font-black text-white hover:bg-white/10">See Body Cinema <Wand2 className="h-4 w-4" /></a></Link></div></div></div></section>
     </main>
   );
-}
-
-function HeroFact({ icon: Icon, title, copy }: { icon: typeof ShieldCheck; title: string; copy: string }) {
-  return <div className="rounded-2xl border border-white/10 bg-black/35 p-5 backdrop-blur-sm"><Icon className="h-5 w-5 text-fuchsia-200" /><h2 className="mt-5 text-base font-black">{title}</h2><p className="mt-2 text-xs leading-relaxed text-zinc-400">{copy}</p></div>;
 }
