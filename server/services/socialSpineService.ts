@@ -670,3 +670,126 @@ export async function prepareCanonicalTelegramJob(input: {
 }
 
 export const socialSpineInternals = { rawQuery, rawExec, rowsOf };
+
+
+type ReconciliationRead = { state: "available"; rows: any[] } | { state: "unavailable"; rows: []; reason: string };
+
+async function reconciliationRead(query: string, params: unknown[] = []): Promise<ReconciliationRead> {
+  try {
+    return { state: "available", rows: await rawQuery(query, params) };
+  } catch (error) {
+    return {
+      state: "unavailable",
+      rows: [],
+      reason: error instanceof Error ? error.message.slice(0, 180) : "read unavailable",
+    };
+  }
+}
+
+/**
+ * Read-only reconciliation inventory for the existing account owner. It never
+ * reads token material and it does not create identities, accounts, posts, or
+ * external jobs. The results are the evidence source for the first real Social
+ * Empire activation.
+ */
+export async function getKingcamActivationInventory(userId: number): Promise<any> {
+  const creatorId = await getCreatorId(userId);
+  const [owner, creatorProfile, ownedMedia, personalChannels, brandChannels, connectedAccounts, legacyCredentials,
+    telegramChannels, whatsappCommunities, distribution, nativePosts, subscriptions, conversations, transactions,
+    socialLinks, accountTokens] = await Promise.all([
+    reconciliationRead(`SELECT id, name, email, role, creator_status, primary_brand, createdAt
+                        FROM users WHERE id = ? LIMIT 1`, [userId]),
+    reconciliationRead(`SELECT id, user_id, display_name, bio, profile_image_url, cover_image_url,
+                                subscription_price_basic, subscription_price_premium, subscription_price_vip,
+                                total_subscribers, language_primary, is_active
+                         FROM vaultx_creators WHERE user_id = ? LIMIT 1`, [userId]),
+    reconciliationRead(`SELECT id, asset_type, source_type, file_name, original_name, mime_type, public_url,
+                                thumbnail_url, duration, width, height, status, created_at
+                         FROM media_assets WHERE user_id = ? AND status = 'ready'
+                         ORDER BY created_at DESC LIMIT 24`, [userId]),
+    reconciliationRead(`SELECT id, owner_type, owner_id, display_name, slug, brand_lane, channel_type,
+                                content_safety_level, is_active, created_at
+                         FROM channel_identities WHERE owner_id = ? ORDER BY created_at ASC`, [userId]),
+    reconciliationRead(`SELECT id, owner_type, owner_id, display_name, slug, brand_lane, channel_type,
+                                content_safety_level, is_active, created_at
+                         FROM channel_identities
+                         WHERE owner_type IN ('vaultx_brand', 'creatorvault_brand') ORDER BY created_at ASC`),
+    reconciliationRead(`SELECT ca.id, ca.platform, ca.platform_account_id, ca.username, ca.display_name,
+                                ca.connection_status, ca.can_post, ca.can_schedule, ca.can_send_dm,
+                                ca.can_read_analytics, ca.can_trigger_funnel, ca.automation_enabled,
+                                ca.requires_approval, ca.last_verified_at, ca.updated_at,
+                                ci.id AS channel_identity_id, ci.owner_type, ci.owner_id, ci.display_name AS channel_name
+                         FROM connected_accounts ca
+                         JOIN channel_identities ci ON ci.id = ca.channel_identity_id
+                         WHERE ci.owner_id = ? OR ci.owner_type IN ('vaultx_brand', 'creatorvault_brand')
+                         ORDER BY ca.updated_at DESC`, [userId]),
+    reconciliationRead(`SELECT id, platform, platform_user_id, platform_username, follower_count, status, last_synced_at
+                         FROM platform_credentials WHERE user_id = ? ORDER BY id DESC`, [userId]),
+    reconciliationRead(`SELECT id, channel_id, channel_name, channel_type, creator_id, created_at
+                         FROM telegram_channels WHERE creator_id = ? ORDER BY created_at DESC`, [userId]),
+    reconciliationRead(`SELECT id, creator_id, created_at FROM whatsapp_communities
+                         WHERE creator_id = ? ORDER BY created_at DESC LIMIT 50`, [userId]),
+    reconciliationRead(`SELECT platform, status, approval_state, origin_system, COUNT(*) AS count,
+                                MAX(created_at) AS last_recorded_at
+                         FROM distribution_jobs WHERE creator_id = ?
+                         GROUP BY platform, status, approval_state, origin_system
+                         ORDER BY last_recorded_at DESC`, [creatorId]),
+    reconciliationRead(`SELECT id, source_media_asset_id, social_package_id, status, visibility,
+                                access_tier, cta_type, published_at
+                         FROM social_native_posts WHERE creator_user_id = ?
+                         ORDER BY published_at DESC LIMIT 24`, [userId]),
+    reconciliationRead(`SELECT COUNT(*) AS count FROM subscriptions WHERE creator_id = ? AND status = 'active'`, [creatorId]),
+    reconciliationRead(`SELECT COUNT(*) AS count FROM conversations WHERE creator_id = ?`, [userId]),
+    reconciliationRead(`SELECT COUNT(*) AS count FROM transactions WHERE creator_id = ? AND status = 'completed'`, [creatorId]),
+    reconciliationRead(`SELECT id, platform, canonical_connected_account_id, legacy_platform_credential_id,
+                                bridge_state, refresh_state, last_successful_read_at, last_successful_publish_at, updated_at
+                         FROM social_account_bridges WHERE user_id = ? ORDER BY updated_at DESC`, [userId]),
+    reconciliationRead(`SELECT ca.id AS connected_account_id, COUNT(at.id) AS token_record_count
+                         FROM connected_accounts ca
+                         LEFT JOIN account_tokens at ON at.connected_account_id = ca.id
+                         JOIN channel_identities ci ON ci.id = ca.channel_identity_id
+                         WHERE ci.owner_id = ? OR ci.owner_type IN ('vaultx_brand', 'creatorvault_brand')
+                         GROUP BY ca.id`, [userId]),
+  ]);
+
+  return {
+    ownerUserId: userId,
+    creatorId,
+    identity: { owner, creatorProfile },
+    ownedMedia,
+    channels: { personal: personalChannels, creatorvaultBrand: brandChannels },
+    accounts: { connected: connectedAccounts, legacyCredentials, tokenPresence: accountTokens, bridges: socialLinks },
+    messaging: { telegram: telegramChannels, whatsapp: whatsappCommunities },
+    social: { distribution, nativePosts, subscriptions, conversations, transactions },
+  };
+}
+
+/**
+ * Creates a canonical internal personal channel only when the owner has no
+ * channel identity at all. It is not an external account and it cannot publish
+ * externally; every recovered external account remains approval-gated.
+ */
+export async function ensureKingcamPersonalChannel(userId: number): Promise<{ channelId: number; created: boolean }> {
+  const existing = await rawQuery(
+    `SELECT id FROM channel_identities WHERE owner_id = ? AND owner_type = 'creator_personal'
+     ORDER BY created_at ASC LIMIT 1`,
+    [userId],
+  );
+  if (existing.length) return { channelId: Number(existing[0].id), created: false };
+
+  const identity = await rawQuery(
+    `SELECT COALESCE(vc.display_name, u.name, 'KingCam') AS display_name
+     FROM users u LEFT JOIN vaultx_creators vc ON vc.user_id = u.id
+     WHERE u.id = ? LIMIT 1`,
+    [userId],
+  );
+  const displayName = String(identity[0]?.display_name || "KingCam").slice(0, 255);
+  const slug = `${displayName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "kingcam"}-${randomBytes(3).toString("hex")}`;
+  const result = await rawExec(
+    `INSERT INTO channel_identities
+     (owner_type, owner_id, display_name, slug, brand_lane, channel_type, content_safety_level, is_active)
+     VALUES ('creator_personal', ?, ?, ?, 'vaultx_adult', 'social', 'teaser', 1)`,
+    [userId, displayName, slug],
+  );
+  return { channelId: Number((result as any).insertId), created: true };
+}

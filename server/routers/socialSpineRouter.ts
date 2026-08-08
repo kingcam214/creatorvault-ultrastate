@@ -7,6 +7,8 @@ import {
   bridgeLegacyPlatformCredentials,
   createNativePost,
   createSocialPackage,
+  ensureKingcamPersonalChannel,
+  getKingcamActivationInventory,
   getSocialCommandSummary,
   linkVerifiedFanIdentity,
   listNativeFeed,
@@ -53,6 +55,14 @@ export const socialSpineRouter = router({
     outboundAutomation: "default_deny",
     externalPosting: "not_available_from_social_spine",
   })),
+
+  reconciliationInventory: creatorProcedure.query(async ({ ctx }) => {
+    return getKingcamActivationInventory(ctx.user.id);
+  }),
+
+  ensureKingcamPersonalChannel: creatorProcedure.mutation(async ({ ctx }) => {
+    return ensureKingcamPersonalChannel(ctx.user.id);
+  }),
 
   bridgeLegacyAccounts: creatorProcedure.mutation(async ({ ctx }) => {
     return bridgeLegacyPlatformCredentials(ctx.user.id);
