@@ -717,7 +717,7 @@ export async function getKingcamActivationInventory(userId: number): Promise<any
     reconciliationRead(`SELECT ca.id, ca.platform, ca.platform_account_id, ca.username, ca.display_name,
                                 ca.connection_status, ca.can_post, ca.can_schedule, ca.can_send_dm,
                                 ca.can_read_analytics, ca.can_trigger_funnel, ca.automation_enabled,
-                                ca.requires_approval, ca.last_verified_at, ca.updated_at,
+                                ca.requires_approval, ca.created_at,
                                 ci.id AS channel_identity_id, ci.owner_type, ci.owner_id, ci.display_name AS channel_name
                          FROM connected_accounts ca
                          JOIN channel_identities ci ON ci.id = ca.channel_identity_id
