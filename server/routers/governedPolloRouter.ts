@@ -24,6 +24,7 @@ import {
   preflightBodyCinemaSourceVideo,
   refreshPolloCapabilitySnapshot,
   runNextControlledSourceVideoAccessAttempt,
+  settleControlledSourceVideoTask,
 } from "../services/polloCapabilityRegistryService";
 
 const OWNER_IDS = new Set([6, 33]);
@@ -237,6 +238,22 @@ export const governedPolloRouter = router({
         evidenceId: input.evidenceId,
         sourceMediaUrl: input.sourceUrl,
         prompt: [buildEvidenceBackedDirectionPrompt(evidenceContext.direction), input.prompt].join(" "),
+      });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  settleControlledSourceVideoTask: protectedProcedure.input(z.object({
+    taskId: z.string().trim().min(8).max(191),
+    durableOutputUrl: z.string().url().max(4000),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await settleControlledSourceVideoTask({
+        ownerId: ctx.user.id,
+        taskId: input.taskId,
+        durableOutputUrl: input.durableOutputUrl,
       });
     } catch (error) {
       return asPrecondition(error);

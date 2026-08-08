@@ -584,6 +584,75 @@ async function fetchJsonResponse(response: Response): Promise<Record<string, unk
   catch { return { responseText: text.slice(0, 800) }; }
 }
 
+export type ControlledSourceVideoTaskSettlement = {
+  taskId: string;
+  modelKey: string;
+  status: "processing" | "succeed" | "failed";
+  providerOutputUrl: string | null;
+  durableOutputUrl: string | null;
+  balanceBeforeCredits: number;
+  balanceAfterCredits: number;
+  actualCostCredits: number;
+  providerResponse: Record<string, unknown>;
+};
+
+export async function settleControlledSourceVideoTask(input: {
+  ownerId: number;
+  taskId: string;
+  durableOutputUrl: string;
+}): Promise<ControlledSourceVideoTaskSettlement> {
+  if (!OWNER_IDS.has(Number(input.ownerId))) throw new Error("Owner approval is required to settle a controlled provider task.");
+  if (!/^https:\/\/creatorvault\.live\/uploads\/content-vault\//i.test(input.durableOutputUrl)) {
+    throw new Error("Controlled task settlement requires a durable CreatorVault output URL.");
+  }
+  await ensurePolloCapabilityRegistrySchema();
+  const rows = await rawQuery<any>(
+    "SELECT * FROM provider_model_access_memory WHERE provider = 'pollo' AND account_scope = ? AND provider_task_id = ? LIMIT 1",
+    [`owner:${input.ownerId}`, input.taskId],
+  );
+  const record = rows[0];
+  if (!record) throw new Error("No controlled provider task record exists for this task ID.");
+  const balanceBeforeCredits = readNumeric(record.balance_before_credits);
+  if (balanceBeforeCredits === null) throw new Error("The controlled task record has no verified balance-before value.");
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!apiKey) throw new Error("POLLO_API_KEY is not configured; task settlement cannot check provider status.");
+  const response = await fetch(`${POLLO_PLATFORM_BASE}/generation/${encodeURIComponent(input.taskId)}/status`, {
+    method: "GET",
+    headers: { "x-api-key": apiKey, Accept: "application/json" },
+  });
+  const providerResponse = await fetchJsonResponse(response);
+  if (!response.ok) throw new Error(`Pollo task status returned ${response.status}: ${safeError((providerResponse as any).message || (providerResponse as any).responseText || "unknown error")}`);
+  const generation = isObject((providerResponse as any).data) && Array.isArray(((providerResponse as any).data as any).generations)
+    ? ((providerResponse as any).data as any).generations[0]
+    : null;
+  const rawStatus = String((generation as any)?.status || (providerResponse as any)?.data?.status || "processing").toLowerCase();
+  const status: ControlledSourceVideoTaskSettlement["status"] = rawStatus === "succeed" ? "succeed" : rawStatus === "failed" ? "failed" : "processing";
+  const providerOutputUrl = typeof (generation as any)?.url === "string" && (generation as any).url ? String((generation as any).url) : null;
+  const balanceAfter = await readPolloBalance();
+  const actualCostCredits = Number(Math.max(0, balanceBeforeCredits - balanceAfter.availableCredits).toFixed(4));
+  const priorMetadata = parseJson<Record<string, unknown>>(record.metadata_json, {});
+  const metadata = {
+    ...priorMetadata,
+    sourceVideoTaskSettlement: {
+      settledAt: new Date().toISOString(),
+      status,
+      providerOutputUrl,
+      durableOutputUrl: input.durableOutputUrl,
+      balanceBeforeCredits,
+      balanceAfterCredits: balanceAfter.availableCredits,
+      actualCostCredits,
+      providerResponse,
+    },
+  };
+  await rawExec(
+    `UPDATE provider_model_access_memory
+     SET access_state = 'available', balance_after_credits = ?, failure_reason = NULL, metadata_json = ?, verified_at = NOW()
+     WHERE id = ?`,
+    [balanceAfter.availableCredits, safeJson(metadata), record.id],
+  );
+  return { taskId: input.taskId, modelKey: String(record.model_key), status, providerOutputUrl, durableOutputUrl: input.durableOutputUrl, balanceBeforeCredits, balanceAfterCredits: balanceAfter.availableCredits, actualCostCredits, providerResponse };
+}
+
 export async function getLatestPolloCapabilitySnapshot(): Promise<PolloCapabilitySnapshot | null> {
   await ensurePolloCapabilityRegistrySchema();
   const rows = await rawQuery<StoredSnapshotRow>(
