@@ -23,6 +23,7 @@ import {
   getLatestPolloCapabilitySnapshot,
   preflightBodyCinemaSourceVideo,
   refreshPolloCapabilitySnapshot,
+  runNextControlledSourceVideoAccessAttempt,
 } from "../services/polloCapabilityRegistryService";
 
 const OWNER_IDS = new Set([6, 33]);
@@ -213,6 +214,29 @@ export const governedPolloRouter = router({
         creatorId,
         evidenceId: input.evidenceId,
         sourceMediaUrl: input.sourceUrl,
+      });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  runNextControlledSourceVideoAccessAttempt: protectedProcedure.input(z.object({
+    creatorId: z.number().int().positive().optional(),
+    evidenceId: z.string().uuid(),
+    sourceUrl: z.string().url().max(4000),
+    prompt: z.string().trim().min(8).max(6000),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    const creatorId = input.creatorId ?? ctx.user.id;
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    try {
+      const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
+      return await runNextControlledSourceVideoAccessAttempt({
+        ownerId: ctx.user.id,
+        creatorId,
+        evidenceId: input.evidenceId,
+        sourceMediaUrl: input.sourceUrl,
+        prompt: [buildEvidenceBackedDirectionPrompt(evidenceContext.direction), input.prompt].join(" "),
       });
     } catch (error) {
       return asPrecondition(error);

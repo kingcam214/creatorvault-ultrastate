@@ -55,13 +55,30 @@ export type PolloCapabilitySnapshot = {
   warnings: string[];
 };
 
+export type ControlledModelAccessState = "available" | "unavailable" | "unknown";
+
+export type ControlledSourceVideoCandidate = {
+  rank: number;
+  modelKey: string;
+  providerApiPath: string;
+  documentedInputSupport: string;
+  durationSeconds: number;
+  resolution: "720p";
+  aspectRatio: "9:16";
+  creativeStrength: string;
+  priceStatus: "price_not_yet_returned";
+  accountAccess: ControlledModelAccessState;
+  lastVerifiedAt: string | null;
+  failureReason: string | null;
+};
+
 export type BodyCinemaSourceVideoPreflight = {
   evidenceId: string;
   sourceMediaUrl: string;
   sourceFingerprint: string;
   selectedDirectionId: string;
-  status: "quote_required" | "blocked";
-  candidates: Array<Pick<PolloModelCapability, "modelKey" | "apiPaths" | "generationTypes" | "supportsSourceVideoReference" | "accountAccess">>;
+  status: "access_attempt_ready" | "blocked";
+  candidates: ControlledSourceVideoCandidate[];
   blockingReasons: string[];
   requiredBeforeSubmission: string[];
   executionPolicy: {
@@ -93,6 +110,25 @@ const POLLO_PUBLIC_MODEL_CATALOG = "https://api.pollo.ai/api/v1/model-specs";
 const POLLO_PLATFORM_BASE = "https://pollo.ai/api/platform";
 const MAX_MODEL_COUNT = 1_000;
 const REQUEST_TIMEOUT_MS = 12_000;
+
+// These routes are verified against Pollo's official OpenAPI reference. They use the
+// exact CreatorVault source video as a typed video reference and support 6s, 720p, 9:16.
+const CONTROLLED_SOURCE_VIDEO_LADDER = [
+  {
+    rank: 1,
+    modelKey: "bytedance/seedance-2-5",
+    providerApiPath: "/generation/bytedance/seedance-2-5/ref2video",
+    documentedInputSupport: "refs[].type=video with HTTPS video URL",
+    creativeStrength: "Multimodal reference anchoring for controlled short-form visual continuity.",
+  },
+  {
+    rank: 2,
+    modelKey: "kling-ai/kling-v3-omni",
+    providerApiPath: "/generation/kling-ai/kling-v3-omni/ref2video",
+    documentedInputSupport: "refs[].type=video with HTTPS video URL",
+    creativeStrength: "High-resolution omni-modal reference control and cinematic motion continuity.",
+  },
+] as const;
 
 function normalizeGenerationType(value: unknown): PolloGenerationType {
   const normalized = String(value || "").trim().toLowerCase();
@@ -300,6 +336,21 @@ export async function ensurePolloCapabilityRegistrySchema(): Promise<void> {
     INDEX idx_provider_capability_snapshots_provider (provider, created_at),
     INDEX idx_provider_capability_snapshots_state (audit_state)
   )`);
+  await rawExec(`CREATE TABLE IF NOT EXISTS provider_model_access_memory (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    provider VARCHAR(32) NOT NULL,
+    account_scope VARCHAR(96) NOT NULL,
+    model_key VARCHAR(191) NOT NULL,
+    access_state VARCHAR(32) NOT NULL,
+    failure_reason TEXT NULL,
+    balance_before_credits DECIMAL(18,4) NULL,
+    balance_after_credits DECIMAL(18,4) NULL,
+    provider_task_id VARCHAR(191) NULL,
+    verified_at DATETIME NOT NULL,
+    metadata_json LONGTEXT NULL,
+    UNIQUE KEY provider_model_access_memory_unique (provider, account_scope, model_key),
+    KEY provider_model_access_memory_account (account_scope, verified_at)
+  )`);
 }
 
 export async function refreshPolloCapabilitySnapshot(requestedBy: number): Promise<PolloCapabilitySnapshot> {
@@ -362,9 +413,12 @@ export async function refreshPolloCapabilitySnapshot(requestedBy: number): Promi
   }
 
   const models = normalizePolloModelCatalog(catalogPayload, accountTokens);
+  // Pollo does not document a read-only per-key model-entitlement endpoint. Balance
+  // verification proves credential health; individual availability is learned safely from
+  // controlled attempts and persisted in provider_model_access_memory.
   const state: CapabilityAuditState = models.length === 0
     ? "blocked"
-    : account.modelAccess.state === "available" && account.balance.state === "available"
+    : account.balance.state === "available"
       ? "ready"
       : "degraded";
   const catalogHash = createHash("sha256").update(safeJson(models.map((model) => ({
@@ -391,6 +445,145 @@ export async function refreshPolloCapabilitySnapshot(requestedBy: number): Promi
   return snapshot;
 }
 
+export async function recordControlledModelAccessOutcome(params: {
+  ownerId: number;
+  modelKey: string;
+  accessState: ControlledModelAccessState;
+  failureReason?: string | null;
+  balanceBeforeCredits?: number | null;
+  balanceAfterCredits?: number | null;
+  providerTaskId?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  if (!OWNER_IDS.has(Number(params.ownerId))) throw new Error("Owner approval is required to record provider model access.");
+  await ensurePolloCapabilityRegistrySchema();
+  if (!CONTROLLED_SOURCE_VIDEO_LADDER.some((candidate) => candidate.modelKey === params.modelKey)) {
+    throw new Error("Only a documented controlled-ladder model may be recorded.");
+  }
+  await rawExec(
+    `INSERT INTO provider_model_access_memory
+      (provider, account_scope, model_key, access_state, failure_reason, balance_before_credits, balance_after_credits, provider_task_id, verified_at, metadata_json)
+     VALUES ('pollo', ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+     ON DUPLICATE KEY UPDATE access_state = VALUES(access_state), failure_reason = VALUES(failure_reason),
+       balance_before_credits = VALUES(balance_before_credits), balance_after_credits = VALUES(balance_after_credits),
+       provider_task_id = VALUES(provider_task_id), verified_at = NOW(), metadata_json = VALUES(metadata_json)`,
+    [`owner:${params.ownerId}`, params.modelKey, params.accessState, params.failureReason ?? null,
+      params.balanceBeforeCredits ?? null, params.balanceAfterCredits ?? null, params.providerTaskId ?? null, safeJson(params.metadata)],
+  );
+}
+
+async function getControlledModelAccessMemory(ownerId: number): Promise<Map<string, Record<string, unknown>>> {
+  await ensurePolloCapabilityRegistrySchema();
+  const rows = await rawQuery<any>(
+    "SELECT model_key, access_state, failure_reason, verified_at FROM provider_model_access_memory WHERE provider = 'pollo' AND account_scope = ?",
+    [`owner:${ownerId}`],
+  );
+  return new Map(rows.map((row) => [String(row.model_key), row]));
+}
+
+export function getControlledSourceVideoLadder(): ReadonlyArray<Omit<ControlledSourceVideoCandidate, "accountAccess" | "lastVerifiedAt" | "failureReason">> {
+  return CONTROLLED_SOURCE_VIDEO_LADDER.map((candidate) => ({ ...candidate, durationSeconds: 6, resolution: "720p", aspectRatio: "9:16", priceStatus: "price_not_yet_returned" }));
+}
+
+export type PolloBalanceRead = {
+  availableCredits: number;
+  totalCredits: number | null;
+  availableAmountUsd: number | null;
+  totalAmountUsd: number | null;
+  readAt: string;
+};
+
+export type ControlledAccessAttemptResult = {
+  outcome: "model_unavailable_no_charge" | "invalid_parameters" | "invalid_key" | "insufficient_balance" | "balance_incident" | "task_created";
+  model: ControlledSourceVideoCandidate;
+  balanceBefore: PolloBalanceRead;
+  balanceAfter: PolloBalanceRead | null;
+  providerTaskId: string | null;
+  providerResponse: Record<string, unknown>;
+  message: string;
+};
+
+export async function readPolloBalance(): Promise<PolloBalanceRead> {
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!apiKey) throw new Error("POLLO_API_KEY is not configured; CreatorVault cannot verify balance before a controlled access attempt.");
+  const raw = await fetchJson(`${POLLO_PLATFORM_BASE}/credit/balance`, { "x-api-key": apiKey });
+  const payload = isObject(raw) && isObject(raw.data) ? raw.data : raw;
+  const record = isObject(payload) ? payload : {};
+  const availableCredits = readNumeric(record.availableCredits);
+  if (availableCredits === null) throw new Error("Pollo balance response omitted availableCredits; no controlled access attempt was sent.");
+  return {
+    availableCredits,
+    totalCredits: readNumeric(record.totalCredits),
+    availableAmountUsd: readNumeric(record.availableAmountUsd),
+    totalAmountUsd: readNumeric(record.totalAmountUsd),
+    readAt: new Date().toISOString(),
+  };
+}
+
+function buildControlledSourceVideoRequest(candidate: typeof CONTROLLED_SOURCE_VIDEO_LADDER[number], sourceUrl: string, prompt: string): Record<string, unknown> {
+  if (!/^https:\/\//i.test(sourceUrl)) throw new Error("Controlled source-video access requires a secure HTTPS CreatorVault source URL.");
+  return {
+    input: {
+      prompt,
+      refs: [{ type: "video", name: "creatorvault_verified_source", video: sourceUrl, order: 1 }],
+      duration: 6,
+      resolution: candidate.modelKey === "kling-ai/kling-v3-omni" ? "720P" : "720p",
+      aspectRatio: "9:16",
+      generateAudio: false,
+    },
+  };
+}
+
+export async function runNextControlledSourceVideoAccessAttempt(input: {
+  ownerId: number;
+  creatorId: number;
+  evidenceId: string;
+  sourceMediaUrl: string;
+  prompt: string;
+}): Promise<ControlledAccessAttemptResult> {
+  if (!OWNER_IDS.has(Number(input.ownerId))) throw new Error("Owner approval is required for a controlled provider access attempt.");
+  const preflight = await preflightBodyCinemaSourceVideo({ creatorId: input.creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceMediaUrl });
+  if (preflight.status !== "access_attempt_ready") throw new Error(`Controlled access is blocked: ${preflight.blockingReasons.join(" ")}`);
+  const candidate = preflight.candidates[0];
+  if (!candidate) throw new Error("No schema-compatible source-video candidate remains for this account.");
+  const ladderSpec = CONTROLLED_SOURCE_VIDEO_LADDER.find((item) => item.modelKey === candidate.modelKey);
+  if (!ladderSpec) throw new Error("Controlled candidate is not part of the documented source-video ladder.");
+  const balanceBefore = await readPolloBalance();
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  const response = await fetch(`https://pollo.ai/api/platform${ladderSpec.providerApiPath}`, {
+    method: "POST",
+    headers: { "x-api-key": apiKey, "Content-Type": "application/json", "X-CreatorVault-Controlled-Attempt": randomUUID() },
+    body: JSON.stringify(buildControlledSourceVideoRequest(ladderSpec, preflight.sourceMediaUrl, input.prompt)),
+  });
+  const providerResponse = await fetchJsonResponse(response);
+  const taskId = String((providerResponse as any)?.data?.taskId || (providerResponse as any)?.taskId || "").trim() || null;
+  if (taskId) {
+    await recordControlledModelAccessOutcome({ ownerId: input.ownerId, modelKey: candidate.modelKey, accessState: "available", balanceBeforeCredits: balanceBefore.availableCredits, providerTaskId: taskId, metadata: { evidenceId: input.evidenceId, sourceFingerprint: preflight.sourceFingerprint, providerResponse } });
+    return { outcome: "task_created", model: candidate, balanceBefore, balanceAfter: null, providerTaskId: taskId, providerResponse, message: "Provider created a real task. Discovery must stop." };
+  }
+  const needsPostBalance = response.status === 403 || response.status === 400 || response.status === 401 || response.status === 402;
+  const balanceAfter = needsPostBalance ? await readPolloBalance() : null;
+  const balanceChanged = balanceAfter !== null && balanceAfter.availableCredits !== balanceBefore.availableCredits;
+  if (balanceChanged) {
+    await recordControlledModelAccessOutcome({ ownerId: input.ownerId, modelKey: candidate.modelKey, accessState: "unknown", failureReason: `Provider returned HTTP ${response.status} and balance changed without task ID.`, balanceBeforeCredits: balanceBefore.availableCredits, balanceAfterCredits: balanceAfter.availableCredits, metadata: { providerResponse, creditIncident: true } });
+    return { outcome: "balance_incident", model: candidate, balanceBefore, balanceAfter, providerTaskId: null, providerResponse, message: "Balance changed without a provider task; discovery stopped and a credit incident was recorded." };
+  }
+  const detail = safeError(isObject(providerResponse) ? providerResponse.message || providerResponse.code || `HTTP ${response.status}` : `HTTP ${response.status}`);
+  if (response.status === 403) {
+    await recordControlledModelAccessOutcome({ ownerId: input.ownerId, modelKey: candidate.modelKey, accessState: "unavailable", failureReason: detail, balanceBeforeCredits: balanceBefore.availableCredits, balanceAfterCredits: balanceAfter?.availableCredits ?? null, metadata: { providerResponse, noTaskId: true } });
+    return { outcome: "model_unavailable_no_charge", model: candidate, balanceBefore, balanceAfter, providerTaskId: null, providerResponse, message: "Model was unavailable for this API key with no task and no observed balance change." };
+  }
+  const outcome = response.status === 400 ? "invalid_parameters" : response.status === 401 ? "invalid_key" : "insufficient_balance";
+  await recordControlledModelAccessOutcome({ ownerId: input.ownerId, modelKey: candidate.modelKey, accessState: "unknown", failureReason: detail, balanceBeforeCredits: balanceBefore.availableCredits, balanceAfterCredits: balanceAfter?.availableCredits ?? null, metadata: { providerResponse, noTaskId: true } });
+  return { outcome, model: candidate, balanceBefore, balanceAfter, providerTaskId: null, providerResponse, message: detail };
+}
+
+async function fetchJsonResponse(response: Response): Promise<Record<string, unknown>> {
+  const text = await response.text().catch(() => "");
+  try { const parsed = JSON.parse(text || "{}"); return isObject(parsed) ? parsed : { responseText: text.slice(0, 800) }; }
+  catch { return { responseText: text.slice(0, 800) }; }
+}
+
 export async function getLatestPolloCapabilitySnapshot(): Promise<PolloCapabilitySnapshot | null> {
   await ensurePolloCapabilityRegistrySchema();
   const rows = await rawQuery<StoredSnapshotRow>(
@@ -409,40 +602,49 @@ export async function preflightBodyCinemaSourceVideo(input: {
   const evidenceContext = await assertBodyCinemaEvidenceReady(input);
   const snapshot = await getLatestPolloCapabilitySnapshot();
   const blockingReasons: string[] = [];
-  if (!snapshot) {
-    blockingReasons.push("No read-only provider capability audit has been recorded. Provider execution is blocked until an owner refreshes the registry.");
+  if (!snapshot) blockingReasons.push("No read-only provider capability audit has been recorded.");
+  if (snapshot && snapshot.account.balance.state !== "available") {
+    blockingReasons.push("Pollo balance could not be read, so CreatorVault will not start a controlled access attempt.");
   }
-  if (snapshot && snapshot.state !== "ready") {
-    blockingReasons.push("The latest provider capability audit is not fully ready; provider execution remains blocked.");
-  }
-  const candidates = (snapshot?.models || [])
-    .filter((model) => model.supportsSourceVideoReference && model.accountAccess === "enabled")
-    .map((model) => ({
-      modelKey: model.modelKey,
-      apiPaths: model.apiPaths,
-      generationTypes: model.generationTypes,
-      supportsSourceVideoReference: model.supportsSourceVideoReference,
-      accountAccess: model.accountAccess,
-    }));
-  if (!candidates.length) {
-    blockingReasons.push("No source-video reference model is proven both available in the public catalog and enabled for this Pollo API key.");
-  }
+  const catalogKeys = new Set((snapshot?.models || [])
+    .filter((model) => model.supportsSourceVideoReference)
+    .map((model) => model.modelKey));
+  const memory = await getControlledModelAccessMemory(input.creatorId);
+  const candidates: ControlledSourceVideoCandidate[] = CONTROLLED_SOURCE_VIDEO_LADDER
+    .filter((candidate) => catalogKeys.has(candidate.modelKey))
+    .map((candidate) => {
+      const learning = memory.get(candidate.modelKey);
+      const accessState = String(learning?.access_state || "unknown") as ControlledModelAccessState;
+      return {
+        ...candidate,
+        durationSeconds: 6,
+        resolution: "720p" as const,
+        aspectRatio: "9:16" as const,
+        priceStatus: "price_not_yet_returned" as const,
+        accountAccess: accessState,
+        lastVerifiedAt: learning?.verified_at ? String(learning.verified_at) : null,
+        failureReason: learning?.failure_reason ? String(learning.failure_reason) : null,
+      };
+    })
+    .filter((candidate) => candidate.accountAccess !== "unavailable");
+  if (!candidates.length) blockingReasons.push("All schema-compatible source-video models are absent from the official catalog or already recorded as unavailable for this API key.");
 
   return {
     evidenceId: evidenceContext.evidence.id,
     sourceMediaUrl: evidenceContext.evidence.sourceMediaUrl,
     sourceFingerprint: evidenceContext.evidence.sourceFingerprint,
     selectedDirectionId: evidenceContext.direction.id,
-    status: blockingReasons.length ? "blocked" : "quote_required",
+    status: blockingReasons.length ? "blocked" : "access_attempt_ready",
     candidates,
     blockingReasons,
     requiredBeforeSubmission: [
       "verified_source_evidence",
       "approved_evidence_backed_treatment",
       "model_capability_match",
-      "read_only_account_access_verification",
-      "live_provider_quote",
-      "exact_budget_cap",
+      "balance_before_access_attempt",
+      "documented_model_contract_match",
+      "idempotent_controlled_access_attempt",
+      "balance_after_rejection_verification",
       "explicit_owner_approval",
       "single_use_submission_permit",
       "persistent_provider_task_tracking",
@@ -488,4 +690,6 @@ export const POLLO_CAPABILITY_REGISTRY_AUDIT_POLICY = {
   modelCatalogReadOnly: true,
   accountModelEndpointReadOnly: true,
   persistedAuditRequiredBeforeSourceVideoExecution: true,
+  readOnlyModelEntitlementRequired: false,
+  controlledAccessLadderRequired: true,
 } as const;

@@ -7,6 +7,7 @@ import {
   buildPolloCapabilitySummary,
   normalizePolloModelCatalog,
   POLLO_CAPABILITY_REGISTRY_AUDIT_POLICY,
+  getControlledSourceVideoLadder,
   type PolloCapabilitySnapshot,
 } from "./polloCapabilityRegistryService";
 
@@ -55,7 +56,16 @@ describe("Pollo capability registry zero-spend policy", () => {
       modelCatalogReadOnly: true,
       accountModelEndpointReadOnly: true,
       persistedAuditRequiredBeforeSourceVideoExecution: true,
+      readOnlyModelEntitlementRequired: false,
+      controlledAccessLadderRequired: true,
     });
+  });
+
+  it("ranks only documented source-video candidates and never labels unknown pricing as free", () => {
+    expect(getControlledSourceVideoLadder()).toEqual([
+      expect.objectContaining({ rank: 1, modelKey: "bytedance/seedance-2-5", durationSeconds: 6, resolution: "720p", aspectRatio: "9:16", priceStatus: "price_not_yet_returned" }),
+      expect.objectContaining({ rank: 2, modelKey: "kling-ai/kling-v3-omni", durationSeconds: 6, resolution: "720p", aspectRatio: "9:16", priceStatus: "price_not_yet_returned" }),
+    ]);
   });
 
   it("counts only account-enabled reference-video models as actionable", () => {
