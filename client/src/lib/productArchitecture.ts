@@ -77,7 +77,6 @@ export const PRODUCT_DOMAINS: ProductDomainDefinition[] = [
 export const CANONICAL_PRIMARY_NAV = [
   { label: "Creator OS", href: CreatorVaultRoute.creatorOS },
   { label: "VaultX", href: CreatorVaultRoute.vaultX },
-  { label: "Body Cinema", href: CreatorVaultRoute.bodyCinema },
   { label: "Social Empire", href: CreatorVaultRoute.socialEmpire },
 ] as const;
 

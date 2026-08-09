@@ -345,7 +345,6 @@ import WhatsAppContentGenerator from "./pages/WhatsAppContentGenerator";
 import GettingStartedChecklist from "./components/GettingStartedChecklist";
 // import KingVideoLab from "./pages/KingVideoLab";
 // import KingAnalytics from "./pages/KingAnalytics";
-// import KingContent from "./pages/KingContent";
 // import KingWaitlist from "./pages/KingWaitlist";
 // import EmpireDocPrompt from "./pages/EmpireDocPrompt";
 // import EmpireBrain from "./pages/EmpireBrain";
@@ -673,7 +672,7 @@ function Router() {
       <Route path={"/king/flyer-design-studio"} component={FlyerDesignStudio} />
       <Route path={"/king/video-lab"} component={KingVideoLab} />
       <Route path={"/king/analytics"} component={KingAnalytics} />
-      <Route path={"/king/content"} component={VaultXDrop} />
+      <Route path={"/king/content"} component={KingContent} />
       <Route path={"/king/waitlist"} component={KingWaitlist} />
       {/* <Route path={"/king/launch-command"} component={LaunchCommand} /> */}
       <Route path="/king/empire-doc" component={EmpireDocPrompt} />
@@ -793,18 +792,22 @@ function Router() {
       <Route path="/vaultlive/stream" component={VaultLiveStream} />
       <Route path="/vault-market-home" component={VaultMarket} />
       <Route path="/vaultx/onboarding" component={VaultXOnboarding} />
-      <Route path="/vaultx/drop" component={VaultXDrop} />
+      {/* Canonical Body Cinema / Drop Route */}
+      <Route path="/vault-x/studio" component={VaultXDrop} />
+
+      {/* Body Cinema legacy aliases mapped safely */}
+      <Route path="/vaultx/drop">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
+      <Route path="/drop">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
+      <Route path="/vaultx/studio">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
+      <Route path="/body-cinema">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
+      <Route path="/vaultx/studio-advanced">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
+
       <Route path="/vaultx/trailers" component={TrailerStudio} />
       <Route path="/trailer-maker" component={TrailerStudio} />
       <Route path="/vault-x/trailers" component={TrailerStudio} />
       <Route path="/trailers" component={TrailerStudio} />
-      <Route path="/drop" component={VaultXDrop} />
-      <Route path="/vaultx/studio" component={VaultXDrop} />
       <Route path="/vaultx/distribution" component={VaultXDistribution} />
-      <Route path="/vault-x/studio" component={VaultXDrop} />
-      <Route path="/body-cinema" component={VaultXDrop} />
       <Route path="/vault-x/library/:jobId" component={VaultXTruthLibrary} />
-      <Route path="/vaultx/studio-advanced" component={VaultXDrop} />
       <Route path="/vault-x/editor" component={VaultXEditor} />
       <Route path="/vaultx/editor" component={VaultXEditor} />
       <Route path="/vaultx/capcut" component={VaultXEditor} />
@@ -822,9 +825,9 @@ function Router() {
       <Route path="/greatest-show/lirys-missed-revenue" component={LirysMissedRevenue} />
       <Route path="/greatest-show/marielka-profile" component={MarielkaProfile} />
       <Route path="/greatest-show/subscribe-success" component={SubscribeSuccess} />
-      <Route path="/king/clone-command" component={VaultXDrop} />
-      <Route path="/clone/command-center" component={VaultXDrop} />
-      <Route path="/clone" component={VaultXDrop} />
+      <Route path="/king/clone-command">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
+      <Route path="/clone/command-center">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
+      <Route path="/clone">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
       <Route path="/king/clone-studio" component={CloneStudio} />
       <Route path="/king/clone-training-lab" component={CloneTrainingLab} />
       <Route path="/king/media-vault" component={MediaVault} />

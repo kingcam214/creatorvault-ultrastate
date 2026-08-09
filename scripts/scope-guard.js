@@ -124,6 +124,13 @@ const ALLOWLISTS = {
     'pnpm-lock.yaml',
     'scripts/scope-guard.js'
   ],
+  'kingcam-content': [
+    'client/src/App.tsx',
+    'client/src/components/AppHeader.tsx',
+    'client/src/lib/productArchitecture.ts',
+    'client/src/pages/KingContent.tsx',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',
