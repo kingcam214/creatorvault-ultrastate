@@ -54,6 +54,16 @@ export interface TextOverlay {
   endTime?: number;   // seconds
 }
 
+export interface AudioMixPlan {
+  targetLufs: number;
+  preserveSourceAudio: boolean;
+  sourceGainDb: number;
+  musicGainDb: number;
+  duckingWindows: Array<{ startMs: number; endMs: number; reductionDb: number }>;
+  fadeInMs: number;
+  fadeOutMs: number;
+}
+
 export interface RenderRequest {
   clips: RenderClip[];
   aspect?: "9:16" | "16:9" | "1:1";
@@ -63,7 +73,8 @@ export interface RenderRequest {
   captionText?: string;   // hook/caption to burn in
   captionStyle?: "bold_center" | "lower_third" | "minimal_top";
   musicUrl?: string;      // optional background music
-  musicVolume?: number;   // 0..1
+  musicVolume?: number;   // 0..1 (legacy flat gain)
+  audioMixPlan?: AudioMixPlan; // Canonical governed audio mix
   watermarkText?: string;
   fadeInOut?: boolean;
   durationCap?: number;   // hard cap on total output seconds
@@ -406,13 +417,30 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
       try {
         const musicLocal = path.join(workDir, "music.mp3");
         await fetchToLocal(req.musicUrl, musicLocal);
-        const vol = req.musicVolume != null ? Math.max(0, Math.min(1, req.musicVolume)) : 0.5;
         const out = path.join(workDir, "music.mp4");
-        await ff([
-          "-i", current, "-stream_loop", "-1", "-i", musicLocal,
-          "-filter_complex", `[1:a]volume=${vol}[m];[0:a][m]amix=inputs=2:duration=first:dropout_transition=2[a]`,
-          "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-shortest", out,
-        ]);
+        if (req.audioMixPlan) {
+          const plan = req.audioMixPlan;
+          const sourceVol = plan.preserveSourceAudio ? Math.pow(10, plan.sourceGainDb / 20) : 0;
+          const musicVol = Math.pow(10, plan.musicGainDb / 20);
+          const duckingFilters = plan.duckingWindows.map(w => {
+            const reduction = Math.pow(10, w.reductionDb / 20);
+            return `volume='if(between(t,${w.startMs / 1000},${w.endMs / 1000}),${reduction},1)':eval=frame`;
+          });
+          const duckingChain = duckingFilters.length ? duckingFilters.join(",") : "anull";
+          const fadeChain = `afade=t=in:st=0:d=${plan.fadeInMs / 1000},afade=t=out:st=${Math.max(0, totalDur - plan.fadeOutMs / 1000).toFixed(2)}:d=${plan.fadeOutMs / 1000}`;
+          await ff([
+            "-i", current, "-stream_loop", "-1", "-i", musicLocal,
+            "-filter_complex", `[0:a]volume=${sourceVol}[s];[1:a]volume=${musicVol},${duckingChain},${fadeChain}[m];[s][m]amix=inputs=2:duration=first:dropout_transition=2,loudnorm=I=${plan.targetLufs}:TP=-1.5:LRA=11[a]`,
+            "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-shortest", out,
+          ]);
+        } else {
+          const vol = req.musicVolume != null ? Math.max(0, Math.min(1, req.musicVolume)) : 0.5;
+          await ff([
+            "-i", current, "-stream_loop", "-1", "-i", musicLocal,
+            "-filter_complex", `[1:a]volume=${vol}[m];[0:a][m]amix=inputs=2:duration=first:dropout_transition=2[a]`,
+            "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-shortest", out,
+          ]);
+        }
         current = out;
       } catch { /* music optional — skip on failure */ }
     }

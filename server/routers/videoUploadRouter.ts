@@ -22,6 +22,7 @@ import {
   isSupportedBodyCinemaVideoSelection,
   sanitiseBodyCinemaUploadFilename,
 } from "../services/bodyCinemaReliability";
+import { registerCreatorOwnedAudioUpload } from "../services/audioIntelligenceService";
 
 // ─── Helper: mime type from filename ─────────────────────────────────────────
 function getMimeType(filename: string): string {
@@ -42,6 +43,36 @@ function getMimeType(filename: string): string {
 const DURABLE_UPLOADS_DIR = "/root/uploads/content-vault";
 const PRIVATE_UPLOAD_RECEIPTS_DIR = "/root/uploads/content-vault-receipts";
 const execFileAsync = promisify(execFile);
+
+function isSupportedAudioSelection(filename: string, suppliedMime: string): boolean {
+  const extension = filename.split(".").pop()?.toLowerCase() ?? "";
+  return ["mp3", "wav", "m4a", "aac", "ogg", "flac"].includes(extension)
+    && (suppliedMime.startsWith("audio/") || suppliedMime === "application/octet-stream");
+}
+
+async function validateDirectAudio(filePath: string): Promise<{ codec: string; sampleRate: number; channels: number; durationSec: number }> {
+  const { stdout } = await execFileAsync(
+    "ffprobe",
+    [
+      "-v", "error", "-select_streams", "a:0",
+      "-show_entries", "stream=codec_name,sample_rate,channels,duration:format=duration",
+      "-of", "json", filePath,
+    ],
+    { timeout: 15_000, maxBuffer: 1024 * 1024, encoding: "utf8" }
+  );
+  const probe = JSON.parse(String(stdout || "{}"));
+  const stream = probe?.streams?.[0];
+  const durationSec = Number(probe?.format?.duration ?? stream?.duration);
+  const sampleRate = Number(stream?.sample_rate);
+  const channels = Number(stream?.channels);
+  if (!stream?.codec_name || !Number.isFinite(sampleRate) || sampleRate < 8_000 || !Number.isFinite(channels) || channels < 1) {
+    throw new Error("The selected file does not contain readable audio.");
+  }
+  if (!Number.isFinite(durationSec) || durationSec < 0.1 || durationSec > 600) {
+    throw new Error("CreatorVault accepts soundtracks between 0.1 seconds and 10 minutes.");
+  }
+  return { codec: String(stream.codec_name), sampleRate, channels, durationSec: Number(durationSec.toFixed(3)) };
+}
 
 async function validateDirectVideo(filePath: string): Promise<{ codec: string; width: number; height: number; durationSec: number }> {
   const { stdout } = await execFileAsync(
@@ -471,8 +502,10 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
 
     const originalName = sanitiseBodyCinemaUploadFilename(f.originalname);
     const suppliedMime = String(f.mimetype || "").toLowerCase();
-    if (!isSupportedBodyCinemaVideoSelection(originalName, suppliedMime)) {
-      return res.status(415).json({ error: "Body Cinema accepts verified MP4, MOV, WebM, MKV, AVI, or M4V video files." });
+    const isAudioUpload = isSupportedAudioSelection(originalName, suppliedMime);
+    const isVideoUpload = isSupportedBodyCinemaVideoSelection(originalName, suppliedMime);
+    if (!isAudioUpload && !isVideoUpload) {
+      return res.status(415).json({ error: "CreatorVault accepts verified video or soundtrack files in this studio." });
     }
 
     const fileUuid = randomUUID();
@@ -481,7 +514,7 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
     destPath = path.join(destDir, originalName);
     await writeFile(destPath, f.buffer);
 
-    const media = await validateDirectVideo(destPath);
+    const media = isAudioUpload ? await validateDirectAudio(destPath) : await validateDirectVideo(destPath);
     const sha256 = createHash("sha256").update(f.buffer).digest("hex");
     const createdAt = new Date().toISOString();
     const url = `https://creatorvault.live/uploads/content-vault/${fileUuid}/${encodeURIComponent(originalName)}`;
@@ -504,6 +537,28 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
       createdAt,
     }, null, 2));
 
+    let canonicalAudioAsset: any = null;
+    if (isAudioUpload) {
+      const mediaAssetId = randomUUID();
+      await rawExec(
+        `INSERT INTO media_assets
+          (id, user_id, source_type, asset_type, file_name, original_name, mime_type, storage_path, public_url, thumbnail_url, duration, status, created_by_feature)
+         VALUES (?, ?, 'creator_upload', 'audio', ?, ?, ?, ?, ?, NULL, ?, 'ready', 'canonical_audio_intelligence')`,
+        [mediaAssetId, creatorId, originalName, originalName, getMimeType(originalName), url, url, (media as any).durationSec]
+      );
+      canonicalAudioAsset = await registerCreatorOwnedAudioUpload({
+        creatorId,
+        title: originalName.replace(/\.[^.]+$/, "") || "Creator soundtrack",
+        assetUrl: url,
+        mimeType: getMimeType(originalName),
+        fileFingerprint: sha256,
+        durationSeconds: (media as any).durationSec,
+        sampleRate: (media as any).sampleRate,
+        channels: (media as any).channels,
+        mediaAssetId,
+      });
+    }
+
     return res.json({
       url,
       filename: originalName,
@@ -518,12 +573,13 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
         createdAt,
         ...media,
       },
+      audioAsset: canonicalAudioAsset,
     });
   } catch (e) {
     if (destPath) await unlink(destPath).catch(() => undefined);
     if (receiptPath) await unlink(receiptPath).catch(() => undefined);
     const message = e instanceof Error ? e.message : String(e);
-    const status = /readable video stream|accepts verified videos/i.test(message) ? 422 : 500;
+    const status = /readable video stream|readable audio|accepts verified|accepts soundtracks/i.test(message) ? 422 : 500;
     return res.status(status).json({ error: message });
   }
 });

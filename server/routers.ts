@@ -146,6 +146,7 @@ import { mercedesAcquisitionAgentRouter } from "./routers/mercedesAcquisitionAge
 import { messageRouter } from "./routers/messageRouter";
 import { musicAIRouter } from "./routers/musicAI";
 import { musicLibraryRouter } from "./routers/musicLibrary";
+import { audioIntelligenceRouter } from "./routers/audioIntelligenceRouter";
 import { nfcCardsRouter } from "./routers/nfcCards";
 import { notificationRouter } from "./routers/notificationRouter";
 import { oauthCallbackRouter } from "./routers/oauthCallback";
@@ -893,6 +894,7 @@ export const appRouter = router({
   missionControl: adminRouter,
   musicAI: musicAIRouter,
   musicLibrary: musicLibraryRouter,
+  audioIntelligence: audioIntelligenceRouter,
   notification: notificationRouter,
   oauthCallback: oauthCallbackRouter,
   onboarding: onboardingRouter,

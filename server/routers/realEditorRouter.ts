@@ -12,6 +12,7 @@ import { router, protectedProcedure } from "../_core/trpc.js";
 import { TRPCError } from "@trpc/server";
 import { startRender, getRenderJob, COLOR_GRADES, MOTION_PRESETS, FOCUS_PRESETS } from "../services/realRenderEngine.js";
 import { BODY_CINEMA_EDIT_PRESETS, EDIT_PRESET_CATEGORIES, getEditPreset } from "../services/bodyCinemaEditPresets.js";
+import { buildAudioDirectedTimeline, toMediaOSManifest } from "../services/audioTimelinePlanner.js";
 
 const clipSchema = z.object({
   src: z.string(),
@@ -34,6 +35,20 @@ const textOverlaySchema = z.object({
   color: z.string().optional(),
   startTime: z.number().optional(),
   endTime: z.number().optional(),
+});
+
+const audioMixPlanSchema = z.object({
+  targetLufs: z.number().min(-36).max(-6).default(-14),
+  preserveSourceAudio: z.boolean().default(true),
+  sourceGainDb: z.number().min(-60).max(12).default(0),
+  musicGainDb: z.number().min(-60).max(12).default(0),
+  duckingWindows: z.array(z.object({
+    startMs: z.number().min(0),
+    endMs: z.number().min(0),
+    reductionDb: z.number().min(-60).max(0),
+  })).default([]),
+  fadeInMs: z.number().min(0).max(10000).default(500),
+  fadeOutMs: z.number().min(0).max(10000).default(2000),
 });
 
 export const realEditorRouter = router({
@@ -67,6 +82,7 @@ export const realEditorRouter = router({
       transitions: z.boolean().optional(),
       musicUrl: z.string().optional(),
       musicVolume: z.number().min(0).max(1).optional(),
+      audioMixPlan: audioMixPlanSchema.optional(),
       watermarkText: z.string().optional(),
       fadeInOut: z.boolean().default(true),
       textOverlays: z.array(textOverlaySchema).optional(),
@@ -109,5 +125,38 @@ export const realEditorRouter = router({
       const job = getRenderJob(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "Render job not found" });
       return job;
+    }),
+
+  planAudioDirectedEdit: protectedProcedure
+    .input(z.object({
+      audioAssetId: z.string().uuid(),
+      sourceEvidenceId: z.string().uuid(),
+      treatmentId: z.string(),
+      targetDurationSeconds: z.number().min(3).max(60).default(15),
+      preserveSourceAudio: z.boolean().default(true),
+      destinationPlatform: z.enum(["creatorvault", "vaultx", "telegram", "instagram", "tiktok", "youtube"]).default("creatorvault"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const plan = await buildAudioDirectedTimeline({
+          creatorId: Number(ctx.user.id),
+          audioAssetId: input.audioAssetId,
+          sourceEvidenceId: input.sourceEvidenceId,
+          treatmentId: input.treatmentId,
+          targetDurationSeconds: input.targetDurationSeconds,
+          preserveSourceAudio: input.preserveSourceAudio,
+          destinationPlatform: input.destinationPlatform,
+        });
+        return {
+          planId: plan.id,
+          timeline: plan.visualEvents,
+          mix: plan.mix,
+          anchors: plan.audioAnchors,
+          mediaOsManifest: toMediaOSManifest(plan, { bpm: 120 } as any), // Passed back to creator UI for transparency
+          creatorMessage: "CreatorVault built a rhythmic cut plan aligned to the major beats of your soundtrack.",
+        };
+      } catch (error: any) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: error?.message || "Audio-directed edit planning failed." });
+      }
     }),
 });

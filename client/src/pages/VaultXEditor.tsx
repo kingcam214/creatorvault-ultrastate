@@ -84,6 +84,8 @@ export default function VaultXEditor() {
   const [watermark, setWatermark] = useState("");
   const [fadeInOut, setFadeInOut] = useState(true);
   const [musicUrl, setMusicUrl] = useState<string | null>(null);
+  const [audioAssetId, setAudioAssetId] = useState<string | null>(null);
+  const [audioLibraryOpen, setAudioLibraryOpen] = useState(false);
   const [musicVolume, setMusicVolume] = useState(0.5);
   const [textOverlays, setTextOverlays] = useState<TextOverlay[]>([]);
 
@@ -91,6 +93,12 @@ export default function VaultXEditor() {
   const musicRef = useRef<HTMLInputElement>(null);
 
   const renderMut = (trpc as any).editor.render.useMutation();
+  const audioLibraryQ = (trpc as any).audioIntelligence.listAssets.useQuery();
+  const analyzeAudioMut = (trpc as any).audioIntelligence.analyzeAsset.useMutation();
+  const audioReadinessQ = (trpc as any).audioIntelligence.getRenderReadiness.useQuery(
+    { assetId: audioAssetId || "", platform: "creatorvault" },
+    { enabled: Boolean(audioAssetId) }
+  );
   const statusQ = (trpc as any).editor.getRenderStatus.useQuery(
     { jobId: jobId || "" },
     { enabled: Boolean(jobId) && step === "rendering", refetchInterval: 2000, retry: false }
@@ -147,9 +155,23 @@ export default function VaultXEditor() {
   const addMusic = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
     const url = await upload(f);
-    if (url) { setMusicUrl(url); toast.success("Music added"); }
+    if (url) {
+      // The direct upload endpoint now automatically registers canonical audio assets
+      // and returns the audioAsset payload. We rely on the library refetch to show it.
+      await audioLibraryQ.refetch();
+      toast.success("Soundtrack added to your library");
+    }
     e.target.value = "";
-  }, [upload]);
+  }, [upload, audioLibraryQ]);
+
+  const selectSoundtrack = useCallback(async (assetId: string, status: string) => {
+    if (status !== "ready") {
+      toast.error("That soundtrack is not ready to use yet.");
+      return;
+    }
+    setAudioAssetId(assetId);
+    setAudioLibraryOpen(false);
+  }, []);
 
   const updateClip = (id: string, patch: Partial<Clip>) => {
     setClips(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
@@ -207,7 +229,7 @@ export default function VaultXEditor() {
         transitions,
         watermarkText: watermark || undefined,
         fadeInOut,
-        musicUrl: musicUrl || undefined,
+        musicUrl: audioReadinessQ.data?.ready ? audioReadinessQ.data.asset?.assetUrl : undefined,
         musicVolume,
         textOverlays: textOverlays.length > 0 ? textOverlays.map(o => ({
           text: o.text, x: o.x, y: o.y, fontSize: o.fontSize, color: o.color,
@@ -216,7 +238,7 @@ export default function VaultXEditor() {
       });
       setJobId(res.jobId);
     } catch (e: any) { toast.error(e?.message || "Render failed"); setStep("edit"); }
-  }, [clips, aspect, globalGrade, globalFocus, captionText, captionStyle, animatedCaptions, transitions, watermark, fadeInOut, musicUrl, musicVolume, textOverlays]);
+  }, [clips, aspect, globalGrade, globalFocus, captionText, captionStyle, animatedCaptions, transitions, watermark, fadeInOut, audioReadinessQ.data, musicVolume, textOverlays]);
 
   const reset = () => { setStep("edit"); setClips([]); setSelectedClipId(null); setOutputUrl(null); setJobId(null); setRenderPct(0); };
 
@@ -449,18 +471,39 @@ export default function VaultXEditor() {
             {/* MUSIC TAB */}
             {activeTab === "music" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {musicUrl ? (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: CARD, border: `1px solid ${GREEN}`, borderRadius: 10, padding: "12px 14px" }}>
-                    <span style={{ fontSize: 14, color: GREEN, fontWeight: 700 }}>🎵 Music added</span>
-                    <button onClick={() => setMusicUrl(null)} style={{ background: "transparent", border: "none", color: MUTED, cursor: "pointer", fontSize: 13 }}>Remove</button>
+                <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px" }}>
+                  <p style={{ margin: "0 0 6px", fontSize: 15, fontWeight: 800 }}>Soundtrack library</p>
+                  <p style={{ margin: 0, fontSize: 12, color: MUTED, lineHeight: 1.5 }}>Choose creator-owned or rights-cleared audio. CreatorVault checks the permission before the soundtrack reaches your edit.</p>
+                </div>
+
+                {audioAssetId && audioReadinessQ.data && (
+                  <div style={{ background: CARD, border: `1px solid ${audioReadinessQ.data.ready ? GREEN : GOLD_BORDER}`, borderRadius: 12, padding: "14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                      <div>
+                        <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: audioReadinessQ.data.ready ? GREEN : GOLD }}>🎵 {audioReadinessQ.data.asset?.title || "Selected soundtrack"}</p>
+                        <p style={{ margin: "5px 0 0", fontSize: 11, color: MUTED }}>{audioReadinessQ.data.reason}</p>
+                      </div>
+                      <button onClick={() => setAudioAssetId(null)} style={{ background: "transparent", border: "none", color: MUTED, cursor: "pointer" }}>Remove</button>
+                    </div>
+                    {audioReadinessQ.data.asset?.rights?.attributionText && <p style={{ margin: "10px 0 0", fontSize: 11, color: MUTED }}>Credit: {audioReadinessQ.data.asset.rights.attributionText}</p>}
                   </div>
-                ) : (
-                  <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "20px", border: `2px dashed ${BORDER}`, borderRadius: 12, cursor: "pointer", color: MUTED, fontSize: 14 }}>
-                    <input ref={musicRef} type="file" accept="audio/*" style={{ display: "none" }} onChange={addMusic} />
-                    🎵 Add background music
-                  </label>
                 )}
-                {musicUrl && (
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {audioLibraryQ.isLoading ? <p style={{ color: MUTED, fontSize: 13 }}>Loading your soundtracks...</p> : audioLibraryQ.data?.assets?.length ? audioLibraryQ.data.assets.map((asset: any) => (
+                    <button key={asset.id} onClick={() => selectSoundtrack(asset.id, asset.status)} style={{ textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "13px", background: audioAssetId === asset.id ? GOLD_DIM : CARD, border: `1px solid ${audioAssetId === asset.id ? GOLD_BORDER : BORDER}`, borderRadius: 10, color: "#fff", cursor: asset.status === "ready" ? "pointer" : "not-allowed", opacity: asset.status === "ready" ? 1 : 0.55 }}>
+                      <span><strong style={{ display: "block", fontSize: 14 }}>{asset.title}</strong><small style={{ color: MUTED }}>{Math.round(asset.durationSeconds || 0)}s · {(asset.rights?.state || "unknown").replace(/_/g, " ")}</small></span>
+                      <span style={{ color: asset.status === "ready" ? GOLD : MUTED, fontSize: 12, fontWeight: 800 }}>{audioAssetId === asset.id ? "Selected" : asset.status === "ready" ? "Choose" : "Unavailable"}</span>
+                    </button>
+                  )) : <p style={{ color: MUTED, fontSize: 13 }}>{audioLibraryQ.data?.creatorMessage || "Add a creator-owned soundtrack to begin."}</p>}
+                </div>
+
+                <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", border: `1px dashed ${GOLD_BORDER}`, borderRadius: 10, cursor: "pointer", color: GOLD, fontSize: 13, fontWeight: 800 }}>
+                  <input ref={musicRef} type="file" accept="audio/*" style={{ display: "none" }} onChange={addMusic} />
+                  <Upload size={15} /> Add creator-owned soundtrack
+                </label>
+
+                {audioAssetId && (
                   <div>
                     <label style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Music Volume</label>
                     <input type="range" min="0" max="1" step="0.05" value={musicVolume} onChange={e => setMusicVolume(parseFloat(e.target.value))} style={{ width: "100%", accentColor: GOLD }} />
@@ -512,8 +555,12 @@ export default function VaultXEditor() {
       {step === "edit" && (
         <div style={{ position: "fixed", inset: "auto 0 0 0", zIndex: 50, background: "rgba(8,8,8,0.96)", borderTop: `1px solid ${BORDER}`, backdropFilter: "blur(12px)", padding: "12px 16px" }}>
           <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-            <button onClick={handleRender} disabled={clips.length === 0} style={{ width: "100%", padding: "16px", borderRadius: 12, background: clips.length ? GOLD : CARD, color: clips.length ? "#000" : MUTED, fontSize: 17, fontWeight: 900, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.08em", border: "none", cursor: clips.length ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              <Film size={18} /> RENDER FINISHED VIDEO
+            <button
+              onClick={handleRender}
+              disabled={clips.length === 0}
+              style={{ width: "100%", padding: "16px", borderRadius: 12, background: clips.length ? GOLD : CARD, color: clips.length ? "#000" : MUTED, fontSize: 17, fontWeight: 900, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.08em", border: "none", cursor: clips.length ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+            >
+              <Film size={18} /> {audioAssetId && audioReadinessQ.data?.ready ? "RENDER WITH SELECTED SOUNDTRACK" : "RENDER FINISHED VIDEO"}
             </button>
           </div>
         </div>

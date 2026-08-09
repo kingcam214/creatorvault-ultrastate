@@ -1,12 +1,57 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
-import * as db from "../db";
-import { eq, desc } from "drizzle-orm";
+import { listCanonicalAudioAssets } from "../services/audioIntelligenceService";
+
+function toLibraryTrack(asset: Awaited<ReturnType<typeof listCanonicalAudioAssets>>[number]) {
+  return {
+    id: asset.id,
+    title: asset.title,
+    artist: asset.rights.source === "creator_upload" ? "Your CreatorVault library" : asset.rights.providerName || "CreatorVault sound library",
+    genre: asset.kind,
+    url: asset.assetUrl,
+    duration: asset.durationSeconds,
+    rightsState: asset.rights.state,
+    allowedPlatforms: asset.rights.allowedPlatforms,
+    canCreateWith: asset.rights.permittedUses.includes("render"),
+    attributionRequired: asset.rights.attributionRequired,
+    attributionText: asset.rights.attributionText,
+    status: asset.status,
+  };
+}
+
 export const musicLibrary = router({
-  getLibrary: protectedProcedure.query(async ({ ctx }) => ({ tracks: [], playlists: [], userId: ctx.user.id })),
-  addTrack: protectedProcedure.input(z.object({ title: z.string(), artist: z.string(), genre: z.string(), url: z.string(), duration: z.number().optional() })).mutation(async ({ ctx, input }) => ({ id: Date.now(), ...input, userId: ctx.user.id, addedAt: new Date().toISOString() })),
-  createPlaylist: protectedProcedure.input(z.object({ name: z.string(), description: z.string().optional(), tracks: z.array(z.number()) })).mutation(async ({ ctx, input }) => ({ id: Date.now(), name: input.name, trackCount: input.tracks.length, userId: ctx.user.id })),
-  searchLibrary: protectedProcedure.input(z.object({ query: z.string() })).query(async ({ input }) => ({ results: [], query: input.query })),
-  getLicensedTracks: protectedProcedure.query(async () => ({ tracks: [], message: "Connect your music licensing account to access tracks" })),
+  getLibrary: protectedProcedure.query(async ({ ctx }) => {
+    const assets = await listCanonicalAudioAssets(Number(ctx.user.id));
+    return { tracks: assets.map(toLibraryTrack), playlists: [], userId: ctx.user.id };
+  }),
+
+  searchLibrary: protectedProcedure
+    .input(z.object({ query: z.string().trim().max(120) }))
+    .query(async ({ ctx, input }) => {
+      const normalized = input.query.toLocaleLowerCase();
+      const assets = await listCanonicalAudioAssets(Number(ctx.user.id));
+      return { results: assets.filter(asset => asset.title.toLocaleLowerCase().includes(normalized)).map(toLibraryTrack), query: input.query };
+    }),
+
+  getLicensedTracks: protectedProcedure.query(async ({ ctx }) => {
+    const assets = await listCanonicalAudioAssets(Number(ctx.user.id));
+    const tracks = assets
+      .filter(asset => asset.rights.state === "creator_owned" || asset.rights.state === "licensed_for_creation")
+      .map(toLibraryTrack);
+    return {
+      tracks,
+      message: tracks.length
+        ? "These soundtracks have recorded creation permission in your CreatorVault library."
+        : "CreatorVault has not found a soundtrack with recorded creation permission yet.",
+    };
+  }),
+
+  addTrack: protectedProcedure.input(z.object({ title: z.string(), artist: z.string().optional(), genre: z.string().optional(), url: z.string().optional(), duration: z.number().optional() })).mutation(() => {
+    throw new Error("Add music through the CreatorVault upload flow so its ownership and release permission stay attached to every edit.");
+  }),
+
+  createPlaylist: protectedProcedure.input(z.object({ name: z.string(), description: z.string().optional(), tracks: z.array(z.string()) })).mutation(() => {
+    throw new Error("Playlists will be available after CreatorVault has real library records to organize. No empty playlist was created.");
+  }),
 });
 export const musicLibraryRouter = musicLibrary;

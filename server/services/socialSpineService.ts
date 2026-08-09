@@ -145,6 +145,8 @@ export async function ensureSocialSpineSchema(): Promise<{ tables: string[] }> {
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_social_package_variants_package (package_id, platform)
   )`);
+  await addColumnIfMissing("social_package_variants", "audio_rights_state", "VARCHAR(32) NOT NULL DEFAULT 'unknown'");
+  await addColumnIfMissing("social_package_variants", "audio_attribution_text", "TEXT NULL");
 
   await rawExec(`CREATE TABLE IF NOT EXISTS social_legacy_adapters (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -176,6 +178,8 @@ export async function ensureSocialSpineSchema(): Promise<{ tables: string[] }> {
     KEY idx_social_native_feed (status, visibility, published_at),
     KEY idx_social_native_creator (creator_user_id, published_at)
   )`);
+  await addColumnIfMissing("social_native_posts", "audio_rights_state", "VARCHAR(32) NOT NULL DEFAULT 'unknown'");
+  await addColumnIfMissing("social_native_posts", "audio_attribution_text", "TEXT NULL");
 
   await rawExec(`CREATE TABLE IF NOT EXISTS social_follows (
     follower_user_id BIGINT NOT NULL,
@@ -389,6 +393,8 @@ export async function createSocialPackage(input: {
   platforms: SocialPackagePlatform[];
   ctaType?: SocialCtaType;
   ctaPayload?: unknown;
+  audioRightsState?: string;
+  audioAttributionText?: string | null;
 }): Promise<{ packageId: string; variants: any[]; distributionJobIds: number[] }> {
   const asset = await requireReadyOwnedAsset(input.userId, input.sourceAssetId);
   const channel = await requireChannel(input.userId, input.channelIdentityId);
@@ -417,10 +423,10 @@ export async function createSocialPackage(input: {
     await rawExec(
       `INSERT INTO social_package_variants
        (id, package_id, platform, variant_role, source_media_asset_id, asset_url,
-        target_aspect_ratio, target_duration_seconds, caption, cta_type, cta_payload_json, readiness_state)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'prepared')`,
+        target_aspect_ratio, target_duration_seconds, caption, cta_type, cta_payload_json, readiness_state, audio_rights_state, audio_attribution_text)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'prepared', ?, ?)`,
       [variantId, packageId, platform, visual.role, String(asset.id), assetUrl, visual.ratio,
-        visual.seconds, input.caption || null, input.ctaType || null, safeJson(input.ctaPayload)],
+        visual.seconds, input.caption || null, input.ctaType || null, safeJson(input.ctaPayload), input.audioRightsState || "unknown", input.audioAttributionText || null],
     );
     const variant = { id: variantId, platform, role: visual.role, readinessState: "prepared", sourceAssetId: String(asset.id) };
     variants.push(variant);
@@ -429,9 +435,9 @@ export async function createSocialPackage(input: {
     if (platform === "native") {
       await rawExec(
         `INSERT INTO social_native_posts
-         (creator_user_id, source_media_asset_id, social_package_id, body, visibility, access_tier, cta_type, cta_payload_json, status)
-         VALUES (?, ?, ?, ?, 'public', 'free', ?, ?, 'published')`,
-        [input.userId, String(asset.id), packageId, input.caption || null, input.ctaType || null, safeJson(input.ctaPayload)],
+         (creator_user_id, source_media_asset_id, social_package_id, body, visibility, access_tier, cta_type, cta_payload_json, status, audio_rights_state, audio_attribution_text)
+         VALUES (?, ?, ?, ?, 'public', 'free', ?, ?, 'published', ?, ?)`,
+        [input.userId, String(asset.id), packageId, input.caption || null, input.ctaType || null, safeJson(input.ctaPayload), input.audioRightsState || "unknown", input.audioAttributionText || null],
       );
       continue;
     }
@@ -460,14 +466,16 @@ export async function createNativePost(input: {
   ctaType?: SocialCtaType;
   ctaPayload?: unknown;
   socialPackageId?: string;
+  audioRightsState?: string;
+  audioAttributionText?: string | null;
 }): Promise<{ postId: number }> {
   await requireReadyOwnedAsset(input.userId, input.sourceAssetId);
   const result = await rawExec(
     `INSERT INTO social_native_posts
-     (creator_user_id, source_media_asset_id, social_package_id, body, visibility, access_tier, cta_type, cta_payload_json, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'published')`,
+     (creator_user_id, source_media_asset_id, social_package_id, body, visibility, access_tier, cta_type, cta_payload_json, status, audio_rights_state, audio_attribution_text)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?)`,
     [input.userId, input.sourceAssetId, input.socialPackageId || null, input.body || null, input.visibility,
-      input.accessTier, input.ctaType || null, safeJson(input.ctaPayload)],
+      input.accessTier, input.ctaType || null, safeJson(input.ctaPayload), input.audioRightsState || "unknown", input.audioAttributionText || null],
   );
   return { postId: Number((result as any).insertId) };
 }
@@ -551,7 +559,7 @@ export async function listNativeFeed(userId: number, input: { cursor?: number; l
   }
   const query = `
     SELECT p.id, p.creator_user_id, p.source_media_asset_id, p.social_package_id, p.body, p.visibility,
-           p.access_tier, p.cta_type, p.cta_payload_json, p.published_at,
+           p.access_tier, p.cta_type, p.cta_payload_json, p.published_at, p.audio_rights_state, p.audio_attribution_text,
            COALESCE(u.name, CONCAT('Creator ', u.id)) AS creator_name,
            CAST(u.id AS CHAR) AS creator_username,
            NULL AS creator_avatar,
@@ -577,6 +585,7 @@ export async function listNativeFeed(userId: number, input: { cursor?: number; l
     sourceAssetId: String(row.source_media_asset_id), mediaUrl: row.public_url || null, thumbnailUrl: row.thumbnail_url || row.public_url || null,
     duration: row.duration ? Number(row.duration) : null, width: row.width ? Number(row.width) : null, height: row.height ? Number(row.height) : null,
     body: row.body, accessTier: row.access_tier, ctaType: row.cta_type, ctaPayload: row.cta_payload_json, publishedAt: row.published_at,
+    audioRightsState: row.audio_rights_state || "unknown", audioAttributionText: row.audio_attribution_text || null,
     reactions: Number(row.reaction_count || 0), comments: Number(row.comment_count || 0), saves: Number(row.save_count || 0),
     likedByViewer: Boolean(Number(row.liked_by_viewer)), savedByViewer: Boolean(Number(row.saved_by_viewer)),
   }));
@@ -659,6 +668,8 @@ export async function prepareCanonicalTelegramJob(input: {
   caption?: string;
   ctaType?: SocialCtaType;
   ctaPayload?: unknown;
+  audioRightsState?: string;
+  audioAttributionText?: string | null;
 }): Promise<{ packageId: string; distributionJobId: number }> {
   const created = await createSocialPackage({
     ...input,

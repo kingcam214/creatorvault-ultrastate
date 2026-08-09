@@ -74,6 +74,7 @@ type GovernedJob = {
   qualityScore: number | null;
   qualityReason: string | null;
   failureMessage: string | null;
+  audioAssetId?: string | null;
 };
 
 const STEP_ORDER: Step[] = ["upload", "preset", "configure", "review"];
@@ -165,6 +166,8 @@ export default function VaultXDrop() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [selectedPreset, setSelectedPreset] = useState<QuickPreset | null>(null);
+  const [audioAssetId, setAudioAssetId] = useState<string | null>(null);
+  const [audioLibraryOpen, setAudioLibraryOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [consent, setConsent] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -179,6 +182,12 @@ export default function VaultXDrop() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const createDraft = trpc.governedPollo.createDraft.useMutation();
   const analyzeSource = (trpc as any).bodyCinema.analyzeSource.useMutation();
+  const planAudioTimeline = (trpc as any).editor.planAudioDirectedEdit.useMutation();
+  const audioLibraryQ = (trpc as any).audioIntelligence.listAssets.useQuery();
+  const audioReadinessQ = (trpc as any).audioIntelligence.getRenderReadiness.useQuery(
+    { assetId: audioAssetId || "", platform: "creatorvault" },
+    { enabled: Boolean(audioAssetId) }
+  );
   const approveDirection = (trpc as any).bodyCinema.approveDirection.useMutation();
   const existingVideosQuery = (trpc as any).mediaAssets.list.useQuery(
     { filter: "videos", limit: 40 },
@@ -384,6 +393,21 @@ export default function VaultXDrop() {
     }
     setCreating(true);
     try {
+      let audioPlan: any = null;
+      if (audioAssetId) {
+        if (!audioReadinessQ.data?.ready) {
+          toast.error(audioReadinessQ.data?.reason || "CreatorVault must verify this soundtrack before it can direct your treatment.");
+          return;
+        }
+        audioPlan = await planAudioTimeline.mutateAsync({
+          audioAssetId,
+          sourceEvidenceId: sourceEvidence.id,
+          treatmentId: selectedPreset.id,
+          targetDurationSeconds: 6,
+          preserveSourceAudio: true,
+          destinationPlatform: "creatorvault",
+        });
+      }
       const response = await createDraft.mutateAsync({
         sourceUrl: hostedUrl,
         sourceChecksum: uploadReceipt.sha256,
@@ -403,6 +427,9 @@ export default function VaultXDrop() {
           presetId: selectedPreset.id,
           presetName: selectedPreset.name,
           sourceReceiptId: uploadReceipt.id,
+          audioAssetId: audioAssetId || undefined,
+          audioTimelinePlanId: audioPlan?.planId || undefined,
+          audioTimingEvidence: audioPlan?.anchors || undefined,
         },
       });
       setGovernedJob(response.job as GovernedJob);
@@ -413,7 +440,7 @@ export default function VaultXDrop() {
     } finally {
       setCreating(false);
     }
-  }, [consent, createDraft, hostedUrl, selectedPreset, sourceEvidence, title, uploadReceipt, uploading]);
+  }, [audioAssetId, audioReadinessQ.data, consent, createDraft, hostedUrl, planAudioTimeline, selectedPreset, sourceEvidence, title, uploadReceipt, uploading]);
 
   const handleDownload = useCallback(() => {
     if (!currentJob?.artifactUrl) return;
@@ -443,6 +470,7 @@ export default function VaultXDrop() {
     setUploadReceipt(null);
     setFileName("");
     setSelectedPreset(null);
+    setAudioAssetId(null);
     setTitle("");
     setConsent(false);
     setUploading(false);
@@ -626,12 +654,26 @@ export default function VaultXDrop() {
                 <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${BORDER}`, display: "grid", gap: 10, fontSize: 12, color: MUTED }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Render Purpose</span><span>Premium PPV Teaser</span></div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Expected Output</span><span>6-second cinematic loop</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Soundtrack</span><span style={{ color: audioAssetId ? GREEN : MUTED }}>{audioAssetId ? "Verified" : "None"}</span></div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Estimated Cost</span><span style={{ color: GOLD, fontWeight: 800 }}>Not approved yet</span></div>
                   <p style={{ margin: 0, color: MUTED, fontSize: 11, lineHeight: 1.5 }}>No render can start until an owner records a real credit estimate and you can see the approved cap.</p>
                 </div>
               )}
             </div>
             
+            <div style={{ marginBottom: 24 }}>
+              <span style={{ fontSize: 13, color: "#fff", fontWeight: 800, display: "block", marginBottom: 8 }}>Music Direction</span>
+              <p style={{ margin: "0 0 10px", color: MUTED, fontSize: 12, lineHeight: 1.45 }}>Choose a rights-cleared soundtrack to shape the pace of this treatment. You can leave this off for a visual-only plan.</p>
+              <div style={{ display: "grid", gap: 8 }}>
+                {audioLibraryQ.isLoading ? <p style={{ color: MUTED, fontSize: 12, margin: 0 }}>Loading your soundtracks...</p> : audioLibraryQ.data?.assets?.length ? audioLibraryQ.data.assets.map((asset: any) => (
+                  <button key={asset.id} type="button" onClick={() => setAudioAssetId(asset.id)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 14px", textAlign: "left", background: audioAssetId === asset.id ? GOLD_DIM : CARD, border: `1px solid ${audioAssetId === asset.id ? GOLD_BORDER : BORDER}`, borderRadius: 12, color: "#fff", cursor: asset.status === "ready" ? "pointer" : "not-allowed", opacity: asset.status === "ready" ? 1 : 0.55 }}>
+                    <span><strong style={{ display: "block", fontSize: 13 }}>🎵 {asset.title}</strong><small style={{ color: MUTED }}>{Math.round(asset.durationSeconds || 0)}s · {(asset.rights?.state || "unknown").replace(/_/g, " ")}</small></span>
+                    <span style={{ color: audioAssetId === asset.id ? GOLD : MUTED, fontSize: 11, fontWeight: 800 }}>{audioAssetId === asset.id ? "Selected" : "Choose"}</span>
+                  </button>
+                )) : <p style={{ color: MUTED, fontSize: 12, margin: 0 }}>{audioLibraryQ.data?.creatorMessage || "Add a creator-owned soundtrack in VaultX Editor to use music direction."}</p>}
+              </div>
+              {audioAssetId && audioReadinessQ.data && <p style={{ margin: "10px 0 0", color: audioReadinessQ.data.ready ? GREEN : GOLD, fontSize: 11 }}>{audioReadinessQ.data.reason}</p>}
+            </div>
             <label style={{ display: "block", marginBottom: 24 }}><span style={{ fontSize: 13, color: "#fff", fontWeight: 800, display: "block", marginBottom: 8 }}>Release Title</span><input value={title} onChange={event => setTitle(event.target.value)} maxLength={120} placeholder="e.g. Midnight Arch Drop" style={{ width: "100%", boxSizing: "border-box", background: "#000", border: `1px solid ${BORDER}`, borderRadius: 16, color: "#fff", fontSize: 16, padding: "16px 18px", outline: "none", transition: "border-color 0.2s", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.5)" }} onFocus={e => e.target.style.borderColor = GOLD} onBlur={e => e.target.style.borderColor = BORDER} /></label>
             
             <label style={{ display: "flex", alignItems: "flex-start", gap: 14, background: consent ? "rgba(69,227,138,0.05)" : "transparent", border: `1px solid ${consent ? "rgba(69,227,138,0.4)" : BORDER}`, borderRadius: 16, padding: "18px", cursor: "pointer", marginBottom: 24, transition: "all 0.2s" }}><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} style={{ width: 22, height: 22, accentColor: GREEN, marginTop: 2, flexShrink: 0, cursor: "pointer" }} /><span style={{ fontSize: 13, color: consent ? "#fff" : MUTED, lineHeight: 1.6 }}>I confirm I am 18+, I own this content, and I authorize CreatorVault to transform it into a cinematic PPV drop.</span></label>
@@ -668,6 +710,7 @@ export default function VaultXDrop() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 16 }}><button type="button" className="body-cinema-button" onClick={handleDownload} disabled={!acceptedAsset} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${acceptedAsset ? GOLD_BORDER : BORDER}`, background: acceptedAsset ? GOLD_DIM : CARD, color: acceptedAsset ? GOLD : MUTED, fontWeight: 800, cursor: acceptedAsset ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><Download size={16} /> Download</button><button type="button" className="body-cinema-button" onClick={reuseSource} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${BORDER}`, background: CARD, color: "#fff", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><RotateCcw size={16} /> Reuse source</button></div>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, padding: "10px 20px", marginBottom: 20, boxShadow: "0 4px 15px rgba(0,0,0,0.2)" }}>
               <StatusRow label="Source Ownership" value="Verified & Bound" state="ready" />
+              {currentJob.audioAssetId && <StatusRow label="Music Direction" value="Rights verified" state="ready" />}
               <StatusRow label="Production Status" value={currentJob.state.replace(/_/g, " ")} state={currentStatus.tone} />
               <StatusRow label="Cost Cap" value={currentJob.estimatedCostCredits ? `${currentJob.estimatedCostCredits} credits` : "Awaiting Approval"} state={currentJob.estimatedCostCredits ? "working" : "locked"} />
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "14px 0" }}><span style={{ fontSize: 13, color: MUTED }}>Sales & Distribution</span><span style={{ fontSize: 13, color: MUTED, fontWeight: 800 }}>Requires Final Creator Review</span></div>

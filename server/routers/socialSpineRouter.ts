@@ -90,6 +90,8 @@ export const socialSpineRouter = router({
       platforms: z.array(platformSchema).min(1).max(9),
       ctaType: ctaSchema.optional(),
       ctaPayload: z.record(z.string(), z.unknown()).optional(),
+      audioRightsState: z.string().optional(),
+      audioAttributionText: z.string().nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => createSocialPackage({ userId: ctx.user.id, ...input })),
 
@@ -102,6 +104,8 @@ export const socialSpineRouter = router({
       caption: z.string().max(5000).optional(),
       ctaType: ctaSchema.optional(),
       ctaPayload: z.record(z.string(), z.unknown()).optional(),
+      audioRightsState: z.string().optional(),
+      audioAttributionText: z.string().nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => prepareCanonicalTelegramJob({ userId: ctx.user.id, ...input })),
 
@@ -127,6 +131,8 @@ export const socialSpineRouter = router({
       ctaType: ctaSchema.optional(),
       ctaPayload: z.record(z.string(), z.unknown()).optional(),
       socialPackageId: z.string().uuid().optional(),
+      audioRightsState: z.string().optional(),
+      audioAttributionText: z.string().nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => createNativePost({ userId: ctx.user.id, ...input })),
 

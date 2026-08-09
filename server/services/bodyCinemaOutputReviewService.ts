@@ -22,6 +22,8 @@ export type BodyCinemaOutputReview = {
   duplicateSimilarity: number;
   reasons: string[];
   outputAnalysis: ReturnType<typeof deriveBodyCinemaDirections>;
+  audioAssetId?: string;
+  audioAnalysisId?: string;
   createdAt?: string;
 };
 
@@ -30,6 +32,8 @@ export type OutputReviewInput = {
   outputAssetUrl: string;
   outputFingerprint: string;
   frameEvidence: BodyCinemaFrameEvidence[];
+  audioAssetId?: string;
+  audioAnalysisId?: string;
 };
 
 function clamp(value: number, min = 0, max = 1): number {
@@ -215,6 +219,8 @@ function serialiseReview(row: any): BodyCinemaOutputReview {
     duplicateSimilarity: Number(review.duplicateSimilarity),
     reasons: review.reasons || [],
     outputAnalysis: review.outputAnalysis,
+    audioAssetId: review.audioAssetId,
+    audioAnalysisId: review.audioAnalysisId,
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined,
   };
 }
@@ -252,6 +258,8 @@ export async function reviewBodyCinemaOutput(creatorId: number, input: OutputRev
     technicalScore: assessment.technicalScore,
     duplicateSimilarity: assessment.duplicateSimilarity,
     reasons: assessment.reasons,
+    audioAssetId: input.audioAssetId,
+    audioAnalysisId: input.audioAnalysisId,
   };
   await rawExec(
     `INSERT INTO body_cinema_output_reviews

@@ -120,6 +120,8 @@ export const bodyCinemaRouter = router({
     outputAssetUrl: z.string().url(),
     outputFingerprint: z.string().regex(/^[0-9a-f]{64}$/i),
     frameEvidence: z.array(frameEvidenceInput).min(1).max(24),
+    audioAssetId: z.string().uuid().optional(),
+    audioAnalysisId: z.string().uuid().optional(),
   })).mutation(async ({ ctx, input }) => {
     try {
       return await reviewBodyCinemaOutput(Number(ctx.user.id), input);
@@ -143,6 +145,7 @@ export const bodyCinemaRouter = router({
     identityLock: z.boolean().default(true),
     preferredProvider: z.string().optional(),
     qualityThreshold: z.number().min(0).max(100).default(70),
+    audioAssetId: z.string().uuid().optional(),
   })).mutation(async ({ ctx, input }) => {
     const eligibility = complianceVault.checkGenerationEligibility(String(ctx.user.id), "GLOBAL");
     if (!eligibility.eligible) {
