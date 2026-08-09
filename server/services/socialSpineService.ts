@@ -145,8 +145,8 @@ export async function ensureSocialSpineSchema(): Promise<{ tables: string[] }> {
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_social_package_variants_package (package_id, platform)
   )`);
-  await addColumnIfMissing("social_package_variants", "audio_rights_state", "VARCHAR(32) NOT NULL DEFAULT 'unknown'");
-  await addColumnIfMissing("social_package_variants", "audio_attribution_text", "TEXT NULL");
+  await addColumnIfMissing("social_package_variants", "audio_rights_state", "audio_rights_state VARCHAR(32) NOT NULL DEFAULT 'unknown'");
+  await addColumnIfMissing("social_package_variants", "audio_attribution_text", "audio_attribution_text TEXT NULL");
 
   await rawExec(`CREATE TABLE IF NOT EXISTS social_legacy_adapters (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -178,8 +178,8 @@ export async function ensureSocialSpineSchema(): Promise<{ tables: string[] }> {
     KEY idx_social_native_feed (status, visibility, published_at),
     KEY idx_social_native_creator (creator_user_id, published_at)
   )`);
-  await addColumnIfMissing("social_native_posts", "audio_rights_state", "VARCHAR(32) NOT NULL DEFAULT 'unknown'");
-  await addColumnIfMissing("social_native_posts", "audio_attribution_text", "TEXT NULL");
+  await addColumnIfMissing("social_native_posts", "audio_rights_state", "audio_rights_state VARCHAR(32) NOT NULL DEFAULT 'unknown'");
+  await addColumnIfMissing("social_native_posts", "audio_attribution_text", "audio_attribution_text TEXT NULL");
 
   await rawExec(`CREATE TABLE IF NOT EXISTS social_follows (
     follower_user_id BIGINT NOT NULL,
