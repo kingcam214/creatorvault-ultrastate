@@ -6,7 +6,7 @@
  * Tabs: Discover | My Profile | Monetize | Telegram | X.com | Earnings
  * ============================================================================
  */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type CSSProperties } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadStripe } from "@stripe/stripe-js";
@@ -18,6 +18,48 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+function MediaFallback({
+  videoSrc,
+  posterSrc,
+  alt,
+  className = "",
+  style = {},
+  objectFit = "cover"
+}: {
+  videoSrc: string;
+  posterSrc: string;
+  alt: string;
+  className?: string;
+  style?: CSSProperties;
+  objectFit?: "cover" | "contain";
+}) {
+  const [error, setError] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <div className={`relative overflow-hidden bg-black ${className}`} style={style} aria-label={alt}>
+      <img
+        src={posterSrc}
+        alt={alt}
+        className={`absolute inset-0 h-full w-full object-${objectFit} transition-opacity duration-700 ${loaded && !error ? "opacity-0" : "opacity-100"}`}
+      />
+      {!error && (
+        <video
+          src={videoSrc}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          onCanPlay={() => setLoaded(true)}
+          onError={() => setError(true)}
+          className={`absolute inset-0 h-full w-full object-${objectFit} transition-opacity duration-700 ${loaded ? "opacity-100" : "opacity-0"}`}
+          aria-hidden="true"
+        />
+      )}
+    </div>
+  );
+}
 import {
   Shield, Lock, Flame, Star, TrendingUp, DollarSign, Users,
   Award, BarChart2, Settings, Zap, Eye, Heart, MessageCircle,
@@ -2384,7 +2426,7 @@ function VaultXPublicLanding() {
               <a href="/vault-x/studio" className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Open Body Cinema Studio</a>
             </div>
             <figure className="relative min-h-[620px] overflow-hidden rounded-[2rem] border border-[#c9a84c]/25 bg-black shadow-2xl shadow-black/50" aria-label="Body Cinema silhouette direction reference">
-              <video aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-center opacity-90" src="/assets/preview-silhouette.mp4" autoPlay loop muted playsInline preload="metadata" />
+              <MediaFallback videoSrc="/assets/preview-silhouette.mp4" posterSrc="/images/platform/body-cinema-hero.webp" alt="Body Cinema silhouette direction reference" className="absolute inset-0 h-full w-full opacity-90" />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.22)_36%,rgba(0,0,0,.94))]" />
               <div className="absolute inset-x-4 top-4 flex flex-wrap items-center gap-2"><span className="rounded-full border border-white/20 bg-black/55 px-3 py-2 text-[10px] font-black uppercase tracking-[.18em] text-white backdrop-blur">Silhouette style reference</span><span className="rounded-full border border-[#c9a84c]/40 bg-[#c9a84c]/15 px-3 py-2 text-[10px] font-black uppercase tracking-[.18em] text-[#f5df98] backdrop-blur">Library motion</span></div>
               <figcaption className="absolute inset-x-4 bottom-4 space-y-3">

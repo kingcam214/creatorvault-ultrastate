@@ -96,6 +96,7 @@ const ALLOWLISTS = {
   'visual-world': [
     'client/src/pages/Home.tsx',
     'client/src/pages/VaultX.tsx',
+    'client/src/lib/homepageMediaRegistry.ts',
     'scripts/scope-guard.js'
   ],
   'body-cinema': [
