@@ -229,7 +229,7 @@ export default function VaultXEditor() {
         transitions,
         watermarkText: watermark || undefined,
         fadeInOut,
-        musicUrl: audioReadinessQ.data?.ready ? audioReadinessQ.data.asset?.assetUrl : undefined,
+        audioAssetId: audioReadinessQ.data?.ready ? audioAssetId || undefined : undefined,
         musicVolume,
         textOverlays: textOverlays.length > 0 ? textOverlays.map(o => ({
           text: o.text, x: o.x, y: o.y, fontSize: o.fontSize, color: o.color,

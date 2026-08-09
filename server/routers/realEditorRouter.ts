@@ -13,6 +13,7 @@ import { TRPCError } from "@trpc/server";
 import { startRender, getRenderJob, COLOR_GRADES, MOTION_PRESETS, FOCUS_PRESETS } from "../services/realRenderEngine.js";
 import { BODY_CINEMA_EDIT_PRESETS, EDIT_PRESET_CATEGORIES, getEditPreset } from "../services/bodyCinemaEditPresets.js";
 import { buildAudioDirectedTimeline, toMediaOSManifest } from "../services/audioTimelinePlanner.js";
+import { assertAudioRights, getAudioAnalysis, getCanonicalAudioAsset } from "../services/audioIntelligenceService.js";
 
 const clipSchema = z.object({
   src: z.string(),
@@ -36,6 +37,22 @@ const textOverlaySchema = z.object({
   startTime: z.number().optional(),
   endTime: z.number().optional(),
 });
+
+async function resolveGovernedMusicForRender(creatorId: number, audioAssetId?: string) {
+  if (!audioAssetId) return undefined;
+  const asset = await getCanonicalAudioAsset(creatorId, audioAssetId);
+  if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "The selected soundtrack is not available in your CreatorVault library." });
+  try {
+    assertAudioRights({ asset, intendedUse: "render", platform: "creatorvault" });
+  } catch (error: any) {
+    throw new TRPCError({ code: "FORBIDDEN", message: error?.message || "This soundtrack is not cleared for this edit." });
+  }
+  const analysis = await getAudioAnalysis(creatorId, audioAssetId);
+  if (!analysis || analysis.analysisStatus !== "ready") {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "CreatorVault must finish reading this soundtrack before it can be used in your edit." });
+  }
+  return asset.assetUrl;
+}
 
 const audioMixPlanSchema = z.object({
   targetLufs: z.number().min(-36).max(-6).default(-14),
@@ -80,15 +97,17 @@ export const realEditorRouter = router({
       captionStyle: z.enum(["bold_center", "lower_third", "minimal_top"]).default("bold_center"),
       animatedCaptions: z.boolean().optional(),
       transitions: z.boolean().optional(),
-      musicUrl: z.string().optional(),
+      audioAssetId: z.string().uuid().optional(),
       musicVolume: z.number().min(0).max(1).optional(),
       audioMixPlan: audioMixPlanSchema.optional(),
       watermarkText: z.string().optional(),
       fadeInOut: z.boolean().default(true),
       textOverlays: z.array(textOverlaySchema).optional(),
     }))
-    .mutation(({ input }) => {
-      const job = startRender(input);
+    .mutation(async ({ ctx, input }) => {
+      const musicUrl = await resolveGovernedMusicForRender(ctx.user.id, input.audioAssetId);
+      const { audioAssetId: _audioAssetId, ...renderInput } = input;
+      const job = startRender({ ...renderInput, musicUrl });
       return { jobId: job.id, status: job.status };
     }),
 
@@ -97,12 +116,13 @@ export const realEditorRouter = router({
       presetId: z.string(),
       clips: z.array(clipSchema).min(1),
       captionText: z.string().optional(),
-      musicUrl: z.string().optional(),
+      audioAssetId: z.string().uuid().optional(),
       watermarkText: z.string().optional(),
     }))
-    .mutation(({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const preset = getEditPreset(input.presetId);
       if (!preset) throw new TRPCError({ code: "NOT_FOUND", message: `Edit preset ${input.presetId} not found` });
+      const musicUrl = await resolveGovernedMusicForRender(ctx.user.id, input.audioAssetId);
       const job = startRender({
         clips: input.clips,
         aspect: preset.aspect,
@@ -111,7 +131,7 @@ export const realEditorRouter = router({
         focus: preset.focus || "none",
         captionText: input.captionText,
         captionStyle: preset.captionStyle,
-        musicUrl: input.musicUrl,
+        musicUrl,
         musicVolume: 0.5,
         watermarkText: input.watermarkText,
         fadeInOut: preset.fadeInOut,
