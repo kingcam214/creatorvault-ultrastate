@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { ArrowUpRight, Crown, Radio, Wand2, ShieldCheck, TrendingUp, Users, LockKeyhole, CheckCircle2, Play, Send, BadgeCheck, Wallet } from "lucide-react";
 import { CreatorVaultRoute } from "@/lib/productArchitecture";
 import { HOMEPAGE_MEDIA, MEDIA_FALLBACKS } from "@/lib/homepageMediaRegistry";
-import { useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 function MediaFallback({
   videoSrc,
@@ -49,6 +49,59 @@ function MediaFallback({
   );
 }
 
+function KingCamHero() {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const startPlayback = () => {
+      video.muted = true;
+      video.defaultMuted = true;
+      void video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    };
+    const markPlaying = () => setIsPlaying(true);
+    const markUnavailable = () => setIsPlaying(false);
+
+    video.addEventListener("playing", markPlaying);
+    video.addEventListener("error", markUnavailable);
+    video.addEventListener("loadeddata", startPlayback, { once: true });
+    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) startPlayback();
+
+    return () => {
+      video.removeEventListener("playing", markPlaying);
+      video.removeEventListener("error", markUnavailable);
+      video.removeEventListener("loadeddata", startPlayback);
+    };
+  }, []);
+
+  return (
+    <div className="absolute inset-0 h-full w-full overflow-hidden bg-black">
+      <img
+        src={MEDIA_FALLBACKS.kingcamHero}
+        alt="KingCam full-body creator portrait"
+        className="absolute inset-0 h-full w-full object-contain"
+      />
+      <video
+        ref={videoRef}
+        src={HOMEPAGE_MEDIA.kingcamHero.livePath}
+        poster={MEDIA_FALLBACKS.kingcamHero}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        onPlaying={() => setIsPlaying(true)}
+        onError={() => setIsPlaying(false)}
+        className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ${isPlaying ? "opacity-100" : "opacity-0"}`}
+        aria-label="KingCam full-body clone hero video"
+      />
+    </div>
+  );
+}
+
 const creatorBenefits = [
   {
     number: "01",
@@ -75,20 +128,14 @@ export default function Home() {
     <main className="min-h-screen overflow-hidden bg-[#090909] text-white selection:bg-white/30">
       {/* 1. HERO: KINGCAM FOUNDER MOTION */}
       <section className="relative isolate min-h-[100svh] overflow-hidden bg-black" aria-label="KingCam creator hero">
-        <MediaFallback
-          videoSrc={HOMEPAGE_MEDIA.kingcamHero.livePath}
-          posterSrc={MEDIA_FALLBACKS.kingcamHero}
-          alt="KingCam creator hero background"
-          className="absolute inset-0 h-full w-full scale-110 opacity-30 blur-2xl"
+        <img
+          src={MEDIA_FALLBACKS.kingcamHero}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-2xl"
         />
-        <div className="absolute inset-0 bg-black/25" />
-        <MediaFallback
-          videoSrc={HOMEPAGE_MEDIA.kingcamHero.livePath}
-          posterSrc={MEDIA_FALLBACKS.kingcamHero}
-          alt="KingCam creator hero video"
-          className="absolute inset-0 h-full w-full"
-          objectFit="contain"
-        />
+        <div className="absolute inset-0 bg-black/15" />
+        <KingCamHero />
 
         {/* BRANDING: CLEAR CREATORVAULT MASTER BRAND */}
         <div className="absolute left-5 top-6 z-10 sm:left-8 sm:top-8">
