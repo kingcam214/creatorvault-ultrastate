@@ -95,21 +95,19 @@ export default function Home() {
           <img src="/logo-white.png" alt="CreatorVault" className="h-7 sm:h-9" />
         </div>
 
-        {/* PRIMARY CTA: ONE CLEAR ACTION */}
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent pb-10 pt-32">
-          <div className="mx-auto max-w-7xl px-5 text-center sm:px-8">
-            <h1 className="text-5xl font-black leading-[0.92] tracking-[-0.06em] sm:text-7xl">Your Content.<br />Your Empire.</h1>
-            <p className="mx-auto mt-5 max-w-xl text-base text-zinc-300 sm:text-lg">The private platform for creators who want to turn their media into high-end drops, control their distribution, and keep the money they earn.</p>
-            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link href="/signup">
-                <a className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-white px-8 font-black text-black transition hover:bg-zinc-200">
-                  Create Your Vault <ArrowUpRight className="h-4 w-4" />
-                </a>
-              </Link>
-              <div className="flex items-center gap-4">
-                <Link href={CreatorVaultRoute.creatorOS}><a className="px-4 py-2 text-sm font-bold text-zinc-400 transition hover:text-white">Sign In</a></Link>
-              </div>
-            </div>
+      </section>
+
+      <section className="border-t border-white/10 bg-black">
+        <div className="mx-auto max-w-7xl px-5 py-14 text-center sm:px-8 sm:py-20">
+          <h1 className="text-5xl font-black leading-[0.92] tracking-[-0.06em] sm:text-7xl">Your Content.<br />Your Empire.</h1>
+          <p className="mx-auto mt-5 max-w-xl text-base text-zinc-300 sm:text-lg">The private platform for creators who want to turn their media into high-end drops, control their distribution, and keep the money they earn.</p>
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link href="/signup">
+              <a className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-white px-8 font-black text-black transition hover:bg-zinc-200">
+                Create Your Vault <ArrowUpRight className="h-4 w-4" />
+              </a>
+            </Link>
+            <Link href={CreatorVaultRoute.creatorOS}><a className="px-4 py-2 text-sm font-bold text-zinc-400 transition hover:text-white">Sign In</a></Link>
           </div>
         </div>
       </section>
