@@ -37,7 +37,7 @@ export default function KingContent() {
             loop
             muted
             playsInline
-            className="h-full w-full object-cover object-right opacity-30"
+            className="h-full w-full object-contain object-right opacity-30"
             src="/videos/kingcam-hero-cam.mp4"
             poster="/assets/kingcam-hero.jpg"
           />
