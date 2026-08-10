@@ -1092,16 +1092,27 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
       resolution: leased.resolution,
       aspectRatio: leased.aspectRatio,
     })
-    : {
-      input: {
-        image: leased.sourceUrl,
-        prompt: leased.prompt,
-        resolution: leased.resolution,
-        length: leased.durationSeconds,
-        mode: leased.mode,
-        aspect_ratio: leased.aspectRatio,
-      },
-    };
+    : (leased.mode === "ref2video" 
+        ? {
+            prompt: leased.prompt,
+            refs: [{ url: leased.sourceUrl, type: "video" }],
+            duration: leased.durationSeconds,
+            resolution: leased.resolution,
+            aspectRatio: leased.aspectRatio,
+            mode: "basic",
+            generateAudio: false,
+          }
+        : {
+            input: {
+              image: leased.sourceUrl,
+              prompt: leased.prompt,
+              resolution: leased.resolution,
+              length: leased.durationSeconds,
+              mode: leased.mode,
+              aspect_ratio: leased.aspectRatio,
+            },
+          }
+      );
   const providerUrl = isSourceVideoReferenceJob(leased)
     ? `https://api.manus.im/api/llm-proxy/v1/${SOURCE_VIDEO_REFERENCE_API_PATH}`
     : `https://api.manus.im/api/llm-proxy/v1/${leased.providerModelPath.replace("pollo/bytedance-seedance-2-5-ref2video", "generation/bytedance/seedance-2-5/ref2video").replace("pollo/", "generation/")}`;
