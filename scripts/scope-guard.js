@@ -139,6 +139,10 @@ const ALLOWLISTS = {
     'server/services/audioIntelligenceService.ts',
     'scripts/scope-guard.js'
   ],
+  'media-delivery': [
+    'server/_core/index.ts',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',

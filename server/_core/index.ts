@@ -1,9 +1,10 @@
 import "dotenv/config";
 import "../services/telegramOutboundFirewall";
 import express from "express";
-import { db } from "../db";
+import { getDb } from "../db";
 import path from "path";
 import { existsSync, mkdirSync, readFileSync } from "fs";
+import { sql } from "drizzle-orm";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -18,6 +19,7 @@ import { initializeWebRTC } from "../webrtc";
 import { handleStripeWebhook } from "./stripeWebhook";
 import { runStartupTasks } from "./startup";
 import { getLLMProviderStatus } from "./llm";
+import { sdk } from "./sdk";
 import videoStudioRouter from "../routers/videoStudioRouter";
 import { videoUploadRouter } from "../routers/videoUploadRouter";
 import { registerTelegramConnectRoutes } from "../services/telegramConnectRoute";
@@ -204,6 +206,43 @@ async function startServer() {
     } catch (e) { res.status(500).json({ error: String(e) }); }
   });
   
+  // Authenticated CreatorVault media playback. This route must be registered before
+  // the Vite single-page-app fallback; otherwise saved media URLs return index.html.
+  const durableUploadsDir = path.resolve(process.cwd(), "..", "uploads");
+  if (!existsSync(durableUploadsDir)) {
+    mkdirSync(durableUploadsDir, { recursive: true });
+  }
+  app.get("/api/media/asset/:assetId", async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!user) return res.status(401).json({ error: "Sign in to view this CreatorVault media." });
+      const database = await getDb();
+      const result = await database.execute(sql`
+        SELECT storage_path, mime_type, original_name, file_name
+        FROM media_assets
+        WHERE id = ${req.params.assetId} AND user_id = ${user.id} AND status = 'ready'
+        LIMIT 1
+      ` as any);
+      const row = (result as any)?.[0]?.[0];
+      if (!row?.storage_path) return res.status(404).json({ error: "This saved media is not available." });
+
+      const assetPath = path.resolve(String(row.storage_path));
+      const approvedRoots = [
+        path.resolve(process.cwd(), "storage", "uploads"),
+        durableUploadsDir,
+      ];
+      const isApprovedPath = approvedRoots.some(root => assetPath.startsWith(`${root}${path.sep}`));
+      if (!isApprovedPath || !existsSync(assetPath)) return res.status(404).json({ error: "This saved media file is not available." });
+
+      res.setHeader("Cache-Control", "private, max-age=3600");
+      res.type(String(row.mime_type || "application/octet-stream"));
+      return res.sendFile(assetPath, { headers: { "Content-Disposition": `inline; filename=\"${String(row.original_name || row.file_name || "creatorvault-media").replace(/[\"\\]/g, "") }\"` } });
+    } catch (error) {
+      console.error("[CreatorVaultMedia] playback error", error);
+      return res.status(500).json({ error: "CreatorVault could not prepare this media." });
+    }
+  });
+
   // Telegram webhook
   app.use("/api/telegram", telegramWebhook);
   // VaultX Video Studio REST endpoints (FFmpeg processing)
@@ -322,10 +361,6 @@ async function startServer() {
   });
 
   // Durable uploads directory — persists across frontend redeployments
-  const durableUploadsDir = path.resolve(process.cwd(), "..", "uploads");
-  if (!existsSync(durableUploadsDir)) {
-    mkdirSync(durableUploadsDir, { recursive: true });
-  }
   app.use("/uploads", express.static(durableUploadsDir, {
     maxAge: "7d",
     etag: true,
