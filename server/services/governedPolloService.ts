@@ -646,11 +646,13 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
   if (!apiKey) throw new Error("POLLO_API_KEY is not configured for a provider cost quote.");
   const requestBody = buildSourceVideoReferenceInput(input);
+  // Remove the 'input' wrapper for Seedance
+  const finalRequestBody = requestBody.input ? requestBody.input : requestBody;
   // Try the estimate endpoint, if it fails, fallback to a manual quote
   let response = await fetch(`https://api.manus.im/api/llm-proxy/v1/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
     method: "POST",
     headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify(requestBody),
+    body: JSON.stringify(finalRequestBody),
   });
   
   if (response.status === 404) {
@@ -1106,10 +1108,11 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
 
   let response: Response;
   try {
+    const finalRequestBody = requestBody.input ? requestBody.input : requestBody;
     response = await fetch(providerUrl, {
       method: "POST",
       headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json", "X-CreatorVault-Request-Id": leased.requestId },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(finalRequestBody),
     });
   } catch (error) {
     return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId: params.workerId, error });
