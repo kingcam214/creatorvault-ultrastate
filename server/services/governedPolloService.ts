@@ -229,11 +229,10 @@ function buildSourceVideoReferenceInput(input: {
   if (!["9:16", "16:9", "1:1", "4:3", "3:4", "21:9"].includes(input.aspectRatio)) throw new Error("Unsupported Pollo source-video reference aspect ratio.");
   return {
     prompt: input.prompt,
-    refs: [{ url: input.sourceUrl, type: "video" }],
+    refs: [{ type: "video", name: "creatorvault_verified_source", video: input.sourceUrl, order: 1 }],
     duration: input.durationSeconds,
-    resolution: input.resolution,
+    resolution: input.resolution === "720p" ? "720P" : input.resolution,
     aspectRatio: input.aspectRatio,
-    mode: "basic",
     generateAudio: false,
   };
 }
