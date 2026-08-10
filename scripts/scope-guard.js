@@ -152,6 +152,7 @@ const ALLOWLISTS = {
     'server/services/creationModelRegistry.test.ts',
     'server/services/creationModelSelection.ts',
     'server/services/creationDirector.ts',
+    'server/services/governedPolloService.ts',
     'server/routers/creationDirectorRouter.ts',
     'server/services/trailerEngine.ts',
     'server/routers/trailerRouter.ts',
