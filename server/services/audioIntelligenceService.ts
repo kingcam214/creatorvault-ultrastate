@@ -116,7 +116,7 @@ export type AudioVisualTimelinePlan = {
   audioAnalysisId: string;
   treatmentId: string | null;
   timelineVersion: "creatorvault.timeline_manifest.v2";
-  visualEvents: Array<{ id: string; startMs: number; endMs: number; intent: string; sourceTimestampMs: number }>;
+  visualEvents: Array<{ id: string; startMs: number; endMs: number; intent: string; sourceTimestampMs: number; punch?: boolean; lightLeak?: boolean; flashIn?: boolean; glitch?: boolean }>;
   audioAnchors: Array<{ visualEventId: string; audioTimeMs: number; eventType: "beat" | "downbeat" | "section" | "onset"; reason: string }>;
   mix: {
     targetLufs: number;

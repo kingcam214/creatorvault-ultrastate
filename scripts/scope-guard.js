@@ -131,6 +131,14 @@ const ALLOWLISTS = {
     'client/src/pages/KingContent.tsx',
     'scripts/scope-guard.js'
   ],
+  'trailer-maker': [
+    'client/src/pages/TrailerStudio.tsx',
+    'server/routers/trailerRouter.ts',
+    'server/services/realRenderEngine.ts',
+    'server/services/audioTimelinePlanner.ts',
+    'server/services/audioIntelligenceService.ts',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',

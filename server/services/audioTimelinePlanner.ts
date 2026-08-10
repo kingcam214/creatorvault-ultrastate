@@ -145,6 +145,10 @@ export async function buildAudioDirectedTimeline(input: {
       endMs: targetEndMs,
       intent: beat.id,
       sourceTimestampMs: beat.sourceTimestampMs,
+      punch: beat.id === "hook" || beat.id === "payoff" || visualEvents.length % 2 === 0,
+      lightLeak: visualEvents.length % 3 === 0,
+      flashIn: beat.id === "hook",
+      glitch: beat.id === "hook",
     });
     audioAnchors.push({
       visualEventId: eventId,

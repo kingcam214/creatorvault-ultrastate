@@ -11,6 +11,13 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc.js";
 import { TRPCError } from "@trpc/server";
 import { startTrailer, getTrailerJob } from "../services/trailerEngine.js";
+import { db } from "../db";
+import { sql } from "drizzle-orm";
+import { buildCinematicPacingPlan } from "../services/cinematicPacingEngine.js";
+import { buildAudioDirectedTimeline, toMediaOSManifest } from "../services/audioTimelinePlanner.js";
+import { startRender } from "../services/realRenderEngine.js";
+import { assertAudioRights, getAudioAnalysis, getCanonicalAudioAsset } from "../services/audioIntelligenceService.js";
+import { analyzeTrailerRetention } from "../services/trailerRetentionAnalyzer.js";
 
 // ─── Viral trailer templates ──────────────────────────────────────────────────
 export interface TrailerTemplate {
@@ -141,6 +148,8 @@ export const trailerRouter = router({
       ctaSubText: z.string().optional(),
       aspect: z.enum(["9:16", "16:9", "1:1"]).default("9:16"),
       musicUrl: z.string().optional(),
+      audioAssetId: z.string().uuid().optional(),
+      trailerProjectId: z.string().uuid().optional(),
       watermarkText: z.string().optional(),
       mode: z.enum(["ai_full_shoot", "ai_remix", "original", "hybrid", "photo_cinematic"]).optional(),
       chromaAberration: z.boolean().optional(),
@@ -148,9 +157,80 @@ export const trailerRouter = router({
       letterbox: z.boolean().optional(),
       glitch: z.boolean().optional(),
     }))
-    .mutation(({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const tpl = TRAILER_TEMPLATES.find(t => t.id === input.templateId);
       if (!tpl) throw new TRPCError({ code: "NOT_FOUND", message: `Trailer template ${input.templateId} not found` });
+      // If a governed trailer project and audio asset are provided, use the new Trailer Director path
+      if (input.trailerProjectId && input.audioAssetId) {
+        const projectRes = await (db as any).execute(sql`SELECT * FROM trailer_projects WHERE id = ${input.trailerProjectId} AND user_id = ${ctx.user.id}` as any);
+        const project = (projectRes as any)?.[0]?.[0];
+        if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "Trailer project not found" });
+
+        const asset = await getCanonicalAudioAsset(ctx.user.id, input.audioAssetId);
+        if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "Soundtrack not found in your library." });
+        assertAudioRights({ asset, intendedUse: "render", platform: "creatorvault" });
+
+        const analysis = await getAudioAnalysis(ctx.user.id, input.audioAssetId);
+        if (!analysis || analysis.analysisStatus !== "ready") {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Soundtrack analysis is not ready." });
+        }
+
+        // 1. Build pacing plan from the project blueprint
+        const blueprint = {
+          scenes: JSON.parse(project.scenes_json || "[]"),
+          hooks: JSON.parse(project.hooks || "[]"),
+          project: { title: input.title, format: input.aspect },
+        };
+        const pacingPlan = buildCinematicPacingPlan(blueprint as any);
+
+        // 2. Build the audio-directed timeline
+        // We simulate a source evidence ID here since we are directing from a project, not a single clip
+        const plan = await buildAudioDirectedTimeline({
+          creatorId: ctx.user.id,
+          audioAssetId: input.audioAssetId,
+          sourceEvidenceId: input.trailerProjectId,
+          treatmentId: tpl.id,
+          targetDurationSeconds: pacingPlan.totalDurationSeconds,
+          preserveSourceAudio: false,
+          destinationPlatform: "creatorvault",
+        });
+
+        // 3. Render using the modern realRenderEngine
+        const renderClips = plan.visualEvents.map((e, i) => ({
+          src: input.clips[i % input.clips.length]?.src || "",
+          trimStart: e.startMs / 1000,
+          trimEnd: e.endMs / 1000,
+          focus: tpl.focusRotation[i % tpl.focusRotation.length],
+          punch: e.punch,
+          lightLeak: e.lightLeak,
+          flashIn: e.flashIn,
+          glitch: e.glitch,
+        }));
+
+        const job = startRender({
+          clips: renderClips,
+          aspect: input.aspect,
+          colorGrade: tpl.vibe,
+          motion: "none",
+          focus: "none",
+          captionText: tpl.hookText,
+          captionStyle: "bold_center",
+          musicUrl: asset.assetUrl,
+          musicVolume: 0.8,
+          audioMixPlan: plan.mix,
+          watermarkText: input.watermarkText,
+          fadeInOut: true,
+          transitions: tpl.transitions,
+          chromaAberration: input.chromaAberration ?? tpl.polish,
+          lightLeaks: input.lightLeaks,
+          letterbox: input.letterbox,
+          glitch: input.glitch,
+          polish: tpl.polish,
+        });
+
+        return { jobId: job.id, status: job.status, templateApplied: tpl.name, mode: "directed" };
+      }
+
       // Determine mode: explicit override > template default > legacy aiRemix flag
       const resolvedMode = input.mode ?? (tpl.aiRemix ? "ai_remix" : "original");
       const job = startTrailer({

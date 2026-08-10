@@ -42,6 +42,10 @@ export interface RenderClip {
   caption?: string;       // per-clip caption text
   captionStyle?: string;  // per-clip caption style
   transition?: string;    // transition INTO this clip: "fade" | "flash" | "dissolve" | "none"
+  punch?: boolean;
+  lightLeak?: boolean;
+  flashIn?: boolean;
+  glitch?: boolean;
 }
 
 export interface TextOverlay {
@@ -81,6 +85,11 @@ export interface RenderRequest {
   transitions?: boolean;  // add xfade transitions between clips
   textOverlays?: TextOverlay[]; // additional text/sticker layers
   animatedCaptions?: boolean;   // animate caption (fade-in + drift)
+  chromaAberration?: boolean;
+  lightLeaks?: boolean;
+  letterbox?: boolean;
+  glitch?: boolean;
+  polish?: boolean;
 }
 
 // ─── Body-focus framing presets ───────────────────────────────────────────────
@@ -124,6 +133,17 @@ export interface RenderJob {
   error?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// ─── Cinematic FX Helpers ─────────────────────────────────────────────────────
+const CHROMA_ABERRATION = "split=3[r][g][b];[r]lutrgb=r=val:g=0:b=0[rv];[g]lutrgb=r=0:g=val:b=0[gv];[b]lutrgb=r=0:g=0:b=val[bv];[rv]pad=iw+8:ih:4:0[rp];[gv]pad=iw+8:ih:0:0[gp];[bv]pad=iw+8:ih:8:0[bp];[rp][gp]blend=all_mode=addition[rg];[rg][bp]blend=all_mode=addition,crop=iw-8:ih:4:0";
+const LIGHT_LEAK = "eq=brightness=0.035:saturation=1.08:gamma=1.01";
+const GLITCH = "geq=r='r(X+3,Y)':g='g(X,Y)':b='b(X-3,Y)',noise=alls=18:allf=t";
+const POLISH = "split[a][b];[b]gblur=sigma=8[bl];[a][bl]blend=all_mode=screen:all_opacity=0.22,noise=alls=7:allf=t+u";
+
+function letterboxFilter(H: number): string {
+  const barH = Math.round(H * 0.105);
+  return `drawbox=x=0:y=0:w=iw:h=${barH}:color=black:t=fill,drawbox=x=0:y=ih-${barH}:w=iw:h=${barH}:color=black:t=fill`;
 }
 
 // ─── Color grade presets (real ffmpeg filter chains) ──────────────────────────
@@ -335,6 +355,20 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
         }
         // Per-clip caption
         if (clip.caption) filters.push(captionFilter(clip.caption, clip.captionStyle || "lower_third", W, H, req.animatedCaptions));
+
+        let punchFilter = "";
+        if (clip.punch) {
+          // Preserve the underlying video frames. Zoompan turns video into a still-frame hold,
+          // so an energy punch uses a brief speed lift and contrast instead.
+          punchFilter = "setpts=0.96*PTS,eq=contrast=1.035:saturation=1.04";
+          filters.push(punchFilter);
+        }
+
+        if (req.polish) filters.push(POLISH);
+        if (clip.flashIn) filters.push(`fade=t=in:st=0:d=0.12:color=white`);
+        if (clip.lightLeak) filters.push(LIGHT_LEAK);
+        if (clip.glitch) filters.push(GLITCH);
+
         const vf = filters.join(",");
         const audioFilters = speed !== 1.0 ? ["-af", `atempo=${Math.max(0.5, Math.min(2.0, speed))}`] : ["-af", "aresample=44100"];
         await ff([
@@ -400,11 +434,13 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
     }
     if (req.watermarkText) {
       const wm = escapeDrawText(req.watermarkText.slice(0, 40));
-      postFilters.push(`drawtext=fontfile=${FONT}:text='${wm}':fontcolor=white@0.55:fontsize=${Math.round(W*0.03)}:x=w-text_w-${Math.round(W*0.03)}:y=h-text_h-${Math.round(H*0.04)}`);
+      postFilters.push(`drawtext=fontfile=${FONT}:text='${wm}':fontcolor=white@0.78:fontsize=${Math.round(W*0.032)}:x=w-text_w-${Math.round(W*0.035)}:y=${Math.round(H*0.055)}`);
     }
-    if (req.fadeInOut && totalDur > 1.5) {
+    if (req.fadeInOut && totalDur > 5) {
       postFilters.push(`fade=t=in:st=0:d=0.5,fade=t=out:st=${(totalDur - 0.6).toFixed(2)}:d=0.6`);
     }
+    if (req.letterbox) postFilters.push(letterboxFilter(H));
+    if (req.chromaAberration) postFilters.push(CHROMA_ABERRATION);
     if (postFilters.length) {
       const out = path.join(workDir, "posted.mp4");
       await ff(["-i", current, "-vf", postFilters.join(","), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy", out]);

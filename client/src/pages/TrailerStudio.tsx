@@ -10,6 +10,7 @@ import { Upload, Loader2, Check, X, Download, Film, Music, ChevronRight, Flame, 
 import { trpc } from "@/lib/trpc";
 import { useVaultXLang, VaultXLangSwitcher } from "@/lib/vaultxI18n";
 import { toast } from "sonner";
+import MediaPicker, { type MediaAssetItem } from "@/components/MediaPicker";
 
 const GOLD = "#F2B15B", GOLD_DIM = "rgba(242,177,91,0.12)", GOLD_BORDER = "rgba(242,177,91,0.35)";
 const BG = "#080808", CARD = "#111", BORDER = "rgba(255,255,255,0.08)", MUTED = "rgba(255,255,255,0.45)", GREEN = "#00E676";
@@ -38,12 +39,16 @@ export default function TrailerStudio() {
   const [step, setStep] = useState<Step>("mode");
   const [mode, setMode] = useState<Mode>("original");
   const [clips, setClips] = useState<Clip[]>([]);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadPct, setUploadPct] = useState(0);
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [priceLine, setPriceLine] = useState("");
   const [musicUrl, setMusicUrl] = useState<string | null>(null);
+  const [audioAssetId, setAudioAssetId] = useState<string | null>(null);
+  const [trailerProjectId, setTrailerProjectId] = useState<string | null>(null);
   const [aspect, setAspect] = useState<"9:16" | "16:9" | "1:1">("9:16");
   const [vibe, setVibe] = useState("cinematic_heat");
   // FX toggles
@@ -58,7 +63,9 @@ export default function TrailerStudio() {
 
   const { t } = useVaultXLang();
   const templatesQ = (trpc as any).trailer.getTemplates.useQuery(undefined, { retry: false });
+  const audioLibraryQ = (trpc as any).audioIntelligence.listAssets.useQuery();
   const buildMut = (trpc as any).trailer.buildFromTemplate.useMutation();
+  const createTrailerProjectMut = (trpc as any).mediaAssets.createTrailerProject.useMutation();
   const statusQ = (trpc as any).trailer.getStatus.useQuery({ jobId: jobId || "" }, { enabled: Boolean(jobId) && step === "building", refetchInterval: 3000, retry: false });
   const templates = templatesQ.data?.templates || [];
 
@@ -93,22 +100,36 @@ export default function TrailerStudio() {
   }, [upload]);
 
   const build = useCallback(async () => {
-    if (!templateId) { toast.error("Pick a template"); return; }
-    if (clips.length === 0) { toast.error("Add clips first"); return; }
+    if (!templateId) { toast.error("Pick a trailer direction"); return; }
+    if (clips.length === 0) { toast.error("Choose saved CreatorVault media first"); return; }
+    if (mode !== "original") { toast.error("AI reshoots stay locked until a governed visual direction is approved. Your original-footage trailer can still be directed now."); return; }
     setStep("building"); setPct(0); setOutputUrl(null);
     try {
+      let projectId = trailerProjectId;
+      if (!projectId && selectedAssetIds.length) {
+        const project = await createTrailerProjectMut.mutateAsync({
+          projectName: title || "Directed trailer",
+          projectType: "launch_trailer",
+          format: aspect,
+          title: title || undefined,
+          concept: priceLine || undefined,
+          selectedAssetIds,
+        });
+        projectId = project.trailerProjectId;
+        setTrailerProjectId(projectId);
+      }
       const res = await buildMut.mutateAsync({
         templateId, clips: clips.map(c => ({ src: c.src })),
         title: title || undefined, ctaSubText: priceLine || undefined, aspect,
-        musicUrl: musicUrl || undefined, watermarkText: title || undefined,
+        musicUrl: musicUrl || undefined, audioAssetId: audioAssetId || undefined, trailerProjectId: projectId || undefined, watermarkText: title || undefined,
         mode, chromaAberration: chroma || undefined, lightLeaks: lightLeaks || undefined,
         letterbox: letterbox || undefined, glitch: glitch || undefined,
       });
       setJobId(res.jobId);
-    } catch (e: any) { toast.error(e?.message || "Build failed"); setStep("fx"); }
-  }, [templateId, clips, title, priceLine, aspect, musicUrl, mode, chroma, lightLeaks, letterbox, glitch]);
+    } catch (e: any) { toast.error(e?.message || "Trailer direction failed"); setStep("fx"); }
+  }, [templateId, clips, title, priceLine, aspect, musicUrl, audioAssetId, trailerProjectId, selectedAssetIds, mode, chroma, lightLeaks, letterbox, glitch]);
 
-  const reset = () => { setStep("mode"); setClips([]); setTemplateId(null); setTitle(""); setPriceLine(""); setMusicUrl(null); setJobId(null); setOutputUrl(null); setPct(0); setChroma(false); setLightLeaks(false); setLetterbox(false); setGlitch(false); };
+  const reset = () => { setStep("mode"); setClips([]); setSelectedAssetIds([]); setTemplateId(null); setTitle(""); setPriceLine(""); setMusicUrl(null); setAudioAssetId(null); setTrailerProjectId(null); setJobId(null); setOutputUrl(null); setPct(0); setChroma(false); setLightLeaks(false); setLetterbox(false); setGlitch(false); };
 
   const selectedMode = MODES.find(m => m.id === mode);
   const isAIMode = mode !== "original";
@@ -182,17 +203,11 @@ export default function TrailerStudio() {
                   <span style={{ position: "absolute", bottom: 3, left: 4, fontSize: 9, color: MUTED }}>#{i + 1}</span>
                 </div>
               ))}
-              <label style={{ aspectRatio: "9/16", borderRadius: 10, border: `2px dashed ${GOLD_BORDER}`, background: GOLD_DIM, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", color: GOLD }}>
-                {uploading ? <><Loader2 size={20} style={{ animation: "spin 1s linear infinite" }} /><span style={{ fontSize: 10 }}>{uploadPct}%</span></> : <><Plus size={22} /><span style={{ fontSize: 10, textAlign: "center" }}>{mode === "photo_cinematic" ? "Add photo" : "Add clip"}</span></>}
-                <input type="file" accept={mode === "photo_cinematic" ? "image/*" : "video/*,image/*"} multiple={mode !== "ai_full_shoot" && mode !== "photo_cinematic"} style={{ display: "none" }} onChange={addClip} />
-              </label>
+              <button onClick={() => setMediaPickerOpen(true)} style={{ aspectRatio: "9/16", borderRadius: 10, border: `2px dashed ${GOLD_BORDER}`, background: GOLD_DIM, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", color: GOLD }}>
+                <Plus size={22} /><span style={{ fontSize: 10, textAlign: "center" }}>Choose from Vault</span>
+              </button>
             </div>
-            <p style={{ fontSize: 12, color: MUTED, marginBottom: 20 }}>
-              {mode === "original" ? "Add 2–6 clips for the best montage." :
-               mode === "ai_full_shoot" ? "1 clip is enough — AI generates 6 new shots from it." :
-               mode === "photo_cinematic" ? "1 photo is enough — AI animates it into 6 cinematic shots." :
-               "Add 2–4 clips for maximum variety."}
-            </p>
+            <p style={{ fontSize: 12, color: MUTED, marginBottom: 20 }}>Choose the real clips or images already saved in your CreatorVault. The Director will build from those actual sources, never from a fake showcase.</p>
             <button onClick={() => setStep("template")} disabled={clips.length === 0} style={{ width: "100%", padding: "16px", borderRadius: 12, background: clips.length ? GOLD : CARD, color: clips.length ? "#000" : MUTED, fontSize: 16, fontWeight: 900, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.06em", border: "none", cursor: clips.length ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               Next: Pick a template <ChevronRight size={18} />
             </button>
@@ -271,17 +286,23 @@ export default function TrailerStudio() {
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
               <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Your name / handle (watermark + CTA)" style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none" }} />
               <input value={priceLine} onChange={e => setPriceLine(e.target.value)} placeholder='CTA line (e.g. "Unlock $29" or "Link in bio")' style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none" }} />
-              {musicUrl ? (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: CARD, border: `1px solid ${GREEN}`, borderRadius: 10, padding: "12px 14px" }}>
-                  <span style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}><Music size={15} color={GREEN} /> Music added — cuts sync to the tempo</span>
-                  <button onClick={() => setMusicUrl(null)} style={{ background: "transparent", border: "none", color: MUTED, cursor: "pointer" }}><X size={16} /></button>
-                </div>
-              ) : (
-                <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: CARD, border: `1px dashed ${BORDER}`, borderRadius: 10, padding: "14px", cursor: "pointer", color: MUTED, fontSize: 13 }}>
-                  <Music size={16} /> Add music — cuts auto-sync to the beat
-                  <input type="file" accept="audio/*" style={{ display: "none" }} onChange={addMusic} />
-                </label>
-              )}
+              <div style={{ background: CARD, border: `1px solid ${audioAssetId ? GREEN : BORDER}`, borderRadius: 12, padding: "12px 14px" }}>
+                <p style={{ margin: "0 0 7px", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", gap: 7 }}><Music size={15} color={audioAssetId ? GREEN : GOLD} /> Soundtrack direction</p>
+                {audioAssetId ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                    <span style={{ fontSize: 12, color: "#e8e8e8" }}>{audioLibraryQ.data?.assets?.find((asset: any) => asset.id === audioAssetId)?.title || "Governed soundtrack selected"}</span>
+                    <button onClick={() => setAudioAssetId(null)} style={{ background: "transparent", border: "none", color: MUTED, cursor: "pointer" }}>Remove</button>
+                  </div>
+                ) : audioLibraryQ.isLoading ? <p style={{ margin: 0, fontSize: 12, color: MUTED }}>Reading your cleared soundtracks…</p> : audioLibraryQ.data?.assets?.length ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    {audioLibraryQ.data.assets.filter((asset: any) => asset.status === "ready").map((asset: any) => (
+                      <button key={asset.id} onClick={() => setAudioAssetId(asset.id)} style={{ textAlign: "left", background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "10px", color: "#fff", cursor: "pointer" }}>
+                        <strong style={{ display: "block", fontSize: 12 }}>{asset.title}</strong><span style={{ color: MUTED, fontSize: 10 }}>{Math.round(asset.durationSeconds || 0)}s · rights cleared</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : <p style={{ margin: 0, fontSize: 12, color: MUTED }}>No cleared soundtrack is in your library yet. Trailer direction will stay visual-first until one is added through your CreatorVault sound library.</p>}
+              </div>
             </div>
 
             {/* Mode summary */}
@@ -326,6 +347,23 @@ export default function TrailerStudio() {
           </div>
         )}
       </div>
+
+      <MediaPicker
+        open={mediaPickerOpen}
+        onClose={() => setMediaPickerOpen(false)}
+        mode="multi"
+        maxSelect={6}
+        title="Choose Trailer Sources"
+        subtitle="Pick the saved videos and images that already belong to your CreatorVault."
+        confirmLabel="Use These Sources"
+        onConfirm={(assets: MediaAssetItem[]) => {
+          const usable = assets.filter((asset) => Boolean(asset.publicUrl));
+          setClips(usable.map((asset) => ({ src: asset.publicUrl!, name: asset.originalName || asset.fileName })));
+          setSelectedAssetIds(usable.map((asset) => asset.id));
+          setTrailerProjectId(null);
+          setMediaPickerOpen(false);
+        }}
+      />
 
       {/* Build bar */}
       {step === "fx" && (
