@@ -1104,7 +1104,7 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
     };
   const providerUrl = isSourceVideoReferenceJob(leased)
     ? `https://api.manus.im/api/llm-proxy/v1/${SOURCE_VIDEO_REFERENCE_API_PATH}`
-    : `https://api.manus.im/api/llm-proxy/v1/generation/${leased.providerModelPath.replace("pollo/", "")}`;
+    : `https://api.manus.im/api/llm-proxy/v1/${leased.providerModelPath.replace("pollo/bytedance-seedance-2-5-ref2video", "generation/bytedance/seedance-2-5/ref2video").replace("pollo/", "generation/")}`;
 
   let response: Response;
   try {
