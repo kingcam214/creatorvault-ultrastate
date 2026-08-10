@@ -645,10 +645,13 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   if (!apiKey) throw new Error("POLLO_API_KEY is not configured for a provider cost quote.");
   const requestBody = buildSourceVideoReferenceInput(input);
   // Try the estimate endpoint, if it fails, fallback to a manual quote
+  // Remove the 'input' wrapper for Seedance
+  const finalRequestBody = requestBody.input ? requestBody.input : requestBody;
+  // Try the estimate endpoint, if it fails, fallback to a manual quote
   let response = await fetch(`https://api.manus.im/api/llm-proxy/v1/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
     method: "POST",
     headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify(requestBody),
+    body: JSON.stringify(finalRequestBody),
   });
   
   if (response.status === 404) {
@@ -1111,7 +1114,7 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
       );
   const providerUrl = isSourceVideoReferenceJob(leased)
     ? `https://api.manus.im/api/llm-proxy/v1/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}`
-    : `https://api.manus.im/api/llm-proxy/v1/${leased.providerModelPath.replace("pollo/bytedance-seedance-2-5-ref2video", "generation/bytedance/seedance-2-5/ref2video").replace("pollo/", "generation/")}`;
+    : `https://api.manus.im/api/llm-proxy/v1/generation/${leased.providerModelPath.replace("pollo/bytedance-seedance-2-5-ref2video", "bytedance/seedance-2-5/ref2video").replace("pollo/", "")}`;
 
   let response: Response;
   try {
