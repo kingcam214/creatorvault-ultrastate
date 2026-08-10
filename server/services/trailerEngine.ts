@@ -28,7 +28,8 @@ const FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
 const GRADES: Record<string, string> = {
   none: "",
   cinematic_heat: "eq=contrast=1.26:saturation=1.22:brightness=-0.02,colorbalance=rm=0.10:bm=-0.08:rh=0.05:bh=-0.05,vignette=PI/5",
-  luxe_gold:      "eq=contrast=1.14:saturation=1.16:gamma=0.95,colorbalance=rm=0.07:gm=0.02:bm=-0.07:rs=0.05,vignette=PI/5.5",
+  // Aggressively push purple/pink source towards gold by cutting blue heavily and boosting red/green
+  luxe_gold:      "eq=contrast=1.15:saturation=0.85:gamma=0.95,colorbalance=rm=0.30:gm=0.20:bm=-0.40:rs=0.20:gs=0.10:bs=-0.30,vignette=PI/5.5",
   neon_night:     "eq=contrast=1.3:saturation=1.38,colorbalance=bm=0.14:rh=0.10:bh=0.10,vignette=PI/5",
   noir_afterdark: "eq=contrast=1.32:saturation=0.84:brightness=-0.05,colorbalance=bm=0.08:bh=0.10,vignette=PI/4",
   velvet_midnight:"eq=contrast=1.24:saturation=1.12:brightness=-0.04,colorbalance=bm=0.12:rh=0.05:bh=0.08,vignette=PI/4.5",
@@ -63,7 +64,7 @@ const CHROMA_ABERRATION = "split=3[r][g][b];[r]lutrgb=r=val:g=0:b=0[rv];[g]lutrg
 
 // Light leak flash: a warm orange bloom that flashes at a cut (0.15s)
 // Applied as an overlay on the first frame of a segment.
-const LIGHT_LEAK = "fade=t=in:st=0:d=0.08:color=0xFF8C00,fade=t=out:st=0.08:d=0.12:color=0xFF8C00";
+const LIGHT_LEAK = "eq=brightness=0.035:saturation=1.08:gamma=1.01";
 
 // Letterbox: adds 2.35:1 cinematic black bars (top + bottom)
 function letterboxFilter(H: number): string {
@@ -71,8 +72,8 @@ function letterboxFilter(H: number): string {
   return `drawbox=x=0:y=0:w=iw:h=${barH}:color=black:t=fill,drawbox=x=0:y=ih-${barH}:w=iw:h=${barH}:color=black:t=fill`;
 }
 
-// Glitch frame: horizontal offset + color shift for 2 frames at the hook cut
-const GLITCH = "geq=r='r(X+3,Y)':g='g(X,Y)':b='b(X-3,Y)',noise=alls=18:allf=t";
+// Glitch frame: Removed entirely as it causes severe digital corruption in ffmpeg renders
+const GLITCH = "";
 
 export type TrailerVibe = "cinematic_heat" | "luxe_gold" | "neon_night" | "noir_afterdark" | "velvet_midnight";
 
@@ -296,11 +297,9 @@ async function build(job: TrailerJob, req: TrailerRequest) {
       // Uses zoompan with a body-part-aware x/y offset so the punch pushes INTO the feature.
       let punch = "";
       if (opts.punch) {
-        const maxZ = 1.18;
-        const cx = focusMeta.cx; const cy = focusMeta.cy;
-        const d = Math.round(dur * fps);
-        // x/y expressions keep the focal point (cx,cy) centered as zoom increases
-        punch = `,zoompan=z='min(zoom+0.006,${maxZ})':d=${d}:x='iw*${cx.toFixed(3)}-(iw/zoom)*${cx.toFixed(3)}':y='ih*${cy.toFixed(3)}-(ih/zoom)*${cy.toFixed(3)}':s=${W}x${H}:fps=${fps}`;
+        // Preserve the underlying video frames. Zoompan turns video into a still-frame hold,
+        // so an energy punch uses a subtle, rapid scale bump and contrast lift.
+        punch = `,scale=iw*1.05:ih*1.05,crop=${W}:${H},eq=contrast=1.05:saturation=1.05`;
       }
 
       if (img) {
@@ -406,6 +405,11 @@ async function build(job: TrailerJob, req: TrailerRequest) {
     const sub = esc((req.ctaSubText || "Link in bio").slice(0, 40));
     const brand = esc((req.title || "").slice(0, 30));
     const ctaDur = 2.8;
+    
+    // Instead of a solid black background, use the last frame of the stitched video, blurred and darkened
+    const lastFramePath = path.join(work, "last_frame.jpg");
+    await ff(["-sseof", "-0.1", "-i", stitched, "-update", "1", "-q:v", "2", lastFramePath]);
+
     // animated: CTA scales/fades in, sub pulses, brand fades
     const ctaDraw = [
       `drawtext=fontfile=${FONT}:text='${cta}':fontcolor=white:fontsize=${Math.round(W*0.078)}:x=(w-text_w)/2:y=h*0.42:alpha='if(lt(t,0.5),t/0.5,1)'`,
@@ -414,9 +418,9 @@ async function build(job: TrailerJob, req: TrailerRequest) {
     ].filter(Boolean).join(",");
     // audio riser: rising sine + bass thump at the reveal
     await ff([
-      "-f", "lavfi", "-t", String(ctaDur), "-i", `color=c=black:s=${W}x${H}:r=${fps}`,
+      "-loop", "1", "-t", String(ctaDur), "-i", lastFramePath,
       "-f", "lavfi", "-t", String(ctaDur), "-i", `aevalsrc=0.25*sin(2*PI*(80+220*t)*t):s=44100:c=stereo`,
-      "-vf", `${ctaDraw},fade=t=in:st=0:d=0.25`,
+      "-vf", `gblur=sigma=20,eq=brightness=-0.3,${ctaDraw}`, // Removed fade=t=in to prevent black frame
       "-af", "afade=t=in:st=0:d=0.3,lowpass=f=2200,volume=0.7",
       "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", ctaPath,
     ]);
@@ -447,7 +451,7 @@ async function build(job: TrailerJob, req: TrailerRequest) {
     if (req.watermarkText) {
       const wm = esc(req.watermarkText.slice(0, 40));
       const out = path.join(work, "wm.mp4");
-      await ff(["-i", current, "-vf", `drawtext=fontfile=${FONT}:text='${wm}':fontcolor=white@0.5:fontsize=${Math.round(W*0.03)}:x=w-text_w-${Math.round(W*0.03)}:y=h-text_h-${Math.round(H*0.04)}`, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy", out]);
+      await ff(["-i", current, "-vf", `drawtext=fontfile=${FONT}:text='${wm}':fontcolor=white@0.9:fontsize=${Math.round(W*0.036)}:x=w-text_w-${Math.round(W*0.04)}:y=${Math.round(H*0.08)}:box=1:boxcolor=black@0.3:boxborderw=4`, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy", out]);
       current = out;
     }
 
@@ -480,7 +484,7 @@ async function build(job: TrailerJob, req: TrailerRequest) {
 // (prevents the side-by-side / split-screen artifact from drifted offsets).
 async function xfadeConcat(segments: { path: string; dur: number }[], work: string, xfade: number, fps: number): Promise<string> {
   // Safe, full-frame transitions only (no split/slide that can read as 2-up on fast cuts)
-  const SAFE = ["fade", "fadeblack", "dissolve", "circleopen", "radial", "smoothleft", "smoothup"];
+  const SAFE = ["dissolve", "fade", "smoothleft", "smoothup"]; // Removed fadeblack, circleopen, radial which can look jarring
   let acc = segments[0].path;
   for (let i = 1; i < segments.length; i++) {
     const next = segments[i];

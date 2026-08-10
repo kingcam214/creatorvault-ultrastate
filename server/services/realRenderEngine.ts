@@ -138,7 +138,8 @@ export interface RenderJob {
 // ─── Cinematic FX Helpers ─────────────────────────────────────────────────────
 const CHROMA_ABERRATION = "split=3[r][g][b];[r]lutrgb=r=val:g=0:b=0[rv];[g]lutrgb=r=0:g=val:b=0[gv];[b]lutrgb=r=0:g=0:b=val[bv];[rv]pad=iw+8:ih:4:0[rp];[gv]pad=iw+8:ih:0:0[gp];[bv]pad=iw+8:ih:8:0[bp];[rp][gp]blend=all_mode=addition[rg];[rg][bp]blend=all_mode=addition,crop=iw-8:ih:4:0";
 const LIGHT_LEAK = "eq=brightness=0.035:saturation=1.08:gamma=1.01";
-const GLITCH = "geq=r='r(X+3,Y)':g='g(X,Y)':b='b(X-3,Y)',noise=alls=18:allf=t";
+// A more controlled glitch that doesn't completely blur out the frame
+const GLITCH = "colorchannelmixer=rr=1:rg=0:rb=0:gr=0:gg=1:gb=0:br=0:bg=0:bb=1,noise=alls=10:allf=t";
 const POLISH = "split[a][b];[b]gblur=sigma=8[bl];[a][bl]blend=all_mode=screen:all_opacity=0.22,noise=alls=7:allf=t+u";
 
 function letterboxFilter(H: number): string {
@@ -359,8 +360,8 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
         let punchFilter = "";
         if (clip.punch) {
           // Preserve the underlying video frames. Zoompan turns video into a still-frame hold,
-          // so an energy punch uses a brief speed lift and contrast instead.
-          punchFilter = "setpts=0.96*PTS,eq=contrast=1.035:saturation=1.04";
+          // so an energy punch uses a subtle, rapid scale bump and contrast lift.
+          punchFilter = `scale=iw*1.05:ih*1.05,crop=${W}:${H},eq=contrast=1.05:saturation=1.05`;
           filters.push(punchFilter);
         }
 
@@ -434,10 +435,15 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
     }
     if (req.watermarkText) {
       const wm = escapeDrawText(req.watermarkText.slice(0, 40));
-      postFilters.push(`drawtext=fontfile=${FONT}:text='${wm}':fontcolor=white@0.78:fontsize=${Math.round(W*0.032)}:x=w-text_w-${Math.round(W*0.035)}:y=${Math.round(H*0.055)}`);
+      // Moved down slightly and increased opacity for better visibility against bright backgrounds
+      postFilters.push(`drawtext=fontfile=${FONT}:text='${wm}':fontcolor=white@0.9:fontsize=${Math.round(W*0.036)}:x=w-text_w-${Math.round(W*0.04)}:y=${Math.round(H*0.08)}:box=1:boxcolor=black@0.3:boxborderw=4`);
     }
-    if (req.fadeInOut && totalDur > 5) {
-      postFilters.push(`fade=t=in:st=0:d=0.5,fade=t=out:st=${(totalDur - 0.6).toFixed(2)}:d=0.6`);
+    if (req.fadeInOut) {
+      if (totalDur > 4) {
+        postFilters.push(`fade=t=in:st=0:d=0.3,fade=t=out:st=${(totalDur - 0.4).toFixed(2)}:d=0.4`);
+      } else {
+        postFilters.push(`fade=t=in:st=0:d=0.2`); // Only fade in for very short trailers to avoid killing the climax
+      }
     }
     if (req.letterbox) postFilters.push(letterboxFilter(H));
     if (req.chromaAberration) postFilters.push(CHROMA_ABERRATION);

@@ -135,9 +135,13 @@ const ALLOWLISTS = {
     'client/src/pages/TrailerStudio.tsx',
     'server/routers/trailerRouter.ts',
     'server/services/realRenderEngine.ts',
+    'server/services/trailerEngine.ts',
     'server/services/audioTimelinePlanner.ts',
     'server/services/audioIntelligenceService.ts',
-    'scripts/scope-guard.js'
+    'scripts/scope-guard.js',
+    'scripts/verify-directed-trailer-render.ts',
+    'scripts/governed-trailer-generation.ts',
+    'scripts/verify-long-trailer-render.ts'
   ],
   'media-delivery': [
     'server/_core/index.ts',
