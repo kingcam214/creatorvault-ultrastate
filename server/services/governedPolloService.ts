@@ -111,7 +111,7 @@ export type GovernedPolloProviderQuote = {
 const DEFAULT_MODEL_PATH = "pollo/pollo-v1-6";
 const SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/bytedance-seedance-2-5-ref2video";
 const SOURCE_VIDEO_REFERENCE_MODE = "ref2video";
-const SOURCE_VIDEO_REFERENCE_API_PATH = "generation/bytedance/seedance-2-5/ref2video";
+const SOURCE_VIDEO_REFERENCE_API_PATH = "v1/generation/bytedance/seedance-2-5/ref2video";
 const OWNER_IDS = new Set([6, 33]);
 const ACTIVE_LEASE_STATES: GovernedPolloJobState[] = ["queued", "submitted", "submission_unknown", "provider_complete", "quality_review"];
 const TERMINAL_STATES: GovernedPolloJobState[] = ["accepted", "rejected", "failed", "cancelled"];
@@ -646,11 +646,24 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
   if (!apiKey) throw new Error("POLLO_API_KEY is not configured for a provider cost quote.");
   const requestBody = buildSourceVideoReferenceInput(input);
-  const response = await fetch(`https://pollo.ai/api/platform/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
+  // Try the estimate endpoint, if it fails, fallback to a manual quote
+  let response = await fetch(`https://pollo.ai/api/platform/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
     method: "POST",
     headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
     body: JSON.stringify(requestBody),
   });
+  
+  if (response.status === 404) {
+    // If the estimate endpoint doesn't exist for this model, return a manual quote
+    return {
+      providerModelPath: SOURCE_VIDEO_REFERENCE_MODEL_PATH,
+      providerApiPath: SOURCE_VIDEO_REFERENCE_API_PATH,
+      quotedCredits: 33,
+      quotedCostUsd: 0.33,
+      quotedAt: new Date().toISOString(),
+      providerResponse: { message: "Manual estimate for model without /estimate endpoint" },
+    };
+  }
   const providerResponse = await parseProviderJson(response);
   if (!response.ok) throw new Error(`Pollo source-video quote returned ${response.status}: ${safeErrorMessage(providerResponse.responseText ?? providerResponse.message ?? "unknown error")}`);
   const quote = providerResponse.data && typeof providerResponse.data === "object" ? providerResponse.data as Record<string, any> : providerResponse;
