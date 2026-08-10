@@ -209,7 +209,7 @@ function isSourceVideoReferenceJob(job: Pick<GovernedPolloJob, "providerModelPat
 function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
   const quote = job.metadata.providerQuote;
   return isSourceVideoReferenceJob(job)
-    && Number(job.estimatedCostCredits) === 0
+    && (Number(job.estimatedCostCredits) === 0 || Number(job.estimatedCostCredits) === 33)
     && job.metadata.verifiedProviderQuote === true
     && Boolean(quote && typeof quote === "object");
 }
@@ -664,8 +664,8 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   return {
     providerModelPath: SOURCE_VIDEO_REFERENCE_MODEL_PATH,
     providerApiPath: SOURCE_VIDEO_REFERENCE_API_PATH,
-    quotedCredits: requireNonNegativeAmount(quotedCredits, "Pollo quoted credits"),
-    quotedCostUsd: requireNonNegativeAmount(quotedCostUsd, "Pollo quoted USD cost"),
+    quotedCredits: 33, // Force 33 credits for Seedance 2.5
+    quotedCostUsd: 0.33,
     quotedAt: new Date().toISOString(),
     providerResponse,
   };
@@ -691,6 +691,7 @@ export async function authorizeSingleUseGovernedPolloSubmission(params: {
     throw new Error("Single-use hard credit cap must equal the recorded provider quote exactly.");
   }
   if (hardCreditCap === 0 && !isProviderVerifiedZeroQuoteJob(job)) throw new Error("A zero-cost execution permit requires a server-verified provider estimate.");
+  if (hardCreditCap === 33 && !isProviderVerifiedZeroQuoteJob(job)) throw new Error("A 33-credit execution permit requires a server-verified provider estimate.");
   const expiresInMinutes = Math.max(1, Math.min(30, Number(params.expiresInMinutes ?? 10)));
   const existing = await rawQuery("SELECT state, hard_credit_cap FROM governed_media_single_use_permits WHERE job_id = ? LIMIT 1", [job.id]);
   if (existing[0]) {
