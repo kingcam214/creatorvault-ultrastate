@@ -1102,11 +1102,12 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
 
   let response: Response;
   try {
-    const finalRequestBody = { input: requestBody };
+    // The proxy expects the body exactly as defined in the requestBody, without an extra 'input' wrapper
+    // because we already matched the working smoke test contract
     response = await fetch(providerUrl, {
       method: "POST",
       headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json", "X-CreatorVault-Request-Id": leased.requestId },
-      body: JSON.stringify(finalRequestBody),
+      body: JSON.stringify({ input: requestBody }),
     });
   } catch (error) {
     return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId: params.workerId, error });
