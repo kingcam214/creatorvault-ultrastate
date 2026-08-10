@@ -90,6 +90,28 @@ describe("CreatorVault model registry routing", () => {
     expect(result.rejected[0]?.reasons).toContain("benchmark_not_accepted");
   });
 
+  it("does not route a model after its benchmark evidence is invalidated", () => {
+    const result = selectBestVerifiedCreationModel([
+      candidate({
+        activationState: "blocked",
+        benchmarkState: "unbenchmarked",
+        evidence: {
+          ...candidate().evidence,
+          benchmarkCount: 0,
+          acceptedBenchmarkCount: 0,
+          rejectedBenchmarkCount: 0,
+          bestAcceptedScore: null,
+          averageAcceptedScore: null,
+          criteria: {},
+        },
+      }),
+    ], generatedShotRequirements);
+
+    expect(result.selected).toBeNull();
+    expect(result.rejected[0]?.reasons).toContain("not_active");
+    expect(result.rejected[0]?.reasons).toContain("benchmark_not_accepted");
+  });
+
   it("chooses the strongest accepted CreatorVault evidence, not catalog order", () => {
     const weaker = candidate({
       modelKey: "hosted/first-configured",

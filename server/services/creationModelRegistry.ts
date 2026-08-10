@@ -77,6 +77,10 @@ export type CreationModelBenchmark = {
   evidenceReference: string;
   notes: string | null;
   reviewedBy: number;
+  evidenceState: "valid" | "invalidated";
+  invalidationReason: string | null;
+  invalidatedBy: number | null;
+  invalidatedAt: string | null;
   createdAt: string;
 };
 
@@ -445,6 +449,10 @@ function normaliseBenchmark(row: any): CreationModelBenchmark {
     evidenceReference: String(row.evidence_reference),
     notes: row.notes ? String(row.notes) : null,
     reviewedBy: Number(row.reviewed_by),
+    evidenceState: String(row.evidence_state || "valid") === "invalidated" ? "invalidated" : "valid",
+    invalidationReason: row.invalidation_reason ? String(row.invalidation_reason) : null,
+    invalidatedBy: row.invalidated_by === null || row.invalidated_by === undefined ? null : Number(row.invalidated_by),
+    invalidatedAt: row.invalidated_at ? String(row.invalidated_at) : null,
     createdAt: String(row.created_at),
   };
 }
@@ -493,10 +501,26 @@ export async function ensureCreationModelRegistrySchema(): Promise<void> {
     evidence_reference TEXT NOT NULL,
     notes TEXT NULL,
     reviewed_by BIGINT NOT NULL,
+    evidence_state VARCHAR(32) NOT NULL DEFAULT 'valid',
+    invalidation_reason TEXT NULL,
+    invalidated_by BIGINT NULL,
+    invalidated_at DATETIME NULL,
     created_at DATETIME NOT NULL,
     KEY creation_model_benchmarks_model (model_key, quality_state, created_at),
     KEY creation_model_benchmarks_source (source_evidence_id, benchmark_version)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+
+  // Older deployments already have the table. Upgrade them without making a
+  // benchmark disappear from history: invalidated evidence stays auditable but
+  // cannot contribute to a routing decision.
+  for (const statement of [
+    "ALTER TABLE creation_model_benchmarks ADD COLUMN evidence_state VARCHAR(32) NOT NULL DEFAULT 'valid'",
+    "ALTER TABLE creation_model_benchmarks ADD COLUMN invalidation_reason TEXT NULL",
+    "ALTER TABLE creation_model_benchmarks ADD COLUMN invalidated_by BIGINT NULL",
+    "ALTER TABLE creation_model_benchmarks ADD COLUMN invalidated_at DATETIME NULL",
+  ]) {
+    try { await rawExec(statement); } catch { /* column is already present */ }
+  }
 
   for (const model of DEFAULT_MODELS) {
     await rawExec(
@@ -562,8 +586,9 @@ function average(values: number[]): number | null {
 }
 
 export function summariseModelEvidence(benchmarks: CreationModelBenchmark[]): ModelEvidenceSummary {
-  const accepted = benchmarks.filter((benchmark) => benchmark.qualityState === "accepted");
-  const rejected = benchmarks.filter((benchmark) => benchmark.qualityState === "rejected");
+  const validBenchmarks = benchmarks.filter((benchmark) => benchmark.evidenceState !== "invalidated");
+  const accepted = validBenchmarks.filter((benchmark) => benchmark.qualityState === "accepted");
+  const rejected = validBenchmarks.filter((benchmark) => benchmark.qualityState === "rejected");
   const criteria: ModelBenchmarkCriteria = {};
   for (const key of METRIC_KEYS) {
     const values = accepted.map((benchmark) => benchmark.criteria[key]).filter((value): value is number => typeof value === "number");
@@ -571,7 +596,7 @@ export function summariseModelEvidence(benchmarks: CreationModelBenchmark[]): Mo
     if (score !== null) criteria[key] = score;
   }
   return {
-    benchmarkCount: benchmarks.length,
+    benchmarkCount: validBenchmarks.length,
     acceptedBenchmarkCount: accepted.length,
     rejectedBenchmarkCount: rejected.length,
     bestAcceptedScore: accepted.length ? Math.max(...accepted.map((benchmark) => benchmark.overallScore)) : null,
@@ -712,6 +737,59 @@ export async function recordCreationModelBenchmark(input: {
 
   const rows = await rawQuery("SELECT * FROM creation_model_benchmarks WHERE id = ? LIMIT 1", [id]);
   return normaliseBenchmark(rows[0]);
+}
+
+export async function invalidateCreationModelBenchmarkEvidence(input: {
+  modelKey: string;
+  evidenceReference: string;
+  reason: string;
+  invalidatedBy: number;
+}): Promise<{ invalidatedCount: number; model: CreationModelRegistryEntry }> {
+  await ensureCreationModelRegistrySchema();
+  const model = await getCreationModel(input.modelKey);
+  if (!model) throw new Error("The selected creation model is not registered.");
+
+  const evidenceReference = String(input.evidenceReference || "").trim();
+  const reason = String(input.reason || "").trim();
+  if (!evidenceReference || !reason) throw new Error("An evidence reference and invalidation reason are required.");
+
+  const result = await rawExec(
+    `UPDATE creation_model_benchmarks
+     SET evidence_state = 'invalidated', invalidation_reason = ?, invalidated_by = ?, invalidated_at = NOW()
+     WHERE model_key = ? AND evidence_reference = ? AND (evidence_state IS NULL OR evidence_state <> 'invalidated')`,
+    [reason, input.invalidatedBy, model.modelKey, evidenceReference],
+  );
+  const invalidatedCount = Number((result as any)?.affectedRows || 0);
+  if (!invalidatedCount) throw new Error("No valid benchmark records matched that evidence reference.");
+
+  const evidence = summariseModelEvidence(await getCreationModelBenchmarks(model.modelKey));
+  const nextBenchmarkState: ModelBenchmarkState = evidence.acceptedBenchmarkCount > 0
+    ? "accepted"
+    : evidence.rejectedBenchmarkCount > 0
+      ? "rejected"
+      : "unbenchmarked";
+  const nextActivationState: ModelActivationState = evidence.acceptedBenchmarkCount > 0
+    ? model.activationState
+    : "blocked";
+  const knownWeaknesses = [...new Set([
+    ...model.knownWeaknesses,
+    "A benchmark evidence record was invalidated because it was not watchable CreatorVault proof.",
+  ])];
+
+  await rawExec(
+    `UPDATE creation_model_registry
+     SET activation_state = ?, benchmark_state = ?, benchmark_evidence_version = ?, known_weaknesses_json = ?, updated_at = NOW()
+     WHERE model_key = ?`,
+    [
+      nextActivationState,
+      nextBenchmarkState,
+      evidence.acceptedBenchmarkCount > 0 ? model.benchmarkEvidenceVersion : null,
+      safeJson(knownWeaknesses),
+      model.modelKey,
+    ],
+  );
+
+  return { invalidatedCount, model: (await getCreationModel(model.modelKey))! };
 }
 
 export async function setCreationModelActivation(input: {

@@ -14,6 +14,7 @@ import {
 import {
   getCreationModelRegistry,
   getRoutableCreationModels,
+  invalidateCreationModelBenchmarkEvidence,
   recordCreationModelBenchmark,
   setCreationModelActivation,
 } from "../services/creationModelRegistry";
@@ -192,6 +193,22 @@ export const creationDirectorRouter = router({
       });
     } catch (error: any) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: error?.message || "The benchmark evidence could not be recorded." });
+    }
+  }),
+
+  invalidateBenchmarkEvidence: protectedProcedure.input(z.object({
+    modelKey: z.string().min(3).max(191),
+    evidenceReference: z.string().min(3).max(5000),
+    reason: z.string().min(12).max(3000),
+  })).mutation(async ({ ctx, input }) => {
+    assertOwner(ctx);
+    try {
+      return await invalidateCreationModelBenchmarkEvidence({
+        ...input,
+        invalidatedBy: Number(ctx.user.id),
+      });
+    } catch (error: any) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error?.message || "CreatorVault could not invalidate that benchmark evidence." });
     }
   }),
 
