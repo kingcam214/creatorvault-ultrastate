@@ -23,6 +23,7 @@ import {
   assertBodyCinemaEvidenceReady,
   buildEvidenceBackedDirectionPrompt,
   getBodyCinemaSourceEvidence,
+  invalidateBodyCinemaSourceEvidence,
   persistBodyCinemaSourceEvidence,
 } from "../services/bodyCinemaEvidenceService";
 import { reviewBodyCinemaOutput } from "../services/bodyCinemaOutputReviewService";
@@ -102,6 +103,22 @@ export const bodyCinemaRouter = router({
     const evidence = await getBodyCinemaSourceEvidence(Number(ctx.user.id), input.evidenceId);
     if (!evidence) throw new TRPCError({ code: "NOT_FOUND", message: "Body Cinema source evidence was not found." });
     return evidence;
+  }),
+
+  invalidateSourceEvidence: protectedProcedure.input(z.object({
+    evidenceId: z.string().uuid(),
+    reason: z.string().min(12).max(3000),
+  })).mutation(async ({ ctx, input }) => {
+    try {
+      return await invalidateBodyCinemaSourceEvidence({
+        creatorId: Number(ctx.user.id),
+        evidenceId: input.evidenceId,
+        reason: input.reason,
+        invalidatedBy: Number(ctx.user.id),
+      });
+    } catch (error: any) {
+      throw evidencePrecondition(error?.message || "Body Cinema could not block that source analysis.");
+    }
   }),
 
   approveDirection: protectedProcedure.input(z.object({

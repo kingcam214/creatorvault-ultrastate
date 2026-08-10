@@ -555,6 +555,33 @@ export async function getBodyCinemaSourceEvidence(creatorId: number, evidenceId:
   return rows[0] ? parseRecord(rows[0]) : null;
 }
 
+export async function invalidateBodyCinemaSourceEvidence(input: {
+  creatorId: number;
+  evidenceId: string;
+  reason: string;
+  invalidatedBy: number;
+}): Promise<BodyCinemaEvidenceRecord> {
+  const evidence = await getBodyCinemaSourceEvidence(input.creatorId, input.evidenceId);
+  if (!evidence) throw new Error("Body Cinema evidence record was not found for this creator.");
+  const reason = String(input.reason || "").trim();
+  if (!reason) throw new Error("An invalidation reason is required.");
+  const rejectionReasons = [...new Set([
+    ...evidence.rejectionReasons,
+    `Invalidated by owner ${input.invalidatedBy}: ${reason}`,
+  ])];
+
+  await rawExec(
+    `UPDATE body_cinema_source_evidence
+     SET analysis_status = 'rejected', review_status = 'blocked', selected_direction_id = NULL,
+         rejection_reasons = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ? AND creator_id = ?`,
+    [JSON.stringify(rejectionReasons), input.evidenceId, input.creatorId],
+  );
+  const invalidated = await getBodyCinemaSourceEvidence(input.creatorId, input.evidenceId);
+  if (!invalidated) throw new Error("Body Cinema evidence could not be read after invalidation.");
+  return invalidated;
+}
+
 export async function approveBodyCinemaDirection(creatorId: number, evidenceId: string, directionId: string): Promise<BodyCinemaEvidenceRecord> {
   const evidence = await getBodyCinemaSourceEvidence(creatorId, evidenceId);
   if (!evidence) throw new Error("Body Cinema evidence record was not found for this creator.");

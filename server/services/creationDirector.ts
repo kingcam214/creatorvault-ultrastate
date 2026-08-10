@@ -21,6 +21,7 @@ import {
   submitGovernedPolloJob,
   recordGovernedPolloProviderCompletion,
   reviewGovernedPolloOutput,
+  cancelGovernedPolloJob,
   getGovernedPolloJob,
 } from "./governedPolloService";
 
@@ -506,6 +507,42 @@ export async function acceptCreationPlanArtifact(params: {
 
   await rawExec("UPDATE creation_director_requests SET state = 'accepted', updated_at = NOW() WHERE request_id = ?", [plan.requestId]);
   return (await getCreationPlan(params.requestId))!;
+}
+
+export async function voidCreationPlan(params: {
+  requestId: string;
+  actorId: number;
+  reason: string;
+}): Promise<CreationDirectorPlan> {
+  const plan = await getCreationPlan(params.requestId);
+  if (!plan) throw new Error("Creation plan not found.");
+  const reason = String(params.reason || "").trim();
+  if (!reason) throw new Error("A cancellation reason is required.");
+  if (plan.creatorId !== params.actorId) throw new Error("Only the creator who owns this plan may cancel it.");
+  if (["accepted", "rejected", "cancelled"].includes(plan.state)) {
+    throw new Error(`Plan in state ${plan.state} cannot be cancelled.`);
+  }
+
+  const job = await getGovernedPolloJobByRequestId(plan.requestId).catch(() => null);
+  if (job) {
+    await cancelGovernedPolloJob({ jobId: job.id, actorId: params.actorId, reason });
+  }
+
+  const blockedReasons = [...new Set([...plan.blockedReasons, "source_evidence_invalidated", "creation_plan_cancelled"])];
+  await rawExec(
+    `UPDATE creation_director_requests
+     SET state = 'cancelled', blocked_reasons_json = ?, updated_at = NOW()
+     WHERE request_id = ?`,
+    [safeJson(blockedReasons), plan.requestId],
+  );
+  await appendEvent({
+    directorRequestId: plan.id,
+    eventType: "creation_plan_cancelled",
+    state: "cancelled",
+    actorId: params.actorId,
+    detail: { reason, governedJobId: job?.id || null },
+  });
+  return (await getCreationPlan(plan.requestId))!;
 }
 
 export async function listCreationPlans(creatorId: number, tool?: CreationTool): Promise<CreationDirectorPlan[]> {

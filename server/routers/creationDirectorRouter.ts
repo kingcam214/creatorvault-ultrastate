@@ -9,6 +9,7 @@ import {
   toCreatorFacingCreationPlan,
   authorizeAndSubmitCreationPlan,
   acceptCreationPlanArtifact,
+  voidCreationPlan,
   type CreationTool,
 } from "../services/creationDirector";
 import {
@@ -159,6 +160,22 @@ export const creationDirectorRouter = router({
       return toCreatorFacingCreationPlan(plan);
     } catch (error: any) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: error?.message || "CreatorVault could not accept this creation artifact." });
+    }
+  }),
+
+  cancelUnsafePlan: protectedProcedure.input(z.object({
+    requestId: z.string().uuid(),
+    reason: z.string().min(12).max(3000),
+  })).mutation(async ({ ctx, input }) => {
+    try {
+      const plan = await voidCreationPlan({
+        requestId: input.requestId,
+        actorId: Number(ctx.user.id),
+        reason: input.reason,
+      });
+      return toCreatorFacingCreationPlan(plan);
+    } catch (error: any) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error?.message || "CreatorVault could not cancel this unsafe creation plan." });
     }
   }),
 

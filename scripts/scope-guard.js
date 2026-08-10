@@ -156,6 +156,7 @@ const ALLOWLISTS = {
     'server/services/trailerEngine.ts',
     'server/routers/trailerRouter.ts',
     'server/routers/bodyCinemaRouter.ts',
+    'server/services/bodyCinemaEvidenceService.ts',
     'server/routers.ts',
     'client/src/pages/KingContent.tsx',
     'client/src/pages/VaultXDrop.tsx',
