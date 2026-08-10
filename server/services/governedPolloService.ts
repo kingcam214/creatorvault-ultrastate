@@ -111,7 +111,7 @@ export type GovernedPolloProviderQuote = {
 const DEFAULT_MODEL_PATH = "pollo/pollo-v1-6";
 const SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/bytedance-seedance-2-5-ref2video";
 const SOURCE_VIDEO_REFERENCE_MODE = "ref2video";
-const SOURCE_VIDEO_REFERENCE_API_PATH = "v1/generation/bytedance/seedance-2-5/ref2video";
+const SOURCE_VIDEO_REFERENCE_API_PATH = "generation/bytedance/seedance-2-5/ref2video";
 const OWNER_IDS = new Set([6, 33]);
 const ACTIVE_LEASE_STATES: GovernedPolloJobState[] = ["queued", "submitted", "submission_unknown", "provider_complete", "quality_review"];
 const TERMINAL_STATES: GovernedPolloJobState[] = ["accepted", "rejected", "failed", "cancelled"];
@@ -647,7 +647,7 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   if (!apiKey) throw new Error("POLLO_API_KEY is not configured for a provider cost quote.");
   const requestBody = buildSourceVideoReferenceInput(input);
   // Try the estimate endpoint, if it fails, fallback to a manual quote
-  let response = await fetch(`https://api.manus.im/api/llm-proxy/v1/generation/${SOURCE_VIDEO_REFERENCE_API_PATH.replace("v1/generation/", "")}/estimate`, {
+  let response = await fetch(`https://api.manus.im/api/llm-proxy/v1/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
     method: "POST",
     headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify(requestBody),
@@ -1101,7 +1101,7 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
       },
     };
   const providerUrl = isSourceVideoReferenceJob(leased)
-    ? `https://api.manus.im/api/llm-proxy/v1/generation/${SOURCE_VIDEO_REFERENCE_API_PATH.replace("v1/generation/", "")}`
+    ? `https://api.manus.im/api/llm-proxy/v1/${SOURCE_VIDEO_REFERENCE_API_PATH}`
     : `https://api.manus.im/api/llm-proxy/v1/generation/${leased.providerModelPath.replace("pollo/", "")}`;
 
   let response: Response;
