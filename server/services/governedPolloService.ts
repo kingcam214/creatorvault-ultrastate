@@ -1111,14 +1111,15 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
       );
   const providerUrl = isSourceVideoReferenceJob(leased)
     ? `https://api.manus.im/api/llm-proxy/v1/${SOURCE_VIDEO_REFERENCE_API_PATH}`
-    : `https://api.manus.im/api/llm-proxy/v1/${leased.providerModelPath.replace("pollo/bytedance-seedance-2-5-ref2video", "generation/bytedance/seedance-2-5/ref2video").replace("pollo/", "")}`;
+    : `https://api.manus.im/api/llm-proxy/v1/${leased.providerModelPath.replace("pollo/bytedance-seedance-2-5-ref2video", "generation/bytedance/seedance-2-5/ref2video").replace("pollo/", "generation/")}`;
 
   let response: Response;
   try {
+    const finalRequestBody = requestBody.input ? requestBody.input : requestBody;
     response = await fetch(providerUrl, {
       method: "POST",
       headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json", "X-CreatorVault-Request-Id": leased.requestId },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(finalRequestBody),
     });
   } catch (error) {
     return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId: params.workerId, error });
