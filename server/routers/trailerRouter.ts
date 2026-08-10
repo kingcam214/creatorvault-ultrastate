@@ -14,10 +14,8 @@ import { startTrailer, getTrailerJob } from "../services/trailerEngine.js";
 import { db } from "../db";
 import { sql } from "drizzle-orm";
 import { buildCinematicPacingPlan } from "../services/cinematicPacingEngine.js";
-import { buildAudioDirectedTimeline, toMediaOSManifest } from "../services/audioTimelinePlanner.js";
 import { startRender } from "../services/realRenderEngine.js";
 import { assertAudioRights, getAudioAnalysis, getCanonicalAudioAsset } from "../services/audioIntelligenceService.js";
-import { analyzeTrailerRetention } from "../services/trailerRetentionAnalyzer.js";
 
 // ─── Viral trailer templates ──────────────────────────────────────────────────
 export interface TrailerTemplate {
@@ -175,37 +173,51 @@ export const trailerRouter = router({
           throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Soundtrack analysis is not ready." });
         }
 
-        // 1. Build pacing plan from the project blueprint
+        // 1. Build the editorial pacing plan from this creator's actual trailer project.
+        // This path intentionally does not fabricate Body Cinema evidence; if that evidence
+        // exists it may inform a future treatment, but a trailer project can still be honestly
+        // directed from its own selected sources.
         const blueprint = {
           scenes: JSON.parse(project.scenes_json || "[]"),
           hooks: JSON.parse(project.hooks || "[]"),
           project: { title: input.title, format: input.aspect },
         };
         const pacingPlan = buildCinematicPacingPlan(blueprint as any);
+        if (!pacingPlan.scenes.length) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Choose saved CreatorVault media before directing this trailer." });
+        }
 
-        // 2. Build the audio-directed timeline
-        // We simulate a source evidence ID here since we are directing from a project, not a single clip
-        const plan = await buildAudioDirectedTimeline({
-          creatorId: ctx.user.id,
-          audioAssetId: input.audioAssetId,
-          sourceEvidenceId: input.trailerProjectId,
-          treatmentId: tpl.id,
-          targetDurationSeconds: pacingPlan.totalDurationSeconds,
-          preserveSourceAudio: false,
-          destinationPlatform: "creatorvault",
+        // 2. Snap the pacing plan to the selected track's real tempo. Each scene stays
+        // grounded in selected creator footage; the beat only determines cut energy.
+        const beatSeconds = 60 / Math.max(1, analysis.bpm || 120);
+        const renderClips = pacingPlan.scenes.map((scene: any, index: number) => {
+          const sceneDuration = Math.max(0.5, Number(scene.durationSeconds || 3));
+          const cutOnBeat = Math.max(0.5, Math.round(sceneDuration / beatSeconds) * beatSeconds);
+          return {
+            src: input.clips[index % input.clips.length]?.src || "",
+            trimStart: 0,
+            trimEnd: cutOnBeat,
+            focus: tpl.focusRotation[index % tpl.focusRotation.length],
+            caption: index === 0 ? tpl.hookText : undefined,
+            captionStyle: "bold_center",
+            punch: scene.role === "hook" || scene.role === "climax" || index % 2 === 0,
+            lightLeak: scene.transitionEnergy >= 72,
+            flashIn: index === 0,
+            glitch: scene.role === "hook" && input.glitch === true,
+          };
         });
 
+        const audioMixPlan = {
+          targetLufs: -14,
+          preserveSourceAudio: false,
+          sourceGainDb: -60,
+          musicGainDb: 0,
+          duckingWindows: [],
+          fadeInMs: 500,
+          fadeOutMs: 1500,
+        };
+
         // 3. Render using the modern realRenderEngine
-        const renderClips = plan.visualEvents.map((e, i) => ({
-          src: input.clips[i % input.clips.length]?.src || "",
-          trimStart: e.startMs / 1000,
-          trimEnd: e.endMs / 1000,
-          focus: tpl.focusRotation[i % tpl.focusRotation.length],
-          punch: e.punch,
-          lightLeak: e.lightLeak,
-          flashIn: e.flashIn,
-          glitch: e.glitch,
-        }));
 
         const job = startRender({
           clips: renderClips,
@@ -217,7 +229,7 @@ export const trailerRouter = router({
           captionStyle: "bold_center",
           musicUrl: asset.assetUrl,
           musicVolume: 0.8,
-          audioMixPlan: plan.mix,
+          audioMixPlan,
           watermarkText: input.watermarkText,
           fadeInOut: true,
           transitions: tpl.transitions,
