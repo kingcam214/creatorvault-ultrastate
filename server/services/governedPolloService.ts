@@ -645,12 +645,10 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   if (!apiKey) throw new Error("POLLO_API_KEY is not configured for a provider cost quote.");
   const requestBody = buildSourceVideoReferenceInput(input);
   // Try the estimate endpoint, if it fails, fallback to a manual quote
-  // Remove the 'input' wrapper for Seedance
-  const finalRequestBody = requestBody.input ? requestBody.input : requestBody;
-  // Try the estimate endpoint, if it fails, fallback to a manual quote
-  let response = await fetch(`https://api.manus.im/api/llm-proxy/v1/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
+  const finalRequestBody = { input: requestBody };
+  let response = await fetch(`https://pollo.ai/api/platform/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
     method: "POST",
-    headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
     body: JSON.stringify(finalRequestBody),
   });
   
@@ -1091,37 +1089,26 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
       resolution: leased.resolution,
       aspectRatio: leased.aspectRatio,
     })
-    : (leased.mode === "ref2video" 
-        ? {
-            prompt: leased.prompt,
-            refs: [{ url: leased.sourceUrl, type: "video" }],
-            duration: leased.durationSeconds,
-            resolution: leased.resolution,
-            aspectRatio: leased.aspectRatio,
-            mode: "basic",
-            generateAudio: false,
-          }
-        : {
-            input: {
-              image: leased.sourceUrl,
-              prompt: leased.prompt,
-              resolution: leased.resolution,
-              length: leased.durationSeconds,
-              mode: leased.mode,
-              aspect_ratio: leased.aspectRatio,
-            },
-          }
-      );
+    : {
+        input: {
+          image: leased.sourceUrl,
+          prompt: leased.prompt,
+          resolution: leased.resolution,
+          length: leased.durationSeconds,
+          mode: leased.mode,
+          aspect_ratio: leased.aspectRatio,
+        },
+      };
   const providerUrl = isSourceVideoReferenceJob(leased)
-    ? `https://api.manus.im/api/llm-proxy/v1/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}`
-    : `https://api.manus.im/api/llm-proxy/v1/generation/${leased.providerModelPath.replace("pollo/bytedance-seedance-2-5-ref2video", "bytedance/seedance-2-5/ref2video").replace("pollo/", "")}`;
+    ? `https://pollo.ai/api/platform/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}`
+    : `https://pollo.ai/api/platform/generation/${leased.providerModelPath.replace("pollo/", "")}`;
 
   let response: Response;
   try {
-    const finalRequestBody = requestBody.input ? requestBody.input : requestBody;
+    const finalRequestBody = isSourceVideoReferenceJob(leased) ? { input: requestBody } : requestBody;
     response = await fetch(providerUrl, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json", "X-CreatorVault-Request-Id": leased.requestId },
+      headers: { "x-api-key": apiKey, "Content-Type": "application/json", "X-CreatorVault-Request-Id": leased.requestId },
       body: JSON.stringify(finalRequestBody),
     });
   } catch (error) {
