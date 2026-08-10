@@ -582,6 +582,32 @@ export async function invalidateBodyCinemaSourceEvidence(input: {
   return invalidated;
 }
 
+export async function invalidateBodyCinemaSourceEvidenceForUrl(input: {
+  creatorId: number;
+  sourceMediaUrl: string;
+  reason: string;
+  invalidatedBy: number;
+}): Promise<{ invalidatedCount: number; evidenceIds: string[] }> {
+  await ensureBodyCinemaEvidenceSchema();
+  const rows = await rawClient<any>(
+    "SELECT id FROM body_cinema_source_evidence WHERE creator_id = ? AND source_asset_url = ? AND analysis_status <> 'rejected'",
+    [input.creatorId, input.sourceMediaUrl],
+  );
+  if (!rows.length) throw new Error("No reusable Body Cinema source evidence matched that saved asset.");
+
+  const evidenceIds: string[] = [];
+  for (const row of rows) {
+    const evidence = await invalidateBodyCinemaSourceEvidence({
+      creatorId: input.creatorId,
+      evidenceId: String(row.id),
+      reason: input.reason,
+      invalidatedBy: input.invalidatedBy,
+    });
+    evidenceIds.push(evidence.id);
+  }
+  return { invalidatedCount: evidenceIds.length, evidenceIds };
+}
+
 export async function approveBodyCinemaDirection(creatorId: number, evidenceId: string, directionId: string): Promise<BodyCinemaEvidenceRecord> {
   const evidence = await getBodyCinemaSourceEvidence(creatorId, evidenceId);
   if (!evidence) throw new Error("Body Cinema evidence record was not found for this creator.");

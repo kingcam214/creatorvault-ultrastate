@@ -24,6 +24,7 @@ import {
   buildEvidenceBackedDirectionPrompt,
   getBodyCinemaSourceEvidence,
   invalidateBodyCinemaSourceEvidence,
+  invalidateBodyCinemaSourceEvidenceForUrl,
   persistBodyCinemaSourceEvidence,
 } from "../services/bodyCinemaEvidenceService";
 import { reviewBodyCinemaOutput } from "../services/bodyCinemaOutputReviewService";
@@ -118,6 +119,22 @@ export const bodyCinemaRouter = router({
       });
     } catch (error: any) {
       throw evidencePrecondition(error?.message || "Body Cinema could not block that source analysis.");
+    }
+  }),
+
+  invalidateSourceUrlEvidence: protectedProcedure.input(z.object({
+    sourceMediaUrl: z.string().url(),
+    reason: z.string().min(12).max(3000),
+  })).mutation(async ({ ctx, input }) => {
+    try {
+      return await invalidateBodyCinemaSourceEvidenceForUrl({
+        creatorId: Number(ctx.user.id),
+        sourceMediaUrl: input.sourceMediaUrl,
+        reason: input.reason,
+        invalidatedBy: Number(ctx.user.id),
+      });
+    } catch (error: any) {
+      throw evidencePrecondition(error?.message || "Body Cinema could not block source analysis for that saved video.");
     }
   }),
 
