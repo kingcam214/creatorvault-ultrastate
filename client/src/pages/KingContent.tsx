@@ -1,7 +1,10 @@
-import { Link } from "wouter";
-import { ArrowUpRight, Crown, Film, Mic, Play, Shield, Sparkles, User, Video } from "lucide-react";
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
+import { ArrowUpRight, Crown, Film, Mic, Play, Shield, Sparkles, User, Video, Image as ImageIcon, Plus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { CreatorVaultRoute } from "@/lib/productArchitecture";
+import MediaPicker, { MediaAssetItem } from "@/components/MediaPicker";
+import { trpc } from "@/lib/trpc";
 
 export default function KingContent() {
   const { user, isLoading } = useAuth();
@@ -25,6 +28,55 @@ export default function KingContent() {
       </div>
     );
   }
+
+  const [intent, setIntent] = useState("");
+  const [activeStage, setActiveStage] = useState<"intent" | "orchestrating" | "ready">("intent");
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [pickerTarget, setPickerTarget] = useState<"clone" | "trailer" | "social" | "dubbing" | null>(null);
+  const [, setLocation] = useLocation();
+
+  // Read-only queries for creation history
+  const { data: mediaAssets } = trpc.mediaAssets.list.useQuery({ limit: 10 });
+  const { data: socialFeed } = trpc.socialSpine.feed.useQuery({ limit: 5 });
+  const createTrailerProject = trpc.mediaAssets.createTrailerProject.useMutation();
+
+  const handlePickerConfirm = async (selected: MediaAssetItem[]) => {
+    setIsPickerOpen(false);
+    if (!selected.length || !pickerTarget) return;
+
+    const asset = selected[0];
+
+    // Every handoff keeps the creator's selected asset attached to the destination.
+    // The trailer path also records a durable, no-spend project before opening the studio.
+    switch (pickerTarget) {
+      case "clone":
+        setLocation(`/clone-empire-home?sourceAssetId=${asset.id}`);
+        break;
+      case "trailer": {
+        try {
+          const project = await createTrailerProject.mutateAsync({
+            projectName: intent.trim() || "KingCam cinematic trailer",
+            projectType: "launch_trailer",
+            format: "9:16",
+            title: intent.trim() || undefined,
+            concept: intent.trim() || undefined,
+            selectedAssetIds: selected.map((selectedAsset) => selectedAsset.id),
+          });
+          setLocation(`/vaultx/trailers?projectId=${project.trailerProjectId}`);
+        } catch {
+          // The studio remains available even if project preparation is temporarily unavailable.
+          setLocation(`/vaultx/trailers?sourceAssetId=${asset.id}`);
+        }
+        break;
+      }
+      case "social":
+        setLocation(`${CreatorVaultRoute.socialEmpire}?sourceAssetId=${asset.id}`);
+        break;
+      case "dubbing":
+        setLocation(`/king/dubbing?sourceAssetId=${asset.id}`);
+        break;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] pb-24 pt-20">
@@ -52,15 +104,151 @@ export default function KingContent() {
             <h1 className="mb-4 text-4xl font-black text-white sm:text-5xl lg:text-6xl">
               Create the Empire.
             </h1>
-            <p className="text-lg leading-relaxed text-zinc-400 sm:text-xl">
+            <p className="text-lg leading-relaxed text-zinc-400 sm:text-xl mb-8">
               Your personal creation arsenal. Build clone video, shape your voice, make cinematic trailers, and command every source clip in your private vault.
             </p>
+
+            {/* Intent Command Bar */}
+            <div className="relative max-w-xl">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-fuchsia-500/20 via-cyan-500/20 to-amber-500/20 blur-lg transition-opacity duration-500" />
+              <div className="relative flex items-center gap-3 rounded-xl border border-white/10 bg-[#0d0d14] p-2 shadow-2xl">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/5 text-zinc-400">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <input
+                  type="text"
+                  value={intent}
+                  onChange={(e) => setIntent(e.target.value)}
+                  placeholder="What do you want to create?"
+                  className="flex-1 bg-transparent text-base font-medium text-white placeholder:text-zinc-600 focus:outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && intent.trim()) {
+                      setActiveStage("orchestrating");
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => intent.trim() && setActiveStage("orchestrating")}
+                  disabled={!intent.trim()}
+                  className="shrink-0 rounded-lg bg-white px-6 py-2.5 text-sm font-black text-black transition hover:bg-zinc-200 disabled:opacity-50 disabled:hover:bg-white"
+                >
+                  Start
+                </button>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {["Clone teaser", "Cinematic trailer", "Voice dub", "Social drop"].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => {
+                      setIntent(suggestion);
+                      setActiveStage("orchestrating");
+                    }}
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-zinc-400 transition hover:bg-white/10 hover:text-white"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {activeStage === "orchestrating" && (
+          <div className="mb-12 rounded-2xl border border-fuchsia-500/30 bg-[#0d0d14] p-8 shadow-[0_0_40px_-10px_rgba(217,70,239,0.15)]">
+            <div className="mb-6 flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-fuchsia-500/20 text-fuchsia-300">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black text-white">Directing Your Creation</h2>
+                <p className="text-sm text-zinc-400">"{intent}"</p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <button
+                onClick={() => { setPickerTarget("clone"); setIsPickerOpen(true); }}
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/10 text-left"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-fuchsia-500/20 text-fuchsia-300">
+                    <ImageIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-white">Generate Clone Motion</div>
+                    <div className="text-xs text-zinc-400">Pick a source photo to animate</div>
+                  </div>
+                </div>
+                <ArrowUpRight className="h-4 w-4 text-zinc-500" />
+              </button>
+
+              <button
+                onClick={() => { setPickerTarget("trailer"); setIsPickerOpen(true); }}
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/10 text-left"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300">
+                    <Film className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-white">Build Cinematic Trailer</div>
+                    <div className="text-xs text-zinc-400">Pick clips to assemble</div>
+                  </div>
+                </div>
+                <ArrowUpRight className="h-4 w-4 text-zinc-500" />
+              </button>
+
+              <button
+                onClick={() => { setPickerTarget("social"); setIsPickerOpen(true); }}
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/10 text-left"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-white">Prepare Social Drop</div>
+                    <div className="text-xs text-zinc-400">Pick a finished video to distribute</div>
+                  </div>
+                </div>
+                <ArrowUpRight className="h-4 w-4 text-zinc-500" />
+              </button>
+
+              <button
+                onClick={() => { setPickerTarget("dubbing"); setIsPickerOpen(true); }}
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/10 text-left"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyan-500/20 text-cyan-300">
+                    <Mic className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-white">Voice & Dubbing</div>
+                    <div className="text-xs text-zinc-400">Pick a video to translate</div>
+                  </div>
+                </div>
+                <ArrowUpRight className="h-4 w-4 text-zinc-500" />
+              </button>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setActiveStage("intent")}
+                className="rounded-lg border border-white/10 bg-transparent px-4 py-2 text-xs font-bold text-zinc-400 transition hover:bg-white/5 hover:text-white"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-xl font-black text-white">Creation History & Engines</h2>
+          <div className="h-px flex-1 ml-6 bg-gradient-to-r from-white/10 to-transparent" />
+        </div>
+        <div className="mb-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Clone Command */}
           <Link href="/clone-empire-home">
             <a className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0f] p-6 transition hover:border-fuchsia-300/40 hover:bg-[#0d0d14]">
@@ -181,7 +369,109 @@ export default function KingContent() {
             </a>
           </Link>
         </div>
+
+        {/* Creation History Read-Only Preview */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Media Vault Preview */}
+          <div className="rounded-2xl border border-white/10 bg-[#0a0a0f] p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-500">Recent Media</h3>
+              <Link href="/king/media-vault">
+                <a className="text-xs font-bold text-fuchsia-300 transition hover:text-fuchsia-200">View Vault &rarr;</a>
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {mediaAssets && mediaAssets.length > 0 ? (
+                mediaAssets.slice(0, 3).map((asset) => (
+                  <div key={asset.id} className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/5 p-3">
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-black">
+                      {asset.thumbnailUrl ? (
+                        <img src={asset.thumbnailUrl} alt="" className="h-full w-full object-cover opacity-80" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Video className="h-4 w-4 text-zinc-600" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-bold text-white">{asset.fileName}</div>
+                      <div className="text-xs text-zinc-500">
+                        {asset.assetType} &bull; {new Date(asset.createdAt || "").toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border border-dashed border-white/10 p-6 text-center text-sm text-zinc-500">
+                  No media in vault yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Social Empire Preview */}
+          <div className="rounded-2xl border border-white/10 bg-[#0a0a0f] p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-500">Recent Social Drops</h3>
+              <Link href={CreatorVaultRoute.socialEmpire}>
+                <a className="text-xs font-bold text-indigo-300 transition hover:text-indigo-200">View Empire &rarr;</a>
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {socialFeed && socialFeed.items.length > 0 ? (
+                socialFeed.items.slice(0, 3).map((post) => (
+                  <div key={post.id} className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/5 p-3">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-indigo-500/10 text-indigo-400">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-bold text-white">{post.body || "No caption"}</div>
+                      <div className="flex items-center gap-2 text-xs text-zinc-500">
+                        <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase text-zinc-300">
+                          {post.visibility}
+                        </span>
+                        &bull; {new Date(post.createdAt || "").toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border border-dashed border-white/10 p-6 text-center text-sm text-zinc-500">
+                  No social drops yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
+
+      {isPickerOpen && (
+        <MediaPicker
+          open={isPickerOpen}
+          onClose={() => setIsPickerOpen(false)}
+          onConfirm={handlePickerConfirm}
+          mode={pickerTarget === "trailer" ? "multi" : "single"}
+          title={
+            pickerTarget === "clone" ? "Select Source Image" :
+            pickerTarget === "trailer" ? "Select Trailer Clips" :
+            pickerTarget === "social" ? "Select Finished Video" :
+            "Select Video for Dubbing"
+          }
+          subtitle={
+            pickerTarget === "clone" ? "Pick a high-quality portrait from your vault" :
+            pickerTarget === "trailer" ? "Pick 2-6 clips to assemble" :
+            pickerTarget === "social" ? "Pick a ready asset to distribute" :
+            "Pick a video with clear dialogue"
+          }
+          confirmLabel={`Continue to ${
+            pickerTarget === "clone" ? "Clone Command" :
+            pickerTarget === "trailer" ? "Trailer Studio" :
+            pickerTarget === "social" ? "Social Empire" :
+            "Dubbing"
+          }`}
+          maxSelect={pickerTarget === "trailer" ? 6 : 1}
+        />
+      )}
     </div>
   );
 }
