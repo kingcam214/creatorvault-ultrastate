@@ -226,13 +226,24 @@ async function startServer() {
       const row = (result as any)?.[0]?.[0];
       if (!row?.storage_path) return res.status(404).json({ error: "This saved media is not available." });
 
-      const assetPath = path.resolve(String(row.storage_path));
+      const storedPath = path.resolve(String(row.storage_path));
+      const fileName = path.basename(storedPath);
+      // Older deployments wrote valid records under more than one durable root.
+      // Only the exact database-owned filename is considered, never a user path.
       const approvedRoots = [
         path.resolve(process.cwd(), "storage", "uploads"),
-        durableUploadsDir,
+        path.resolve(process.cwd(), "..", "storage", "uploads"),
+        path.resolve(process.cwd(), "uploads"),
+        path.resolve(process.cwd(), "..", "uploads"),
+        path.resolve(durableUploadsDir, "content-vault"),
+        path.resolve("/root/creatorvault/storage/uploads"),
+        path.resolve("/root/creatorvault/uploads"),
+        path.resolve("/root/uploads"),
+        path.resolve("/root/uploads/content-vault"),
       ];
-      const isApprovedPath = approvedRoots.some(root => assetPath.startsWith(`${root}${path.sep}`));
-      if (!isApprovedPath || !existsSync(assetPath)) return res.status(404).json({ error: "This saved media file is not available." });
+      const assetPath = [storedPath, ...approvedRoots.map(root => path.join(root, fileName))]
+        .find(candidate => approvedRoots.some(root => candidate.startsWith(`${root}${path.sep}`)) && existsSync(candidate));
+      if (!assetPath) return res.status(404).json({ error: "This saved media file is not available." });
 
       res.setHeader("Cache-Control", "private, max-age=3600");
       res.type(String(row.mime_type || "application/octet-stream"));
