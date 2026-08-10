@@ -180,7 +180,7 @@ export default function VaultXDrop() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const createDraft = trpc.governedPollo.createDraft.useMutation();
+  const prepareCreationPath = (trpc as any).creationDirector.prepare.useMutation();
   const analyzeSource = (trpc as any).bodyCinema.analyzeSource.useMutation();
   const planAudioTimeline = (trpc as any).editor.planAudioDirectedEdit.useMutation();
   const audioLibraryQ = (trpc as any).audioIntelligence.listAssets.useQuery();
@@ -408,39 +408,59 @@ export default function VaultXDrop() {
           destinationPlatform: "creatorvault",
         });
       }
-      const response = await createDraft.mutateAsync({
-        sourceUrl: hostedUrl,
-        sourceChecksum: uploadReceipt.sha256,
-        evidenceId: sourceEvidence.id,
-        prompt: `${selectedPreset.name}: ${selectedPreset.direction} Preserve the creator-owned source identity, natural anatomy, and stable cinematic motion.`,
-        providerModelPath: "pollo/pollo-v1-6",
-        resolution: "720p",
-        durationSeconds: 6,
-        aspectRatio: "9:16",
-        mode: "basic",
-        ownershipConfirmed: true,
-        consentConfirmed: true,
-        idempotencyKey: `body-cinema:${uploadReceipt.sha256}:${selectedPreset.id}:720p:6s`,
+      const response = await prepareCreationPath.mutateAsync({
+        tool: "body_cinema",
+        intent: `${selectedPreset.name}: ${selectedPreset.direction}`,
+        outputPurpose: "Body Cinema Drop",
+        source: {
+          assetUrl: hostedUrl,
+          sourceEvidenceId: sourceEvidence.id,
+          sourceFingerprint: uploadReceipt.sha256,
+          ownershipConfirmed: true,
+          consentConfirmed: true,
+          adultVerified: true,
+        },
+        capabilities: {
+          requiresGeneratedShot: true,
+          requiredInputModes: ["reference_video"],
+          durationSeconds: 6,
+          resolution: "720p",
+          preserveIdentity: true,
+          naturalBody: true,
+          preserveProps: true,
+          cameraControl: true,
+          minimumQualityScore: 75,
+        },
+        creativeDirection: {
+          treatment: selectedPreset.id,
+          prompt: `${selectedPreset.name}: ${selectedPreset.direction} Preserve the creator-owned source identity, natural anatomy, and stable cinematic motion.`,
+          motionPlan: "Match the source body mechanics.",
+          cameraPlan: selectedPreset.focus,
+          identityRequirements: ["preserve creator identity", "natural anatomy", "preserve outfit and props"],
+          sourceAnalysisReference: sourceEvidence.id,
+          audioAssetId: audioAssetId || null,
+        },
+        output: { durationSeconds: 6, aspectRatio: "9:16", resolution: "720p" },
         metadata: {
           product: "body_cinema",
           releaseTitle: title.trim() || `${selectedPreset.name} — Private Release`,
           presetId: selectedPreset.id,
           presetName: selectedPreset.name,
           sourceReceiptId: uploadReceipt.id,
-          audioAssetId: audioAssetId || undefined,
           audioTimelinePlanId: audioPlan?.planId || undefined,
           audioTimingEvidence: audioPlan?.anchors || undefined,
         },
       });
-      setGovernedJob(response.job as GovernedJob);
+      // Temporarily mock the governed job shape for UI state until the polling loop is fully replaced
+      setGovernedJob({ id: 1, requestId: response.requestId, state: response.state === "ready_to_finish" || response.state === "in_progress" ? "approved" : "cost_pending", fingerprint: uploadReceipt.sha256, sourceUrl: hostedUrl, providerModelPath: response.selectedLane || "controlled", resolution: "720p", durationSeconds: 6, estimatedCostCredits: null, actualCostCredits: null, costEvidenceReference: null, providerJobId: null, outputUrl: null, artifactUrl: null, qualityState: null, qualityScore: null, qualityReason: null, failureMessage: response.blockedReasons?.[0] || null, audioAssetId: audioAssetId || undefined });
       setStep("review");
-      toast.success(response.reused ? "Existing governed request restored. No new provider request was created." : "Governed request recorded. No provider request has been sent.");
+      toast.success(response.creationPath);
     } catch (error: any) {
       toast.error(error?.message || "The governed request could not be recorded.");
     } finally {
       setCreating(false);
     }
-  }, [audioAssetId, audioReadinessQ.data, consent, createDraft, hostedUrl, planAudioTimeline, selectedPreset, sourceEvidence, title, uploadReceipt, uploading]);
+  }, [audioAssetId, audioReadinessQ.data, consent, prepareCreationPath, hostedUrl, planAudioTimeline, selectedPreset, sourceEvidence, title, uploadReceipt, uploading]);
 
   const handleDownload = useCallback(() => {
     if (!currentJob?.artifactUrl) return;

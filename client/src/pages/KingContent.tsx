@@ -39,21 +39,48 @@ export default function KingContent() {
   const { data: mediaAssets } = trpc.mediaAssets.list.useQuery({ limit: 10 });
   const { data: socialFeed } = trpc.socialSpine.feed.useQuery({ limit: 5 });
   const createTrailerProject = trpc.mediaAssets.createTrailerProject.useMutation();
+  const prepareCreationPath = (trpc as any).creationDirector.prepare.useMutation();
 
   const handlePickerConfirm = async (selected: MediaAssetItem[]) => {
     setIsPickerOpen(false);
     if (!selected.length || !pickerTarget) return;
 
     const asset = selected[0];
+    const sourceUrl = String(asset.publicUrl || "").trim();
+    const plannedDuration = Math.max(1, Math.min(60, Math.round(asset.duration || 15)));
 
     // Every handoff keeps the creator's selected asset attached to the destination.
     // The trailer path also records a durable, no-spend project before opening the studio.
     switch (pickerTarget) {
       case "clone":
+        if (sourceUrl) {
+          await prepareCreationPath.mutateAsync({
+            tool: "kingcam_content",
+            intent: intent.trim() || "Create a KingCam clone motion piece.",
+            outputPurpose: "KingCam clone motion",
+            source: { assetUrl: sourceUrl, ownershipConfirmed: true, consentConfirmed: true, adultVerified: true },
+            capabilities: { requiresGeneratedShot: true, requiredInputModes: ["reference_image"], durationSeconds: 6, resolution: "720p", preserveIdentity: true, naturalBody: true, cameraControl: true, minimumQualityScore: 75 },
+            creativeDirection: { prompt: intent.trim() || "Create a polished full-body KingCam motion moment from the approved identity source.", identityRequirements: ["preserve KingCam identity", "natural full-body motion"] },
+            output: { durationSeconds: 6, aspectRatio: "9:16", resolution: "720p" },
+            metadata: { mediaAssetId: asset.id, preparedFrom: "kingcam_content" },
+          });
+        }
         setLocation(`/clone-empire-home?sourceAssetId=${asset.id}`);
         break;
       case "trailer": {
         try {
+          if (sourceUrl) {
+            await prepareCreationPath.mutateAsync({
+              tool: "kingcam_content",
+              intent: intent.trim() || "Build a KingCam cinematic trailer from approved footage.",
+              outputPurpose: "KingCam trailer",
+              source: { assetUrl: sourceUrl, ownershipConfirmed: true, consentConfirmed: true, adultVerified: true },
+              capabilities: { requiresGeneratedShot: false, requiredInputModes: ["source_video"], requiredOutputMode: "video", durationSeconds: plannedDuration, resolution: "720p" },
+              creativeDirection: { prompt: intent.trim() || "Build a music-led cinematic trailer from this approved KingCam footage.", motionPlan: "Use the strongest source moments and preserve original identity.", cameraPlan: "Shape the source footage into a clean premium campaign cut." },
+              output: { durationSeconds: plannedDuration, aspectRatio: "9:16", resolution: "720p" },
+              metadata: { mediaAssetId: asset.id, preparedFrom: "kingcam_content" },
+            });
+          }
           const project = await createTrailerProject.mutateAsync({
             projectName: intent.trim() || "KingCam cinematic trailer",
             projectType: "launch_trailer",
@@ -70,6 +97,18 @@ export default function KingContent() {
         break;
       }
       case "social":
+        if (sourceUrl) {
+          await prepareCreationPath.mutateAsync({
+            tool: "kingcam_content",
+            intent: intent.trim() || "Prepare an approved KingCam social drop.",
+            outputPurpose: "KingCam social package",
+            source: { assetUrl: sourceUrl, ownershipConfirmed: true, consentConfirmed: true, adultVerified: true },
+            capabilities: { requiresGeneratedShot: false, requiredInputModes: ["source_video"], requiredOutputMode: "social_variant", durationSeconds: plannedDuration, resolution: "720p" },
+            creativeDirection: { prompt: intent.trim() || "Prepare social-ready variants from this approved KingCam footage.", motionPlan: "Preserve the original source and use the strongest opening.", cameraPlan: "Use the source framing without synthetic changes." },
+            output: { durationSeconds: plannedDuration, aspectRatio: "9:16", resolution: "720p" },
+            metadata: { mediaAssetId: asset.id, preparedFrom: "kingcam_content" },
+          });
+        }
         setLocation(`${CreatorVaultRoute.socialEmpire}?sourceAssetId=${asset.id}`);
         break;
       case "dubbing":

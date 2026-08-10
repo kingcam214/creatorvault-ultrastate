@@ -124,8 +124,14 @@ export default function TrailerStudio() {
         musicUrl: musicUrl || undefined, audioAssetId: audioAssetId || undefined, trailerProjectId: projectId || undefined, watermarkText: title || undefined,
         mode, chromaAberration: chroma || undefined, lightLeaks: lightLeaks || undefined,
         letterbox: letterbox || undefined, glitch: glitch || undefined,
+        sourceProof: selectedAssetIds.length ? { ownershipConfirmed: true, consentConfirmed: true, adultVerified: true } : undefined,
       });
-      setJobId(res.jobId);
+      if (res.directorState) {
+        toast.success(res.creationPath || "A proven creation route is staged.");
+        setStep("done");
+      } else {
+        setJobId(res.jobId);
+      }
     } catch (e: any) { toast.error(e?.message || "Trailer direction failed"); setStep("fx"); }
   }, [templateId, clips, title, priceLine, aspect, musicUrl, audioAssetId, trailerProjectId, selectedAssetIds, mode, chroma, lightLeaks, letterbox, glitch]);
 

@@ -278,6 +278,7 @@ import { agentTelemetryRouter } from "./routers/agentTelemetryRouter";
 import { challengeAutomationRouter } from "./routers/challengeAutomationRouter";
 import { polloRouter } from "./routers/polloRouter";
 import { governedPolloRouter } from "./routers/governedPolloRouter";
+import { creationDirectorRouter } from "./routers/creationDirectorRouter";
 import { distributionRouter } from "./routers/distributionRouter";
 import { socialSpineRouter } from "./routers/socialSpineRouter";
 // import { contentProtectionRouter } from "./routers/contentProtection"; // service stubs not implemented
@@ -966,6 +967,7 @@ export const appRouter = router({
   vaultx: vaultxRouter,
   vaultxAcquisition: vaultxAcquisitionOperatorRouter,
   bodyCinema: bodyCinemaRouter,
+  creationDirector: creationDirectorRouter,
   compliance: complianceRouter,
   renderGraph: renderGraphRouter,
   editor: realEditorRouter,

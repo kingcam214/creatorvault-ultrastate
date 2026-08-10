@@ -6,7 +6,6 @@ import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { BodyCinemaRouter, createDefaultProviderProfiles } from "../services/bodyCinemaProviderRouter";
 import { complianceVault } from "../services/complianceVault";
-import { randomUUID } from "crypto";
 import {
   BODY_CINEMA_PRESETS,
   PRESET_CATEGORIES,
@@ -27,6 +26,7 @@ import {
   persistBodyCinemaSourceEvidence,
 } from "../services/bodyCinemaEvidenceService";
 import { reviewBodyCinemaOutput } from "../services/bodyCinemaOutputReviewService";
+import { buildCreationCapabilities, getCreationPlan, prepareCreationPlan, toCreatorFacingCreationPlan } from "../services/creationDirector";
 
 const cinemaRouter = new BodyCinemaRouter();
 const configuredProviders: Record<string, boolean> = {
@@ -151,38 +151,68 @@ export const bodyCinemaRouter = router({
     if (!eligibility.eligible) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Compliance check failed: " + eligibility.blockers.join("; ") });
     }
-    let evidenceContext: { direction: { camera: string; movement: string; composition: string; bodyFocus: string[] } };
+    let evidenceContext: { evidence: { id: string; sourceFingerprint: string }; direction: { id: string; camera: string; movement: string; composition: string; bodyFocus: string[] } };
     try {
       evidenceContext = await assertBodyCinemaEvidenceReady({
         creatorId: Number(ctx.user.id),
         evidenceId: input.evidenceId,
         sourceMediaUrl: input.sourceAssetUrl,
-      });
+      }) as typeof evidenceContext;
     } catch (error: any) {
-      throw evidencePrecondition(error?.message || "Body Cinema source evidence is required before provider submission.");
+      throw evidencePrecondition(error?.message || "Body Cinema needs your saved source understanding before it can prepare this premium drop.");
     }
     const evidencePrompt = buildEvidenceBackedDirectionPrompt(evidenceContext.direction as any);
-    const job = {
-      id: randomUUID(),
-      userId: String(ctx.user.id),
-      goal: input.goal as any,
-      sourceAssetUrl: input.sourceAssetUrl,
-      sourceType: input.sourceType as any,
-      style: input.style as any,
-      platform: input.platform as any,
-      aspectRatio: input.aspectRatio,
-      duration: input.duration,
-      prompt: [evidencePrompt, input.prompt].filter(Boolean).join(" "),
-      motionDirective: [evidenceContext.direction.movement, input.motionDirective].filter(Boolean).join(" "),
-      cameraMovement: [evidenceContext.direction.camera, input.cameraMovement].filter(Boolean).join(" "),
-      identityLock: input.identityLock,
-      preferredProvider: input.preferredProvider as any,
-      qualityThreshold: input.qualityThreshold,
-      maxRetries: 2,
-      consentVerified: true,
-      ageVerified: true,
+    const plan = await prepareCreationPlan({
+      creatorId: Number(ctx.user.id),
+      requestedBy: Number(ctx.user.id),
+      tool: "body_cinema",
+      intent: input.goal,
+      outputPurpose: input.platform,
+      source: {
+        assetUrl: input.sourceAssetUrl,
+        sourceEvidenceId: evidenceContext.evidence.id,
+        sourceFingerprint: evidenceContext.evidence.sourceFingerprint,
+        ownershipConfirmed: true,
+        consentConfirmed: true,
+        adultVerified: true,
+      },
+      capabilities: buildCreationCapabilities({
+        requiresGeneratedShot: true,
+        requiredInputModes: [input.sourceType === "video" ? "reference_video" : "reference_image"],
+        durationSeconds: input.duration,
+        resolution: "720p",
+        preserveIdentity: input.identityLock,
+        naturalBody: true,
+        preserveProps: true,
+        cameraControl: Boolean(input.cameraMovement || evidenceContext.direction.camera),
+        minimumQualityScore: input.qualityThreshold,
+      }),
+      creativeDirection: {
+        treatment: evidenceContext.direction.id,
+        prompt: [evidencePrompt, input.prompt].filter(Boolean).join(" "),
+        motionPlan: [evidenceContext.direction.movement, input.motionDirective].filter(Boolean).join(" "),
+        cameraPlan: [evidenceContext.direction.camera, input.cameraMovement].filter(Boolean).join(" "),
+        identityRequirements: input.identityLock ? ["preserve creator identity", "preserve source body continuity", "preserve styling and visible props"] : [],
+        sourceAnalysisReference: evidenceContext.evidence.id,
+        audioAssetId: input.audioAssetId || null,
+      },
+      output: {
+        durationSeconds: input.duration,
+        aspectRatio: input.aspectRatio as "9:16" | "16:9" | "1:1",
+        resolution: "720p",
+      },
+      metadata: {
+        bodyCinemaEvidenceId: evidenceContext.evidence.id,
+        approvedTreatment: evidenceContext.direction.id,
+        creatorSelectedProviderIgnored: Boolean(input.preferredProvider),
+        reason: "Body Cinema requests creative capability; the Creation Director selects only a CreatorVault-verified route.",
+      },
+    });
+    return {
+      id: plan.requestId,
+      directorState: plan.state,
+      ...toCreatorFacingCreationPlan(plan),
     };
-    return cinemaRouter.submitJob(job);
   }),
 
   generateOutputLadder: protectedProcedure.input(z.object({
@@ -231,8 +261,10 @@ export const bodyCinemaRouter = router({
     };
   }),
 
-  getJobStatus: protectedProcedure.input(z.object({ jobId: z.string() })).query(({ input }) => {
-    return cinemaRouter.getJobStatus(input.jobId) || { status: "not_found" };
+  getJobStatus: protectedProcedure.input(z.object({ jobId: z.string() })).query(async ({ ctx, input }) => {
+    const plan = await getCreationPlan(input.jobId);
+    if (plan && plan.creatorId === Number(ctx.user.id)) return toCreatorFacingCreationPlan(plan);
+    return cinemaRouter.getJobStatus(input.jobId) || { state: "not_found" };
   }),
 
   // ── PRESET LIBRARY ──────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ import { sql } from "drizzle-orm";
 import { buildCinematicPacingPlan } from "../services/cinematicPacingEngine.js";
 import { startRender } from "../services/realRenderEngine.js";
 import { assertAudioRights, getAudioAnalysis, getCanonicalAudioAsset } from "../services/audioIntelligenceService.js";
+import { buildCreationCapabilities, prepareCreationPlan, toCreatorFacingCreationPlan } from "../services/creationDirector";
 
 // ─── Viral trailer templates ──────────────────────────────────────────────────
 export interface TrailerTemplate {
@@ -105,6 +106,73 @@ export const TRAILER_TEMPLATES: TrailerTemplate[] = [
 ];
 
 const clipSchema = z.object({ src: z.string(), trimStart: z.number().optional(), trimEnd: z.number().optional() });
+const sourceProofSchema = z.object({
+  sourceEvidenceId: z.string().uuid().optional(),
+  sourceFingerprint: z.string().regex(/^[a-f0-9]{16,128}$/i).optional(),
+  ownershipConfirmed: z.boolean().default(false),
+  consentConfirmed: z.boolean().default(false),
+  adultVerified: z.boolean().default(false),
+}).optional();
+
+function requestsNewTrailerShots(mode: string | undefined, aiRemix?: boolean): boolean {
+  const resolved = mode || (aiRemix ? "ai_remix" : "original");
+  return ["ai_full_shoot", "ai_remix", "hybrid", "photo_cinematic"].includes(resolved);
+}
+
+async function prepareTrailerShotPath(input: {
+  clips: Array<{ src: string; trimStart?: number; trimEnd?: number }>;
+  title?: string;
+  vibe?: string;
+  aspect: "9:16" | "16:9" | "1:1";
+  focusRotation?: string[];
+  mode?: string;
+  aiRemix?: boolean;
+  sourceProof?: { sourceEvidenceId?: string; sourceFingerprint?: string; ownershipConfirmed: boolean; consentConfirmed: boolean; adultVerified: boolean };
+}, creatorId: number) {
+  const source = input.clips[0];
+  const sourceProof = input.sourceProof || { ownershipConfirmed: false, consentConfirmed: false, adultVerified: false };
+  const plan = await prepareCreationPlan({
+    creatorId,
+    requestedBy: creatorId,
+    tool: "trailer_maker",
+    intent: input.title || "Create a premium trailer shot with a materially different camera moment.",
+    outputPurpose: "Trailer Maker shot library",
+    source: {
+      assetUrl: source.src,
+      sourceEvidenceId: sourceProof.sourceEvidenceId || null,
+      sourceFingerprint: sourceProof.sourceFingerprint || null,
+      ownershipConfirmed: sourceProof.ownershipConfirmed,
+      consentConfirmed: sourceProof.consentConfirmed,
+      adultVerified: sourceProof.adultVerified,
+    },
+    capabilities: buildCreationCapabilities({
+      requiresGeneratedShot: true,
+      requiredInputModes: ["reference_video"],
+      requiredOutputMode: "video",
+      durationSeconds: 6,
+      resolution: "720p",
+      preserveIdentity: true,
+      naturalBody: true,
+      preserveProps: true,
+      cameraControl: true,
+      minimumQualityScore: 75,
+    }),
+    creativeDirection: {
+      treatment: input.vibe || "trailer-shot",
+      prompt: `Create one distinct, premium camera moment for the approved trailer direction. Preserve the creator identity, outfit, visible props, and source context. Camera language: ${(input.focusRotation || ["full-body", "face", "waist"]).join(", ")}.`,
+      motionPlan: "Natural confident movement with a clear visual payoff; do not repeat a static pose.",
+      cameraPlan: "One deliberate cinematic camera move matched to the source scene.",
+      identityRequirements: ["preserve creator identity", "preserve visible outfit", "preserve visible props", "natural anatomy and movement"],
+      sourceAnalysisReference: sourceProof.sourceEvidenceId || null,
+    },
+    output: { durationSeconds: 6, aspectRatio: input.aspect, resolution: "720p" },
+    metadata: {
+      requestedMode: input.mode || (input.aiRemix ? "ai_remix" : "original"),
+      finalTrailerAssembly: "Trailer Maker will only use an accepted shot after independent quality review.",
+    },
+  });
+  return { id: plan.requestId, directorState: plan.state, ...toCreatorFacingCreationPlan(plan) };
+}
 
 export const trailerRouter = router({
   getTemplates: protectedProcedure.query(() => ({
@@ -128,12 +196,16 @@ export const trailerRouter = router({
       aiRemix: z.boolean().optional(),
       aiShotCount: z.number().min(1).max(16).optional(),
       mode: z.enum(["ai_full_shoot", "ai_remix", "original", "hybrid", "photo_cinematic"]).optional(),
+      sourceProof: sourceProofSchema,
       chromaAberration: z.boolean().optional(),
       lightLeaks: z.boolean().optional(),
       letterbox: z.boolean().optional(),
       glitch: z.boolean().optional(),
     }))
-    .mutation(({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      if (requestsNewTrailerShots(input.mode, input.aiRemix)) {
+        return prepareTrailerShotPath(input, Number(ctx.user.id));
+      }
       const job = startTrailer(input);
       return { jobId: job.id, status: job.status };
     }),
@@ -150,6 +222,7 @@ export const trailerRouter = router({
       trailerProjectId: z.string().uuid().optional(),
       watermarkText: z.string().optional(),
       mode: z.enum(["ai_full_shoot", "ai_remix", "original", "hybrid", "photo_cinematic"]).optional(),
+      sourceProof: sourceProofSchema,
       chromaAberration: z.boolean().optional(),
       lightLeaks: z.boolean().optional(),
       letterbox: z.boolean().optional(),
@@ -245,6 +318,17 @@ export const trailerRouter = router({
 
       // Determine mode: explicit override > template default > legacy aiRemix flag
       const resolvedMode = input.mode ?? (tpl.aiRemix ? "ai_remix" : "original");
+      if (requestsNewTrailerShots(resolvedMode)) {
+        return prepareTrailerShotPath({
+          clips: input.clips,
+          title: input.title || tpl.name,
+          vibe: tpl.vibe,
+          aspect: input.aspect,
+          focusRotation: tpl.focusRotation,
+          mode: resolvedMode,
+          sourceProof: input.sourceProof,
+        }, Number(ctx.user.id));
+      }
       const job = startTrailer({
         clips: input.clips,
         title: input.title,

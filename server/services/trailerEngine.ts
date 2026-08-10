@@ -16,7 +16,6 @@ import { spawn, execSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
-import { generateAIShots } from "./aiShotGenerator.js";
 
 const PUBLIC_ROOT = "/root/uploads";
 const TRAILER_DIR = path.join(PUBLIC_ROOT, "trailers");
@@ -195,6 +194,10 @@ function animatedText(textBeat: string, W: number, H: number, dur: number): stri
 }
 
 export function startTrailer(req: TrailerRequest): TrailerJob {
+  const mode: TrailerMode = req.mode || (req.aiRemix ? "ai_remix" : "original");
+  if (["ai_full_shoot", "ai_remix", "hybrid", "photo_cinematic"].includes(mode)) {
+    throw new Error("New trailer shots must be prepared through the CreatorVault Creation Director before they can enter a trailer.");
+  }
   const job: TrailerJob = { id: randomUUID(), status: "queued", progress: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
   jobs.set(job.id, job); persist();
   build(job, req).catch(e => upd(job, { status: "failed", error: String(e?.message || e) }));
@@ -236,42 +239,10 @@ async function build(job: TrailerJob, req: TrailerRequest) {
     let clips = (req.clips || []).filter(c => c && c.src);
     if (clips.length === 0) throw new Error("No clips provided");
 
-    // ─── MODE ROUTING ──────────────────────────────────────────────────────────
-    const needsAI = mode === "ai_full_shoot" || mode === "ai_remix" || mode === "hybrid" || mode === "photo_cinematic";
-    if (needsAI) {
-      upd(job, { progress: 5, stage: "AI is shooting new angles" });
-      try {
-        const want = Math.max(2, Math.min(16, req.aiShotCount || (mode === "ai_full_shoot" || mode === "photo_cinematic" ? 8 : 6)));
-        const ai = await generateAIShots(clips.map(c => ({ src: c.src })), want, {
-          resolution: "720p",
-          onProgress: (d, t) => upd(job, { progress: 5 + Math.round((d / t) * 15), stage: `AI generating new shots (${d}/${t})` }),
-        });
-        if (ai.shots.length > 0) {
-          const aiClips = ai.shots.map(s => ({ src: s }));
-          if (mode === "ai_full_shoot" || mode === "photo_cinematic") {
-            // AI ONLY — trailer is 100% AI-generated shots
-            clips = aiClips;
-          } else if (mode === "hybrid") {
-            // HYBRID — interleave AI shots with originals for max variety
-            const merged: typeof clips = [];
-            const maxLen = Math.max(aiClips.length, clips.length);
-            for (let i = 0; i < maxLen; i++) {
-              if (i < aiClips.length) merged.push(aiClips[i]);
-              if (i < clips.length) merged.push(clips[i]);
-            }
-            clips = merged;
-          } else {
-            // AI REMIX — AI leads, original anchors
-            clips = [...aiClips, clips[0]];
-          }
-          // Override focus rotation with the body-specific focuses the AI used
-          if (ai.bodyFocuses.length > 0) {
-            const origFocuses = req.focusRotation && req.focusRotation.length ? req.focusRotation : ["face","chest","waist","abs","butt","legs"];
-            (req as any)._aiFocuses = [...ai.bodyFocuses, ...origFocuses.slice(0, 2)];
-          }
-        }
-      } catch { /* fall back to original clips if AI fails */ }
-    }
+    // New synthetic shots are intentionally not created inside the FFmpeg assembly engine.
+    // The public router routes those requests through the Creation Director, where source proof,
+    // model evidence, budgets, candidate records, and quality rejection are enforced before any
+    // accepted shot can be handed back to this footage-only assembly path.
 
     const segments: { path: string; dur: number }[] = [];
     let segIdx = 0;

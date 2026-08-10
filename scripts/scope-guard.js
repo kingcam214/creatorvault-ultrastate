@@ -147,6 +147,21 @@ const ALLOWLISTS = {
     'server/_core/index.ts',
     'scripts/scope-guard.js'
   ],
+  'creation-arsenal': [
+    'server/services/creationModelRegistry.ts',
+    'server/services/creationModelRegistry.test.ts',
+    'server/services/creationModelSelection.ts',
+    'server/services/creationDirector.ts',
+    'server/routers/creationDirectorRouter.ts',
+    'server/services/trailerEngine.ts',
+    'server/routers/trailerRouter.ts',
+    'server/routers/bodyCinemaRouter.ts',
+    'server/routers.ts',
+    'client/src/pages/KingContent.tsx',
+    'client/src/pages/VaultXDrop.tsx',
+    'client/src/pages/TrailerStudio.tsx',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',
