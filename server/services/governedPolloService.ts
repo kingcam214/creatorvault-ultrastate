@@ -1090,14 +1090,12 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
       aspectRatio: leased.aspectRatio,
     })
     : {
-        input: {
-          image: leased.sourceUrl,
-          prompt: leased.prompt,
-          resolution: leased.resolution,
-          length: leased.durationSeconds,
-          mode: leased.mode,
-          aspect_ratio: leased.aspectRatio,
-        },
+        image: leased.sourceUrl,
+        prompt: leased.prompt,
+        resolution: leased.resolution,
+        length: leased.durationSeconds,
+        mode: leased.mode,
+        aspect_ratio: leased.aspectRatio,
       };
   const providerUrl = isSourceVideoReferenceJob(leased)
     ? `https://pollo.ai/api/platform/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}`
@@ -1105,7 +1103,7 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
 
   let response: Response;
   try {
-    const finalRequestBody = isSourceVideoReferenceJob(leased) ? { input: requestBody } : requestBody;
+    const finalRequestBody = { input: requestBody };
     response = await fetch(providerUrl, {
       method: "POST",
       headers: { "x-api-key": apiKey, "Content-Type": "application/json", "X-CreatorVault-Request-Id": leased.requestId },
