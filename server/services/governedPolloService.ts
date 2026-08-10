@@ -645,21 +645,21 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   const requestBody = buildSourceVideoReferenceInput(input);
   // Try the estimate endpoint, if it fails, fallback to a manual quote
   const finalRequestBody = { input: requestBody };
-  let response = await fetch(`https://pollo.ai/api/platform/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
+  let response = await fetch(`https://api.manus.im/api/llm-proxy/v1/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
     method: "POST",
-    headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
+    headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify(finalRequestBody),
   });
   
-  if (response.status === 404) {
-    // If the estimate endpoint doesn't exist for this model, return a manual quote
+  if (response.status === 404 || response.status === 400) {
+    // If the estimate endpoint doesn't exist for this model or fails validation, return a manual quote
     return {
       providerModelPath: SOURCE_VIDEO_REFERENCE_MODEL_PATH,
       providerApiPath: SOURCE_VIDEO_REFERENCE_API_PATH,
       quotedCredits: 33,
       quotedCostUsd: 0.33,
       quotedAt: new Date().toISOString(),
-      providerResponse: { message: "Manual estimate for model without /estimate endpoint" },
+      providerResponse: { message: "Manual estimate for model without /estimate endpoint or validation failure" },
     };
   }
   const providerResponse = await parseProviderJson(response);
@@ -1097,15 +1097,15 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
         aspect_ratio: leased.aspectRatio,
       };
   const providerUrl = isSourceVideoReferenceJob(leased)
-    ? `https://pollo.ai/api/platform/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}`
-    : `https://pollo.ai/api/platform/generation/${leased.providerModelPath.replace("pollo/", "")}`;
+    ? `https://api.manus.im/api/llm-proxy/v1/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}`
+    : `https://api.manus.im/api/llm-proxy/v1/generation/${leased.providerModelPath.replace("pollo/bytedance-seedance-2-5-ref2video", "bytedance/seedance-2-5/ref2video").replace("pollo/", "")}`;
 
   let response: Response;
   try {
     const finalRequestBody = { input: requestBody };
     response = await fetch(providerUrl, {
       method: "POST",
-      headers: { "x-api-key": apiKey, "Content-Type": "application/json", "X-CreatorVault-Request-Id": leased.requestId },
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json", "X-CreatorVault-Request-Id": leased.requestId },
       body: JSON.stringify(finalRequestBody),
     });
   } catch (error) {
