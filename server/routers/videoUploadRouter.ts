@@ -520,6 +520,10 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
     const url = `https://creatorvault.live/uploads/content-vault/${fileUuid}/${encodeURIComponent(originalName)}`;
     const creatorId = Number((req as any).authenticatedUserId);
     const creatorProfileId = Number((req as any).authenticatedCreatorId);
+    const requestedClassification = String(req.get("x-creatorvault-source-classification") || "").trim().toLowerCase();
+    const approvedDemo = requestedClassification === "approved_demo" && OWNER_IDS.includes(creatorId);
+    const sourceType = approvedDemo ? "approved_demo" : "creator_upload";
+    const createdByFeature = approvedDemo ? "creatorvault_approved_demo" : "body_cinema_direct_upload";
 
     await mkdir(PRIVATE_UPLOAD_RECEIPTS_DIR, { recursive: true });
     receiptPath = path.join(PRIVATE_UPLOAD_RECEIPTS_DIR, `${fileUuid}.json`);
@@ -535,6 +539,7 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
       media,
       verified: true,
       createdAt,
+      classification: approvedDemo ? "approved_demo" : "creator_owned",
     }, null, 2));
 
     const mediaAssetId = randomUUID();
@@ -561,10 +566,11 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
       await rawExec(
         `INSERT INTO media_assets
           (id, user_id, source_type, asset_type, file_name, original_name, mime_type, file_size, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
-         VALUES (?, ?, 'creator_upload', 'video', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', 'body_cinema_direct_upload')`,
+         VALUES (?, ?, ?, 'video', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?)`,
         [
           mediaAssetId,
           creatorId,
+          sourceType,
           originalName,
           originalName,
           getMimeType(originalName),
@@ -575,6 +581,7 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
           (media as any).durationSec,
           (media as any).width,
           (media as any).height,
+          createdByFeature,
         ]
       );
     }
