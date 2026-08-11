@@ -147,6 +147,12 @@ const ALLOWLISTS = {
     'server/_core/index.ts',
     'scripts/scope-guard.js'
   ],
+  'creation-kernel': [
+    'server/services/creationProjectService.ts',
+    'server/routers/creationProjectsRouter.ts',
+    'server/routers.ts',
+    'scripts/scope-guard.js'
+  ],
   'creation-arsenal': [
     'server/services/creationModelRegistry.ts',
     'server/services/creationModelRegistry.test.ts',
