@@ -421,6 +421,12 @@ export async function prepareCreationPlan(requestInput: CreationDirectorRequest)
     } catch (error) {
       // Allow the plan to return even if the draft fails, so the creator sees the intent was recorded.
       console.error("Creation Director could not stage the governed draft:", error);
+      // For debugging, update the blocked reasons so we can see the error
+      const errorStr = error instanceof Error ? error.message : String(error);
+      await rawExec(
+        "UPDATE creation_director_requests SET blocked_reasons_json = ?, updated_at = NOW() WHERE request_id = ?",
+        [safeJson([...resolution.blockedReasons, `draft_staging_failed:${errorStr}`]), requestId]
+      );
     }
   }
 
