@@ -151,6 +151,7 @@ const ALLOWLISTS = {
     'server/services/creationProjectService.ts',
     'server/routers/creationProjectsRouter.ts',
     'server/routers.ts',
+    'client/src/pages/KingContent.tsx',
     'scripts/scope-guard.js'
   ],
   'creation-arsenal': [

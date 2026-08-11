@@ -38,8 +38,48 @@ export default function KingContent() {
   // Read-only queries for creation history
   const { data: mediaAssets } = trpc.mediaAssets.list.useQuery({ limit: 10 });
   const { data: socialFeed } = trpc.socialSpine.feed.useQuery({ limit: 5 });
+  const { data: kingcamIdentity } = (trpc as any).cloneEngine.getClone.useQuery({});
   const createTrailerProject = trpc.mediaAssets.createTrailerProject.useMutation();
   const prepareCreationPath = (trpc as any).creationDirector.prepare.useMutation();
+  const openCreationProject = (trpc as any).creationProjects.open.useMutation();
+  const linkCreationProject = (trpc as any).creationProjects.link.useMutation();
+
+  const kingcamIdentityReference = (() => {
+    const activeModel = kingcamIdentity?.activeModels?.[0];
+    if (activeModel?.id) return `clone_model:${activeModel.id}`;
+    if (kingcamIdentity?.profile?.id) return `clone_profile:${kingcamIdentity.profile.id}`;
+    return "kingcam_identity_pending";
+  })();
+
+  const openKingcamCreation = async (asset: MediaAssetItem, purpose: string) => {
+    return openCreationProject.mutateAsync({
+      title: intent.trim() || purpose,
+      intent: intent.trim() || purpose,
+      outputPurpose: purpose,
+      sourceAssetId: asset.id,
+      identityReference: kingcamIdentityReference,
+      metadata: {
+        enteredFrom: "kingcam_content",
+        identityState: kingcamIdentity?.activeModels?.[0]?.id ? "production_identity_model" : "identity_profile",
+      },
+    });
+  };
+
+  const linkPreparedCreation = async (projectId: string, plan: any, extras: Record<string, unknown> = {}) => {
+    const state = plan?.state === "ready_to_finish"
+      ? "ready_to_create"
+      : plan?.state === "in_progress"
+        ? "in_progress"
+        : plan?.state === "not_ready"
+          ? "blocked"
+          : "ready_to_review";
+    await linkCreationProject.mutateAsync({
+      projectId,
+      creationDirectorRequestId: plan?.requestId || null,
+      state,
+      metadata: extras,
+    });
+  };
 
   const handlePickerConfirm = async (selected: MediaAssetItem[]) => {
     setIsPickerOpen(false);
@@ -52,9 +92,10 @@ export default function KingContent() {
     // Every handoff keeps the creator's selected asset attached to the destination.
     // The trailer path also records a durable, no-spend project before opening the studio.
     switch (pickerTarget) {
-      case "clone":
+      case "clone": {
+        const project = await openKingcamCreation(asset, "KingCam clone motion");
         if (sourceUrl) {
-          await prepareCreationPath.mutateAsync({
+          const plan = await prepareCreationPath.mutateAsync({
             tool: "kingcam_content",
             intent: intent.trim() || "Create a KingCam clone motion piece.",
             outputPurpose: "KingCam clone motion",
@@ -62,15 +103,20 @@ export default function KingContent() {
             capabilities: { requiresGeneratedShot: true, requiredInputModes: ["reference_image"], durationSeconds: 6, resolution: "720p", preserveIdentity: true, naturalBody: true, cameraControl: true, minimumQualityScore: 75 },
             creativeDirection: { prompt: intent.trim() || "Create a polished full-body KingCam motion moment from the approved identity source.", identityRequirements: ["preserve KingCam identity", "natural full-body motion"] },
             output: { durationSeconds: 6, aspectRatio: "9:16", resolution: "720p" },
-            metadata: { mediaAssetId: asset.id, preparedFrom: "kingcam_content" },
+            metadata: { mediaAssetId: asset.id, creationProjectId: project.id, preparedFrom: "kingcam_content" },
           });
+          await linkPreparedCreation(project.id, plan, { nextDestination: "clone_empire" });
         }
-        setLocation(`/clone-empire-home?sourceAssetId=${asset.id}`);
+        setLocation(`/clone-empire-home?sourceAssetId=${asset.id}&creationProjectId=${project.id}`);
         break;
+      }
       case "trailer": {
+        let creationProjectId: string | null = null;
         try {
+          const creationProject = await openKingcamCreation(asset, "KingCam cinematic trailer");
+          creationProjectId = creationProject.id;
           if (sourceUrl) {
-            await prepareCreationPath.mutateAsync({
+            const plan = await prepareCreationPath.mutateAsync({
               tool: "kingcam_content",
               intent: intent.trim() || "Build a KingCam cinematic trailer from approved footage.",
               outputPurpose: "KingCam trailer",
@@ -78,10 +124,11 @@ export default function KingContent() {
               capabilities: { requiresGeneratedShot: false, requiredInputModes: ["source_video"], requiredOutputMode: "video", durationSeconds: plannedDuration, resolution: "720p" },
               creativeDirection: { prompt: intent.trim() || "Build a music-led cinematic trailer from this approved KingCam footage.", motionPlan: "Use the strongest source moments and preserve original identity.", cameraPlan: "Shape the source footage into a clean premium campaign cut." },
               output: { durationSeconds: plannedDuration, aspectRatio: "9:16", resolution: "720p" },
-              metadata: { mediaAssetId: asset.id, preparedFrom: "kingcam_content" },
+              metadata: { mediaAssetId: asset.id, creationProjectId: creationProject.id, preparedFrom: "kingcam_content" },
             });
+            await linkPreparedCreation(creationProject.id, plan, { nextDestination: "trailer_studio" });
           }
-          const project = await createTrailerProject.mutateAsync({
+          const trailerProject = await createTrailerProject.mutateAsync({
             projectName: intent.trim() || "KingCam cinematic trailer",
             projectType: "launch_trailer",
             format: "9:16",
@@ -89,16 +136,21 @@ export default function KingContent() {
             concept: intent.trim() || undefined,
             selectedAssetIds: selected.map((selectedAsset) => selectedAsset.id),
           });
-          setLocation(`/vaultx/trailers?projectId=${project.trailerProjectId}`);
+          await linkCreationProject.mutateAsync({
+            projectId: creationProject.id,
+            metadata: { trailerProjectId: trailerProject.trailerProjectId, nextDestination: "trailer_studio" },
+          });
+          setLocation(`/vaultx/trailers?projectId=${trailerProject.trailerProjectId}&creationProjectId=${creationProject.id}`);
         } catch {
-          // The studio remains available even if project preparation is temporarily unavailable.
-          setLocation(`/vaultx/trailers?sourceAssetId=${asset.id}`);
+          // The studio remains available even if a future destination is temporarily unavailable.
+          setLocation(`/vaultx/trailers?sourceAssetId=${asset.id}${creationProjectId ? `&creationProjectId=${creationProjectId}` : ""}`);
         }
         break;
       }
-      case "social":
+      case "social": {
+        const project = await openKingcamCreation(asset, "KingCam social package");
         if (sourceUrl) {
-          await prepareCreationPath.mutateAsync({
+          const plan = await prepareCreationPath.mutateAsync({
             tool: "kingcam_content",
             intent: intent.trim() || "Prepare an approved KingCam social drop.",
             outputPurpose: "KingCam social package",
@@ -106,14 +158,18 @@ export default function KingContent() {
             capabilities: { requiresGeneratedShot: false, requiredInputModes: ["source_video"], requiredOutputMode: "social_variant", durationSeconds: plannedDuration, resolution: "720p" },
             creativeDirection: { prompt: intent.trim() || "Prepare social-ready variants from this approved KingCam footage.", motionPlan: "Preserve the original source and use the strongest opening.", cameraPlan: "Use the source framing without synthetic changes." },
             output: { durationSeconds: plannedDuration, aspectRatio: "9:16", resolution: "720p" },
-            metadata: { mediaAssetId: asset.id, preparedFrom: "kingcam_content" },
+            metadata: { mediaAssetId: asset.id, creationProjectId: project.id, preparedFrom: "kingcam_content" },
           });
+          await linkPreparedCreation(project.id, plan, { nextDestination: "social_empire" });
         }
-        setLocation(`${CreatorVaultRoute.socialEmpire}?sourceAssetId=${asset.id}`);
+        setLocation(`${CreatorVaultRoute.socialEmpire}?sourceAssetId=${asset.id}&creationProjectId=${project.id}`);
         break;
-      case "dubbing":
-        setLocation(`/king/dubbing?sourceAssetId=${asset.id}`);
+      }
+      case "dubbing": {
+        const project = await openKingcamCreation(asset, "KingCam voice and dubbing");
+        setLocation(`/king/dubbing?sourceAssetId=${asset.id}&creationProjectId=${project.id}`);
         break;
+      }
     }
   };
 
