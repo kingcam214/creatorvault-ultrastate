@@ -14,8 +14,9 @@ import { selectBestVerifiedCreationModel } from "./creationModelSelection";
 
 export type CreationTool = "body_cinema" | "trailer_maker" | "kingcam_content" | "creator_os";
 export type CreationDirectorState = "planning" | "ready_for_assembly" | "ready_for_governed_submission" | "blocked" | "submitted" | "quality_review" | "accepted" | "rejected" | "cancelled";
+import { assertBodyCinemaEvidenceReady } from "./bodyCinemaEvidenceService";
 import {
-  createGovernedPolloDraft,
+  createQuotedGovernedPolloSourceVideoDraft,
   getGovernedPolloJobByRequestId,
   authorizeSingleUseGovernedPolloSubmission,
   submitGovernedPolloJob,
@@ -395,18 +396,26 @@ export async function prepareCreationPlan(requestInput: CreationDirectorRequest)
 
   if (resolution.state === "ready_for_governed_submission" && resolution.selectedModel) {
     try {
-      await createGovernedPolloDraft({
+      if (request.tool === "body_cinema") {
+        const evidence = await assertBodyCinemaEvidenceReady({
+          creatorId: request.creatorId,
+          evidenceId: request.source.sourceEvidenceId,
+          sourceMediaUrl: request.source.assetUrl,
+        });
+        if (request.creativeDirection.treatment && evidence.direction.id !== request.creativeDirection.treatment) {
+          throw new Error("The selected Body Cinema treatment does not match the approved source direction.");
+        }
+      }
+      const staged = await createQuotedGovernedPolloSourceVideoDraft({
         creatorId: request.creatorId,
         requestedBy: request.requestedBy,
+        requestId,
         sourceUrl: request.source.assetUrl,
         sourceChecksum: request.source.sourceFingerprint || null,
         prompt: request.creativeDirection.prompt,
-        providerModelPath: resolution.selectedModel.metadata?.providerPath ? String(resolution.selectedModel.metadata.providerPath) : resolution.selectedModel.modelKey,
         resolution: request.output.resolution as "480p" | "720p" | "1080p",
         durationSeconds: request.output.durationSeconds,
         aspectRatio: request.output.aspectRatio,
-        mode: "basic",
-        outputCount: 1,
         ownershipConfirmed: true,
         consentConfirmed: true,
         idempotencyKey: `creation-director:${idempotencyKey}`,
@@ -416,17 +425,32 @@ export async function prepareCreationPlan(requestInput: CreationDirectorRequest)
           intent: request.intent,
           audioAssetId: request.creativeDirection.audioAssetId || undefined,
           sourceEvidenceId: request.source.sourceEvidenceId || undefined,
+          selectedModelKey: resolution.selectedModel.modelKey,
         },
       });
+      await appendEvent({
+        directorRequestId: id,
+        eventType: "governed_draft_staged",
+        state: "ready_for_governed_submission",
+        actorId: request.requestedBy,
+        detail: { governedJobId: staged.job.id, selectedModelKey: resolution.selectedModel.modelKey },
+      });
     } catch (error) {
-      // Allow the plan to return even if the draft fails, so the creator sees the intent was recorded.
-      console.error("Creation Director could not stage the governed draft:", error);
-      // For debugging, update the blocked reasons so we can see the error
       const errorStr = error instanceof Error ? error.message : String(error);
+      const blockedReasons = [...new Set([...resolution.blockedReasons, "governed_draft_staging_failed", errorStr])];
       await rawExec(
-        "UPDATE creation_director_requests SET blocked_reasons_json = ?, updated_at = NOW() WHERE request_id = ?",
-        [safeJson([...resolution.blockedReasons, `draft_staging_failed:${errorStr}`]), requestId]
+        `UPDATE creation_director_requests
+         SET state = 'blocked', blocked_reasons_json = ?, updated_at = NOW()
+         WHERE request_id = ?`,
+        [safeJson(blockedReasons), requestId],
       );
+      await appendEvent({
+        directorRequestId: id,
+        eventType: "governed_draft_staging_failed",
+        state: "blocked",
+        actorId: request.requestedBy,
+        detail: { selectedModelKey: resolution.selectedModel.modelKey, error: errorStr },
+      });
     }
   }
 

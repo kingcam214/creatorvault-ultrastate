@@ -44,6 +44,8 @@ export type CreateGovernedPolloDraftInput = {
   ownershipConfirmed: boolean;
   consentConfirmed: boolean;
   idempotencyKey?: string | null;
+  /** Internal correlation key supplied by Creation Director; never creator-facing. */
+  requestId?: string | null;
   metadata?: Record<string, unknown>;
 };
 
@@ -585,7 +587,8 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
     return { job, reused: true };
   }
 
-  const requestId = randomUUID();
+  const requestId = String(input.requestId || randomUUID()).trim();
+  if (!requestId || requestId.length > 64) throw new Error("Governed request correlation ID is invalid.");
   const result = await rawExec(
     `INSERT INTO governed_media_jobs
       (request_id, creator_id, requested_by, state, idempotency_key, fingerprint, source_url, source_checksum, prompt,
@@ -739,6 +742,8 @@ export async function createQuotedGovernedPolloSourceVideoDraft(input: {
   ownershipConfirmed: boolean;
   consentConfirmed: boolean;
   idempotencyKey?: string | null;
+  /** Internal correlation key supplied by Creation Director; never creator-facing. */
+  requestId?: string | null;
   metadata?: Record<string, unknown>;
 }): Promise<{ job: GovernedPolloJob; reused: boolean; quote: GovernedPolloProviderQuote }> {
   const quote = await quoteGovernedPolloSourceVideoReference({
