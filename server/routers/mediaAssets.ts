@@ -177,6 +177,10 @@ export const mediaAssetsRouter = router({
         FROM media_assets
         WHERE user_id = ${ctx.user.id}
           AND status = 'ready'
+          -- Legacy entries using the private delivery endpoint have already failed
+          -- durable playback verification. They remain auditable but cannot be offered
+          -- as source media until their backing file is restored and reverified.
+          AND (public_url IS NULL OR public_url NOT LIKE '%/api/media/asset/%')
           ${typeCondition}
         ORDER BY created_at DESC
         LIMIT ${limit}

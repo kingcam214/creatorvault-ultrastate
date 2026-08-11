@@ -154,6 +154,7 @@ const ALLOWLISTS = {
     'client/src/pages/KingContent.tsx',
     'client/src/pages/VaultXDrop.tsx',
     'server/routers/videoUploadRouter.ts',
+    'server/routers/mediaAssets.ts',
     'server/routers/realEditorRouter.ts',
     'server/_core/index.ts',
     'scripts/scope-guard.js'
