@@ -450,7 +450,7 @@ export async function acceptInspectedAssemblyRender(input: {
     await rawExec(
       `INSERT INTO media_assets
         (id, user_id, source_type, asset_type, file_name, original_name, mime_type, storage_path, public_url, thumbnail_url, status, created_by_feature)
-       VALUES (?, ?, 'assembly_render', 'video', ?, ?, 'video/mp4', ?, ?, ?, 'ready', 'body_cinema_assembly')`,
+       VALUES (?, ?, 'generated', 'video', ?, ?, 'video/mp4', ?, ?, ?, 'ready', 'body_cinema_assembly')`,
       [assetId, input.creatorId, `${baseName}.mp4`, `${baseName}.mp4`, input.outputUrl, input.outputUrl, input.outputUrl],
     );
   }
