@@ -112,8 +112,20 @@ export type GovernedPolloProviderQuote = {
 
 const DEFAULT_MODEL_PATH = "pollo/pollo-v1-6";
 const SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/bytedance-seedance-2-5-ref2video";
+const KLING_SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/kling-v3-omni-ref2video";
 const SOURCE_VIDEO_REFERENCE_MODE = "ref2video";
-const SOURCE_VIDEO_REFERENCE_API_PATH = "bytedance/seedance-2-5/ref2video";
+const SOURCE_VIDEO_REFERENCE_CONTRACTS = {
+  [SOURCE_VIDEO_REFERENCE_MODEL_PATH]: {
+    apiPath: "bytedance/seedance-2-5/ref2video",
+    acceptedResolutions: ["480p", "720p"] as const,
+    providerResolution: (resolution: string) => resolution,
+  },
+  [KLING_SOURCE_VIDEO_REFERENCE_MODEL_PATH]: {
+    apiPath: "kling-ai/kling-v3-omni/ref2video",
+    acceptedResolutions: ["720p", "1080p"] as const,
+    providerResolution: (resolution: string) => resolution === "720p" ? "720P" : "1080P",
+  },
+} as const;
 const OWNER_IDS = new Set([6, 33]);
 const ACTIVE_LEASE_STATES: GovernedPolloJobState[] = ["queued", "submitted", "submission_unknown", "provider_complete", "quality_review"];
 const TERMINAL_STATES: GovernedPolloJobState[] = ["accepted", "rejected", "failed", "cancelled"];
@@ -204,8 +216,12 @@ function safeErrorMessage(error: unknown): string {
   return message.replace(/x-api-key\s*[:=]\s*[^\s,]+/gi, "x-api-key=[redacted]").slice(0, 1200);
 }
 
+function getSourceVideoReferenceContract(providerModelPath: string) {
+  return SOURCE_VIDEO_REFERENCE_CONTRACTS[providerModelPath as keyof typeof SOURCE_VIDEO_REFERENCE_CONTRACTS] || null;
+}
+
 function isSourceVideoReferenceJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode">): boolean {
-  return job.providerModelPath === SOURCE_VIDEO_REFERENCE_MODEL_PATH && job.mode === SOURCE_VIDEO_REFERENCE_MODE;
+  return Boolean(getSourceVideoReferenceContract(job.providerModelPath)) && job.mode === SOURCE_VIDEO_REFERENCE_MODE;
 }
 
 function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
@@ -217,23 +233,26 @@ function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerMod
 }
 
 function buildSourceVideoReferenceInput(input: {
+  providerModelPath: string;
   sourceUrl: string;
   prompt: string;
   durationSeconds: number;
   resolution: string;
   aspectRatio: string;
 }): Record<string, unknown> {
+  const contract = getSourceVideoReferenceContract(input.providerModelPath);
+  if (!contract) throw new Error("The governed source-video model does not have a documented provider contract.");
   if (!/^https:\/\//i.test(input.sourceUrl)) throw new Error("The governed source-video reference must be a secure HTTPS URL.");
   if (!Number.isInteger(input.durationSeconds) || input.durationSeconds < 4 || input.durationSeconds > 15) {
     throw new Error("Pollo source-video reference duration must be between 4 and 15 seconds.");
   }
-  if (!["480p", "720p", "1080p"].includes(input.resolution)) throw new Error("Unsupported Pollo source-video reference resolution.");
+  if (!(contract.acceptedResolutions as readonly string[]).includes(input.resolution)) throw new Error("Unsupported resolution for the documented source-video model.");
   if (!["9:16", "16:9", "1:1", "4:3", "3:4", "21:9"].includes(input.aspectRatio)) throw new Error("Unsupported Pollo source-video reference aspect ratio.");
   return {
     prompt: input.prompt,
     refs: [{ type: "video", name: "creatorvault_verified_source", video: input.sourceUrl, order: 1 }],
     duration: input.durationSeconds,
-    resolution: input.resolution,
+    resolution: contract.providerResolution(input.resolution),
     aspectRatio: input.aspectRatio,
     generateAudio: false,
   };
@@ -645,7 +664,10 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
 }): Promise<GovernedPolloProviderQuote> {
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
   if (!apiKey) throw new Error("POLLO_API_KEY is not configured for a provider cost quote.");
-  const requestBody = buildSourceVideoReferenceInput(input);
+  const requestBody = buildSourceVideoReferenceInput({
+    providerModelPath: SOURCE_VIDEO_REFERENCE_MODEL_PATH,
+    ...input,
+  });
   // Use the manual quote since Pollo endpoints often lack the /estimate route for new models
   let response = {
     status: 404,
@@ -658,7 +680,7 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
     // If the estimate endpoint doesn't exist for this model or fails validation, return a manual quote
     return {
       providerModelPath: SOURCE_VIDEO_REFERENCE_MODEL_PATH,
-      providerApiPath: SOURCE_VIDEO_REFERENCE_API_PATH,
+      providerApiPath: SOURCE_VIDEO_REFERENCE_CONTRACTS[SOURCE_VIDEO_REFERENCE_MODEL_PATH].apiPath,
       quotedCredits: 33,
       quotedCostUsd: 0.33,
       quotedAt: new Date().toISOString(),
@@ -677,7 +699,7 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   }
   return {
     providerModelPath: SOURCE_VIDEO_REFERENCE_MODEL_PATH,
-    providerApiPath: SOURCE_VIDEO_REFERENCE_API_PATH,
+    providerApiPath: SOURCE_VIDEO_REFERENCE_CONTRACTS[SOURCE_VIDEO_REFERENCE_MODEL_PATH].apiPath,
     quotedCredits: 33, // Force 33 credits for Seedance 2.5
     quotedCostUsd: 0.33,
     quotedAt: new Date().toISOString(),
@@ -1087,6 +1109,7 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
 
   const requestBody = isSourceVideoReferenceJob(leased)
     ? buildSourceVideoReferenceInput({
+      providerModelPath: leased.providerModelPath,
       sourceUrl: leased.sourceUrl,
       prompt: leased.prompt,
       durationSeconds: leased.durationSeconds,
@@ -1100,7 +1123,7 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
         mode: leased.mode,
       };
   const providerUrl = isSourceVideoReferenceJob(leased)
-    ? `https://pollo.ai/api/platform/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}`
+    ? `https://pollo.ai/api/platform/generation/${getSourceVideoReferenceContract(leased.providerModelPath)!.apiPath}`
     : `https://pollo.ai/api/platform/generation/${leased.providerModelPath.replace("pollo/", "")}`;
 
   let response: Response;
