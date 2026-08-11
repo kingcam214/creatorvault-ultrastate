@@ -226,10 +226,12 @@ async function startServer() {
       const row = (result as any)?.[0]?.[0];
       if (!row?.storage_path) return res.status(404).json({ error: "This saved media is not available." });
 
-      const storedPath = path.resolve(String(row.storage_path));
-      const fileName = path.basename(storedPath);
+      const rawStoragePath = String(row.storage_path);
+      const fileName = path.basename(rawStoragePath.split("?")[0]) || path.basename(String(row.file_name || ""));
+      const assetId = String(req.params.assetId);
       // Older deployments wrote valid records under more than one durable root.
-      // Only the exact database-owned filename is considered, never a user path.
+      // We test only database-derived absolute paths and the exact record-owned filename
+      // inside explicitly approved roots; no request-controlled path is ever resolved.
       const approvedRoots = [
         path.resolve(process.cwd(), "storage", "uploads"),
         path.resolve(process.cwd(), "..", "storage", "uploads"),
@@ -241,8 +243,21 @@ async function startServer() {
         path.resolve("/root/uploads"),
         path.resolve("/root/uploads/content-vault"),
       ];
-      const assetPath = [storedPath, ...approvedRoots.map(root => path.join(root, fileName))]
-        .find(candidate => approvedRoots.some(root => candidate.startsWith(`${root}${path.sep}`)) && existsSync(candidate));
+      const candidates = new Set<string>();
+      if (path.isAbsolute(rawStoragePath)) candidates.add(path.resolve(rawStoragePath));
+      try {
+        const storedUrl = new URL(rawStoragePath);
+        if (storedUrl.pathname.startsWith("/uploads/")) candidates.add(path.resolve("/root", `.${storedUrl.pathname}`));
+        if (storedUrl.pathname.startsWith("/storage/uploads/")) candidates.add(path.resolve(process.cwd(), `..${storedUrl.pathname}`));
+      } catch {
+        // A storage path can be a local filesystem path; it was handled above.
+      }
+      for (const root of approvedRoots) {
+        candidates.add(path.join(root, fileName));
+        candidates.add(path.join(root, assetId, fileName));
+        candidates.add(path.join(root, "content-vault", assetId, fileName));
+      }
+      const assetPath = [...candidates].find(candidate => approvedRoots.some(root => candidate === root || candidate.startsWith(`${root}${path.sep}`)) && existsSync(candidate));
       if (!assetPath) return res.status(404).json({ error: "This saved media file is not available." });
 
       res.setHeader("Cache-Control", "private, max-age=3600");

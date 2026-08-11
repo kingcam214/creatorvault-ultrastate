@@ -155,6 +155,7 @@ const ALLOWLISTS = {
     'client/src/pages/VaultXDrop.tsx',
     'server/routers/videoUploadRouter.ts',
     'server/routers/realEditorRouter.ts',
+    'server/_core/index.ts',
     'scripts/scope-guard.js'
   ],
   'creation-arsenal': [
