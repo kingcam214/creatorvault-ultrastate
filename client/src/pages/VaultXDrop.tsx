@@ -38,6 +38,7 @@ const RED = "#FF7C7C";
 type Step = "upload" | "preset" | "configure" | "review";
 type UploadReceipt = {
   id: string;
+  mediaAssetId?: string;
   sha256: string;
   verified: boolean;
   ownerBound: boolean;
@@ -56,7 +57,7 @@ type QuickPreset = {
 };
 
 type GovernedJob = {
-  id: number;
+  id: number | null;
   requestId: string;
   state: string;
   fingerprint: string;
@@ -177,10 +178,13 @@ export default function VaultXDrop() {
   const [sourceEvidence, setSourceEvidence] = useState<any>(null);
   const [analyzingSource, setAnalyzingSource] = useState(false);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
+  const [creationProjectId, setCreationProjectId] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const prepareCreationPath = (trpc as any).creationDirector.prepare.useMutation();
+  const openCreationProject = (trpc as any).creationProjects.open.useMutation();
+  const linkCreationProject = (trpc as any).creationProjects.link.useMutation();
   const analyzeSource = (trpc as any).bodyCinema.analyzeSource.useMutation();
   const planAudioTimeline = (trpc as any).editor.planAudioDirectedEdit.useMutation();
   const audioLibraryQ = (trpc as any).audioIntelligence.listAssets.useQuery();
@@ -196,11 +200,34 @@ export default function VaultXDrop() {
   const autoSelectedMediaIdRef = useRef<string | null>(null);
   const jobQuery = trpc.governedPollo.job.useQuery(
     { jobId: governedJob?.id ?? 1 },
-    { enabled: Boolean(governedJob?.id), refetchInterval: governedJob && ["approved", "queued", "submitted", "provider_complete", "quality_review"].includes(governedJob.state) ? 8000 : false },
+    { enabled: typeof governedJob?.id === "number" && governedJob.id > 0, refetchInterval: governedJob && typeof governedJob.id === "number" && governedJob.id > 0 && ["approved", "queued", "submitted", "provider_complete", "quality_review"].includes(governedJob.state) ? 8000 : false },
   );
   const currentJob = (jobQuery.data as GovernedJob | undefined) || governedJob;
   const currentStatus = statusCopy(currentJob?.state);
   const acceptedAsset = currentJob?.state === "accepted" && Boolean(currentJob.artifactUrl);
+
+  const openBodyCinemaCreation = useCallback(async (sourceAssetId: string, sourceUrl: string) => {
+    const project = await openCreationProject.mutateAsync({
+      title: title.trim() || "Body Cinema private release",
+      intent: "Turn this creator-owned video into a distinct cinematic Body Cinema treatment.",
+      outputPurpose: "Body Cinema Drop",
+      sourceAssetId,
+      metadata: { enteredFrom: "body_cinema", sourceUrl, finishingLane: "source_preserving_assembly" },
+    });
+    setCreationProjectId(project.id);
+    return project;
+  }, [openCreationProject, title]);
+
+  const linkBodyCinemaEvidence = useCallback(async (projectId: string, evidence: any, treatmentId?: string | null, audioId?: string | null) => {
+    await linkCreationProject.mutateAsync({
+      projectId,
+      sourceEvidenceId: evidence.id,
+      treatmentId: treatmentId || undefined,
+      audioAssetId: audioId || undefined,
+      state: "ready_to_create",
+      metadata: { analysisStatus: evidence.analysisStatus, analysisVersion: evidence.analysisVersion || null, treatmentSelected: treatmentId || null },
+    });
+  }, [linkCreationProject]);
 
   useEffect(() => () => {
     if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
@@ -228,6 +255,7 @@ export default function VaultXDrop() {
     setUploadReceipt(null);
     setGovernedJob(null);
     setSourceEvidence(null);
+    setCreationProjectId(null);
     setUploadProgress(0);
     setUploading(true);
     setStep("preset");
@@ -252,7 +280,7 @@ export default function VaultXDrop() {
         xhr.send(form);
       });
       setHostedUrl(payload.url);
-      setUploadReceipt(payload.uploadReceipt);
+      setUploadReceipt({ ...payload.uploadReceipt, mediaAssetId: payload.mediaAssetId || payload.uploadReceipt?.mediaAssetId });
       setUploadProgress(100);
       setAnalyzingSource(true);
       try {
@@ -265,7 +293,11 @@ export default function VaultXDrop() {
           frameEvidence: localAnalysis.frameEvidence,
         });
         setSourceEvidence(evidence);
-        toast.success("Source verified and analyzed locally. Choose a treatment supported by the observed frames.");
+        const sourceAssetId = payload.mediaAssetId || payload.uploadReceipt?.mediaAssetId;
+        if (!sourceAssetId) throw new Error("CreatorVault could not attach this verified upload to your Vault.");
+        const project = await openBodyCinemaCreation(sourceAssetId, payload.url);
+        await linkBodyCinemaEvidence(project.id, evidence);
+        toast.success("Source verified and analyzed. Choose a treatment supported by the observed frames.");
       } catch (analysisError: any) {
         setSourceEvidence(null);
         toast.error(analysisError?.message || "Source uploaded, but local evidence analysis could not verify enough usable frames.");
@@ -301,6 +333,7 @@ export default function VaultXDrop() {
     setUploadReceipt(null);
     setGovernedJob(null);
     setSourceEvidence(null);
+    setCreationProjectId(null);
     setFileName(asset.originalName || asset.fileName || "CreatorVault video");
 
     try {
@@ -324,8 +357,11 @@ export default function VaultXDrop() {
         frameEvidence: localAnalysis.frameEvidence,
       });
       setSourceEvidence(evidence);
+      const project = await openBodyCinemaCreation(asset.id, asset.publicUrl);
+      await linkBodyCinemaEvidence(project.id, evidence);
       setUploadReceipt({
         id: asset.id,
+        mediaAssetId: asset.id,
         sha256: localAnalysis.sourceFingerprint,
         verified: true,
         ownerBound: true,
@@ -369,13 +405,14 @@ export default function VaultXDrop() {
     try {
       const evidence = await approveDirection.mutateAsync({ evidenceId: sourceEvidence.id, directionId });
       setSourceEvidence(evidence);
+      if (creationProjectId) await linkBodyCinemaEvidence(creationProjectId, evidence, preset.id, audioAssetId);
       setSelectedPreset(preset);
       setTitle(`${preset.name} — Private Release`);
       setStep("configure");
     } catch (error: any) {
       toast.error(error?.message || "This treatment is not supported by the verified source evidence.");
     }
-  }, [approveDirection, sourceEvidence]);
+  }, [approveDirection, audioAssetId, creationProjectId, linkBodyCinemaEvidence, sourceEvidence]);
 
   const handleCreateGovernedDraft = useCallback(async () => {
     if (!hostedUrl || !uploadReceipt?.verified) {
@@ -408,6 +445,10 @@ export default function VaultXDrop() {
           destinationPlatform: "creatorvault",
         });
       }
+      const sourceAssetId = uploadReceipt.mediaAssetId || uploadReceipt.id;
+      const project = creationProjectId
+        ? { id: creationProjectId }
+        : await openBodyCinemaCreation(sourceAssetId, hostedUrl);
       const response = await prepareCreationPath.mutateAsync({
         tool: "body_cinema",
         intent: `${selectedPreset.name}: ${selectedPreset.direction}`,
@@ -449,10 +490,20 @@ export default function VaultXDrop() {
           sourceReceiptId: uploadReceipt.id,
           audioTimelinePlanId: audioPlan?.planId || undefined,
           audioTimingEvidence: audioPlan?.anchors || undefined,
+          creationProjectId: project.id,
         },
       });
-      // Temporarily mock the governed job shape for UI state until the polling loop is fully replaced
-      setGovernedJob({ id: 1, requestId: response.requestId, state: response.state === "ready_to_finish" || response.state === "in_progress" ? "approved" : "cost_pending", fingerprint: uploadReceipt.sha256, sourceUrl: hostedUrl, providerModelPath: response.selectedLane || "controlled", resolution: "720p", durationSeconds: 6, estimatedCostCredits: null, actualCostCredits: null, costEvidenceReference: null, providerJobId: null, outputUrl: null, artifactUrl: null, qualityState: null, qualityScore: null, qualityReason: null, failureMessage: response.blockedReasons?.[0] || null, audioAssetId: audioAssetId || undefined });
+      await linkCreationProject.mutateAsync({
+        projectId: project.id,
+        sourceEvidenceId: sourceEvidence.id,
+        treatmentId: selectedPreset.id,
+        audioAssetId: audioAssetId || undefined,
+        creationDirectorRequestId: response.requestId,
+        state: response.state === "ready_to_finish" ? "ready_to_create" : response.state === "in_progress" ? "in_progress" : "blocked",
+        metadata: { releaseTitle: title.trim() || `${selectedPreset.name} — Private Release`, creationPath: response.creationPath },
+      });
+      setCreationProjectId(project.id);
+      setGovernedJob({ id: null, requestId: response.requestId, state: response.state === "ready_to_finish" ? "cost_pending" : "failed", fingerprint: uploadReceipt.sha256, sourceUrl: hostedUrl, providerModelPath: response.selectedLane || "no provider route", resolution: "720p", durationSeconds: 6, estimatedCostCredits: null, actualCostCredits: null, costEvidenceReference: null, providerJobId: null, outputUrl: null, artifactUrl: null, qualityState: null, qualityScore: null, qualityReason: null, failureMessage: response.blockedReasons?.[0] || null, audioAssetId: audioAssetId || undefined });
       setStep("review");
       toast.success(response.creationPath);
     } catch (error: any) {
@@ -460,7 +511,7 @@ export default function VaultXDrop() {
     } finally {
       setCreating(false);
     }
-  }, [audioAssetId, audioReadinessQ.data, consent, prepareCreationPath, hostedUrl, planAudioTimeline, selectedPreset, sourceEvidence, title, uploadReceipt, uploading]);
+  }, [audioAssetId, audioReadinessQ.data, consent, creationProjectId, hostedUrl, linkCreationProject, openBodyCinemaCreation, planAudioTimeline, prepareCreationPath, selectedPreset, sourceEvidence, title, uploadReceipt, uploading]);
 
   const handleDownload = useCallback(() => {
     if (!currentJob?.artifactUrl) return;
@@ -711,18 +762,18 @@ export default function VaultXDrop() {
               <p style={{ color: MUTED, fontSize: 12, lineHeight: 1.55, margin: 0 }}>{currentStatus.detail}</p>
             </div>
             <div style={{ position: "relative", borderRadius: 24, overflow: "hidden", background: "#000", aspectRatio: "9/16", maxHeight: 560, margin: "0 auto 24px", border: `1px solid ${BORDER}`, boxShadow: "0 20px 40px rgba(0,0,0,0.6)" }}>
-              <video src={currentJob.artifactUrl || currentJob.outputUrl || (acceptedAsset ? undefined : "/assets/final-drop.mp4")} autoPlay={!acceptedAsset} loop={!acceptedAsset} controls={acceptedAsset} muted={!acceptedAsset} playsInline style={{ width: "100%", height: "100%", objectFit: "cover", opacity: acceptedAsset ? 1 : 0.7 }} />
+              <video src={currentJob?.artifactUrl || currentJob?.outputUrl || undefined} autoPlay={acceptedAsset} loop={acceptedAsset} controls={acceptedAsset} muted={!acceptedAsset} playsInline style={{ width: "100%", height: "100%", objectFit: "cover", opacity: acceptedAsset ? 1 : 0.7 }} />
               {!acceptedAsset && (
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.7) 100%)", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 24 }}>
                   <div style={{ alignSelf: "flex-start", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", padding: "6px 12px", borderRadius: 999, border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 6 }}>
                     <div style={{ width: 6, height: 6, borderRadius: "50%", background: GOLD, animation: "pulse 2s infinite" }} />
                     <style>{`@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }`}</style>
-                    <span style={{ fontSize: 10, color: "#fff", fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase" }}>Simulated Outcome</span>
+                    <span style={{ fontSize: 10, color: "#fff", fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase" }}>No finished drop yet</span>
                   </div>
                   <div style={{ textAlign: "center" }}>
                     <Film size={32} color={GOLD} style={{ marginBottom: 12, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} />
-                    <p style={{ margin: 0, fontSize: 18, color: "#fff", fontWeight: 900, textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}>Preparing your drop</p>
-                    <p style={{ margin: "6px 0 0", fontSize: 13, color: "rgba(255,255,255,0.8)", lineHeight: 1.5, textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>This is a preview of the cinematic quality you can expect once the render is approved.</p>
+                    <p style={{ margin: 0, fontSize: 18, color: "#fff", fontWeight: 900, textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}>Your source and treatment are locked</p>
+                    <p style={{ margin: "6px 0 0", fontSize: 13, color: "rgba(255,255,255,0.8)", lineHeight: 1.5, textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>CreatorVault shows a video here only after a real finished drop passes review.</p>
                   </div>
                 </div>
               )}
@@ -747,7 +798,7 @@ export default function VaultXDrop() {
                 {currentJob.failureMessage && <div style={{ color: RED, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}><span style={{ fontWeight: 800, display: "block", marginBottom: 4 }}>Safe Failure</span>{currentJob.failureMessage}</div>}
               </div>
               <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <a href={`/vault-x/library/${currentJob.id}`} style={{ color: GOLD, fontSize: 11, fontWeight: 800, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}><ShieldCheck size={12} /> View Truth Library Record</a>
+                {typeof currentJob?.id === "number" && currentJob.id > 0 ? <a href={`/vault-x/library/${currentJob.id}`} style={{ color: GOLD, fontSize: 11, fontWeight: 800, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}><ShieldCheck size={12} /> View Truth Library Record</a> : <span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Creation record saved</span>}
                 <CopyButton text={currentJob.requestId} label="Copy Plan ID" />
               </div>
             </div>

@@ -413,6 +413,66 @@ async function assetForProject(creatorId: number, assetId: string | null): Promi
   return rows[0] ? normaliseAsset(rows[0]) : null;
 }
 
+export async function acceptInspectedAssemblyRender(input: {
+  creatorId: number;
+  actorId: number;
+  projectId: string;
+  renderJobId: string;
+  outputUrl: string;
+  qualityScore: number;
+  qualityNote: string;
+}): Promise<CreationProject> {
+  const project = await getCreationProject(input.creatorId, input.projectId);
+  if (!project) throw new Error("This creation could not be found.");
+  if (!project.renderJobId || project.renderJobId !== input.renderJobId) {
+    throw new Error("This finished edit is not linked to this creation.");
+  }
+  if (!/^https:\/\/creatorvault\.live\/uploads\/renders\//i.test(input.outputUrl)) {
+    throw new Error("CreatorVault could not verify the finished edit storage path.");
+  }
+  if (!Number.isFinite(input.qualityScore) || input.qualityScore < 75 || input.qualityScore > 100) {
+    throw new Error("Only an inspected edit that clears the quality standard can enter your Vault.");
+  }
+  const qualityNote = String(input.qualityNote || "").trim();
+  if (qualityNote.length < 12) throw new Error("Record why this edit earned approval before adding it to your Vault.");
+
+  const existing = await rawQuery(
+    "SELECT id FROM media_assets WHERE user_id = ? AND public_url = ? LIMIT 1",
+    [input.creatorId, input.outputUrl],
+  );
+  const assetId = existing[0]?.id ? String(existing[0].id) : randomUUID();
+  if (!existing.length) {
+    const baseName = `${project.title || "creatorvault-master"}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80) || "creatorvault-master";
+    await rawExec(
+      `INSERT INTO media_assets
+        (id, user_id, source_type, asset_type, file_name, original_name, mime_type, storage_path, public_url, thumbnail_url, status, created_by_feature)
+       VALUES (?, ?, 'assembly_render', 'video', ?, ?, 'video/mp4', ?, ?, ?, 'ready', 'body_cinema_assembly')`,
+      [assetId, input.creatorId, `${baseName}.mp4`, `${baseName}.mp4`, input.outputUrl, input.outputUrl, input.outputUrl],
+    );
+  }
+
+  return updateCreationProjectLinks({
+    creatorId: input.creatorId,
+    projectId: input.projectId,
+    actorId: input.actorId,
+    patch: {
+      acceptedAssetId: assetId,
+      state: "accepted",
+      metadata: {
+        acceptedRenderUrl: input.outputUrl,
+        acceptedRenderJobId: input.renderJobId,
+        qualityScore: input.qualityScore,
+        qualityNote,
+        acceptanceBasis: "inspected_source_preserving_assembly",
+      },
+    },
+  });
+}
+
 export async function getCreationProjectDashboard(creatorId: number, projectId: string): Promise<CreationProjectDashboard | null> {
   const project = await getCreationProject(creatorId, projectId);
   if (!project) return null;

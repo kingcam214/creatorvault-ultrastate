@@ -6,6 +6,7 @@ import {
   getCreationProjectDashboard,
   listCreationProjects,
   updateCreationProjectLinks,
+  acceptInspectedAssemblyRender,
   type CreationProjectState,
 } from "../services/creationProjectService";
 
@@ -54,6 +55,24 @@ export const creationProjectsRouter = router({
     const project = await getCreationProjectDashboard(Number(ctx.user.id), input.projectId);
     if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "CreatorVault could not find this creation." });
     return project;
+  }),
+
+  acceptAssemblyMaster: protectedProcedure.input(z.object({
+    projectId: z.string().uuid(),
+    renderJobId: z.string().min(1).max(96),
+    outputUrl: z.string().url(),
+    qualityScore: z.number().min(75).max(100),
+    qualityNote: z.string().min(12).max(2000),
+  })).mutation(async ({ ctx, input }) => {
+    try {
+      return await acceptInspectedAssemblyRender({
+        creatorId: Number(ctx.user.id),
+        actorId: Number(ctx.user.id),
+        ...input,
+      });
+    } catch (error: any) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error?.message || "CreatorVault could not place this approved master in your Vault." });
+    }
   }),
 
   link: protectedProcedure.input(z.object({

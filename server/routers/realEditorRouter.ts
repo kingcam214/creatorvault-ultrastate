@@ -14,6 +14,7 @@ import { startRender, getRenderJob, COLOR_GRADES, MOTION_PRESETS, FOCUS_PRESETS 
 import { BODY_CINEMA_EDIT_PRESETS, EDIT_PRESET_CATEGORIES, getEditPreset } from "../services/bodyCinemaEditPresets.js";
 import { buildAudioDirectedTimeline, toMediaOSManifest } from "../services/audioTimelinePlanner.js";
 import { assertAudioRights, getAudioAnalysis, getCanonicalAudioAsset } from "../services/audioIntelligenceService.js";
+import { getCreationProject, updateCreationProjectLinks } from "../services/creationProjectService.js";
 
 const clipSchema = z.object({
   src: z.string(),
@@ -26,6 +27,10 @@ const clipSchema = z.object({
   caption: z.string().optional(),
   captionStyle: z.string().optional(),
   transition: z.string().optional(),
+  punch: z.boolean().optional(),
+  lightLeak: z.boolean().optional(),
+  flashIn: z.boolean().optional(),
+  glitch: z.boolean().optional(),
 });
 
 const textOverlaySchema = z.object({
@@ -103,11 +108,30 @@ export const realEditorRouter = router({
       watermarkText: z.string().optional(),
       fadeInOut: z.boolean().default(true),
       textOverlays: z.array(textOverlaySchema).optional(),
+      chromaAberration: z.boolean().optional(),
+      lightLeaks: z.boolean().optional(),
+      letterbox: z.boolean().optional(),
+      glitch: z.boolean().optional(),
+      polish: z.boolean().optional(),
+      creationProjectId: z.string().uuid().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const creatorId = Number(ctx.user.id);
+      if (input.creationProjectId) {
+        const project = await getCreationProject(creatorId, input.creationProjectId);
+        if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "CreatorVault could not find the creation attached to this finish." });
+      }
       const musicUrl = await resolveGovernedMusicForRender(ctx.user.id, input.audioAssetId);
-      const { audioAssetId: _audioAssetId, ...renderInput } = input;
+      const { audioAssetId: _audioAssetId, creationProjectId, ...renderInput } = input;
       const job = startRender({ ...renderInput, musicUrl });
+      if (creationProjectId) {
+        await updateCreationProjectLinks({
+          creatorId,
+          projectId: creationProjectId,
+          actorId: creatorId,
+          patch: { renderJobId: job.id, audioAssetId: input.audioAssetId || null, state: "in_progress", metadata: { finishingLane: "source_preserving_assembly" } },
+        });
+      }
       return { jobId: job.id, status: job.status };
     }),
 
@@ -118,8 +142,14 @@ export const realEditorRouter = router({
       captionText: z.string().optional(),
       audioAssetId: z.string().uuid().optional(),
       watermarkText: z.string().optional(),
+      creationProjectId: z.string().uuid().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const creatorId = Number(ctx.user.id);
+      if (input.creationProjectId) {
+        const project = await getCreationProject(creatorId, input.creationProjectId);
+        if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "CreatorVault could not find the creation attached to this finish." });
+      }
       const preset = getEditPreset(input.presetId);
       if (!preset) throw new TRPCError({ code: "NOT_FOUND", message: `Edit preset ${input.presetId} not found` });
       const musicUrl = await resolveGovernedMusicForRender(ctx.user.id, input.audioAssetId);
@@ -136,6 +166,14 @@ export const realEditorRouter = router({
         watermarkText: input.watermarkText,
         fadeInOut: preset.fadeInOut,
       });
+      if (input.creationProjectId) {
+        await updateCreationProjectLinks({
+          creatorId,
+          projectId: input.creationProjectId,
+          actorId: creatorId,
+          patch: { renderJobId: job.id, audioAssetId: input.audioAssetId || null, state: "in_progress", metadata: { presetId: input.presetId, finishingLane: "source_preserving_assembly" } },
+        });
+      }
       return { jobId: job.id, status: job.status, presetApplied: preset.name };
     }),
 

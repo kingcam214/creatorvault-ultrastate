@@ -152,6 +152,9 @@ const ALLOWLISTS = {
     'server/routers/creationProjectsRouter.ts',
     'server/routers.ts',
     'client/src/pages/KingContent.tsx',
+    'client/src/pages/VaultXDrop.tsx',
+    'server/routers/videoUploadRouter.ts',
+    'server/routers/realEditorRouter.ts',
     'scripts/scope-guard.js'
   ],
   'creation-arsenal': [

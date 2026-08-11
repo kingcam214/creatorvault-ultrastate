@@ -537,9 +537,9 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
       createdAt,
     }, null, 2));
 
+    const mediaAssetId = randomUUID();
     let canonicalAudioAsset: any = null;
     if (isAudioUpload) {
-      const mediaAssetId = randomUUID();
       await rawExec(
         `INSERT INTO media_assets
           (id, user_id, source_type, asset_type, file_name, original_name, mime_type, storage_path, public_url, thumbnail_url, duration, status, created_by_feature)
@@ -557,16 +557,38 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
         channels: (media as any).channels,
         mediaAssetId,
       });
+    } else {
+      await rawExec(
+        `INSERT INTO media_assets
+          (id, user_id, source_type, asset_type, file_name, original_name, mime_type, file_size, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
+         VALUES (?, ?, 'creator_upload', 'video', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', 'body_cinema_direct_upload')`,
+        [
+          mediaAssetId,
+          creatorId,
+          originalName,
+          originalName,
+          getMimeType(originalName),
+          Number(f.size),
+          url,
+          url,
+          url,
+          (media as any).durationSec,
+          (media as any).width,
+          (media as any).height,
+        ]
+      );
     }
 
     return res.json({
       url,
       filename: originalName,
       storageId: fileUuid,
+      mediaAssetId,
       size: Number(f.size),
       mime: getMimeType(originalName),
       uploadReceipt: {
         id: fileUuid,
+        mediaAssetId,
         sha256,
         verified: true,
         ownerBound: true,
