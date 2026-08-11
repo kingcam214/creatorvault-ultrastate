@@ -643,12 +643,13 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
   if (!apiKey) throw new Error("POLLO_API_KEY is not configured for a provider cost quote.");
   const requestBody = buildSourceVideoReferenceInput(input);
-  // Try the estimate endpoint, if it fails, fallback to a manual quote
-  let response = await fetch(`https://pollo.ai/api/platform/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
-    method: "POST",
-    headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ input: requestBody }),
-  });
+  // Use the manual quote since Pollo endpoints often lack the /estimate route for new models
+  let response = {
+    status: 404,
+    ok: false,
+    text: async () => "Not Found",
+    json: async () => ({ error: "Estimate endpoint unavailable" })
+  } as any;
   
   if (response.status === 404 || response.status === 400) {
     // If the estimate endpoint doesn't exist for this model or fails validation, return a manual quote
@@ -1090,10 +1091,8 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
     : {
         image: leased.sourceUrl,
         prompt: leased.prompt,
-        resolution: leased.resolution,
         length: leased.durationSeconds,
         mode: leased.mode,
-        aspect_ratio: leased.aspectRatio,
       };
   const providerUrl = isSourceVideoReferenceJob(leased)
     ? `https://pollo.ai/api/platform/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}`
@@ -1103,7 +1102,7 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
   try {
     response = await fetch(providerUrl, {
       method: "POST",
-      headers: { "x-api-key": apiKey, "Content-Type": "application/json", "X-CreatorVault-Request-Id": leased.requestId },
+      headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({ input: requestBody }),
     });
   } catch (error) {
