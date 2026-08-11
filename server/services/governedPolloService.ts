@@ -644,11 +644,10 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   if (!apiKey) throw new Error("POLLO_API_KEY is not configured for a provider cost quote.");
   const requestBody = buildSourceVideoReferenceInput(input);
   // Try the estimate endpoint, if it fails, fallback to a manual quote
-  const finalRequestBody = { input: requestBody };
   let response = await fetch(`https://pollo.ai/api/platform/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
     method: "POST",
     headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
-    body: JSON.stringify(finalRequestBody),
+    body: JSON.stringify({ input: requestBody }),
   });
   
   if (response.status === 404 || response.status === 400) {
@@ -1081,24 +1080,20 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
   }
 
   const requestBody = isSourceVideoReferenceJob(leased)
-    ? {
-        input: buildSourceVideoReferenceInput({
-          sourceUrl: leased.sourceUrl,
-          prompt: leased.prompt,
-          durationSeconds: leased.durationSeconds,
-          resolution: leased.resolution,
-          aspectRatio: leased.aspectRatio,
-        })
-      }
+    ? buildSourceVideoReferenceInput({
+      sourceUrl: leased.sourceUrl,
+      prompt: leased.prompt,
+      durationSeconds: leased.durationSeconds,
+      resolution: leased.resolution,
+      aspectRatio: leased.aspectRatio,
+    })
     : {
-        input: {
-          image: leased.sourceUrl,
-          prompt: leased.prompt,
-          resolution: leased.resolution,
-          length: leased.durationSeconds,
-          mode: leased.mode,
-          aspect_ratio: leased.aspectRatio,
-        }
+        image: leased.sourceUrl,
+        prompt: leased.prompt,
+        resolution: leased.resolution,
+        length: leased.durationSeconds,
+        mode: leased.mode,
+        aspect_ratio: leased.aspectRatio,
       };
   const providerUrl = isSourceVideoReferenceJob(leased)
     ? `https://pollo.ai/api/platform/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}`
@@ -1109,7 +1104,7 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
     response = await fetch(providerUrl, {
       method: "POST",
       headers: { "x-api-key": apiKey, "Content-Type": "application/json", "X-CreatorVault-Request-Id": leased.requestId },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({ input: requestBody }),
     });
   } catch (error) {
     return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId: params.workerId, error });
