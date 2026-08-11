@@ -233,7 +233,7 @@ function buildSourceVideoReferenceInput(input: {
     prompt: input.prompt,
     refs: [{ type: "video", name: "creatorvault_verified_source", video: input.sourceUrl, order: 1 }],
     duration: input.durationSeconds,
-    resolution: input.resolution === "720p" ? "720P" : input.resolution,
+    resolution: input.resolution,
     aspectRatio: input.aspectRatio,
     generateAudio: false,
   };
