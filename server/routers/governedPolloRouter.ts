@@ -10,6 +10,7 @@ import {
   listGovernedPolloEvents,
   listGovernedPolloJobs,
   recordGovernedPolloProviderCompletion,
+  pollGovernedPolloProviderJob,
   reviewGovernedPolloOutput,
   setGovernedPolloCostEstimate,
   submitGovernedPolloJob,
@@ -345,6 +346,15 @@ export const governedPolloRouter = router({
     ownerOnly(ctx.user.id);
     try {
       return await submitGovernedPolloJob({ jobId: input.jobId, workerId: input.workerId });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  pollProviderStatus: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await pollGovernedPolloProviderJob({ jobId: input.jobId, actorId: ctx.user.id });
     } catch (error) {
       return asPrecondition(error);
     }

@@ -1142,6 +1142,68 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
   return markGovernedPolloSubmitted({ jobId: leased.id, workerId: params.workerId, providerJobId: String(providerJobId), providerResponse: responseJson });
 }
 
+export async function pollGovernedPolloProviderJob(params: { jobId: number; actorId: number }): Promise<GovernedPolloJob> {
+  requireOwner(params.actorId);
+  await ensureGovernedPolloSchema();
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job) throw new Error("Governed media job was not found.");
+  if (job.state !== "submitted") throw new Error(`Job in state ${job.state} cannot be polled for provider completion.`);
+  if (!job.providerJobId) throw new Error("The governed media job has no provider task ID to poll.");
+
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!apiKey) throw new Error("POLLO_API_KEY is not configured; provider status cannot be read.");
+  const response = await fetch(`https://pollo.ai/api/platform/generation/${encodeURIComponent(job.providerJobId)}/status`, {
+    method: "GET",
+    headers: { "x-api-key": apiKey, Accept: "application/json" },
+  });
+  const providerResponse = await parseProviderJson(response);
+  if (!response.ok) {
+    throw new Error(`Pollo task status returned ${response.status}: ${safeErrorMessage(providerResponse.responseText ?? providerResponse.message ?? "unknown error")}`);
+  }
+
+  const generations = providerResponse.data && typeof providerResponse.data === "object"
+    ? (providerResponse.data as Record<string, unknown>).generations
+    : providerResponse.generations;
+  const generation = Array.isArray(generations) && generations[0] && typeof generations[0] === "object"
+    ? generations[0] as Record<string, unknown>
+    : null;
+  const rawStatus = String(generation?.status ?? (providerResponse.data as Record<string, unknown> | undefined)?.status ?? providerResponse.status ?? "processing").toLowerCase();
+  const outputUrl = typeof generation?.url === "string" ? generation.url.trim() : "";
+
+  if (["succeed", "succeeded", "completed"].includes(rawStatus)) {
+    if (!outputUrl) throw new Error("Pollo reported completion without a usable output URL.");
+    return recordGovernedPolloProviderCompletion({
+      jobId: job.id,
+      providerJobId: job.providerJobId,
+      outputUrl,
+      providerResponse,
+    });
+  }
+  if (["failed", "fail", "error", "cancelled", "canceled"].includes(rawStatus)) {
+    return failGovernedPolloJob({
+      jobId: job.id,
+      actorId: params.actorId,
+      code: "provider_task_failed",
+      error: new Error(String(generation?.failMsg ?? generation?.error ?? providerResponse.message ?? "Pollo provider task failed.")),
+    });
+  }
+
+  await rawExec(
+    "UPDATE governed_media_jobs SET provider_response_json = ?, updated_at = NOW() WHERE id = ? AND state = 'submitted'",
+    [safeJson(providerResponse), job.id],
+  );
+  await appendEvent({
+    jobId: job.id,
+    eventType: "provider_status_polled",
+    fromState: "submitted",
+    toState: "submitted",
+    actorId: params.actorId,
+    correlationId: job.requestId,
+    detail: { providerJobId: job.providerJobId, status: rawStatus },
+  });
+  return (await getGovernedPolloJob(job.id))!;
+}
+
 export async function recordGovernedPolloProviderCompletion(params: { jobId: number; providerJobId: string; outputUrl: string; providerResponse?: Record<string, unknown> }): Promise<GovernedPolloJob> {
   await ensureGovernedPolloSchema();
   const job = await getGovernedPolloJob(params.jobId);
