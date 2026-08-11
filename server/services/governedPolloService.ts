@@ -854,12 +854,34 @@ async function getReservedCredits(scope: string, creatorId?: number): Promise<nu
   return Number(rows[0]?.credits ?? 0);
 }
 
+function isExplicitOwnerDirectedSourcePilot(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
+  const cap = Number(job.metadata.hardCreditCap);
+  return isSourceVideoReferenceJob(job)
+    && job.metadata.ownerDirectedPilot === true
+    && job.metadata.candidateLimit === 1
+    && job.metadata.noAutomaticRetry === true
+    && Number.isFinite(cap)
+    && cap > 0
+    && Number(job.estimatedCostCredits) === cap;
+}
+
 async function reserveBudget(job: GovernedPolloJob, approverId: number): Promise<void> {
   if (isProviderVerifiedZeroQuoteJob(job)) return;
   const estimated = requirePositiveAmount(job.estimatedCostCredits, "Estimated credit cost");
   const config = getGovernedPolloConfig();
   if (config.perRequestCreditCap <= 0 || config.perUserDailyCreditCap <= 0 || config.globalDailyCreditCap <= 0 || config.maxConcurrentJobs <= 0) {
-    throw new Error("Governed Pollo budgets are frozen. Set explicit positive caps only after reviewing the requested job.");
+    if (!isExplicitOwnerDirectedSourcePilot(job)) {
+      throw new Error("Governed Pollo budgets are frozen. Set explicit positive caps only after reviewing the requested job.");
+    }
+    const reference = `reserve:owner-directed-pilot:${job.requestId}`;
+    for (const scope of ["global_daily", "creator_daily"]) {
+      await rawExec(
+        `INSERT INTO governed_media_budget_ledger (job_id, creator_id, scope, entry_type, credits, reference, detail_json, created_at)
+         VALUES (?, ?, ?, 'reserve', ?, ?, ?, NOW())`,
+        [job.id, job.creatorId, scope, estimated, reference, safeJson({ approverId, ownerDirectedPilot: true, hardCreditCap: estimated, generalBudgetsFrozen: true })],
+      );
+    }
+    return;
   }
   if (estimated > config.perRequestCreditCap) throw new Error("Requested credit cap exceeds the configured per-request ceiling.");
   const [globalReserved, creatorReserved, active] = await Promise.all([
