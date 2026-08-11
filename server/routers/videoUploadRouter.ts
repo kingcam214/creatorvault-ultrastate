@@ -522,7 +522,10 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
     const creatorProfileId = Number((req as any).authenticatedCreatorId);
     const requestedClassification = String(req.get("x-creatorvault-source-classification") || "").trim().toLowerCase();
     const approvedDemo = requestedClassification === "approved_demo" && OWNER_IDS.includes(creatorId);
-    const sourceType = approvedDemo ? "approved_demo" : "creator_upload";
+    // media_assets.source_type is a constrained legacy field. Keep its permitted
+    // ownership value and carry the unambiguous demonstration classification in
+    // created_by_feature plus the immutable upload receipt.
+    const sourceType = "creator_upload";
     const createdByFeature = approvedDemo ? "creatorvault_approved_demo" : "body_cinema_direct_upload";
 
     await mkdir(PRIVATE_UPLOAD_RECEIPTS_DIR, { recursive: true });
