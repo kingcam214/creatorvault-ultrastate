@@ -645,9 +645,9 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   const requestBody = buildSourceVideoReferenceInput(input);
   // Try the estimate endpoint, if it fails, fallback to a manual quote
   const finalRequestBody = { input: requestBody };
-  let response = await fetch(`https://api.manus.im/api/llm-proxy/v1/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
+  let response = await fetch(`https://pollo.ai/api/platform/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}/estimate`, {
     method: "POST",
-    headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
     body: JSON.stringify(finalRequestBody),
   });
   
@@ -1097,8 +1097,8 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
         aspect_ratio: leased.aspectRatio,
       };
   const providerUrl = isSourceVideoReferenceJob(leased)
-    ? `https://api.manus.im/api/llm-proxy/v1/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}`
-    : `https://api.manus.im/api/llm-proxy/v1/generation/${leased.providerModelPath.replace("pollo/", "")}`;
+    ? `https://pollo.ai/api/platform/generation/${SOURCE_VIDEO_REFERENCE_API_PATH}`
+    : `https://pollo.ai/api/platform/generation/${leased.providerModelPath.replace("pollo/", "")}`;
 
   let response: Response;
   try {
@@ -1106,7 +1106,7 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
     // because we already matched the working smoke test contract
     response = await fetch(providerUrl, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json", "X-CreatorVault-Request-Id": leased.requestId },
+      headers: { "x-api-key": apiKey, "Content-Type": "application/json", "X-CreatorVault-Request-Id": leased.requestId },
       body: JSON.stringify({ input: requestBody }),
     });
   } catch (error) {
