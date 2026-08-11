@@ -258,7 +258,12 @@ async function startServer() {
         candidates.add(path.join(root, "content-vault", assetId, fileName));
       }
       const assetPath = [...candidates].find(candidate => approvedRoots.some(root => candidate === root || candidate.startsWith(`${root}${path.sep}`)) && existsSync(candidate));
-      if (!assetPath) return res.status(404).json({ error: "This saved media file is not available." });
+      if (!assetPath) {
+        // A record is never presented as ready again after authenticated delivery
+        // confirms that its durable backing file is gone. The metadata remains for audit.
+        await database.execute(sql`UPDATE media_assets SET status = 'unavailable', updated_at = NOW() WHERE id = ${req.params.assetId} AND user_id = ${user.id} AND status = 'ready'` as any);
+        return res.status(404).json({ error: "This saved media file is not available." });
+      }
 
       res.setHeader("Cache-Control", "private, max-age=3600");
       res.type(String(row.mime_type || "application/octet-stream"));
