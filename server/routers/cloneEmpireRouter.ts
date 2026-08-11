@@ -245,7 +245,7 @@ export const cloneEmpireRouter = router({
     if (!legacyCloneRenderExecutionEnabled()) {
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
-        message: "Legacy Clone Empire rendering is retired for credit safety. Create and approve a governed media request before any source, audio, or video work can begin.",
+        message: "Clone creation is temporarily disabled while we upgrade the rendering engine to the new governed standard. Use the Creation Director in KingCam Content.",
       });
     }
     ensureDirs();
@@ -291,7 +291,7 @@ export const cloneEmpireRouter = router({
     if (!legacyCloneRenderExecutionEnabled()) {
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
-        message: "Legacy Clone Empire rendering is retired for credit safety. Create and approve a governed media request before any source, audio, or video work can begin.",
+        message: "Clone creation is temporarily disabled while we upgrade the rendering engine to the new governed standard. Use the Creation Director in KingCam Content.",
       });
     }
     ensureDirs();

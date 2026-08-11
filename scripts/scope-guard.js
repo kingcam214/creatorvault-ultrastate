@@ -157,11 +157,14 @@ const ALLOWLISTS = {
     'server/services/trailerEngine.ts',
     'server/routers/trailerRouter.ts',
     'server/routers/bodyCinemaRouter.ts',
+    'server/routers/cloneEmpireRouter.ts',
     'server/services/bodyCinemaEvidenceService.ts',
     'server/routers.ts',
     'client/src/pages/KingContent.tsx',
+    'client/src/pages/CloneEmpire.tsx',
     'client/src/pages/VaultXDrop.tsx',
     'client/src/pages/TrailerStudio.tsx',
+    'client/src/App.tsx',
     'scripts/scope-guard.js'
   ],
   'body-cinema': [

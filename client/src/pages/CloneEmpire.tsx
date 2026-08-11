@@ -169,14 +169,14 @@ export default function CloneEmpire() {
   // tRPC queries
   const { data: statsData, refetch: refetchStats } = trpc.cloneEmpire.getCloneStats.useQuery(undefined, { retry: false });
   const { data: trainingJobs, refetch: refetchJobs } = trpc.cloneEmpire.listTrainingJobs.useQuery(undefined, { retry: false });
-  // @ts-ignore
-  // @ts-ignore
+
+
   const { data: cloneVideos, refetch: refetchVideos } = trpc.cloneEmpire.listCloneContent.useQuery({ limit: 50, offset: 0, contentType: "all" }, { retry: false });
 
-  // @ts-ignore
+
   // Also get existing clone videos from the main clone lab
-  // @ts-ignore
-  const { data: existingVideos } = trpc.cloneLab.listCloneVideos.useQuery({ limit: 50, offset: 0 }, { retry: false });
+
+  const { data: existingVideos } = (trpc as any).cloneLab.listCloneVideos.useQuery({ limit: 50, offset: 0 }, { retry: false });
 
   if (authLoading) {
     return <LoadingSpinner message="Loading Clone Empire..." />;
@@ -196,12 +196,9 @@ export default function CloneEmpire() {
     setGenerating(true); setError(null); setLastResult(null);
     try {
       const result = await generateTalkingHead.mutateAsync({
-  // @ts-ignore
-        topic: topic || "KingCam intro",
-        format: format as any,
-        voice,
+        script: useCustomScript && customScript ? customScript : topic || "KingCam intro",
         style: style as any,
-        customScript: useCustomScript && customScript ? customScript : undefined,
+        title: (topic || "KingCam intro").substring(0, 50),
       });
       setLastResult(result);
       refetchVideos();
@@ -217,11 +214,8 @@ export default function CloneEmpire() {
     setGenerating(true); setError(null); setLastResult(null);
     try {
       const result = await generateFullBody.mutateAsync({
-  // @ts-ignore
-        prompt: fullBodyPrompt,
-        aspectRatio: "9:16",
+        script: fullBodyPrompt,
         duration: 5,
-        mode: "pro",
         title: fullBodyPrompt.substring(0, 80),
       });
       setLastResult(result);
@@ -238,11 +232,8 @@ export default function CloneEmpire() {
     setGeneratingImage(true); setError(null); setLastImageResult(null);
     try {
       const result = await generateImage.mutateAsync({
-        prompt: imagePrompt,
-  // @ts-ignore
-        colorVariant,
-        aspectRatio: "1:1",
-        outputFormat: "jpg",
+        prompt: `${imagePrompt} wearing ${colorVariant}`,
+        style: "realistic",
       });
       setLastImageResult(result);
     } catch (e: any) {
@@ -257,11 +248,8 @@ export default function CloneEmpire() {
     setTraining(true); setError(null); setTrainingResult(null);
     try {
       const result = await trainClone.mutateAsync({
-  // @ts-ignore
-        jobName: trainingJobName,
-        zipUrl: trainingZipUrl,
-        imageCount: trainingImageCount,
-        steps: trainingSteps,
+        cloneId: "kingcam-1",
+        samples: [trainingZipUrl],
       });
       setTrainingResult(result);
       refetchJobs();
@@ -272,10 +260,10 @@ export default function CloneEmpire() {
     }
   };
 
-  // @ts-ignore
+
   const allVideos = [
     ...(existingVideos?.items || []),
-  // @ts-ignore
+
     ...(cloneVideos?.items || []).filter((v: any) => v.video_url),
   ];
 
@@ -300,21 +288,18 @@ export default function CloneEmpire() {
           </div>
 
           {/* Stats Bar */}
-  // @ts-ignore
+
           {statsData && (
-  // @ts-ignore
+
             <div style={{ display: "flex", gap: 24, marginTop: 16, flexWrap: "wrap" }}>
-  // @ts-ignore
+
               {[
-  // @ts-ignore
-  // @ts-ignore
-                { label: "Total Videos", value: statsData.videos?.total_videos || 0, icon: <Video size={14} />, color: "#D4AF37" },
-  // @ts-ignore
-                { label: "Ready", value: statsData.videos?.ready_videos || 0, icon: <CheckCircle size={14} />, color: "#10B981" },
-  // @ts-ignore
-                { label: "Training Jobs", value: statsData.training?.total_trainings || 0, icon: <Brain size={14} />, color: "#8B5CF6" },
-  // @ts-ignore
-                { label: "Total Revenue", value: `$${(statsData.content?.total_revenue || 0).toFixed(2)}`, icon: <DollarSign size={14} />, color: "#F59E0B" },
+
+
+                { label: "Total Videos", value: (statsData as any).videos?.total_videos || 0, icon: <Video size={14} />, color: "#D4AF37" },
+                { label: "Ready", value: (statsData as any).videos?.ready_videos || 0, icon: <CheckCircle size={14} />, color: "#10B981" },
+                { label: "Training Jobs", value: (statsData as any).training?.total_trainings || 0, icon: <Brain size={14} />, color: "#8B5CF6" },
+                { label: "Total Revenue", value: `$${((statsData as any).content?.total_revenue || 0).toFixed(2)}`, icon: <DollarSign size={14} />, color: "#F59E0B" },
               ].map(s => (
                 <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ color: s.color }}>{s.icon}</span>
@@ -334,7 +319,7 @@ export default function CloneEmpire() {
             { id: "studio", label: "Studio", icon: <Wand2 size={15} /> },
             { id: "train", label: "Train Model", icon: <Brain size={15} /> },
             { id: "gallery", label: "Gallery", icon: <Film size={15} /> },
-            { id: "schedule", label: "Schedule", icon: <Calendar size={15} /> },
+
             { id: "stats", label: "Analytics", icon: <BarChart2 size={15} /> },
           ] as { id: Tab; label: string; icon: React.ReactNode }[]).map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
@@ -357,7 +342,7 @@ export default function CloneEmpire() {
               <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
                   <Video size={18} color="#D4AF37" />
-                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Clone Video Studio</h2>
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Clone Creation Studio</h2>
                 </div>
 
                 {/* Mode Toggle */}
@@ -429,7 +414,7 @@ export default function CloneEmpire() {
 
                     <button onClick={handleGenerateTalkingHead} disabled={generating}
                       style={{ width: "100%", padding: "14px", border: "none", borderRadius: 12, background: generating ? "rgba(212,175,55,0.3)" : "linear-gradient(135deg, #D4AF37, #8B6914)", color: generating ? "rgba(255,255,255,0.5)" : "#000", fontWeight: 700, fontSize: 14, cursor: generating ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                      {generating ? <><RefreshCw size={16} className="animate-spin" /> Generating... (~4 min)</> : <><Sparkles size={16} /> Generate Talking Head Video</>}
+                      {generating ? <><RefreshCw size={16} className="animate-spin" /> Working On It... (~4 min)</> : <><Sparkles size={16} /> Create Premium Drop</>}
                     </button>
                   </div>
                 ) : (
@@ -442,11 +427,11 @@ export default function CloneEmpire() {
                         style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "#fff", fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" }} />
                     </div>
                     <div style={{ padding: 12, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 10, fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
-                      <strong style={{ color: "#8B5CF6" }}>Powered by Kling O1 Pro</strong> — Full-body motion video using your KingCam reference image. 5-10 second cinematic clips.
+                      <strong style={{ color: "#8B5CF6" }}>Full Body Motion</strong> — Cinematic 5-10 second clips generated from your signature identity reference.
                     </div>
                     <button onClick={handleGenerateFullBody} disabled={generating}
                       style={{ width: "100%", padding: "14px", border: "none", borderRadius: 12, background: generating ? "rgba(139,92,246,0.3)" : "linear-gradient(135deg, #8B5CF6, #4B0082)", color: generating ? "rgba(255,255,255,0.5)" : "#fff", fontWeight: 700, fontSize: 14, cursor: generating ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                      {generating ? <><RefreshCw size={16} className="animate-spin" /> Generating... (~2 min)</> : <><Film size={16} /> Generate Full Body Video</>}
+                      {generating ? <><RefreshCw size={16} className="animate-spin" /> Working On It... (~2 min)</> : <><Film size={16} /> Create Premium Drop</>}
                     </button>
                   </div>
                 )}
@@ -460,7 +445,7 @@ export default function CloneEmpire() {
                 {lastResult && (
                   <div style={{ marginTop: 16, padding: 16, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, color: "#10B981", fontWeight: 600, fontSize: 13 }}>
-                      <CheckCircle size={14} /> Generated Successfully
+                      <CheckCircle size={14} /> Your Drop Is Ready To Sell
                     </div>
                     {lastResult.videoUrl && (
                       <video src={lastResult.videoUrl} controls style={{ width: "100%", borderRadius: 8, maxHeight: 200 }} />
@@ -483,7 +468,7 @@ export default function CloneEmpire() {
               <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
                   <Image size={18} color="#D4AF37" />
-                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Clone Image Generator</h2>
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Clone Image Creation</h2>
                 </div>
 
                 {/* Color Variants */}
@@ -511,7 +496,7 @@ export default function CloneEmpire() {
 
                 <button onClick={handleGenerateImage} disabled={generatingImage}
                   style={{ width: "100%", padding: "12px", border: "none", borderRadius: 12, background: generatingImage ? "rgba(212,175,55,0.3)" : "linear-gradient(135deg, #D4AF37, #8B6914)", color: generatingImage ? "rgba(255,255,255,0.5)" : "#000", fontWeight: 700, fontSize: 13, cursor: generatingImage ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  {generatingImage ? <><RefreshCw size={14} className="animate-spin" /> Generating...</> : <><Sparkles size={14} /> Generate Clone Image</>}
+                  {generatingImage ? <><RefreshCw size={14} className="animate-spin" /> Working On It...</> : <><Sparkles size={14} /> Create Premium Drop</>}
                 </button>
 
                 {lastImageResult?.imageUrl && (
@@ -578,7 +563,7 @@ export default function CloneEmpire() {
 
                 {trainingResult && (
                   <div style={{ marginTop: 16, padding: 14, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 12, fontSize: 12 }}>
-                    <div style={{ color: "#10B981", fontWeight: 600, marginBottom: 6 }}>Training Started!</div>
+                    <div style={{ color: "#10B981", fontWeight: 600, marginBottom: 6 }}>Content In Progress!</div>
                     <div style={{ color: "rgba(255,255,255,0.6)" }}>Job ID: <code style={{ color: "#D4AF37" }}>{trainingResult.jobId}</code></div>
                     <div style={{ color: "rgba(255,255,255,0.6)", marginTop: 4 }}>Replicate ID: <code style={{ color: "#D4AF37" }}>{trainingResult.replicateTrainingId}</code></div>
                     <div style={{ color: "rgba(255,255,255,0.5)", marginTop: 6 }}>Training typically takes 20-60 minutes. Check the Training Jobs section for status.</div>
@@ -592,23 +577,23 @@ export default function CloneEmpire() {
               <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-  // @ts-ignore
+
                     <Layers size={18} color="#D4AF37" />
                     <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Training Jobs</h2>
                   </div>
                   <button onClick={() => refetchJobs()} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)" }}>
                     <RefreshCw size={14} />
                   </button>
-  // @ts-ignore
+
                 </div>
-  // @ts-ignore
+
                 {!trainingJobs?.length ? (
                   <div style={{ textAlign: "center", padding: 40, color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
                     No training jobs yet. Start your first training run to upgrade your clone model.
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-  // @ts-ignore
+
                     {trainingJobs.map((job: any) => (
                       <div key={job.id} style={{ padding: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12 }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
@@ -657,42 +642,21 @@ export default function CloneEmpire() {
           </div>
         )}
 
-        {/* ── SCHEDULE TAB ── */}
-        {activeTab === "schedule" && (
-          <div style={{ textAlign: "center", padding: 80 }}>
-            <Calendar size={48} color="rgba(212,175,55,0.3)" style={{ marginBottom: 16 }} />
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Content Scheduler</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", maxWidth: 400, margin: "0 auto" }}>
-              Schedule your clone videos for auto-posting to Instagram, TikTok, YouTube, and Twitter. Connect your social accounts to enable scheduling.
-            </div>
-            <div style={{ marginTop: 24, padding: 16, background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.2)", borderRadius: 12, display: "inline-block", fontSize: 13, color: "#D4AF37" }}>
-  // @ts-ignore
-              Social account integration coming next sprint
-  // @ts-ignore
-            </div>
-  // @ts-ignore
-          </div>
-  // @ts-ignore
-        )}
-  // @ts-ignore
 
-  // @ts-ignore
+
+
+
         {/* ── STATS TAB ── */}
         {activeTab === "stats" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
             {[
-  // @ts-ignore
-              { label: "Total Clone Videos", value: statsData?.videos?.total_videos || 0, icon: <Video size={20} />, color: "#D4AF37", sub: "All time" },
-  // @ts-ignore
-              { label: "Ready Videos", value: statsData?.videos?.ready_videos || 0, icon: <CheckCircle size={20} />, color: "#10B981", sub: "Available" },
-  // @ts-ignore
-              { label: "Training Jobs", value: statsData?.training?.total_trainings || 0, icon: <Brain size={20} />, color: "#8B5CF6", sub: `${statsData?.training?.successful_trainings || 0} successful` },
-  // @ts-ignore
-              { label: "Total Revenue", value: `$${(statsData?.content?.total_revenue || 0).toFixed(2)}`, icon: <DollarSign size={20} />, color: "#F59E0B", sub: "All sources" },
-  // @ts-ignore
-              { label: "Total Views", value: statsData?.content?.total_views || 0, icon: <Eye size={20} />, color: "#3B82F6", sub: "Across platforms" },
-  // @ts-ignore
-              { label: "Avg Engagement", value: `${((statsData?.content?.avg_engagement || 0) * 100).toFixed(1)}%`, icon: <Heart size={20} />, color: "#EC4899", sub: "Rate" },
+
+              { label: "Total Clone Videos", value: (statsData as any)?.videos?.total_videos || 0, icon: <Video size={20} />, color: "#D4AF37", sub: "All time" },
+              { label: "Ready Videos", value: (statsData as any)?.videos?.ready_videos || 0, icon: <CheckCircle size={20} />, color: "#10B981", sub: "Available" },
+              { label: "Training Jobs", value: (statsData as any)?.training?.total_trainings || 0, icon: <Brain size={20} />, color: "#8B5CF6", sub: `${(statsData as any)?.training?.successful_trainings || 0} successful` },
+              { label: "Total Revenue", value: `$${((statsData as any)?.content?.total_revenue || 0).toFixed(2)}`, icon: <DollarSign size={20} />, color: "#F59E0B", sub: "All sources" },
+              { label: "Total Views", value: (statsData as any)?.content?.total_views || 0, icon: <Eye size={20} />, color: "#3B82F6", sub: "Across platforms" },
+              { label: "Avg Engagement", value: `${(((statsData as any)?.content?.avg_engagement || 0) * 100).toFixed(1)}%`, icon: <Heart size={20} />, color: "#EC4899", sub: "Rate" },
             ].map(stat => (
               <div key={stat.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>

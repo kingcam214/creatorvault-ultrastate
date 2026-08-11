@@ -216,7 +216,7 @@ export default function KingContent() {
                     <ImageIcon className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="font-bold text-white">Generate Clone Motion</div>
+                    <div className="font-bold text-white">Create Clone Motion</div>
                     <div className="text-xs text-zinc-400">Pick a source photo to animate</div>
                   </div>
                 </div>
@@ -248,7 +248,7 @@ export default function KingContent() {
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="font-bold text-white">Prepare Social Drop</div>
+                    <div className="font-bold text-white">Prepare My Sales Package</div>
                     <div className="text-xs text-zinc-400">Pick a finished video to distribute</div>
                   </div>
                 </div>
@@ -451,7 +451,7 @@ export default function KingContent() {
           {/* Social Empire Preview */}
           <div className="rounded-2xl border border-white/10 bg-[#0a0a0f] p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-500">Recent Social Drops</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-500">Recent Sales Packages</h3>
               <Link href={CreatorVaultRoute.socialEmpire}>
                 <a className="text-xs font-bold text-indigo-300 transition hover:text-indigo-200">View Empire &rarr;</a>
               </Link>
