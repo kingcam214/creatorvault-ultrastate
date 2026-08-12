@@ -447,7 +447,6 @@ import VaultXDrop from "./pages/VaultXDrop";
 import VaultXTruthLibrary from "./pages/VaultXTruthLibrary";
 import TrailerStudio from "./pages/TrailerStudio";
 import VaultXDistribution from "@/pages/VaultXDistribution";
-import VaultXEditor from "./pages/VaultXEditor";
 import VaultXAnalytics from "./pages/VaultXAnalytics";
 import VideoOS from "./pages/VideoOS";
 import Waitlist from "./pages/Waitlist";
@@ -805,18 +804,18 @@ function Router() {
       <Route path="/trailers" component={TrailerStudio} />
       <Route path="/vaultx/distribution" component={VaultXDistribution} />
       <Route path="/vault-x/library/:jobId" component={VaultXTruthLibrary} />
-      <Route path="/vault-x/editor" component={VaultXEditor} />
-      <Route path="/vaultx/editor" component={VaultXEditor} />
-      <Route path="/vaultx/capcut" component={VaultXEditor} />
-      <Route path="/adult-editor" component={VaultXEditor} />
-      <Route path="/creator/editor" component={VaultXEditor} />
+      <Route path="/vault-x/editor">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
+      <Route path="/vaultx/editor">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
+      <Route path="/vaultx/capcut">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
+      <Route path="/adult-editor">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
+      <Route path="/creator/editor">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/vault-x/analytics" component={VaultXAnalytics} />
       <Route path="/vault-x/fan-library" component={VaultXFanLibrary} />
-      <Route path="/vaultx/video-editor/:projectId">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
-      <Route path="/vaultx/video-editor">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+      <Route path="/vaultx/video-editor/:projectId">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
+      <Route path="/vaultx/video-editor">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       {/* Redirect aliases for OwnerCockpit and legacy links */}
       <Route path="/vaultx" component={VaultX} />
-      <Route path="/vaultx-video-editor">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+      <Route path="/vaultx-video-editor">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/video-os" component={VideoOS} />
       <Route path="/waitlist" component={Waitlist} />
       <Route path="/greatest-show/lirys-missed-revenue" component={LirysMissedRevenue} />
@@ -831,8 +830,8 @@ function Router() {
       <Route path="/king/challenge-story" component={ChallengeStoryEngine} />
       <Route path="/king/challenge" component={ChallengeStoryEngine} />
       <Route path="/tools/viral-optimizer-v2" component={ViralOptimizerV2} />
-      <Route path="/videoeditor/vaultx">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
-      <Route path="/videoeditor/vaultx-projects">{() => { window.location.replace("/vault-x/editor"); return null; }}</Route>
+      <Route path="/videoeditor/vaultx">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
+      <Route path="/videoeditor/vaultx-projects">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route component={NotFound} />
       </Switch>
       </div>
