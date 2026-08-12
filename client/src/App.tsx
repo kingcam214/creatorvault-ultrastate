@@ -201,7 +201,6 @@ import DesignDepartment from "./pages/DesignDepartment";
 import DominicanSector from "./pages/DominicanSector";
 import DubbingAI from "./pages/DubbingAI";
 import EditProfile from "./pages/EditProfile";
-import EmmaAIAgentDashboard from "./pages/EmmaAIAgentDashboard";
 import EmmaEmpire from "./pages/EmmaEmpire";
 import EmmaHome from "./pages/EmmaHome";
 import EmmaNetworkHome from "./pages/EmmaNetworkHome";
@@ -613,7 +612,7 @@ function Router() {
       <Route path={"/empire-brain-rules"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/empire-state"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/agent-tracker"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
-      <Route path={"/emma-ai-agents"} component={EmmaAIAgentDashboard} />
+      <Route path={"/emma-ai-agents"}>{() => { window.location.replace("/emma/network"); return null; }}</Route>
       <Route path={"/empire-brain-showrunner"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/apparel-lab"} component={ApparelLab} />
       <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} />
