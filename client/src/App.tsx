@@ -214,16 +214,7 @@ import EmmaNetworkHome from "./pages/EmmaNetworkHome";
 import EmmaResetDashboard from "./pages/EmmaResetDashboard";
 import EmmaSimpleView from "./pages/EmmaSimpleView";
 import EmmaUniversity from "./pages/EmmaUniversity";
-import EmpireBrain from "./pages/EmpireBrain";
-import EmpireBrainDashboard from "./pages/EmpireBrainDashboard";
-import EmpireBrainRules from "./pages/EmpireBrainRules";
-import EmpireBrainShowrunner from "./pages/EmpireBrainShowrunner";
-import EmpireCockpitV2 from "./pages/EmpireCockpitV2";
-import EmpireDocPrompt from "./pages/EmpireDocPrompt";
-import EmpireState from "./pages/EmpireState";
-import EmpireVerticals from "./pages/EmpireVerticals";
 import EpisodeDetailPage from "./pages/EpisodeDetailPage";
-import EspionageDashboard from "./pages/EspionageDashboard";
 import Explore from "./pages/Explore";
 import FanSubscribe from "./pages/FanSubscribe";
 import FlyerComposer from "./pages/FlyerComposer";
@@ -367,7 +358,6 @@ import GettingStartedChecklist from "./components/GettingStartedChecklist";
 // import ChuuchMerch from "./pages/ChuuchMerch";
 // import ChuuchTransition from "./pages/ChuuchTransition";
 import ChuuchMembersPage from "./pages/ChuuchMembers";
-import EmpireCockpitV3 from "./pages/EmpireCockpitV3";
 import AgentApprovalInbox from "./pages/AgentApprovalInbox";
 import AgentCommandTower from "./pages/AgentCommandTower";
 import AgentLive from "./pages/AgentLive";
@@ -583,7 +573,7 @@ function Router() {
       <Route path="/business-cards/ai-designer" component={AICardDesigner} />
       <Route path="/king/hollywood-ai" component={HollywoodReplacement} />
           <Route path="/king/platform-war-room" component={PlatformWarRoom} />
-          <Route path="/king/empire-verticals" component={EmpireVerticals} />
+          <Route path="/king/empire-verticals">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/king/video-editor/:projectId"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-pay"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/hollywood-replacement"} component={HollywoodReplacement} />
@@ -643,15 +633,15 @@ function Router() {
       <Route path={"/king/content"} component={KingContent} />
       <Route path={"/king/waitlist"} component={KingWaitlist} />
       {/* <Route path={"/king/launch-command"} component={LaunchCommand} /> */}
-      <Route path="/king/empire-doc" component={EmpireDocPrompt} />
+      <Route path="/king/empire-doc">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/nfc-cards"} component={NFCCards} />
-      <Route path={"/empire-brain"} component={EmpireBrain} />
-      <Route path={"/empire-brain-dashboard"} component={EmpireBrainDashboard} />
-      <Route path={"/empire-brain-rules"} component={EmpireBrainRules} />
-      <Route path={"/empire-state"} component={EmpireState} />
+      <Route path={"/empire-brain"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
+      <Route path={"/empire-brain-dashboard"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
+      <Route path={"/empire-brain-rules"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
+      <Route path={"/empire-state"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/agent-tracker"} component={AgentTracker} />
       <Route path={"/emma-ai-agents"} component={EmmaAIAgentDashboard} />
-      <Route path={"/empire-brain-showrunner"} component={EmpireBrainShowrunner} />
+      <Route path={"/empire-brain-showrunner"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/apparel-lab"} component={ApparelLab} />
       <Route path={"/king/emma"} component={EmmaNetworkHome} />
       <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} />
@@ -675,11 +665,11 @@ function Router() {
       <Route path={"/presentation-empire"} component={PresentationEmpire} />
       <Route path={"/owner-cockpit/presentation-empire"} component={PresentationEmpireCockpit} />
       <Route path={"/owner-cockpit/recruitment"} component={RecruitmentDashboard} />
-      <Route path={"/owner-cockpit/espionage"} component={EspionageDashboard} />
+      <Route path={"/owner-cockpit/espionage"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/ai-empire"} component={AIEmpireDashboard} />
       <Route path={"/owner-cockpit/apple-queue"} component={AppleQDashboard} />
-      <Route path="/empire-cockpit-v3" component={EmpireCockpitV3} />
-              <Route path="/empire-cockpit-v2" component={EmpireCockpitV2} />
+      <Route path="/empire-cockpit-v3">{() => { window.location.replace("/dashboard"); return null; }}</Route>
+              <Route path="/empire-cockpit-v2">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/kingcam-clone"}>{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
       <Route path={"/kingcam-demos"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/kingcam-tours"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
