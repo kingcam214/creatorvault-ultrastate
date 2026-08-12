@@ -42,7 +42,7 @@ const capabilitiesSchema = z.object({
   requiresGeneratedShot: z.boolean(),
   requiredInputModes: z.array(z.enum(["text", "reference_image", "reference_video", "source_video", "audio", "accepted_shot"]))
     .min(1),
-  requiredOutputMode: z.enum(["video", "assembled_master", "social_variant", "analysis"]).default("video"),
+  requiredOutputMode: z.enum(["image", "video", "assembled_master", "social_variant", "analysis"]).default("video"),
   durationSeconds: z.number().int().min(1).max(3600),
   resolution: z.string().min(2).max(32),
   preserveIdentity: z.boolean().optional(),
