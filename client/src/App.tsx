@@ -257,7 +257,6 @@ import Onboard from "./pages/Onboard";
 import OnboardingV2 from "./pages/OnboardingV2";
 import OperatorDashboard from "./pages/OperatorDashboard";
 import OwnerCockpit from "./pages/OwnerCockpit";
-import PerformanceAnalytics from "./pages/PerformanceAnalytics";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
 import PlatformWarRoom from "./pages/PlatformWarRoom";
 import PodcastStudio from "./pages/PodcastStudio";
@@ -459,7 +458,7 @@ function Router() {
       <Route path={"/content-dashboard"} component={ContentDashboard} />
       <Route path={"/monetization"} component={MonetizationPipeline} />
       <Route path={"/lead-capture"} component={LeadCapture} />
-      <Route path={"/analytics"} component={PerformanceAnalytics} />
+      <Route path={"/analytics"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/marketplace"} component={Marketplace} />
       <Route path={"/marketplace/create"} component={MarketplaceCreate} />
       <Route path={"/marketplace/manage"} component={MarketplaceManage} />
