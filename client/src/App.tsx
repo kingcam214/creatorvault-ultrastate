@@ -325,8 +325,6 @@ import VaultRise from "./pages/VaultRise";
 import VaultSnap from "./pages/VaultSnap";
 import VaultSpaceDashboard from "./pages/VaultSpaceDashboard";
 import VaultX from "./pages/VaultX";
-import VideoEditor from "./pages/videoeditor/VideoEditor";
-import VideoEditorProjects from "./pages/videoeditor/VideoEditorProjects";
 import VideoLab from "./pages/VideoLab";
 import VideoLabPro from "./pages/VideoLabPro";
 import VideoProductionStudio from "./pages/VideoProductionStudio";
@@ -597,7 +595,7 @@ function Router() {
       <Route path="/agents" component={AgentRoster} />
       <Route path="/hire" component={AgentRoster} />
       <Route path={"/king/emma"} component={KingEmmaOversight} />
-      <Route path={"/king/video-editor"} component={VideoEditorProjects} />
+      <Route path={"/king/video-editor"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/king/script-director" component={ScriptDirectorPage} />
           <Route path="/king/import" component={KingCamImport} />
           <Route path="/king/gallery" component={KingCamGallery} />
@@ -612,7 +610,7 @@ function Router() {
       <Route path="/king/hollywood-ai" component={HollywoodReplacement} />
           <Route path="/king/platform-war-room" component={PlatformWarRoom} />
           <Route path="/king/empire-verticals" component={EmpireVerticals} />
-      <Route path={"/king/video-editor/:projectId"} component={VideoEditor} />
+      <Route path={"/king/video-editor/:projectId"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-pay"} component={VaultPay} />
       <Route path={"/hollywood-replacement"} component={HollywoodReplacement} />
       <Route path={"/proof-gate"} component={ProofGate} />
