@@ -33,7 +33,12 @@ const VIBES = [
 
 export default function TrailerStudio() {
   const search = useSearch();
-  const selectedVaultAssetId = new URLSearchParams(search).get("sourceAssetId");
+  const handoffParams = new URLSearchParams(search);
+  const selectedVaultAssetId = handoffParams.get("sourceAssetId");
+  const selectedVaultAssetIds = Array.from(new Set([
+    ...(handoffParams.get("sourceAssetIds") || "").split(",").filter(Boolean),
+    ...(selectedVaultAssetId ? [selectedVaultAssetId] : []),
+  ]));
   const [step, setStep] = useState<Step>("mode");
   const [mode, setMode] = useState<Mode>("original");
   const [clips, setClips] = useState<Clip[]>([]);
@@ -66,7 +71,7 @@ export default function TrailerStudio() {
   const createTrailerProjectMut = (trpc as any).mediaAssets.createTrailerProject.useMutation();
   const selectedVaultSourceQ = (trpc as any).mediaAssets.list.useQuery(
     { filter: "videos", limit: 120 },
-    { enabled: Boolean(selectedVaultAssetId), staleTime: 30_000 },
+    { enabled: selectedVaultAssetIds.length > 0, staleTime: 30_000 },
   );
   const statusQ = (trpc as any).trailer.getStatus.useQuery({ jobId: jobId || "" }, { enabled: Boolean(jobId) && step === "building", refetchInterval: 3000, retry: false });
   const templates = templatesQ.data?.templates || [];
@@ -79,15 +84,17 @@ export default function TrailerStudio() {
   }, [statusQ.data]);
 
   useEffect(() => {
-    if (!selectedVaultAssetId || selectedAssetIds.length > 0) return;
+    if (selectedVaultAssetIds.length === 0 || selectedAssetIds.length > 0) return;
     const media = Array.isArray(selectedVaultSourceQ.data) ? selectedVaultSourceQ.data as MediaAssetItem[] : [];
-    const selectedAsset = media.find((asset) => asset.id === selectedVaultAssetId && Boolean(asset.publicUrl));
-    if (!selectedAsset?.publicUrl) return;
-    setClips([{ src: selectedAsset.publicUrl, name: selectedAsset.originalName || selectedAsset.fileName }]);
-    setSelectedAssetIds([selectedAsset.id]);
+    const selectedAssets = selectedVaultAssetIds
+      .map((assetId) => media.find((asset) => asset.id === assetId && Boolean(asset.publicUrl)))
+      .filter((asset): asset is MediaAssetItem => Boolean(asset?.publicUrl));
+    if (selectedAssets.length === 0) return;
+    setClips(selectedAssets.map((asset) => ({ src: asset.publicUrl!, name: asset.originalName || asset.fileName })));
+    setSelectedAssetIds(selectedAssets.map((asset) => asset.id));
     setStep("clips");
-    toast.success("Your selected Vault source is ready for trailer direction.");
-  }, [selectedAssetIds.length, selectedVaultAssetId, selectedVaultSourceQ.data]);
+    toast.success(`${selectedAssets.length === 1 ? "Your selected Vault source is" : "Your selected Vault sources are"} ready for trailer direction.`);
+  }, [selectedAssetIds.length, selectedVaultAssetIds.join(","), selectedVaultSourceQ.data]);
 
   const upload = useCallback(async (file: File): Promise<string | null> => {
     setUploading(true); setUploadPct(0);

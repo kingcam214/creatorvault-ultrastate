@@ -145,7 +145,8 @@ export default function KingContent() {
             projectId: creationProject.id,
             metadata: { trailerProjectId: trailerProject.trailerProjectId, nextDestination: "trailer_studio" },
           });
-          setLocation(`/vaultx/trailers?projectId=${trailerProject.trailerProjectId}&creationProjectId=${creationProject.id}`);
+          const sourceAssetIds = selected.map((selectedAsset) => selectedAsset.id).join(",");
+          setLocation(`/vaultx/trailers?sourceAssetIds=${encodeURIComponent(sourceAssetIds)}&sourceAssetId=${asset.id}&projectId=${trailerProject.trailerProjectId}&creationProjectId=${creationProject.id}`);
         } catch {
           // The studio remains available even if a future destination is temporarily unavailable.
           setLocation(`/vaultx/trailers?sourceAssetId=${asset.id}${creationProjectId ? `&creationProjectId=${creationProjectId}` : ""}`);
