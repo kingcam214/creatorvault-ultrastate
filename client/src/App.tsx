@@ -237,7 +237,6 @@ import InfluencerOnboarding from "./pages/InfluencerOnboarding";
 import JoinVaultLive from "./pages/JoinVaultLive";
 import KingCamCommandCenter from "./pages/KingCamCommandCenter";
 import KingCamScriptWriter from "./pages/KingCamScriptWriter";
-import KingConnectSocials from "./pages/KingConnectSocials";
 import KingContent from "./pages/KingContent";
 import KingMoneyMission from "./pages/KingMoneyMission";
 import KingUsers from "./pages/KingUsers";
@@ -538,7 +537,7 @@ function Router() {
       <Route path="/king/command-center" component={KingCamCommandCenter} />
       <Route path="/king/episodes-3d">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/king/empire-3d">{() => { window.location.replace("/dashboard"); return null; }}</Route>
-      <Route path="/king/connect-socials" component={KingConnectSocials} />
+      <Route path="/king/connect-socials">{() => { window.location.replace("/social-hub"); return null; }}</Route>
       <Route path="/king/vault-remix">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/king/empire">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/king/money-mission" component={KingMoneyMission} />
