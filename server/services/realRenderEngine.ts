@@ -138,12 +138,18 @@ function focusFilter(focus: string, W: number, H: number): string {
  * converted into a still-image zoompan effect.
  */
 function videoMotionFilter(mode: NonNullable<RenderClip["videoMotion"]>, W: number, H: number): string {
-  const crop = (zoom: string, x: string, y: string) => `crop=w='trunc(${W}/(${zoom})/2)*2':h='trunc(${H}/(${zoom})/2)*2':x='${x}':y='${y}',scale=${W}:${H}:flags=lanczos`;
-  if (mode === "push_in") return crop("1+0.035*t", "(iw-ow)/2", "(ih-oh)/2");
-  if (mode === "pull_out") return crop("1.12-0.035*t", "(iw-ow)/2", "(ih-oh)/2");
-  if (mode === "drift_left") return crop("1.10", "(iw-ow)*(1-min(1,t/2.4))", "(ih-oh)/2");
-  if (mode === "rise") return crop("1.08", "(iw-ow)/2", "(ih-oh)*(1-min(1,t/2.2))");
-  if (mode === "peek") return crop("1.18", "if(lt(t,0.22),0,(iw-ow)*0.68)", "(ih-oh)/2");
+  // FFmpeg evaluates crop width/height during graph setup. Keep dimensions fixed
+  // and animate only the crop origin per source frame, preserving real motion.
+  const crop = (scale: number, x: string, y: string) => {
+    const cw = Math.floor((W * scale) / 2) * 2;
+    const ch = Math.floor((H * scale) / 2) * 2;
+    return `crop=${cw}:${ch}:x='${x}':y='${y}',scale=${W}:${H}:flags=lanczos`;
+  };
+  if (mode === "push_in") return crop(0.90, "(iw-ow)/2", "(ih-oh)*max(0,0.60-min(0.60,t/3.0))");
+  if (mode === "pull_out") return crop(0.96, "(iw-ow)/2", "(ih-oh)*min(0.38,t/3.0)");
+  if (mode === "drift_left") return crop(0.90, "(iw-ow)*(1-min(1,t/2.4))", "(ih-oh)/2");
+  if (mode === "rise") return crop(0.92, "(iw-ow)/2", "(ih-oh)*(1-min(1,t/2.2))");
+  if (mode === "peek") return crop(0.86, "(iw-ow)*min(0.68,max(0,(t-0.18)/0.42))", "(ih-oh)/2");
   return "";
 }
 
