@@ -254,7 +254,6 @@ import KingConnectSocials from "./pages/KingConnectSocials";
 import KingContent from "./pages/KingContent";
 import KingEmmaOversight from "./pages/KingEmmaOversight";
 import KingEmpire from "./pages/KingEmpire";
-import KingGemCenter from "./pages/king/KingGemCenter";
 import KingLife from "./pages/KingLife";
 import KingMoneyMission from "./pages/KingMoneyMission";
 import KingUsers from "./pages/KingUsers";
@@ -565,7 +564,7 @@ function Router() {
       <Route path={"/emma/reset"} component={EmmaSimpleView} />
       <Route path={"/emma/network"} component={EmmaNetworkHome} />
       <Route path={"/king"} component={KingHome} />
-          <Route path="/king/gem-center" component={KingGemCenter} />
+          <Route path="/king/gem-center">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/king/demos"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/king/agent-live" component={AgentLive} />
