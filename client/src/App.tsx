@@ -244,7 +244,6 @@ import ImageLab from "./pages/ImageLab";
 import InfluencerDashboard from "./pages/InfluencerDashboard";
 import InfluencerOnboarding from "./pages/InfluencerOnboarding";
 import JoinVaultLive from "./pages/JoinVaultLive";
-import KingAnalytics from "./pages/KingAnalytics";
 import KingBackOffice from "./pages/KingBackOffice";
 import KingCamCommandCenter from "./pages/KingCamCommandCenter";
 import KingCamEmpireMap3D from "./pages/KingCamEmpireMap3D";
@@ -640,7 +639,7 @@ function Router() {
       <Route path={"/king/flyer-generator"} component={FlyerGenerator} />
       <Route path={"/king/flyer-design-studio"} component={FlyerDesignStudio} />
       <Route path={"/king/video-lab"} component={KingVideoLab} />
-      <Route path={"/king/analytics"} component={KingAnalytics} />
+      <Route path={"/king/analytics"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/king/content"} component={KingContent} />
       <Route path={"/king/waitlist"} component={KingWaitlist} />
       {/* <Route path={"/king/launch-command"} component={LaunchCommand} /> */}
