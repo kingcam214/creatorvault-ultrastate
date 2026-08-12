@@ -252,7 +252,6 @@ import KingCamDemos from "./pages/KingCamDemos";
 import KingCamEmpireMap3D from "./pages/KingCamEmpireMap3D";
 import KingCamEngine from "./pages/KingCamEngine";
 import KingCamEpisodeTheater3D from "./pages/KingCamEpisodeTheater3D";
-import KingCamGallery from "./pages/king/KingCamGallery";
 import KingCamScriptWriter from "./pages/KingCamScriptWriter";
 import KingCamShowcase from "./pages/KingCamShowcase";
 import KingCamShowreel from "./pages/KingCamShowreel";
@@ -596,7 +595,7 @@ function Router() {
       <Route path={"/king/video-editor"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/king/script-director" component={ScriptDirectorPage} />
           <Route path="/king/import">{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
-          <Route path="/king/gallery" component={KingCamGallery} />
+          <Route path="/king/gallery">{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path="/king/music-composer">{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path={"/music-library"} component={MusicLibrary} />
       <Route path={"/artist/storefront"} component={ArtistStorefront} />
