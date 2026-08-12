@@ -397,7 +397,6 @@ import FlyerStudio from "./pages/FlyerStudio";
 import FunnelForge from "./pages/FunnelForge";
 import HaitianSector from "./pages/HaitianSector";
 import KingCamVault from "./pages/KingCamVault";
-import LipSyncStudio from "./pages/LipSyncStudio";
 import MarielkaDashboard from "./pages/MarielkaDashboard";
 import MediaHubPage from "./pages/MediaHubPage";
 import MotionFlyerAgent from "./pages/MotionFlyerAgent";
@@ -750,7 +749,7 @@ function Router() {
       <Route path="/funnels" component={FunnelForge} />
       <Route path="/sector/haiti" component={HaitianSector} />
       <Route path="/kingcam/vault" component={KingCamVault} />
-      <Route path="/studio/lipsync" component={LipSyncStudio} />
+      <Route path="/studio/lipsync">{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
       <Route path="/mi-panel/marielka-dashboard" component={MarielkaDashboard} />
       <Route path="/media/hub" component={MediaHubPage} />
       <Route path="/agents/motion-flyer-agent" component={MotionFlyerAgent} />
