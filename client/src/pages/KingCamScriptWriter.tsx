@@ -5,7 +5,7 @@ import { Link } from "wouter";
 import {
   FileText, Zap, Save, Copy, Send, Trash2, ChevronLeft,
   Video, MessageSquare, BookOpen, TrendingUp, Mic, Play,
-  CheckCircle, Clock, RefreshCw, Sparkles, ArrowRight
+  CheckCircle, Clock, RefreshCw, Sparkles
 } from "lucide-react";
 
 const SCRIPT_TYPES = [
@@ -51,7 +51,7 @@ export function KingCamScriptWriter() {
   });
 
   const updateStatusMutation = trpc.kingcamScriptWriter.updateScriptStatus.useMutation({
-    onSuccess: () => { toast({ title: "Script Approved", description: "Ready to send to Engine" }); refetchScripts(); },
+    onSuccess: () => { toast({ title: "Script saved", description: "Your approved direction is ready in the script library." }); refetchScripts(); },
   });
 
   const deleteScriptMutation = trpc.kingcamScriptWriter.deleteScript.useMutation({
@@ -92,12 +92,12 @@ export function KingCamScriptWriter() {
           </div>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: "0.5px" }}>Script Writer</div>
-            <div style={{ fontSize: 11, color: "#666" }}>KingCam AI — Powered by GPT-4</div>
+            <div style={{ fontSize: 11, color: "#666" }}>Shape the words before you step in front of the camera.</div>
           </div>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <button onClick={() => setActiveTab("generate")} style={{ padding: "6px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: activeTab === "generate" ? "#00D9FF" : "#1a1a2e", color: activeTab === "generate" ? "#000" : "#888" }}>
-            Generate
+            Create
           </button>
           <button onClick={() => setActiveTab("library")} style={{ padding: "6px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: activeTab === "library" ? "#00D9FF" : "#1a1a2e", color: activeTab === "library" ? "#000" : "#888" }}>
             Library {scriptsData?.scripts?.length ? `(${scriptsData.scripts.length})` : ""}
@@ -157,7 +157,7 @@ export function KingCamScriptWriter() {
             {/* Generate Button */}
             <button onClick={handleGenerate} disabled={generateMutation.isPending || !topic.trim()}
               style={{ width: "100%", padding: "14px", borderRadius: 10, border: "none", background: generateMutation.isPending ? "#1a1a2e" : `linear-gradient(135deg, ${selectedTypeConfig?.color || "#00D9FF"}, ${selectedTypeConfig?.color || "#00D9FF"}88)`, color: generateMutation.isPending ? "#555" : "#000", cursor: generateMutation.isPending ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              {generateMutation.isPending ? <><RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} /> Generating...</> : <><Sparkles size={16} /> Generate Script</>}
+              {generateMutation.isPending ? <><RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} /> Building your script...</> : <><Sparkles size={16} /> Create My Script</>}
             </button>
           </div>
 
@@ -187,11 +187,7 @@ export function KingCamScriptWriter() {
                     style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: "#00D9FF", color: "#000", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
                     <CheckCircle size={12} /> Approve
                   </button>
-                  <Link href="/king/engine">
-                    <button style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: "#C9A84C", color: "#000", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                      <ArrowRight size={12} /> Send to Engine
-                    </button>
-                  </Link>
+
                 </div>
 
                 {/* Script Content */}
@@ -224,7 +220,7 @@ export function KingCamScriptWriter() {
               <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, color: "#333" }}>
                 <FileText size={48} />
                 <div style={{ fontSize: 18, fontWeight: 600, color: "#444" }}>Select a type and enter a topic</div>
-                <div style={{ fontSize: 13, color: "#333" }}>KingCam AI will write in your voice</div>
+                <div style={{ fontSize: 13, color: "#333" }}>Build the words you want to own on camera.</div>
               </div>
             )}
           </div>

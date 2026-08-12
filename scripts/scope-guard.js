@@ -168,6 +168,7 @@ const ALLOWLISTS = {
     'client/src/App.tsx',
     'client/src/pages/KingContent.tsx',
     'client/src/pages/KingCamVault.tsx',
+    'client/src/pages/KingCamScriptWriter.tsx',
     'client/src/pages/CreatorVideoStudio.tsx',
     'client/src/pages/CloneEmpire.tsx',
     'client/src/pages/DubbingAI.tsx',
