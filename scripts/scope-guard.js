@@ -156,8 +156,12 @@ const ALLOWLISTS = {
   ],
   'creation-kernel': [
     'server/services/creationProjectService.ts',
+    'server/services/creationProofService.ts',
     'server/routers/creationProjectsRouter.ts',
+    'server/routers/creationProofRouter.ts',
     'server/routers.ts',
+    'client/src/lib/homepageMediaRegistry.ts',
+    'client/src/pages/Home.tsx',
     'client/src/pages/KingContent.tsx',
     'client/src/pages/VaultXDrop.tsx',
     'server/routers/videoUploadRouter.ts',

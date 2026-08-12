@@ -1,5 +1,6 @@
 export type PublicMediaStatus = "approved" | "review-required" | "excluded";
 export type ProofStatus = "watchable-platform-visual" | "watchable-style-reference" | "unverified-result" | "not-public-proof";
+export type PublicProofEligibility = "legacy_verified_campaign" | "owner_certified_public_proof" | "not_eligible";
 
 export type HomepageMediaAsset = {
   assetId: string;
@@ -17,6 +18,7 @@ export type HomepageMediaAsset = {
   sourceAsset: string | null;
   outputAsset: string | null;
   proofStatus: ProofStatus;
+  publicProofEligibility?: PublicProofEligibility;
   fallbackAsset: string;
   livePath: string;
   workingStatus: "ready" | "review-required" | "excluded";
@@ -32,6 +34,7 @@ export type HomepageMediaAsset = {
 export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
   kingcamHero: {
     assetId: "kingcam-hero-cam",
+    publicProofEligibility: "legacy_verified_campaign",
     sourceSystem: "KingCam clone campaign",
     creatorOwner: "KingCam / CreatorVault",
     publicSafeStatus: "approved",
@@ -52,6 +55,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
   },
   womenCreatorMotion: {
     assetId: "platform-dashboard-hero",
+    publicProofEligibility: "legacy_verified_campaign",
     sourceSystem: "CreatorVault platform hero library",
     creatorOwner: "CreatorVault",
     publicSafeStatus: "approved",
@@ -72,6 +76,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
   },
   womenCreatorAudienceMotion: {
     assetId: "platform-marketplace-hero",
+    publicProofEligibility: "legacy_verified_campaign",
     sourceSystem: "CreatorVault platform hero library",
     creatorOwner: "CreatorVault",
     publicSafeStatus: "approved",
@@ -152,6 +157,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
   },
   vaultxRevenueVisual: {
     assetId: "vaultx-hero",
+    publicProofEligibility: "legacy_verified_campaign",
     sourceSystem: "VaultX public product visual",
     creatorOwner: "CreatorVault",
     publicSafeStatus: "approved",
@@ -172,6 +178,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
   },
   vaultxTrailer: {
     assetId: "vaultx-cinematic-trailer",
+    publicProofEligibility: "legacy_verified_campaign",
     sourceSystem: "VaultX cinematic trailer",
     creatorOwner: "CreatorVault",
     publicSafeStatus: "approved",
@@ -192,6 +199,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
   },
   kingcamCampaignSource: {
     assetId: "kingcam-platform-native-source",
+    publicProofEligibility: "legacy_verified_campaign",
     sourceSystem: "CreatorVault native KingCam production",
     creatorOwner: "KingCam / CreatorVault",
     publicSafeStatus: "approved",
@@ -212,6 +220,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
   },
   kingcamPlatformTrailer: {
     assetId: "vaultx-homepage-kingcam-trailer",
+    publicProofEligibility: "legacy_verified_campaign",
     sourceSystem: "CreatorVault native KingCam production",
     creatorOwner: "KingCam / CreatorVault",
     publicSafeStatus: "approved",
@@ -232,6 +241,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
   },
   premiumUnlockVisual: {
     assetId: "vaultx-final-drop",
+    publicProofEligibility: "legacy_verified_campaign",
     sourceSystem: "VaultX visual library",
     creatorOwner: "CreatorVault",
     publicSafeStatus: "approved",
@@ -474,6 +484,13 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
 
 // Public media may not include historic Assembly/Body Cinema outputs that relied on
 // the now-prohibited FFmpeg creative-effect path. They remain internal evidence only.
+export function isPublicHomepageEligible(asset: HomepageMediaAsset): boolean {
+  return asset.publicSafeStatus === "approved"
+    && asset.workingStatus === "ready"
+    && asset.mediaKind === "motion"
+    && (asset.publicProofEligibility === "legacy_verified_campaign" || asset.publicProofEligibility === "owner_certified_public_proof");
+}
+
 export const HOMEPAGE_MEDIA_SEQUENCE = [
   HOMEPAGE_MEDIA.kingcamHero,
   HOMEPAGE_MEDIA.womenCreatorMotion,
@@ -483,7 +500,7 @@ export const HOMEPAGE_MEDIA_SEQUENCE = [
   HOMEPAGE_MEDIA.kingcamCampaignSource,
   HOMEPAGE_MEDIA.kingcamPlatformTrailer,
   HOMEPAGE_MEDIA.premiumUnlockVisual,
-] as const;
+].filter(isPublicHomepageEligible);
 
 export const MEDIA_FALLBACKS = {
   kingcamHero: HOMEPAGE_MEDIA.kingcamHero.fallbackAsset,

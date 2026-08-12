@@ -280,6 +280,7 @@ import { polloRouter } from "./routers/polloRouter";
 import { governedPolloRouter } from "./routers/governedPolloRouter";
 import { creationDirectorRouter } from "./routers/creationDirectorRouter";
 import { creationProjectsRouter } from "./routers/creationProjectsRouter";
+import { creationProofRouter } from "./routers/creationProofRouter";
 import { governedKingcamIdentityRouter } from "./routers/governedKingcamIdentityRouter";
 import { distributionRouter } from "./routers/distributionRouter";
 import { socialSpineRouter } from "./routers/socialSpineRouter";
@@ -971,6 +972,7 @@ export const appRouter = router({
   bodyCinema: bodyCinemaRouter,
   creationDirector: creationDirectorRouter,
   creationProjects: creationProjectsRouter,
+  creationProof: creationProofRouter,
   governedKingcamIdentity: governedKingcamIdentityRouter,
   compliance: complianceRouter,
   renderGraph: renderGraphRouter,

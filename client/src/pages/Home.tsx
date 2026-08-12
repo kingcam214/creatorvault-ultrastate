@@ -1,7 +1,7 @@
 import { ArrowUpRight, CheckCircle2, Play, ShieldCheck, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import { CreatorVaultRoute } from "@/lib/productArchitecture";
-import { HOMEPAGE_MEDIA } from "@/lib/homepageMediaRegistry";
+import { HOMEPAGE_MEDIA_SEQUENCE } from "@/lib/homepageMediaRegistry";
 import { type CSSProperties } from "react";
 
 function ShowcaseMotion({
@@ -55,7 +55,10 @@ const releaseMoves = [
 ];
 
 export default function Home() {
-  const showcase = HOMEPAGE_MEDIA.kingcamHero;
+  const showcase = HOMEPAGE_MEDIA_SEQUENCE.find((asset) => asset.assetId === "kingcam-hero-cam");
+  if (!showcase) {
+    throw new Error("CreatorVault homepage hero requires an eligible motion proof.");
+  }
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#080706] text-white selection:bg-[#f0d18a]/40">
