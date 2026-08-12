@@ -206,7 +206,6 @@ import EmmaUniversity from "./pages/EmmaUniversity";
 import EpisodeDetailPage from "./pages/EpisodeDetailPage";
 import Explore from "./pages/Explore";
 import FanSubscribe from "./pages/FanSubscribe";
-import FlyerComposer from "./pages/FlyerComposer";
 import FlyerDesignStudio from "./pages/FlyerDesignStudio";
 import FlyerGenerator from "./pages/FlyerGenerator";
 import FollowListPage from "./pages/FollowListPage";
@@ -432,7 +431,7 @@ function Router() {
       <Route path={"/flyer-generator"} component={FlyerGenerator} />
       <Route path={"/animated-flyer-studio"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/image-lab"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
-      <Route path={"/flyer-composer"} component={FlyerComposer} />
+      <Route path={"/flyer-composer"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/flyer-design-studio"} component={FlyerDesignStudio} />
       <Route path={"/dayshift-doctor"} component={DayShiftDoctor} />
       <Route path={"/nurse"} component={NurseConsole} />
