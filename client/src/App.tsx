@@ -166,7 +166,6 @@ import AIEmpireDashboard from "./pages/AIEmpireDashboard";
 import AdminManualPayments from "./pages/AdminManualPayments";
 import AdminPayouts from "./pages/AdminPayouts";
 import AgentRoster from "./pages/AgentRoster";
-import AnimatedFlyerStudio from "./pages/AnimatedFlyerStudio";
 import ApparelLab from "./pages/ApparelLab";
 import ArtistStorefront from "./pages/ArtistStorefront";
 import BrandDeals from "./pages/BrandDeals";
@@ -431,7 +430,7 @@ function Router() {
       <Route path={"/dashboard"} component={CreatorHome} />
       <Route path={"/operator"} component={OperatorDashboard} />
       <Route path={"/flyer-generator"} component={FlyerGenerator} />
-      <Route path={"/animated-flyer-studio"} component={AnimatedFlyerStudio} />
+      <Route path={"/animated-flyer-studio"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/image-lab"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/flyer-composer"} component={FlyerComposer} />
       <Route path={"/flyer-design-studio"} component={FlyerDesignStudio} />
