@@ -285,7 +285,6 @@ import TelegramMoneyHub from "./pages/TelegramMoneyHub";
 import ThumbnailGeneratorUI from "./pages/ThumbnailGeneratorUI";
 // import UnifiedContentPublisher from "./pages/UnifiedContentPublisher"; // MERGED into SocialHub
 import University from "./pages/University";
-import VaultGuardian from "./pages/VaultGuardian";
 import VaultLiveSimple from "./pages/VaultLiveSimple";
 import VaultX from "./pages/VaultX";
 import VideoLab from "./pages/VideoLab";
@@ -573,7 +572,7 @@ function Router() {
       <Route path={"/proof-gate"} component={ProofGate} />
       <Route path={"/dominican"} component={DominicanSector} />
       <Route path={"/guia"} component={GuiaCreador} />
-      <Route path={"/vault-guardian"} component={VaultGuardian} />
+      <Route path={"/vault-guardian"}>{() => { window.location.replace("/vault-x"); return null; }}</Route>
       <Route path={"/vault-remix"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/video-lab"} component={VideoLab} />
       <Route path={"/video-lab-pro"} component={VideoLabPro} />
