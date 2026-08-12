@@ -27,17 +27,20 @@ function ShowcaseMotion({
       <img
         src={posterSrc}
         alt={alt}
-        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${ready && !failed ? "opacity-0" : "opacity-100"}`}
+        className="absolute inset-0 h-full w-full object-cover"
       />
       {!failed && (
         <video
           src={videoSrc}
+          poster={posterSrc}
           autoPlay
           loop
           muted
           playsInline
           preload={priority ? "auto" : "metadata"}
+          onLoadedData={() => setReady(true)}
           onCanPlay={() => setReady(true)}
+          onPlaying={() => setReady(true)}
           onError={() => setFailed(true)}
           className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${ready ? "opacity-100" : "opacity-0"}`}
           aria-hidden="true"
@@ -78,8 +81,8 @@ export default function Home() {
           className="absolute inset-0"
           priority
         />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,4,3,.3)_0%,rgba(5,4,3,.1)_30%,rgba(5,4,3,.88)_88%,#080706_100%)]" />
-        <div className="absolute inset-y-0 left-0 w-full bg-[radial-gradient(circle_at_16%_52%,rgba(0,0,0,.58),transparent_42%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,4,3,.18)_0%,rgba(5,4,3,.04)_30%,rgba(5,4,3,.72)_88%,#080706_100%)]" />
+        <div className="absolute inset-y-0 left-0 w-full bg-[radial-gradient(circle_at_16%_52%,rgba(0,0,0,.28),transparent_42%)]" />
 
         <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-7xl flex-col px-5 pb-7 pt-6 sm:px-8 sm:pt-8 lg:px-12">
           <header className="flex items-center justify-between">

@@ -286,7 +286,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
     sourceAsset: "bd4577fa-1511-4bff-b598-f1cf515ddca3",
     outputAsset: "7240f27f-6e92-4fc2-8026-66b7d86168e4",
     proofStatus: "watchable-platform-visual",
-    fallbackAsset: "/images/platform/body-cinema-feature-proof.webp",
+    fallbackAsset: "/images/home/body-cinema-arch-hero-poster.jpg",
     livePath: "https://creatorvault.live/uploads/renders/217aa25a-13c3-4b79-a8da-9fb2f4287851/vaultx-edit-217aa25a-13c3-4b79-a8da-9fb2f4287851.mp4",
     workingStatus: "ready",
   },
