@@ -206,6 +206,15 @@ export default function VaultXDrop() {
     { staleTime: 30_000 },
   );
   const autoSelectedMediaIdRef = useRef<string | null>(null);
+
+  // The canonical audio library is ordered newest-first. When a creator has a
+  // verified soundtrack, Body Cinema brings it forward automatically so its
+  // measured rhythm map can direct the treatment without another hunt.
+  useEffect(() => {
+    if (audioAssetId) return;
+    const newestVerified = audioLibraryQ.data?.assets?.find((asset: any) => asset.status === "ready");
+    if (newestVerified?.id) setAudioAssetId(String(newestVerified.id));
+  }, [audioAssetId, audioLibraryQ.data?.assets]);
   const jobQuery = trpc.governedPollo.job.useQuery(
     { jobId: governedJob?.id ?? 1 },
     { enabled: typeof governedJob?.id === "number" && governedJob.id > 0, refetchInterval: governedJob && typeof governedJob.id === "number" && governedJob.id > 0 && ["approved", "queued", "submitted", "provider_complete", "quality_review"].includes(governedJob.state) ? 8000 : false },
