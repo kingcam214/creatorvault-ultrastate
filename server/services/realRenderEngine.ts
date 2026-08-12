@@ -90,6 +90,7 @@ export interface RenderRequest {
   letterbox?: boolean;
   glitch?: boolean;
   polish?: boolean;
+  technicalLift?: "balanced" | "noir_safe";
 }
 
 // ─── Body-focus framing presets ───────────────────────────────────────────────
@@ -141,6 +142,10 @@ const LIGHT_LEAK = "eq=brightness=0.035:saturation=1.08:gamma=1.01";
 // A more controlled glitch that doesn't completely blur out the frame
 const GLITCH = "colorchannelmixer=rr=1:rg=0:rb=0:gr=0:gg=1:gb=0:br=0:bg=0:bb=1,noise=alls=10:allf=t";
 const POLISH = "split[a][b];[b]gblur=sigma=8[bl];[a][bl]blend=all_mode=screen:all_opacity=0.22,noise=alls=7:allf=t+u";
+const TECHNICAL_LIFT: Record<NonNullable<RenderRequest["technicalLift"]>, string> = {
+  balanced: "eq=brightness=0.06:gamma=1.08:contrast=1.03:saturation=1.03,unsharp=5:5:0.9:5:5:0.0",
+  noir_safe: "eq=brightness=0.032:gamma=1.045:contrast=1.02,unsharp=5:5:0.72:5:5:0.0",
+};
 
 function letterboxFilter(H: number): string {
   const barH = Math.round(H * 0.105);
@@ -332,6 +337,7 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
         else filters.push(fitChain);
         if (focus) filters.push(focus);
         if (grade) filters.push(grade);
+        if (req.technicalLift) filters.push(TECHNICAL_LIFT[req.technicalLift]);
         const vf = filters.join(",");
         await ff([
           "-loop", "1", "-t", String(dur), "-i", localSrc,
@@ -348,6 +354,7 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
         filters.push(fitChain);
         if (clipFocus) filters.push(clipFocus);
         if (clipGrade) filters.push(clipGrade);
+        if (req.technicalLift) filters.push(TECHNICAL_LIFT[req.technicalLift]);
         // Per-clip speed ramp
         const speed = clip.speed != null ? Math.max(0.05, Math.min(32, clip.speed)) : 1.0;
         if (speed !== 1.0) {

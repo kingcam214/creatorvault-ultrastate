@@ -134,6 +134,7 @@ export function buildBodyCinemaAssemblyRecipe(input: {
       chromaAberration: visuals.chromaAberration,
       glitch: visuals.glitch,
       watermarkText: input.watermarkText || undefined,
+      technicalLift: input.direction.id === "silhouette" ? "noir_safe" : "balanced",
       durationCap: Math.min(20, Math.max(4, sourceDuration * 1.15)),
     },
   };
