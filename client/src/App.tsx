@@ -354,7 +354,6 @@ import KingCamVault from "./pages/KingCamVault";
 import MarielkaDashboard from "./pages/MarielkaDashboard";
 import MediaHubPage from "./pages/MediaHubPage";
 import MotionFlyerAgent from "./pages/MotionFlyerAgent";
-import MusicCoverStudio from "./pages/MusicCoverStudio";
 import MusicLibraryAgent from "./pages/MusicLibraryAgent";
 import OAuthSocialCallback from "./pages/OAuthSocialCallback";
 import Podcasting from "./pages/Podcasting";
@@ -700,7 +699,7 @@ function Router() {
       <Route path="/mi-panel/marielka-dashboard" component={MarielkaDashboard} />
       <Route path="/media/hub" component={MediaHubPage} />
       <Route path="/agents/motion-flyer-agent" component={MotionFlyerAgent} />
-      <Route path="/music/cover-studio" component={MusicCoverStudio} />
+      <Route path="/music/cover-studio">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/agents/music-library-agent" component={MusicLibraryAgent} />
       <Route path="/oauth/social/callback" component={OAuthSocialCallback} />
       <Route path="/ops/status">{() => { window.location.replace("/dashboard"); return null; }}</Route>
