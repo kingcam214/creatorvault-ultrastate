@@ -182,6 +182,7 @@ export default function VaultXDrop() {
   const [governedJob, setGovernedJob] = useState<GovernedJob | null>(null);
   const [sourceEvidence, setSourceEvidence] = useState<any>(null);
   const [analyzingSource, setAnalyzingSource] = useState(false);
+  const [activeInsightId, setActiveInsightId] = useState<string | null>(null);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const [creationProjectId, setCreationProjectId] = useState<string | null>(null);
 
@@ -210,6 +211,19 @@ export default function VaultXDrop() {
   const currentJob = (jobQuery.data as GovernedJob | undefined) || governedJob;
   const currentStatus = statusCopy(currentJob?.state);
   const acceptedAsset = currentJob?.state === "accepted" && Boolean(currentJob.artifactUrl);
+  const sourceDurationMs = Math.max(
+    Number(uploadReceipt?.durationSec || 0) * 1000,
+    ...(sourceEvidence?.frameEvidence || []).map((frame: any) => Number(frame.timestampMs || 0)),
+    1,
+  );
+  const jumpToSourceMoment = useCallback((insight: any) => {
+    const timestampMs = Math.max(0, Number(insight?.timestampMs || 0));
+    setActiveInsightId(String(insight?.id || ""));
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = timestampMs / 1000;
+    void video.play().catch(() => undefined);
+  }, []);
 
   const openBodyCinemaCreation = useCallback(async (sourceAssetId: string, sourceUrl: string) => {
     const project = await openCreationProject.mutateAsync({
@@ -260,6 +274,7 @@ export default function VaultXDrop() {
     setUploadReceipt(null);
     setGovernedJob(null);
     setSourceEvidence(null);
+    setActiveInsightId(null);
     setCreationProjectId(null);
     setUploadProgress(0);
     setUploading(true);
@@ -338,6 +353,7 @@ export default function VaultXDrop() {
     setUploadReceipt(null);
     setGovernedJob(null);
     setSourceEvidence(null);
+    setActiveInsightId(null);
     setCreationProjectId(null);
     setFileName(asset.originalName || asset.fileName || "CreatorVault video");
 
@@ -544,6 +560,8 @@ export default function VaultXDrop() {
     setVideoUrl(null);
     setHostedUrl(null);
     setUploadReceipt(null);
+    setSourceEvidence(null);
+    setActiveInsightId(null);
     setFileName("");
     setSelectedPreset(null);
     setAudioAssetId(null);
@@ -677,11 +695,32 @@ export default function VaultXDrop() {
             
             {sourceEvidence?.analysisStatus === "verified" && <div style={{ background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, border: `1px solid rgba(69,227,138,0.35)`, borderRadius: 20, padding: 20, marginBottom: 24, boxShadow: "0 8px 30px rgba(69,227,138,0.08)" }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}><div><p style={{ fontSize: 11, color: GREEN, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", margin: 0, display: "flex", alignItems: "center", gap: 6 }}><Sparkles size={14} /> Analysis Complete</p><p style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, margin: "6px 0 0" }}>We found the strongest moments in your clip. The treatments below are mapped to your actual movement and framing.</p></div></div>
-              {sourceEvidence.editorFindings?.insights?.length > 0 && <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
-                {sourceEvidence.editorFindings.insights.map((insight: any) => <div key={insight.id} style={{ background: insight.id === "weakest" ? "rgba(255,124,124,0.07)" : "rgba(0,0,0,0.42)", border: `1px solid ${insight.id === "weakest" ? "rgba(255,124,124,0.25)" : BORDER}`, borderRadius: 12, padding: 11 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}><p style={{ margin: 0, color: insight.id === "weakest" ? "#ffb2b2" : "#fff", fontSize: 11, fontWeight: 900, lineHeight: 1.25 }}>{insight.label}</p><span style={{ color: GOLD, fontSize: 10, fontWeight: 800, whiteSpace: "nowrap" }}>{formatMoment(insight.timestampMs)}</span></div>
-                  <p style={{ margin: "7px 0 0", color: MUTED, fontSize: 10, lineHeight: 1.45 }}>{insight.action}</p>
-                </div>)}
+              {sourceEvidence.editorFindings?.insights?.length > 0 && <div style={{ marginTop: 18, borderTop: `1px solid ${BORDER}`, paddingTop: 18 }}>
+                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 13 }}>
+                  <div><p style={{ margin: 0, color: GOLD, fontSize: 10, fontFamily: "monospace", letterSpacing: "0.14em", textTransform: "uppercase" }}>Moment map</p><p style={{ margin: "5px 0 0", color: "#fff", fontSize: 14, fontWeight: 900 }}>Tap a marker. Your actual source jumps to that moment.</p></div>
+                  <span style={{ color: GREEN, fontSize: 10, fontWeight: 900, whiteSpace: "nowrap" }}>{sourceEvidence.analysisScore}/100 source read</span>
+                </div>
+                <div style={{ position: "relative", minHeight: 56, overflow: "hidden", borderRadius: 14, border: `1px solid ${BORDER}`, background: "linear-gradient(90deg, rgba(213,183,96,0.12), rgba(0,0,0,0.56) 42%, rgba(99,217,245,0.10))", marginBottom: 12 }}>
+                  <div style={{ position: "absolute", left: 12, right: 12, top: "50%", height: 1, background: "rgba(255,255,255,0.20)" }} />
+                  {sourceEvidence.editorFindings.insights.map((insight: any) => {
+                    const isWeak = insight.id === "weakest";
+                    const active = activeInsightId === insight.id;
+                    const left = `${Math.min(96, Math.max(2, (Number(insight.timestampMs || 0) / sourceDurationMs) * 96 + 2))}%`;
+                    return <button key={`marker-${insight.id}`} type="button" onClick={() => jumpToSourceMoment(insight)} aria-label={`Watch ${insight.label} at ${formatMoment(insight.timestampMs)}`} style={{ position: "absolute", left, top: "50%", transform: "translate(-50%, -50%)", width: active ? 31 : 25, height: active ? 31 : 25, padding: 0, borderRadius: 999, border: `2px solid ${active ? "#fff" : isWeak ? RED : GOLD}`, background: active ? (isWeak ? RED : GOLD) : "#090909", color: active ? "#090909" : isWeak ? RED : GOLD, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: active ? `0 0 0 5px ${isWeak ? "rgba(255,124,124,0.16)" : "rgba(213,183,96,0.18)"}` : "0 4px 12px rgba(0,0,0,0.55)", transition: "all 160ms cubic-bezier(0.23,1,0.32,1)", zIndex: active ? 3 : 2 }}><span style={{ fontSize: 8, fontWeight: 950 }}>{formatMoment(insight.timestampMs).replace("s", "")}</span></button>;
+                  })}
+                  <span style={{ position: "absolute", left: 10, bottom: 7, color: MUTED, fontSize: 9 }}>0:00</span><span style={{ position: "absolute", right: 10, bottom: 7, color: MUTED, fontSize: 9 }}>{formatMoment(sourceDurationMs)}</span>
+                </div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {sourceEvidence.editorFindings.insights.map((insight: any) => {
+                    const isWeak = insight.id === "weakest";
+                    const active = activeInsightId === insight.id;
+                    return <button key={insight.id} type="button" className="body-cinema-button" onClick={() => jumpToSourceMoment(insight)} style={{ width: "100%", padding: "13px 14px", textAlign: "left", background: active ? (isWeak ? "rgba(255,124,124,0.10)" : "rgba(213,183,96,0.12)") : "rgba(0,0,0,0.38)", border: `1px solid ${active ? (isWeak ? "rgba(255,124,124,0.52)" : GOLD_BORDER) : (isWeak ? "rgba(255,124,124,0.26)" : BORDER)}`, borderRadius: 14, color: "#fff", cursor: "pointer" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}><span style={{ color: isWeak ? "#ffb2b2" : "#fff", fontSize: 12, fontWeight: 950 }}>{insight.label}</span><span style={{ color: isWeak ? RED : GOLD, fontSize: 11, fontWeight: 900, whiteSpace: "nowrap" }}>{formatMoment(insight.timestampMs)} · Watch</span></div>
+                      <p style={{ margin: "8px 0 0", color: "rgba(255,255,255,0.75)", fontSize: 11, lineHeight: 1.45 }}>{insight.why}</p>
+                      <p style={{ margin: "6px 0 0", color: isWeak ? "#ffb2b2" : GREEN, fontSize: 10, lineHeight: 1.42, fontWeight: 800 }}>{insight.action}</p>
+                    </button>;
+                  })}
+                </div>
               </div>}
               <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
                 {sourceEvidence.directions?.map((dir: any) => (

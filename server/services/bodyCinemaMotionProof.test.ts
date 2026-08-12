@@ -55,7 +55,7 @@ describe("Body Cinema motion proof package", () => {
     const route = readFileSync(routePath, "utf8");
 
     expect(route).toContain("Demo Drop Preview");
-    expect(route).toContain("Simulated Outcome");
+    expect(route).toContain("This is one example of the energy a finished drop can carry.");
     expect(route).not.toContain("Finding highest-converting hook");
   });
 });

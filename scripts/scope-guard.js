@@ -167,6 +167,7 @@ const ALLOWLISTS = {
     'server/routers/videoUploadRouter.ts',
     'server/routers/mediaAssets.ts',
     'server/routers/realEditorRouter.ts',
+    'server/services/bodyCinemaMotionProof.test.ts',
     'server/_core/index.ts',
     'scripts/scope-guard.js'
   ],
