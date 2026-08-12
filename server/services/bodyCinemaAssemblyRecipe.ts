@@ -67,7 +67,7 @@ const RECIPE_VISUALS: Record<BodyCinemaDirection["id"], RecipeVisuals> = {
     transitions: true,
     fadeInOut: false,
     polish: true,
-    chromaAberration: true,
+    chromaAberration: false,
     glitch: false,
   },
 };
