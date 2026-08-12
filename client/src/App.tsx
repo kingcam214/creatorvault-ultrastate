@@ -247,7 +247,6 @@ import JoinVaultLive from "./pages/JoinVaultLive";
 import KingAnalytics from "./pages/KingAnalytics";
 import KingBackOffice from "./pages/KingBackOffice";
 import KingCamCommandCenter from "./pages/KingCamCommandCenter";
-import KingCamDemos from "./pages/KingCamDemos";
 import KingCamEmpireMap3D from "./pages/KingCamEmpireMap3D";
 import KingCamEpisodeTheater3D from "./pages/KingCamEpisodeTheater3D";
 import KingCamScriptWriter from "./pages/KingCamScriptWriter";
@@ -571,7 +570,7 @@ function Router() {
       <Route path={"/king"} component={KingHome} />
           <Route path="/king/gem-center" component={KingGemCenter} />
       <Route path={"/king/users"} component={KingUsers} />
-      <Route path={"/king/demos"} component={KingCamDemos} />
+      <Route path={"/king/demos"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/king/agent-live" component={AgentLive} />
       <Route path={"/king/presentation-builder"} component={PresentationBuilder} />
       <Route path={"/presentation-builder"} component={PresentationBuilder} />
@@ -701,7 +700,7 @@ function Router() {
       <Route path="/empire-cockpit-v3" component={EmpireCockpitV3} />
               <Route path="/empire-cockpit-v2" component={EmpireCockpitV2} />
       <Route path={"/kingcam-clone"}>{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
-      <Route path={"/kingcam-demos"} component={KingCamDemos} />
+      <Route path={"/kingcam-demos"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/kingcam-tours"} component={KingCamTours} />
       <Route path={"/kingcam-showcase"} component={KingCamShowcase} />
       <Route path={"/smart-album"} component={SmartAlbum} />
