@@ -206,7 +206,6 @@ import EmmaUniversity from "./pages/EmmaUniversity";
 import EpisodeDetailPage from "./pages/EpisodeDetailPage";
 import Explore from "./pages/Explore";
 import FanSubscribe from "./pages/FanSubscribe";
-import FlyerGenerator from "./pages/FlyerGenerator";
 import FollowListPage from "./pages/FollowListPage";
 import FontLibrary from "./pages/FontLibrary";
 import GreatestShowStudio from "./pages/GreatestShowStudio";
@@ -427,7 +426,7 @@ function Router() {
       <Route path={"/creator/:handle"} component={PublicCreatorLanding} />
       <Route path={"/dashboard"} component={CreatorHome} />
       <Route path={"/operator"} component={OperatorDashboard} />
-      <Route path={"/flyer-generator"} component={FlyerGenerator} />
+      <Route path={"/flyer-generator"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/animated-flyer-studio"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/image-lab"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/flyer-composer"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
@@ -589,7 +588,7 @@ function Router() {
       <Route path={"/greatest-show/adult"} component={AdultContent} />
       <Route path={"/greatest-show/apply"} component={CreatorApplication} />
       <Route path={"/greatest-show/subscribe"} component={FanSubscription} />
-      <Route path={"/king/flyer-generator"} component={FlyerGenerator} />
+      <Route path={"/king/flyer-generator"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/king/flyer-design-studio"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/king/video-lab"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
       <Route path={"/king/analytics"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
