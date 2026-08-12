@@ -181,17 +181,18 @@ export default function KingContent() {
   return (
     <div className="min-h-screen bg-[#050505] pb-24 pt-20">
       {/* Hero Section */}
-      <div className="relative mb-12 border-b border-white/10 bg-[#0a0a0f]">
+      <div className="relative mb-12 min-h-[620px] overflow-hidden border-b border-white/10 bg-[#0a0a0f]">
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/80 to-transparent z-10" />
+          <div className="absolute inset-0 z-10 bg-gradient-to-r from-[#050505] via-[#050505]/35 to-transparent" />
           <video
             autoPlay
             loop
             muted
             playsInline
-            className="h-full w-full object-contain object-right opacity-30"
+            className="h-full w-full object-contain object-right opacity-100"
             src="/videos/kingcam-hero-cam.mp4"
             poster="/assets/kingcam-hero.jpg"
+            preload="auto"
           />
         </div>
 
