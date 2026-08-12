@@ -225,6 +225,15 @@ function serialiseReview(row: any): BodyCinemaOutputReview {
   };
 }
 
+export async function getBodyCinemaOutputReview(creatorId: number, outputFingerprint: string): Promise<BodyCinemaOutputReview | null> {
+  await ensureBodyCinemaOutputReviewSchema();
+  const rows = await rawQuery<any>(
+    "SELECT * FROM body_cinema_output_reviews WHERE creator_id = ? AND output_fingerprint = ? LIMIT 1",
+    [creatorId, outputFingerprint.toLowerCase()],
+  );
+  return rows[0] ? serialiseReview(rows[0]) : null;
+}
+
 export async function reviewBodyCinemaOutput(creatorId: number, input: OutputReviewInput): Promise<BodyCinemaOutputReview> {
   await ensureBodyCinemaOutputReviewSchema();
   const source = await getBodyCinemaSourceEvidence(creatorId, input.evidenceId);

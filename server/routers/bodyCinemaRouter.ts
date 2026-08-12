@@ -27,7 +27,7 @@ import {
   invalidateBodyCinemaSourceEvidenceForUrl,
   persistBodyCinemaSourceEvidence,
 } from "../services/bodyCinemaEvidenceService";
-import { reviewBodyCinemaOutput } from "../services/bodyCinemaOutputReviewService";
+import { getBodyCinemaOutputReview, reviewBodyCinemaOutput } from "../services/bodyCinemaOutputReviewService";
 import { buildBodyCinemaAssemblyRecipe } from "../services/bodyCinemaAssemblyRecipe";
 import { buildAudioDirectedTimeline } from "../services/audioTimelinePlanner";
 import { getCanonicalAudioAsset } from "../services/audioIntelligenceService";
@@ -231,6 +231,12 @@ export const bodyCinemaRouter = router({
     } catch (error: any) {
       throw evidencePrecondition(error?.message || "CreatorVault could not build this source-backed master.");
     }
+  }),
+
+  getOutputReview: protectedProcedure.input(z.object({
+    outputFingerprint: z.string().regex(/^[a-f0-9]{64}$/i),
+  })).query(async ({ ctx, input }) => {
+    return getBodyCinemaOutputReview(Number(ctx.user.id), input.outputFingerprint);
   }),
 
   reviewOutput: protectedProcedure.input(z.object({
