@@ -301,7 +301,6 @@ import ThumbnailGeneratorUI from "./pages/ThumbnailGeneratorUI";
 // import UnifiedContentPublisher from "./pages/UnifiedContentPublisher"; // MERGED into SocialHub
 import University from "./pages/University";
 import VaultAnalytics from "./pages/VaultAnalytics";
-import VaultCulture from "./pages/VaultCulture";
 import VaultGuardian from "./pages/VaultGuardian";
 import VaultLiveSimple from "./pages/VaultLiveSimple";
 import VaultPay from "./pages/VaultPay";
@@ -696,7 +695,7 @@ function Router() {
        <Route path={"/vaultspace-dashboard"} component={VaultSpaceDashboard} />
       <Route path={"/vault-moment"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-rise"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
-      <Route path={"/vault-culture"} component={VaultCulture} />
+      <Route path={"/vault-culture"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/hollywood-shows" component={HollywoodShows} />
       <Route path="/hollywood-creator-dashboard" component={HollywoodCreatorDashboard} />
       <Route path="/hollywood-studio" component={HollywoodStudio} />
