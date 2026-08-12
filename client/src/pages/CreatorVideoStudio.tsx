@@ -1,630 +1,96 @@
-/**
- * Creator AI Video Studio
- * 
- * Long-form multi-scene video generation with:
- * - Scene timeline composer
- * - Character continuity controls
- * - Scene regeneration
- * - Video assembly
- */
-
-import { useState } from "react";
-import { MediaUpload } from "@/components/MediaUpload";
-import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Film,
-  Sparkles,
-  Image as ImageIcon,
-  Play,
-  RefreshCw,
-  Lock,
-  ArrowUp,
-  ArrowDown,
-  Download,
-} from "lucide-react";
+import { useMemo, useState } from "react";
+import { Link, useLocation } from "wouter";
+import { ArrowRight, Film, Play, ShieldCheck, Sparkles, Video } from "lucide-react";
 import MediaPicker, { type MediaAssetItem } from "@/components/MediaPicker";
+import { trpc } from "@/lib/trpc";
 
-interface Scene {
-  id: string;
-  sceneIndex: number;
-  description: string;
-  prompt: string;
-  imageUrl?: string;
-  status: "pending" | "generating" | "complete" | "failed";
-  errorMessage?: string;
-  regenerationCount?: number;
-  characterLocked?: boolean;
+function isVideo(asset: MediaAssetItem) {
+  return asset.assetType === "video" || Boolean(asset.mimeType?.startsWith("video/"));
 }
 
-interface VideoJob {
-  id: number;
-  prompt: string;
-  duration: number;
-  sceneCount: number;
-  status: "pending" | "queued" | "processing" | "complete" | "failed";
-  progress: number;
-  scenes: Scene[];
-  videoUrl?: string;
-  characterFeatures?: {
-    hair: string;
-    eyes: string;
-    skin: string;
-    clothing: string;
-    style: string;
-  };
+function videoPoster(asset: MediaAssetItem) {
+  const candidate = asset.thumbnailUrl ?? "";
+  return /\.(avif|gif|jpe?g|png|webp)(?:$|[?#])/i.test(candidate) ? candidate : undefined;
+}
+
+function formatDuration(seconds?: number | null) {
+  if (!seconds || seconds < 0) return "—";
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.floor(seconds % 60);
+  return `${minutes}:${remainder.toString().padStart(2, "0")}`;
 }
 
 export default function CreatorVideoStudio() {
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("create");
-  const [currentJobId, setCurrentJobId] = useState<number | null>(null);
-  
-  // Create job form state
-  const [prompt, setPrompt] = useState("");
-  const [baseImageUrl, setBaseImageUrl] = useState("");
-  const [duration, setDuration] = useState(30);
-  const [sceneCount, setSceneCount] = useState(5);
-  const [showMediaPicker, setShowMediaPicker] = useState(false);
-  const [selectedBaseMedia, setSelectedBaseMedia] = useState<MediaAssetItem | null>(null);
+  const [, setLocation] = useLocation();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<MediaAssetItem | null>(null);
+  const [selectionMessage, setSelectionMessage] = useState<string | null>(null);
+  const mediaQuery = trpc.mediaAssets.list.useQuery({ filter: "videos", limit: 120 }, { staleTime: 30_000 });
+  const verifiedVideoSources = useMemo(() => {
+    const media = Array.isArray(mediaQuery.data) ? mediaQuery.data as MediaAssetItem[] : [];
+    return media.filter((asset) => isVideo(asset) && Boolean(asset.publicUrl));
+  }, [mediaQuery.data]);
+  const activeSource = selectedAsset || verifiedVideoSources[0] || null;
 
-  // Mutations
-  const createJob = trpc.video.create.useMutation({
-    onSuccess: (data) => {
-      toast({
-        title: "Video job created",
-        description: "Scene plan generated. Click 'Generate Scenes' to start.",
-      });
-      setCurrentJobId(data.jobId);
-      setActiveTab("timeline");
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to create video job",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const generateScenes = trpc.video.generateScenes.useMutation({
-    onSuccess: () => {
-      toast({
-        title: "Scene generation started",
-        description: "Generating all scenes with character continuity...",
-      });
-      jobQuery.refetch();
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to generate scenes",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const regenerateScene = trpc.video.regenerateScene.useMutation({
-    onSuccess: () => {
-      toast({
-        title: "Scene regenerated",
-        description: "New version created with updated prompt.",
-      });
-      jobQuery.refetch();
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to regenerate scene",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const reorderScenes = trpc.video.reorderScenes.useMutation({
-    onSuccess: () => {
-      toast({
-        title: "Scenes reordered",
-        description: "Timeline updated successfully.",
-      });
-      jobQuery.refetch();
-    },
-  });
-
-  const assembleVideo = trpc.video.assembleVideo.useMutation({
-    onSuccess: (data) => {
-      toast({
-        title: "Video assembled",
-        description: "Your video is ready to download!",
-      });
-      jobQuery.refetch();
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to assemble video",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Queries
-  const jobsQuery = trpc.video.getMyJobs.useQuery();
-  const jobQuery = trpc.video.getJob.useQuery(
-    { jobId: currentJobId! },
-    { enabled: !!currentJobId, refetchInterval: (currentJobId && jobsQuery.data?.find((j: any) => j.id === currentJobId)?.status === "processing") ? 3000 : false }
-  );
-
-  const currentJob = jobQuery.data as VideoJob | null | undefined;
-
-  const handleCreateJob = () => {
-    if (!prompt.trim()) {
-      toast({
-        title: "Prompt required",
-        description: "Please enter a video concept.",
-        variant: "destructive",
-      });
+  const continueWith = (destination: "body-cinema" | "trailer-maker") => {
+    if (!activeSource?.publicUrl) {
+      setSelectionMessage("Choose a saved video first. CreatorVault only opens footage it can actually use.");
+      setPickerOpen(true);
       return;
     }
-
-    createJob.mutate({
-      prompt,
-      baseImageUrl: baseImageUrl || undefined,
-      duration,
-      sceneCount,
-    });
-  };
-
-  const handleGenerateScenes = () => {
-    if (!currentJobId) return;
-    generateScenes.mutate({ jobId: currentJobId });
-  };
-
-  const handleRegenerateScene = (sceneId: string, currentPrompt: string) => {
-    const newPrompt = window.prompt("Enter new scene prompt:", currentPrompt);
-    if (!newPrompt) return;
-    
-    regenerateScene.mutate({
-      sceneId,
-      newPrompt,
-    });
-  };
-
-  const handleMoveScene = (sceneIndex: number, direction: "up" | "down") => {
-    if (!currentJob) return;
-    
-    const scenes = [...currentJob.scenes].sort((a, b) => a.sceneIndex - b.sceneIndex);
-    const newIndex = direction === "up" ? sceneIndex - 1 : sceneIndex + 1;
-    
-    if (newIndex < 0 || newIndex >= scenes.length) return;
-    
-    // Swap scenes
-    [scenes[sceneIndex], scenes[newIndex]] = [scenes[newIndex], scenes[sceneIndex]];
-    
-    reorderScenes.mutate({
-      jobId: currentJob.id,
-      sceneIds: scenes.map(s => s.id),
-    });
+    const path = destination === "body-cinema" ? "/vault-x/studio" : "/vaultx/trailers";
+    setLocation(`${path}?sourceAssetId=${encodeURIComponent(activeSource.id)}`);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900">
-      <div className="container mx-auto py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Film className="w-8 h-8 text-purple-600" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Creator AI Video Studio
-            </h1>
+    <main className="min-h-screen overflow-hidden bg-[#060608] pb-20 pt-20 text-white">
+      <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_85%_10%,rgba(168,85,247,0.20),transparent_30%),radial-gradient(circle_at_15%_95%,rgba(251,191,36,0.10),transparent_36%),#09090d]">
+        <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16 lg:px-12">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-violet-100"><Sparkles className="h-3.5 w-3.5" /> Creator Video Studio</div>
+            <h1 className="mt-5 text-5xl font-black leading-[0.84] tracking-[-0.075em] text-white sm:text-7xl">Start with the<br /><span className="text-violet-200">moment you own.</span></h1>
+            <p className="mt-6 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">Choose a saved CreatorVault source, watch it, and send that exact footage into the creation room built for it. Nothing is invented, replaced, or presented as finished before there is a real result to watch.</p>
           </div>
-          <p className="text-muted-foreground">
-            Generate long-form AI videos with scene continuity and character consistency
-          </p>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 py-9 sm:px-8 lg:px-12">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]">
+          <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#0d0d12] shadow-[0_25px_80px_-42px_rgba(168,85,247,0.55)]">
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-6"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">Your selected source</p><h2 className="mt-1 text-xl font-black text-white">{activeSource ? activeSource.originalName || activeSource.fileName : "Choose footage from your vault"}</h2></div><button type="button" onClick={() => { setSelectionMessage(null); setPickerOpen(true); }} className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-xs font-black text-white transition hover:bg-white hover:text-black">Choose saved footage</button></div>
+            <div className="relative aspect-[16/10] bg-black sm:aspect-[16/9]">
+              {activeSource?.publicUrl ? <video key={activeSource.id} src={activeSource.publicUrl} poster={videoPoster(activeSource)} controls playsInline preload="metadata" className="h-full w-full object-contain" /> : <div className="flex h-full flex-col items-center justify-center px-6 text-center"><Video className="h-10 w-10 text-zinc-600" /><p className="mt-4 text-lg font-black text-white">Your real footage belongs here.</p><p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-400">This studio only starts from videos CreatorVault can open and carry into the next creation step.</p></div>}
+              {activeSource && <span className="absolute bottom-4 left-4 rounded-full border border-white/20 bg-black/65 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white backdrop-blur">Verified video · {formatDuration(activeSource.duration)}</span>}
+            </div>
+            <div className="border-t border-white/10 p-5 sm:p-6"><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" /><p className="text-sm leading-relaxed text-zinc-300">The source remains connected through the next step. CreatorVault does not use visual tricks to stand in for a watchable premium creation.</p></div>{selectionMessage && <p className="mt-4 rounded-xl border border-amber-200/20 bg-amber-200/10 px-4 py-3 text-sm font-bold text-amber-100">{selectionMessage}</p>}</div>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <button type="button" onClick={() => continueWith("body-cinema")} className="group overflow-hidden rounded-3xl border border-fuchsia-300/25 bg-[radial-gradient(circle_at_top_right,rgba(232,121,249,0.16),transparent_42%),#101015] p-6 text-left transition hover:-translate-y-0.5 hover:border-fuchsia-200/60">
+              <div className="flex items-start justify-between gap-5"><span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-fuchsia-300/15 text-fuchsia-200"><Film className="h-6 w-6" /></span><ArrowRight className="h-5 w-5 text-fuchsia-200 transition group-hover:translate-x-1" /></div><p className="mt-8 text-[10px] font-black uppercase tracking-[0.16em] text-fuchsia-200">Body Cinema</p><h2 className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">Read the moment.<br />Choose the treatment.</h2><p className="mt-4 text-sm leading-relaxed text-zinc-300">Your selected footage moves into source intelligence, measured moments, and the treatment decision made around what is actually in the clip.</p><span className="mt-6 inline-flex text-xs font-black text-fuchsia-100">Open with this source <ArrowRight className="ml-2 h-4 w-4" /></span></button>
+            <button type="button" onClick={() => continueWith("trailer-maker")} className="group overflow-hidden rounded-3xl border border-amber-200/25 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.15),transparent_42%),#101015] p-6 text-left transition hover:-translate-y-0.5 hover:border-amber-100/60">
+              <div className="flex items-start justify-between gap-5"><span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-200/15 text-amber-100"><Play className="h-6 w-6 fill-current" /></span><ArrowRight className="h-5 w-5 text-amber-100 transition group-hover:translate-x-1" /></div><p className="mt-8 text-[10px] font-black uppercase tracking-[0.16em] text-amber-100">Trailer Maker</p><h2 className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">Build the story<br />around the source.</h2><p className="mt-4 text-sm leading-relaxed text-zinc-300">Carry the exact selected video into your trailer direction: opening, structure, aspect, purpose, and release intent all stay tied to the real footage.</p><span className="mt-6 inline-flex text-xs font-black text-amber-50">Open with this source <ArrowRight className="ml-2 h-4 w-4" /></span></button>
+          </div>
         </div>
 
-        {/* Main Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="create">
-              <Sparkles className="w-4 h-4 mr-2" />
-              Create Video
-            </TabsTrigger>
-            <TabsTrigger value="timeline" disabled={!currentJobId}>
-              <Film className="w-4 h-4 mr-2" />
-              Scene Timeline
-            </TabsTrigger>
-            <TabsTrigger value="library">
-              <ImageIcon className="w-4 h-4 mr-2" />
-              My Videos
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Create Video Tab */}
-          <TabsContent value="create">
-            <Card>
-              <CardHeader>
-                <CardTitle>New Video Project</CardTitle>
-                <CardDescription>
-                  Describe your video concept and we'll generate a multi-scene timeline
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="prompt">Video Concept *</Label>
-                  <Textarea
-                    id="prompt"
-                    placeholder="Example: A day in the life of a cyberpunk hacker navigating neon-lit streets, infiltrating corporate servers, and escaping through underground tunnels..."
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    rows={5}
-                    className="resize-none"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor="baseImage">Base Image URL (Optional)</Label>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setShowMediaPicker(true)}
-                    >
-                      Select Media
-                    </Button>
-                  </div>
-                  <Input
-                    id="baseImage"
-                    placeholder="Tap to upload reference image"
-                    value={baseImageUrl}
-                    onChange={(e) => setBaseImageUrl(e.target.value)}
-                  />
-                  {selectedBaseMedia && (
-                    <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 p-2">
-                      <img
-                        src={selectedBaseMedia.thumbnailUrl ?? selectedBaseMedia.publicUrl ?? ""}
-                        alt={selectedBaseMedia.fileName}
-                        className="h-12 w-16 rounded object-cover"
-                      />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{selectedBaseMedia.fileName}</p>
-                        <p className="text-xs text-muted-foreground">Selected from your media library</p>
-                      </div>
-                    </div>
-                  )}
-                  <p className="text-sm text-muted-foreground">
-                    Provide a character reference image to maintain visual consistency
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="duration">Duration (seconds)</Label>
-                    <Input
-                      id="duration"
-                      type="number"
-                      min={15}
-                      max={300}
-                      value={duration}
-                      onChange={(e) => setDuration(parseInt(e.target.value))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="sceneCount">Scene Count</Label>
-                    <Input
-                      id="sceneCount"
-                      type="number"
-                      min={3}
-                      max={15}
-                      value={sceneCount}
-                      onChange={(e) => setSceneCount(parseInt(e.target.value))}
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleCreateJob}
-                  disabled={createJob.isPending || !prompt.trim()}
-                  className="w-full"
-                  size="lg"
-                >
-                  {createJob.isPending ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                      Generating Scene Plan...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Create Video Project
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Scene Timeline Tab */}
-          <TabsContent value="timeline">
-            {currentJob ? (
-              <div className="space-y-6">
-                {/* Job Status Card */}
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>{currentJob.prompt.slice(0, 60)}...</CardTitle>
-                        <CardDescription>
-                          {currentJob.sceneCount} scenes • {currentJob.duration}s duration
-                        </CardDescription>
-                      </div>
-                      <Badge variant={
-                        currentJob.status === "complete" ? "default" :
-                        currentJob.status === "processing" ? "secondary" :
-                        currentJob.status === "failed" ? "destructive" :
-                        "outline"
-                      }>
-                        {currentJob.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {currentJob.status === "processing" && (
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Generating scenes...</span>
-                          <span>{currentJob.progress}%</span>
-                        </div>
-                        <Progress value={currentJob.progress} />
-                      </div>
-                    )}
-
-                    {currentJob.status === "queued" && (
-                      <Button
-                        onClick={handleGenerateScenes}
-                        disabled={generateScenes.isPending}
-                        className="w-full"
-                      >
-                        {generateScenes.isPending ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                            Starting...
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4 mr-2" />
-                            Generate All Scenes
-                          </>
-                        )}
-                      </Button>
-                    )}
-
-                    {currentJob.status === "complete" && currentJob.scenes.every(s => s.status === "complete") && !currentJob.videoUrl && (
-                      <Button
-                        onClick={() => assembleVideo.mutate({ jobId: currentJob.id })}
-                        disabled={assembleVideo.isPending}
-                        className="w-full"
-                      >
-                        {assembleVideo.isPending ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                            Assembling Video...
-                          </>
-                        ) : (
-                          <>
-                            <Film className="w-4 h-4 mr-2" />
-                            Assemble Final Video
-                          </>
-                        )}
-                      </Button>
-                    )}
-
-                    {currentJob.videoUrl && (
-                      <Button
-                        asChild
-                        className="w-full"
-                        variant="default"
-                      >
-                        <a href={currentJob.videoUrl} download target="_blank" rel="noopener noreferrer">
-                          <Download className="w-4 h-4 mr-2" />
-                          Download Video
-                        </a>
-                      </Button>
-                    )}
-
-                    {currentJob.characterFeatures && (
-                      <div className="p-4 bg-muted rounded-lg space-y-2">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <Lock className="w-4 h-4" />
-                          Character Features Locked
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                          <div>Hair: {currentJob.characterFeatures.hair}</div>
-                          <div>Eyes: {currentJob.characterFeatures.eyes}</div>
-                          <div>Skin: {currentJob.characterFeatures.skin}</div>
-                          <div>Style: {currentJob.characterFeatures.style}</div>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Scene Timeline */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Scene Timeline</h3>
-                  {currentJob.scenes
-                    .sort((a, b) => a.sceneIndex - b.sceneIndex)
-                    .map((scene, index) => (
-                      <Card key={scene.id}>
-                        <CardContent className="p-4">
-                          <div className="flex gap-4">
-                            {/* Scene Preview */}
-                            <div className="w-48 h-32 bg-muted rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-                              {scene.imageUrl ? (
-                                <img
-                                  src={scene.imageUrl}
-                                  alt={`Scene ${scene.sceneIndex + 1}`}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : scene.status === "generating" ? (
-                                <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
-                              ) : (
-                                <ImageIcon className="w-8 h-8 text-muted-foreground" />
-                              )}
-                            </div>
-
-                            {/* Scene Details */}
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <h4 className="font-semibold">Scene {scene.sceneIndex + 1}</h4>
-                                <Badge variant={
-                                  scene.status === "complete" ? "default" :
-                                  scene.status === "generating" ? "secondary" :
-                                  scene.status === "failed" ? "destructive" :
-                                  "outline"
-                                }>
-                                  {scene.status}
-                                </Badge>
-                              </div>
-
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {scene.description}
-                              </p>
-
-                              {scene.errorMessage && (
-                                <p className="text-sm text-destructive">
-                                  Error: {scene.errorMessage}
-                                </p>
-                              )}
-
-                              {scene.regenerationCount && scene.regenerationCount > 0 && (
-                                <p className="text-xs text-muted-foreground">
-                                  Regenerated {scene.regenerationCount} time(s)
-                                </p>
-                              )}
-
-                              {/* Scene Actions */}
-                              <div className="flex gap-2 pt-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleRegenerateScene(scene.id, scene.prompt)}
-                                  disabled={scene.status === "generating" || regenerateScene.isPending}
-                                >
-                                  <RefreshCw className="w-3 h-3 mr-1" />
-                                  Regenerate
-                                </Button>
-
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleMoveScene(index, "up")}
-                                  disabled={index === 0}
-                                >
-                                  <ArrowUp className="w-3 h-3" />
-                                </Button>
-
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleMoveScene(index, "down")}
-                                  disabled={index === currentJob.scenes.length - 1}
-                                >
-                                  <ArrowDown className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                </div>
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <Film className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">
-                    No video project selected. Create a new project to get started.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* Library Tab */}
-          <TabsContent value="library">
-            <div className="space-y-4">
-              {jobsQuery.data && jobsQuery.data.length > 0 ? (
-                jobsQuery.data.map((job: any) => (
-                  <Card
-                    key={job.id}
-                    className="cursor-pointer hover:border-primary transition-colors"
-                    onClick={() => {
-                      setCurrentJobId(job.id);
-                      setActiveTab("timeline");
-                    }}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-semibold">{job.prompt.slice(0, 60)}...</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {job.sceneCount} scenes • {job.duration}s • Created {new Date(job.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <Badge variant={
-                          job.status === "complete" ? "default" :
-                          job.status === "processing" ? "secondary" :
-                          job.status === "failed" ? "destructive" :
-                          "outline"
-                        }>
-                          {job.status}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <Film className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">
-                      No video projects yet. Create your first AI video!
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+        <div className="mt-10 flex flex-col gap-4 border-t border-white/10 pt-7 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">Available creator sources</p><p className="mt-1 text-sm text-zinc-300">{mediaQuery.isLoading ? "Reading your vault…" : `${verifiedVideoSources.length} verified video${verifiedVideoSources.length === 1 ? " is" : "s are"} ready to choose.`}</p></div><Link href="/king/media-vault"><a className="inline-flex items-center gap-2 text-sm font-black text-violet-200 transition hover:text-white">Open Media Vault <ArrowRight className="h-4 w-4" /></a></Link></div>
+      </section>
 
       <MediaPicker
-        open={showMediaPicker}
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
         mode="single"
-        title="Select Base Reference Media"
-        subtitle="Pick one image or video frame to guide character consistency"
-        confirmLabel="Use this media"
-        onClose={() => setShowMediaPicker(false)}
-        onConfirm={(selected) => {
-          const first = selected[0];
-          if (!first) return;
-          setSelectedBaseMedia(first);
-          setBaseImageUrl(first.publicUrl ?? first.thumbnailUrl ?? "");
-          setShowMediaPicker(false);
+        title="Choose Your Video Source"
+        subtitle="Only saved CreatorVault videos that can be opened and used are offered here."
+        confirmLabel="Use This Video"
+        onConfirm={(assets) => {
+          const source = assets.find((asset) => isVideo(asset) && Boolean(asset.publicUrl));
+          if (!source) { setSelectionMessage("Choose a ready video source from your vault."); return; }
+          setSelectedAsset(source);
+          setSelectionMessage(null);
+          setPickerOpen(false);
         }}
       />
-    </div>
+    </main>
   );
 }
