@@ -325,7 +325,6 @@ import ChuuchMembersPage from "./pages/ChuuchMembers";
 import AgentApprovalInbox from "./pages/AgentApprovalInbox";
 import AgentCommandTower from "./pages/AgentCommandTower";
 import AgentLive from "./pages/AgentLive";
-import AlbumCoverDesigner from "./pages/AlbumCoverDesigner";
 import BCBPanel from "./pages/BCBPanel";
 import BotMonetizationDashboard from "./pages/BotMonetizationDashboard";
 import ChicaFunnelManager from "./pages/ChicaFunnelManager";
@@ -668,7 +667,7 @@ function Router() {
         <Route path="/my-loyalty" component={MyLoyaltyPortal} />
       <Route path="/agents/approvals" component={AgentApprovalInbox} />
       <Route path="/agents/command-tower" component={AgentCommandTower} />
-      <Route path="/music/album-cover" component={AlbumCoverDesigner} />
+      <Route path="/music/album-cover">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/mi-panel/bcb-panel" component={BCBPanel} />
       <Route path="/bots/monetization" component={BotMonetizationDashboard} />
       <Route path="/chica/funnels" component={ChicaFunnelManager} />
