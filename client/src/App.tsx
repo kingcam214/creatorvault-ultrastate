@@ -170,7 +170,6 @@ import AgentRoster from "./pages/AgentRoster";
 import AgentTracker from "./pages/AgentTracker";
 import AnimatedFlyerStudio from "./pages/AnimatedFlyerStudio";
 import ApparelLab from "./pages/ApparelLab";
-import AppleQDashboard from "./pages/AppleQDashboard";
 import ArtistStorefront from "./pages/ArtistStorefront";
 import BrandDeals from "./pages/BrandDeals";
 import BusinessCardDesigner from "./pages/BusinessCardDesigner";
@@ -641,7 +640,7 @@ function Router() {
       <Route path={"/owner-cockpit/recruitment"} component={RecruitmentDashboard} />
       <Route path={"/owner-cockpit/espionage"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/ai-empire"} component={AIEmpireDashboard} />
-      <Route path={"/owner-cockpit/apple-queue"} component={AppleQDashboard} />
+      <Route path={"/owner-cockpit/apple-queue"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/empire-cockpit-v3">{() => { window.location.replace("/dashboard"); return null; }}</Route>
               <Route path="/empire-cockpit-v2">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/kingcam-clone"}>{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
