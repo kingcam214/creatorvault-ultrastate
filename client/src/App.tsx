@@ -279,7 +279,6 @@ import MessageThread from "./pages/MessageThread";
 import Messages from "./pages/Messages";
 import MonetizationPipeline from "./pages/MonetizationPipeline";
 // import { MultiPlatformPosting } from "./pages/MultiPlatformPosting"; // MERGED into SocialHub
-import MusicAI from "./pages/MusicAI";
 import MusicLibrary from "./pages/MusicLibrary";
 import MySubscriptions from "./pages/MySubscriptions";
 import NFCCards from "./pages/NFCCards";
@@ -598,7 +597,7 @@ function Router() {
       <Route path="/king/script-director" component={ScriptDirectorPage} />
           <Route path="/king/import">{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
           <Route path="/king/gallery" component={KingCamGallery} />
-      <Route path="/king/music-composer" component={MusicAI} />
+      <Route path="/king/music-composer">{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path={"/music-library"} component={MusicLibrary} />
       <Route path={"/artist/storefront"} component={ArtistStorefront} />
       <Route path="/king/dubbing" component={DubbingAI} />
