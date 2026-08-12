@@ -58,7 +58,7 @@ const RECIPE_VISUALS: Record<BodyCinemaDirection["id"], RecipeVisuals> = {
     lightLeaks: true,
   },
   "vip-tease": {
-    colorGrade: "neon_night",
+    colorGrade: "rose_glow",
     focusSequence: ["torso", "face", "none", "hips", "none"],
     speedSequence: [1.08, 1, 1.04, 0.96, 1.1],
     captionStyle: "bold_center",
@@ -68,7 +68,7 @@ const RECIPE_VISUALS: Record<BodyCinemaDirection["id"], RecipeVisuals> = {
     fadeInOut: false,
     polish: true,
     chromaAberration: true,
-    glitch: true,
+    glitch: false,
   },
 };
 
