@@ -441,7 +441,6 @@ import CloneCommand from "./pages/king/CloneCommand";
 import ContentCommand from "./pages/ContentCommand";
 import MediaVault from "./pages/king/MediaVault";
 import ChallengeStoryEngine from "./pages/king/ChallengeStoryEngine";
-import ViralOptimizerV2 from "./pages/tools/ViralOptimizerV2";
 // import ChuuchCode from "./pages/ChuuchCode";
 // import ChuuchEvents from "./pages/ChuuchEvents";
 // import ShowPage from "./pages/ShowPage";
@@ -809,7 +808,7 @@ function Router() {
       <Route path="/king/media-vault" component={KingCamVault} />
       <Route path="/king/challenge-story" component={ChallengeStoryEngine} />
       <Route path="/king/challenge" component={ChallengeStoryEngine} />
-      <Route path="/tools/viral-optimizer-v2" component={ViralOptimizerV2} />
+      <Route path="/tools/viral-optimizer-v2">{() => { window.location.replace("/social-hub"); return null; }}</Route>
       <Route path="/videoeditor/vaultx">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/videoeditor/vaultx-projects">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route component={NotFound} />
