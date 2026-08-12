@@ -43,6 +43,11 @@ export default function KingContent() {
   const prepareCreationPath = (trpc as any).creationDirector.prepare.useMutation();
   const openCreationProject = (trpc as any).creationProjects.open.useMutation();
   const linkCreationProject = (trpc as any).creationProjects.link.useMutation();
+  const creationProofQ = (trpc as any).creationProof.getMine.useQuery();
+  const proofEntries = Array.isArray(creationProofQ.data) ? creationProofQ.data as any[] : [];
+  const certifiedProofs = proofEntries.filter((proof) => proof.status === "certified");
+  const candidateProofs = proofEntries.filter((proof) => proof.status === "candidate");
+  const rejectedProofs = proofEntries.filter((proof) => proof.status === "rejected");
 
   const kingcamIdentityReference = (() => {
     const activeModel = kingcamIdentity?.activeModels?.[0];
@@ -250,6 +255,23 @@ export default function KingContent() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <section className="mb-10 overflow-hidden rounded-3xl border border-emerald-300/20 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.15),transparent_42%),linear-gradient(135deg,#0c1210,#080909)] p-6 shadow-[0_20px_55px_-30px_rgba(52,211,153,0.45)] sm:p-8">
+          <div className="flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
+            <div className="max-w-2xl">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200"><Shield className="h-3.5 w-3.5" /> Your Proof Vault</div>
+              <h2 className="text-3xl font-black tracking-[-0.05em] text-white sm:text-4xl">Finished work earns its place.</h2>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-300 sm:text-base">Only a finished piece that has been watched all the way through, checked against its source, and signed off can stand as public proof. A plan is never counted as a finished creation.</p>
+            </div>
+            <div className="grid grid-cols-3 overflow-hidden rounded-2xl border border-white/10 bg-black/25 text-center">
+              <div className="min-w-24 border-r border-white/10 px-4 py-4"><p className="text-2xl font-black text-emerald-300">{certifiedProofs.length}</p><p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-zinc-500">Signed off</p></div>
+              <div className="min-w-24 border-r border-white/10 px-4 py-4"><p className="text-2xl font-black text-amber-200">{candidateProofs.length}</p><p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-zinc-500">Under review</p></div>
+              <div className="min-w-24 px-4 py-4"><p className="text-2xl font-black text-rose-300">{rejectedProofs.length}</p><p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-zinc-500">Kept out</p></div>
+            </div>
+          </div>
+          <div className="mt-7 border-t border-white/10 pt-5">
+            {creationProofQ.isLoading ? <p className="text-sm font-bold text-zinc-400">Checking your finished-work library…</p> : certifiedProofs.length > 0 ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{certifiedProofs.slice(0, 3).map((proof) => <div key={proof.id} className="rounded-2xl border border-emerald-300/20 bg-black/25 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-200">{proof.proofClass === "flagship" ? "Flagship proof" : proof.proofClass === "public_showcase" ? "Public showcase" : "Gold standard"}</p><p className="mt-2 text-sm font-black text-white">{proof.overallScore}/100 visual standard</p></div><Shield className="h-5 w-5 shrink-0 text-emerald-300" /></div><p className="mt-3 line-clamp-2 text-xs leading-relaxed text-zinc-400">{proof.reviewNotes || "Reviewed against the finished watchable piece."}</p></div>)}</div> : <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-white/15 bg-black/20 p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-black text-white">No finished work has been signed off yet.</p><p className="mt-1 text-sm text-zinc-400">Your creation tools are ready. A piece appears here only after it becomes watchable and clears the visual standard.</p></div><Link href="/vault-x/studio"><a className="inline-flex shrink-0 items-center gap-2 text-sm font-black text-emerald-200 transition hover:text-white">Open Body Cinema <ArrowUpRight className="h-4 w-4" /></a></Link></div>}
+          </div>
+        </section>
         {activeStage === "orchestrating" && (
           <div className="mb-12 rounded-2xl border border-fuchsia-500/30 bg-[#0d0d14] p-8 shadow-[0_0_40px_-10px_rgba(217,70,239,0.15)]">
             <div className="mb-6 flex items-center gap-4">
