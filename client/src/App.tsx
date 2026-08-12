@@ -287,7 +287,6 @@ import ThumbnailGeneratorUI from "./pages/ThumbnailGeneratorUI";
 import University from "./pages/University";
 import VaultGuardian from "./pages/VaultGuardian";
 import VaultLiveSimple from "./pages/VaultLiveSimple";
-import VaultSpaceDashboard from "./pages/VaultSpaceDashboard";
 import VaultX from "./pages/VaultX";
 import VideoLab from "./pages/VideoLab";
 import VideoLabPro from "./pages/VideoLabPro";
@@ -672,7 +671,7 @@ function Router() {
       <Route path={"/vault-pass"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-drop"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-analytics"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
-       <Route path={"/vaultspace-dashboard"} component={VaultSpaceDashboard} />
+       <Route path={"/vaultspace-dashboard"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/vault-moment"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-rise"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-culture"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
