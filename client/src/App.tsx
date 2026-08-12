@@ -22,7 +22,6 @@ import Register from "./pages/Register";
 import SignupPage from "./pages/SignupPage";
 import Dashboard from "./pages/Dashboard";
 import CreatorHome from "./pages/CreatorHome";
-import KingHome from "./pages/KingHome";
 // import KingGemCenter from "./pages/king/KingGemCenter";
 // import FlyerGenerator from "./pages/FlyerGenerator";
 // import AnimatedFlyerStudio from "./pages/AnimatedFlyerStudio";
@@ -520,7 +519,7 @@ function Router() {
       <Route path={"/emma/reset-dashboard"} component={EmmaResetDashboard} />
       <Route path={"/emma/reset"} component={EmmaSimpleView} />
       <Route path={"/emma/network"} component={EmmaNetworkHome} />
-      <Route path={"/king"} component={KingHome} />
+      <Route path={"/king"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
           <Route path="/king/gem-center">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/king/demos"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
