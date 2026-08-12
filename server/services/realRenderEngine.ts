@@ -379,8 +379,10 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
 
         const vf = filters.join(",");
         const audioFilters = speed !== 1.0 ? ["-af", `atempo=${Math.max(0.5, Math.min(2.0, speed))}`] : ["-af", "aresample=44100"];
+        // Keep trim controls as input options. When -t is an output option it
+        // truncates a slow-motion setpts result back to the source duration.
         await ff([
-          ...ss, "-i", localSrc, ...dur,
+          ...ss, ...dur, "-i", localSrc,
           "-vf", vf, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(fps),
           "-c:a", "aac", "-ar", "44100", "-ac", "2",
           ...audioFilters, outPart,
