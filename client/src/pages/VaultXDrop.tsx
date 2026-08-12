@@ -635,14 +635,6 @@ export default function VaultXDrop() {
               <div><p style={{ fontSize: 20, fontWeight: 900, margin: 0 }}>Choose from your Vault</p><p style={{ fontSize: 13, color: MUTED, margin: "6px 0 0" }}>Your saved videos appear here automatically</p></div>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 7, color: GREEN, fontSize: 11, fontWeight: 800 }}><ShieldCheck size={14} /> Your videos stay attached to your account</div>
             </button>
-            <p style={{ margin: "14px 0 20px", textAlign: "center", color: MUTED, fontSize: 12 }}>Need a brand-new clip instead? Add it below.</p>
-            
-            <label className="body-cinema-button" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, minHeight: 220, padding: 24, borderRadius: 24, border: `1px solid ${GOLD_BORDER}`, background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, cursor: "pointer", textAlign: "center", boxShadow: "0 8px 30px rgba(213,183,96,0.1)" }}>
-              <div style={{ width: 64, height: 64, borderRadius: 20, background: `linear-gradient(135deg, ${GOLD}, #b09140)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(213,183,96,0.25)" }}><Upload size={28} color="#080808" /></div>
-              <div><p style={{ fontSize: 20, fontWeight: 900, margin: 0, letterSpacing: "-0.01em", color: "#fff" }}>Tap to upload your source</p><p style={{ fontSize: 13, color: MUTED, margin: "6px 0 0" }}>High quality video works best · up to 100 MB</p></div>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 7, color: GREEN, fontSize: 11, fontWeight: 800, marginTop: 4 }}><ShieldCheck size={14} /> 100% Creator Owned & Protected</div>
-              <input ref={fileInputRef} type="file" accept="video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-msvideo,video/x-m4v" style={{ display: "none" }} onChange={handleFileUpload} />
-            </label>
 
             <div style={{ margin: "44px -16px 0", padding: "32px 16px", background: "linear-gradient(180deg, rgba(213,183,96,0.06), transparent)", borderTop: `1px solid ${BORDER}` }}>
               <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", textAlign: "center", margin: "0 0 10px" }}>See the treatments move</p>
