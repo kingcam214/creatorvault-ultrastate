@@ -316,7 +316,6 @@ import VaultX from "./pages/VaultX";
 import VideoLab from "./pages/VideoLab";
 import VideoLabPro from "./pages/VideoLabPro";
 import VideoProductionStudio from "./pages/VideoProductionStudio";
-import VideoStudio from "./pages/VideoStudio";
 import ReleaseInfo from "./pages/ReleaseInfo";
 import ViralOptimizer from "./pages/tools/ViralOptimizer";
 import ViralOptimizerPage from "./pages/ViralOptimizerPage";
@@ -608,7 +607,7 @@ function Router() {
       <Route path={"/vault-remix"} component={VaultRemix} />
       <Route path={"/video-lab"} component={VideoLab} />
       <Route path={"/video-lab-pro"} component={VideoLabPro} />
-      <Route path={"/video-studio"} component={VideoStudio} />
+      <Route path={"/video-studio"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
       <Route path={"/video-production-studio"} component={VideoProductionStudio} />
       <Route path={"/vault-x"} component={VaultX} />
       <Route path={"/culture-selection"} component={CultureSelection} />
