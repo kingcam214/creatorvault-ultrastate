@@ -22,7 +22,7 @@ import {
   isSupportedBodyCinemaVideoSelection,
   sanitiseBodyCinemaUploadFilename,
 } from "../services/bodyCinemaReliability";
-import { registerCreatorOwnedAudioUpload } from "../services/audioIntelligenceService";
+import { registerCanonicalAudioAsset, registerCreatorOwnedAudioUpload } from "../services/audioIntelligenceService";
 
 // ─── Helper: mime type from filename ─────────────────────────────────────────
 function getMimeType(filename: string): string {
@@ -552,20 +552,41 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
       await rawExec(
         `INSERT INTO media_assets
           (id, user_id, source_type, asset_type, file_name, original_name, mime_type, storage_path, public_url, thumbnail_url, duration, status, created_by_feature)
-         VALUES (?, ?, 'creator_upload', 'audio', ?, ?, ?, ?, ?, NULL, ?, 'ready', 'canonical_audio_intelligence')`,
-        [mediaAssetId, creatorId, originalName, originalName, getMimeType(originalName), url, url, (media as any).durationSec]
+         VALUES (?, ?, ?, 'audio', ?, ?, ?, ?, ?, NULL, ?, 'ready', ?)`,
+        [mediaAssetId, creatorId, sourceType, originalName, originalName, getMimeType(originalName), url, url, (media as any).durationSec, approvedDemo ? "creatorvault_approved_demo_audio" : "canonical_audio_intelligence"]
       );
-      canonicalAudioAsset = await registerCreatorOwnedAudioUpload({
-        creatorId,
-        title: originalName.replace(/\.[^.]+$/, "") || "Creator soundtrack",
-        assetUrl: url,
-        mimeType: getMimeType(originalName),
-        fileFingerprint: sha256,
-        durationSeconds: (media as any).durationSec,
-        sampleRate: (media as any).sampleRate,
-        channels: (media as any).channels,
-        mediaAssetId,
-      });
+      canonicalAudioAsset = approvedDemo
+        ? await registerCanonicalAudioAsset({
+          creatorId,
+          title: originalName.replace(/\.[^.]+$/, "") || "CreatorVault demonstration soundtrack",
+          assetUrl: url,
+          mimeType: getMimeType(originalName),
+          kind: "music",
+          fingerprint: sha256,
+          durationSeconds: (media as any).durationSec,
+          sampleRate: (media as any).sampleRate,
+          channels: (media as any).channels,
+          mediaAssetId,
+          rights: {
+            state: "creator_owned",
+            source: "first_party_fixture",
+            allowedPlatforms: ["creatorvault", "vaultx", "instagram", "tiktok", "youtube"],
+            permittedUses: ["preview", "render", "distribution"],
+            attributionRequired: false,
+            evidenceNote: "CreatorVault-owned generated demonstration soundtrack imported with an owner-bound receipt, source checksum, and approved-demo classification.",
+          },
+        })
+        : await registerCreatorOwnedAudioUpload({
+          creatorId,
+          title: originalName.replace(/\.[^.]+$/, "") || "Creator soundtrack",
+          assetUrl: url,
+          mimeType: getMimeType(originalName),
+          fileFingerprint: sha256,
+          durationSeconds: (media as any).durationSec,
+          sampleRate: (media as any).sampleRate,
+          channels: (media as any).channels,
+          mediaAssetId,
+        });
     } else {
       await rawExec(
         `INSERT INTO media_assets
