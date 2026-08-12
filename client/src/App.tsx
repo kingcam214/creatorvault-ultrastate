@@ -302,7 +302,6 @@ import ThumbnailGeneratorUI from "./pages/ThumbnailGeneratorUI";
 import University from "./pages/University";
 import VaultAnalytics from "./pages/VaultAnalytics";
 import VaultCulture from "./pages/VaultCulture";
-import VaultDrop from "./pages/VaultDrop";
 import VaultGuardian from "./pages/VaultGuardian";
 import VaultLiveSimple from "./pages/VaultLiveSimple";
 import VaultMoment from "./pages/VaultMoment";
@@ -698,7 +697,7 @@ function Router() {
       <Route path={"/smart-album"} component={SmartAlbum} />
       <Route path={"/vault-snap"} component={VaultSnap} />
       <Route path={"/vault-pass"} component={VaultPass} />
-      <Route path={"/vault-drop"} component={VaultDrop} />
+      <Route path={"/vault-drop"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-analytics"} component={VaultAnalytics} />
        <Route path={"/vaultspace-dashboard"} component={VaultSpaceDashboard} />
       <Route path={"/vault-moment"} component={VaultMoment} />
