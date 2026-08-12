@@ -193,7 +193,6 @@ import CreatorToolbox from "./pages/CreatorToolbox";
 import CreatorVaultDominicana from "./pages/CreatorVaultDominicana";
 import CultureSelection from "./pages/CultureSelection";
 import DayShiftDoctor from "./pages/DayShiftDoctor";
-import DesignDepartment from "./pages/DesignDepartment";
 import DominicanSector from "./pages/DominicanSector";
 import DubbingAI from "./pages/DubbingAI";
 import EditProfile from "./pages/EditProfile";
@@ -431,7 +430,7 @@ function Router() {
       <Route path={"/flyer-design-studio"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/dayshift-doctor"} component={DayShiftDoctor} />
       <Route path={"/nurse"} component={NurseConsole} />
-      <Route path={"/design-department"} component={DesignDepartment} />
+      <Route path={"/design-department"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/whatsapp-content"} component={WhatsAppContentGenerator} />
       <Route path={"/king/whatsapp-bot"} component={WhatsAppBotDashboard} />
       <Route path={"/studio-slots"} component={StudioSlots} />
