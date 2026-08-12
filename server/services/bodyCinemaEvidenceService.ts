@@ -34,6 +34,27 @@ export type BodyCinemaShotRanking = {
   faceSupport: number;
   subjectCoverage: number;
   cropSafety: number;
+  motionEnergy?: number;
+  visualQuality?: number;
+};
+
+export type BodyCinemaPerformanceInsight = {
+  id: "opening" | "thumbnail" | "motion" | "framing" | "weakest" | "recommendation";
+  label: string;
+  timestampMs: number;
+  confidence: number;
+  why: string;
+  action: string;
+};
+
+export type BodyCinemaTreatmentGrammar = {
+  cameraLanguage: string;
+  pace: string;
+  framing: string;
+  lighting: string;
+  typography: string;
+  audioFeel: string;
+  ending: string;
 };
 
 export type BodyCinemaTimelineBeat = {
@@ -57,6 +78,7 @@ export type BodyCinemaDirection = {
   evidence: string[];
   confidence: number;
   distinction: string;
+  grammar: BodyCinemaTreatmentGrammar;
   timeline: BodyCinemaTimelineBeat[];
 };
 
@@ -71,6 +93,7 @@ export type BodyCinemaEditorFindings = {
   strongestLoopTimestampMs: number;
   weakestSectionStartMs: number;
   weakestSectionEndMs: number;
+  insights?: BodyCinemaPerformanceInsight[];
 };
 
 export type BodyCinemaEvidenceRecord = {
@@ -103,7 +126,7 @@ export type SourceEvidenceInput = {
   frameEvidence: BodyCinemaFrameEvidence[];
 };
 
-const EVIDENCE_VERSION = "adaptive-video-source-intelligence/v2";
+const EVIDENCE_VERSION = "adaptive-video-source-intelligence/v3";
 const MIN_FRAME_COUNT = 6;
 const MIN_VISIBLE_LANDMARKS = 8;
 const MIN_CONFIDENCE = 0.55;
@@ -212,6 +235,24 @@ function visibleCount(frame: BodyCinemaFrameEvidence): number {
   return frame.landmarks.filter((landmark) => landmarkConfidence(landmark) >= MIN_CONFIDENCE).length;
 }
 
+function frameMotionEnergy(frame: BodyCinemaFrameEvidence, previous?: BodyCinemaFrameEvidence): number {
+  if (!previous) return 0;
+  const currentTorso = centroid(frame, BODY_GROUPS.torso) || centroid(frame, BODY_GROUPS.shoulders);
+  const previousTorso = centroid(previous, BODY_GROUPS.torso) || centroid(previous, BODY_GROUPS.shoulders);
+  if (!currentTorso || !previousTorso) return 0;
+  const travel = Math.hypot(currentTorso.x - previousTorso.x, currentTorso.y - previousTorso.y);
+  const sceneShift = fingerprintDistance(previous.frameFingerprint, frame.frameFingerprint);
+  return Number(clamp(travel * 8 + sceneShift * 0.35).toFixed(3));
+}
+
+function frameVisualQuality(frame: BodyCinemaFrameEvidence): number {
+  const brightness = typeof frame.brightness === "number" ? clamp(1 - Math.abs(frame.brightness - 0.55) * 1.6) : 0.65;
+  const sharpness = typeof frame.sharpness === "number" ? clamp(frame.sharpness) : 0.5;
+  const contrast = typeof frame.contrast === "number" ? clamp(frame.contrast) : 0.5;
+  const coverage = clamp(frame.subjectCoverage ?? visibleCount(frame) / 33);
+  return Number(clamp(brightness * 0.25 + sharpness * 0.35 + contrast * 0.2 + coverage * 0.2).toFixed(3));
+}
+
 function buildBodyMap(frames: BodyCinemaFrameEvidence[]): Record<string, number> {
   const result: Record<string, number> = {};
   for (const [group, points] of Object.entries(BODY_GROUPS)) {
@@ -271,7 +312,8 @@ export function deriveScenesAndShotRankings(frames: BodyCinemaFrameEvidence[]): 
     scenes.push({ sceneId, startMs: currentStart, endMs: finalFrame.timestampMs, representativeTimestampMs: finalFrame.timestampMs });
   }
 
-  const shotRankings = ordered.map((frame) => {
+  const shotRankings = ordered.map((frame, index) => {
+    const previous = ordered[index - 1];
     const visible = visibleCount(frame);
     const poseCoverage = visible / 33;
     const regionSupport = ["face", "shoulders", "torso", "hips", "arms", "legs"]
@@ -285,7 +327,9 @@ export function deriveScenesAndShotRankings(frames: BodyCinemaFrameEvidence[]): 
     const subjectCoverage = clamp(frame.subjectCoverage ?? poseCoverage);
     const cropSafety = clamp(1 - Math.max(0, Math.abs((frame.face?.centerX ?? 0.5) - 0.5) - 0.25) * 2);
     const contrast = typeof frame.contrast === "number" ? clamp(frame.contrast) : 0.5;
-    const score = Math.round(clamp(poseCoverage * 0.2 + regionSupport * 0.2 + sharpness * 0.18 + brightness * 0.1 + faceSupport * 0.14 + subjectCoverage * 0.1 + cropSafety * 0.05 + contrast * 0.03) * 100);
+    const motionEnergy = frameMotionEnergy(frame, previous);
+    const visualQuality = frameVisualQuality(frame);
+    const score = Math.round(clamp(poseCoverage * 0.18 + regionSupport * 0.18 + sharpness * 0.15 + brightness * 0.08 + faceSupport * 0.13 + subjectCoverage * 0.08 + cropSafety * 0.05 + contrast * 0.03 + motionEnergy * 0.07 + visualQuality * 0.05) * 100);
     return {
       timestampMs: frame.timestampMs,
       sceneId: frameSceneIds.get(frame.timestampMs) || 0,
@@ -294,7 +338,9 @@ export function deriveScenesAndShotRankings(frames: BodyCinemaFrameEvidence[]): 
       faceSupport: Number(faceSupport.toFixed(3)),
       subjectCoverage: Number(subjectCoverage.toFixed(3)),
       cropSafety: Number(cropSafety.toFixed(3)),
-      reason: `Pose ${Math.round(poseCoverage * 100)}%, face framing ${Math.round(faceSupport * 100)}%, subject coverage ${Math.round(subjectCoverage * 100)}%, crop safety ${Math.round(cropSafety * 100)}%, sharpness ${Math.round(sharpness * 100)}%.`,
+      motionEnergy,
+      visualQuality,
+      reason: `Pose ${Math.round(poseCoverage * 100)}%, face framing ${Math.round(faceSupport * 100)}%, subject coverage ${Math.round(subjectCoverage * 100)}%, motion ${Math.round(motionEnergy * 100)}%, crop safety ${Math.round(cropSafety * 100)}%, sharpness ${Math.round(sharpness * 100)}%.`,
     };
   }).sort((left, right) => right.score - left.score);
 
@@ -308,6 +354,45 @@ function chooseRankedShot(rankings: BodyCinemaShotRanking[], score: (shot: BodyC
   if (selected) used.add(selected.timestampMs);
   return selected;
 }
+
+const TREATMENT_GRAMMAR: Record<BodyCinemaDirection["id"], BodyCinemaTreatmentGrammar> = {
+  "the-arch": {
+    cameraLanguage: "Measured three-quarter movement that protects the body line before the payoff.",
+    pace: "Deliberate build with a late, held reveal.",
+    framing: "Torso-and-hip structural line with no aggressive crop chase.",
+    lighting: "Sculpted side-light contrast with controlled shadow detail.",
+    typography: "Sparse, low-positioned statement that arrives after the opening frame settles.",
+    audioFeel: "Low-pressure rise with room for the source movement to breathe.",
+    ending: "Stable full-form hold that resolves with confidence.",
+  },
+  "silhouette": {
+    cameraLanguage: "Still, graphic full-form composition with almost no synthetic movement.",
+    pace: "Slowest treatment: shape and negative space carry the tension.",
+    framing: "Protected subject edge and full-body negative space.",
+    lighting: "Deep contrast with an emphasis on separation, not skin smoothing.",
+    typography: "Minimal top line; no caption competes with the outline.",
+    audioFeel: "Restrained pulse or near-silent atmosphere.",
+    ending: "Quiet, loop-safe exit that preserves the outline.",
+  },
+  "luxury-reveal": {
+    cameraLanguage: "Face-and-detail-led campaign framing that opens calm and grows richer.",
+    pace: "Controlled polish; details unfold before the reveal rather than rushing it.",
+    framing: "Safe face, shoulder, and texture composition with a later full-form release.",
+    lighting: "Warm highlights, retained natural texture, and private-suite softness.",
+    typography: "Elegant small-caps line with a measured entrance and exit.",
+    audioFeel: "Warm, private, and polished rather than percussive.",
+    ending: "A composed final hold that feels like a campaign close.",
+  },
+  "vip-tease": {
+    cameraLanguage: "Immediate vertical hook followed by a compact tension-and-payoff sequence.",
+    pace: "Fastest treatment: decisive opening, short hold, then a cliffhanger.",
+    framing: "Safe first-second crop with the strongest visual held for private-access payoff.",
+    lighting: "Crisp high-contrast teaser finish that protects detail.",
+    typography: "Short kinetic access line that lands on the beat and clears before payoff.",
+    audioFeel: "Sharper pulse with an intentional cut before full resolution.",
+    ending: "Unresolved exit designed to create a next-action impulse.",
+  },
+};
 
 function compileTreatmentTimeline(treatment: BodyCinemaDirection["id"], rankings: BodyCinemaShotRanking[], sourceDurationMs: number): BodyCinemaTimelineBeat[] {
   const used = new Set<number>();
@@ -356,17 +441,32 @@ export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
   const supportedFrameCount = visibleLandmarkCounts.filter((count) => count >= MIN_VISIBLE_LANDMARKS).length;
   const features = availableFeatures(bodyMap);
 
+  const temporalShots = [...shotRankings].sort((a, b) => a.timestampMs - b.timestampMs);
+  const earlyShots = temporalShots.filter((shot) => shot.timestampMs <= 3000);
+  const strongestHook = [...(earlyShots.length ? earlyShots : temporalShots)].sort((a, b) => b.score - a.score)[0] || shotRankings[0];
+  const strongestThumbnail = [...shotRankings].sort((a, b) => (b.faceSupport * 0.6 + b.score / 100 * 0.4) - (a.faceSupport * 0.6 + a.score / 100 * 0.4))[0] || shotRankings[0];
+  const strongestMotion = [...shotRankings].sort((a, b) => Number(b.motionEnergy || 0) - Number(a.motionEnergy || 0))[0] || shotRankings[0];
+  const strongestFraming = [...shotRankings].sort((a, b) => (b.subjectCoverage * 0.55 + b.cropSafety * 0.45) - (a.subjectCoverage * 0.55 + a.cropSafety * 0.45))[0] || shotRankings[0];
+  const strongestLoop = [...temporalShots.slice(-Math.max(1, Math.ceil(temporalShots.length / 3)))].sort((a, b) => b.score - a.score)[0] || shotRankings[0];
+  const weakestShot = [...shotRankings].sort((a, b) => a.score - b.score)[0] || shotRankings[0];
   const editorFindings: BodyCinemaEditorFindings = {
-    strongestHookTimestampMs: shotRankings.find(s => s.timestampMs < 3000)?.timestampMs || shotRankings[0]?.timestampMs || 0,
-    strongestThumbnailTimestampMs: [...shotRankings].sort((a, b) => b.faceSupport - a.faceSupport)[0]?.timestampMs || 0,
-    strongestExpressionTimestampMs: [...shotRankings].sort((a, b) => b.faceSupport - a.faceSupport)[0]?.timestampMs || 0,
-    strongestAngleTimestampMs: [...shotRankings].sort((a, b) => b.subjectCoverage - a.subjectCoverage)[0]?.timestampMs || 0,
-    strongestMotionTimestampMs: [...shotRankings].sort((a, b) => (bodyMap.motion || 0) - (bodyMap.motion || 0))[0]?.timestampMs || 0, // Simplified motion
-    strongestRevealTimestampMs: shotRankings[Math.floor(shotRankings.length / 2)]?.timestampMs || 0,
+    strongestHookTimestampMs: strongestHook?.timestampMs || 0,
+    strongestThumbnailTimestampMs: strongestThumbnail?.timestampMs || 0,
+    strongestExpressionTimestampMs: strongestThumbnail?.timestampMs || 0,
+    strongestAngleTimestampMs: strongestFraming?.timestampMs || 0,
+    strongestMotionTimestampMs: strongestMotion?.timestampMs || 0,
+    strongestRevealTimestampMs: shotRankings[0]?.timestampMs || 0,
     strongestCommercialTimestampMs: shotRankings[0]?.timestampMs || 0,
-    strongestLoopTimestampMs: shotRankings[shotRankings.length - 1]?.timestampMs || 0,
-    weakestSectionStartMs: shotRankings[shotRankings.length - 1]?.timestampMs || 0,
-    weakestSectionEndMs: (shotRankings[shotRankings.length - 1]?.timestampMs || 0) + 1000,
+    strongestLoopTimestampMs: strongestLoop?.timestampMs || 0,
+    weakestSectionStartMs: weakestShot?.timestampMs || 0,
+    weakestSectionEndMs: (weakestShot?.timestampMs || 0) + 1000,
+    insights: [
+      { id: "opening", label: "Strongest opening", timestampMs: strongestHook?.timestampMs || 0, confidence: strongestHook?.score || 0, why: strongestHook?.reason || "No supported opening frame was measured.", action: "Lead with this moment so the opening is grounded in your clearest early frame." },
+      { id: "thumbnail", label: "Best cover moment", timestampMs: strongestThumbnail?.timestampMs || 0, confidence: strongestThumbnail?.score || 0, why: strongestThumbnail?.reason || "No supported cover frame was measured.", action: "Use this frame for the cover because it combines face support and clean composition." },
+      { id: "motion", label: "Strongest movement", timestampMs: strongestMotion?.timestampMs || 0, confidence: Math.round(Number(strongestMotion?.motionEnergy || 0) * 100), why: strongestMotion?.reason || "No supported movement frame was measured.", action: "Build the transition around this natural movement instead of inventing choreography." },
+      { id: "framing", label: "Strongest body framing", timestampMs: strongestFraming?.timestampMs || 0, confidence: strongestFraming?.score || 0, why: strongestFraming?.reason || "No supported full-form frame was measured.", action: "Reserve this composition for the reveal or the held payoff." },
+      { id: "weakest", label: "Section to protect", timestampMs: weakestShot?.timestampMs || 0, confidence: weakestShot?.score || 0, why: weakestShot?.reason || "No weaker section was measured.", action: "Do not make this section the opening, cover, or payoff; use it only if the treatment needs a brief bridge." },
+    ],
   };
 
   if (frames.length < MIN_FRAME_COUNT) rejectionReasons.push(`Analyze at least ${MIN_FRAME_COUNT} sampled frames before planning a Body Cinema direction.`);
@@ -401,6 +501,7 @@ export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
       ],
       confidence: Math.round(clamp(bodyMap.torso * 0.35 + bodyMap.hips * 0.35 + bodyMap.legs * 0.15 + bodyMap.motion * 0.15) * 100),
       distinction: "A sculpted body-line reveal with a delayed payoff—not a silhouette, a face-led edit, or a fast teaser.",
+      grammar: TREATMENT_GRAMMAR["the-arch"],
     },
     {
       id: "silhouette" as const,
@@ -417,6 +518,7 @@ export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
       ],
       confidence: Math.round(clamp(bodyMap.torso * 0.4 + bodyMap.hips * 0.3 + bodyMap.legs * 0.2 + bodyMap.frameCoverage * 0.1) * 100),
       distinction: "A graphic shape-and-light composition with a full-form hold—not The Arch, a polished reveal, or a teaser hook.",
+      grammar: TREATMENT_GRAMMAR.silhouette,
     },
     {
       id: "luxury-reveal" as const,
@@ -433,6 +535,7 @@ export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
       ],
       confidence: Math.round(clamp(bodyMap.face * 0.45 + bodyMap.shoulders * 0.3 + bodyMap.torso * 0.15 + bodyMap.frameCoverage * 0.1) * 100),
       distinction: "A gradual, detail-led private campaign reveal—not a body-line composition, silhouette, or rapid-access teaser.",
+      grammar: TREATMENT_GRAMMAR["luxury-reveal"],
     },
     {
       id: "vip-tease" as const,
@@ -449,12 +552,25 @@ export function deriveBodyCinemaDirections(frames: BodyCinemaFrameEvidence[]): {
       ],
       confidence: Math.round(clamp(bodyMap.arms * 0.25 + bodyMap.torso * 0.25 + bodyMap.motion * 0.3 + bodyMap.frameCoverage * 0.2) * 100),
       distinction: "A fast access-hook sequence with an intentional cliffhanger—not a gradual luxury reveal, a structural arch, or a still silhouette.",
+      grammar: TREATMENT_GRAMMAR["vip-tease"],
     },
   ].map((direction) => ({
     ...direction,
     bodyFocus: direction.bodyFocus.length ? direction.bodyFocus : features.slice(0, 2),
     timeline: compileTreatmentTimeline(direction.id, shotRankings, Math.max(1, ...frames.map((frame) => frame.timestampMs))),
   }));
+
+  const recommendedDirection = [...directions].sort((left, right) => right.confidence - left.confidence)[0];
+  if (recommendedDirection && editorFindings.insights) {
+    editorFindings.insights.push({
+      id: "recommendation",
+      label: `Recommended treatment: ${recommendedDirection.label}`,
+      timestampMs: recommendedDirection.timeline[0]?.sourceTimestampMs || 0,
+      confidence: recommendedDirection.confidence,
+      why: `${recommendedDirection.distinction} ${recommendedDirection.evidence[0] || ""}`.trim(),
+      action: `Build this as a ${recommendedDirection.grammar.pace.toLowerCase()} ${recommendedDirection.grammar.ending.toLowerCase()}`,
+    });
+  }
 
   if (!directions.some((direction) => direction.confidence >= 40)) {
     rejectionReasons.push("No proposed direction is supported by enough observed source evidence to be approved.");
@@ -485,7 +601,10 @@ function parseRecord(row: any): BodyCinemaEvidenceRecord {
     frameEvidence: evidence.frameEvidence || [],
     scenes: evidence.scenes || [],
     shotRankings: evidence.shotRankings || [],
-    directions: evidence.directions || [],
+    directions: (evidence.directions || []).map((direction: BodyCinemaDirection) => ({
+      ...direction,
+      grammar: direction.grammar || TREATMENT_GRAMMAR[direction.id],
+    })),
     editorFindings: evidence.editorFindings || undefined,
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined,
     updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : undefined,

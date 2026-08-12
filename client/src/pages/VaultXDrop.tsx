@@ -109,6 +109,11 @@ function formatSeconds(value?: number) {
   return `${Number(value).toFixed(value && value < 10 ? 1 : 0)}s`;
 }
 
+function formatMoment(timestampMs?: number) {
+  if (!Number.isFinite(timestampMs)) return "—";
+  return `${(Number(timestampMs) / 1000).toFixed(Number(timestampMs) < 10_000 ? 1 : 0)}s`;
+}
+
 function statusCopy(state?: string | null) {
   switch (state) {
     case "cost_pending": return { label: "Cost evidence required", detail: "No provider request was sent. An owner must add a documented credit cap before approval.", tone: "locked" as const };
@@ -672,6 +677,12 @@ export default function VaultXDrop() {
             
             {sourceEvidence?.analysisStatus === "verified" && <div style={{ background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, border: `1px solid rgba(69,227,138,0.35)`, borderRadius: 20, padding: 20, marginBottom: 24, boxShadow: "0 8px 30px rgba(69,227,138,0.08)" }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}><div><p style={{ fontSize: 11, color: GREEN, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", margin: 0, display: "flex", alignItems: "center", gap: 6 }}><Sparkles size={14} /> Analysis Complete</p><p style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, margin: "6px 0 0" }}>We found the strongest moments in your clip. The treatments below are mapped to your actual movement and framing.</p></div></div>
+              {sourceEvidence.editorFindings?.insights?.length > 0 && <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+                {sourceEvidence.editorFindings.insights.map((insight: any) => <div key={insight.id} style={{ background: insight.id === "weakest" ? "rgba(255,124,124,0.07)" : "rgba(0,0,0,0.42)", border: `1px solid ${insight.id === "weakest" ? "rgba(255,124,124,0.25)" : BORDER}`, borderRadius: 12, padding: 11 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}><p style={{ margin: 0, color: insight.id === "weakest" ? "#ffb2b2" : "#fff", fontSize: 11, fontWeight: 900, lineHeight: 1.25 }}>{insight.label}</p><span style={{ color: GOLD, fontSize: 10, fontWeight: 800, whiteSpace: "nowrap" }}>{formatMoment(insight.timestampMs)}</span></div>
+                  <p style={{ margin: "7px 0 0", color: MUTED, fontSize: 10, lineHeight: 1.45 }}>{insight.action}</p>
+                </div>)}
+              </div>}
               <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
                 {sourceEvidence.directions?.map((dir: any) => (
                   <div key={dir.id} style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${BORDER}`, borderRadius: 12, padding: 12 }}>
@@ -679,6 +690,7 @@ export default function VaultXDrop() {
                       <p style={{ margin: 0, color: "#fff", fontSize: 14, fontWeight: 900 }}>{dir.label}</p>
                       <span style={{ background: "rgba(213,183,96,0.15)", color: GOLD, padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 800 }}>{dir.confidence}% Match</span>
                     </div>
+                    <p style={{ margin: "0 0 8px", color: "rgba(255,255,255,0.78)", fontSize: 11, lineHeight: 1.45 }}>{dir.grammar?.pace || dir.distinction}</p>
                     <div style={{ display: "grid", gap: 6 }}>
                       {dir.evidence?.map((ev: string, i: number) => (
                         <p key={i} style={{ margin: 0, color: MUTED, fontSize: 11, display: "flex", gap: 6 }}><span style={{ color: GOLD }}>•</span> {ev}</p>

@@ -214,6 +214,7 @@ const ALLOWLISTS = {
     'server/routers/videoUploadRouter.ts',
     'server/routers/vaultxRouter.ts',
     'server/services/bodyCinemaEvidenceService.ts',
+    'server/services/bodyCinemaAssemblyRecipe.ts',
     'server/services/bodyCinemaExistingMediaProofService.ts',
     'server/services/governedPolloService.ts',
     'server/services/polloCapabilityRegistryService.ts',

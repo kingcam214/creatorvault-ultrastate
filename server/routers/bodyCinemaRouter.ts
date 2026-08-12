@@ -28,6 +28,9 @@ import {
   persistBodyCinemaSourceEvidence,
 } from "../services/bodyCinemaEvidenceService";
 import { reviewBodyCinemaOutput } from "../services/bodyCinemaOutputReviewService";
+import { buildBodyCinemaAssemblyRecipe } from "../services/bodyCinemaAssemblyRecipe";
+import { startRender } from "../services/realRenderEngine";
+import { getCreationProject, updateCreationProjectLinks } from "../services/creationProjectService";
 import { buildCreationCapabilities, getCreationPlan, prepareCreationPlan, toCreatorFacingCreationPlan } from "../services/creationDirector";
 
 const cinemaRouter = new BodyCinemaRouter();
@@ -146,6 +149,59 @@ export const bodyCinemaRouter = router({
       return await approveBodyCinemaDirection(Number(ctx.user.id), input.evidenceId, input.directionId);
     } catch (error: any) {
       throw evidencePrecondition(error?.message || "Body Cinema direction approval failed.");
+    }
+  }),
+
+  assembleEvidenceBackedMaster: protectedProcedure.input(z.object({
+    evidenceId: z.string().uuid(),
+    sourceAssetUrl: z.string().url(),
+    creationProjectId: z.string().uuid(),
+    watermarkText: z.string().trim().min(1).max(40).optional(),
+  })).mutation(async ({ ctx, input }) => {
+    const creatorId = Number(ctx.user.id);
+    try {
+      const evidenceContext = await assertBodyCinemaEvidenceReady({
+        creatorId,
+        evidenceId: input.evidenceId,
+        sourceMediaUrl: input.sourceAssetUrl,
+      });
+      const project = await getCreationProject(creatorId, input.creationProjectId);
+      if (!project) throw new Error("CreatorVault could not find the creation attached to this master.");
+      if (project.sourceEvidenceId && project.sourceEvidenceId !== input.evidenceId) {
+        throw new Error("This saved creation belongs to a different source understanding.");
+      }
+      const recipe = buildBodyCinemaAssemblyRecipe({
+        sourceUrl: input.sourceAssetUrl,
+        evidence: evidenceContext.evidence,
+        direction: evidenceContext.direction,
+        watermarkText: input.watermarkText || null,
+      });
+      const job = startRender(recipe.request);
+      await updateCreationProjectLinks({
+        creatorId,
+        projectId: input.creationProjectId,
+        actorId: creatorId,
+        patch: {
+          renderJobId: job.id,
+          sourceEvidenceId: evidenceContext.evidence.id,
+          treatmentId: evidenceContext.direction.id,
+          state: "in_progress",
+          metadata: {
+            finishingLane: "source_preserving_assembly",
+            treatmentGrammar: evidenceContext.direction.grammar,
+            creatorSummary: recipe.creatorSummary,
+            assemblyRecipe: recipe.treatmentId,
+          },
+        },
+      });
+      return {
+        jobId: job.id,
+        status: job.status,
+        treatment: evidenceContext.direction.label,
+        creatorMessage: `${recipe.creatorSummary} CreatorVault is building your finished drop from the moments measured in this exact source.`,
+      };
+    } catch (error: any) {
+      throw evidencePrecondition(error?.message || "CreatorVault could not build this source-backed master.");
     }
   }),
 
