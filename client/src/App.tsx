@@ -255,7 +255,6 @@ import RecruitmentDashboard from "./pages/RecruitmentDashboard";
 import ScriptDirectorPage from "./pages/scripttovideo/ScriptDirectorPage";
 import Services from "./pages/Services";
 import ShowPage from "./pages/ShowPage";
-import SmartAlbum from "./pages/SmartAlbum";
 import StudioSlots from "./pages/StudioSlots";
 import Subscriptions from "./pages/Subscriptions";
 import TelegramMoneyHub from "./pages/TelegramMoneyHub";
@@ -634,7 +633,7 @@ function Router() {
       <Route path={"/kingcam-demos"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/kingcam-tours"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/kingcam-showcase"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
-      <Route path={"/smart-album"} component={SmartAlbum} />
+      <Route path={"/smart-album"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/vault-snap"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-pass"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-drop"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
