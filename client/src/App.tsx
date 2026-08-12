@@ -162,7 +162,6 @@ import EliteDancers from "./pages/greatest-show/EliteDancers";
 import AdultContent from "./pages/greatest-show/AdultContent";
 import CreatorApplication from "./pages/greatest-show/CreatorApplication";
 import FanSubscription from "./pages/greatest-show/FanSubscription";
-import AICardDesigner from "./pages/AICardDesigner";
 import AIEmpireDashboard from "./pages/AIEmpireDashboard";
 import AdminManualPayments from "./pages/AdminManualPayments";
 import AdminPayouts from "./pages/AdminPayouts";
@@ -171,8 +170,6 @@ import AnimatedFlyerStudio from "./pages/AnimatedFlyerStudio";
 import ApparelLab from "./pages/ApparelLab";
 import ArtistStorefront from "./pages/ArtistStorefront";
 import BrandDeals from "./pages/BrandDeals";
-import BusinessCardDesigner from "./pages/BusinessCardDesigner";
-import CardEditor from "./pages/CardEditor";
 import ChicaCockpit from "./pages/ChicaCockpit";
 import ChicasEmpire from "./pages/ChicasEmpire";
 import Chuuch from "./pages/Chuuch";
@@ -536,10 +533,10 @@ function Router() {
       <Route path={"/music-library"}>{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path={"/artist/storefront"} component={ArtistStorefront} />
       <Route path="/king/dubbing" component={DubbingAI} />
-      <Route path="/business-cards" component={BusinessCardDesigner} />
-      <Route path="/business-cards/editor" component={CardEditor} />
-      <Route path="/business-cards/editor/:cardId" component={CardEditor} />
-      <Route path="/business-cards/ai-designer" component={AICardDesigner} />
+      <Route path="/business-cards">{() => { window.location.replace("/king/content"); return null; }}</Route>
+      <Route path="/business-cards/editor">{() => { window.location.replace("/king/content"); return null; }}</Route>
+      <Route path="/business-cards/editor/:cardId">{() => { window.location.replace("/king/content"); return null; }}</Route>
+      <Route path="/business-cards/ai-designer">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/king/hollywood-ai" component={HollywoodReplacement} />
           <Route path="/king/platform-war-room">{() => { window.location.replace("/social-hub"); return null; }}</Route>
           <Route path="/king/empire-verticals">{() => { window.location.replace("/dashboard"); return null; }}</Route>
