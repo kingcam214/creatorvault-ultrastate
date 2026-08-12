@@ -256,7 +256,6 @@ import NurseConsole from "./pages/NurseConsole";
 import Onboard from "./pages/Onboard";
 import OnboardingV2 from "./pages/OnboardingV2";
 import OperatorDashboard from "./pages/OperatorDashboard";
-import OwnerCockpit from "./pages/OwnerCockpit";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
 import PodcastStudio from "./pages/PodcastStudio";
 import PresentationBuilder from "./pages/PresentationBuilder";
@@ -638,7 +637,7 @@ function Router() {
       <Route path={"/messages/:conversationId"} component={MessageThread} />
       <Route path={"/onboarding"} component={OnboardingV2} />
       <Route path={"/command-hub-v2"} component={CommandHubV2} />
-      <Route path={"/owner-cockpit"} component={OwnerCockpit} />
+      <Route path={"/owner-cockpit"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/chicas-empire"} component={ChicasEmpire} />
       <Route path={"/presentation-empire"} component={PresentationEmpire} />
       <Route path={"/owner-cockpit/presentation-empire"} component={PresentationEmpireCockpit} />
