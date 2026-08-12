@@ -246,7 +246,6 @@ import InfluencerOnboarding from "./pages/InfluencerOnboarding";
 import JoinVaultLive from "./pages/JoinVaultLive";
 import KingAnalytics from "./pages/KingAnalytics";
 import KingBackOffice from "./pages/KingBackOffice";
-import KingCamClone from "./pages/KingCamClone";
 import KingCamCommandCenter from "./pages/KingCamCommandCenter";
 import KingCamDemos from "./pages/KingCamDemos";
 import KingCamEmpireMap3D from "./pages/KingCamEmpireMap3D";
@@ -701,7 +700,7 @@ function Router() {
       <Route path={"/owner-cockpit/apple-queue"} component={AppleQDashboard} />
       <Route path="/empire-cockpit-v3" component={EmpireCockpitV3} />
               <Route path="/empire-cockpit-v2" component={EmpireCockpitV2} />
-      <Route path={"/kingcam-clone"} component={KingCamClone} />
+      <Route path={"/kingcam-clone"}>{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
       <Route path={"/kingcam-demos"} component={KingCamDemos} />
       <Route path={"/kingcam-tours"} component={KingCamTours} />
       <Route path={"/kingcam-showcase"} component={KingCamShowcase} />
