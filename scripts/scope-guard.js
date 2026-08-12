@@ -162,6 +162,7 @@ const ALLOWLISTS = {
     'server/routers.ts',
     'client/src/lib/homepageMediaRegistry.ts',
     'client/src/pages/Home.tsx',
+    'client/src/components/MediaPicker.tsx',
     'client/src/pages/KingContent.tsx',
     'client/src/pages/VaultXDrop.tsx',
     'server/routers/videoUploadRouter.ts',

@@ -502,7 +502,9 @@ export default function KingContent() {
                 mediaAssets.slice(0, 3).map((asset) => (
                   <div key={asset.id} className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/5 p-3">
                     <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-black">
-                      {asset.thumbnailUrl ? (
+                      {(asset.assetType === "video" || asset.mimeType?.startsWith("video/")) && asset.publicUrl ? (
+                        <video src={asset.publicUrl} poster={asset.thumbnailUrl || undefined} muted playsInline preload="metadata" className="h-full w-full object-cover opacity-80" />
+                      ) : asset.thumbnailUrl ? (
                         <img src={asset.thumbnailUrl} alt="" className="h-full w-full object-cover opacity-80" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center">

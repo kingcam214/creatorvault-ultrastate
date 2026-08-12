@@ -312,26 +312,29 @@ export default function MediaPicker({
                       background: "#080808",
                       overflow: "hidden",
                     }}>
-                      {url ? (
-                        vid && hoveredId === asset.id && asset.publicUrl ? (
-                          <video
-                            className="mp-video-preview"
-                            src={asset.publicUrl}
-                            autoPlay muted loop playsInline
-                            style={{ objectFit: "cover", width: "100%", height: "100%" }}
-                          />
-                        ) : (
-                          <img
-                            src={url}
-                            alt=""
-                            loading="lazy"
-                            style={{
-                              width: "100%", height: "100%", objectFit: "cover",
-                              transition: "transform .3s ease",
-                              transform: hoveredId === asset.id ? "scale(1.06)" : "scale(1)",
-                            }}
-                          />
-                        )
+                      {vid && asset.publicUrl ? (
+                        <video
+                          className="mp-video-preview"
+                          src={asset.publicUrl}
+                          poster={asset.thumbnailUrl || undefined}
+                          autoPlay={hoveredId === asset.id}
+                          muted
+                          loop
+                          playsInline
+                          preload="metadata"
+                          style={{ objectFit: "cover", width: "100%", height: "100%", transform: hoveredId === asset.id ? "scale(1.06)" : "scale(1)", transition: "transform .3s ease" }}
+                        />
+                      ) : url ? (
+                        <img
+                          src={url}
+                          alt=""
+                          loading="lazy"
+                          style={{
+                            width: "100%", height: "100%", objectFit: "cover",
+                            transition: "transform .3s ease",
+                            transform: hoveredId === asset.id ? "scale(1.06)" : "scale(1)",
+                          }}
+                        />
                       ) : (
                         <div style={{
                           width: "100%", height: "100%",
@@ -522,7 +525,9 @@ export default function MediaPicker({
                   width: 36, height: 36, borderRadius: 8, overflow: "hidden",
                   border: `1.5px solid ${T.gold}`, flexShrink: 0,
                 }}>
-                  {(a.thumbnailUrl ?? a.publicUrl) ? (
+                  {isVideo(a) && a.publicUrl ? (
+                    <video src={a.publicUrl} poster={a.thumbnailUrl || undefined} muted playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (a.thumbnailUrl ?? a.publicUrl) ? (
                     <img src={a.thumbnailUrl ?? a.publicUrl ?? ""} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
                     <div style={{ width: "100%", height: "100%", background: T.surface, display: "grid", placeItems: "center", fontSize: 10, color: T.muted }}>
