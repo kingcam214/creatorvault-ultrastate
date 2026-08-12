@@ -278,7 +278,6 @@ import MessageThread from "./pages/MessageThread";
 import Messages from "./pages/Messages";
 import MonetizationPipeline from "./pages/MonetizationPipeline";
 // import { MultiPlatformPosting } from "./pages/MultiPlatformPosting"; // MERGED into SocialHub
-import MusicLibrary from "./pages/MusicLibrary";
 import MySubscriptions from "./pages/MySubscriptions";
 import NFCCards from "./pages/NFCCards";
 import Notifications from "./pages/Notifications";
@@ -597,7 +596,7 @@ function Router() {
           <Route path="/king/import">{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
           <Route path="/king/gallery">{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path="/king/music-composer">{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
-      <Route path={"/music-library"} component={MusicLibrary} />
+      <Route path={"/music-library"}>{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path={"/artist/storefront"} component={ArtistStorefront} />
       <Route path="/king/dubbing" component={DubbingAI} />
       <Route path="/business-cards" component={BusinessCardDesigner} />
