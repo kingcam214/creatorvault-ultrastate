@@ -830,7 +830,7 @@ function Router() {
       <Route path="/clone">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
       <Route path="/king/clone-studio" component={CloneStudio} />
       <Route path="/king/clone-training-lab" component={CloneTrainingLab} />
-      <Route path="/king/media-vault" component={MediaVault} />
+      <Route path="/king/media-vault" component={KingCamVault} />
       <Route path="/king/challenge-story" component={ChallengeStoryEngine} />
       <Route path="/king/challenge" component={ChallengeStoryEngine} />
       <Route path="/tools/viral-optimizer-v2" component={ViralOptimizerV2} />

@@ -163,6 +163,7 @@ const ALLOWLISTS = {
     'client/src/lib/homepageMediaRegistry.ts',
     'client/src/pages/Home.tsx',
     'client/src/components/MediaPicker.tsx',
+    'client/src/App.tsx',
     'client/src/pages/KingContent.tsx',
     'client/src/pages/KingCamVault.tsx',
     'client/src/pages/VaultXDrop.tsx',
