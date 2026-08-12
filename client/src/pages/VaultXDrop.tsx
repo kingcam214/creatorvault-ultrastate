@@ -166,6 +166,7 @@ function StatusRow({ label, value, state }: { label: string; value: string; stat
 export default function VaultXDrop() {
   const search = useSearch();
   const selectedVaultAssetId = new URLSearchParams(search).get("sourceAssetId");
+  const selectedVaultAudioAssetId = new URLSearchParams(search).get("audioAssetId");
   const [step, setStep] = useState<Step>("upload");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [hostedUrl, setHostedUrl] = useState<string | null>(null);
@@ -207,14 +208,22 @@ export default function VaultXDrop() {
   );
   const autoSelectedMediaIdRef = useRef<string | null>(null);
 
-  // The canonical audio library is ordered newest-first. When a creator has a
-  // verified soundtrack, Body Cinema brings it forward automatically so its
-  // measured rhythm map can direct the treatment without another hunt.
+  // Preserve an exact soundtrack selected in the Vault. Otherwise the canonical
+  // audio library is newest-first, so Body Cinema brings the latest verified
+  // soundtrack forward automatically without another hunt.
   useEffect(() => {
+    const verifiedAssets = audioLibraryQ.data?.assets?.filter((asset: any) => asset.status === "ready") || [];
+    const requestedAsset = selectedVaultAudioAssetId
+      ? verifiedAssets.find((asset: any) => String(asset.id) === selectedVaultAudioAssetId)
+      : null;
+    if (requestedAsset?.id) {
+      if (audioAssetId !== String(requestedAsset.id)) setAudioAssetId(String(requestedAsset.id));
+      return;
+    }
     if (audioAssetId) return;
-    const newestVerified = audioLibraryQ.data?.assets?.find((asset: any) => asset.status === "ready");
+    const newestVerified = verifiedAssets[0];
     if (newestVerified?.id) setAudioAssetId(String(newestVerified.id));
-  }, [audioAssetId, audioLibraryQ.data?.assets]);
+  }, [audioAssetId, audioLibraryQ.data?.assets, selectedVaultAudioAssetId]);
   const jobQuery = trpc.governedPollo.job.useQuery(
     { jobId: governedJob?.id ?? 1 },
     { enabled: typeof governedJob?.id === "number" && governedJob.id > 0, refetchInterval: governedJob && typeof governedJob.id === "number" && governedJob.id > 0 && ["approved", "queued", "submitted", "provider_complete", "quality_review"].includes(governedJob.state) ? 8000 : false },
