@@ -304,7 +304,6 @@ import VaultAnalytics from "./pages/VaultAnalytics";
 import VaultCulture from "./pages/VaultCulture";
 import VaultGuardian from "./pages/VaultGuardian";
 import VaultLiveSimple from "./pages/VaultLiveSimple";
-import VaultMoment from "./pages/VaultMoment";
 import VaultPay from "./pages/VaultPay";
 import VaultRemix from "./pages/VaultRemix";
 import VaultRise from "./pages/VaultRise";
@@ -697,7 +696,7 @@ function Router() {
       <Route path={"/vault-drop"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-analytics"} component={VaultAnalytics} />
        <Route path={"/vaultspace-dashboard"} component={VaultSpaceDashboard} />
-      <Route path={"/vault-moment"} component={VaultMoment} />
+      <Route path={"/vault-moment"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-rise"} component={VaultRise} />
       <Route path={"/vault-culture"} component={VaultCulture} />
       <Route path="/hollywood-shows" component={HollywoodShows} />
