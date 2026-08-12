@@ -14,6 +14,7 @@ import {
 } from "../services/creationDirector";
 import {
   getCreationModelRegistry,
+  getCreationModelBenchmarks,
   getRoutableCreationModels,
   invalidateCreationModelBenchmarkEvidence,
   recordCreationModelBenchmark,
@@ -187,6 +188,13 @@ export const creationDirectorRouter = router({
   getOwnerRegistry: protectedProcedure.query(async ({ ctx }) => {
     assertOwner(ctx);
     return getCreationModelRegistry();
+  }),
+
+  getOwnerBenchmarks: protectedProcedure.input(z.object({
+    modelKey: z.string().min(3).max(191),
+  })).query(async ({ ctx, input }) => {
+    assertOwner(ctx);
+    return getCreationModelBenchmarks(input.modelKey);
   }),
 
   recordBenchmark: protectedProcedure.input(z.object({
