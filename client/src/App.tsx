@@ -359,7 +359,6 @@ import MusicCoverStudio from "./pages/MusicCoverStudio";
 import MusicLibraryAgent from "./pages/MusicLibraryAgent";
 import OAuthSocialCallback from "./pages/OAuthSocialCallback";
 import Podcasting from "./pages/Podcasting";
-import RealGPTDashboard from "./pages/RealGPTDashboard";
 import Shop from "./pages/Shop";
 // import SocialAutoposterAgent from "./pages/SocialAutoposterAgent"; // MERGED into SocialHub
 import SocialHub from "./pages/SocialHub";
@@ -707,7 +706,7 @@ function Router() {
       <Route path="/oauth/social/callback" component={OAuthSocialCallback} />
       <Route path="/ops/status">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/podcasting-home" component={Podcasting} />
-      <Route path="/realgpt/dashboard" component={RealGPTDashboard} />
+      <Route path="/realgpt/dashboard">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/shop" component={Shop} />
       {/* social-autoposter-agent, factory, posting-hub merged into /social-hub */}
       <Route path="/social/factory" component={SocialHub} />
