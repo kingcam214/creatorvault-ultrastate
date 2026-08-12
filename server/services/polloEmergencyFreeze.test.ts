@@ -48,14 +48,14 @@ describe("Pollo emergency credit freeze", () => {
     expect(isLegacyPolloExecutionAllowed()).toBe(false);
   });
 
-  it("permits legacy Pollo execution only with the deliberate two-switch override", () => {
+  it("never permits legacy Pollo execution, even when governed-mode values are set", () => {
     process.env.CREATORVAULT_POLLO_EXECUTION_MODE = "governed";
     process.env.CREATORVAULT_POLLO_EMERGENCY_FREEZE = "off";
 
-    expect(isLegacyPolloExecutionAllowed()).toBe(true);
+    expect(isLegacyPolloExecutionAllowed()).toBe(false);
     expect(() =>
-      assertLegacyPolloExecutionAllowed({ operation: "test.explicit-override", actorUserId: 33 }),
-    ).not.toThrow();
+      assertLegacyPolloExecutionAllowed({ operation: "test.governed-values-still-legacy", actorUserId: 33 }),
+    ).toThrow(POLLO_EMERGENCY_FREEZE_MESSAGE);
   });
 
   it("never permits a legacy paid-media path, even if Pollo override values are set", () => {

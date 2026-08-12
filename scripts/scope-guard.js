@@ -157,6 +157,8 @@ const ALLOWLISTS = {
   'creation-kernel': [
     'server/services/creationProjectService.ts',
     'server/services/creationProofService.ts',
+    'server/services/polloEmergencyFreeze.ts',
+    'server/services/polloEmergencyFreeze.test.ts',
     'server/routers/creationProjectsRouter.ts',
     'server/routers/creationProofRouter.ts',
     'server/routers.ts',

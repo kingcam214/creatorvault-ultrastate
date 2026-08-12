@@ -2,8 +2,8 @@
  * Emergency default-deny boundary for legacy Pollo calls.
  *
  * A paid generation provider must never be reachable merely because an API key is
- * present. Until the governed control plane is released, every legacy caller is
- * frozen unless an operator deliberately sets BOTH environment values below.
+ * present. Every legacy caller stays frozen permanently; only the governed
+ * control plane may submit a chargeable provider request.
  *
  * This module makes no provider request and contains no account credential.
  */
@@ -21,15 +21,10 @@ export const LEGACY_PAID_MEDIA_FREEZE_MESSAGE =
   "Legacy paid media generation is temporarily paused while CreatorVault credit controls are recovered. No chargeable request was sent.";
 
 export function isLegacyPolloExecutionAllowed(): boolean {
-  return (
-    process.env.CREATORVAULT_POLLO_EXECUTION_MODE === "governed" &&
-    process.env.CREATORVAULT_POLLO_EMERGENCY_FREEZE === "off"
-  );
+  return false;
 }
 
 export function assertLegacyPolloExecutionAllowed(context: PolloLegacyCallContext): void {
-  if (isLegacyPolloExecutionAllowed()) return;
-
   console.warn("[PolloSafety] blocked legacy paid provider call", {
     operation: context.operation,
     actorUserId: context.actorUserId ?? null,
