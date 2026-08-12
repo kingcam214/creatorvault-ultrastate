@@ -291,10 +291,10 @@ export const mediaAssetsRouter = router({
         retentionReport: productionCore.retentionReport,
         cloneIntegration: cloneAwareTrailerMode,
         renderHandoff: {
-          status: "handoff_prepared",
-          recommendedNextEngine: "ffmpeg_or_remotion_render_worker",
-          requiredBeforeRender: ["asset_file_access_verified", "caption_safe_zones_checked", "voiceover_job_completed_or_muted_export_selected", "output_storage_path_allocated"],
-          warnings: ["No rendered trailer URL is exposed until a render job writes and validates a real MP4."],
+          status: "approved_creation_lane_required",
+          recommendedNextEngine: "approved_creatorvault_creation_lane",
+          requiredBeforeRender: ["asset_file_access_verified", "approved_creation_lane_selected", "watchable_output_review_completed", "output_storage_path_allocated"],
+          warnings: ["No finished trailer is claimed until an approved creation lane produces a watchable MP4 that passes review."],
         },
       } as any);
       const scenesJson = JSON.stringify(productionCore.blueprint.scenes);
@@ -343,10 +343,10 @@ export const mediaAssetsRouter = router({
           cloneAwareTrailerMode,
           mediaOSManifest,
           renderReadiness: {
-            status: "handoff_prepared",
+            status: "approved_creation_lane_required",
             canClaimRenderedOutput: false,
-            nextEngine: "ffmpeg_or_remotion_render_worker",
-            requiredBeforeRender: ["asset_file_access_verified", "caption_safe_zones_checked", "voiceover_job_completed_or_muted_export_selected", "output_storage_path_allocated"],
+            nextEngine: "approved_creatorvault_creation_lane",
+            requiredBeforeRender: ["asset_file_access_verified", "approved_creation_lane_selected", "watchable_output_review_completed", "output_storage_path_allocated"],
           },
         },
       };
