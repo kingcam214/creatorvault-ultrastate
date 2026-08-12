@@ -411,7 +411,6 @@ import VaultXTruthLibrary from "./pages/VaultXTruthLibrary";
 import TrailerStudio from "./pages/TrailerStudio";
 import VaultXDistribution from "@/pages/VaultXDistribution";
 import VaultXAnalytics from "./pages/VaultXAnalytics";
-import VideoOS from "./pages/VideoOS";
 import Waitlist from "./pages/Waitlist";
 import AgeGate from "./components/AgeGate";
 import PublicCreatorLanding from "./pages/PublicCreatorLanding";
@@ -778,7 +777,7 @@ function Router() {
       {/* Redirect aliases for OwnerCockpit and legacy links */}
       <Route path="/vaultx" component={VaultX} />
       <Route path="/vaultx-video-editor">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
-      <Route path="/video-os" component={VideoOS} />
+      <Route path="/video-os">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/waitlist" component={Waitlist} />
       <Route path="/greatest-show/lirys-missed-revenue" component={LirysMissedRevenue} />
       <Route path="/greatest-show/marielka-profile" component={MarielkaProfile} />
