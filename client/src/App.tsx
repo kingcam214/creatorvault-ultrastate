@@ -167,7 +167,6 @@ import AIEmpireDashboard from "./pages/AIEmpireDashboard";
 import AdminManualPayments from "./pages/AdminManualPayments";
 import AdminPayouts from "./pages/AdminPayouts";
 import AgentRoster from "./pages/AgentRoster";
-import AgentTracker from "./pages/AgentTracker";
 import AnimatedFlyerStudio from "./pages/AnimatedFlyerStudio";
 import ApparelLab from "./pages/ApparelLab";
 import ArtistStorefront from "./pages/ArtistStorefront";
@@ -613,7 +612,7 @@ function Router() {
       <Route path={"/empire-brain-dashboard"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/empire-brain-rules"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/empire-state"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
-      <Route path={"/agent-tracker"} component={AgentTracker} />
+      <Route path={"/agent-tracker"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/emma-ai-agents"} component={EmmaAIAgentDashboard} />
       <Route path={"/empire-brain-showrunner"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/apparel-lab"} component={ApparelLab} />
