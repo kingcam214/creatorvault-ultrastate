@@ -103,21 +103,7 @@ export default function KingContent() {
     // The trailer path also records a durable, no-spend project before opening the studio.
     switch (pickerTarget) {
       case "clone": {
-        const project = await openKingcamCreation(asset, "KingCam clone motion");
-        if (sourceUrl) {
-          const plan = await prepareCreationPath.mutateAsync({
-            tool: "kingcam_content",
-            intent: intent.trim() || "Create a KingCam clone motion piece.",
-            outputPurpose: "KingCam clone motion",
-            source: { assetUrl: sourceUrl, ownershipConfirmed: true, consentConfirmed: true, adultVerified: true },
-            capabilities: { requiresGeneratedShot: true, requiredInputModes: ["reference_image"], durationSeconds: 6, resolution: "720p", preserveIdentity: true, naturalBody: true, cameraControl: true, minimumQualityScore: 75 },
-            creativeDirection: { prompt: intent.trim() || "Create a polished full-body KingCam motion moment from the approved identity source.", identityRequirements: ["preserve KingCam identity", "natural full-body motion"] },
-            output: { durationSeconds: 6, aspectRatio: "9:16", resolution: "720p" },
-            metadata: { mediaAssetId: asset.id, creationProjectId: project.id, preparedFrom: "kingcam_content" },
-          });
-          await linkPreparedCreation(project.id, plan, { nextDestination: "clone_empire" });
-        }
-        setLocation(`/clone-empire-home?sourceAssetId=${asset.id}&creationProjectId=${project.id}`);
+        setLocation(`/clone-empire-home?sourceAssetId=${asset.id}`);
         break;
       }
       case "trailer": {
@@ -301,8 +287,8 @@ export default function KingContent() {
                     <ImageIcon className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="font-bold text-white">Create Clone Motion</div>
-                    <div className="text-xs text-zinc-400">Pick a source photo to animate</div>
+                    <div className="font-bold text-white">Review Clone Identity</div>
+                    <div className="text-xs text-zinc-400">Open the exact approved identity source</div>
                   </div>
                 </div>
                 <ArrowUpRight className="h-4 w-4 text-zinc-500" />
