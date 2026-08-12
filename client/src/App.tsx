@@ -305,7 +305,6 @@ import VaultCulture from "./pages/VaultCulture";
 import VaultGuardian from "./pages/VaultGuardian";
 import VaultLiveSimple from "./pages/VaultLiveSimple";
 import VaultPay from "./pages/VaultPay";
-import VaultRemix from "./pages/VaultRemix";
 import VaultSpaceDashboard from "./pages/VaultSpaceDashboard";
 import VaultX from "./pages/VaultX";
 import VideoLab from "./pages/VideoLab";
@@ -596,7 +595,7 @@ function Router() {
       <Route path={"/dominican"} component={DominicanSector} />
       <Route path={"/guia"} component={GuiaCreador} />
       <Route path={"/vault-guardian"} component={VaultGuardian} />
-      <Route path={"/vault-remix"} component={VaultRemix} />
+      <Route path={"/vault-remix"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/video-lab"} component={VideoLab} />
       <Route path={"/video-lab-pro"} component={VideoLabPro} />
       <Route path={"/video-studio"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
