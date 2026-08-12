@@ -164,6 +164,7 @@ const ALLOWLISTS = {
     'client/src/pages/Home.tsx',
     'client/src/components/MediaPicker.tsx',
     'client/src/pages/KingContent.tsx',
+    'client/src/pages/KingCamVault.tsx',
     'client/src/pages/VaultXDrop.tsx',
     'server/routers/videoUploadRouter.ts',
     'server/routers/mediaAssets.ts',
