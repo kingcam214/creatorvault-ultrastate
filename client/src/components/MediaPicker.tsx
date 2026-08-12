@@ -530,7 +530,7 @@ export default function MediaPicker({
                   border: `1.5px solid ${T.gold}`, flexShrink: 0,
                 }}>
                   {isVideo(a) && a.publicUrl ? (
-                    <video src={a.publicUrl} poster={a.thumbnailUrl || undefined} muted playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <video src={a.publicUrl} poster={videoPoster(a)} muted playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (a.thumbnailUrl ?? a.publicUrl) ? (
                     <img src={a.thumbnailUrl ?? a.publicUrl ?? ""} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
