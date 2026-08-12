@@ -257,7 +257,6 @@ import ShowPage from "./pages/ShowPage";
 import StudioSlots from "./pages/StudioSlots";
 import Subscriptions from "./pages/Subscriptions";
 import TelegramMoneyHub from "./pages/TelegramMoneyHub";
-import ThumbnailGeneratorUI from "./pages/ThumbnailGeneratorUI";
 // import UnifiedContentPublisher from "./pages/UnifiedContentPublisher"; // MERGED into SocialHub
 import University from "./pages/University";
 import VaultLiveSimple from "./pages/VaultLiveSimple";
@@ -546,7 +545,7 @@ function Router() {
       <Route path={"/video-production-studio"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
       <Route path={"/vault-x"} component={VaultX} />
       <Route path={"/culture-selection"} component={CultureSelection} />
-      <Route path={"/thumbnail-generator"} component={ThumbnailGeneratorUI} />
+      <Route path={"/thumbnail-generator"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/admin/payouts"} component={AdminPayouts} />
       <Route path={"/admin/manual-payments"} component={AdminManualPayments} />
       <Route path={"/admin/tips"} component={AdminTips} />
