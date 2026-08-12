@@ -163,7 +163,14 @@ export function buildBodyCinemaAssemblyRecipe(input: {
   if (input.evidence.sourceMediaUrl !== input.sourceUrl) {
     throw new Error("The approved Body Cinema evidence belongs to a different saved source.");
   }
-  const visuals = RECIPE_VISUALS[input.direction.id];
+  const baseVisuals = RECIPE_VISUALS[input.direction.id];
+  const strictShowcaseSource = input.evidence.analysisVersion === "creatorvault-showcase-cinematic-1080/v1";
+  // Luxury needs a close material invitation, not a parade of crops. For the
+  // strict public proof, make that invitation one beat and let the full-body
+  // campaign frame carry the rest of the visual run.
+  const visuals: RecipeVisuals = strictShowcaseSource && input.direction.id === "luxury-reveal"
+    ? { ...baseVisuals, focusSequence: ["chest", "none", "none", "none", "none"] }
+    : baseVisuals;
   const sourceDuration = sourceDurationSeconds(input.evidence);
   const clips = buildSourceClips({
     sourceUrl: input.sourceUrl,
@@ -195,7 +202,7 @@ export function buildBodyCinemaAssemblyRecipe(input: {
       polish: visuals.polish,
       lightLeaks: visuals.lightLeaks,
       watermarkText: input.watermarkText || undefined,
-      technicalLift: input.direction.id === "silhouette" ? "noir_safe" : "balanced",
+      technicalLift: strictShowcaseSource ? "showcase_crisp" : input.direction.id === "silhouette" ? "noir_safe" : "balanced",
       durationCap: Math.min(20, Math.max(4, sourceDuration * 1.25)),
       musicUrl: input.audio?.assetUrl,
       audioMixPlan: input.audio?.mix,

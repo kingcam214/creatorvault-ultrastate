@@ -96,7 +96,7 @@ export interface RenderRequest {
   letterbox?: boolean;
   glitch?: boolean;
   polish?: boolean;
-  technicalLift?: "balanced" | "noir_safe";
+  technicalLift?: "balanced" | "noir_safe" | "showcase_crisp";
 }
 
 // ─── Body-focus framing presets ───────────────────────────────────────────────
@@ -178,6 +178,9 @@ const POLISH = "eq=contrast=1.025:saturation=1.02,unsharp=5:5:0.55:5:5:0.0,noise
 const TECHNICAL_LIFT: Record<NonNullable<RenderRequest["technicalLift"]>, string> = {
   balanced: "eq=brightness=0.12:gamma=1.55:contrast=1.025:saturation=1.04,unsharp=7:7:1.35:7:7:0.0",
   noir_safe: "eq=brightness=0.135:gamma=1.62:contrast=1.02:saturation=0.98,unsharp=7:7:1.28:7:7:0.0",
+  // Reserved for proven showcase sources: reduce only the finest sensor noise,
+  // retain skin and fabric texture, then restore real edge definition.
+  showcase_crisp: "hqdn3d=0.45:0.45:4:4,eq=brightness=0.08:gamma=1.32:contrast=1.035:saturation=1.025,unsharp=7:7:1.72:7:7:0.0",
 };
 
 function letterboxFilter(H: number): string {
