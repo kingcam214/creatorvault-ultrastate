@@ -401,7 +401,6 @@ import BCBPanel from "./pages/BCBPanel";
 import BotMonetizationDashboard from "./pages/BotMonetizationDashboard";
 import ChicaFunnelManager from "./pages/ChicaFunnelManager";
 import CloneEmpire from "./pages/CloneEmpire";
-import CloneRenderStudio from "./pages/CloneRenderStudio";
 import ComponentShowcase from "./pages/ComponentShowcase";
 import CreatorProfilePage from "./pages/CreatorProfilePage";
 import CreatorVaultAyiti from "./pages/CreatorVaultAyiti";
@@ -461,8 +460,6 @@ import SubscribeSuccess from "./pages/greatest-show/SubscribeSuccess";
 import CloneCommand from "./pages/king/CloneCommand";
 
 import ContentCommand from "./pages/ContentCommand";
-import CloneStudio from "./pages/king/CloneStudio";
-import CloneTrainingLab from "./pages/king/CloneTrainingLab";
 import MediaVault from "./pages/king/MediaVault";
 import ChallengeStoryEngine from "./pages/king/ChallengeStoryEngine";
 import ViralOptimizerV2 from "./pages/tools/ViralOptimizerV2";
@@ -757,7 +754,7 @@ function Router() {
       <Route path="/bots/monetization" component={BotMonetizationDashboard} />
       <Route path="/chica/funnels" component={ChicaFunnelManager} />
       <Route path="/clone-empire-home" component={CloneEmpire} />
-      <Route path="/clone/render-studio" component={CloneRenderStudio} />
+      <Route path="/clone/render-studio">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
       <Route path="/_dev/components" component={ComponentShowcase} />
       <Route path="/creator/profile-page" component={CreatorProfilePage} />
       <Route path="/vault-ayiti" component={CreatorVaultAyiti} />
@@ -828,8 +825,8 @@ function Router() {
       <Route path="/king/clone-command">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
       <Route path="/clone/command-center">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
       <Route path="/clone">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
-      <Route path="/king/clone-studio" component={CloneStudio} />
-      <Route path="/king/clone-training-lab" component={CloneTrainingLab} />
+      <Route path="/king/clone-studio">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
+      <Route path="/king/clone-training-lab">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
       <Route path="/king/media-vault" component={KingCamVault} />
       <Route path="/king/challenge-story" component={ChallengeStoryEngine} />
       <Route path="/king/challenge" component={ChallengeStoryEngine} />
