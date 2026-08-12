@@ -286,7 +286,6 @@ import VaultLiveSimple from "./pages/VaultLiveSimple";
 import VaultX from "./pages/VaultX";
 import ReleaseInfo from "./pages/ReleaseInfo";
 import ViralOptimizer from "./pages/tools/ViralOptimizer";
-import ViralOptimizerPage from "./pages/ViralOptimizerPage";
 import WhatsAppBotDashboard from "./pages/WhatsAppBotDashboard";
 import WhatsAppContentGenerator from "./pages/WhatsAppContentGenerator";
 // import CreatorSubscriptionTiers from "./pages/CreatorSubscriptionTiers";
@@ -631,7 +630,7 @@ function Router() {
       <Route path={"/apparel-lab"} component={ApparelLab} />
       <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} />
       <Route path={"/real-estate-empire"} component={RealEstateEmpire} />
-      <Route path={"/viral-optimizer"} component={ViralOptimizerPage} />
+      <Route path={"/viral-optimizer"}>{() => { window.location.replace("/social-hub"); return null; }}</Route>
       <Route path={"/vertical-pack"} component={VerticalPackLauncher} />
       <Route path={"/brand-deals"} component={BrandDeals} />
       <Route path={"/subscriptions"} component={Subscriptions} />
