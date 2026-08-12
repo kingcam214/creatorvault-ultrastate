@@ -1,118 +1,87 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearch } from "wouter";
+import { ArrowRight, Languages, Mic, ShieldCheck, Sparkles, Video } from "lucide-react";
+import MediaPicker, { type MediaAssetItem } from "@/components/MediaPicker";
 import { trpc } from "@/lib/trpc";
-import { Mic, Globe, Play, Upload, Languages, Zap } from "lucide-react";
+
+const languages = [
+  { code: "es", name: "Spanish" },
+  { code: "fr", name: "French" },
+  { code: "pt", name: "Portuguese" },
+  { code: "de", name: "German" },
+  { code: "it", name: "Italian" },
+  { code: "ja", name: "Japanese" },
+  { code: "ko", name: "Korean" },
+  { code: "zh", name: "Chinese" },
+  { code: "ar", name: "Arabic" },
+  { code: "hi", name: "Hindi" },
+] as const;
+
+function isVideo(asset: MediaAssetItem) {
+  return asset.assetType === "video" || Boolean(asset.mimeType?.startsWith("video/"));
+}
+
+function videoPoster(asset: MediaAssetItem) {
+  const candidate = asset.thumbnailUrl ?? "";
+  return /\.(avif|gif|jpe?g|png|webp)(?:$|[?#])/i.test(candidate) ? candidate : undefined;
+}
+
+function formatDuration(seconds?: number | null) {
+  if (!seconds || seconds < 0) return "—";
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.floor(seconds % 60);
+  return `${minutes}:${remainder.toString().padStart(2, "0")}`;
+}
 
 export default function DubbingAI() {
-  const [videoUrl, setVideoUrl] = useState("");
-  const [targetLang, setTargetLang] = useState("es");
-  const [voice, setVoice] = useState("natural");
+  const search = useSearch();
+  const handedOffSourceAssetId = new URLSearchParams(search).get("sourceAssetId");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<MediaAssetItem | null>(null);
+  const [targetLanguage, setTargetLanguage] = useState<(typeof languages)[number]["code"]>("es");
+  const [spokenScript, setSpokenScript] = useState("");
+  const mediaQuery = trpc.mediaAssets.list.useQuery({ filter: "videos", limit: 120 }, { staleTime: 30_000 });
+  const adaptScript = (trpc as any).dubbingAI.generateDubbingScript.useMutation();
+  const sources = useMemo(() => {
+    const media = Array.isArray(mediaQuery.data) ? mediaQuery.data as MediaAssetItem[] : [];
+    return media.filter((asset) => isVideo(asset) && Boolean(asset.publicUrl));
+  }, [mediaQuery.data]);
+  const activeSource = selectedAsset || sources.find((asset) => asset.id === handedOffSourceAssetId) || sources[0] || null;
+  const selectedLanguage = languages.find((language) => language.code === targetLanguage) || languages[0];
 
-  const languages = [
-    { code: "es", name: "Spanish", flag: "🇪🇸" },
-    { code: "fr", name: "French", flag: "🇫🇷" },
-    { code: "pt", name: "Portuguese", flag: "🇧🇷" },
-    { code: "de", name: "German", flag: "🇩🇪" },
-    { code: "it", name: "Italian", flag: "🇮🇹" },
-    { code: "ja", name: "Japanese", flag: "🇯🇵" },
-    { code: "ko", name: "Korean", flag: "🇰🇷" },
-    { code: "zh", name: "Chinese", flag: "🇨🇳" },
-    { code: "ar", name: "Arabic", flag: "🇸🇦" },
-    { code: "hi", name: "Hindi", flag: "🇮🇳" },
-    { code: "ht", name: "Haitian Creole", flag: "🇭🇹" },
-    { code: "ru", name: "Russian", flag: "🇷🇺" },
-  ];
+  useEffect(() => {
+    if (!handedOffSourceAssetId || selectedAsset || !sources.length) return;
+    const handedOffAsset = sources.find((asset) => asset.id === handedOffSourceAssetId);
+    if (handedOffAsset) setSelectedAsset(handedOffAsset);
+  }, [handedOffSourceAssetId, selectedAsset, sources]);
+
+  const prepareVoiceDirection = () => {
+    if (!activeSource || !spokenScript.trim()) return;
+    adaptScript.mutate({
+      originalScript: spokenScript.trim(),
+      sourceLanguage: "English",
+      targetLanguage: selectedLanguage.name,
+      preserveTiming: true,
+    });
+  };
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-            <Languages className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Dubbing AI</h1>
-            <p className="text-gray-400">Translate & dub your videos into 12+ languages with AI voice cloning</p>
-          </div>
+    <main className="min-h-screen overflow-hidden bg-[#060609] pb-20 pt-20 text-white">
+      <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_82%_10%,rgba(34,211,238,0.17),transparent_30%),radial-gradient(circle_at_12%_95%,rgba(168,85,247,0.15),transparent_34%),#090b10]">
+        <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16 lg:px-12">
+          <div className="max-w-3xl"><div className="inline-flex items-center gap-2 rounded-full border border-cyan-200/25 bg-cyan-200/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100"><Mic className="h-3.5 w-3.5" /> Voice Direction</div><h1 className="mt-5 text-5xl font-black leading-[0.84] tracking-[-0.075em] sm:text-7xl">Give the moment<br /><span className="text-cyan-200">the right words.</span></h1><p className="mt-6 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">Start from a real saved video. Shape the spoken words for another language while holding onto the tone, timing, and intention of the original moment.</p></div>
         </div>
+      </section>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          {[
-            { label: "Languages", value: "12+", icon: Globe, color: "text-blue-400" },
-            { label: "Voice Quality", value: "Studio", icon: Mic, color: "text-green-400" },
-            { label: "Turnaround", value: "< 5 min", icon: Zap, color: "text-yellow-400" },
-          ].map(s => (
-            <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
-              <s.icon className={`w-6 h-6 ${s.color} mx-auto mb-2`} />
-              <p className="text-xl font-bold">{s.value}</p>
-              <p className="text-gray-400 text-sm">{s.label}</p>
-            </div>
-          ))}
-        </div>
+      <section className="mx-auto grid max-w-7xl gap-6 px-5 py-9 sm:px-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(340px,.95fr)] lg:px-12">
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#0d1015] shadow-[0_25px_80px_-42px_rgba(34,211,238,0.5)]"><div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-6"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">Source video</p><h2 className="mt-1 max-w-[16rem] truncate text-xl font-black text-white sm:max-w-md">{activeSource ? activeSource.originalName || activeSource.fileName : "Choose footage from your vault"}</h2></div><button type="button" onClick={() => setPickerOpen(true)} className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-xs font-black text-white transition hover:bg-white hover:text-black">Choose source</button></div><div className="relative aspect-[16/10] bg-black sm:aspect-[16/9]">{activeSource?.publicUrl ? <video key={activeSource.id} src={activeSource.publicUrl} poster={videoPoster(activeSource)} controls playsInline preload="metadata" className="h-full w-full object-contain" /> : <div className="flex h-full flex-col items-center justify-center px-6 text-center"><Video className="h-10 w-10 text-zinc-600" /><p className="mt-4 text-lg font-black">Start with a saved video.</p><p className="mt-2 max-w-sm text-sm leading-relaxed text-zinc-400">CreatorVault will carry the exact footage you select through this direction step.</p></div>}{activeSource && <span className="absolute bottom-4 left-4 rounded-full border border-white/20 bg-black/65 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white backdrop-blur">Verified video · {formatDuration(activeSource.duration)}</span>}</div><div className="flex gap-3 border-t border-white/10 p-5"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" /><p className="text-sm leading-relaxed text-zinc-300">This room produces an adapted voice script from the words you provide. A spoken track is never presented as complete until there is a real track to play.</p></div></div>
 
-        {/* Main Form */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-6">
-          <h2 className="font-bold text-lg mb-4">Dub Your Video</h2>
-          
-          {/* Video Input */}
-          <div className="mb-4">
-            <label className="text-sm text-gray-400 mb-2 block">Video URL or Upload</label>
-            <div className="flex gap-3">
-              <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="Paste video URL (YouTube, direct link, etc.)" className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500" />
-              <button className="bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-3 rounded-lg transition-colors flex items-center gap-2">
-                <Upload className="w-4 h-4" /> Upload
-              </button>
-            </div>
-          </div>
+        <div className="rounded-3xl border border-white/10 bg-[#101116] p-5 sm:p-6"><div className="flex items-start gap-3"><span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-200/10 text-cyan-100"><Languages className="h-5 w-5" /></span><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">Language direction</p><h2 className="mt-1 text-2xl font-black tracking-[-0.045em] text-white">Keep the feeling. Change the words.</h2></div></div><div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">{languages.map((language) => <button key={language.code} type="button" onClick={() => setTargetLanguage(language.code)} className={`rounded-xl border px-3 py-3 text-left text-xs font-black transition ${targetLanguage === language.code ? "border-cyan-200 bg-cyan-200 text-black" : "border-white/10 bg-white/[0.035] text-zinc-300 hover:border-white/30 hover:text-white"}`}>{language.name}</button>)}</div><div className="mt-6"><label className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">What is said in the source moment?</label><textarea value={spokenScript} onChange={(event) => setSpokenScript(event.target.value)} placeholder="Write the spoken words exactly as they should be understood…" rows={7} className="mt-3 w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm leading-relaxed text-white placeholder:text-zinc-600 focus:border-cyan-200/55 focus:outline-none" /></div><button type="button" disabled={!activeSource || !spokenScript.trim() || adaptScript.isPending} onClick={prepareVoiceDirection} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-4 text-sm font-black text-black transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-40">{adaptScript.isPending ? <Sparkles className="h-4 w-4 animate-pulse" /> : <ArrowRight className="h-4 w-4" />} Prepare {selectedLanguage.name} voice script</button>{adaptScript.error && <p className="mt-4 rounded-xl border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm font-bold text-rose-100">The script could not be prepared. Your source remains untouched.</p>}</div>
+      </section>
 
-          {/* Language Selection */}
-          <div className="mb-4">
-            <label className="text-sm text-gray-400 mb-2 block">Target Language</label>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-              {languages.map(lang => (
-                <button key={lang.code} onClick={() => setTargetLang(lang.code)} className={`p-2 rounded-lg border text-center transition-all ${targetLang === lang.code ? "border-blue-500 bg-blue-500/20" : "border-white/10 bg-white/5 hover:border-white/30"}`}>
-                  <div className="text-xl">{lang.flag}</div>
-                  <div className="text-xs mt-1 text-gray-300">{lang.name}</div>
-                </button>
-              ))}
-            </div>
-          </div>
+      {adaptScript.data?.dubbedScript && <section className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12"><div className="overflow-hidden rounded-3xl border border-cyan-200/20 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.12),transparent_48%),#0d1015] p-6 sm:p-8"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">Prepared voice script</p><h2 className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">{selectedLanguage.name} direction for this moment.</h2></div><Languages className="h-7 w-7 text-cyan-200" /></div><p className="mt-6 whitespace-pre-wrap text-base leading-relaxed text-zinc-100">{adaptScript.data.dubbedScript}</p></div></section>}
 
-          {/* Voice Style */}
-          <div className="mb-6">
-            <label className="text-sm text-gray-400 mb-2 block">Voice Style</label>
-            <div className="flex gap-2">
-              {["natural", "energetic", "professional", "casual"].map(v => (
-                <button key={v} onClick={() => setVoice(v)} className={`px-4 py-2 rounded-lg text-sm capitalize transition-all ${voice === v ? "bg-blue-500 text-white" : "bg-white/10 text-gray-400 hover:bg-white/20"}`}>{v}</button>
-              ))}
-            </div>
-          </div>
-
-          <button disabled={!videoUrl} className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 disabled:opacity-50 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2">
-            <Languages className="w-5 h-5" /> Start Dubbing
-          </button>
-        </div>
-
-        {/* How it works */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-          <h3 className="font-bold mb-3">How It Works</h3>
-          <div className="grid md:grid-cols-3 gap-4">
-            {[
-              { step: "1", title: "Upload Video", desc: "Paste a URL or upload your video file" },
-              { step: "2", title: "Choose Language", desc: "Select from 12+ target languages" },
-              { step: "3", title: "AI Dubs It", desc: "AI translates and clones the voice in the new language" },
-            ].map(s => (
-              <div key={s.step} className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-sm flex-shrink-0">{s.step}</div>
-                <div>
-                  <p className="font-semibold text-sm">{s.title}</p>
-                  <p className="text-gray-500 text-xs mt-0.5">{s.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+      <MediaPicker open={pickerOpen} onClose={() => setPickerOpen(false)} mode="single" title="Choose Your Video Source" subtitle="Only saved CreatorVault videos that can be opened and used are offered here." confirmLabel="Use This Video" onConfirm={(assets) => { const source = assets.find((asset) => isVideo(asset) && Boolean(asset.publicUrl)); if (!source) return; setSelectedAsset(source); setPickerOpen(false); }} />
+    </main>
   );
 }
