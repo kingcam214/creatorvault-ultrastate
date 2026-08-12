@@ -280,6 +280,7 @@ import { polloRouter } from "./routers/polloRouter";
 import { governedPolloRouter } from "./routers/governedPolloRouter";
 import { creationDirectorRouter } from "./routers/creationDirectorRouter";
 import { creationProjectsRouter } from "./routers/creationProjectsRouter";
+import { governedKingcamIdentityRouter } from "./routers/governedKingcamIdentityRouter";
 import { distributionRouter } from "./routers/distributionRouter";
 import { socialSpineRouter } from "./routers/socialSpineRouter";
 // import { contentProtectionRouter } from "./routers/contentProtection"; // service stubs not implemented
@@ -970,6 +971,7 @@ export const appRouter = router({
   bodyCinema: bodyCinemaRouter,
   creationDirector: creationDirectorRouter,
   creationProjects: creationProjectsRouter,
+  governedKingcamIdentity: governedKingcamIdentityRouter,
   compliance: complianceRouter,
   renderGraph: renderGraphRouter,
   editor: realEditorRouter,

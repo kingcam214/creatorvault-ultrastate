@@ -7,7 +7,7 @@ export type CommercialEligibility = "verified" | "conditional" | "unverified" | 
 export type ModelActivationState = "planned" | "configured" | "benchmarking" | "active" | "deprecated" | "blocked";
 export type ModelBenchmarkState = "unbenchmarked" | "conditional" | "accepted" | "rejected";
 export type CreatorVaultInputMode = "text" | "reference_image" | "reference_video" | "source_video" | "audio" | "accepted_shot";
-export type CreatorVaultOutputMode = "video" | "assembled_master" | "social_variant" | "analysis";
+export type CreatorVaultOutputMode = "image" | "video" | "assembled_master" | "social_variant" | "analysis";
 
 export type ModelBenchmarkCriteria = {
   facePreservation?: number;
@@ -233,6 +233,37 @@ const DEFAULT_MODELS: Array<Omit<CreationModelRegistryEntry, "createdAt" | "upda
     metadata: {
       providerPath: "/generation/kling-ai/kling-v3-omni/ref2video",
       governedOnly: true,
+    },
+  },
+  {
+    modelKey: "replicate/kingcam-fluxdevcam",
+    provider: "replicate",
+    model: "KingCam FluxDevCam",
+    modelVersion: "trained-clone",
+    executionLane: "hosted",
+    commercialEligibility: "conditional",
+    licenseName: "Creator-controlled trained-model account entitlement",
+    licenseReference: null,
+    activationState: "configured",
+    inputModes: ["text", "reference_image", "reference_video"],
+    outputModes: ["image"],
+    maxUsefulDurationSeconds: 1,
+    supportedResolutions: ["1024px", "9:16", "16:9", "1:1"],
+    supportsReferenceImage: true,
+    supportsReferenceVideo: false,
+    supportsIdentityPreservation: true,
+    supportsCameraControl: false,
+    supportsPoseControl: false,
+    supportsAudio: false,
+    knownWeaknesses: ["No accepted CreatorVault identity-image benchmark exists yet.", "May only be called through the owner-bounded governed image benchmark route until watchable review evidence exists."],
+    verifiedUseCases: [],
+    benchmarkEvidenceVersion: null,
+    benchmarkState: "unbenchmarked",
+    metadata: {
+      canonicalService: "server/services/governedKingcamIdentityService.ts",
+      sourceModel: "kingcam214/fluxdevcam",
+      governedOnly: true,
+      requiresDurableCopyBeforeReview: true,
     },
   },
   {
