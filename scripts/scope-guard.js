@@ -101,6 +101,11 @@ const ALLOWLISTS = {
     'client/public/images/home/luxury-gold-room-demo-poster.jpg',
     'scripts/scope-guard.js'
   ],
+  'ffmpeg-technical-only': [
+    'server/services/realRenderEngine.ts',
+    'client/src/lib/homepageMediaRegistry.ts',
+    'scripts/scope-guard.js'
+  ],
   'audio-intelligence': [
     'server/services/audioIntelligenceService.ts',
     'server/services/audioIntelligenceService.test.ts',

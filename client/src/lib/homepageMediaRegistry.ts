@@ -254,7 +254,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
     assetId: "b99b8561-1d34-4799-aa3d-9f95c8ff5136",
     sourceSystem: "CreatorVault Assembly lane",
     creatorOwner: "KingCam / CreatorVault",
-    publicSafeStatus: "approved",
+    publicSafeStatus: "excluded",
     consentUsageStatus: "Approved CreatorVault demonstration identity asset with durable accepted-master lineage.",
     mediaKind: "motion",
     mobileSafe: true,
@@ -274,7 +274,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
     assetId: "128de5ea-a6bf-4cb8-a859-6472187a7b50",
     sourceSystem: "CreatorVault Trailer Maker / Assembly lane",
     creatorOwner: "KingCam / CreatorVault",
-    publicSafeStatus: "approved",
+    publicSafeStatus: "excluded",
     consentUsageStatus: "Approved CreatorVault demonstration identity asset with inspected trailer lineage.",
     mediaKind: "motion",
     mobileSafe: true,
@@ -314,7 +314,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
     assetId: "bc6842b1-b774-4957-8d75-a871250a6b41",
     sourceSystem: "Body Cinema / Assembly lane",
     creatorOwner: "CreatorVault approved demonstration source",
-    publicSafeStatus: "approved",
+    publicSafeStatus: "excluded",
     consentUsageStatus: "Approved CreatorVault demonstration source and accepted Body Cinema master.",
     mediaKind: "motion",
     mobileSafe: true,
@@ -334,7 +334,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
     assetId: "98aee65d-a71c-42d4-a64e-d21250834b6f",
     sourceSystem: "Body Cinema / Assembly lane",
     creatorOwner: "CreatorVault approved demonstration source",
-    publicSafeStatus: "approved",
+    publicSafeStatus: "excluded",
     consentUsageStatus: "Approved CreatorVault demonstration source and accepted Body Cinema master.",
     mediaKind: "motion",
     mobileSafe: true,
@@ -354,7 +354,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
     assetId: "158f18dc-db9e-4091-9746-a69a6dbdca96",
     sourceSystem: "Body Cinema / Assembly lane",
     creatorOwner: "CreatorVault approved demonstration source",
-    publicSafeStatus: "approved",
+    publicSafeStatus: "excluded",
     consentUsageStatus: "Approved CreatorVault demonstration source and accepted Body Cinema master.",
     mediaKind: "motion",
     mobileSafe: true,
@@ -374,7 +374,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
     assetId: "768b5648-c298-4a99-999d-07caeb062929",
     sourceSystem: "Body Cinema / Assembly lane",
     creatorOwner: "CreatorVault approved demonstration source",
-    publicSafeStatus: "approved",
+    publicSafeStatus: "excluded",
     consentUsageStatus: "Approved CreatorVault demonstration source and accepted Body Cinema master.",
     mediaKind: "motion",
     mobileSafe: true,
@@ -394,7 +394,7 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
     assetId: "9d701191-abee-4071-a676-588241937a66",
     sourceSystem: "Body Cinema / Assembly lane",
     creatorOwner: "CreatorVault approved demonstration source",
-    publicSafeStatus: "approved",
+    publicSafeStatus: "excluded",
     consentUsageStatus: "Approved CreatorVault demonstration source and accepted derivative lineage.",
     mediaKind: "motion",
     mobileSafe: true,
@@ -472,14 +472,9 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
   },
 };
 
+// Public media may not include historic Assembly/Body Cinema outputs that relied on
+// the now-prohibited FFmpeg creative-effect path. They remain internal evidence only.
 export const HOMEPAGE_MEDIA_SEQUENCE = [
-  HOMEPAGE_MEDIA.kingcamHeroLoopProof,
-  HOMEPAGE_MEDIA.kingcamTrailerProof,
-  HOMEPAGE_MEDIA.bodyCinemaArchProof,
-  HOMEPAGE_MEDIA.bodyCinemaSilhouetteProof,
-  HOMEPAGE_MEDIA.bodyCinemaLuxuryProof,
-  HOMEPAGE_MEDIA.bodyCinemaVipProof,
-  HOMEPAGE_MEDIA.bodyCinemaArchTeaserProof,
   HOMEPAGE_MEDIA.kingcamHero,
   HOMEPAGE_MEDIA.womenCreatorMotion,
   HOMEPAGE_MEDIA.womenCreatorAudienceMotion,
@@ -488,7 +483,6 @@ export const HOMEPAGE_MEDIA_SEQUENCE = [
   HOMEPAGE_MEDIA.kingcamCampaignSource,
   HOMEPAGE_MEDIA.kingcamPlatformTrailer,
   HOMEPAGE_MEDIA.premiumUnlockVisual,
-  HOMEPAGE_MEDIA.creationArsenal,
 ] as const;
 
 export const MEDIA_FALLBACKS = {

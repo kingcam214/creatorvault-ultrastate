@@ -5,15 +5,16 @@
  * This is NOT a spec/JSON exporter. It actually processes video with ffmpeg
  * on the VPS and writes a finished MP4 to durable public storage.
  *
- * Operations (all real):
- *   - Multi-clip trim + concat (the timeline cut)
- *   - Body Cinema color grade presets (LUT-style via eq/curves/colorbalance)
- *   - Cinematic motion (zoompan slow push / drift) for image clips
- *   - Caption / hook text overlay (drawtext)
- *   - Background music track mix (amix) with original audio ducking
- *   - Watermark text
- *   - Aspect ratio framing (9:16 / 16:9 / 1:1) with blurred-fill background
- *   - Fade in/out
+ * Technical operations only:
+ *   - Multi-clip trim + hard concat
+ *   - Aspect-ratio normalization and encode packaging
+ *   - Governed audio alignment and mix
+ *   - Thumbnail, duration, and delivery validation
+ *
+ * FFmpeg is expressly prohibited from creating visual effects, LUTs, grades,
+ * simulated camera motion, image animation, captions, overlays, transitions,
+ * speed ramps, freezes, light leaks, glitches, or creative transformations.
+ * CreatorVault creative transformation must use an approved elite creation lane.
  *
  * Jobs run async; status is tracked in-memory + on disk so the editor can poll.
  * ============================================================================
@@ -104,18 +105,7 @@ export interface RenderRequest {
 // body region by scaling up and panning to a normalized center, then re-fitting.
 // cx/cy are the focal center as a fraction of the frame (0..1). zoom>1 tightens.
 export const FOCUS_PRESETS: Record<string, { label: string; emoji: string; cx: number; cy: number; zoom: number }> = {
-  none:        { label: "Full Body",   emoji: "🧍", cx: 0.5,  cy: 0.5,  zoom: 1.0 },
-  abs:         { label: "Abs",         emoji: "💪", cx: 0.5,  cy: 0.52, zoom: 1.7 },
-  waist:       { label: "Waist",       emoji: "⏳", cx: 0.5,  cy: 0.55, zoom: 1.55 },
-  butt:        { label: "Butt",        emoji: "🍑", cx: 0.5,  cy: 0.66, zoom: 1.7 },
-  hips:        { label: "Hips",        emoji: "💃", cx: 0.5,  cy: 0.62, zoom: 1.5 },
-  legs:        { label: "Legs",        emoji: "👠", cx: 0.5,  cy: 0.74, zoom: 1.45 },
-  thighs:      { label: "Thighs",      emoji: "🔥", cx: 0.5,  cy: 0.68, zoom: 1.65 },
-  chest:       { label: "Chest",       emoji: "💎", cx: 0.5,  cy: 0.38, zoom: 1.6 },
-  back:        { label: "Back",        emoji: "🖤", cx: 0.5,  cy: 0.5,  zoom: 1.5 },
-  lowerback:   { label: "Lower Back",  emoji: "💫", cx: 0.5,  cy: 0.62, zoom: 1.75 },
-  face:        { label: "Face",        emoji: "👄", cx: 0.5,  cy: 0.28, zoom: 1.7 },
-  silhouette:  { label: "Silhouette",  emoji: "✨", cx: 0.5,  cy: 0.5,  zoom: 1.15 },
+  none: { label: "Source framing", emoji: "🧍", cx: 0.5, cy: 0.5, zoom: 1.0 },
 };
 
 function focusFilter(focus: string, W: number, H: number): string {
@@ -191,25 +181,12 @@ function letterboxFilter(H: number): string {
 // ─── Color grade presets (real ffmpeg filter chains) ──────────────────────────
 // Each returns a filter string applied to the video stream.
 export const COLOR_GRADES: Record<string, { label: string; filter: string }> = {
-  none:            { label: "Natural",        filter: "" },
-  luxe_gold:       { label: "Luxe Gold",       filter: "eq=contrast=1.12:saturation=1.15:gamma=0.96,colorbalance=rm=0.06:gm=0.02:bm=-0.06:rs=0.05:bs=-0.05" },
-  cinematic_heat:  { label: "Cinematic Heat",  filter: "eq=contrast=1.25:saturation=1.2:brightness=-0.02,colorbalance=rm=0.10:bm=-0.08:rh=0.06:bh=-0.06,vignette=PI/5" },
-  noir_afterdark:  { label: "After Dark Noir", filter: "eq=contrast=1.3:saturation=0.85:brightness=-0.05,colorbalance=bm=0.08:bh=0.10:rm=-0.04,vignette=PI/4" },
-  soft_skin:       { label: "Soft Skin",       filter: "eq=contrast=1.05:saturation=1.08:brightness=0.03,gblur=sigma=0.6,colorbalance=rm=0.05:gm=0.03" },
-  velvet_midnight: { label: "Velvet Midnight", filter: "eq=contrast=1.22:saturation=1.1:brightness=-0.04,colorbalance=bm=0.12:rh=0.05:bh=0.08,vignette=PI/4.5" },
-  neon_night:      { label: "Neon Night",      filter: "eq=contrast=1.28:saturation=1.35,colorbalance=bm=0.14:rh=0.10:bh=0.10,vignette=PI/5" },
-  rose_glow:       { label: "Rose Glow",       filter: "eq=contrast=1.1:saturation=1.18:brightness=0.02,colorbalance=rm=0.10:rh=0.08:bm=-0.04" },
-  platinum:        { label: "Platinum",        filter: "eq=contrast=1.15:saturation=0.95:brightness=0.02,colorbalance=bm=0.04:gm=0.02" },
-  bronze_editorial:{ label: "Bronze Editorial",filter: "eq=contrast=1.2:saturation=1.05:gamma=0.94,colorbalance=rm=0.08:gm=0.04:bm=-0.08:rs=0.06" },
+  none: { label: "Natural source", filter: "" },
 };
 
-// ─── Motion presets (zoompan for image clips) ─────────────────────────────────
+// FFmpeg may not animate still imagery or simulate camera movement.
 export const MOTION_PRESETS: Record<string, { label: string; expr: (durSec: number, fps: number) => string }> = {
-  none:        { label: "Static",        expr: () => "" },
-  slow_push:   { label: "Slow Push In",  expr: (d, fps) => `zoompan=z='min(zoom+0.0009,1.18)':d=${Math.round(d*fps)}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=${fps}` },
-  slow_pull:   { label: "Slow Pull Out", expr: (d, fps) => `zoompan=z='if(eq(on,1),1.18,max(zoom-0.0009,1.0))':d=${Math.round(d*fps)}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=${fps}` },
-  drift_left:  { label: "Drift Left",    expr: (d, fps) => `zoompan=z='1.12':d=${Math.round(d*fps)}:x='(iw-iw/zoom)*(on/${Math.round(d*fps)})':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=${fps}` },
-  drift_up:    { label: "Drift Up",      expr: (d, fps) => `zoompan=z='1.12':d=${Math.round(d*fps)}:x='iw/2-(iw/zoom/2)':y='(ih-ih/zoom)*(1-on/${Math.round(d*fps)})':s=1080x1920:fps=${fps}` },
+  none: { label: "Source motion only", expr: () => "" },
 };
 
 const ASPECT_DIMS: Record<string, { w: number; h: number }> = {
@@ -266,7 +243,28 @@ async function fetchToLocal(src: string, dest: string): Promise<void> {
   fs.writeFileSync(dest, Buffer.from(await resp.arrayBuffer()));
 }
 
+function assertTechnicalOnlyRequest(req: RenderRequest): void {
+  const prohibited: string[] = [];
+  if ((req.colorGrade || "none") !== "none") prohibited.push("color grade");
+  if ((req.motion || "none") !== "none") prohibited.push("image motion");
+  if ((req.focus || "none") !== "none") prohibited.push("reframing");
+  if (req.captionText || req.watermarkText || (req.textOverlays?.length || 0) > 0 || req.animatedCaptions) prohibited.push("text overlay");
+  if (req.fadeInOut || req.transitions || req.chromaAberration || req.lightLeaks || req.letterbox || req.glitch || req.polish || req.technicalLift) prohibited.push("visual effect");
+  for (const clip of req.clips || []) {
+    if ((clip.type || "video") === "image") prohibited.push("image animation");
+    if ((clip.speed ?? 1) !== 1 || (clip.focus || "none") !== "none" || (clip.colorGrade || "none") !== "none" || clip.caption || clip.punch || clip.lightLeak || clip.flashIn || clip.glitch || (clip.videoMotion || "none") !== "none" || clip.holdFinalFrameSeconds || clip.shadowEcho) prohibited.push("per-clip creative processing");
+  }
+  if (prohibited.length) {
+    throw new Error(`CreatorVault technical media lane refuses ${[...new Set(prohibited)].join(", ")}. Use an approved elite creation lane for creative transformation.`);
+  }
+}
+
 function ff(args: string[], timeoutMs = 240000): Promise<void> {
+  const joined = args.join(" ");
+  const prohibitedFilter = /(zoompan|drawtext|colorbalance|\beq=|curves=|vignette|gblur|unsharp|noise=|lutrgb|colorchannelmixer|fade=t|tpad=|xfade=|crop=|setpts=|split=|blend=)/i.test(joined);
+  if (prohibitedFilter) {
+    return Promise.reject(new Error("CreatorVault policy blocks FFmpeg creative effects and filters. Use an approved elite creation lane."));
+  }
   return new Promise((resolve, reject) => {
     const p = spawn("ffmpeg", ["-y", ...args]);
     let err = "";
@@ -319,6 +317,7 @@ function textOverlayFilter(overlay: TextOverlay, W: number, H: number): string {
 
 // ─── Main render ───────────────────────────────────────────────────────────────
 export function startRender(req: RenderRequest): RenderJob {
+  assertTechnicalOnlyRequest(req);
   const job: RenderJob = {
     id: randomUUID(),
     status: "queued",
