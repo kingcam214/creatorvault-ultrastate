@@ -206,7 +206,6 @@ import EmmaUniversity from "./pages/EmmaUniversity";
 import EpisodeDetailPage from "./pages/EpisodeDetailPage";
 import Explore from "./pages/Explore";
 import FanSubscribe from "./pages/FanSubscribe";
-import FlyerDesignStudio from "./pages/FlyerDesignStudio";
 import FlyerGenerator from "./pages/FlyerGenerator";
 import FollowListPage from "./pages/FollowListPage";
 import FontLibrary from "./pages/FontLibrary";
@@ -432,7 +431,7 @@ function Router() {
       <Route path={"/animated-flyer-studio"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/image-lab"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/flyer-composer"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
-      <Route path={"/flyer-design-studio"} component={FlyerDesignStudio} />
+      <Route path={"/flyer-design-studio"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/dayshift-doctor"} component={DayShiftDoctor} />
       <Route path={"/nurse"} component={NurseConsole} />
       <Route path={"/design-department"} component={DesignDepartment} />
@@ -591,7 +590,7 @@ function Router() {
       <Route path={"/greatest-show/apply"} component={CreatorApplication} />
       <Route path={"/greatest-show/subscribe"} component={FanSubscription} />
       <Route path={"/king/flyer-generator"} component={FlyerGenerator} />
-      <Route path={"/king/flyer-design-studio"} component={FlyerDesignStudio} />
+      <Route path={"/king/flyer-design-studio"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/king/video-lab"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
       <Route path={"/king/analytics"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/king/content"} component={KingContent} />
