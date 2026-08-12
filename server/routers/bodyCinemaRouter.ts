@@ -29,6 +29,8 @@ import {
 } from "../services/bodyCinemaEvidenceService";
 import { reviewBodyCinemaOutput } from "../services/bodyCinemaOutputReviewService";
 import { buildBodyCinemaAssemblyRecipe } from "../services/bodyCinemaAssemblyRecipe";
+import { buildAudioDirectedTimeline } from "../services/audioTimelinePlanner";
+import { getCanonicalAudioAsset } from "../services/audioIntelligenceService";
 import { startRender } from "../services/realRenderEngine";
 import { getCreationProject, updateCreationProjectLinks } from "../services/creationProjectService";
 import { buildCreationCapabilities, getCreationPlan, prepareCreationPlan, toCreatorFacingCreationPlan } from "../services/creationDirector";
@@ -157,6 +159,8 @@ export const bodyCinemaRouter = router({
     sourceAssetUrl: z.string().url(),
     creationProjectId: z.string().uuid(),
     watermarkText: z.string().trim().min(1).max(40).optional(),
+    audioAssetId: z.string().uuid().optional(),
+    destinationPlatform: z.enum(["creatorvault", "vaultx", "instagram", "tiktok", "youtube"]).default("creatorvault"),
   })).mutation(async ({ ctx, input }) => {
     const creatorId = Number(ctx.user.id);
     try {
@@ -170,11 +174,32 @@ export const bodyCinemaRouter = router({
       if (project.sourceEvidenceId && project.sourceEvidenceId !== input.evidenceId) {
         throw new Error("This saved creation belongs to a different source understanding.");
       }
+      const sourceDurationSeconds = Math.max(4, ...evidenceContext.evidence.frameEvidence.map((frame) => Number(frame.timestampMs || 0) / 1000));
+      let audioDirection: Parameters<typeof buildBodyCinemaAssemblyRecipe>[0]["audio"] | undefined;
+      if (input.audioAssetId) {
+        const audioAsset = await getCanonicalAudioAsset(creatorId, input.audioAssetId);
+        if (!audioAsset) throw new Error("The selected soundtrack is not in this CreatorVault library.");
+        const audioTimeline = await buildAudioDirectedTimeline({
+          creatorId,
+          audioAssetId: input.audioAssetId,
+          sourceEvidenceId: input.evidenceId,
+          treatmentId: evidenceContext.direction.id,
+          targetDurationSeconds: Math.min(12, sourceDurationSeconds),
+          preserveSourceAudio: false,
+          destinationPlatform: input.destinationPlatform,
+        });
+        audioDirection = {
+          assetUrl: audioAsset.assetUrl,
+          mix: audioTimeline.mix,
+          visualEvents: audioTimeline.visualEvents,
+        };
+      }
       const recipe = buildBodyCinemaAssemblyRecipe({
         sourceUrl: input.sourceAssetUrl,
         evidence: evidenceContext.evidence,
         direction: evidenceContext.direction,
         watermarkText: input.watermarkText || null,
+        audio: audioDirection,
       });
       const job = startRender(recipe.request);
       await updateCreationProjectLinks({
@@ -191,6 +216,9 @@ export const bodyCinemaRouter = router({
             treatmentGrammar: evidenceContext.direction.grammar,
             creatorSummary: recipe.creatorSummary,
             assemblyRecipe: recipe.treatmentId,
+            audioDirected: Boolean(input.audioAssetId),
+            audioAssetId: input.audioAssetId || null,
+            destinationPlatform: input.destinationPlatform,
           },
         },
       });

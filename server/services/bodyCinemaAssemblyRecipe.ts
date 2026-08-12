@@ -1,5 +1,11 @@
-import type { RenderClip, RenderRequest, TextOverlay } from "./realRenderEngine";
 import type { BodyCinemaDirection, BodyCinemaEvidenceRecord } from "./bodyCinemaEvidenceService";
+import type { RenderClip, RenderRequest, TextOverlay } from "./realRenderEngine";
+
+export type BodyCinemaAudioDirection = {
+  assetUrl: string;
+  mix: NonNullable<RenderRequest["audioMixPlan"]>;
+  visualEvents: Array<{ startMs: number; endMs: number; sourceTimestampMs: number; intent: string; punch?: boolean; lightLeak?: boolean; flashIn?: boolean; glitch?: boolean }>;
+};
 
 export type BodyCinemaAssemblyRecipe = {
   treatmentId: BodyCinemaDirection["id"];
@@ -12,63 +18,75 @@ type RecipeVisuals = {
   colorGrade: string;
   focusSequence: string[];
   speedSequence: number[];
-  captionStyle: "bold_center" | "lower_third" | "minimal_top";
-  caption: string;
+  videoMotionSequence: Array<NonNullable<RenderClip["videoMotion"]>>;
+  caption?: string;
+  captionStyle?: "bold_center" | "lower_third" | "minimal_top";
   overlays: TextOverlay[];
   transitions: boolean;
   fadeInOut: boolean;
   polish?: boolean;
   lightLeaks?: boolean;
-  chromaAberration?: boolean;
-  glitch?: boolean;
+  shadowEcho?: boolean;
+  holds?: Record<number, number>;
+  clipPunches?: number[];
+  clipFlashes?: number[];
 };
 
+/**
+ * Canonical cinematic grammar. A treatment is no longer a grade plus a label:
+ * it has an independent source order, camera behavior, framing sequence,
+ * motion tempo, reveal architecture, and payoff behavior.
+ */
 const RECIPE_VISUALS: Record<BodyCinemaDirection["id"], RecipeVisuals> = {
   "the-arch": {
     colorGrade: "cinematic_heat",
-    focusSequence: ["none", "torso", "hips", "none", "none"],
-    speedSequence: [0.96, 0.9, 0.94, 1, 0.98],
-    captionStyle: "lower_third",
-    caption: "THE ARCH",
-    overlays: [{ text: "HOLD THE LINE", x: 0.5, y: 0.11, fontSize: 0.031, color: "#D5B760", startTime: 1.2, endTime: 2.5 }],
+    focusSequence: ["none", "torso", "none", "hips", "none"],
+    speedSequence: [0.82, 0.76, 0.9, 0.74, 0.92],
+    videoMotionSequence: ["pull_out", "rise", "push_in", "rise", "none"],
+    overlays: [{ text: "THE LINE HOLDS", x: 0.5, y: 0.12, fontSize: 0.026, color: "#E8D8A0", startTime: 3.8, endTime: 5.4 }],
     transitions: true,
     fadeInOut: true,
     polish: true,
+    holds: { 3: 0.8 },
   },
   silhouette: {
     colorGrade: "noir_afterdark",
-    focusSequence: ["silhouette", "silhouette", "none", "silhouette", "none"],
-    speedSequence: [1, 0.98, 1, 0.98, 1],
-    captionStyle: "minimal_top",
-    caption: "FORM IN SHADOW",
-    overlays: [{ text: "STAY IN THE FRAME", x: 0.5, y: 0.88, fontSize: 0.026, color: "#FFFFFF", startTime: 2.3, endTime: 3.5 }],
+    focusSequence: ["none", "silhouette", "none", "silhouette", "none"],
+    speedSequence: [0.96, 0.9, 0.86, 0.92, 1],
+    videoMotionSequence: ["none", "drift_left", "none", "pull_out", "none"],
+    overlays: [{ text: "AFTER THE LIGHT", x: 0.5, y: 0.08, fontSize: 0.022, color: "#D6E6FF", startTime: 1.8, endTime: 3.1 }],
     transitions: true,
-    fadeInOut: true,
+    fadeInOut: false,
+    shadowEcho: true,
+    holds: { 2: 0.45 },
   },
   "luxury-reveal": {
     colorGrade: "luxe_gold",
     focusSequence: ["face", "chest", "torso", "none", "none"],
-    speedSequence: [0.94, 0.96, 0.98, 1, 0.98],
-    captionStyle: "minimal_top",
-    caption: "PRIVATE RELEASE",
-    overlays: [{ text: "DETAIL. THEN REVEAL.", x: 0.5, y: 0.84, fontSize: 0.029, color: "#F4D98B", startTime: 1.4, endTime: 3.2 }],
+    speedSequence: [0.72, 0.76, 0.84, 0.9, 0.96],
+    videoMotionSequence: ["push_in", "rise", "drift_left", "pull_out", "none"],
+    overlays: [{ text: "TAKE YOUR TIME", x: 0.5, y: 0.84, fontSize: 0.024, color: "#F7E4A8", startTime: 2.5, endTime: 4.1 }],
     transitions: true,
     fadeInOut: true,
     polish: true,
     lightLeaks: true,
+    holds: { 3: 0.62 },
   },
   "vip-tease": {
     colorGrade: "rose_glow",
-    focusSequence: ["torso", "face", "none", "hips", "none"],
-    speedSequence: [1.08, 1, 1.04, 0.96, 1.1],
-    captionStyle: "bold_center",
-    caption: "PRIVATE ACCESS",
-    overlays: [{ text: "NOT THE WHOLE STORY", x: 0.5, y: 0.78, fontSize: 0.034, color: "#D5B760", startTime: 0.65, endTime: 1.9 }],
+    focusSequence: ["face", "none", "torso", "hips", "none"],
+    speedSequence: [1.16, 0.94, 1.06, 0.82, 1.18],
+    videoMotionSequence: ["peek", "drift_left", "push_in", "rise", "none"],
+    overlays: [
+      { text: "NOT YET.", x: 0.5, y: 0.78, fontSize: 0.035, color: "#F5D58B", startTime: 0.22, endTime: 0.78 },
+      { text: "ONE MORE LOOK", x: 0.5, y: 0.12, fontSize: 0.023, color: "#FFFFFF", startTime: 4.25, endTime: 5.1 },
+    ],
     transitions: true,
     fadeInOut: false,
     polish: true,
-    chromaAberration: false,
-    glitch: false,
+    holds: { 3: 0.55 },
+    clipPunches: [0, 2],
+    clipFlashes: [0],
   },
 };
 
@@ -77,25 +95,60 @@ function sourceDurationSeconds(evidence: BodyCinemaEvidenceRecord): number {
   return Math.max(1, ...timestamps) / 1000;
 }
 
-function buildSourceClips(sourceUrl: string, direction: BodyCinemaDirection, sourceDuration: number, visuals: RecipeVisuals): RenderClip[] {
-  const beats = direction.timeline.length ? direction.timeline : [];
-  const clipLength = Math.max(0.55, Math.min(2.4, sourceDuration / Math.max(2, beats.length - 0.5)));
+function sourceBeats(input: {
+  direction: BodyCinemaDirection;
+  audio?: BodyCinemaAudioDirection;
+}): Array<{ sourceTimestampMs: number; targetDurationMs: number; intent: string; punch?: boolean; lightLeak?: boolean; flashIn?: boolean; glitch?: boolean }> {
+  if (input.audio?.visualEvents.length) {
+    return input.audio.visualEvents.map((event) => ({
+      sourceTimestampMs: event.sourceTimestampMs,
+      targetDurationMs: Math.max(450, event.endMs - event.startMs),
+      intent: event.intent,
+      punch: event.punch,
+      lightLeak: event.lightLeak,
+      flashIn: event.flashIn,
+      glitch: event.glitch,
+    }));
+  }
+  return input.direction.timeline.map((beat) => ({
+    sourceTimestampMs: beat.sourceTimestampMs,
+    targetDurationMs: Math.max(500, beat.endMs - beat.startMs),
+    intent: beat.id,
+  }));
+}
+
+function buildSourceClips(input: {
+  sourceUrl: string;
+  direction: BodyCinemaDirection;
+  sourceDuration: number;
+  visuals: RecipeVisuals;
+  audio?: BodyCinemaAudioDirection;
+}): RenderClip[] {
+  const beats = sourceBeats({ direction: input.direction, audio: input.audio });
   return beats.map((beat, index) => {
-    const preferredStart = Math.max(0, beat.sourceTimestampMs / 1000 - clipLength * 0.34);
-    const safeStart = Math.min(preferredStart, Math.max(0, sourceDuration - clipLength));
-    const safeEnd = Math.max(safeStart + 0.5, Math.min(sourceDuration, safeStart + clipLength));
+    const speed = input.visuals.speedSequence[index % input.visuals.speedSequence.length];
+    // Because slow motion lengthens a clip, take only the source duration that
+    // maps to the music-directed target window after speed is applied.
+    const targetSeconds = Math.max(0.55, Math.min(2.4, beat.targetDurationMs / 1000));
+    const rawLength = Math.max(0.55, Math.min(2.4, targetSeconds * speed));
+    const preferredStart = Math.max(0, beat.sourceTimestampMs / 1000 - rawLength * 0.34);
+    const safeStart = Math.min(preferredStart, Math.max(0, input.sourceDuration - rawLength));
+    const safeEnd = Math.max(safeStart + 0.5, Math.min(input.sourceDuration, safeStart + rawLength));
     return {
-      src: sourceUrl,
+      src: input.sourceUrl,
       type: "video",
       trimStart: Number(safeStart.toFixed(3)),
       trimEnd: Number(safeEnd.toFixed(3)),
-      focus: visuals.focusSequence[index % visuals.focusSequence.length],
-      colorGrade: visuals.colorGrade,
-      speed: visuals.speedSequence[index % visuals.speedSequence.length],
-      punch: direction.id === "vip-tease" && (index === 0 || index === 3),
-      flashIn: direction.id === "vip-tease" && index === 0,
-      lightLeak: direction.id === "luxury-reveal" && (index === 1 || index === 3),
-      glitch: direction.id === "vip-tease" && index === 4,
+      focus: input.visuals.focusSequence[index % input.visuals.focusSequence.length],
+      colorGrade: input.visuals.colorGrade,
+      speed,
+      videoMotion: input.visuals.videoMotionSequence[index % input.visuals.videoMotionSequence.length],
+      holdFinalFrameSeconds: input.visuals.holds?.[index],
+      shadowEcho: Boolean(input.visuals.shadowEcho && (index === 1 || index === 2 || index === 3)),
+      punch: Boolean(input.visuals.clipPunches?.includes(index) || beat.punch),
+      flashIn: Boolean(input.visuals.clipFlashes?.includes(index) || beat.flashIn),
+      lightLeak: Boolean(input.visuals.lightLeaks && (index === 1 || index === 3) || beat.lightLeak),
+      glitch: Boolean(beat.glitch && input.direction.id === "vip-tease"),
     };
   });
 }
@@ -105,19 +158,29 @@ export function buildBodyCinemaAssemblyRecipe(input: {
   evidence: BodyCinemaEvidenceRecord;
   direction: BodyCinemaDirection;
   watermarkText?: string | null;
+  audio?: BodyCinemaAudioDirection;
 }): BodyCinemaAssemblyRecipe {
   if (input.evidence.sourceMediaUrl !== input.sourceUrl) {
     throw new Error("The approved Body Cinema evidence belongs to a different saved source.");
   }
   const visuals = RECIPE_VISUALS[input.direction.id];
   const sourceDuration = sourceDurationSeconds(input.evidence);
-  const clips = buildSourceClips(input.sourceUrl, input.direction, sourceDuration, visuals);
+  const clips = buildSourceClips({
+    sourceUrl: input.sourceUrl,
+    direction: input.direction,
+    sourceDuration,
+    visuals,
+    audio: input.audio,
+  });
   if (!clips.length) throw new Error("The approved treatment has no observed source moments to finish.");
 
+  const beatDirected = Boolean(input.audio?.visualEvents.length);
   return {
     treatmentId: input.direction.id,
     label: input.direction.label,
-    creatorSummary: `${input.direction.label} uses ${input.direction.grammar.pace.toLowerCase()} ${input.direction.grammar.ending.toLowerCase()}`,
+    creatorSummary: beatDirected
+      ? `${input.direction.label} is timing its camera, motion, text, and payoff to a measured soundtrack rhythm.`
+      : `${input.direction.label} is building ${input.direction.grammar.pace.toLowerCase()} with ${input.direction.grammar.ending.toLowerCase()}`,
     request: {
       clips,
       aspect: "9:16",
@@ -131,11 +194,11 @@ export function buildBodyCinemaAssemblyRecipe(input: {
       fadeInOut: visuals.fadeInOut,
       polish: visuals.polish,
       lightLeaks: visuals.lightLeaks,
-      chromaAberration: visuals.chromaAberration,
-      glitch: visuals.glitch,
       watermarkText: input.watermarkText || undefined,
       technicalLift: input.direction.id === "silhouette" ? "noir_safe" : "balanced",
-      durationCap: Math.min(20, Math.max(4, sourceDuration * 1.15)),
+      durationCap: Math.min(20, Math.max(4, sourceDuration * 1.25)),
+      musicUrl: input.audio?.assetUrl,
+      audioMixPlan: input.audio?.mix,
     },
   };
 }

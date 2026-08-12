@@ -46,6 +46,12 @@ export interface RenderClip {
   lightLeak?: boolean;
   flashIn?: boolean;
   glitch?: boolean;
+  /** Source-preserving camera simulation for video clips. */
+  videoMotion?: "none" | "push_in" | "pull_out" | "drift_left" | "rise" | "peek";
+  /** Deliberate temporal hold for a pose payoff or interruption. */
+  holdFinalFrameSeconds?: number;
+  /** A restrained mirrored luminance echo for shape-led treatments. */
+  shadowEcho?: boolean;
 }
 
 export interface TextOverlay {
@@ -124,6 +130,27 @@ function focusFilter(focus: string, W: number, H: number): string {
   x = Math.max(0, Math.min(x, W - cw));
   y = Math.max(0, Math.min(y, H - ch));
   return `crop=${cw}:${ch}:${x}:${y},scale=${W}:${H}`;
+}
+
+/**
+ * Motion is applied after framing and before grade. These crop expressions use
+ * the actual clip time, so the source remains continuous rather than being
+ * converted into a still-image zoompan effect.
+ */
+function videoMotionFilter(mode: NonNullable<RenderClip["videoMotion"]>, W: number, H: number): string {
+  const crop = (zoom: string, x: string, y: string) => `crop=w='trunc(${W}/(${zoom})/2)*2':h='trunc(${H}/(${zoom})/2)*2':x='${x}':y='${y}',scale=${W}:${H}:flags=lanczos`;
+  if (mode === "push_in") return crop("1+0.035*t", "(iw-ow)/2", "(ih-oh)/2");
+  if (mode === "pull_out") return crop("1.12-0.035*t", "(iw-ow)/2", "(ih-oh)/2");
+  if (mode === "drift_left") return crop("1.10", "(iw-ow)*(1-min(1,t/2.4))", "(ih-oh)/2");
+  if (mode === "rise") return crop("1.08", "(iw-ow)/2", "(ih-oh)*(1-min(1,t/2.2))");
+  if (mode === "peek") return crop("1.18", "if(lt(t,0.22),0,(iw-ow)*0.68)", "(ih-oh)/2");
+  return "";
+}
+
+function shadowEchoFilter(): string {
+  // Keep the graph valid for -vf while making the subject edge read as a
+  // graphic, low-saturation luminance shape rather than a cosmetic recolor.
+  return "eq=contrast=1.12:saturation=0.42:brightness=-0.01,vignette=PI/3";
 }
 
 export interface RenderJob {
@@ -353,8 +380,11 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
         const clipGrade = COLOR_GRADES[clip.colorGrade || req.colorGrade || "none"]?.filter || "";
         filters.push(fitChain);
         if (clipFocus) filters.push(clipFocus);
+        const videoMotion = clip.videoMotion ? videoMotionFilter(clip.videoMotion, W, H) : "";
+        if (videoMotion) filters.push(videoMotion);
         if (clipGrade) filters.push(clipGrade);
         if (req.technicalLift) filters.push(TECHNICAL_LIFT[req.technicalLift]);
+        if (clip.shadowEcho) filters.push(shadowEchoFilter());
         // Per-clip speed ramp
         const speed = clip.speed != null ? Math.max(0.05, Math.min(32, clip.speed)) : 1.0;
         if (speed !== 1.0) {
@@ -376,6 +406,9 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
         if (clip.flashIn) filters.push(`fade=t=in:st=0:d=0.12:color=white`);
         if (clip.lightLeak) filters.push(LIGHT_LEAK);
         if (clip.glitch) filters.push(GLITCH);
+        if (clip.holdFinalFrameSeconds && clip.holdFinalFrameSeconds > 0) {
+          filters.push(`tpad=stop_mode=clone:stop_duration=${Math.min(1.5, clip.holdFinalFrameSeconds).toFixed(3)}`);
+        }
 
         const vf = filters.join(",");
         const audioFilters = speed !== 1.0 ? ["-af", `atempo=${Math.max(0.5, Math.min(2.0, speed))}`] : ["-af", "aresample=44100"];
