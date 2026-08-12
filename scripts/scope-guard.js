@@ -167,6 +167,7 @@ const ALLOWLISTS = {
     'client/src/pages/KingContent.tsx',
     'client/src/pages/KingCamVault.tsx',
     'client/src/pages/CreatorVideoStudio.tsx',
+    'client/src/pages/SocialHub.tsx',
     'client/src/pages/TrailerStudio.tsx',
     'client/src/pages/VaultXDrop.tsx',
     'server/routers/videoUploadRouter.ts',

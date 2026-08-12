@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "../hooks/use-toast";
 import {
@@ -25,8 +26,15 @@ function money(cents?: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format((Number(cents || 0)) / 100);
 }
 
+function videoPoster(value?: string | null) {
+  const candidate = value ?? "";
+  return /\.(avif|gif|jpe?g|png|webp)(?:$|[?#])/i.test(candidate) ? candidate : undefined;
+}
+
 export default function SocialHub() {
   const { toast } = useToast();
+  const search = useSearch();
+  const handedOffSourceAssetId = new URLSearchParams(search).get("sourceAssetId");
   const utils = trpc.useUtils();
   const [feedMode, setFeedMode] = useState<"for_you" | "following">("for_you");
   const [packageOpen, setPackageOpen] = useState(false);
@@ -62,6 +70,14 @@ export default function SocialHub() {
   const awaitingApproval = distribution.filter((row: any) => ["draft", "ready", "scheduled"].includes(row.status)).reduce((sum: number, row: any) => sum + Number(row.count || 0), 0);
   const readyMedia = Array.isArray(media.data) ? media.data : [];
   const feedItems = feed.data?.items || [];
+
+  useEffect(() => {
+    if (!handedOffSourceAssetId || selectedAssetId || !readyMedia.length) return;
+    const handedOffAsset = readyMedia.find((asset: any) => String(asset.id) === handedOffSourceAssetId && Boolean(asset.publicUrl));
+    if (!handedOffAsset) return;
+    setSelectedAssetId(String(handedOffAsset.id));
+    setPackageOpen(true);
+  }, [handedOffSourceAssetId, readyMedia, selectedAssetId]);
   const selectedAsset = readyMedia.find((asset: any) => String(asset.id) === selectedAssetId);
   const selectedChannel = (channels.data || []).find((channel: any) => String(channel.id) === selectedChannelId);
   const totalNotifications = (notifications.data || []).filter((item: any) => !item.is_read).length;
@@ -155,7 +171,7 @@ export default function SocialHub() {
                 {feedItems.map((post: any) => (
                   <article key={post.id} className="group overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#101015] shadow-2xl shadow-black/30">
                     <div className="relative aspect-[9/14] overflow-hidden bg-black">
-                      {post.mediaUrl ? <video src={post.mediaUrl} poster={post.thumbnailUrl || undefined} className="h-full w-full object-cover" muted loop autoPlay playsInline preload="metadata" /> : <div className="grid h-full place-items-center text-zinc-600"><Video className="h-10 w-10" /></div>}
+                      {post.mediaUrl ? <video src={post.mediaUrl} poster={videoPoster(post.thumbnailUrl)} className="h-full w-full object-cover" muted loop autoPlay playsInline preload="metadata" /> : <div className="grid h-full place-items-center text-zinc-600"><Video className="h-10 w-10" /></div>}
                       <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 to-transparent" />
                       <div className="absolute left-4 top-4 flex items-center gap-2">
                         <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 text-xs font-black">{String(post.creator?.name || "C").slice(0, 1)}</div>
@@ -224,7 +240,7 @@ export default function SocialHub() {
           </div>
           <div className="grid gap-7 p-6 lg:grid-cols-[1.1fr_.9fr]">
             <div className="space-y-6">
-              <div><label className="mb-3 block text-xs font-black uppercase tracking-[0.16em] text-zinc-500">1. Choose your owned video</label><div className="grid max-h-80 grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3">{readyMedia.map((asset: any) => <button key={asset.id} onClick={() => setSelectedAssetId(String(asset.id))} className={`group overflow-hidden rounded-2xl border text-left transition ${selectedAssetId === String(asset.id) ? "border-fuchsia-400 ring-2 ring-fuchsia-400/30" : "border-white/10 hover:border-white/30"}`}><div className="relative aspect-[9/12] bg-black">{asset.publicUrl ? <video src={asset.publicUrl} poster={asset.thumbnailUrl || undefined} muted preload="metadata" className="h-full w-full object-cover" /> : null}<span className="absolute bottom-2 left-2 rounded-md bg-black/70 px-1.5 py-1 text-[9px] font-bold">{asset.duration ? `${Math.round(asset.duration)}s` : "VIDEO"}</span></div><div className="truncate px-2 py-2 text-[11px] font-bold text-zinc-300">{asset.originalName || asset.fileName}</div></button>)}</div>{!readyMedia.length && <p className="rounded-xl border border-dashed border-white/15 p-4 text-sm text-zinc-500">No ready CreatorVault videos are available to package yet.</p>}</div>
+              <div><label className="mb-3 block text-xs font-black uppercase tracking-[0.16em] text-zinc-500">1. Choose your owned video</label><div className="grid max-h-80 grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3">{readyMedia.map((asset: any) => <button key={asset.id} onClick={() => setSelectedAssetId(String(asset.id))} className={`group overflow-hidden rounded-2xl border text-left transition ${selectedAssetId === String(asset.id) ? "border-fuchsia-400 ring-2 ring-fuchsia-400/30" : "border-white/10 hover:border-white/30"}`}><div className="relative aspect-[9/12] bg-black">{asset.publicUrl ? <video src={asset.publicUrl} poster={videoPoster(asset.thumbnailUrl)} muted preload="metadata" className="h-full w-full object-cover" /> : null}<span className="absolute bottom-2 left-2 rounded-md bg-black/70 px-1.5 py-1 text-[9px] font-bold">{asset.duration ? `${Math.round(asset.duration)}s` : "VIDEO"}</span></div><div className="truncate px-2 py-2 text-[11px] font-bold text-zinc-300">{asset.originalName || asset.fileName}</div></button>)}</div>{!readyMedia.length && <p className="rounded-xl border border-dashed border-white/15 p-4 text-sm text-zinc-500">No ready CreatorVault videos are available to package yet.</p>}</div>
               <div><label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-zinc-500">2. Give this moment its voice</label><textarea value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What should this moment make fans feel or do?" rows={4} className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:border-fuchsia-400/60 focus:outline-none" /></div>
               <div><label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-zinc-500">3. Build money into the moment</label><div className="flex flex-wrap gap-2">{ctas.map(([id, label]) => <button key={id} onClick={() => setCtaType(id)} className={`rounded-full px-3 py-2 text-xs font-black ${ctaType === id ? "bg-white text-black" : "border border-white/10 text-zinc-400 hover:text-white"}`}>{label}</button>)}</div></div>
             </div>
