@@ -20,11 +20,7 @@ type Mode = "original" | "ai_remix" | "ai_full_shoot" | "hybrid" | "photo_cinema
 interface Clip { src: string; name: string; }
 
 const MODES: { id: Mode; emoji: string; name: string; desc: string; badge?: string; aiTime?: string }[] = [
-  { id: "original",         emoji: "✂️",  name: "Original Edit",     desc: "Your footage only. Fast. Pure cinematic ffmpeg — speed ramps, body focus, grade, transitions.", badge: "FASTEST" },
-  { id: "ai_remix",         emoji: "🔀",  name: "AI Remix",          desc: "AI generates 4 new camera angles from your clip, then mixes them with your original.", badge: "POPULAR", aiTime: "+1–2 min" },
-  { id: "ai_full_shoot",    emoji: "🤖",  name: "AI Full Shoot",     desc: "Upload 1 clip. AI generates 6 completely new cinematic shots. Trailer is 100% AI-generated.", badge: "WOW FACTOR", aiTime: "+2–3 min" },
-  { id: "hybrid",           emoji: "🔀",  name: "Hybrid",            desc: "Upload multiple clips. AI generates shots from each. Max variety — interleaved AI + original.", badge: "MAX VARIETY", aiTime: "+2–3 min" },
-  { id: "photo_cinematic",  emoji: "📸",  name: "Photo Cinematic",   desc: "Upload a photo. AI animates it into 6 cinematic motion shots. No video needed.", badge: "CHEAT CODE", aiTime: "+2–3 min" },
+  { id: "original", emoji: "🎬", name: "Trailer Direction", desc: "Keep your footage intact. Build a source-backed story, opening, pacing, and payoff around the strongest moments you already own.", badge: "SOURCE FIRST" },
 ];
 
 const VIBES = [
@@ -60,11 +56,11 @@ export default function TrailerStudio() {
   const [pct, setPct] = useState(0);
   const [stage, setStage] = useState("");
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
+  const [directionSaved, setDirectionSaved] = useState(false);
 
   const { t } = useVaultXLang();
   const templatesQ = (trpc as any).trailer.getTemplates.useQuery(undefined, { retry: false });
   const audioLibraryQ = (trpc as any).audioIntelligence.listAssets.useQuery();
-  const buildMut = (trpc as any).trailer.buildFromTemplate.useMutation();
   const createTrailerProjectMut = (trpc as any).mediaAssets.createTrailerProject.useMutation();
   const statusQ = (trpc as any).trailer.getStatus.useQuery({ jobId: jobId || "" }, { enabled: Boolean(jobId) && step === "building", refetchInterval: 3000, retry: false });
   const templates = templatesQ.data?.templates || [];
@@ -101,12 +97,10 @@ export default function TrailerStudio() {
 
   const build = useCallback(async () => {
     if (!templateId) { toast.error("Pick a trailer direction"); return; }
-    if (clips.length === 0) { toast.error("Choose saved CreatorVault media first"); return; }
-    if (mode !== "original") { toast.error("AI reshoots stay locked until a governed visual direction is approved. Your original-footage trailer can still be directed now."); return; }
-    setStep("building"); setPct(0); setOutputUrl(null);
+    if (clips.length === 0 || selectedAssetIds.length === 0) { toast.error("Choose saved CreatorVault media first"); return; }
     try {
       let projectId = trailerProjectId;
-      if (!projectId && selectedAssetIds.length) {
+      if (!projectId) {
         const project = await createTrailerProjectMut.mutateAsync({
           projectName: title || "Directed trailer",
           projectType: "launch_trailer",
@@ -118,24 +112,12 @@ export default function TrailerStudio() {
         projectId = project.trailerProjectId;
         setTrailerProjectId(projectId);
       }
-      const res = await buildMut.mutateAsync({
-        templateId, clips: clips.map(c => ({ src: c.src })),
-        title: title || undefined, ctaSubText: priceLine || undefined, aspect,
-        musicUrl: musicUrl || undefined, audioAssetId: audioAssetId || undefined, trailerProjectId: projectId || undefined, watermarkText: title || undefined,
-        mode, chromaAberration: chroma || undefined, lightLeaks: lightLeaks || undefined,
-        letterbox: letterbox || undefined, glitch: glitch || undefined,
-        sourceProof: selectedAssetIds.length ? { ownershipConfirmed: true, consentConfirmed: true, adultVerified: true } : undefined,
-      });
-      if (res.directorState) {
-        toast.success(res.creationPath || "A proven creation route is staged.");
-        setStep("done");
-      } else {
-        setJobId(res.jobId);
-      }
-    } catch (e: any) { toast.error(e?.message || "Trailer direction failed"); setStep("fx"); }
-  }, [templateId, clips, title, priceLine, aspect, musicUrl, audioAssetId, trailerProjectId, selectedAssetIds, mode, chroma, lightLeaks, letterbox, glitch]);
+      setDirectionSaved(true);
+      toast.success("Your real sources and trailer direction are saved. CreatorVault will not substitute visual effects for a finished premium trailer.");
+    } catch (e: any) { toast.error(e?.message || "Trailer direction could not be saved"); }
+  }, [templateId, clips, title, priceLine, aspect, trailerProjectId, selectedAssetIds]);
 
-  const reset = () => { setStep("mode"); setClips([]); setSelectedAssetIds([]); setTemplateId(null); setTitle(""); setPriceLine(""); setMusicUrl(null); setAudioAssetId(null); setTrailerProjectId(null); setJobId(null); setOutputUrl(null); setPct(0); setChroma(false); setLightLeaks(false); setLetterbox(false); setGlitch(false); };
+  const reset = () => { setStep("mode"); setClips([]); setSelectedAssetIds([]); setTemplateId(null); setTitle(""); setPriceLine(""); setMusicUrl(null); setAudioAssetId(null); setTrailerProjectId(null); setJobId(null); setOutputUrl(null); setDirectionSaved(false); setPct(0); setChroma(false); setLightLeaks(false); setLetterbox(false); setGlitch(false); };
 
   const selectedMode = MODES.find(m => m.id === mode);
   const isAIMode = mode !== "original";
@@ -166,7 +148,7 @@ export default function TrailerStudio() {
           <div>
             <p style={{ fontSize: 11, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 6 }}>VaultX · Viral Trailers</p>
             <h1 style={{ fontSize: 34, fontFamily: "Bebas Neue, sans-serif", lineHeight: 1, margin: "0 0 8px" }}>{t("trailer.mode_title")}</h1>
-            <p style={{ fontSize: 14, color: MUTED, marginBottom: 20, lineHeight: 1.6 }}>5 ways to create. From pure ffmpeg speed to full AI cinematography. Pick what fits your content.</p>
+            <p style={{ fontSize: 14, color: MUTED, marginBottom: 20, lineHeight: 1.6 }}>Start with the footage you already own. The Director keeps the selected source, opening, story structure, and release purpose together before any finishing lane is considered.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {MODES.map(m => (
                 <button key={m.id} onClick={() => { setMode(m.id); setStep("clips"); }} style={{ display: "flex", alignItems: "center", gap: 14, textAlign: "left", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "16px", cursor: "pointer", transition: "border 0.15s" }}>
@@ -251,7 +233,8 @@ export default function TrailerStudio() {
         {step === "fx" && (
           <div>
             <h2 style={{ fontSize: 26, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 6px" }}>{t("trailer.fx_title")}</h2>
-            <p style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>All optional. Every toggle adds a real ffmpeg effect to the final render.</p>
+            <p style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>Set the release details around your real source. CreatorVault does not use cosmetic effects as a substitute for a finished premium trailer.</p>
+            {directionSaved && <div style={{ marginBottom: 16, border: `1px solid rgba(0,230,118,0.35)`, background: "rgba(0,230,118,0.08)", borderRadius: 12, padding: "12px 14px", color: GREEN, fontSize: 12, lineHeight: 1.45 }}>Your selected footage and direction are saved together. This is not presented as a finished trailer until there is a watchable result that clears review.</div>}
 
             {/* Vibe */}
             <p style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>{t("trailer.vibe")}</p>
@@ -269,24 +252,7 @@ export default function TrailerStudio() {
               {(["9:16", "16:9", "1:1"] as const).map(a => <button key={a} onClick={() => setAspect(a)} style={{ flex: 1, padding: "10px", borderRadius: 8, border: `1px solid ${aspect === a ? GOLD : BORDER}`, background: aspect === a ? GOLD_DIM : "transparent", color: aspect === a ? GOLD : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{a}</button>)}
             </div>
 
-            {/* Cinematic FX toggles */}
-            <p style={{ fontSize: 11, color: MUTED, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>{t("trailer.effects")}</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-              {[
-                { key: "chroma", val: chroma, set: setChroma, emoji: "🌈", label: "Chromatic Aberration", desc: "RGB lens split" },
-                { key: "lightLeaks", val: lightLeaks, set: setLightLeaks, emoji: "✨", label: "Light Leaks", desc: "Warm flash on cuts" },
-                { key: "letterbox", val: letterbox, set: setLetterbox, emoji: "🎬", label: "Letterbox Bars", desc: "2.35:1 cinematic" },
-                { key: "glitch", val: glitch, set: setGlitch, emoji: "⚡", label: "Glitch Frame", desc: "Hook cut glitch" },
-              ].map(fx => (
-                <button key={fx.key} onClick={() => fx.set((v: boolean) => !v)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px", borderRadius: 12, border: `1px solid ${fx.val ? GOLD : BORDER}`, background: fx.val ? GOLD_DIM : CARD, cursor: "pointer", textAlign: "left" }}>
-                  <span style={{ fontSize: 20 }}>{fx.emoji}</span>
-                  <div>
-                    <p style={{ fontSize: 12, fontWeight: 800, margin: 0, color: fx.val ? "#fff" : "#ddd" }}>{fx.label}</p>
-                    <p style={{ fontSize: 10, color: MUTED, margin: 0 }}>{fx.desc}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
+            <div style={{ marginBottom: 16, border: `1px solid ${BORDER}`, borderRadius: 12, background: CARD, padding: "13px 14px" }}><p style={{ margin: 0, color: "#fff", fontSize: 13, fontWeight: 800 }}>Visual finish stays protected</p><p style={{ margin: "5px 0 0", color: MUTED, fontSize: 11, lineHeight: 1.45 }}>Your original footage stays intact. CreatorVault will not disguise an unfinished trailer with cosmetic manipulation.</p></div>
 
             {/* Info & CTA */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
@@ -327,7 +293,7 @@ export default function TrailerStudio() {
             <h2 style={{ fontSize: 28, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 8px" }}>
               {isAIMode ? "AI is building your trailer..." : "Rendering your trailer..."}
             </h2>
-            <p style={{ fontSize: 14, color: MUTED, marginBottom: 8 }}>{stage || (isAIMode ? "Generating new camera angles, then cutting the trailer" : "ffmpeg is assembling your cinematic teaser")}</p>
+            <p style={{ fontSize: 14, color: MUTED, marginBottom: 8 }}>{stage || (isAIMode ? "Preparing the governed visual direction" : "Keeping your selected source and story structure together")}</p>
             <div style={{ maxWidth: 400, margin: "8px auto 0", height: 8, background: CARD, borderRadius: 4, overflow: "hidden" }}><div style={{ width: `${pct}%`, height: "100%", background: GOLD, transition: "width 0.4s" }} /></div>
             <p style={{ fontSize: 13, color: GOLD, fontWeight: 700, marginTop: 8 }}>{pct}%</p>
             <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
@@ -376,7 +342,7 @@ export default function TrailerStudio() {
         <div style={{ position: "fixed", inset: "auto 0 0 0", zIndex: 50, background: "rgba(8,8,8,0.96)", borderTop: `1px solid ${BORDER}`, backdropFilter: "blur(12px)", padding: "12px 16px" }}>
           <div style={{ maxWidth: 800, margin: "0 auto" }}>
             <button onClick={build} disabled={!templateId} style={{ width: "100%", padding: "16px", borderRadius: 12, background: templateId ? GOLD : CARD, color: templateId ? "#000" : MUTED, fontSize: 17, fontWeight: 900, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.08em", border: "none", cursor: templateId ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              <Flame size={18} /> {t("trailer.build")}
+              <Flame size={18} /> {directionSaved ? "Trailer direction saved" : "Save trailer direction"}
             </button>
           </div>
         </div>

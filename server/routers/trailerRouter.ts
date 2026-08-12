@@ -18,6 +18,13 @@ import { startRender } from "../services/realRenderEngine.js";
 import { assertAudioRights, getAudioAnalysis, getCanonicalAudioAsset } from "../services/audioIntelligenceService.js";
 import { buildCreationCapabilities, prepareCreationPlan, toCreatorFacingCreationPlan } from "../services/creationDirector";
 
+function legacyCreativeRenderBlocked(): never {
+  throw new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message: "Your source and trailer plan are saved. CreatorVault will not run the old visual-effects builder because it cannot meet the current finished-work standard.",
+  });
+}
+
 // ─── Viral trailer templates ──────────────────────────────────────────────────
 export interface TrailerTemplate {
   id: string;
@@ -206,8 +213,7 @@ export const trailerRouter = router({
       if (requestsNewTrailerShots(input.mode, input.aiRemix)) {
         return prepareTrailerShotPath(input, Number(ctx.user.id));
       }
-      const job = startTrailer(input);
-      return { jobId: job.id, status: job.status };
+      legacyCreativeRenderBlocked();
     }),
 
   buildFromTemplate: protectedProcedure
@@ -292,6 +298,7 @@ export const trailerRouter = router({
 
         // 3. Render using the modern realRenderEngine
 
+        legacyCreativeRenderBlocked();
         const job = startRender({
           clips: renderClips,
           aspect: input.aspect,
@@ -329,6 +336,7 @@ export const trailerRouter = router({
           sourceProof: input.sourceProof,
         }, Number(ctx.user.id));
       }
+      legacyCreativeRenderBlocked();
       const job = startTrailer({
         clips: input.clips,
         title: input.title,
