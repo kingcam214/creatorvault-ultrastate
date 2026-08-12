@@ -207,7 +207,6 @@ import EpisodeDetailPage from "./pages/EpisodeDetailPage";
 import Explore from "./pages/Explore";
 import FanSubscribe from "./pages/FanSubscribe";
 import FollowListPage from "./pages/FollowListPage";
-import FontLibrary from "./pages/FontLibrary";
 import GreatestShowStudio from "./pages/GreatestShowStudio";
 import HollywoodAcademy from "./pages/HollywoodAcademy";
 import HollywoodChannel from "./pages/HollywoodChannel";
@@ -651,7 +650,7 @@ function Router() {
       <Route path="/hollywood/channel/:creatorId" component={HollywoodChannel} />
       <Route path="/hollywood/episode/:episodeId" component={HollywoodEpisode} />
       <Route path="/hollywood/:slug" component={HollywoodShow} />
-      <Route path={"/font-library"} component={FontLibrary} />
+      <Route path={"/font-library"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
             <Route path={"/recruiter-dashboard"} component={RecruiterDashboard} />
             <Route path={"/dominicana"} component={CreatorVaultDominicana} />
       <Route path="/chuuch" component={Chuuch} />
