@@ -242,7 +242,6 @@ import Onboard from "./pages/Onboard";
 import OnboardingV2 from "./pages/OnboardingV2";
 import OperatorDashboard from "./pages/OperatorDashboard";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
-import PodcastStudio from "./pages/PodcastStudio";
 import PresentationBuilder from "./pages/PresentationBuilder";
 import PresentationEmpire from "./pages/PresentationEmpire";
 import PresentationEmpireCockpit from "./pages/PresentationEmpireCockpit";
@@ -549,7 +548,7 @@ function Router() {
       <Route path={"/admin/payouts"} component={AdminPayouts} />
       <Route path={"/admin/manual-payments"} component={AdminManualPayments} />
       <Route path={"/admin/tips"} component={AdminTips} />
-      <Route path={"/podcast-studio"} component={PodcastStudio} />
+      <Route path={"/podcast-studio"}>{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path={"/podcasting"} component={Podcasting} />
       <Route path={"/launch-trailer-studio"} component={LaunchTrailerStudio} />
       <Route path={"/god-mode"} component={GodModeAI} />
