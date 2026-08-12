@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import {
   ArrowLeft,
   Check,
@@ -164,6 +164,8 @@ function StatusRow({ label, value, state }: { label: string; value: string; stat
 }
 
 export default function VaultXDrop() {
+  const search = useSearch();
+  const selectedVaultAssetId = new URLSearchParams(search).get("sourceAssetId");
   const [step, setStep] = useState<Step>("upload");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [hostedUrl, setHostedUrl] = useState<string | null>(null);
@@ -200,7 +202,7 @@ export default function VaultXDrop() {
   );
   const approveDirection = (trpc as any).bodyCinema.approveDirection.useMutation();
   const existingVideosQuery = (trpc as any).mediaAssets.list.useQuery(
-    { filter: "videos", limit: 40 },
+    { filter: "videos", limit: 120 },
     { staleTime: 30_000 },
   );
   const autoSelectedMediaIdRef = useRef<string | null>(null);
@@ -411,11 +413,13 @@ export default function VaultXDrop() {
 
   useEffect(() => {
     const videos = Array.isArray(existingVideosQuery.data) ? existingVideosQuery.data as MediaAssetItem[] : [];
-    const newestUsableVideo = videos.find((asset) => asset.publicUrl && (asset.assetType === "video" || asset.mimeType?.startsWith("video/")));
-    if (!newestUsableVideo || autoSelectedMediaIdRef.current || uploading || videoUrl || sourceEvidence) return;
-    autoSelectedMediaIdRef.current = newestUsableVideo.id;
-    void handleExistingMediaSelection([newestUsableVideo]);
-  }, [existingVideosQuery.data, handleExistingMediaSelection, sourceEvidence, uploading, videoUrl]);
+    const usableVideos = videos.filter((asset) => asset.publicUrl && (asset.assetType === "video" || asset.mimeType?.startsWith("video/")));
+    const requestedVaultVideo = selectedVaultAssetId ? usableVideos.find((asset) => asset.id === selectedVaultAssetId) : null;
+    const sourceToUse = requestedVaultVideo || usableVideos[0];
+    if (!sourceToUse || autoSelectedMediaIdRef.current || uploading || videoUrl || sourceEvidence) return;
+    autoSelectedMediaIdRef.current = sourceToUse.id;
+    void handleExistingMediaSelection([sourceToUse]);
+  }, [existingVideosQuery.data, handleExistingMediaSelection, selectedVaultAssetId, sourceEvidence, uploading, videoUrl]);
 
   const handleSelectPreset = useCallback(async (preset: QuickPreset) => {
     if (!sourceEvidence?.id || sourceEvidence?.analysisStatus !== "verified") {
