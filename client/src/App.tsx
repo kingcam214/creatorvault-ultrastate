@@ -250,7 +250,6 @@ import KingCamClone from "./pages/KingCamClone";
 import KingCamCommandCenter from "./pages/KingCamCommandCenter";
 import KingCamDemos from "./pages/KingCamDemos";
 import KingCamEmpireMap3D from "./pages/KingCamEmpireMap3D";
-import KingCamEngine from "./pages/KingCamEngine";
 import KingCamEpisodeTheater3D from "./pages/KingCamEpisodeTheater3D";
 import KingCamScriptWriter from "./pages/KingCamScriptWriter";
 import KingCamShowcase from "./pages/KingCamShowcase";
@@ -519,7 +518,7 @@ function Router() {
       <Route path={"/university"} component={University} />
       <Route path={"/learn"} component={KingCamShowreel} />
       <Route path={"/king/script-writer"} component={KingCamScriptWriter} />
-      <Route path={"/king/engine"} component={KingCamEngine} />
+      <Route path={"/king/engine"}>{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
       <Route path={"/emma-university"} component={EmmaUniversity} />
       <Route path={"/services"} component={Services} />
       <Route path={"/creator/subscription-tiers"} component={CreatorSubscriptionTiers} />
