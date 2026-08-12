@@ -81,7 +81,6 @@ import EmmaNetwork from "./pages/EmmaNetwork";
 // import InfluencerDashboard from "./pages/InfluencerDashboard";
 // import JoinVaultLive from "./pages/JoinVaultLive";
 // import ControlRoom from "./pages/ControlRoom";
-import LaunchTrailerStudio from "./pages/LaunchTrailerStudio";
 import GodModeAI from "./pages/GodModeAI";
 // import KingCamClone from "./pages/KingCamClone";
 // import KingCamShowcase from "./pages/KingCamShowcase";
@@ -550,7 +549,7 @@ function Router() {
       <Route path={"/admin/tips"} component={AdminTips} />
       <Route path={"/podcast-studio"}>{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path={"/podcasting"} component={Podcasting} />
-      <Route path={"/launch-trailer-studio"} component={LaunchTrailerStudio} />
+      <Route path={"/launch-trailer-studio"}>{() => { window.location.replace("/trailer-maker"); return null; }}</Route>
       <Route path={"/god-mode"} component={GodModeAI} />
       <Route path={"/king/god-mode"} component={GodModeAI} />
       <Route path={"/shows/:slug/episodes/:episodeId"} component={EpisodeDetailPage} />
