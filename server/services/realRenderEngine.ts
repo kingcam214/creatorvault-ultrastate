@@ -141,10 +141,10 @@ const CHROMA_ABERRATION = "split=3[r][g][b];[r]lutrgb=r=val:g=0:b=0[rv];[g]lutrg
 const LIGHT_LEAK = "eq=brightness=0.035:saturation=1.08:gamma=1.01";
 // A more controlled glitch that doesn't completely blur out the frame
 const GLITCH = "colorchannelmixer=rr=1:rg=0:rb=0:gr=0:gg=1:gb=0:br=0:bg=0:bb=1,noise=alls=10:allf=t";
-const POLISH = "split[a][b];[b]gblur=sigma=8[bl];[a][bl]blend=all_mode=screen:all_opacity=0.22,noise=alls=7:allf=t+u";
+const POLISH = "eq=contrast=1.025:saturation=1.02,unsharp=5:5:0.55:5:5:0.0,noise=alls=3:allf=t+u";
 const TECHNICAL_LIFT: Record<NonNullable<RenderRequest["technicalLift"]>, string> = {
-  balanced: "eq=brightness=0.06:gamma=1.08:contrast=1.03:saturation=1.03,unsharp=5:5:0.9:5:5:0.0",
-  noir_safe: "eq=brightness=0.032:gamma=1.045:contrast=1.02,unsharp=5:5:0.72:5:5:0.0",
+  balanced: "eq=brightness=0.12:gamma=1.55:contrast=1.025:saturation=1.04,unsharp=7:7:1.35:7:7:0.0",
+  noir_safe: "eq=brightness=0.075:gamma=1.32:contrast=1.045:saturation=0.98,unsharp=7:7:1.12:7:7:0.0",
 };
 
 function letterboxFilter(H: number): string {
@@ -325,7 +325,7 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
       const isImg = isImage(clip.src) || clip.type === "image";
 
       // Build the video filter chain
-      const fitChain = `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps}`;
+      const fitChain = `scale=${W}:${H}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps}`;
       const focus = focusFilter(req.focus || "none", W, H);
       const filters: string[] = [];
 
