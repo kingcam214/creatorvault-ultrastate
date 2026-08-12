@@ -374,7 +374,6 @@ import Shop from "./pages/Shop";
 // import SocialAutoposterAgent from "./pages/SocialAutoposterAgent"; // MERGED into SocialHub
 import SocialHub from "./pages/SocialHub";
 import OutreachCommandCenter from "./pages/OutreachCommandCenter";
-import VaultXChallenges from "./pages/VaultXChallenges";
 import ForYouFeed from "./pages/ForYouFeed";
 import VaultXFanLibrary from "./pages/VaultXFanLibrary";
 import AIChatter from "./pages/AIChatter";
@@ -500,7 +499,7 @@ function Router() {
       <Route path="/social-audit" component={SocialHub} />
       <Route path="/social-autoposter" component={SocialHub} />
       <Route path="/outreach" component={OutreachCommandCenter} />
-      <Route path="/vaultx-challenges" component={VaultXChallenges} />
+      <Route path="/vaultx-challenges">{() => { window.location.replace("/vault-x"); return null; }}</Route>
       <Route path="/ai-agent-challenge" component={ChallengeStoryEngine} />
       <Route path="/challenges" component={ChallengeStoryEngine} />
       <Route path="/for-you" component={ForYouFeed} />
