@@ -257,7 +257,6 @@ import KingEmpire from "./pages/KingEmpire";
 import KingLife from "./pages/KingLife";
 import KingMoneyMission from "./pages/KingMoneyMission";
 import KingUsers from "./pages/KingUsers";
-import KingVaultRemixEngine from "./pages/KingVaultRemixEngine";
 import KingVideoLab from "./pages/KingVideoLab";
 import KingWaitlist from "./pages/KingWaitlist";
 import LeadCapture from "./pages/LeadCapture";
@@ -577,7 +576,7 @@ function Router() {
       <Route path="/king/episodes-3d" component={KingCamEpisodeTheater3D} />
       <Route path="/king/empire-3d" component={KingCamEmpireMap3D} />
       <Route path="/king/connect-socials" component={KingConnectSocials} />
-      <Route path="/king/vault-remix" component={KingVaultRemixEngine} />
+      <Route path="/king/vault-remix">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/king/empire" component={KingEmpire} />
       <Route path="/king/money-mission" component={KingMoneyMission} />
       <Route path="/king/life" component={KingLife} />
