@@ -285,9 +285,6 @@ import ThumbnailGeneratorUI from "./pages/ThumbnailGeneratorUI";
 import University from "./pages/University";
 import VaultLiveSimple from "./pages/VaultLiveSimple";
 import VaultX from "./pages/VaultX";
-import VideoLab from "./pages/VideoLab";
-import VideoLabPro from "./pages/VideoLabPro";
-import VideoProductionStudio from "./pages/VideoProductionStudio";
 import ReleaseInfo from "./pages/ReleaseInfo";
 import ViralOptimizer from "./pages/tools/ViralOptimizer";
 import ViralOptimizerPage from "./pages/ViralOptimizerPage";
@@ -572,10 +569,10 @@ function Router() {
       <Route path={"/guia"} component={GuiaCreador} />
       <Route path={"/vault-guardian"}>{() => { window.location.replace("/vault-x"); return null; }}</Route>
       <Route path={"/vault-remix"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
-      <Route path={"/video-lab"} component={VideoLab} />
-      <Route path={"/video-lab-pro"} component={VideoLabPro} />
+      <Route path={"/video-lab"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
+      <Route path={"/video-lab-pro"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
       <Route path={"/video-studio"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
-      <Route path={"/video-production-studio"} component={VideoProductionStudio} />
+      <Route path={"/video-production-studio"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
       <Route path={"/vault-x"} component={VaultX} />
       <Route path={"/culture-selection"} component={CultureSelection} />
       <Route path={"/thumbnail-generator"} component={ThumbnailGeneratorUI} />
