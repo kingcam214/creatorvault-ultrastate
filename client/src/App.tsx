@@ -189,7 +189,6 @@ import ChuuchTransition from "./pages/ChuuchTransition";
 import CommandHubV2 from "./pages/CommandHubV2";
 import ContentDashboard from "./pages/ContentDashboard";
 // import { ContentScheduler } from "./pages/ContentScheduler"; // MERGED into SocialHub
-import ControlRoom from "./pages/ControlRoom";
 import { CreatorAnalyticsDashboard } from "./pages/CreatorAnalyticsDashboard";
 import CreatorEarnings from "./pages/CreatorEarnings";
 import CreatorManagement from "./pages/CreatorManagement";
@@ -506,7 +505,7 @@ function Router() {
       <Route path={"/live"} component={BrowseLive} />
       <Route path={"/stream/:id"} component={StreamView} />
       <Route path={"/join-vaultlive"} component={JoinVaultLive} />
-      <Route path={"/control-room"} component={ControlRoom} />
+      <Route path={"/control-room"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/subscribe/:creatorId"} component={FanSubscribe} />
       <Route path={"/emma"} component={EmmaHome} />
       <Route path={"/emma-empire"} component={EmmaEmpire} />
