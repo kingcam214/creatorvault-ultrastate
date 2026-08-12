@@ -63,6 +63,10 @@ const T = {
 function isVideo(a: MediaAssetItem) {
   return (a.assetType ?? "").toLowerCase() === "video" || (a.mimeType ?? "").startsWith("video/");
 }
+function videoPoster(a: MediaAssetItem) {
+  const candidate = a.thumbnailUrl ?? "";
+  return /\.(avif|gif|jpe?g|png|webp)(?:$|[?#])/i.test(candidate) ? candidate : undefined;
+}
 function formatDuration(s: number | null | undefined) {
   if (!s) return "";
   const m = Math.floor(s / 60);
@@ -316,7 +320,7 @@ export default function MediaPicker({
                         <video
                           className="mp-video-preview"
                           src={asset.publicUrl}
-                          poster={asset.thumbnailUrl || undefined}
+                          poster={videoPoster(asset)}
                           autoPlay={hoveredId === asset.id}
                           muted
                           loop

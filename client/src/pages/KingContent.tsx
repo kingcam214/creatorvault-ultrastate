@@ -6,6 +6,11 @@ import { CreatorVaultRoute } from "@/lib/productArchitecture";
 import MediaPicker, { MediaAssetItem } from "@/components/MediaPicker";
 import { trpc } from "@/lib/trpc";
 
+function videoPoster(asset: MediaAssetItem) {
+  const candidate = asset.thumbnailUrl ?? "";
+  return /\.(avif|gif|jpe?g|png|webp)(?:$|[?#])/i.test(candidate) ? candidate : undefined;
+}
+
 export default function KingContent() {
   const { user, isLoading } = useAuth();
   const isKingCamOwner = user?.id === 6 || user?.id === 33 || user?.role === "king" || user?.role === "admin";
@@ -505,7 +510,7 @@ export default function KingContent() {
                   <div key={asset.id} className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/5 p-3">
                     <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-black">
                       {(asset.assetType === "video" || asset.mimeType?.startsWith("video/")) && asset.publicUrl ? (
-                        <video src={asset.publicUrl} poster={asset.thumbnailUrl || undefined} muted playsInline preload="metadata" className="h-full w-full object-cover opacity-80" />
+                        <video src={asset.publicUrl} poster={videoPoster(asset)} muted playsInline preload="metadata" className="h-full w-full object-cover opacity-80" />
                       ) : asset.thumbnailUrl ? (
                         <img src={asset.thumbnailUrl} alt="" className="h-full w-full object-cover opacity-80" />
                       ) : (
