@@ -258,7 +258,6 @@ import OnboardingV2 from "./pages/OnboardingV2";
 import OperatorDashboard from "./pages/OperatorDashboard";
 import OwnerCockpit from "./pages/OwnerCockpit";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
-import PlatformWarRoom from "./pages/PlatformWarRoom";
 import PodcastStudio from "./pages/PodcastStudio";
 import PresentationBuilder from "./pages/PresentationBuilder";
 import PresentationEmpire from "./pages/PresentationEmpire";
@@ -552,7 +551,7 @@ function Router() {
       <Route path="/business-cards/editor/:cardId" component={CardEditor} />
       <Route path="/business-cards/ai-designer" component={AICardDesigner} />
       <Route path="/king/hollywood-ai" component={HollywoodReplacement} />
-          <Route path="/king/platform-war-room" component={PlatformWarRoom} />
+          <Route path="/king/platform-war-room">{() => { window.location.replace("/social-hub"); return null; }}</Route>
           <Route path="/king/empire-verticals">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/king/video-editor/:projectId"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-pay"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
