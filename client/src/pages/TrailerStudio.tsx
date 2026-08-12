@@ -5,7 +5,7 @@
  * ============================================================================
  */
 import { useState, useCallback, useEffect, ChangeEvent } from "react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { Upload, Loader2, Check, X, Download, Film, Music, ChevronRight, Flame, Plus, Sparkles, Zap, Camera, Image, Layers } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useVaultXLang, VaultXLangSwitcher } from "@/lib/vaultxI18n";
@@ -32,6 +32,8 @@ const VIBES = [
 ];
 
 export default function TrailerStudio() {
+  const search = useSearch();
+  const selectedVaultAssetId = new URLSearchParams(search).get("sourceAssetId");
   const [step, setStep] = useState<Step>("mode");
   const [mode, setMode] = useState<Mode>("original");
   const [clips, setClips] = useState<Clip[]>([]);
@@ -62,6 +64,10 @@ export default function TrailerStudio() {
   const templatesQ = (trpc as any).trailer.getTemplates.useQuery(undefined, { retry: false });
   const audioLibraryQ = (trpc as any).audioIntelligence.listAssets.useQuery();
   const createTrailerProjectMut = (trpc as any).mediaAssets.createTrailerProject.useMutation();
+  const selectedVaultSourceQ = (trpc as any).mediaAssets.list.useQuery(
+    { filter: "videos", limit: 120 },
+    { enabled: Boolean(selectedVaultAssetId), staleTime: 30_000 },
+  );
   const statusQ = (trpc as any).trailer.getStatus.useQuery({ jobId: jobId || "" }, { enabled: Boolean(jobId) && step === "building", refetchInterval: 3000, retry: false });
   const templates = templatesQ.data?.templates || [];
 
@@ -71,6 +77,17 @@ export default function TrailerStudio() {
     if (j.status === "succeeded" && j.outputUrl) { setOutputUrl(j.outputUrl); setStep("done"); toast.success("Your trailer is ready"); }
     else if (j.status === "failed") { toast.error(j.error || "Build failed"); setStep("fx"); }
   }, [statusQ.data]);
+
+  useEffect(() => {
+    if (!selectedVaultAssetId || selectedAssetIds.length > 0) return;
+    const media = Array.isArray(selectedVaultSourceQ.data) ? selectedVaultSourceQ.data as MediaAssetItem[] : [];
+    const selectedAsset = media.find((asset) => asset.id === selectedVaultAssetId && Boolean(asset.publicUrl));
+    if (!selectedAsset?.publicUrl) return;
+    setClips([{ src: selectedAsset.publicUrl, name: selectedAsset.originalName || selectedAsset.fileName }]);
+    setSelectedAssetIds([selectedAsset.id]);
+    setStep("clips");
+    toast.success("Your selected Vault source is ready for trailer direction.");
+  }, [selectedAssetIds.length, selectedVaultAssetId, selectedVaultSourceQ.data]);
 
   const upload = useCallback(async (file: File): Promise<string | null> => {
     setUploading(true); setUploadPct(0);
@@ -179,7 +196,7 @@ export default function TrailerStudio() {
                   {mode === "photo_cinematic" ? "Upload a photo — AI animates it into cinematic shots." :
                    mode === "ai_full_shoot" ? "Upload 1 clip or photo — AI generates all the shots." :
                    mode === "hybrid" ? "Upload 2–4 clips — AI generates shots from each for max variety." :
-                   "Upload your clips."}
+                   "Choose the real clips already saved in your CreatorVault."}
                 </p>
               </div>
             </div>
