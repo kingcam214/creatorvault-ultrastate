@@ -303,7 +303,6 @@ import University from "./pages/University";
 import VaultAnalytics from "./pages/VaultAnalytics";
 import VaultGuardian from "./pages/VaultGuardian";
 import VaultLiveSimple from "./pages/VaultLiveSimple";
-import VaultPay from "./pages/VaultPay";
 import VaultSpaceDashboard from "./pages/VaultSpaceDashboard";
 import VaultX from "./pages/VaultX";
 import VideoLab from "./pages/VideoLab";
@@ -588,7 +587,7 @@ function Router() {
           <Route path="/king/platform-war-room" component={PlatformWarRoom} />
           <Route path="/king/empire-verticals" component={EmpireVerticals} />
       <Route path={"/king/video-editor/:projectId"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
-      <Route path={"/vault-pay"} component={VaultPay} />
+      <Route path={"/vault-pay"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/hollywood-replacement"} component={HollywoodReplacement} />
       <Route path={"/proof-gate"} component={ProofGate} />
       <Route path={"/dominican"} component={DominicanSector} />
