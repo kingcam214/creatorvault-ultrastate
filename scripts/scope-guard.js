@@ -98,6 +98,7 @@ const ALLOWLISTS = {
     'client/src/pages/VaultX.tsx',
     'client/src/lib/homepageMediaRegistry.ts',
     'client/public/images/home/body-cinema-arch-hero-poster.jpg',
+    'client/public/images/home/luxury-gold-room-demo-poster.jpg',
     'scripts/scope-guard.js'
   ],
   'audio-intelligence': [
