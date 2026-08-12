@@ -362,7 +362,6 @@ import MotionFlyerAgent from "./pages/MotionFlyerAgent";
 import MusicCoverStudio from "./pages/MusicCoverStudio";
 import MusicLibraryAgent from "./pages/MusicLibraryAgent";
 import OAuthSocialCallback from "./pages/OAuthSocialCallback";
-import OpsStatusPage from "./pages/OpsStatusPage";
 import Podcasting from "./pages/Podcasting";
 import RealGPTDashboard from "./pages/RealGPTDashboard";
 import Shop from "./pages/Shop";
@@ -710,7 +709,7 @@ function Router() {
       <Route path="/music/cover-studio" component={MusicCoverStudio} />
       <Route path="/agents/music-library-agent" component={MusicLibraryAgent} />
       <Route path="/oauth/social/callback" component={OAuthSocialCallback} />
-      <Route path="/ops/status" component={OpsStatusPage} />
+      <Route path="/ops/status">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/podcasting-home" component={Podcasting} />
       <Route path="/realgpt/dashboard" component={RealGPTDashboard} />
       <Route path="/shop" component={Shop} />
