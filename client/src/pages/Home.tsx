@@ -2,7 +2,7 @@ import { ArrowUpRight, CheckCircle2, Play, ShieldCheck, Sparkles } from "lucide-
 import { Link } from "wouter";
 import { CreatorVaultRoute } from "@/lib/productArchitecture";
 import { HOMEPAGE_MEDIA } from "@/lib/homepageMediaRegistry";
-import { useState, type CSSProperties } from "react";
+import { type CSSProperties } from "react";
 
 function ShowcaseMotion({
   videoSrc,
@@ -19,33 +19,19 @@ function ShowcaseMotion({
   style?: CSSProperties;
   priority?: boolean;
 }) {
-  const [failed, setFailed] = useState(false);
-  const [ready, setReady] = useState(false);
-
   return (
     <div className={`relative overflow-hidden bg-[#090806] ${className}`} style={style} aria-label={alt}>
-      <img
-        src={posterSrc}
-        alt={alt}
+      <video
+        src={videoSrc}
+        poster={posterSrc}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload={priority ? "auto" : "metadata"}
         className="absolute inset-0 h-full w-full object-cover"
+        aria-hidden="true"
       />
-      {!failed && (
-        <video
-          src={videoSrc}
-          poster={posterSrc}
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload={priority ? "auto" : "metadata"}
-          onLoadedData={() => setReady(true)}
-          onCanPlay={() => setReady(true)}
-          onPlaying={() => setReady(true)}
-          onError={() => setFailed(true)}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${ready ? "opacity-100" : "opacity-0"}`}
-          aria-hidden="true"
-        />
-      )}
     </div>
   );
 }
@@ -69,24 +55,21 @@ const releaseMoves = [
 ];
 
 export default function Home() {
-  const showcase = HOMEPAGE_MEDIA.luxuryGoldRoomDemoSource;
+  const showcase = HOMEPAGE_MEDIA.kingcamHero;
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#080706] text-white selection:bg-[#f0d18a]/40">
       <section
-        className="relative isolate min-h-[100svh] overflow-hidden border-b border-white/10 bg-cover bg-center bg-no-repeat sm:bg-[position:center_38%]"
-        style={{ backgroundImage: `url(${showcase.fallbackAsset})` }}
+        className="relative isolate min-h-[100svh] overflow-hidden border-b border-white/10"
         aria-label="CreatorVault showcase hero"
       >
-        <div className="absolute inset-0 hidden sm:block">
-          <ShowcaseMotion
-            videoSrc={showcase.livePath}
-            posterSrc={showcase.fallbackAsset}
-            alt="CreatorVault-owned luxury editorial demonstration motion"
-            className="absolute inset-0"
-            priority
-          />
-        </div>
+        <ShowcaseMotion
+          videoSrc={showcase.livePath}
+          posterSrc={showcase.fallbackAsset}
+          alt="KingCam Clone full-body moving identity hero"
+          className="absolute inset-0"
+          priority
+        />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,4,3,.18)_0%,rgba(5,4,3,.04)_30%,rgba(5,4,3,.72)_88%,#080706_100%)]" />
         <div className="absolute inset-y-0 left-0 w-full bg-[radial-gradient(circle_at_16%_52%,rgba(0,0,0,.28),transparent_42%)]" />
 
@@ -134,12 +117,12 @@ export default function Home() {
         <div className="absolute right-[-8rem] top-[-10rem] h-[30rem] w-[30rem] rounded-full bg-[#c99547]/10 blur-[110px]" />
         <div className="relative mx-auto grid max-w-7xl gap-12 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-[.9fr_1.1fr] lg:items-end lg:px-12">
           <div className="max-w-lg">
-            <div className="text-xs font-black uppercase tracking-[0.25em] text-[#e8c87e]">CreatorVault / Visual direction</div>
-            <h2 className="mt-4 text-4xl font-black leading-[.92] tracking-[-.06em] sm:text-6xl">The visual has to carry the room before the tools even speak.</h2>
+            <div className="text-xs font-black uppercase tracking-[0.25em] text-[#e8c87e]">KingCam Clone / CreatorVault</div>
+            <h2 className="mt-4 text-4xl font-black leading-[.92] tracking-[-.06em] sm:text-6xl">The founder is not a poster. He is part of the world.</h2>
           </div>
           <div className="border-l border-[#e8c87e]/30 pl-6 sm:pl-8">
-            <div className="flex items-center gap-3 text-sm font-black text-[#f5ddb0]"><CheckCircle2 className="h-5 w-5" /> CreatorVault-owned demonstration visual</div>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">This is a first-party editorial visual reference—not a creator result, not a color treatment, and not a shortcut presented as creation.</p>
+            <div className="flex items-center gap-3 text-sm font-black text-[#f5ddb0]"><CheckCircle2 className="h-5 w-5" /> Full-body moving clone identity</div>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">KingCam&apos;s clone stays in motion at the entrance. The rest of CreatorVault is built to turn creator-owned media into releases with the same kind of presence.</p>
           </div>
         </div>
       </section>
