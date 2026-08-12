@@ -236,7 +236,6 @@ import InfluencerDashboard from "./pages/InfluencerDashboard";
 import InfluencerOnboarding from "./pages/InfluencerOnboarding";
 import JoinVaultLive from "./pages/JoinVaultLive";
 import KingCamCommandCenter from "./pages/KingCamCommandCenter";
-import KingCamEmpireMap3D from "./pages/KingCamEmpireMap3D";
 import KingCamScriptWriter from "./pages/KingCamScriptWriter";
 import KingConnectSocials from "./pages/KingConnectSocials";
 import KingContent from "./pages/KingContent";
@@ -546,7 +545,7 @@ function Router() {
       <Route path={"/king/backoffice"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/king/command-center" component={KingCamCommandCenter} />
       <Route path="/king/episodes-3d">{() => { window.location.replace("/king/content"); return null; }}</Route>
-      <Route path="/king/empire-3d" component={KingCamEmpireMap3D} />
+      <Route path="/king/empire-3d">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/king/connect-socials" component={KingConnectSocials} />
       <Route path="/king/vault-remix">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/king/empire" component={KingEmpire} />
