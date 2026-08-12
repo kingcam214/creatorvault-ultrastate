@@ -235,7 +235,6 @@ import ImageLab from "./pages/ImageLab";
 import InfluencerDashboard from "./pages/InfluencerDashboard";
 import InfluencerOnboarding from "./pages/InfluencerOnboarding";
 import JoinVaultLive from "./pages/JoinVaultLive";
-import KingBackOffice from "./pages/KingBackOffice";
 import KingCamCommandCenter from "./pages/KingCamCommandCenter";
 import KingCamEmpireMap3D from "./pages/KingCamEmpireMap3D";
 import KingCamEpisodeTheater3D from "./pages/KingCamEpisodeTheater3D";
@@ -545,7 +544,7 @@ function Router() {
       <Route path={"/presentation-builder"} component={PresentationBuilder} />
       <Route path="/king/telegram-hub" component={TelegramMoneyHub} />
       <Route path="/telegram-hub" component={TelegramMoneyHub} />
-      <Route path={"/king/backoffice"} component={KingBackOffice} />
+      <Route path={"/king/backoffice"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/king/command-center" component={KingCamCommandCenter} />
       <Route path="/king/episodes-3d" component={KingCamEpisodeTheater3D} />
       <Route path="/king/empire-3d" component={KingCamEmpireMap3D} />
