@@ -247,7 +247,6 @@ import KingEmpire from "./pages/KingEmpire";
 import KingLife from "./pages/KingLife";
 import KingMoneyMission from "./pages/KingMoneyMission";
 import KingUsers from "./pages/KingUsers";
-import KingVideoLab from "./pages/KingVideoLab";
 import KingWaitlist from "./pages/KingWaitlist";
 import LeadCapture from "./pages/LeadCapture";
 import MarkCubanAgent from "./pages/MarkCubanAgent";
@@ -627,7 +626,7 @@ function Router() {
       <Route path={"/greatest-show/subscribe"} component={FanSubscription} />
       <Route path={"/king/flyer-generator"} component={FlyerGenerator} />
       <Route path={"/king/flyer-design-studio"} component={FlyerDesignStudio} />
-      <Route path={"/king/video-lab"} component={KingVideoLab} />
+      <Route path={"/king/video-lab"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
       <Route path={"/king/analytics"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/king/content"} component={KingContent} />
       <Route path={"/king/waitlist"} component={KingWaitlist} />
