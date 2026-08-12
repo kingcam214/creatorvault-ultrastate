@@ -394,8 +394,10 @@ async function runRender(job: RenderJob, req: RenderRequest): Promise<void> {
         // Per-clip speed ramp
         const speed = clip.speed != null ? Math.max(0.05, Math.min(32, clip.speed)) : 1.0;
         if (speed !== 1.0) {
+          // Keep every source frame intact. Temporal averaging looked smooth on
+          // paper but visibly softened bodies and created ghost contours in the
+          // measured showcase proof; timing alone preserves natural detail.
           filters.push(`setpts=${(1/speed).toFixed(4)}*PTS`);
-          if (speed < 1.0) filters.push("tblend=all_mode=average"); // motion blur for slow-mo
         }
         // Per-clip caption
         if (clip.caption) filters.push(captionFilter(clip.caption, clip.captionStyle || "lower_third", W, H, req.animatedCaptions));
