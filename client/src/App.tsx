@@ -250,7 +250,6 @@ import KingCamCommandCenter from "./pages/KingCamCommandCenter";
 import KingCamEmpireMap3D from "./pages/KingCamEmpireMap3D";
 import KingCamEpisodeTheater3D from "./pages/KingCamEpisodeTheater3D";
 import KingCamScriptWriter from "./pages/KingCamScriptWriter";
-import KingCamShowcase from "./pages/KingCamShowcase";
 import KingCamShowreel from "./pages/KingCamShowreel";
 import KingCamTours from "./pages/KingCamTours";
 import KingConnectSocials from "./pages/KingConnectSocials";
@@ -702,7 +701,7 @@ function Router() {
       <Route path={"/kingcam-clone"}>{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
       <Route path={"/kingcam-demos"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/kingcam-tours"} component={KingCamTours} />
-      <Route path={"/kingcam-showcase"} component={KingCamShowcase} />
+      <Route path={"/kingcam-showcase"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/smart-album"} component={SmartAlbum} />
       <Route path={"/vault-snap"} component={VaultSnap} />
       <Route path={"/vault-pass"} component={VaultPass} />
