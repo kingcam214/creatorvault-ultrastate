@@ -239,7 +239,6 @@ import KingCamCommandCenter from "./pages/KingCamCommandCenter";
 import KingCamScriptWriter from "./pages/KingCamScriptWriter";
 import KingConnectSocials from "./pages/KingConnectSocials";
 import KingContent from "./pages/KingContent";
-import KingEmmaOversight from "./pages/KingEmmaOversight";
 import KingEmpire from "./pages/KingEmpire";
 import KingLife from "./pages/KingLife";
 import KingMoneyMission from "./pages/KingMoneyMission";
@@ -553,7 +552,7 @@ function Router() {
       <Route path="/king/life" component={KingLife} />
       <Route path="/agents" component={AgentRoster} />
       <Route path="/hire" component={AgentRoster} />
-      <Route path={"/king/emma"} component={KingEmmaOversight} />
+      <Route path={"/king/emma"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/king/video-editor"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/king/script-director" component={ScriptDirectorPage} />
           <Route path="/king/import">{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
@@ -638,7 +637,6 @@ function Router() {
       <Route path={"/emma-ai-agents"} component={EmmaAIAgentDashboard} />
       <Route path={"/empire-brain-showrunner"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/apparel-lab"} component={ApparelLab} />
-      <Route path={"/king/emma"} component={EmmaNetworkHome} />
       <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} />
       <Route path={"/real-estate-empire"} component={RealEstateEmpire} />
       <Route path={"/viral-optimizer"} component={ViralOptimizerPage} />
