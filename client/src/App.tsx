@@ -305,7 +305,6 @@ import VaultCulture from "./pages/VaultCulture";
 import VaultGuardian from "./pages/VaultGuardian";
 import VaultLiveSimple from "./pages/VaultLiveSimple";
 import VaultMoment from "./pages/VaultMoment";
-import VaultPass from "./pages/VaultPass";
 import VaultPay from "./pages/VaultPay";
 import VaultRemix from "./pages/VaultRemix";
 import VaultRise from "./pages/VaultRise";
@@ -695,7 +694,7 @@ function Router() {
       <Route path={"/kingcam-showcase"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/smart-album"} component={SmartAlbum} />
       <Route path={"/vault-snap"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
-      <Route path={"/vault-pass"} component={VaultPass} />
+      <Route path={"/vault-pass"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-drop"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-analytics"} component={VaultAnalytics} />
        <Route path={"/vaultspace-dashboard"} component={VaultSpaceDashboard} />
