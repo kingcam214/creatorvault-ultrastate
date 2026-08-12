@@ -224,7 +224,6 @@ import HollywoodReplacement from "./pages/HollywoodReplacement";
 import HollywoodShow from "./pages/HollywoodShow";
 import HollywoodShows from "./pages/HollywoodShows";
 import HollywoodStudio from "./pages/HollywoodStudio";
-import ImageLab from "./pages/ImageLab";
 import InfluencerDashboard from "./pages/InfluencerDashboard";
 import InfluencerOnboarding from "./pages/InfluencerOnboarding";
 import JoinVaultLive from "./pages/JoinVaultLive";
@@ -437,7 +436,7 @@ function Router() {
       <Route path={"/operator"} component={OperatorDashboard} />
       <Route path={"/flyer-generator"} component={FlyerGenerator} />
       <Route path={"/animated-flyer-studio"} component={AnimatedFlyerStudio} />
-      <Route path={"/image-lab"} component={ImageLab} />
+      <Route path={"/image-lab"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/flyer-composer"} component={FlyerComposer} />
       <Route path={"/flyer-design-studio"} component={FlyerDesignStudio} />
       <Route path={"/dayshift-doctor"} component={DayShiftDoctor} />
