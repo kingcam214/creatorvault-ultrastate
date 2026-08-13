@@ -309,7 +309,6 @@ import AIChatter from "./pages/AIChatter";
 import SpatialComposer from "./pages/SpatialComposer";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import TestCheckout from "./pages/TestCheckout";
-import UniversityEnrollSuccess from "./pages/UniversityEnrollSuccess";
 import VaultLiveControlRoom from "./pages/VaultLiveControlRoom";
 import VaultLiveStream from "./pages/VaultLiveStream";
 import VaultMarket from "./pages/VaultMarket";
@@ -650,7 +649,7 @@ function Router() {
       <Route path="/tools/spatial-composer" component={SpatialComposer} />
       <Route path="/subscription/success" component={SubscriptionSuccess} />
       <Route path="/_dev/test-checkout" component={TestCheckout} />
-      <Route path="/university/enroll-success" component={UniversityEnrollSuccess} />
+      <Route path="/university/enroll-success">{() => { window.location.replace("/university"); return null; }}</Route>
       <Route path="/vault/cut">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/vaultlive/control-room" component={VaultLiveControlRoom} />
       <Route path="/vaultlive/stream" component={VaultLiveStream} />
