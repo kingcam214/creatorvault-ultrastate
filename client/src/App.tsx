@@ -224,7 +224,6 @@ import MonetizationPipeline from "./pages/MonetizationPipeline";
 import MySubscriptions from "./pages/MySubscriptions";
 import NFCCards from "./pages/NFCCards";
 import Notifications from "./pages/Notifications";
-import NurseConsole from "./pages/NurseConsole";
 import OnboardingV2 from "./pages/OnboardingV2";
 import OperatorDashboard from "./pages/OperatorDashboard";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
@@ -408,7 +407,7 @@ function Router() {
       <Route path={"/flyer-composer"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/flyer-design-studio"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/dayshift-doctor"} component={DayShiftDoctor} />
-      <Route path={"/nurse"} component={NurseConsole} />
+      <Route path={"/nurse"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/design-department"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/whatsapp-content"} component={WhatsAppContentGenerator} />
       <Route path={"/king/whatsapp-bot"} component={WhatsAppBotDashboard} />
