@@ -64,7 +64,6 @@ import OwnerControl from "./pages/OwnerControl";
 import OwnerStatus from "./pages/OwnerStatus";
 import CreatorVideoStudio from "./pages/CreatorVideoStudio";
 // import VideoStudio from './pages/VideoStudio';
-import AdultSalesBot from "./pages/AdultSalesBot";
 // import CreatorManagement from "./pages/CreatorManagement";
 // import Onboard from "./pages/Onboard";
 // // import { MultiPlatformPosting } from "./pages/MultiPlatformPosting"; // MERGED into SocialHub
@@ -445,7 +444,7 @@ function Router() {
        <Route path={"/creator-analytics"} component={CreatorAnalyticsDashboard} />
       <Route path={"/tools/viral-optimizer"} component={ViralOptimizer} />
       <Route path={"/ai-bot"} component={AIBot} />
-      <Route path={"/adult-sales-bot"} component={AdultSalesBot} />
+      <Route path={"/adult-sales-bot"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/creator-management"} component={CreatorManagement} />
       <Route path={"/command-hub"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/command-center"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
