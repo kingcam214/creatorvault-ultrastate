@@ -9,6 +9,10 @@ function isVideo(asset: MediaAssetItem) {
   return asset.assetType === "video" || Boolean(asset.mimeType?.startsWith("video/"));
 }
 
+function isPlayableCloneUrl(url?: string | null) {
+  return Boolean(url) && !/^https:\/\/replicate\.delivery\//i.test(String(url));
+}
+
 function videoPoster(asset: MediaAssetItem) {
   const candidate = asset.thumbnailUrl ?? "";
   return /\.(avif|gif|jpe?g|png|webp)(?:$|[?#])/i.test(candidate) ? candidate : undefined;
@@ -30,8 +34,8 @@ export default function CloneEmpire() {
   const selectedIdentitySource = media.find((asset) => asset.id === sourceAssetId) || null;
   const cloneMedia = useMemo(() => {
     const legacy = Array.isArray(cloneContentQuery.data?.items) ? cloneContentQuery.data.items : [];
-    const vault = media.filter((asset) => isVideo(asset) && Boolean(asset.publicUrl) && /kingcam|clone/i.test(`${asset.originalName || ""} ${asset.fileName || ""}`));
-    const legacyItems = legacy.filter((item: any) => Boolean(item.video_url)).map((item: any) => ({ id: `clone:${item.id}`, title: item.title || item.context || "KingCam clone motion", url: item.video_url as string, poster: item.thumbnail_url as string | null, createdAt: item.created_at as string | null }));
+    const vault = media.filter((asset) => isVideo(asset) && isPlayableCloneUrl(asset.publicUrl) && /kingcam|clone/i.test(`${asset.originalName || ""} ${asset.fileName || ""}`));
+    const legacyItems = legacy.filter((item: any) => isPlayableCloneUrl(item.video_url)).map((item: any) => ({ id: `clone:${item.id}`, title: item.title || item.context || "KingCam clone motion", url: item.video_url as string, poster: item.thumbnail_url as string | null, createdAt: item.created_at as string | null }));
     const vaultItems = vault.map((asset) => ({ id: asset.id, title: asset.originalName || asset.fileName, url: asset.publicUrl!, poster: videoPoster(asset), createdAt: asset.createdAt || null }));
     return [...vaultItems, ...legacyItems].filter((item, index, all) => all.findIndex((candidate) => candidate.url === item.url) === index).slice(0, 9);
   }, [cloneContentQuery.data?.items, media]);
