@@ -113,6 +113,11 @@ const REQUEST_TIMEOUT_MS = 12_000;
 
 // These routes are verified against Pollo's official OpenAPI reference. They use the
 // exact CreatorVault source video as a typed video reference and support 6s, 720p, 9:16.
+const REJECTED_SOURCE_VIDEO_MODELS = new Map<string, string>([
+  ["bytedance/seedance-2-5", "Rejected after Body Cinema quality review: the result did not meet source-preservation and motion-quality standards."],
+  ["kling-ai/kling-v3-omni", "Rejected after Body Cinema quality review: the result did not meet source-preservation and motion-quality standards."],
+]);
+
 const CONTROLLED_SOURCE_VIDEO_LADDER = [
   {
     rank: 1,
@@ -679,8 +684,14 @@ export async function preflightBodyCinemaSourceVideo(input: {
     .filter((model) => model.supportsSourceVideoReference)
     .map((model) => model.modelKey));
   const memory = await getControlledModelAccessMemory(input.creatorId);
+  const rejectedCandidates = CONTROLLED_SOURCE_VIDEO_LADDER
+    .filter((candidate) => REJECTED_SOURCE_VIDEO_MODELS.has(candidate.modelKey));
+  if (rejectedCandidates.length) {
+    blockingReasons.push(`Recorded Body Cinema quality rejection blocks: ${rejectedCandidates.map((candidate) => candidate.modelKey).join(", ")}.`);
+  }
   const candidates: ControlledSourceVideoCandidate[] = CONTROLLED_SOURCE_VIDEO_LADDER
     .filter((candidate) => catalogKeys.has(candidate.modelKey))
+    .filter((candidate) => !REJECTED_SOURCE_VIDEO_MODELS.has(candidate.modelKey))
     .map((candidate) => {
       const learning = memory.get(candidate.modelKey);
       const accessState = String(learning?.access_state || "unknown") as ControlledModelAccessState;
@@ -696,7 +707,7 @@ export async function preflightBodyCinemaSourceVideo(input: {
       };
     })
     .filter((candidate) => candidate.accountAccess !== "unavailable");
-  if (!candidates.length) blockingReasons.push("All schema-compatible source-video models are absent from the official catalog or already recorded as unavailable for this API key.");
+  if (!candidates.length) blockingReasons.push("No schema-compatible source-video model remains eligible after account-access and Body Cinema quality-rejection controls.");
 
   return {
     evidenceId: evidenceContext.evidence.id,
