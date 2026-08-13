@@ -171,6 +171,7 @@ const ALLOWLISTS = {
     'client/src/pages/KingCamScriptWriter.tsx',
     'client/src/pages/Dashboard.tsx',
     'client/src/pages/CreatorVideoStudio.tsx',
+    'client/src/pages/CreatorManagement.tsx',
     'client/src/pages/CloneEmpire.tsx',
     'client/src/pages/DubbingAI.tsx',
     'client/src/pages/SocialHub.tsx',

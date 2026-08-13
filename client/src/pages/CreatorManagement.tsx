@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { Users, Search, Filter, UserCheck, UserX, DollarSign, TrendingUp, Mail } from "lucide-react";
+import { Users, Search, Filter, UserCheck, UserX, DollarSign } from "lucide-react";
 
 export default function CreatorManagement() {
   const [search, setSearch] = useState("");
@@ -23,12 +23,11 @@ export default function CreatorManagement() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-6">
           {[
             { label: "Total Users", value: users?.length || 0, icon: Users, color: "text-blue-400" },
             { label: "Creators", value: users?.filter((u: any) => u.role === "creator").length || 0, icon: UserCheck, color: "text-green-400" },
             { label: "Admins", value: users?.filter((u: any) => u.role === "admin" || u.role === "owner").length || 0, icon: UserX, color: "text-purple-400" },
-            { label: "Active", value: users?.length || 0, icon: TrendingUp, color: "text-yellow-400" },
           ].map(s => (
             <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
               <s.icon className={`w-5 h-5 ${s.color} mb-2`} />
@@ -60,7 +59,6 @@ export default function CreatorManagement() {
                 <th className="text-left px-4 py-3">User</th>
                 <th className="text-left px-4 py-3">Role</th>
                 <th className="text-left px-4 py-3">Joined</th>
-                <th className="text-left px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -83,11 +81,6 @@ export default function CreatorManagement() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-sm">{user.created_at ? new Date(user.created_at).toLocaleDateString() : "—"}</td>
-                  <td className="px-4 py-3">
-                    <button className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-colors flex items-center gap-1">
-                      <Mail className="w-3 h-3" /> Message
-                    </button>
-                  </td>
                 </tr>
               ))}
             </tbody>
