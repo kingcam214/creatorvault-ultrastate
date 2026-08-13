@@ -183,7 +183,6 @@ import CreatorManagement from "./pages/CreatorManagement";
 import CreatorPublicTiers from "./pages/CreatorPublicTiers";
 import CreatorSubscriptionTiers from "./pages/CreatorSubscriptionTiers";
 import CreatorSubscriptions from "./pages/CreatorSubscriptions";
-import CreatorToolbox from "./pages/CreatorToolbox";
 import CreatorVaultDominicana from "./pages/CreatorVaultDominicana";
 import CultureSelection from "./pages/CultureSelection";
 import DayShiftDoctor from "./pages/DayShiftDoctor";
@@ -442,8 +441,8 @@ function Router() {
       <Route path={"/my-subscriptions"} component={MySubscriptions} />
       <Route path={"/creator"} component={CreatorDashboard} />
       <Route path={"/creator/tools"} component={CreatorTools} />
-      <Route path={"/creator/toolbox"} component={CreatorToolbox} />
-      <Route path={"/creator-toolbox"} component={CreatorToolbox} />
+      <Route path={"/creator/toolbox"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
+      <Route path={"/creator-toolbox"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/video-studio"} component={CreatorVideoStudio} />
       <Route path={"/creator/subscriptions"} component={CreatorSubscriptions} />
       <Route path={"/creator/earnings"} component={CreatorEarnings} />
