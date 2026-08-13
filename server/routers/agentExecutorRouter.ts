@@ -174,6 +174,87 @@ export const agentExecutorRouter = router({
       return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
     }),
 
+  runCloneIdentityGuardianTruth: ownerProcedure
+    .mutation(async ({ ctx }) => {
+      const startedAt = new Date();
+      const safeRows = async (query: any): Promise<any[]> => {
+        try {
+          return rowsFromExecute(await db.db.execute(query));
+        } catch {
+          return [];
+        }
+      };
+      const [profileRows, playableRows, renderRows, trainingRows] = await Promise.all([
+        safeRows(sql`
+          SELECT id, voice_id, speaking_style, tone_guidelines, signature_intro, signature_outro, updated_at
+          FROM kingcam_clone_profile
+          ORDER BY id ASC LIMIT 1
+        `),
+        safeRows(sql`
+          SELECT COUNT(*) AS playableVideos, COALESCE(SUM(duration_seconds), 0) AS playableDurationSeconds
+          FROM kingcam_clone_videos
+          WHERE render_status = 'ready'
+            AND video_url IS NOT NULL
+            AND video_url <> ''
+            AND video_url NOT LIKE 'https://replicate.delivery/%'
+        `),
+        safeRows(sql`
+          SELECT render_status, render_provider, COUNT(*) AS count
+          FROM kingcam_clone_videos
+          GROUP BY render_status, render_provider
+        `),
+        safeRows(sql`
+          SELECT status, COUNT(*) AS count, MAX(created_at) AS latestRecordedAt
+          FROM clone_training_jobs
+          GROUP BY status
+        `),
+      ]);
+      const profile = profileRows[0] || null;
+      const playable = playableRows[0] || {};
+      const snapshot = {
+        source: "creatorvault_clone_factory",
+        profile: profile ? {
+          configured: Boolean(profile.voice_id || profile.speaking_style || profile.tone_guidelines),
+          hasVoiceReference: Boolean(profile.voice_id),
+          hasSpeakingDirection: Boolean(profile.speaking_style || profile.tone_guidelines),
+          hasSignatureLanguage: Boolean(profile.signature_intro || profile.signature_outro),
+          lastUpdatedAt: profile.updated_at || null,
+        } : {
+          configured: false,
+          hasVoiceReference: false,
+          hasSpeakingDirection: false,
+          hasSignatureLanguage: false,
+          lastUpdatedAt: null,
+        },
+        media: {
+          playableVideos: Number(playable.playableVideos ?? 0),
+          playableDurationSeconds: Number(playable.playableDurationSeconds ?? 0),
+          renderStates: renderRows.map((row: any) => ({
+            status: String(row.render_status), provider: row.render_provider ? String(row.render_provider) : null, count: Number(row.count ?? 0),
+          })),
+        },
+        training: trainingRows.map((row: any) => ({
+          status: String(row.status), count: Number(row.count ?? 0), latestRecordedAt: row.latestRecordedAt || null,
+        })),
+      };
+      const receiptId = await recordAgentActionReceipt({
+        agentSlug: "clone-identity-guardian",
+        agentName: "Clone Identity Guardian",
+        agentCategory: "clone",
+        taskType: "clone_identity_truth_snapshot",
+        action: "read_clone_profile_playable_media_and_training_records",
+        status: "success",
+        outcomeSummary: `Read KingCam Clone truth: ${snapshot.media.playableVideos} playable videos, ${snapshot.training.reduce((sum, item) => sum + item.count, 0)} training records, and ${snapshot.profile.configured ? "a configured identity profile" : "no configured identity profile"}.`,
+        evidence: { requestedByUserId: ctx.user.id, ...snapshot },
+        artifacts: { snapshot },
+        revenueGenerated: 0,
+        startedAt,
+        finishedAt: new Date(),
+      });
+      await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'clone-identity-guardian'`);
+      return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
+    }),
+
   runPerformanceIntelligenceTruth: ownerProcedure
     .mutation(async ({ ctx }) => {
       const startedAt = new Date();
