@@ -181,7 +181,6 @@ import EmmaEmpire from "./pages/EmmaEmpire";
 import EmmaHome from "./pages/EmmaHome";
 import EmmaNetworkHome from "./pages/EmmaNetworkHome";
 import EmmaResetDashboard from "./pages/EmmaResetDashboard";
-import EmmaUniversity from "./pages/EmmaUniversity";
 import EpisodeDetailPage from "./pages/EpisodeDetailPage";
 import Explore from "./pages/Explore";
 import FanSubscribe from "./pages/FanSubscribe";
@@ -411,7 +410,7 @@ function Router() {
       <Route path={"/learn"}>{() => { window.location.replace("/"); return null; }}</Route>
       <Route path={"/king/script-writer"} component={KingCamScriptWriter} />
       <Route path={"/king/engine"}>{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
-      <Route path={"/emma-university"} component={EmmaUniversity} />
+      <Route path={"/emma-university"}>{() => { window.location.replace("/emma/network"); return null; }}</Route>
       <Route path={"/services"} component={Services} />
       <Route path={"/creator/subscription-tiers"} component={CreatorSubscriptionTiers} />
       <Route path={"/creator/:creatorId/protected-demo"} component={ProtectedContentDemo} />
