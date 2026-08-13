@@ -210,7 +210,6 @@ import Messages from "./pages/Messages";
 import OperatorDashboard from "./pages/OperatorDashboard";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
 import PublicProfile from "./pages/PublicProfile";
-import RealEstateEmpire from "./pages/RealEstateEmpire";
 import ScriptDirectorPage from "./pages/scripttovideo/ScriptDirectorPage";
 import Services from "./pages/Services";
 import ShowPage from "./pages/ShowPage";
@@ -556,7 +555,7 @@ function Router() {
       <Route path={"/empire-brain-showrunner"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/apparel-lab"} component={ApparelLab} />
       <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} />
-      <Route path={"/real-estate-empire"} component={RealEstateEmpire} />
+      <Route path={"/real-estate-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/viral-optimizer"}>{() => { window.location.replace("/social-hub"); return null; }}</Route>
       <Route path={"/vertical-pack"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/brand-deals"} component={BrandDeals} />
