@@ -484,11 +484,16 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
 
 // Public media may not include historic Assembly/Body Cinema outputs that relied on
 // the now-prohibited FFmpeg creative-effect path. They remain internal evidence only.
-export function isPublicHomepageEligible(asset: HomepageMediaAsset): boolean {
+// This is the single public-proof authority for homepage showcase selection.
+export function hasCertifiedPublicProof(asset: HomepageMediaAsset): boolean {
   return asset.publicSafeStatus === "approved"
     && asset.workingStatus === "ready"
-    && asset.mediaKind === "motion"
+    && asset.proofStatus === "watchable-platform-visual"
     && (asset.publicProofEligibility === "legacy_verified_campaign" || asset.publicProofEligibility === "owner_certified_public_proof");
+}
+
+export function isPublicHomepageEligible(asset: HomepageMediaAsset): boolean {
+  return asset.mediaKind === "motion" && hasCertifiedPublicProof(asset);
 }
 
 export const HOMEPAGE_MEDIA_SEQUENCE = [
