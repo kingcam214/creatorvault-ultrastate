@@ -299,7 +299,6 @@ import ChicaFunnelManager from "./pages/ChicaFunnelManager";
 import CloneEmpire from "./pages/CloneEmpire";
 import ComponentShowcase from "./pages/ComponentShowcase";
 import CreatorProfilePage from "./pages/CreatorProfilePage";
-import CreatorVaultAyiti from "./pages/CreatorVaultAyiti";
 import DelbaniaPanel from "./pages/DelbaniaPanel";
 import Demos from "./pages/Demos";
 import EmmaReset from "./pages/EmmaReset";
@@ -642,7 +641,7 @@ function Router() {
       <Route path="/clone/render-studio">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
       <Route path="/_dev/components" component={ComponentShowcase} />
       <Route path="/creator/profile-page" component={CreatorProfilePage} />
-      <Route path="/vault-ayiti" component={CreatorVaultAyiti} />
+      <Route path="/vault-ayiti">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/mi-panel/delbania-panel" component={DelbaniaPanel} />
       <Route path="/demos-home" component={Demos} />
       <Route path="/emma/reset-home" component={EmmaReset} />
