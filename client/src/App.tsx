@@ -59,7 +59,6 @@ import AppHeader from "./components/AppHeader";
 // import EmmaUniversity from "./pages/EmmaUniversity";
 import EmmaTransparencyLog from "./pages/EmmaTransparencyLog";
 // import Services from "./pages/Services";
-import CreatorDashboard from "./pages/CreatorDashboard";
 import AIBot from "./pages/AIBot";
 import OwnerControl from "./pages/OwnerControl";
 import OwnerStatus from "./pages/OwnerStatus";
@@ -435,7 +434,7 @@ function Router() {
       <Route path={"/creator/:creatorId/tiers"} component={CreatorPublicTiers} />
       <Route path={"/creator/:creatorId/protected-demo"} component={ProtectedContentDemo} />
       <Route path={"/my-subscriptions"} component={MySubscriptions} />
-      <Route path={"/creator"} component={CreatorDashboard} />
+      <Route path={"/creator"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/tools"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/toolbox"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator-toolbox"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
