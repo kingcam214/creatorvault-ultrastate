@@ -443,7 +443,7 @@ export const agentExecutorRouter = router({
           return { available: false, rows: [] };
         }
       };
-      const [packageRead, distributionRead, nativePostRead, audienceRead, conversationRead, moneyRead] = await Promise.all([
+      const [packageRead, distributionRead, nativePostRead, audienceRead, conversationSchemaRead, moneyRead] = await Promise.all([
         safeRows(sql`
           SELECT state, approval_state, COUNT(*) AS count
           FROM social_packages
@@ -469,9 +469,10 @@ export const agentExecutorRouter = router({
             (SELECT COUNT(*) FROM subscriptions WHERE creator_id = ${creatorId} AND status = 'active') AS activeSubscribers
         `),
         safeRows(sql`
-          SELECT COUNT(*) AS conversations
-          FROM conversations
-          WHERE creator_id = ${creatorId}
+          SELECT COLUMN_NAME AS columnName
+          FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'conversations'
+          ORDER BY ORDINAL_POSITION ASC
         `),
         safeRows(sql`
           SELECT COALESCE(SUM(creator_share_in_cents), 0) AS creatorEarningsCents,
@@ -480,6 +481,17 @@ export const agentExecutorRouter = router({
           WHERE creator_id = ${creatorId} AND status = 'completed'
         `),
       ]);
+      const conversationColumns = conversationSchemaRead.rows
+        .map((row: any) => String(row.columnName || ""))
+        .filter(Boolean);
+      const hasCanonicalConversationOwner = conversationColumns.includes("creator_id");
+      const conversationRead = hasCanonicalConversationOwner
+        ? await safeRows(sql`
+            SELECT COUNT(*) AS conversations
+            FROM conversations
+            WHERE creator_id = ${creatorId}
+          `)
+        : { available: false, rows: [] };
       const audience = audienceRead.rows[0] || {};
       const conversations = conversationRead.rows[0] || {};
       const money = moneyRead.rows[0] || {};
@@ -493,6 +505,13 @@ export const agentExecutorRouter = router({
           audience: audienceRead.available ? "available" : "unavailable",
           conversations: conversationRead.available ? "available" : "unavailable",
           money: moneyRead.available ? "available" : "unavailable",
+        },
+        conversationContract: {
+          expectedOwnerColumn: "creator_id",
+          observedColumns: conversationColumns,
+          state: conversationSchemaRead.available
+            ? (hasCanonicalConversationOwner ? "canonical_owner_available" : "canonical_owner_missing")
+            : "schema_read_unavailable",
         },
         packages: packageRead.rows.map((row: any) => ({
           state: String(row.state), approvalState: String(row.approval_state), count: Number(row.count ?? 0),
