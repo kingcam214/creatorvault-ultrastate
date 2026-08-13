@@ -502,6 +502,13 @@ async function renderBodyCinemaArtifacts(input: {
   platforms: string[];
   durationSeconds: number;
 }): Promise<{ renderedOutputUrl: string; teaserUrl: string; thumbnailUrl: string; platformExports: any[]; renderMeta: any }> {
+  // CreatorVault law: FFmpeg may inspect, transcode, or package media, but it may
+  // never manufacture Body Cinema treatments through filters, text overlays, crops,
+  // color changes, or simulated camera motion. This legacy lane remains auditable,
+  // but is permanently default-denied until an approved source-preserving creation
+  // lane provides the finished watchable result.
+  throw new Error("CREATIVE_FFMPEG_BODY_CINEMA_DISABLED");
+
   const renderDir = path.join(PUBLIC_UPLOADS_DIR, "body-cinema", String(input.creatorId), input.collectionId);
   fs.mkdirSync(renderDir, { recursive: true });
   const sourcePath = await resolveBodyCinemaSource(input.sourceUrl, renderDir);
@@ -6156,9 +6163,15 @@ Generate body-focused captions and return ONLY valid JSON:
           durationSeconds: productionPlan.remotionComposition.totalDuration,
         });
       } catch (error: any) {
+        if (String(error?.message || error) === "CREATIVE_FFMPEG_BODY_CINEMA_DISABLED") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "This Body Cinema treatment is held until an approved source-preserving creation lane is ready. CreatorVault will not create it with basic effects.",
+          });
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Body Cinema FFmpeg render failed: ${error?.message || String(error)}`,
+          message: "This Body Cinema treatment could not be prepared. Your source remains safely in your Vault.",
         });
       }
       productionPlan.renderedOutputUrl = renderResult.renderedOutputUrl;
