@@ -406,6 +406,7 @@ function Router() {
       <Route path={"/onboard/influencer"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/onboard/creator"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/influencer"} component={InfluencerDashboard} />
+      <Route path="/social" component={SocialHub} />
       <Route path="/social-hub" component={SocialHub} />
       <Route path="/social-audit" component={SocialHub} />
       <Route path="/social-autoposter" component={SocialHub} />
