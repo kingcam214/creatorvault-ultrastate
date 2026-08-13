@@ -198,7 +198,6 @@ import KingContent from "./pages/KingContent";
 import KingMoneyMission from "./pages/KingMoneyMission";
 import KingUsers from "./pages/KingUsers";
 import KingWaitlist from "./pages/KingWaitlist";
-import LeadCapture from "./pages/LeadCapture";
 import MarkCubanAgent from "./pages/MarkCubanAgent";
 import Marketplace from "./pages/Marketplace";
 import MarketplaceAnalytics from "./pages/MarketplaceAnalytics";
@@ -394,7 +393,7 @@ function Router() {
       <Route path={"/studio-slots"} component={StudioSlots} />
       <Route path={"/content-dashboard"}>{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path={"/monetization"} component={MonetizationPipeline} />
-      <Route path={"/lead-capture"} component={LeadCapture} />
+      <Route path={"/lead-capture"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/analytics"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/marketplace"} component={Marketplace} />
       <Route path={"/marketplace/create"} component={MarketplaceCreate} />
