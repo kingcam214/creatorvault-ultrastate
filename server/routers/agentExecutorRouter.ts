@@ -124,6 +124,54 @@ export const agentExecutorRouter = router({
       return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
     }),
 
+  runDevGuardianTruth: ownerProcedure
+    .mutation(async ({ ctx }) => {
+      const startedAt = new Date();
+      const releaseUrl = "https://creatorvault.live/__release";
+      const response = await fetch(releaseUrl, {
+        headers: { "Cache-Control": "no-cache" },
+        signal: AbortSignal.timeout(15_000),
+      });
+      const checkedAt = new Date();
+      if (!response.ok) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `CreatorVault public release check failed with HTTP ${response.status}.`,
+        });
+      }
+      const release = await response.json() as Record<string, unknown>;
+      const gitSha = typeof release.gitSha === "string" ? release.gitSha : null;
+      const deployedAt = typeof release.deployedAt === "string" ? release.deployedAt : null;
+      const snapshot = {
+        source: releaseUrl,
+        httpStatus: response.status,
+        latencyMs: checkedAt.getTime() - startedAt.getTime(),
+        gitSha,
+        deployedAt,
+        app: typeof release.app === "string" ? release.app : null,
+        environment: typeof release.environment === "string" ? release.environment : null,
+        governedMediaExecutionEnabled: release.governedMediaExecutionEnabled === true,
+        socialOutboundAutomationEnabled:
+          Boolean((release.socialEmpire as Record<string, unknown> | undefined)?.outboundAutomationEnabled),
+      };
+      const receiptId = await recordAgentActionReceipt({
+        agentSlug: "dev-guardian-agent",
+        agentName: "Dev Guardian Agent",
+        agentCategory: "infra",
+        taskType: "public_release_probe",
+        action: "read_public_release_metadata",
+        status: "success",
+        outcomeSummary: `Checked public CreatorVault release ${gitSha ?? "without a reported git SHA"} in ${snapshot.latencyMs}ms.`,
+        evidence: { requestedByUserId: ctx.user.id, ...snapshot },
+        artifacts: { release },
+        revenueGenerated: 0,
+        startedAt,
+        finishedAt: new Date(),
+      });
+      await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'dev-guardian-agent'`);
+      return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
+    }),
+
   getHeldRoster: ownerProcedure
     .input(z.object({ limit: z.number().int().min(1).max(100).default(60) }).optional())
     .query(async ({ input }) => {
