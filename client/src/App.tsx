@@ -18,7 +18,6 @@ import Home from "./pages/Home";
 // import CardEditor from "./pages/CardEditor";
 // import AICardDesigner from "./pages/AICardDesigner";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 import SignupPage from "./pages/SignupPage";
 import Dashboard from "./pages/Dashboard";
 import CreatorHome from "./pages/CreatorHome";
@@ -366,7 +365,7 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/__release"} component={ReleaseInfo} />
       <Route path={"/login"} component={Login} />
-      <Route path={"/register"} component={Register} />
+      <Route path={"/register"}>{() => { window.location.replace("/signup"); return null; }}</Route>
       <Route path={"/signup"} component={SignupPage} />
       <Route path={"/waitlist"} component={Waitlist} />
       <Route path={"/terms"} component={TermsPage} />
