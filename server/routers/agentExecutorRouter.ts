@@ -174,6 +174,91 @@ export const agentExecutorRouter = router({
       return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
     }),
 
+  runVaultxRevenueIntelligenceTruth: ownerProcedure
+    .mutation(async ({ ctx }) => {
+      const startedAt = new Date();
+      const safeRows = async (query: any): Promise<any[]> => {
+        try {
+          return rowsFromExecute(await db.db.execute(query));
+        } catch {
+          return [];
+        }
+      };
+      const creatorRows = await safeRows(sql`SELECT id FROM vaultx_creators WHERE user_id = ${ctx.user.id} LIMIT 1`);
+      const creatorId = creatorRows[0]?.id ? Number(creatorRows[0].id) : null;
+      const [packageRows, contentRows, unlockRows, earningsRows] = await Promise.all([
+        safeRows(sql`
+          SELECT status, asset_status, asset_quality_passed, COUNT(*) AS count
+          FROM vaultx_revenue_packages
+          WHERE user_id = ${ctx.user.id}
+          GROUP BY status, asset_status, asset_quality_passed
+        `),
+        creatorId ? safeRows(sql`
+          SELECT status, is_ppv, COUNT(*) AS count, COALESCE(SUM(purchase_count), 0) AS recordedPurchaseCount, COALESCE(SUM(view_count), 0) AS recordedViewCount
+          FROM vaultx_content
+          WHERE creator_id = ${creatorId}
+          GROUP BY status, is_ppv
+        `) : Promise.resolve([]),
+        creatorId ? safeRows(sql`
+          SELECT COUNT(*) AS completedUnlocks, COALESCE(SUM(amount_paid), 0) AS recordedCompletedUnlockAmount
+          FROM vaultx_ppv_purchases
+          WHERE creator_id = ${creatorId} AND status = 'completed'
+        `) : Promise.resolve([]),
+        safeRows(sql`
+          SELECT status, COUNT(*) AS count, COALESCE(SUM(amount), 0) AS recordedAmount
+          FROM creator_earnings
+          WHERE creator_id = ${creatorId ?? -1}
+          GROUP BY status
+        `),
+      ]);
+      const unlocks = unlockRows[0] || {};
+      const snapshot = {
+        source: "creatorvault_vaultx_revenue",
+        creatorLinked: Boolean(creatorId),
+        creatorId,
+        packages: packageRows.map((row: any) => ({
+          status: row.status ? String(row.status) : null,
+          assetStatus: row.asset_status ? String(row.asset_status) : null,
+          qualityPassed: Boolean(row.asset_quality_passed),
+          count: Number(row.count ?? 0),
+        })),
+        publishedContent: contentRows.map((row: any) => ({
+          status: row.status ? String(row.status) : null,
+          isPpv: Boolean(row.is_ppv),
+          count: Number(row.count ?? 0),
+          recordedPurchaseCount: Number(row.recordedPurchaseCount ?? 0),
+          recordedViewCount: Number(row.recordedViewCount ?? 0),
+        })),
+        completedUnlocks: {
+          count: Number(unlocks.completedUnlocks ?? 0),
+          recordedAmount: Number(unlocks.recordedCompletedUnlockAmount ?? 0),
+          creatorShareRate: 0.85,
+          platformFeeRate: 0.15,
+        },
+        recordedCreatorEarnings: earningsRows.map((row: any) => ({
+          status: row.status ? String(row.status) : null,
+          count: Number(row.count ?? 0),
+          recordedAmount: Number(row.recordedAmount ?? 0),
+        })),
+      };
+      const receiptId = await recordAgentActionReceipt({
+        agentSlug: "vaultx-revenue-intelligence",
+        agentName: "VaultX Revenue Intelligence",
+        agentCategory: "vaultx",
+        taskType: "vaultx_revenue_truth_snapshot",
+        action: "read_package_content_unlock_and_earnings_records",
+        status: "success",
+        outcomeSummary: `Read VaultX revenue truth: ${snapshot.completedUnlocks.count} completed unlock records and ${snapshot.packages.reduce((sum, item) => sum + item.count, 0)} package records.`,
+        evidence: { requestedByUserId: ctx.user.id, ...snapshot },
+        artifacts: { snapshot },
+        revenueGenerated: 0,
+        startedAt,
+        finishedAt: new Date(),
+      });
+      await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'vaultx-revenue-intelligence'`);
+      return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
+    }),
+
   runCloneIdentityGuardianTruth: ownerProcedure
     .mutation(async ({ ctx }) => {
       const startedAt = new Date();
