@@ -297,7 +297,6 @@ import MarielkaDashboard from "./pages/MarielkaDashboard";
 import MediaHubPage from "./pages/MediaHubPage";
 import MotionFlyerAgent from "./pages/MotionFlyerAgent";
 import MusicLibraryAgent from "./pages/MusicLibraryAgent";
-import OAuthSocialCallback from "./pages/OAuthSocialCallback";
 import Podcasting from "./pages/Podcasting";
 import Shop from "./pages/Shop";
 // import SocialAutoposterAgent from "./pages/SocialAutoposterAgent"; // MERGED into SocialHub
@@ -642,7 +641,7 @@ function Router() {
       <Route path="/agents/motion-flyer-agent" component={MotionFlyerAgent} />
       <Route path="/music/cover-studio">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/agents/music-library-agent" component={MusicLibraryAgent} />
-      <Route path="/oauth/social/callback" component={OAuthSocialCallback} />
+      <Route path="/oauth/social/callback">{() => { window.location.replace("/social"); return null; }}</Route>
       <Route path="/ops/status">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/podcasting-home" component={Podcasting} />
       <Route path="/realgpt/dashboard">{() => { window.location.replace("/dashboard"); return null; }}</Route>
