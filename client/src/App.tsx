@@ -239,7 +239,6 @@ import OnboardingV2 from "./pages/OnboardingV2";
 import OperatorDashboard from "./pages/OperatorDashboard";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
 import PresentationEmpire from "./pages/PresentationEmpire";
-import PresentationEmpireCockpit from "./pages/PresentationEmpireCockpit";
 import ProofGate from "./pages/ProofGate";
 import ProtectedContentDemo from "./pages/ProtectedContentDemo";
 import PublicProfile from "./pages/PublicProfile";
@@ -613,7 +612,7 @@ function Router() {
       <Route path={"/owner-cockpit"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/chicas-empire"} component={ChicasEmpire} />
       <Route path={"/presentation-empire"} component={PresentationEmpire} />
-      <Route path={"/owner-cockpit/presentation-empire"} component={PresentationEmpireCockpit} />
+      <Route path={"/owner-cockpit/presentation-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/recruitment"} component={RecruitmentDashboard} />
       <Route path={"/owner-cockpit/espionage"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/ai-empire"} component={AIEmpireDashboard} />
