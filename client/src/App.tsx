@@ -181,7 +181,6 @@ import EmmaEmpire from "./pages/EmmaEmpire";
 import EmmaHome from "./pages/EmmaHome";
 import EmmaNetworkHome from "./pages/EmmaNetworkHome";
 import EmmaResetDashboard from "./pages/EmmaResetDashboard";
-import EmmaSimpleView from "./pages/EmmaSimpleView";
 import EmmaUniversity from "./pages/EmmaUniversity";
 import EpisodeDetailPage from "./pages/EpisodeDetailPage";
 import Explore from "./pages/Explore";
@@ -459,7 +458,7 @@ function Router() {
       <Route path={"/emma-empire"} component={EmmaEmpire} />
       <Route path="/chica" component={ChicaCockpit} />
       <Route path={"/emma/reset-dashboard"} component={EmmaResetDashboard} />
-      <Route path={"/emma/reset"} component={EmmaSimpleView} />
+      <Route path={"/emma/reset"}>{() => { window.location.replace("/emma/network"); return null; }}</Route>
       <Route path={"/emma/network"} component={EmmaNetworkHome} />
       <Route path={"/king"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
           <Route path="/king/gem-center">{() => { window.location.replace("/king/content"); return null; }}</Route>
