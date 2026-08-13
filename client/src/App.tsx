@@ -158,7 +158,6 @@ import EliteDancers from "./pages/greatest-show/EliteDancers";
 import AdultContent from "./pages/greatest-show/AdultContent";
 import CreatorApplication from "./pages/greatest-show/CreatorApplication";
 import FanSubscription from "./pages/greatest-show/FanSubscription";
-import AIEmpireDashboard from "./pages/AIEmpireDashboard";
 import AdminManualPayments from "./pages/AdminManualPayments";
 import AdminPayouts from "./pages/AdminPayouts";
 import AgentRoster from "./pages/AgentRoster";
@@ -613,7 +612,7 @@ function Router() {
       <Route path={"/owner-cockpit/presentation-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/recruitment"} component={RecruitmentDashboard} />
       <Route path={"/owner-cockpit/espionage"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
-      <Route path={"/owner-cockpit/ai-empire"} component={AIEmpireDashboard} />
+      <Route path={"/owner-cockpit/ai-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/apple-queue"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/empire-cockpit-v3">{() => { window.location.replace("/dashboard"); return null; }}</Route>
               <Route path="/empire-cockpit-v2">{() => { window.location.replace("/dashboard"); return null; }}</Route>
