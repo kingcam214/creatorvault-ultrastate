@@ -32,7 +32,7 @@ export const agentExecutorRouter = router({
     `));
     const latestReceipts = await getRecentAgentActionReceipts({ limit: 12 });
     const activeCount = Number(statusRows.find((row: any) => row.status === "active")?.count ?? 0);
-    const heldCount = Number(statusRows.find((row: any) => row.status === "paused")?.count ?? 0);
+    const heldCount = Number(statusRows.find((row: any) => row.status === "inactive")?.count ?? 0);
 
     return {
       autonomousExecutionEnabled: process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN === "true",
@@ -50,7 +50,7 @@ export const agentExecutorRouter = router({
       const reason = input?.reason || AGENT_HOLD_REASON;
       const result = await db.db.execute(sql`
         UPDATE empire_agents
-        SET status = 'paused', paused_until = NULL
+        SET status = 'inactive', paused_until = NULL
         WHERE status = 'active'
       `);
       const affectedRows = Number((result as any)?.[0]?.affectedRows ?? (result as any)?.affectedRows ?? 0);
@@ -65,7 +65,7 @@ export const agentExecutorRouter = router({
         evidence: {
           requestedByUserId: ctx.user.id,
           previousState: "active",
-          newState: "paused",
+          newState: "inactive",
           reason,
         },
         artifacts: { table: "empire_agents" },
@@ -81,7 +81,7 @@ export const agentExecutorRouter = router({
       const rows = rowsFromExecute(await db.db.execute(sql`
         SELECT id, name, slug, status, tasks, inputs, outputs, paused_until, created_at
         FROM empire_agents
-        WHERE status = 'paused'
+        WHERE status = 'inactive'
         ORDER BY id ASC
         LIMIT ${limit}
       `));
