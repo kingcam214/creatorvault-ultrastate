@@ -298,7 +298,6 @@ import DelbaniaPanel from "./pages/DelbaniaPanel";
 import Demos from "./pages/Demos";
 import EmmaReset from "./pages/EmmaReset";
 import EmmaResetSuccess from "./pages/EmmaResetSuccess";
-import HaitianSector from "./pages/HaitianSector";
 import KingCamVault from "./pages/KingCamVault";
 import MarielkaDashboard from "./pages/MarielkaDashboard";
 import MediaHubPage from "./pages/MediaHubPage";
@@ -641,7 +640,7 @@ function Router() {
       <Route path="/emma/reset-success" component={EmmaResetSuccess} />
       <Route path="/flyer-studio-v2">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/funnels">{() => { window.location.replace("/dashboard"); return null; }}</Route>
-      <Route path="/sector/haiti" component={HaitianSector} />
+      <Route path="/sector/haiti">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/kingcam/vault" component={KingCamVault} />
       <Route path="/studio/lipsync">{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
       <Route path="/mi-panel/marielka-dashboard" component={MarielkaDashboard} />
