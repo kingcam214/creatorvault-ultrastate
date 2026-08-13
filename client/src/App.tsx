@@ -394,7 +394,6 @@ function Router() {
       <Route path={"/creator/subscriptions"} component={CreatorSubscriptions} />
       <Route path={"/creator/earnings"} component={CreatorEarnings} />
       <Route path={"/creator/analytics"} component={CreatorAnalyticsDashboard} />
-      <Route path={"/creator/:handle"} component={PublicCreatorLanding} />
        <Route path={"/creator-analytics"} component={CreatorAnalyticsDashboard} />
       <Route path={"/tools/viral-optimizer"} component={ViralOptimizer} />
       <Route path={"/ai-bot"} component={AIBot} />
@@ -664,6 +663,7 @@ function Router() {
       <Route path="/vaultx/capcut">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/adult-editor">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/creator/editor">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
+      <Route path={"/creator/:handle"} component={PublicCreatorLanding} />
       <Route path="/vault-x/analytics" component={VaultXAnalytics} />
       <Route path="/vault-x/fan-library" component={VaultXFanLibrary} />
       <Route path="/vaultx/video-editor/:projectId">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
