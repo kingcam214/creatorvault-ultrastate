@@ -485,13 +485,20 @@ export const agentExecutorRouter = router({
         .map((row: any) => String(row.columnName || ""))
         .filter(Boolean);
       const hasCanonicalConversationOwner = conversationColumns.includes("creator_id");
+      const hasParticipantList = conversationColumns.includes("participant_ids");
       const conversationRead = hasCanonicalConversationOwner
         ? await safeRows(sql`
             SELECT COUNT(*) AS conversations
             FROM conversations
             WHERE creator_id = ${creatorId}
           `)
-        : { available: false, rows: [] };
+        : hasParticipantList
+          ? await safeRows(sql`
+              SELECT COUNT(*) AS conversations
+              FROM conversations
+              WHERE JSON_CONTAINS(participant_ids, CAST(${ctx.user.id} AS JSON))
+            `)
+          : { available: false, rows: [] };
       const audience = audienceRead.rows[0] || {};
       const conversations = conversationRead.rows[0] || {};
       const money = moneyRead.rows[0] || {};
@@ -509,8 +516,9 @@ export const agentExecutorRouter = router({
         conversationContract: {
           expectedOwnerColumn: "creator_id",
           observedColumns: conversationColumns,
+          readScope: hasCanonicalConversationOwner ? "creator_id" : hasParticipantList ? "participant_ids_owner_membership" : null,
           state: conversationSchemaRead.available
-            ? (hasCanonicalConversationOwner ? "canonical_owner_available" : "canonical_owner_missing")
+            ? (hasCanonicalConversationOwner ? "canonical_owner_available" : hasParticipantList ? "participant_owner_available" : "canonical_owner_missing")
             : "schema_read_unavailable",
         },
         packages: packageRead.rows.map((row: any) => ({
