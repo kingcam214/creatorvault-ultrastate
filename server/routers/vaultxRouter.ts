@@ -56,6 +56,10 @@ import {
   updateVaultxArtifactStatus,
   VaultxArtifactNotReadyError,
 } from "../services/vaultxArtifactSpineService";
+import {
+  assertGovernedPolloJobReadyForMonetization,
+  getGovernedPolloJob,
+} from "../services/governedPolloService";
 
 const OWNER_IDS = [6, 33];
 const PLATFORM_FEE = 0.15;
@@ -279,6 +283,107 @@ function validateVaultxChatterConfig(input: { isEnabled: boolean; personaDescrip
 async function getCreatorId(userId: number): Promise<number | null> {
   const rows = await rawQuery("SELECT id FROM vaultx_creators WHERE user_id = ? AND is_active = 1 LIMIT 1", [userId]);
   return rows[0]?.id ?? null;
+}
+
+async function ensureBodyCinemaPublicationSchema(): Promise<void> {
+  await rawExec(`CREATE TABLE IF NOT EXISTS vaultx_body_cinema_publications (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    governed_job_id BIGINT NOT NULL,
+    creator_user_id BIGINT NOT NULL,
+    vaultx_creator_id BIGINT NOT NULL,
+    vaultx_content_id BIGINT NOT NULL,
+    vaultx_artifact_id BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_vaultx_body_cinema_governed_job (governed_job_id),
+    INDEX idx_vaultx_body_cinema_creator (creator_user_id),
+    INDEX idx_vaultx_body_cinema_content (vaultx_content_id)
+  )`);
+}
+
+async function publishAcceptedBodyCinemaToVaultX(input: {
+  creatorUserId: number;
+  governedJobId: number;
+  title: string;
+  description?: string | null;
+  priceCents: number;
+}): Promise<{ contentId: number; artifactId: number; alreadyPublished: boolean }> {
+  const job = await getGovernedPolloJob(input.governedJobId);
+  if (!job || Number(job.creatorId) !== input.creatorUserId) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "CreatorVault could not find this finished Body Cinema drop." });
+  }
+  try {
+    assertGovernedPolloJobReadyForMonetization(job);
+  } catch (error: any) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: error?.message || "Only an accepted finished drop can enter VaultX." });
+  }
+  if (Number(job.qualityScore || 0) < 90) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "This Body Cinema drop did not clear CreatorVault’s 90-point release standard." });
+  }
+
+  const vaultxCreatorId = await getCreatorId(input.creatorUserId);
+  if (!vaultxCreatorId) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Open your VaultX creator home before preparing a paid drop." });
+  }
+
+  await ensureBodyCinemaPublicationSchema();
+  const publishedRows = await rawQuery(
+    "SELECT vaultx_content_id, vaultx_artifact_id FROM vaultx_body_cinema_publications WHERE governed_job_id = ? LIMIT 1",
+    [job.id],
+  );
+  if (publishedRows[0]) {
+    return {
+      contentId: Number(publishedRows[0].vaultx_content_id),
+      artifactId: Number(publishedRows[0].vaultx_artifact_id),
+      alreadyPublished: true,
+    };
+  }
+
+  const artifact = await persistReadyVaultxArtifact({
+    creatorId: input.creatorUserId,
+    kind: "video",
+    stage: "body-cinema-accepted-master",
+    provider: "pollo",
+    providerJobId: job.providerJobId,
+    sourceUrl: job.sourceUrl,
+    finalUrl: String(job.artifactUrl),
+    expectedMimePrefix: "video/",
+    qualityScore: Number(job.qualityScore),
+    metadata: {
+      governedJobId: job.id,
+      governedRequestId: job.requestId,
+      qualityState: job.qualityState,
+      qualityReason: job.qualityReason,
+      sourcePreserved: true,
+    },
+  });
+  if (!artifact.output_url) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "CreatorVault could not secure the accepted video for VaultX release." });
+  }
+
+  const created: any = await rawExec(
+    `INSERT INTO vaultx_content
+      (creator_id, title, description, content_type, thumbnail_url, censored_url, uncensored_url, is_ppv, ppv_price, status, access_tier)
+     VALUES (?, ?, ?, 'video', NULL, NULL, ?, 1, ?, 'active', 'ppv')`,
+    [vaultxCreatorId, input.title, input.description || null, artifact.output_url, input.priceCents / 100],
+  );
+  const contentId = Number(created?.insertId || 0);
+  if (!contentId) throw new Error("VaultX could not create the paid release record.");
+
+  await rawExec(
+    `INSERT INTO vaultx_body_cinema_publications
+      (governed_job_id, creator_user_id, vaultx_creator_id, vaultx_content_id, vaultx_artifact_id)
+     VALUES (?, ?, ?, ?, ?)`,
+    [job.id, input.creatorUserId, vaultxCreatorId, contentId, artifact.id],
+  );
+  await recordVaultxArtifactEvent({
+    artifactId: artifact.id,
+    creatorId: input.creatorUserId,
+    eventType: "body_cinema.vaultx_ppv_published",
+    status: "ready",
+    payload: { governedJobId: job.id, vaultxContentId: contentId, priceCents: input.priceCents },
+  });
+
+  return { contentId, artifactId: artifact.id, alreadyPublished: false };
 }
 
 async function ensureUploadDir(creatorId: number): Promise<string> {
@@ -6152,6 +6257,24 @@ Generate body-focused captions and return ONLY valid JSON:
         console.error("[VaultX] AI viral clips generation failed:", err);
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Video generation failed. Check API keys." });
       }
+    }),
+
+  // ─── PROCEDURE: publishAcceptedBodyCinemaDrop ───────────────────────────────
+  publishAcceptedBodyCinemaDrop: protectedProcedure
+    .input(z.object({
+      governedJobId: z.number().int().positive(),
+      title: z.string().trim().min(3).max(255),
+      description: z.string().trim().max(2000).optional(),
+      priceCents: z.number().int().min(100).max(1_000_000),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return publishAcceptedBodyCinemaToVaultX({
+        creatorUserId: Number(ctx.user.id),
+        governedJobId: input.governedJobId,
+        title: input.title,
+        description: input.description,
+        priceCents: input.priceCents,
+      });
     }),
 
   // ─── PROCEDURE: getBodyCinemaCollections ───────────────────────────────────

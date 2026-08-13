@@ -188,6 +188,8 @@ export default function VaultXDrop() {
   const [activeInsightId, setActiveInsightId] = useState<string | null>(null);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const [creationProjectId, setCreationProjectId] = useState<string | null>(null);
+  const [releasePrice, setReleasePrice] = useState("25");
+  const [publishedContentId, setPublishedContentId] = useState<number | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -202,6 +204,7 @@ export default function VaultXDrop() {
     { enabled: Boolean(audioAssetId) }
   );
   const approveDirection = (trpc as any).bodyCinema.approveDirection.useMutation();
+  const publishAcceptedDrop = (trpc as any).vaultx.publishAcceptedBodyCinemaDrop.useMutation();
   const existingVideosQuery = (trpc as any).mediaAssets.list.useQuery(
     { filter: "videos", limit: 120 },
     { staleTime: 30_000 },
@@ -566,10 +569,34 @@ export default function VaultXDrop() {
     anchor.click();
   }, [currentJob?.artifactUrl, title]);
 
+  const publishToVaultX = useCallback(async () => {
+    if (!acceptedAsset || !currentJob?.id) {
+      toast.error("Only a reviewed, accepted finished drop can enter a paid VaultX release.");
+      return;
+    }
+    const priceCents = Math.round(Number(releasePrice) * 100);
+    if (!Number.isFinite(priceCents) || priceCents < 100) {
+      toast.error("Set a private-unlock price of at least $1.00.");
+      return;
+    }
+    try {
+      const result = await publishAcceptedDrop.mutateAsync({
+        governedJobId: currentJob.id,
+        title: title.trim() || "Private Body Cinema Release",
+        priceCents,
+      });
+      setPublishedContentId(Number(result.contentId));
+      toast.success(result.alreadyPublished ? "This finished drop is already connected to VaultX." : "Your paid VaultX unlock is ready.");
+    } catch (error: any) {
+      toast.error(error?.message || "CreatorVault could not prepare this paid VaultX unlock.");
+    }
+  }, [acceptedAsset, currentJob?.id, publishAcceptedDrop, releasePrice, title]);
+
   const reuseSource = useCallback(() => {
     setSelectedPreset(null);
     setTitle("");
     setConsent(false);
+    setPublishedContentId(null);
     setGovernedJob(null);
     setStep("preset");
     toast.info("Source retained. Choose another treatment to create a separate governed request.");
@@ -589,6 +616,8 @@ export default function VaultXDrop() {
     setAudioAssetId(null);
     setTitle("");
     setConsent(false);
+    setReleasePrice("25");
+    setPublishedContentId(null);
     setUploading(false);
     setUploadProgress(0);
     setCreating(false);
@@ -848,6 +877,16 @@ export default function VaultXDrop() {
                 </div>
               )}
             </div>
+            {acceptedAsset && <div style={{ marginBottom: 16, padding: 20, borderRadius: 20, border: `1px solid ${GOLD_BORDER}`, background: "linear-gradient(135deg, rgba(213,183,96,0.16), rgba(17,17,17,0.94))", boxShadow: "0 14px 32px rgba(0,0,0,0.26)" }}>
+              <p style={{ margin: "0 0 7px", color: GOLD, fontSize: 10, fontFamily: "monospace", letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 900 }}>Paid unlock ready</p>
+              <h3 style={{ margin: "0 0 8px", color: "#fff", fontSize: 21, lineHeight: 1.1, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.06em" }}>Turn this accepted drop into a VaultX private release.</h3>
+              <p style={{ margin: "0 0 16px", color: MUTED, fontSize: 12, lineHeight: 1.55 }}>CreatorVault will preserve this reviewed master, create one paid unlock, and keep the full video hidden until a buyer completes payment.</p>
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 0.7fr) minmax(0, 1.3fr)", gap: 10, alignItems: "stretch" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 13px", borderRadius: 12, border: `1px solid ${BORDER}`, background: "#070707", color: GOLD, fontWeight: 900, fontSize: 18 }}><span>$</span><input aria-label="Private unlock price" value={releasePrice} onChange={(event) => setReleasePrice(event.target.value)} inputMode="decimal" type="number" min="1" step="0.01" style={{ width: "100%", border: 0, outline: 0, background: "transparent", color: "#fff", fontSize: 17, fontWeight: 800 }} /></label>
+                <button type="button" className="body-cinema-button" onClick={() => void publishToVaultX()} disabled={publishAcceptedDrop.isPending} style={{ minHeight: 52, borderRadius: 12, border: "none", background: publishAcceptedDrop.isPending ? CARD_SOFT : `linear-gradient(135deg, ${GOLD}, #fff0a3)`, color: publishAcceptedDrop.isPending ? MUTED : "#090909", fontFamily: "Bebas Neue, sans-serif", fontSize: 18, letterSpacing: "0.07em", fontWeight: 900, cursor: publishAcceptedDrop.isPending ? "wait" : "pointer" }}>{publishAcceptedDrop.isPending ? "Preparing private unlock…" : "Put It Behind Paid Access"}</button>
+              </div>
+              {publishedContentId && <a href={`/vaultx?content=${publishedContentId}`} style={{ display: "inline-flex", marginTop: 14, color: GOLD, fontSize: 12, fontWeight: 900, textDecoration: "none" }}>Open your VaultX paid release →</a>}
+            </div>}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 16 }}><button type="button" className="body-cinema-button" onClick={handleDownload} disabled={!acceptedAsset} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${acceptedAsset ? GOLD_BORDER : BORDER}`, background: acceptedAsset ? GOLD_DIM : CARD, color: acceptedAsset ? GOLD : MUTED, fontWeight: 800, cursor: acceptedAsset ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><Download size={16} /> Download</button><button type="button" className="body-cinema-button" onClick={reuseSource} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${BORDER}`, background: CARD, color: "#fff", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><RotateCcw size={16} /> Reuse source</button></div>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, padding: "10px 20px", marginBottom: 20, boxShadow: "0 4px 15px rgba(0,0,0,0.2)" }}>
               <StatusRow label="Source Ownership" value="Verified & Bound" state="ready" />
