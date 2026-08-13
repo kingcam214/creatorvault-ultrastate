@@ -238,7 +238,6 @@ import Onboard from "./pages/Onboard";
 import OnboardingV2 from "./pages/OnboardingV2";
 import OperatorDashboard from "./pages/OperatorDashboard";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
-import PresentationBuilder from "./pages/PresentationBuilder";
 import PresentationEmpire from "./pages/PresentationEmpire";
 import PresentationEmpireCockpit from "./pages/PresentationEmpireCockpit";
 import ProofGate from "./pages/ProofGate";
@@ -495,8 +494,8 @@ function Router() {
       <Route path={"/king/users"} component={KingUsers} />
       <Route path={"/king/demos"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/king/agent-live" component={AgentLive} />
-      <Route path={"/king/presentation-builder"} component={PresentationBuilder} />
-      <Route path={"/presentation-builder"} component={PresentationBuilder} />
+      <Route path={"/king/presentation-builder"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
+      <Route path={"/presentation-builder"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/king/telegram-hub" component={TelegramMoneyHub} />
       <Route path="/telegram-hub" component={TelegramMoneyHub} />
       <Route path={"/king/backoffice"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
