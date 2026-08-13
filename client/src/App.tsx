@@ -202,7 +202,6 @@ import HollywoodShow from "./pages/HollywoodShow";
 import HollywoodShows from "./pages/HollywoodShows";
 import HollywoodStudio from "./pages/HollywoodStudio";
 import InfluencerDashboard from "./pages/InfluencerDashboard";
-import InfluencerOnboarding from "./pages/InfluencerOnboarding";
 import JoinVaultLive from "./pages/JoinVaultLive";
 import KingCamScriptWriter from "./pages/KingCamScriptWriter";
 import KingContent from "./pages/KingContent";
@@ -444,7 +443,7 @@ function Router() {
       <Route path={"/command-hub"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/command-center"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/onboard"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
-      <Route path={"/onboard/influencer"} component={InfluencerOnboarding} />
+      <Route path={"/onboard/influencer"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/onboard/creator"} component={CreatorOnboarding} />
       <Route path={"/influencer"} component={InfluencerDashboard} />
       <Route path="/social-hub" component={SocialHub} />
