@@ -67,6 +67,7 @@ const ALLOWLISTS = {
     'client/src/pages/NFCCards.tsx',
     'client/src/pages/Notifications.tsx',
     'client/src/pages/EmmaTransparencyLog.tsx',
+    'client/src/pages/GodModeAI.tsx',
     'scripts/scope-guard.js'
   ],
   distribution: [

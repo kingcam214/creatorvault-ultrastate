@@ -82,7 +82,7 @@ export default function GodModeAI() {
             ))}
           </div>
           <div style={{ marginTop: 22, display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link href="/vaultx-editor"><button style={buttonStyle(accent)}>Open Body Cinema</button></Link>
+            <Link href="/vault-x/studio"><button style={buttonStyle(accent)}>Open Body Cinema</button></Link>
             <Link href="/launch-trailer-studio"><button style={buttonStyle(gold, true)}>Build Trailer Pack</button></Link>
             <Link href="/king/clone-command"><button style={buttonStyle(hot, true)}>Clone Scene</button></Link>
           </div>
