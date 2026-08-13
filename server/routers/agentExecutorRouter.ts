@@ -339,14 +339,25 @@ export const agentExecutorRouter = router({
           return [];
         }
       };
-      const [profileRows, playableRows, renderRows, trainingRows] = await Promise.all([
+      const [profileRows, libraryRows, legacyRows, renderRows, trainingRows] = await Promise.all([
         safeRows(sql`
           SELECT id, voice_id, speaking_style, tone_guidelines, signature_intro, signature_outro, updated_at
           FROM kingcam_clone_profile
           ORDER BY id ASC LIMIT 1
         `),
         safeRows(sql`
-          SELECT COUNT(*) AS playableVideos, COALESCE(SUM(duration_seconds), 0) AS playableDurationSeconds
+          SELECT COUNT(*) AS libraryReadyCloneVideos, COALESCE(SUM(duration), 0) AS libraryReadyCloneDurationSeconds
+          FROM media_assets
+          WHERE user_id = ${ctx.user.id}
+            AND status = 'ready'
+            AND (asset_type = 'video' OR mime_type LIKE 'video/%')
+            AND (CONCAT(COALESCE(original_name, ''), ' ', COALESCE(file_name, '')) REGEXP 'kingcam|clone')
+            AND public_url IS NOT NULL
+            AND public_url <> ''
+            AND public_url NOT LIKE 'https://replicate.delivery/%'
+        `),
+        safeRows(sql`
+          SELECT COUNT(*) AS legacyReadyRecords
           FROM kingcam_clone_videos
           WHERE render_status = 'ready'
             AND video_url IS NOT NULL
@@ -365,7 +376,8 @@ export const agentExecutorRouter = router({
         `),
       ]);
       const profile = profileRows[0] || null;
-      const playable = playableRows[0] || {};
+      const library = libraryRows[0] || {};
+      const legacy = legacyRows[0] || {};
       const snapshot = {
         source: "creatorvault_clone_factory",
         profile: profile ? {
@@ -382,8 +394,9 @@ export const agentExecutorRouter = router({
           lastUpdatedAt: null,
         },
         media: {
-          playableVideos: Number(playable.playableVideos ?? 0),
-          playableDurationSeconds: Number(playable.playableDurationSeconds ?? 0),
+          libraryReadyCloneVideos: Number(library.libraryReadyCloneVideos ?? 0),
+          libraryReadyCloneDurationSeconds: Number(library.libraryReadyCloneDurationSeconds ?? 0),
+          legacyReadyRecordsNotPlaybackVerified: Number(legacy.legacyReadyRecords ?? 0),
           renderStates: renderRows.map((row: any) => ({
             status: String(row.render_status), provider: row.render_provider ? String(row.render_provider) : null, count: Number(row.count ?? 0),
           })),
@@ -397,9 +410,9 @@ export const agentExecutorRouter = router({
         agentName: "Clone Identity Guardian",
         agentCategory: "clone",
         taskType: "clone_identity_truth_snapshot",
-        action: "read_clone_profile_playable_media_and_training_records",
+        action: "read_clone_profile_library_candidates_and_legacy_records",
         status: "success",
-        outcomeSummary: `Read KingCam Clone truth: ${snapshot.media.playableVideos} playable videos, ${snapshot.training.reduce((sum, item) => sum + item.count, 0)} training records, and ${snapshot.profile.configured ? "a configured identity profile" : "no configured identity profile"}.`,
+        outcomeSummary: `Read KingCam Clone truth: ${snapshot.media.libraryReadyCloneVideos} verified Clone Factory library videos, ${snapshot.media.legacyReadyRecordsNotPlaybackVerified} legacy ready records not counted as playback-verified, ${snapshot.training.reduce((sum, item) => sum + item.count, 0)} training records, and ${snapshot.profile.configured ? "a configured identity profile" : "no configured identity profile"}.`,
         evidence: { requestedByUserId: ctx.user.id, ...snapshot },
         artifacts: { snapshot },
         revenueGenerated: 0,
