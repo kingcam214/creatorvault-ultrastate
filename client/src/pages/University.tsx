@@ -88,6 +88,12 @@ export default function University() {
   });
 
   const isCreator = user?.role === "creator" || user?.role === "influencer" || user?.role === "celebrity" || user?.role === "admin" || user?.role === "king";
+  const selectedModules = Array.isArray(selectedCourse?.syllabusJson)
+    ? selectedCourse.syllabusJson
+    : Array.isArray(selectedCourse?.syllabusJson?.modules)
+      ? selectedCourse.syllabusJson.modules
+      : [];
+  const selectedLessonCount = selectedModules.reduce((total: number, module: any) => total + (Array.isArray(module?.lessons) ? module.lessons.length : 0), 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-950 via-black to-black">
@@ -154,10 +160,10 @@ export default function University() {
           </Card>
           <Card className="bg-gradient-to-br from-green-900/50 to-black border-green-500/30">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-400">Certificates</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-400">Published Learning Paths</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-white">Available</div>
+              <div className="text-3xl font-bold text-white">{courses.filter((c: any) => c.status === "published").length}</div>
             </CardContent>
           </Card>
         </div>
@@ -249,7 +255,7 @@ export default function University() {
                     </div>
                     <div className="flex items-center gap-1">
                       <Users className="h-4 w-4" />
-                      <span>0 enrolled</span>
+                      <span>{Array.isArray(course.syllabusJson) ? `${course.syllabusJson.reduce((total: number, module: any) => total + (Array.isArray(module?.lessons) ? module.lessons.length : 0), 0)} lessons mapped` : "Course details"}</span>
                     </div>
                   </div>
                   <Button
@@ -387,6 +393,29 @@ export default function University() {
                 {selectedCourse?.status}
               </Badge>
             </div>
+            {selectedModules.length > 0 && (
+              <div className="space-y-3 rounded-xl border border-purple-500/30 bg-black/30 p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold text-white">Your lesson path</span>
+                  <span className="text-purple-300">{selectedLessonCount} lessons mapped</span>
+                </div>
+                <div className="space-y-3">
+                  {selectedModules.map((module: any, moduleIndex: number) => (
+                    <div key={module.id || moduleIndex} className="border-l-2 border-purple-500/50 pl-3">
+                      <p className="font-medium text-white">{module.title || `Module ${moduleIndex + 1}`}</p>
+                      {module.description && <p className="mt-1 text-sm text-gray-400">{module.description}</p>}
+                      <div className="mt-2 space-y-1">
+                        {(Array.isArray(module.lessons) ? module.lessons : []).map((lesson: any, lessonIndex: number) => (
+                          <p key={lesson.id || lessonIndex} className="text-sm text-gray-300">
+                            {lesson.title || `Lesson ${lessonIndex + 1}`}{lesson.duration_minutes || lesson.duration ? ` · ${lesson.duration_minutes || lesson.duration} min` : ""}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {!selectedCourse?.isFree && (
               <div className="p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
                 <p className="text-sm text-yellow-400">
@@ -404,7 +433,7 @@ export default function University() {
               disabled={enrollMutation.isPending || !selectedCourse?.isFree}
               className="bg-gradient-to-r from-purple-600 to-pink-600"
             >
-              {enrollMutation.isPending ? "Enrolling..." : selectedCourse?.isFree ? "Enroll Free" : "Pay & Enroll"}
+              {enrollMutation.isPending ? "Opening Your Course..." : selectedCourse?.isFree ? "Start Learning" : "Paid Access Coming Through Checkout"}
             </Button>
           </DialogFooter>
         </DialogContent>

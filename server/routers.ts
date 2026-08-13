@@ -742,6 +742,14 @@ export const appRouter = router({
       return await dbFGH.listCourses({ status: "published" });
     }),
 
+    getCourse: publicProcedure.input(z.object({ courseId: z.string().uuid() })).query(async ({ input }) => {
+      const course = await dbFGH.getCourse(input.courseId);
+      if (!course || course.status !== "published") {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Course not found" });
+      }
+      return course;
+    }),
+
     createCourse: creatorProcedure.input(z.object({
       title: z.string(),
       description: z.string(),
