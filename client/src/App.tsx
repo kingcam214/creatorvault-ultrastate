@@ -180,7 +180,6 @@ import EmmaEmpire from "./pages/EmmaEmpire";
 import EmmaHome from "./pages/EmmaHome";
 import EmmaNetworkHome from "./pages/EmmaNetworkHome";
 import FanSubscribe from "./pages/FanSubscribe";
-import HollywoodAcademy from "./pages/HollywoodAcademy";
 import HollywoodChannel from "./pages/HollywoodChannel";
 import HollywoodEpisode from "./pages/HollywoodEpisode";
 import HollywoodReplacement from "./pages/HollywoodReplacement";
@@ -582,7 +581,7 @@ function Router() {
       <Route path="/hollywood-shows">{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path="/hollywood-creator-dashboard">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/hollywood-studio">{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
-      <Route path="/hollywood-academy" component={HollywoodAcademy} />
+      <Route path="/hollywood-academy">{() => { window.location.replace("/university"); return null; }}</Route>
       <Route path="/hollywood/channel/:creatorId" component={HollywoodChannel} />
       <Route path="/hollywood/episode/:episodeId" component={HollywoodEpisode} />
       <Route path="/hollywood/:slug" component={HollywoodShow} />
