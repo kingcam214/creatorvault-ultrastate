@@ -207,7 +207,6 @@ import MarketplaceProduct from "./pages/MarketplaceProduct";
 import MessageThread from "./pages/MessageThread";
 import Messages from "./pages/Messages";
 // import { MultiPlatformPosting } from "./pages/MultiPlatformPosting"; // MERGED into SocialHub
-import MySubscriptions from "./pages/MySubscriptions";
 import OperatorDashboard from "./pages/OperatorDashboard";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
 import ProtectedContentDemo from "./pages/ProtectedContentDemo";
@@ -407,7 +406,7 @@ function Router() {
       <Route path={"/services"} component={Services} />
       <Route path={"/creator/subscription-tiers"} component={CreatorSubscriptionTiers} />
       <Route path={"/creator/:creatorId/protected-demo"} component={ProtectedContentDemo} />
-      <Route path={"/my-subscriptions"} component={MySubscriptions} />
+      <Route path={"/my-subscriptions"}>{() => { window.location.replace("/creator/subscriptions"); return null; }}</Route>
       <Route path={"/creator"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/tools"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/toolbox"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
