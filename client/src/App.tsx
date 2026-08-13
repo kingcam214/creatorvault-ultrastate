@@ -121,7 +121,6 @@ import FeedPage from "./pages/Feed";
 // import CreatorToolbox from "./pages/CreatorToolbox";
 // import ViralOptimizer from "./pages/tools/ViralOptimizer"; // @deprecated — use ViralOptimizerPage
 // import ViralOptimizerPage from "./pages/ViralOptimizerPage";
-import VerticalPackLauncher from "./pages/VerticalPackLauncher";
 // import CreatorEarnings from "./pages/CreatorEarnings";
 // import AdminPayouts from "./pages/AdminPayouts";
 // import AdminManualPayments from "./pages/AdminManualPayments";
@@ -600,7 +599,7 @@ function Router() {
       <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} />
       <Route path={"/real-estate-empire"} component={RealEstateEmpire} />
       <Route path={"/viral-optimizer"}>{() => { window.location.replace("/social-hub"); return null; }}</Route>
-      <Route path={"/vertical-pack"} component={VerticalPackLauncher} />
+      <Route path={"/vertical-pack"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/brand-deals"} component={BrandDeals} />
       <Route path={"/subscriptions"} component={Subscriptions} />
       {/* <Route path={"/feed"} component={FeedPage} /> */}
