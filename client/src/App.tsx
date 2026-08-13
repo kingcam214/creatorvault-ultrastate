@@ -60,6 +60,7 @@ import AppHeader from "./components/AppHeader";
 import AIBot from "./pages/AIBot";
 import OwnerControl from "./pages/OwnerControl";
 import OwnerStatus from "./pages/OwnerStatus";
+import AgentCommand from "./pages/AgentCommand";
 import CreatorVideoStudio from "./pages/CreatorVideoStudio";
 // import VideoStudio from './pages/VideoStudio';
 // import CreatorManagement from "./pages/CreatorManagement";
@@ -498,6 +499,7 @@ function Router() {
       <Route path={"/recruiter"} component={RecruiterDashboard} />
       <Route path={"/payout-setup"} component={PayoutSetup} />
       <Route path={"/telegram-setup"} component={TelegramSetup} />
+      <Route path={"/empire-command"} component={AgentCommand} />
       <Route path={"/owner-control"} component={OwnerControl} />
       <Route path={"/owner-status"} component={OwnerStatus} />
       <Route path={"/greatest-show"} component={GreatestShowLanding} />

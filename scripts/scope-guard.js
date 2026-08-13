@@ -250,6 +250,12 @@ const ALLOWLISTS = {
     'server/routers/empireAgents.ts',
     'scripts/scope-guard.js'
   ],
+  'agent-command-surface': [
+    'client/src/App.tsx',
+    'client/src/pages/AgentCommand.tsx',
+    'server/routers/agentExecutorRouter.ts',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',
