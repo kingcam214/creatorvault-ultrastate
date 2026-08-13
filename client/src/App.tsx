@@ -174,7 +174,6 @@ import ChuuchMedia from "./pages/ChuuchMedia";
 import ChuuchMerch from "./pages/ChuuchMerch";
 import ChuuchTeaching from "./pages/ChuuchTeaching";
 import ChuuchTransition from "./pages/ChuuchTransition";
-import CommandHubV2 from "./pages/CommandHubV2";
 import ContentDashboard from "./pages/ContentDashboard";
 // import { ContentScheduler } from "./pages/ContentScheduler"; // MERGED into SocialHub
 import { CreatorAnalyticsDashboard } from "./pages/CreatorAnalyticsDashboard";
@@ -603,7 +602,7 @@ function Router() {
       <Route path={"/messages"} component={Messages} />
       <Route path={"/messages/:conversationId"} component={MessageThread} />
       <Route path={"/onboarding"} component={OnboardingV2} />
-      <Route path={"/command-hub-v2"} component={CommandHubV2} />
+      <Route path={"/command-hub-v2"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/chicas-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/presentation-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
