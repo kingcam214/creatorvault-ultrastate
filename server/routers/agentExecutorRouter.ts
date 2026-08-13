@@ -562,7 +562,7 @@ export const agentExecutorRouter = router({
       const findings = evidence.editorFindings;
       const selectedDirection = evidence.directions.find(direction => direction.id === evidence.selectedDirectionId) || null;
       const result = await invokeLLM({
-        model: "gpt-5-mini",
+        model: "gpt-4.1-mini",
         maxTokens: 1200,
         outputSchema: {
           name: "creator_growth_brief",
