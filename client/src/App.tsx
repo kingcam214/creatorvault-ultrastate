@@ -57,7 +57,6 @@ import AppHeader from "./components/AppHeader";
 // import KingCamScriptWriter from "./pages/KingCamScriptWriter";
 // import KingCamEngine from "./pages/KingCamEngine";
 // import EmmaUniversity from "./pages/EmmaUniversity";
-import EmmaTransparencyLog from "./pages/EmmaTransparencyLog";
 // import Services from "./pages/Services";
 import AIBot from "./pages/AIBot";
 import OwnerControl from "./pages/OwnerControl";
