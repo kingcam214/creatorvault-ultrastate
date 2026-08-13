@@ -392,7 +392,20 @@ async function ensureUploadDir(creatorId: number): Promise<string> {
   return dir;
 }
 
+function assertFFmpegTechnicalOnly(args: string[]): void {
+  const command = args.join(" ").toLowerCase();
+  const prohibitedCreativeOperations = [
+    "-filter_complex", "drawtext", "drawbox", "zoompan", "eq=", "curves", "colorbalance",
+    "smartblur", "gblur", "boxblur", "hqdn3d", "vidstab", "setpts", "xfade", "fade=",
+    "overlay", "amix", "afade", "atempo", "loudnorm",
+  ];
+  if (prohibitedCreativeOperations.some((operation) => command.includes(operation))) {
+    throw new Error("CREATIVE_FFMPEG_OPERATION_DISABLED");
+  }
+}
+
 function runFFmpeg(args: string[]): Promise<void> {
+  assertFFmpegTechnicalOnly(args);
   return new Promise((resolve, reject) => {
     const proc = spawn("ffmpeg", ["-y", ...args]);
     let stderr = "";
