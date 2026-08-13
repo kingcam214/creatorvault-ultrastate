@@ -259,6 +259,76 @@ export const agentExecutorRouter = router({
       return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
     }),
 
+  runMediaVaultGuardianTruth: ownerProcedure
+    .mutation(async ({ ctx }) => {
+      const startedAt = new Date();
+      const [assetRows, sourceRows, riskRows] = await Promise.all([
+        db.db.execute(sql`
+          SELECT asset_type, status, COUNT(*) AS count,
+                 COALESCE(SUM(duration), 0) AS totalDurationSeconds
+          FROM media_assets
+          WHERE user_id = ${ctx.user.id}
+          GROUP BY asset_type, status
+        `),
+        db.db.execute(sql`
+          SELECT source_type, created_by_feature, COUNT(*) AS count
+          FROM media_assets
+          WHERE user_id = ${ctx.user.id}
+          GROUP BY source_type, created_by_feature
+        `),
+        db.db.execute(sql`
+          SELECT
+            COUNT(*) AS totalAssets,
+            COALESCE(SUM(CASE WHEN status = 'ready' THEN 1 ELSE 0 END), 0) AS readyAssets,
+            COALESCE(SUM(CASE WHEN status = 'ready' AND (public_url IS NULL OR public_url NOT LIKE '%/api/media/asset/%') THEN 1 ELSE 0 END), 0) AS readySourceCandidates,
+            COALESCE(SUM(CASE WHEN public_url IS NULL AND storage_path IS NULL THEN 1 ELSE 0 END), 0) AS missingDeliveryPath,
+            COALESCE(SUM(CASE WHEN public_url LIKE '%/api/media/asset/%' THEN 1 ELSE 0 END), 0) AS legacyPrivateDelivery,
+            COALESCE(SUM(CASE WHEN public_url LIKE 'https://replicate.delivery/%' THEN 1 ELSE 0 END), 0) AS expiringReplicateLinks
+          FROM media_assets
+          WHERE user_id = ${ctx.user.id}
+        `),
+      ]);
+      const risk = rowsFromExecute(riskRows)[0] || {};
+      const snapshot = {
+        source: "creatorvault_media_vault",
+        assets: rowsFromExecute(assetRows).map((row: any) => ({
+          type: row.asset_type ? String(row.asset_type) : "unknown",
+          status: row.status ? String(row.status) : "unknown",
+          count: Number(row.count ?? 0),
+          totalDurationSeconds: Number(row.totalDurationSeconds ?? 0),
+        })),
+        sourceMix: rowsFromExecute(sourceRows).map((row: any) => ({
+          sourceType: row.source_type ? String(row.source_type) : null,
+          createdBy: row.created_by_feature ? String(row.created_by_feature) : null,
+          count: Number(row.count ?? 0),
+        })),
+        readiness: {
+          totalAssets: Number(risk.totalAssets ?? 0),
+          readyAssets: Number(risk.readyAssets ?? 0),
+          readySourceCandidates: Number(risk.readySourceCandidates ?? 0),
+          missingDeliveryPath: Number(risk.missingDeliveryPath ?? 0),
+          legacyPrivateDelivery: Number(risk.legacyPrivateDelivery ?? 0),
+          expiringReplicateLinks: Number(risk.expiringReplicateLinks ?? 0),
+        },
+      };
+      const receiptId = await recordAgentActionReceipt({
+        agentSlug: "media-vault-guardian",
+        agentName: "Media Vault Guardian",
+        agentCategory: "media",
+        taskType: "media_vault_truth_snapshot",
+        action: "read_asset_readiness_storage_and_link_risk",
+        status: "success",
+        outcomeSummary: `Read Media Vault truth: ${snapshot.readiness.readySourceCandidates} ready source candidates out of ${snapshot.readiness.totalAssets} total assets, with ${snapshot.readiness.expiringReplicateLinks} expiring provider links flagged.`,
+        evidence: { requestedByUserId: ctx.user.id, ...snapshot },
+        artifacts: { snapshot },
+        revenueGenerated: 0,
+        startedAt,
+        finishedAt: new Date(),
+      });
+      await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'media-vault-guardian'`);
+      return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
+    }),
+
   runCloneIdentityGuardianTruth: ownerProcedure
     .mutation(async ({ ctx }) => {
       const startedAt = new Date();
