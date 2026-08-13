@@ -212,7 +212,6 @@ import PublicProfile from "./pages/PublicProfile";
 import ScriptDirectorPage from "./pages/scripttovideo/ScriptDirectorPage";
 import Services from "./pages/Services";
 import ShowPage from "./pages/ShowPage";
-import Subscriptions from "./pages/Subscriptions";
 import TelegramMoneyHub from "./pages/TelegramMoneyHub";
 // import UnifiedContentPublisher from "./pages/UnifiedContentPublisher"; // MERGED into SocialHub
 import University from "./pages/University";
@@ -556,7 +555,7 @@ function Router() {
       <Route path={"/viral-optimizer"}>{() => { window.location.replace("/social-hub"); return null; }}</Route>
       <Route path={"/vertical-pack"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/brand-deals"} component={BrandDeals} />
-      <Route path={"/subscriptions"} component={Subscriptions} />
+      <Route path={"/subscriptions"}>{() => { window.location.replace("/creator/subscriptions"); return null; }}</Route>
       {/* <Route path={"/feed"} component={FeedPage} /> */}
       <Route path={"/explore"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/profile/edit"} component={EditProfile} />
