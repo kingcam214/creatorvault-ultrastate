@@ -212,7 +212,6 @@ import PublicProfile from "./pages/PublicProfile";
 import ScriptDirectorPage from "./pages/scripttovideo/ScriptDirectorPage";
 import Services from "./pages/Services";
 import ShowPage from "./pages/ShowPage";
-import StudioSlots from "./pages/StudioSlots";
 import Subscriptions from "./pages/Subscriptions";
 import TelegramMoneyHub from "./pages/TelegramMoneyHub";
 // import UnifiedContentPublisher from "./pages/UnifiedContentPublisher"; // MERGED into SocialHub
@@ -384,7 +383,7 @@ function Router() {
       <Route path={"/design-department"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/whatsapp-content"} component={WhatsAppContentGenerator} />
       <Route path={"/king/whatsapp-bot"} component={WhatsAppBotDashboard} />
-      <Route path={"/studio-slots"} component={StudioSlots} />
+      <Route path={"/studio-slots"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/content-dashboard"}>{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path={"/monetization"}>{() => { window.location.replace("/creator/earnings"); return null; }}</Route>
       <Route path={"/lead-capture"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
