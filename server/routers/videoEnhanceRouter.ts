@@ -50,7 +50,25 @@ import * as fs from "fs";
 import { mkdir, writeFile, readFile, unlink } from "fs/promises";
 import * as os from "os";
 
-const execAsync = promisify(exec);
+const rawExecAsync = promisify(exec);
+
+function assertTechnicalFFmpegCommand(command: string): void {
+  const normalized = command.toLowerCase();
+  const prohibitedCreativeOperations = [
+    "-filter_complex", "drawtext", "drawbox", "zoompan", "eq=", "curves", "colorbalance",
+    "smartblur", "gblur", "boxblur", "hqdn3d", "vidstab", "setpts", "xfade", "fade=",
+    "overlay", "amix", "afade", "atempo", "loudnorm", "vignette",
+  ];
+  if (prohibitedCreativeOperations.some((operation) => normalized.includes(operation))) {
+    throw new Error("CREATIVE_FFMPEG_OPERATION_DISABLED");
+  }
+}
+
+async function execAsync(command: string, options?: any) {
+  assertTechnicalFFmpegCommand(command);
+  return rawExecAsync(command, options);
+}
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN || "";
 const POLLO_API_KEY = process.env.POLLO_API_KEY || "";
@@ -588,7 +606,7 @@ export const videoEnhanceRouter = router({
         unlink(fullOut).catch(() => {});
 
         const probeResult = await execAsync(`ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${tmpIn}"`).catch(() => ({ stdout: "60" }));
-        const vidDuration = parseFloat(probeResult.stdout.trim()) || 60;
+        const vidDuration = parseFloat(String(probeResult.stdout).trim()) || 60;
         const thumbTimes = [0, vidDuration * 0.25, vidDuration * 0.5, vidDuration * 0.75];
         for (const t of thumbTimes) {
           try {

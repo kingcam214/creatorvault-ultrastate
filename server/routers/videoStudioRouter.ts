@@ -18,7 +18,25 @@ import { randomUUID } from "crypto";
 import path from "path";
 import os from "os";
 
-const execAsync = promisify(exec);
+const rawExecAsync = promisify(exec);
+
+function assertTechnicalFFmpegCommand(command: string): void {
+  const normalized = command.toLowerCase();
+  const prohibitedCreativeOperations = [
+    "-filter_complex", "drawtext", "drawbox", "zoompan", "eq=", "curves", "colorbalance",
+    "smartblur", "gblur", "boxblur", "hqdn3d", "vidstab", "setpts", "xfade", "fade=",
+    "overlay", "amix", "afade", "atempo", "loudnorm", "vignette",
+  ];
+  if (prohibitedCreativeOperations.some((operation) => normalized.includes(operation))) {
+    throw new Error("CREATIVE_FFMPEG_OPERATION_DISABLED");
+  }
+}
+
+async function execAsync(command: string, options?: any) {
+  assertTechnicalFFmpegCommand(command);
+  return rawExecAsync(command, options);
+}
+
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
 const router = Router();
 
@@ -59,7 +77,14 @@ async function saveDurableAndRespond(res: Response, buffer: Buffer, filename: st
 function handleError(res: Response, e: unknown) {
   const msg = e instanceof Error ? e.message : String(e);
   console.error("[VideoStudio]", msg);
-  res.status(500).json({ error: msg, message: msg, recovery: "Try again or reduce file size." });
+  if (msg === "CREATIVE_FFMPEG_OPERATION_DISABLED") {
+    return res.status(409).json({
+      error: "This old basic-effects lane is held.",
+      message: "CreatorVault will not change your content with basic filters, artificial movement, or burned-in text. Use an approved source-preserving creation lane when it is ready.",
+      recovery: "Your original media is untouched in your Vault.",
+    });
+  }
+  return res.status(500).json({ error: "CreatorVault could not prepare this media.", message: "CreatorVault could not prepare this media.", recovery: "Your original media is untouched in your Vault." });
 }
 
 // ─── /filter — beauty, skin smooth, denoise, censor, color filters ───────────

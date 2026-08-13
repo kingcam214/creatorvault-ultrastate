@@ -134,6 +134,9 @@ const ALLOWLISTS = {
   ],
   'ffmpeg-technical-only': [
     'server/services/realRenderEngine.ts',
+    'server/routers/videoStudioRouter.ts',
+    'server/routers/videoEnhanceRouter.ts',
+    'server/routers/vaultxRouter.ts',
     'client/src/lib/homepageMediaRegistry.ts',
     'scripts/scope-guard.js'
   ],
