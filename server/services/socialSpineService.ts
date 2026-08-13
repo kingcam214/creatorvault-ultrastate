@@ -464,7 +464,7 @@ export async function listSocialPackages(userId: number): Promise<any[]> {
             sp.created_at, sp.updated_at,
             COUNT(DISTINCT spv.id) AS variant_count,
             COUNT(DISTINCT dj.id) AS distribution_job_count,
-            COALESCE(SUM(CASE WHEN dj.status = 'ready' THEN 1 ELSE 0 END), 0) AS ready_job_count
+            COUNT(DISTINCT CASE WHEN dj.status = 'ready' THEN dj.id END) AS ready_job_count
      FROM social_packages sp
      LEFT JOIN social_package_variants spv ON spv.package_id = sp.id
      LEFT JOIN distribution_jobs dj ON dj.social_package_id = sp.id AND dj.origin_system = 'social_spine'
