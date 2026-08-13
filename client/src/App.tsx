@@ -288,7 +288,6 @@ import Demos from "./pages/Demos";
 import EmmaReset from "./pages/EmmaReset";
 import EmmaResetSuccess from "./pages/EmmaResetSuccess";
 import KingCamVault from "./pages/KingCamVault";
-import MarielkaDashboard from "./pages/MarielkaDashboard";
 import MediaHubPage from "./pages/MediaHubPage";
 import MotionFlyerAgent from "./pages/MotionFlyerAgent";
 import MusicLibraryAgent from "./pages/MusicLibraryAgent";
@@ -628,7 +627,7 @@ function Router() {
       <Route path="/sector/haiti">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/kingcam/vault" component={KingCamVault} />
       <Route path="/studio/lipsync">{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
-      <Route path="/mi-panel/marielka-dashboard" component={MarielkaDashboard} />
+      <Route path="/mi-panel/marielka-dashboard">{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path="/media/hub" component={MediaHubPage} />
       <Route path="/agents/motion-flyer-agent" component={MotionFlyerAgent} />
       <Route path="/music/cover-studio">{() => { window.location.replace("/king/content"); return null; }}</Route>
