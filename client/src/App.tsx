@@ -227,7 +227,6 @@ import Notifications from "./pages/Notifications";
 import OnboardingV2 from "./pages/OnboardingV2";
 import OperatorDashboard from "./pages/OperatorDashboard";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
-import ProofGate from "./pages/ProofGate";
 import ProtectedContentDemo from "./pages/ProtectedContentDemo";
 import PublicProfile from "./pages/PublicProfile";
 import RealEstateEmpire from "./pages/RealEstateEmpire";
@@ -514,7 +513,7 @@ function Router() {
       <Route path={"/king/video-editor/:projectId"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-pay"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/hollywood-replacement"} component={HollywoodReplacement} />
-      <Route path={"/proof-gate"} component={ProofGate} />
+      <Route path={"/proof-gate"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/dominican"} component={DominicanSector} />
       <Route path={"/guia"} component={GuiaCreador} />
       <Route path={"/vault-guardian"}>{() => { window.location.replace("/vault-x"); return null; }}</Route>
