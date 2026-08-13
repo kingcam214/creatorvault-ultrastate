@@ -266,6 +266,7 @@ export const mediaAssetsRouter = router({
           WHERE user_id = ${ctx.user.id}
             AND id IN (${selectedIdsSql})
             AND status = 'ready'
+            AND (public_url IS NULL OR public_url NOT LIKE '%/api/media/asset/%')
           LIMIT ${input.selectedAssetIds.length}
         ` as any
       );
