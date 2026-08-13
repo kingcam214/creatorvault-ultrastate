@@ -219,7 +219,6 @@ import Messages from "./pages/Messages";
 import MonetizationPipeline from "./pages/MonetizationPipeline";
 // import { MultiPlatformPosting } from "./pages/MultiPlatformPosting"; // MERGED into SocialHub
 import MySubscriptions from "./pages/MySubscriptions";
-import Notifications from "./pages/Notifications";
 import OperatorDashboard from "./pages/OperatorDashboard";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
 import ProtectedContentDemo from "./pages/ProtectedContentDemo";
@@ -585,7 +584,7 @@ function Router() {
       <Route path={"/profile/edit"} component={EditProfile} />
       <Route path={"/profile/:username"} component={PublicProfile} />
       <Route path="/follow-list/:userId/:type" component={FollowListPage} />
-      <Route path={"/notifications"} component={Notifications} />
+      <Route path={"/notifications"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/messages"} component={Messages} />
       <Route path={"/messages/:conversationId"} component={MessageThread} />
       <Route path={"/onboarding"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
