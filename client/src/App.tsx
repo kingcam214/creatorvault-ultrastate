@@ -181,7 +181,6 @@ import EmmaEmpire from "./pages/EmmaEmpire";
 import EmmaHome from "./pages/EmmaHome";
 import EmmaNetworkHome from "./pages/EmmaNetworkHome";
 import EmmaResetDashboard from "./pages/EmmaResetDashboard";
-import EpisodeDetailPage from "./pages/EpisodeDetailPage";
 import Explore from "./pages/Explore";
 import FanSubscribe from "./pages/FanSubscribe";
 import FollowListPage from "./pages/FollowListPage";
@@ -518,7 +517,7 @@ function Router() {
       <Route path={"/launch-trailer-studio"}>{() => { window.location.replace("/trailer-maker"); return null; }}</Route>
       <Route path={"/god-mode"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/king/god-mode"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
-      <Route path={"/shows/:slug/episodes/:episodeId"} component={EpisodeDetailPage} />
+      <Route path={"/shows/:slug/episodes/:episodeId"}>{({ slug }: { slug: string }) => { window.location.replace(`/shows/${slug}`); return null; }}</Route>
       <Route path={"/shows/:slug"} component={ShowPage} />
       {/* /social-audit merged into SocialHub */}
       <Route path={"/performance-insights"} component={PerformanceInsights} />
