@@ -295,7 +295,6 @@ import MarielkaDashboard from "./pages/MarielkaDashboard";
 import MediaHubPage from "./pages/MediaHubPage";
 import MotionFlyerAgent from "./pages/MotionFlyerAgent";
 import MusicLibraryAgent from "./pages/MusicLibraryAgent";
-import Podcasting from "./pages/Podcasting";
 import Shop from "./pages/Shop";
 // import SocialAutoposterAgent from "./pages/SocialAutoposterAgent"; // MERGED into SocialHub
 import SocialHub from "./pages/SocialHub";
@@ -498,7 +497,7 @@ function Router() {
       <Route path={"/admin/manual-payments"} component={AdminManualPayments} />
       <Route path={"/admin/tips"} component={AdminTips} />
       <Route path={"/podcast-studio"}>{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
-      <Route path={"/podcasting"} component={Podcasting} />
+      <Route path={"/podcasting"}>{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path={"/launch-trailer-studio"}>{() => { window.location.replace("/trailer-maker"); return null; }}</Route>
       <Route path={"/god-mode"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/king/god-mode"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
@@ -639,7 +638,7 @@ function Router() {
       <Route path="/agents/music-library-agent" component={MusicLibraryAgent} />
       <Route path="/oauth/social/callback">{() => { window.location.replace("/social"); return null; }}</Route>
       <Route path="/ops/status">{() => { window.location.replace("/dashboard"); return null; }}</Route>
-      <Route path="/podcasting-home" component={Podcasting} />
+      <Route path="/podcasting-home">{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path="/realgpt/dashboard">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/shop" component={Shop} />
       {/* social-autoposter-agent, factory, posting-hub merged into /social-hub */}
