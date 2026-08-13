@@ -179,7 +179,6 @@ import EditProfile from "./pages/EditProfile";
 import EmmaEmpire from "./pages/EmmaEmpire";
 import EmmaHome from "./pages/EmmaHome";
 import EmmaNetworkHome from "./pages/EmmaNetworkHome";
-import EmmaResetDashboard from "./pages/EmmaResetDashboard";
 import FanSubscribe from "./pages/FanSubscribe";
 import FollowListPage from "./pages/FollowListPage";
 import GreatestShowStudio from "./pages/GreatestShowStudio";
@@ -439,7 +438,7 @@ function Router() {
       <Route path={"/emma"} component={EmmaHome} />
       <Route path={"/emma-empire"} component={EmmaEmpire} />
       <Route path="/chica" component={ChicaCockpit} />
-      <Route path={"/emma/reset-dashboard"} component={EmmaResetDashboard} />
+      <Route path={"/emma/reset-dashboard"}>{() => { window.location.replace("/emma/network"); return null; }}</Route>
       <Route path={"/emma/reset"}>{() => { window.location.replace("/emma/network"); return null; }}</Route>
       <Route path={"/emma/network"} component={EmmaNetworkHome} />
       <Route path={"/king"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
