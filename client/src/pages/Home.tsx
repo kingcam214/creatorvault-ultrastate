@@ -69,10 +69,23 @@ export default function Home() {
         <ShowcaseMotion
           videoSrc={showcase.livePath}
           posterSrc={showcase.fallbackAsset}
-          alt="KingCam Clone full-body moving identity hero"
+          alt="KingCam Clone moving identity backdrop"
           className="absolute inset-0"
           priority
         />
+        <div className="pointer-events-none absolute inset-0 flex items-end justify-center overflow-hidden sm:justify-end">
+          <video
+            src={showcase.livePath}
+            poster={showcase.fallbackAsset}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="h-full w-full max-w-full object-contain object-bottom sm:w-auto"
+            aria-label="KingCam Clone full-body moving identity hero"
+          />
+        </div>
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,4,3,.18)_0%,rgba(5,4,3,.04)_30%,rgba(5,4,3,.72)_88%,#080706_100%)]" />
         <div className="absolute inset-y-0 left-0 w-full bg-[radial-gradient(circle_at_16%_52%,rgba(0,0,0,.28),transparent_42%)]" />
 
