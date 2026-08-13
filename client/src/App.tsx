@@ -181,7 +181,6 @@ import EmmaHome from "./pages/EmmaHome";
 import EmmaNetworkHome from "./pages/EmmaNetworkHome";
 import FanSubscribe from "./pages/FanSubscribe";
 import HollywoodReplacement from "./pages/HollywoodReplacement";
-import HollywoodShow from "./pages/HollywoodShow";
 import InfluencerDashboard from "./pages/InfluencerDashboard";
 import JoinVaultLive from "./pages/JoinVaultLive";
 import KingCamScriptWriter from "./pages/KingCamScriptWriter";
@@ -582,7 +581,7 @@ function Router() {
       <Route path="/hollywood-academy">{() => { window.location.replace("/university"); return null; }}</Route>
       <Route path="/hollywood/channel/:creatorId">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/hollywood/episode/:episodeId">{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
-      <Route path="/hollywood/:slug" component={HollywoodShow} />
+      <Route path="/hollywood/:slug">{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/font-library"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
             <Route path={"/recruiter-dashboard"} component={RecruiterDashboard} />
             <Route path={"/dominicana"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
