@@ -174,6 +174,89 @@ export const agentExecutorRouter = router({
       return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
     }),
 
+  runPerformanceIntelligenceTruth: ownerProcedure
+    .mutation(async ({ ctx }) => {
+      const startedAt = new Date();
+      const creatorRows = rowsFromExecute(await db.db.execute(sql`
+        SELECT id FROM vaultx_creators WHERE user_id = ${ctx.user.id} LIMIT 1
+      `));
+      const creatorId = Number(creatorRows[0]?.id ?? ctx.user.id);
+      const [packageRows, distributionRows, nativePostRows, audienceRows, moneyRows] = await Promise.all([
+        db.db.execute(sql`
+          SELECT state, approval_state, COUNT(*) AS count
+          FROM social_packages
+          WHERE creator_user_id = ${ctx.user.id}
+          GROUP BY state, approval_state
+        `),
+        db.db.execute(sql`
+          SELECT platform, status, approval_state, COUNT(*) AS count, MAX(created_at) AS lastRecordedAt
+          FROM distribution_jobs
+          WHERE creator_id = ${creatorId}
+          GROUP BY platform, status, approval_state
+          ORDER BY lastRecordedAt DESC
+        `),
+        db.db.execute(sql`
+          SELECT status, visibility, access_tier, COUNT(*) AS count
+          FROM social_native_posts
+          WHERE creator_user_id = ${ctx.user.id}
+          GROUP BY status, visibility, access_tier
+        `),
+        db.db.execute(sql`
+          SELECT
+            (SELECT COUNT(*) FROM social_follows WHERE creator_user_id = ${ctx.user.id}) AS followers,
+            (SELECT COUNT(*) FROM subscriptions WHERE creator_id = ${creatorId} AND status = 'active') AS activeSubscribers,
+            (SELECT COUNT(*) FROM conversations WHERE creator_id = ${creatorId}) AS conversations
+        `),
+        db.db.execute(sql`
+          SELECT COALESCE(SUM(creator_share_cents), 0) AS creatorEarningsCents,
+                 COUNT(*) AS paidUnlocks
+          FROM transactions
+          WHERE creator_id = ${creatorId} AND status = 'completed'
+        `),
+      ]);
+      const audience = rowsFromExecute(audienceRows)[0] || {};
+      const money = rowsFromExecute(moneyRows)[0] || {};
+      const snapshot = {
+        source: "creatorvault_social_empire",
+        creatorId,
+        packages: rowsFromExecute(packageRows).map((row: any) => ({
+          state: String(row.state), approvalState: String(row.approval_state), count: Number(row.count ?? 0),
+        })),
+        distribution: rowsFromExecute(distributionRows).map((row: any) => ({
+          platform: String(row.platform), status: String(row.status), approvalState: String(row.approval_state),
+          count: Number(row.count ?? 0), lastRecordedAt: row.lastRecordedAt || null,
+        })),
+        nativePosts: rowsFromExecute(nativePostRows).map((row: any) => ({
+          status: String(row.status), visibility: String(row.visibility), accessTier: String(row.access_tier), count: Number(row.count ?? 0),
+        })),
+        audience: {
+          followers: Number(audience.followers ?? 0),
+          activeSubscribers: Number(audience.activeSubscribers ?? 0),
+          conversations: Number(audience.conversations ?? 0),
+        },
+        money: {
+          creatorEarningsCents: Number(money.creatorEarningsCents ?? 0),
+          paidUnlocks: Number(money.paidUnlocks ?? 0),
+        },
+      };
+      const receiptId = await recordAgentActionReceipt({
+        agentSlug: "performance-intelligence-agent",
+        agentName: "Performance Intelligence Agent",
+        agentCategory: "analytics",
+        taskType: "social_empire_truth_snapshot",
+        action: "read_social_distribution_audience_and_money_records",
+        status: "success",
+        outcomeSummary: `Read Social Empire truth: ${snapshot.packages.reduce((sum, item) => sum + item.count, 0)} packages, ${snapshot.distribution.reduce((sum, item) => sum + item.count, 0)} distribution records, ${snapshot.audience.activeSubscribers} active subscribers, and ${snapshot.money.paidUnlocks} paid unlocks.`,
+        evidence: { requestedByUserId: ctx.user.id, ...snapshot },
+        artifacts: { snapshot },
+        revenueGenerated: 0,
+        startedAt,
+        finishedAt: new Date(),
+      });
+      await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'performance-intelligence-agent'`);
+      return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
+    }),
+
   runCreatorGrowthBrief: ownerProcedure
     .input(z.object({
       sourceAssetId: z.string().uuid(),
