@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import {
   SOCIAL_SPINE_VERSION,
   addComment,
+  approveSocialPackage,
   bridgeLegacyPlatformCredentials,
   createNativePost,
   createSocialPackage,
@@ -14,6 +15,7 @@ import {
   linkVerifiedFanIdentity,
   listNativeFeed,
   listSocialNotifications,
+  listSocialPackages,
   markSocialNotificationRead,
   prepareCanonicalTelegramJob,
   recordLegacyAdapter,
@@ -94,6 +96,12 @@ export const socialSpineRouter = router({
       audioAttributionText: z.string().nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => createSocialPackage({ userId: ctx.user.id, ...input })),
+
+  packages: creatorProcedure.query(async ({ ctx }) => listSocialPackages(ctx.user.id)),
+
+  approvePackage: creatorProcedure
+    .input(z.object({ packageId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => approveSocialPackage({ userId: ctx.user.id, packageId: input.packageId })),
 
   prepareTelegram: creatorProcedure
     .input(z.object({

@@ -414,10 +414,18 @@ export const distributionRouter = router({
   "job.markReady": protectedProcedure
     .input(z.object({ jobId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      await rawExec(
-        `UPDATE distribution_jobs SET status = 'ready' WHERE id = ?`,
-        [input.jobId]
+      const jobs = await rawQuery(
+        `SELECT dj.id, dj.approval_state
+         FROM distribution_jobs dj
+         JOIN channel_identities ci ON ci.id = dj.channel_identity_id
+         WHERE dj.id = ? AND (ci.owner_id = ? OR ci.owner_type IN ('vaultx_brand', 'creatorvault_brand'))`,
+        [input.jobId, ctx.user.id],
       );
+      if (!jobs.length) throw new TRPCError({ code: "NOT_FOUND", message: "Distribution record was not found for this creator" });
+      if (String(jobs[0].approval_state) !== "approved") {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Creator approval is required before this distribution record can be made ready" });
+      }
+      await rawExec(`UPDATE distribution_jobs SET status = 'ready' WHERE id = ? AND approval_state = 'approved'`, [input.jobId]);
       return { success: true };
     }),
 
@@ -429,17 +437,20 @@ export const distributionRouter = router({
         `SELECT dj.*, ci.brand_lane, ci.content_safety_level, ci.owner_id
          FROM distribution_jobs dj
          JOIN channel_identities ci ON ci.id = dj.channel_identity_id
-         WHERE dj.id = ?`,
-        [input.jobId]
+         WHERE dj.id = ? AND (ci.owner_id = ? OR ci.owner_type IN ('vaultx_brand', 'creatorvault_brand'))`,
+        [input.jobId, userId]
       );
       if (!jobs.length) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
       const job = jobs[0];
 
-      if (!["draft", "ready"].includes(job.status)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: `Job is in status '${job.status}' — cannot post` });
+      if (job.status !== "ready") {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: `This distribution record is '${job.status}' and must be ready before release` });
+      }
+      if (String(job.approval_state) !== "approved") {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Creator approval is required before external release" });
       }
 
-      // Mark as posting
+      // Mark as posting only after an explicit owner-approved ready state.
       await rawExec(`UPDATE distribution_jobs SET status = 'posting' WHERE id = ?`, [input.jobId]);
 
       try {

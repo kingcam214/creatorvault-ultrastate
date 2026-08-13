@@ -457,6 +457,75 @@ export async function createSocialPackage(input: {
   return { packageId, variants, distributionJobIds };
 }
 
+export async function listSocialPackages(userId: number): Promise<any[]> {
+  await ensureSocialSpineSchema();
+  const rows = await rawQuery(
+    `SELECT sp.id, sp.source_media_asset_id, sp.title, sp.purpose, sp.destination_url, sp.state, sp.approval_state,
+            sp.created_at, sp.updated_at,
+            COUNT(DISTINCT spv.id) AS variant_count,
+            COUNT(DISTINCT dj.id) AS distribution_job_count,
+            COALESCE(SUM(CASE WHEN dj.status = 'ready' THEN 1 ELSE 0 END), 0) AS ready_job_count
+     FROM social_packages sp
+     LEFT JOIN social_package_variants spv ON spv.package_id = sp.id
+     LEFT JOIN distribution_jobs dj ON dj.social_package_id = sp.id AND dj.origin_system = 'social_spine'
+     WHERE sp.creator_user_id = ?
+     GROUP BY sp.id
+     ORDER BY sp.created_at DESC
+     LIMIT 60`,
+    [userId],
+  );
+  return rows.map((row: any) => ({
+    id: String(row.id), sourceAssetId: String(row.source_media_asset_id), title: String(row.title), purpose: String(row.purpose),
+    destinationUrl: String(row.destination_url), state: String(row.state), approvalState: String(row.approval_state),
+    createdAt: row.created_at, updatedAt: row.updated_at, variantCount: Number(row.variant_count || 0),
+    distributionJobCount: Number(row.distribution_job_count || 0), readyJobCount: Number(row.ready_job_count || 0),
+  }));
+}
+
+export async function approveSocialPackage(input: { userId: number; packageId: string }): Promise<{
+  packageId: string; approvalState: "approved"; distributionJobIds: number[]; readyJobCount: number;
+}> {
+  await ensureSocialSpineSchema();
+  const packages = await rawQuery(
+    `SELECT id, state, approval_state FROM social_packages WHERE id = ? AND creator_user_id = ? LIMIT 1`,
+    [input.packageId, input.userId],
+  );
+  if (!packages.length) throw new Error("CreatorVault package was not found for this creator");
+  const packageRecord = packages[0];
+  if (!['draft', 'approved'].includes(String(packageRecord.state)) || !['awaiting_approval', 'approved'].includes(String(packageRecord.approval_state))) {
+    throw new Error("Only a pending CreatorVault package can be approved for release");
+  }
+
+  await rawExec(
+    `UPDATE social_packages
+     SET state = 'approved', approval_state = 'approved'
+     WHERE id = ? AND creator_user_id = ?`,
+    [input.packageId, input.userId],
+  );
+  const creatorId = await getCreatorId(input.userId);
+  await rawExec(
+    `UPDATE distribution_jobs
+     SET status = CASE WHEN status = 'draft' THEN 'ready' ELSE status END,
+         approval_state = 'approved'
+     WHERE social_package_id = ? AND creator_id = ? AND origin_system = 'social_spine'
+       AND status IN ('draft', 'ready')`,
+    [input.packageId, creatorId],
+  );
+  const jobs = await rawQuery(
+    `SELECT id, status, approval_state FROM distribution_jobs
+     WHERE social_package_id = ? AND creator_id = ? AND origin_system = 'social_spine'
+     ORDER BY id ASC`,
+    [input.packageId, creatorId],
+  );
+  const readyJobCount = jobs.filter((job: any) => String(job.status) === 'ready' && String(job.approval_state) === 'approved').length;
+  return {
+    packageId: input.packageId,
+    approvalState: 'approved',
+    distributionJobIds: jobs.map((job: any) => Number(job.id)),
+    readyJobCount,
+  };
+}
+
 export async function createNativePost(input: {
   userId: number;
   sourceAssetId: string;

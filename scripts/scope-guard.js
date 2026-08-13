@@ -79,6 +79,7 @@ const ALLOWLISTS = {
     'server/_core/index.ts',
     'server/routers.ts',
     'server/routers/socialSpineRouter.ts',
+    'server/routers/distributionRouter.ts',
     'server/routers/followRouter.ts',
     'server/routers/notificationRouter.ts',
     'server/services/socialSpineService.ts',
