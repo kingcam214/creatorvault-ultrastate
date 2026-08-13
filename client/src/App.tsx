@@ -196,7 +196,6 @@ import FollowListPage from "./pages/FollowListPage";
 import GreatestShowStudio from "./pages/GreatestShowStudio";
 import HollywoodAcademy from "./pages/HollywoodAcademy";
 import HollywoodChannel from "./pages/HollywoodChannel";
-import HollywoodCreatorDashboard from "./pages/HollywoodCreatorDashboard";
 import HollywoodEpisode from "./pages/HollywoodEpisode";
 import HollywoodReplacement from "./pages/HollywoodReplacement";
 import HollywoodShow from "./pages/HollywoodShow";
@@ -619,7 +618,7 @@ function Router() {
       <Route path={"/vault-rise"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path={"/vault-culture"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/hollywood-shows" component={HollywoodShows} />
-      <Route path="/hollywood-creator-dashboard" component={HollywoodCreatorDashboard} />
+      <Route path="/hollywood-creator-dashboard">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/hollywood-studio" component={HollywoodStudio} />
       <Route path="/hollywood-academy" component={HollywoodAcademy} />
       <Route path="/hollywood/channel/:creatorId" component={HollywoodChannel} />
