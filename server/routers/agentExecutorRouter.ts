@@ -561,71 +561,50 @@ export const agentExecutorRouter = router({
 
       const findings = evidence.editorFindings;
       const selectedDirection = evidence.directions.find(direction => direction.id === evidence.selectedDirectionId) || null;
-      const result = await invokeLLM({
-        model: "gpt-4.1-mini",
-        maxTokens: 1200,
-        outputSchema: {
-          name: "creator_growth_brief",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              leadLine: { type: "string" },
-              shortTitle: { type: "string" },
-              caption: { type: "string" },
-              storyBeats: { type: "array", items: { type: "string" } },
-              callToAction: { type: "string" },
-              platformNotes: { type: "array", items: { type: "string" } },
-              evidenceMomentsMs: { type: "array", items: { type: "number" } },
-            },
-            required: ["leadLine", "shortTitle", "caption", "storyBeats", "callToAction", "platformNotes", "evidenceMomentsMs"],
-            additionalProperties: false,
-          },
-        },
-        messages: [
-          {
-            role: "system",
-            content: "You are Creator Growth inside CreatorVault. Build a premium, direct content brief from the provided verified video evidence only. Never claim views, sales, subscribers, or activity that is not in the evidence. Never mention technical systems, models, prompts, data, pipelines, tools, or providers. Do not describe nudity or explicit sexual activity. Keep the writing confident, creator-facing, and ready for a luxury adult-creator brand within lawful platform boundaries.",
-          },
-          {
-            role: "user",
-            content: JSON.stringify({
-              goal: input.goal,
-              source: {
-                fileName: asset.original_name || asset.file_name || "CreatorVault video",
-                durationSeconds: Number(asset.duration || 0) || null,
-              },
-              verifiedAnalysis: {
-                analysisScore: evidence.analysisScore,
-                strongestOpeningMs: findings?.strongestHookTimestampMs ?? null,
-                strongestThumbnailMs: findings?.strongestThumbnailTimestampMs ?? null,
-                strongestMotionMs: findings?.strongestMotionTimestampMs ?? null,
-                strongestCommercialMs: findings?.strongestCommercialTimestampMs ?? null,
-                weakestSectionStartMs: findings?.weakestSectionStartMs ?? null,
-                weakestSectionEndMs: findings?.weakestSectionEndMs ?? null,
-                bodyFocus: evidence.bodyMap,
-                suggestedDirection: selectedDirection ? {
-                  label: selectedDirection.label,
-                  confidence: selectedDirection.confidence,
-                  evidence: selectedDirection.evidence,
-                  distinction: selectedDirection.distinction,
-                } : null,
-              },
-              instruction: "Create the growth brief from these verified moments. Keep evidenceMomentsMs limited to timestamps that appear above.",
-            }),
-          },
+      const evidenceMomentsMs = Array.from(new Set([
+        findings?.strongestHookTimestampMs,
+        findings?.strongestThumbnailTimestampMs,
+        findings?.strongestMotionTimestampMs,
+        findings?.strongestCommercialTimestampMs,
+      ].filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0)));
+      const toTimestamp = (milliseconds: number | undefined | null): string => {
+        if (typeof milliseconds !== "number" || !Number.isFinite(milliseconds) || milliseconds < 0) return "the verified opening";
+        const totalSeconds = Math.floor(milliseconds / 1000);
+        return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}`;
+      };
+      const directionLabel = selectedDirection?.label || "the selected Body Cinema direction";
+      const sourceTitle = String(asset.original_name || asset.file_name || "CreatorVault video").replace(/\.[^.]+$/, "");
+      const goalCopy = {
+        ppv_offer: { title: "A private moment worth unlocking", cta: "Unlock the full drop.", platform: "Lead with the proof moment, then send the audience to the private unlock." },
+        subscriber_growth: { title: "Stay close for the next drop", cta: "Subscribe for first access.", platform: "Use the opening as the public signal and keep the full reward for subscribers." },
+        social_tease: { title: "The moment before the full reveal", cta: "Watch the next move inside CreatorVault.", platform: "Keep the public cut tight and let the ending create the next click." },
+        creator_authority: { title: "A direction built with intention", cta: "Step into the CreatorVault experience.", platform: "Use the strongest movement as the authority signal; do not over-explain the work." },
+      }[input.goal];
+      const strongestOpening = toTimestamp(findings?.strongestHookTimestampMs);
+      const strongestMotion = toTimestamp(findings?.strongestMotionTimestampMs);
+      const strongestThumbnail = toTimestamp(findings?.strongestThumbnailTimestampMs);
+      const brief: Record<string, unknown> = {
+        leadLine: `Open at ${strongestOpening}; that is where this ${directionLabel} direction earns attention first.`,
+        shortTitle: goalCopy.title,
+        caption: `${sourceTitle} moves from the strongest opening into a ${directionLabel} payoff. The public moment creates the invitation; the full experience lives inside CreatorVault.`,
+        storyBeats: [
+          `Open on the verified hook at ${strongestOpening}.`,
+          `Carry the strongest movement at ${strongestMotion} without adding an unrelated visual claim.`,
+          `Use the frame at ${strongestThumbnail} as the cover choice.`,
+          findings?.weakestSectionStartMs !== null && findings?.weakestSectionStartMs !== undefined
+            ? `Do not lead with the weaker section beginning at ${toTimestamp(findings.weakestSectionStartMs)}.`
+            : "Keep the opening focused on the verified strongest moment.",
+          `Land on the ${directionLabel} direction, then make one clear invitation.`,
         ],
-      });
-      const rawBrief = result.choices[0]?.message?.content;
-      if (typeof rawBrief !== "string" || !rawBrief.trim()) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Creator Growth did not return a usable brief." });
-      }
-      let brief: Record<string, unknown>;
-      try {
-        brief = JSON.parse(rawBrief);
-      } catch {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Creator Growth returned an invalid brief." });
-      }
+        callToAction: goalCopy.cta,
+        platformNotes: [
+          goalCopy.platform,
+          "Use only the verified timestamps carried from this exact CreatorVault video.",
+          "This brief is source-grounded and does not claim reach, sales, or subscriber results.",
+        ],
+        evidenceMomentsMs,
+        method: "deterministic_verified_evidence",
+      };
       const receiptId = await recordAgentActionReceipt({
         agentSlug: "creator-growth-agent",
         agentName: "Creator Growth Agent",
@@ -641,6 +620,7 @@ export const agentExecutorRouter = router({
           analysisScore: evidence.analysisScore,
           goal: input.goal,
           selectedDirectionId: evidence.selectedDirectionId,
+          briefMethod: "deterministic_verified_evidence",
         },
         artifacts: { brief },
         revenueGenerated: 0,
