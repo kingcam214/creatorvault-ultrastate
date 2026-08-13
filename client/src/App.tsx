@@ -240,7 +240,6 @@ import ProofGate from "./pages/ProofGate";
 import ProtectedContentDemo from "./pages/ProtectedContentDemo";
 import PublicProfile from "./pages/PublicProfile";
 import RealEstateEmpire from "./pages/RealEstateEmpire";
-import RecruitmentDashboard from "./pages/RecruitmentDashboard";
 import ScriptDirectorPage from "./pages/scripttovideo/ScriptDirectorPage";
 import Services from "./pages/Services";
 import ShowPage from "./pages/ShowPage";
@@ -610,7 +609,7 @@ function Router() {
       <Route path={"/owner-cockpit/chicas-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/presentation-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/presentation-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
-      <Route path={"/owner-cockpit/recruitment"} component={RecruitmentDashboard} />
+      <Route path={"/owner-cockpit/recruitment"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/espionage"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/ai-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/apple-queue"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
