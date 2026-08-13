@@ -128,7 +128,6 @@ import PayoutSetup from "./pages/PayoutSetup";
 import AdminTips from "./pages/AdminTips";
 import GuiaCreador from "./pages/GuiaCreador";
 import TelegramSetup from "./pages/TelegramSetup";
-import CreatorOnboarding from "./pages/CreatorOnboarding";
 import BrowseLive from "./pages/BrowseLive";
 import StreamView from "./pages/StreamView";
 import GreatestShowLanding from "./pages/greatest-show/index";
@@ -444,7 +443,7 @@ function Router() {
       <Route path={"/command-center"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/onboard"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/onboard/influencer"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
-      <Route path={"/onboard/creator"} component={CreatorOnboarding} />
+      <Route path={"/onboard/creator"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/influencer"} component={InfluencerDashboard} />
       <Route path="/social-hub" component={SocialHub} />
       <Route path="/social-audit" component={SocialHub} />
