@@ -430,58 +430,78 @@ export const agentExecutorRouter = router({
         SELECT id FROM vaultx_creators WHERE user_id = ${ctx.user.id} LIMIT 1
       `));
       const creatorId = Number(creatorRows[0]?.id ?? ctx.user.id);
-      const [packageRows, distributionRows, nativePostRows, audienceRows, moneyRows] = await Promise.all([
-        db.db.execute(sql`
+      const safeRows = async (query: any): Promise<{ available: boolean; rows: any[] }> => {
+        try {
+          return { available: true, rows: rowsFromExecute(await db.db.execute(query)) };
+        } catch {
+          return { available: false, rows: [] };
+        }
+      };
+      const [packageRead, distributionRead, nativePostRead, audienceRead, conversationRead, moneyRead] = await Promise.all([
+        safeRows(sql`
           SELECT state, approval_state, COUNT(*) AS count
           FROM social_packages
           WHERE creator_user_id = ${ctx.user.id}
           GROUP BY state, approval_state
         `),
-        db.db.execute(sql`
+        safeRows(sql`
           SELECT platform, status, approval_state, COUNT(*) AS count, MAX(created_at) AS lastRecordedAt
           FROM distribution_jobs
           WHERE creator_id = ${creatorId}
           GROUP BY platform, status, approval_state
           ORDER BY lastRecordedAt DESC
         `),
-        db.db.execute(sql`
+        safeRows(sql`
           SELECT status, visibility, access_tier, COUNT(*) AS count
           FROM social_native_posts
           WHERE creator_user_id = ${ctx.user.id}
           GROUP BY status, visibility, access_tier
         `),
-        db.db.execute(sql`
+        safeRows(sql`
           SELECT
             (SELECT COUNT(*) FROM social_follows WHERE creator_user_id = ${ctx.user.id}) AS followers,
-            (SELECT COUNT(*) FROM subscriptions WHERE creator_id = ${creatorId} AND status = 'active') AS activeSubscribers,
-            (SELECT COUNT(*) FROM conversations WHERE creator_id = ${creatorId}) AS conversations
+            (SELECT COUNT(*) FROM subscriptions WHERE creator_id = ${creatorId} AND status = 'active') AS activeSubscribers
         `),
-        db.db.execute(sql`
-          SELECT COALESCE(SUM(creator_share_cents), 0) AS creatorEarningsCents,
+        safeRows(sql`
+          SELECT COUNT(*) AS conversations
+          FROM conversations
+          WHERE creator_id = ${creatorId}
+        `),
+        safeRows(sql`
+          SELECT COALESCE(SUM(creator_share_in_cents), 0) AS creatorEarningsCents,
                  COUNT(*) AS paidUnlocks
           FROM transactions
           WHERE creator_id = ${creatorId} AND status = 'completed'
         `),
       ]);
-      const audience = rowsFromExecute(audienceRows)[0] || {};
-      const money = rowsFromExecute(moneyRows)[0] || {};
+      const audience = audienceRead.rows[0] || {};
+      const conversations = conversationRead.rows[0] || {};
+      const money = moneyRead.rows[0] || {};
       const snapshot = {
         source: "creatorvault_social_empire",
         creatorId,
-        packages: rowsFromExecute(packageRows).map((row: any) => ({
+        readStates: {
+          packages: packageRead.available ? "available" : "unavailable",
+          distribution: distributionRead.available ? "available" : "unavailable",
+          nativePosts: nativePostRead.available ? "available" : "unavailable",
+          audience: audienceRead.available ? "available" : "unavailable",
+          conversations: conversationRead.available ? "available" : "unavailable",
+          money: moneyRead.available ? "available" : "unavailable",
+        },
+        packages: packageRead.rows.map((row: any) => ({
           state: String(row.state), approvalState: String(row.approval_state), count: Number(row.count ?? 0),
         })),
-        distribution: rowsFromExecute(distributionRows).map((row: any) => ({
+        distribution: distributionRead.rows.map((row: any) => ({
           platform: String(row.platform), status: String(row.status), approvalState: String(row.approval_state),
           count: Number(row.count ?? 0), lastRecordedAt: row.lastRecordedAt || null,
         })),
-        nativePosts: rowsFromExecute(nativePostRows).map((row: any) => ({
+        nativePosts: nativePostRead.rows.map((row: any) => ({
           status: String(row.status), visibility: String(row.visibility), accessTier: String(row.access_tier), count: Number(row.count ?? 0),
         })),
         audience: {
           followers: Number(audience.followers ?? 0),
           activeSubscribers: Number(audience.activeSubscribers ?? 0),
-          conversations: Number(audience.conversations ?? 0),
+          conversations: conversationRead.available ? Number(conversations.conversations ?? 0) : null,
         },
         money: {
           creatorEarningsCents: Number(money.creatorEarningsCents ?? 0),
