@@ -14,6 +14,8 @@
  * OWNER MANDATE: Nothing deploys without registration here.
  */
 
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { db } from "../db";
 import { 
   telegramBots,
@@ -77,28 +79,79 @@ export interface SystemLog {
   timestamp: Date;
 }
 
+interface ReleaseMetadata {
+  commit?: string;
+  gitSha?: string;
+  branch?: string;
+  timestamp?: string;
+  deployedAt?: string;
+  builtAt?: string;
+  environment?: string;
+}
+
+const CREATORVAULT_PRODUCTION_URL = process.env.CREATORVAULT_PUBLIC_URL || "https://creatorvault.live";
+
+async function readReleaseMetadata(): Promise<ReleaseMetadata | null> {
+  const releasePaths = [
+    path.resolve(process.cwd(), "dist", "public", "release.json"),
+    path.resolve(process.cwd(), "dist", "release.json"),
+    path.resolve(process.cwd(), "release.json"),
+  ];
+
+  for (const releasePath of releasePaths) {
+    try {
+      const raw = await readFile(releasePath, "utf8");
+      return JSON.parse(raw) as ReleaseMetadata;
+    } catch {
+      // Try the next production release location. An absent release stamp is not a deployment.
+    }
+  }
+
+  return null;
+}
+
+async function getBroadcastStates() {
+  const events = await db
+    .select()
+    .from(botEvents)
+    .where(eq(botEvents.eventType, "broadcast_toggle"))
+    .orderBy(desc(botEvents.createdAt));
+  const states = new Map<string, boolean>();
+
+  for (const event of events as any[]) {
+    const eventData = event.eventData as { botId?: string; enabled?: boolean } | null;
+    if (eventData?.botId && !states.has(eventData.botId)) {
+      states.set(eventData.botId, eventData.enabled === true);
+    }
+  }
+
+  return states;
+}
+
 /**
  * Get all active deployments
  */
 export async function getAllDeployments(): Promise<SystemDeployment[]> {
-  // For now, return hardcoded deployments
-  // In production, would query system_deployments table
-  return [
-    {
-      id: "creatorvault-main",
-      name: "CreatorVault ULTRASTATE",
-      type: "website",
-      url: "https://3000-iwfr5umzbitqw8es11bym-9c3c9d70.manusvm.computer",
-      status: "active",
-      owner: "KINGCAM",
-      deployedAt: new Date("2024-12-18"),
-      lastHealthCheck: new Date(),
-      metadata: {
-        version: "7e5c1532",
-        features: ["server", "db", "user"],
-      },
+  const release = await readReleaseMetadata();
+  if (!release) return [];
+
+  const deployedAt = new Date(release.deployedAt || release.timestamp || release.builtAt || 0);
+  if (Number.isNaN(deployedAt.getTime())) return [];
+
+  return [{
+    id: "creatorvault-production",
+    name: "CreatorVault Production",
+    type: "website",
+    url: CREATORVAULT_PRODUCTION_URL,
+    status: "active",
+    owner: "KINGCAM",
+    deployedAt,
+    metadata: {
+      commit: release.commit || release.gitSha || null,
+      branch: release.branch || null,
+      environment: release.environment || null,
     },
-  ];
+  }];
 }
 
 /**
@@ -106,6 +159,7 @@ export async function getAllDeployments(): Promise<SystemDeployment[]> {
  */
 export async function getAllBots(): Promise<SystemBot[]> {
   const bots: SystemBot[] = [];
+  const broadcastStates = await getBroadcastStates();
 
   // Get Telegram bots
   const telegramBotsData = await db.select().from(telegramBots);
@@ -115,8 +169,8 @@ export async function getAllBots(): Promise<SystemBot[]> {
     type: "telegram" as const,
     status: bot.status as "active" | "paused" | "error",
     enabled: bot.status === "active",
-    broadcastEnabled: true,
-    messageCount: 0, // Would query telegram_leads or bot_events
+    broadcastEnabled: broadcastStates.get(bot.id) ?? false,
+    messageCount: 0, // Message totals are not yet recorded per bot.
     lastActivity: bot.updatedAt,
     metadata: {
       botToken: "***",
@@ -132,29 +186,14 @@ export async function getAllBots(): Promise<SystemBot[]> {
     type: "whatsapp" as const,
     status: provider.status as "active" | "paused" | "error",
     enabled: provider.status === "active",
-    broadcastEnabled: true,
-    messageCount: 0, // Would query whatsapp_leads or bot_events
+    broadcastEnabled: broadcastStates.get(provider.id) ?? false,
+    messageCount: 0, // Message totals are not yet recorded per provider.
     lastActivity: provider.updatedAt,
     metadata: {
       phoneNumber: provider.phoneNumber,
       provider: provider.provider,
     },
   })));
-
-  // Add AI Assistant bot
-  bots.push({
-    id: "ai-assistant-main",
-    name: "CreatorVault AI Assistant",
-    type: "ai_assistant",
-    status: "active",
-    enabled: true,
-    broadcastEnabled: false,
-    messageCount: 0, // Would query bot_events
-    lastActivity: new Date(),
-    metadata: {
-      roles: ["creator", "recruiter", "field_operator", "ambassador"],
-    },
-  });
 
   return bots;
 }
@@ -163,69 +202,16 @@ export async function getAllBots(): Promise<SystemBot[]> {
  * Get all system channels
  */
 export async function getAllChannels(): Promise<SystemChannel[]> {
-  // For now, return hardcoded channels
-  // In production, would query system_channels table
-  return [
-    {
-      id: "marketplace",
-      platform: "CreatorVault",
-      name: "Marketplace",
-      status: "active",
-      enabled: true,
-      metadata: { route: "/marketplace" },
-    },
-    {
-      id: "university",
-      platform: "CreatorVault",
-      name: "University",
-      status: "active",
-      enabled: true,
-      metadata: { route: "/university" },
-    },
-    {
-      id: "services",
-      platform: "CreatorVault",
-      name: "Services",
-      status: "active",
-      enabled: true,
-      metadata: { route: "/services" },
-    },
-    {
-      id: "ai-bot",
-      platform: "CreatorVault",
-      name: "AI Bot",
-      status: "active",
-      enabled: true,
-      metadata: { route: "/ai-bot" },
-    },
-    {
-      id: "command-hub",
-      platform: "CreatorVault",
-      name: "Command Hub",
-      status: "active",
-      enabled: true,
-      metadata: { route: "/command-hub" },
-    },
-  ];
+  // No durable channel registry exists yet. Return no channels rather than inventing active routes.
+  return [];
 }
 
 /**
  * Get all system links
  */
 export async function getAllLinks(): Promise<SystemLink[]> {
-  // For now, return hardcoded links
-  // In production, would query system_links table
-  return [
-    {
-      id: "main-deployment",
-      url: "https://3000-iwfr5umzbitqw8es11bym-9c3c9d70.manusvm.computer",
-      type: "deployment",
-      destination: "CreatorVault ULTRASTATE",
-      createdBy: "KINGCAM",
-      createdAt: new Date("2024-12-18"),
-      accessCount: 0,
-    },
-  ];
+  // No durable generated-link registry exists yet. Return no links rather than inventing traceability.
+  return [];
 }
 
 /**

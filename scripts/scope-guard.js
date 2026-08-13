@@ -236,6 +236,10 @@ const ALLOWLISTS = {
     'client/src/pages/SocialHub.tsx',
     'scripts/scope-guard.js'
   ],
+  'owner-registry': [
+    'server/services/systemRegistry.ts',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',
