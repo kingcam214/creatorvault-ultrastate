@@ -223,7 +223,6 @@ import MonetizationPipeline from "./pages/MonetizationPipeline";
 import MySubscriptions from "./pages/MySubscriptions";
 import NFCCards from "./pages/NFCCards";
 import Notifications from "./pages/Notifications";
-import OnboardingV2 from "./pages/OnboardingV2";
 import OperatorDashboard from "./pages/OperatorDashboard";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
 import ProtectedContentDemo from "./pages/ProtectedContentDemo";
@@ -592,7 +591,7 @@ function Router() {
       <Route path={"/notifications"} component={Notifications} />
       <Route path={"/messages"} component={Messages} />
       <Route path={"/messages/:conversationId"} component={MessageThread} />
-      <Route path={"/onboarding"} component={OnboardingV2} />
+      <Route path={"/onboarding"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/command-hub-v2"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/chicas-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
