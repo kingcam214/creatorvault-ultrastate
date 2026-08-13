@@ -245,6 +245,11 @@ const ALLOWLISTS = {
     'server/services/systemRegistry.ts',
     'scripts/scope-guard.js'
   ],
+  'agent-command-authority': [
+    'server/routers/agentExecutorRouter.ts',
+    'server/routers/empireAgents.ts',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',

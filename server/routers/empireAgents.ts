@@ -1,8 +1,18 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
+import { TRPCError } from "@trpc/server";
 import * as db from "../db";
 import { sql } from "drizzle-orm";
 import OpenAI from "openai";
+
+const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== "king" && ctx.user.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Owner approval is required for agent registry control." });
+  }
+  return next({ ctx });
+});
+
+const AGENT_ACTIVATION_REQUIREMENT = "A real source, owner approval, action receipt, and observed result are required before an agent can be activated.";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -61,7 +71,7 @@ export const empireAgents = router({
     return extractRows(result);
   }),
 
-  deployAgent: protectedProcedure
+  deployAgent: ownerProcedure
     .input(z.object({ agentId: z.number(), mission: z.string().min(3), targets: z.array(z.string()).default([]) }))
     .mutation(async ({ input }) => {
       const agent = await getAgentById(input.agentId);
@@ -84,18 +94,19 @@ export const empireAgents = router({
       const plan = c.choices[0].message.content?.trim();
       if (!plan) throw new Error(`OpenAI returned an empty deployment plan for ${agent.slug}`);
 
-      await db.db.execute(sql`UPDATE empire_agents SET status = 'active' WHERE id = ${input.agentId}`);
-      await insertAgentReport(agent, "deployment_plan", plan);
+      await insertAgentReport(agent, "activation_plan", `${plan}\n\nActivation requirement: ${AGENT_ACTIVATION_REQUIREMENT}`);
 
       return {
-        deployed: true,
+        deployed: false,
+        commandState: "plan_ready",
         agentId: input.agentId,
         agentSlug: agent.slug,
         agentName: agent.name,
-        status: "active",
+        status: agent.status,
         mission: input.mission,
         targets: input.targets,
         plan,
+        activationRequirement: AGENT_ACTIVATION_REQUIREMENT,
       };
     }),
 
@@ -110,18 +121,26 @@ export const empireAgents = router({
       return { reports: extractRows(result), userId: ctx.user.id };
     }),
 
-  stopAgent: protectedProcedure.input(z.object({ agentId: z.number(), reason: z.string().optional() })).mutation(async ({ input }) => {
+  stopAgent: ownerProcedure.input(z.object({ agentId: z.number(), reason: z.string().optional() })).mutation(async ({ input }) => {
     const agent = await getAgentById(input.agentId);
     await db.db.execute(sql`UPDATE empire_agents SET status = 'inactive', paused_until = NULL WHERE id = ${input.agentId}`);
     await insertAgentReport(agent, "agent_stopped", `Agent stopped by owner${input.reason ? `: ${input.reason}` : "."}`);
     return { stopped: true, agentId: input.agentId, agentSlug: agent.slug, agentName: agent.name, status: "inactive" };
   }),
 
-  resumeAgent: protectedProcedure.input(z.object({ agentId: z.number(), reason: z.string().optional() })).mutation(async ({ input }) => {
+  resumeAgent: ownerProcedure.input(z.object({ agentId: z.number(), reason: z.string().optional() })).mutation(async ({ input }) => {
     const agent = await getAgentById(input.agentId);
-    await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE id = ${input.agentId}`);
-    await insertAgentReport(agent, "agent_resumed", `Agent resumed by owner${input.reason ? `: ${input.reason}` : "."}`);
-    return { resumed: true, agentId: input.agentId, agentSlug: agent.slug, agentName: agent.name, status: "active" };
+    const note = `Activation requested by owner${input.reason ? `: ${input.reason}` : "."} ${AGENT_ACTIVATION_REQUIREMENT}`;
+    await insertAgentReport(agent, "activation_requested", note);
+    return {
+      resumed: false,
+      commandState: "approval_required",
+      agentId: input.agentId,
+      agentSlug: agent.slug,
+      agentName: agent.name,
+      status: agent.status,
+      activationRequirement: AGENT_ACTIVATION_REQUIREMENT,
+    };
   }),
 
   getActiveChallenge: protectedProcedure.query(async () => {
