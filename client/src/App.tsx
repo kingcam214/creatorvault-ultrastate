@@ -225,7 +225,6 @@ import MySubscriptions from "./pages/MySubscriptions";
 import NFCCards from "./pages/NFCCards";
 import Notifications from "./pages/Notifications";
 import NurseConsole from "./pages/NurseConsole";
-import Onboard from "./pages/Onboard";
 import OnboardingV2 from "./pages/OnboardingV2";
 import OperatorDashboard from "./pages/OperatorDashboard";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
@@ -448,7 +447,7 @@ function Router() {
       <Route path={"/creator-management"} component={CreatorManagement} />
       <Route path={"/command-hub"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/command-center"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
-      <Route path={"/onboard"} component={Onboard} />
+      <Route path={"/onboard"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/onboard/influencer"} component={InfluencerOnboarding} />
       <Route path={"/onboard/creator"} component={CreatorOnboarding} />
       <Route path={"/influencer"} component={InfluencerDashboard} />
