@@ -298,7 +298,6 @@ import DelbaniaPanel from "./pages/DelbaniaPanel";
 import Demos from "./pages/Demos";
 import EmmaReset from "./pages/EmmaReset";
 import EmmaResetSuccess from "./pages/EmmaResetSuccess";
-import FlyerStudio from "./pages/FlyerStudio";
 import FunnelForge from "./pages/FunnelForge";
 import HaitianSector from "./pages/HaitianSector";
 import KingCamVault from "./pages/KingCamVault";
@@ -641,7 +640,7 @@ function Router() {
       <Route path="/demos-home" component={Demos} />
       <Route path="/emma/reset-home" component={EmmaReset} />
       <Route path="/emma/reset-success" component={EmmaResetSuccess} />
-      <Route path="/flyer-studio-v2" component={FlyerStudio} />
+      <Route path="/flyer-studio-v2">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/funnels" component={FunnelForge} />
       <Route path="/sector/haiti" component={HaitianSector} />
       <Route path="/kingcam/vault" component={KingCamVault} />
