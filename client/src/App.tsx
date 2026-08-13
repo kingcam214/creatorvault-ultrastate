@@ -174,7 +174,6 @@ import CreatorManagement from "./pages/CreatorManagement";
 import CreatorSubscriptionTiers from "./pages/CreatorSubscriptionTiers";
 import CreatorSubscriptions from "./pages/CreatorSubscriptions";
 import CreatorVaultDominicana from "./pages/CreatorVaultDominicana";
-import CultureSelection from "./pages/CultureSelection";
 import DayShiftDoctor from "./pages/DayShiftDoctor";
 import DominicanSector from "./pages/DominicanSector";
 import DubbingAI from "./pages/DubbingAI";
@@ -513,7 +512,7 @@ function Router() {
       <Route path={"/video-studio"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
       <Route path={"/video-production-studio"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
       <Route path={"/vault-x"} component={VaultX} />
-      <Route path={"/culture-selection"} component={CultureSelection} />
+      <Route path={"/culture-selection"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/thumbnail-generator"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/admin/payouts"} component={AdminPayouts} />
       <Route path={"/admin/manual-payments"} component={AdminManualPayments} />
