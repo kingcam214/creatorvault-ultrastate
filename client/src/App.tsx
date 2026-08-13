@@ -63,7 +63,6 @@ import CreatorDashboard from "./pages/CreatorDashboard";
 import AIBot from "./pages/AIBot";
 import OwnerControl from "./pages/OwnerControl";
 import OwnerStatus from "./pages/OwnerStatus";
-import CreatorTools from "./pages/CreatorTools";
 import CreatorVideoStudio from "./pages/CreatorVideoStudio";
 // import VideoStudio from './pages/VideoStudio';
 import AdultSalesBot from "./pages/AdultSalesBot";
@@ -437,7 +436,7 @@ function Router() {
       <Route path={"/creator/:creatorId/protected-demo"} component={ProtectedContentDemo} />
       <Route path={"/my-subscriptions"} component={MySubscriptions} />
       <Route path={"/creator"} component={CreatorDashboard} />
-      <Route path={"/creator/tools"} component={CreatorTools} />
+      <Route path={"/creator/tools"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/toolbox"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator-toolbox"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/video-studio"} component={CreatorVideoStudio} />
