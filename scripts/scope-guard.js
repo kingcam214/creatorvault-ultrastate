@@ -74,6 +74,12 @@ const ALLOWLISTS = {
     'client/src/pages/TelegramMoneyHub.tsx',
     'scripts/scope-guard.js'
   ],
+  analytics: [
+    'client/src/pages/CreatorAnalyticsDashboard.tsx',
+    'server/routers/analytics.ts',
+    'server/services/creatorAnalytics.ts',
+    'scripts/scope-guard.js'
+  ],
   university: [
     'client/src/pages/University.tsx',
     'client/src/pages/UniversityEnrollSuccess.tsx',

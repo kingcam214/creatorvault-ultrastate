@@ -320,6 +320,29 @@ export async function fetchPlatformMetrics(userId: number): Promise<{ success: b
 
 // ============ ANALYTICS AGGREGATION ============
 
+export async function getAnalyticsAvailability(userId: number): Promise<{
+  activePlatformCount: number;
+  activePlatforms: Platform[];
+  recordedMetricCount: number;
+  hasVerifiedActivity: boolean;
+}> {
+  const [credentials, metrics] = await Promise.all([
+    db.select({ platform: platformCredentials.platform })
+      .from(platformCredentials)
+      .where(and(eq(platformCredentials.userId, userId), eq(platformCredentials.status, "active"))),
+    db.select({ id: creatorMetrics.id })
+      .from(creatorMetrics)
+      .where(eq(creatorMetrics.userId, userId)),
+  ]);
+  const activePlatforms = Array.from(new Set(credentials.map((credential: any) => credential.platform))) as Platform[];
+  return {
+    activePlatformCount: activePlatforms.length,
+    activePlatforms,
+    recordedMetricCount: metrics.length,
+    hasVerifiedActivity: metrics.length > 0,
+  };
+}
+
 /**
  * Get overview stats for a user
  */

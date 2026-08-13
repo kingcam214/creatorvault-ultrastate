@@ -8,6 +8,7 @@ import { TRPCError } from "@trpc/server";
 import { protectedProcedure } from "../_core/trpc";
 import {
   fetchPlatformMetrics,
+  getAnalyticsAvailability,
   getOverviewStats,
   getPlatformBreakdown,
   getTopPerformingPosts,
@@ -41,6 +42,10 @@ export const analyticsRouter = router({
     }
 
     return result;
+  }),
+
+  analyticsAvailability: creatorProcedure.query(async ({ ctx }) => {
+    return await getAnalyticsAvailability(ctx.user.id);
   }),
 
   /**

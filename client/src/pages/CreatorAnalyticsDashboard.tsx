@@ -20,6 +20,7 @@ export function CreatorAnalyticsDashboard() {
   const { toast } = useToast();
   const [timeRange, setTimeRange] = useState("30");
 
+  const { data: analyticsAvailability, isLoading: loadingAvailability } = trpc.creatorAnalytics.analyticsAvailability.useQuery();
   const { data: overviewStats, isLoading: loadingOverview } = trpc.creatorAnalytics.getOverviewStats.useQuery({
     days: parseInt(timeRange),
   });
@@ -56,6 +57,9 @@ export function CreatorAnalyticsDashboard() {
     },
   });
 
+  const hasVerifiedActivity = Boolean(analyticsAvailability?.hasVerifiedActivity);
+  const hasActiveChannels = Boolean(analyticsAvailability && analyticsAvailability.activePlatformCount > 0);
+
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
@@ -72,7 +76,7 @@ export function CreatorAnalyticsDashboard() {
         <div>
           <h1 className="text-3xl font-bold mb-2">Creator Analytics</h1>
           <p className="text-muted-foreground">
-            Track your growth across all platforms. Monetization milestones and revenue projections.
+            See your real audience movement and recorded money signals in one place.
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -86,19 +90,31 @@ export function CreatorAnalyticsDashboard() {
               <SelectItem value="90">Last 90 days</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            variant="outline"
-            onClick={() => refreshMutation.mutate()}
-            disabled={refreshMutation.isPending}
-          >
-            {refreshMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-          </Button>
+          {hasActiveChannels && (
+            <Button
+              variant="outline"
+              onClick={() => refreshMutation.mutate()}
+              disabled={refreshMutation.isPending}
+            >
+              {refreshMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              <span className="ml-2">Refresh Activity</span>
+            </Button>
+          )}
         </div>
       </div>
+
+      {!loadingAvailability && !hasVerifiedActivity && (
+        <div className="mb-8 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-4">
+          <p className="font-semibold text-amber-100">Your Money Insights room is waiting for real channel activity.</p>
+          <p className="mt-1 text-sm text-amber-100/80">
+            CreatorVault has not received a verified audience or earnings record from a connected channel yet. Nothing below is being guessed.
+          </p>
+        </div>
+      )}
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -166,7 +182,7 @@ export function CreatorAnalyticsDashboard() {
             ) : (
               <>
                 <div className="text-2xl font-bold">{formatCurrency(overviewStats?.totalRevenue || 0)}</div>
-                <p className="text-xs text-muted-foreground">From all platforms</p>
+                <p className="text-xs text-muted-foreground">Recorded in connected-channel activity</p>
               </>
             )}
           </CardContent>
