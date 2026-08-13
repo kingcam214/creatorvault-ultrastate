@@ -219,7 +219,6 @@ import Messages from "./pages/Messages";
 import MonetizationPipeline from "./pages/MonetizationPipeline";
 // import { MultiPlatformPosting } from "./pages/MultiPlatformPosting"; // MERGED into SocialHub
 import MySubscriptions from "./pages/MySubscriptions";
-import NFCCards from "./pages/NFCCards";
 import Notifications from "./pages/Notifications";
 import OperatorDashboard from "./pages/OperatorDashboard";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
@@ -566,7 +565,7 @@ function Router() {
       <Route path={"/king/waitlist"} component={KingWaitlist} />
       {/* <Route path={"/king/launch-command"} component={LaunchCommand} /> */}
       <Route path="/king/empire-doc">{() => { window.location.replace("/dashboard"); return null; }}</Route>
-      <Route path={"/nfc-cards"} component={NFCCards} />
+      <Route path={"/nfc-cards"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/empire-brain"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/empire-brain-dashboard"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/empire-brain-rules"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
