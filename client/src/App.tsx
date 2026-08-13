@@ -209,7 +209,6 @@ import Messages from "./pages/Messages";
 // import { MultiPlatformPosting } from "./pages/MultiPlatformPosting"; // MERGED into SocialHub
 import OperatorDashboard from "./pages/OperatorDashboard";
 // import { PlatformConnections } from "./pages/PlatformConnections"; // MERGED into SocialHub
-import ProtectedContentDemo from "./pages/ProtectedContentDemo";
 import PublicProfile from "./pages/PublicProfile";
 import RealEstateEmpire from "./pages/RealEstateEmpire";
 import ScriptDirectorPage from "./pages/scripttovideo/ScriptDirectorPage";
@@ -405,7 +404,7 @@ function Router() {
       <Route path={"/emma-university"}>{() => { window.location.replace("/emma/network"); return null; }}</Route>
       <Route path={"/services"} component={Services} />
       <Route path={"/creator/subscription-tiers"} component={CreatorSubscriptionTiers} />
-      <Route path={"/creator/:creatorId/protected-demo"} component={ProtectedContentDemo} />
+      <Route path={"/creator/:creatorId/protected-demo"}>{({ creatorId }: { creatorId: string }) => { window.location.replace(`/creator/${creatorId}`); return null; }}</Route>
       <Route path={"/my-subscriptions"}>{() => { window.location.replace("/creator/subscriptions"); return null; }}</Route>
       <Route path={"/creator"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/tools"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
