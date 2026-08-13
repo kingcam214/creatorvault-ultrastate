@@ -173,7 +173,6 @@ import CreatorEarnings from "./pages/CreatorEarnings";
 import CreatorManagement from "./pages/CreatorManagement";
 import CreatorSubscriptionTiers from "./pages/CreatorSubscriptionTiers";
 import CreatorSubscriptions from "./pages/CreatorSubscriptions";
-import CreatorVaultDominicana from "./pages/CreatorVaultDominicana";
 import DayShiftDoctor from "./pages/DayShiftDoctor";
 import DominicanSector from "./pages/DominicanSector";
 import DubbingAI from "./pages/DubbingAI";
@@ -615,7 +614,7 @@ function Router() {
       <Route path="/hollywood/:slug" component={HollywoodShow} />
       <Route path={"/font-library"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
             <Route path={"/recruiter-dashboard"} component={RecruiterDashboard} />
-            <Route path={"/dominicana"} component={CreatorVaultDominicana} />
+            <Route path={"/dominicana"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/chuuch" component={Chuuch} />
       <Route path="/chuuch/elders/:slug" component={ChuuchElders} />
       <Route path="/chuuch/elders" component={ChuuchElders} />
