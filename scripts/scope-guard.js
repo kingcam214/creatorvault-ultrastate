@@ -229,6 +229,13 @@ const ALLOWLISTS = {
     'server/_core/realGPT.ts',
     'scripts/scope-guard.js'
   ],
+  'creator-language': [
+    'client/src/pages/AIBot.tsx',
+    'client/src/pages/CloneEmpire.tsx',
+    'client/src/pages/CreatorEarnings.tsx',
+    'client/src/pages/SocialHub.tsx',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',

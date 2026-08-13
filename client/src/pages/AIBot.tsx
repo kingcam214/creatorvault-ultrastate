@@ -72,7 +72,7 @@ export default function AIBot() {
       setConversationHistory((history) => [...history, { role: "assistant", content: data.message }]);
       setMessage("");
     },
-    onError: (error) => toast.error(error.message || "RealGPT could not answer that yet."),
+    onError: () => toast.error("RealGPT needs a moment. Run that by me again."),
   });
 
   const sendMessage = (content: string) => {
@@ -160,13 +160,13 @@ export default function AIBot() {
       <div className="realgpt-frame">
         <section className="realgpt-hero">
           <div>
-            <div className="realgpt-kicker"><Radar size={13} /> CreatorVault intelligence</div>
+            <div className="realgpt-kicker"><Radar size={13} /> Your CreatorVault advantage</div>
             <h1 className="realgpt-title">REAL<span>GPT</span></h1>
-            <p className="realgpt-subtitle">Your CreatorVault intelligence layer. It uses the role and context you already have here to help you make the next move with more power.</p>
+            <p className="realgpt-subtitle">Your private guide inside CreatorVault. Choose your mission and get a stronger next move for what you are building.</p>
           </div>
           <div className="realgpt-orb" aria-hidden="true">
             <BrainCircuit className="realgpt-orb-icon" size={35} strokeWidth={2.4} />
-            <span className="realgpt-status"><i /> ready with your context</span>
+            <span className="realgpt-status"><i /> ready for your next move</span>
           </div>
         </section>
 
@@ -192,9 +192,9 @@ export default function AIBot() {
             <header className="realgpt-chat-header">
               <div>
                 <h2>{activeRole.label} room</h2>
-                <p>{activeRole.eyebrow} · RealGPT responds through your saved CreatorVault context.</p>
+                <p>{activeRole.eyebrow} · RealGPT is ready to help you make this move count.</p>
               </div>
-              {context ? <span className="realgpt-context-pill"><ShieldCheck size={13} /> context present</span> : null}
+              {context ? <span className="realgpt-context-pill"><ShieldCheck size={13} /> YOUR WORLD IS READY</span> : null}
             </header>
 
             <div className="realgpt-message-area">
@@ -202,7 +202,7 @@ export default function AIBot() {
                 <div className="realgpt-empty">
                   <div className="realgpt-empty-symbol"><Crown size={27} /></div>
                   <h3>What needs to move <span style={{ color: activeRole.color }}>right now?</span></h3>
-                  <p>Start with the piece of your business that is holding you back. RealGPT will work from your selected focus and saved CreatorVault context—not a generic script.</p>
+                  <p>Start with the part of your business holding you back. RealGPT will help you turn it into your next move—not a generic answer.</p>
                   <div className="realgpt-chip-row">
                     <button type="button" className="realgpt-chip" onClick={() => sendMessage(activeRole.prompt)}>{activeRole.prompt}</button>
                     <button type="button" className="realgpt-chip" onClick={() => sendMessage("Give me the one move that creates the most leverage today.")}>Find my highest-leverage move</button>
@@ -239,16 +239,16 @@ export default function AIBot() {
             </form>
           </section>
 
-          <aside className="realgpt-side" aria-label="RealGPT context">
+          <aside className="realgpt-side" aria-label="Your RealGPT advantage">
             <div className="realgpt-brief">
               <p className="realgpt-brief-label"><Sparkles size={13} /> Your focus</p>
               <strong>{roleLabel(role)}</strong>
               <p>{activeRole.description}</p>
             </div>
             <div className="realgpt-brief">
-              <p className="realgpt-brief-label"><ShieldCheck size={13} /> Saved context</p>
+              <p className="realgpt-brief-label"><ShieldCheck size={13} /> Your CreatorVault world</p>
               <strong>{context?.location || "CreatorVault"}</strong>
-              <p>{context?.language ? `Language: ${context.language.toUpperCase()}. ` : ""}RealGPT uses the profile context CreatorVault already has for you.</p>
+              <p>{context?.language ? `Language: ${context.language.toUpperCase()}. ` : ""}RealGPT is working with the CreatorVault details you have already shared.</p>
             </div>
             <div className="realgpt-brief">
               <p className="realgpt-brief-label"><ArrowUp size={13} /> Move with power</p>

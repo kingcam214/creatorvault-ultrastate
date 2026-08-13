@@ -26,14 +26,14 @@ export default function CreatorEarnings() {
   
   const requestPayoutMutation = trpc.payouts.requestPayout.useMutation({
     onSuccess: () => {
-      toast.success("Payout requested successfully — instant rails move directly to processing when eligible");
+      toast.success("Your cash-out request is in. Fast payment options start moving right away when available.");
       setPayoutAmount("");
       setPaymentDetails("");
       refetchBalance();
       refetchPayouts();
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: () => {
+      toast.error("We could not start this cash-out. Check your payment details and try again.");
     },
   });
 
@@ -65,6 +65,13 @@ export default function CreatorEarnings() {
   const formatDate = (date: Date | string | null) => {
     if (!date) return "N/A";
     return new Date(date).toLocaleDateString();
+  };
+
+  const payoutStatusLabel = (status?: string) => {
+    if (status === "completed") return "Paid";
+    if (status === "processing") return "On its way";
+    if (status === "rejected") return "Needs attention";
+    return "Waiting for review";
   };
 
   return (
@@ -101,7 +108,7 @@ export default function CreatorEarnings() {
               {balance ? formatCurrency(balance.pendingBalanceInCents) : "$0.00"}
             </div>
             <p className="text-sm text-muted-foreground mt-2">
-              Processing payouts
+              Cash-outs on the way
             </p>
           </CardContent>
         </Card>
@@ -126,7 +133,7 @@ export default function CreatorEarnings() {
         <CardHeader>
           <CardTitle>Request Payout</CardTitle>
           <CardDescription>
-            Minimum payout: $10.00 • Stripe is fallback only • Cash App, Zelle, TON, Wise, PayPal, and Stars rails are supported
+            Minimum cash-out: $10.00 • Cash App, Zelle, TON, Wise, PayPal, and Stars are ready when available
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -166,15 +173,15 @@ export default function CreatorEarnings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="mode">Payout Speed</Label>
+            <Label htmlFor="mode">How fast do you need it?</Label>
             <Select value={requestedMode} onValueChange={(v) => setRequestedMode(v as any)}>
               <SelectTrigger id="mode"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="instant">Instant / fastest available rail</SelectItem>
-                <SelectItem value="standard">Standard queue</SelectItem>
+                <SelectItem value="standard">Standard timing</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">Instant requests are moved to processing immediately and require operator/provider transfer proof before completion.</p>
+            <p className="text-xs text-muted-foreground">Fast cash-out requests move first when available and close once your payment confirmation is attached.</p>
           </div>
 
           <div className="space-y-2">
@@ -193,16 +200,15 @@ export default function CreatorEarnings() {
             disabled={requestPayoutMutation.isPending}
             className="w-full"
           >
-            {requestPayoutMutation.isPending ? "Processing..." : "Request Payout"}
+            {requestPayoutMutation.isPending ? "Sending your request..." : "Request Cash-Out"}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Non-Stripe Instant Rails */}
       <Card>
         <CardHeader>
-          <CardTitle>Instant Payout Rails</CardTitle>
-          <CardDescription>Stripe stays available as a fallback only. These rails are designed for faster creator cash-out and proof-based reconciliation.</CardDescription>
+          <CardTitle>Cash-Out Options</CardTitle>
+          <CardDescription>Choose the payment option that gets your money where you need it. Every completed payment is matched to its confirmation.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -210,8 +216,7 @@ export default function CreatorEarnings() {
               <div key={rail.key} className="border rounded-lg p-3 space-y-1">
                 <div className="font-semibold">{rail.label}</div>
                 <div className="text-xs text-muted-foreground">{rail.expectedSpeed}</div>
-                <div className="text-xs text-green-600 font-medium">Stripe required: {rail.stripeRequired ? "Yes" : "No"}</div>
-                <div className="text-xs text-muted-foreground">Proof: {rail.proofRequired}</div>
+                <div className="text-xs text-muted-foreground">Payment confirmation: {rail.proofRequired}</div>
               </div>
             ))}
           </div>
@@ -247,7 +252,7 @@ export default function CreatorEarnings() {
                     payout.status === "rejected" ? "bg-red-100 text-red-800" :
                     "bg-gray-100 text-gray-800"
                   }`}>
-                    {payout.status}
+                    {payoutStatusLabel(payout.status)}
                   </div>
                 </div>
               ))}
