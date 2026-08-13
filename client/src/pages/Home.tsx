@@ -20,7 +20,7 @@ function ShowcaseMotion({
   priority?: boolean;
 }) {
   return (
-    <div className={`relative overflow-hidden bg-[#090806] ${className}`} style={style} aria-label={alt}>
+    <div className={`overflow-hidden bg-[#090806] ${className}`} style={style} aria-label={alt}>
       <video
         src={videoSrc}
         poster={posterSrc}
