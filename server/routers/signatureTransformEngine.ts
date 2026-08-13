@@ -30,7 +30,26 @@ import os from "os";
 import OpenAI from "openai";
 import fetch from "node-fetch";
 
-const execAsync = promisify(exec);
+const rawExecAsync = promisify(exec);
+
+function assertTechnicalFFmpegCommand(command: string): void {
+  const normalized = command.toLowerCase();
+  const prohibitedCreativeOperations = [
+    "-filter_complex", "drawtext", "drawbox", "zoompan", "eq=", "curves", "colorbalance",
+    "smartblur", "gblur", "boxblur", "hqdn3d", "vidstab", "setpts", "xfade", "fade=",
+    "overlay", "amix", "afade", "atempo", "loudnorm", "vignette",
+  ];
+  if (prohibitedCreativeOperations.some((operation) => normalized.includes(operation))) {
+    throw new Error("CREATIVE_FFMPEG_OPERATION_DISABLED");
+  }
+}
+
+async function execAsync(command: string): Promise<{ stdout: string; stderr: string }> {
+  assertTechnicalFFmpegCommand(command);
+  const result = await rawExecAsync(command);
+  return { stdout: String(result.stdout), stderr: String(result.stderr) };
+}
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;

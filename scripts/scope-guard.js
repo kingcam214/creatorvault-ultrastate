@@ -136,6 +136,9 @@ const ALLOWLISTS = {
     'server/services/realRenderEngine.ts',
     'server/routers/videoStudioRouter.ts',
     'server/routers/videoEnhanceRouter.ts',
+    'server/routers/signatureTransformEngine.ts',
+    'server/routers/smartCaptions.ts',
+    'server/services/automatedDirectorService.ts',
     'server/routers/vaultxRouter.ts',
     'client/src/lib/homepageMediaRegistry.ts',
     'scripts/scope-guard.js'
