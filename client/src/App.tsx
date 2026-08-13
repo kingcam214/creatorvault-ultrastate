@@ -171,7 +171,6 @@ import ChuuchTransition from "./pages/ChuuchTransition";
 import { CreatorAnalyticsDashboard } from "./pages/CreatorAnalyticsDashboard";
 import CreatorEarnings from "./pages/CreatorEarnings";
 import CreatorManagement from "./pages/CreatorManagement";
-import CreatorPublicTiers from "./pages/CreatorPublicTiers";
 import CreatorSubscriptionTiers from "./pages/CreatorSubscriptionTiers";
 import CreatorSubscriptions from "./pages/CreatorSubscriptions";
 import CreatorVaultDominicana from "./pages/CreatorVaultDominicana";
@@ -419,7 +418,6 @@ function Router() {
       <Route path={"/emma-university"} component={EmmaUniversity} />
       <Route path={"/services"} component={Services} />
       <Route path={"/creator/subscription-tiers"} component={CreatorSubscriptionTiers} />
-      <Route path={"/creator/:creatorId/tiers"} component={CreatorPublicTiers} />
       <Route path={"/creator/:creatorId/protected-demo"} component={ProtectedContentDemo} />
       <Route path={"/my-subscriptions"} component={MySubscriptions} />
       <Route path={"/creator"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
