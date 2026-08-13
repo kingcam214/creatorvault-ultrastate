@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
+import { TRPCError } from "@trpc/server";
 import OpenAI from "openai";
 import Stripe from "stripe";
 import * as db from "../db";
@@ -17,6 +18,13 @@ import {
   getPrimaryAgentReceiptRank,
   recordAgentActionReceipt,
 } from "../services/agentActionReceipts";
+
+const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== "king" && ctx.user.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Owner approval is required for agent execution." });
+  }
+  return next({ ctx });
+});
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // @ts-ignore
@@ -1194,7 +1202,7 @@ export async function runChallengeAutomationCycle(mode: "priority" | "full" = "p
 
 export function getChallengeAutomationStatus() {
   return {
-    enabled: process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN !== "false",
+    enabled: process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN === "true",
     running: challengeAutomationRunning,
     intervalActive: Boolean(challengeAutomationInterval),
     priorityAgentCount: REVENUE_PRIORITY_AGENT_SLUGS.length,
@@ -1203,8 +1211,8 @@ export function getChallengeAutomationStatus() {
 }
 
 export async function startChallengeAutomationCron() {
-  if (process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN === "false") {
-    console.log("[VaultX Challenge Agents] autonomous challenge-agent loop disabled by VAULTX_CHALLENGE_AGENTS_AUTORUN=false");
+  if (process.env.VAULTX_CHALLENGE_AGENTS_AUTORUN !== "true") {
+    console.log("[VaultX Challenge Agents] autonomous challenge-agent loop is disabled until explicitly enabled by VAULTX_CHALLENGE_AGENTS_AUTORUN=true");
     return getChallengeAutomationStatus();
   }
   if (challengeAutomationInterval) return getChallengeAutomationStatus();
@@ -1356,13 +1364,13 @@ export const challengeAutomationRouter = router({
       };
     }),
 
-  getAutonomousStatus: protectedProcedure.query(async () => getChallengeAutomationStatus()),
+  getAutonomousStatus: ownerProcedure.query(async () => getChallengeAutomationStatus()),
 
-  runAutonomousCycle: protectedProcedure
+  runAutonomousCycle: ownerProcedure
     .input(z.object({ mode: z.enum(["priority", "full"]).default("priority") }))
     .mutation(async ({ input }) => runChallengeAutomationCycle(input.mode)),
 
-  startAutonomousLoop: protectedProcedure.mutation(async () => startChallengeAutomationCron()),
+  startAutonomousLoop: ownerProcedure.mutation(async () => startChallengeAutomationCron()),
 
   getActiveChallenge: protectedProcedure.query(async () => {
     const result = await db.db.execute(sql`SELECT * FROM empire_challenges WHERE status = 'active' ORDER BY week_number ASC LIMIT 1`);
@@ -1500,7 +1508,7 @@ export const challengeAutomationRouter = router({
   }),
 
   // Run a single agent — real execution, no public revenue crediting
-  runAgent: protectedProcedure
+  runAgent: ownerProcedure
     .input(z.object({ agentSlug: z.string(), agentName: z.string(), creditToChallenge: z.boolean().default(false) }))
     .mutation(async ({ input }) => {
       const { outcome, revenue, status, action } = await executeAgent(input.agentSlug);
@@ -1520,7 +1528,7 @@ export const challengeAutomationRouter = router({
     }),
 
   // Run ALL agents — full real execution cycle, no public revenue crediting
-  runFullCycle: protectedProcedure
+  runFullCycle: ownerProcedure
     .input(z.object({ creditToChallenge: z.boolean().default(false) }))
     .mutation(async () => {
       const allSlugs = Object.keys(AGENT_META);

@@ -240,6 +240,11 @@ const ALLOWLISTS = {
     'server/services/systemRegistry.ts',
     'scripts/scope-guard.js'
   ],
+  'agent-safety-freeze': [
+    'server/routers/challengeAutomationRouter.ts',
+    'server/services/systemRegistry.ts',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',

@@ -90,6 +90,11 @@ interface ReleaseMetadata {
 }
 
 const CREATORVAULT_PRODUCTION_URL = process.env.CREATORVAULT_PUBLIC_URL || "https://creatorvault.live";
+const OWNER_HIDDEN_BOT_NAME = /\b(test|simulated)\b/i;
+
+function isOwnerVisibleBot(name: string | null | undefined) {
+  return Boolean(name?.trim()) && !OWNER_HIDDEN_BOT_NAME.test(name);
+}
 
 async function readReleaseMetadata(): Promise<ReleaseMetadata | null> {
   const releasePaths = [
@@ -163,7 +168,7 @@ export async function getAllBots(): Promise<SystemBot[]> {
 
   // Get Telegram bots
   const telegramBotsData = await db.select().from(telegramBots);
-  bots.push(...telegramBotsData.map((bot: any) => ({
+  bots.push(...telegramBotsData.filter((bot: any) => isOwnerVisibleBot(bot.name)).map((bot: any) => ({
     id: bot.id,
     name: bot.name,
     type: "telegram" as const,
@@ -180,7 +185,7 @@ export async function getAllBots(): Promise<SystemBot[]> {
 
   // Get WhatsApp providers
   const whatsappData = await db.select().from(whatsappProviders);
-  bots.push(...whatsappData.map((provider: any) => ({
+  bots.push(...whatsappData.filter((provider: any) => isOwnerVisibleBot(provider.name)).map((provider: any) => ({
     id: provider.id,
     name: provider.name,
     type: "whatsapp" as const,
