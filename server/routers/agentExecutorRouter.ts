@@ -4,6 +4,8 @@ import { sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { router, protectedProcedure } from "../_core/trpc";
 import * as db from "../db";
+import { invokeLLM } from "../_core/llm";
+import { getBodyCinemaSourceEvidence } from "../services/bodyCinemaEvidenceService";
 import {
   getRecentAgentActionReceipts,
   recordAgentActionReceipt,
@@ -170,6 +172,131 @@ export const agentExecutorRouter = router({
       });
       await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'dev-guardian-agent'`);
       return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
+    }),
+
+  runCreatorGrowthBrief: ownerProcedure
+    .input(z.object({
+      sourceAssetId: z.string().uuid(),
+      evidenceId: z.string().uuid(),
+      goal: z.enum(["subscriber_growth", "ppv_offer", "social_tease", "creator_authority"]),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const startedAt = new Date();
+      const ownedAssets = rowsFromExecute(await db.db.execute(sql`
+        SELECT id, asset_type, source_type, public_url, storage_path, duration, file_name, original_name
+        FROM media_assets
+        WHERE id = ${input.sourceAssetId} AND user_id = ${ctx.user.id} AND status = 'ready'
+        LIMIT 1
+      `));
+      const asset = ownedAssets[0];
+      if (!asset) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Creator Growth could not find that ready CreatorVault video." });
+      }
+      if (!String(asset.asset_type || "").toLowerCase().includes("video")) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Creator Growth needs a ready CreatorVault video." });
+      }
+      const durableSourceUrl = String(asset.public_url || asset.storage_path || "");
+      if (!durableSourceUrl) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Creator Growth needs a durable CreatorVault video source." });
+      }
+      const evidence = await getBodyCinemaSourceEvidence(Number(ctx.user.id), input.evidenceId);
+      if (!evidence || evidence.analysisStatus !== "verified" || evidence.sourceMediaUrl !== durableSourceUrl) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Creator Growth needs verified Body Cinema understanding for this exact CreatorVault video.",
+        });
+      }
+
+      const findings = evidence.editorFindings;
+      const selectedDirection = evidence.directions.find(direction => direction.id === evidence.selectedDirectionId) || null;
+      const result = await invokeLLM({
+        model: "gpt-5-mini",
+        maxTokens: 1200,
+        outputSchema: {
+          name: "creator_growth_brief",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              leadLine: { type: "string" },
+              shortTitle: { type: "string" },
+              caption: { type: "string" },
+              storyBeats: { type: "array", items: { type: "string" } },
+              callToAction: { type: "string" },
+              platformNotes: { type: "array", items: { type: "string" } },
+              evidenceMomentsMs: { type: "array", items: { type: "number" } },
+            },
+            required: ["leadLine", "shortTitle", "caption", "storyBeats", "callToAction", "platformNotes", "evidenceMomentsMs"],
+            additionalProperties: false,
+          },
+        },
+        messages: [
+          {
+            role: "system",
+            content: "You are Creator Growth inside CreatorVault. Build a premium, direct content brief from the provided verified video evidence only. Never claim views, sales, subscribers, or activity that is not in the evidence. Never mention technical systems, models, prompts, data, pipelines, tools, or providers. Do not describe nudity or explicit sexual activity. Keep the writing confident, creator-facing, and ready for a luxury adult-creator brand within lawful platform boundaries.",
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              goal: input.goal,
+              source: {
+                fileName: asset.original_name || asset.file_name || "CreatorVault video",
+                durationSeconds: Number(asset.duration || 0) || null,
+              },
+              verifiedAnalysis: {
+                analysisScore: evidence.analysisScore,
+                strongestOpeningMs: findings?.strongestHookTimestampMs ?? null,
+                strongestThumbnailMs: findings?.strongestThumbnailTimestampMs ?? null,
+                strongestMotionMs: findings?.strongestMotionTimestampMs ?? null,
+                strongestCommercialMs: findings?.strongestCommercialTimestampMs ?? null,
+                weakestSectionStartMs: findings?.weakestSectionStartMs ?? null,
+                weakestSectionEndMs: findings?.weakestSectionEndMs ?? null,
+                bodyFocus: evidence.bodyMap,
+                suggestedDirection: selectedDirection ? {
+                  label: selectedDirection.label,
+                  confidence: selectedDirection.confidence,
+                  evidence: selectedDirection.evidence,
+                  distinction: selectedDirection.distinction,
+                } : null,
+              },
+              instruction: "Create the growth brief from these verified moments. Keep evidenceMomentsMs limited to timestamps that appear above.",
+            }),
+          },
+        ],
+      });
+      const rawBrief = result.choices[0]?.message?.content;
+      if (typeof rawBrief !== "string" || !rawBrief.trim()) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Creator Growth did not return a usable brief." });
+      }
+      let brief: Record<string, unknown>;
+      try {
+        brief = JSON.parse(rawBrief);
+      } catch {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Creator Growth returned an invalid brief." });
+      }
+      const receiptId = await recordAgentActionReceipt({
+        agentSlug: "creator-growth-agent",
+        agentName: "Creator Growth Agent",
+        agentCategory: "creation",
+        taskType: "evidence_backed_growth_brief",
+        action: "built_growth_brief_from_verified_creator_media",
+        status: "success",
+        outcomeSummary: `Built a ${input.goal} brief from verified Body Cinema evidence for one ready CreatorVault video.`,
+        evidence: {
+          requestedByUserId: ctx.user.id,
+          sourceAssetId: input.sourceAssetId,
+          evidenceId: input.evidenceId,
+          analysisScore: evidence.analysisScore,
+          goal: input.goal,
+          selectedDirectionId: evidence.selectedDirectionId,
+        },
+        artifacts: { brief },
+        revenueGenerated: 0,
+        startedAt,
+        finishedAt: new Date(),
+      });
+      await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'creator-growth-agent'`);
+      return { brief, receiptId, activated: true, autonomousExecutionEnabled: false };
     }),
 
   getHeldRoster: ownerProcedure
