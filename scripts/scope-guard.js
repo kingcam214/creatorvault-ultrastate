@@ -74,6 +74,16 @@ const ALLOWLISTS = {
     'client/src/pages/TelegramMoneyHub.tsx',
     'scripts/scope-guard.js'
   ],
+  university: [
+    'client/src/pages/University.tsx',
+    'client/src/pages/UniversityEnrollSuccess.tsx',
+    'server/routers.ts',
+    'server/routers/courseVideoRouter.ts',
+    'server/routers/universityV2Router.ts',
+    'server/db-fgh.ts',
+    'drizzle/schema.ts',
+    'scripts/scope-guard.js'
+  ],
   'social-empire': [
     'client/src/pages/SocialHub.tsx',
     'server/_core/index.ts',

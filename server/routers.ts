@@ -738,8 +738,8 @@ export const appRouter = router({
   // ============ UNIVERSITY ============
   courseVideo: courseVideoRouter,
   university: router({
-    getCourses: publicProcedure.query(() => {
-      return [];
+    getCourses: publicProcedure.query(async () => {
+      return await dbFGH.listCourses({ status: "published" });
     }),
 
     createCourse: creatorProcedure.input(z.object({
