@@ -27,6 +27,12 @@ function rowsFromExecute(result: any): any[] {
   return result?.rows ?? [];
 }
 
+async function activateRegisteredProvenWeapon(slug: string): Promise<boolean> {
+  const result = await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = ${slug}`);
+  const write = Array.isArray(result) ? result[0] : result;
+  return Number((write as any)?.affectedRows ?? 0) > 0;
+}
+
 export const agentExecutorRouter = router({
   getCommandStatus: ownerProcedure.query(async () => {
     const statusRows = rowsFromExecute(await db.db.execute(sql`
@@ -122,8 +128,8 @@ export const agentExecutorRouter = router({
         startedAt,
         finishedAt: new Date(),
       });
-      await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'stripe-revenue-agent'`);
-      return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
+      const activated = await activateRegisteredProvenWeapon("stripe-revenue-agent");
+      return { snapshot, receiptId, activated, autonomousExecutionEnabled: false };
     }),
 
   runDevGuardianTruth: ownerProcedure
@@ -170,8 +176,8 @@ export const agentExecutorRouter = router({
         startedAt,
         finishedAt: new Date(),
       });
-      await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'dev-guardian-agent'`);
-      return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
+      const activated = await activateRegisteredProvenWeapon("dev-guardian-agent");
+      return { snapshot, receiptId, activated, autonomousExecutionEnabled: false };
     }),
 
   runVaultxRevenueIntelligenceTruth: ownerProcedure
@@ -255,8 +261,8 @@ export const agentExecutorRouter = router({
         startedAt,
         finishedAt: new Date(),
       });
-      await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'vaultx-revenue-intelligence'`);
-      return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
+      const activated = await activateRegisteredProvenWeapon("vaultx-revenue-intelligence");
+      return { snapshot, receiptId, activated, autonomousExecutionEnabled: false };
     }),
 
   runMediaVaultGuardianTruth: ownerProcedure
@@ -325,8 +331,8 @@ export const agentExecutorRouter = router({
         startedAt,
         finishedAt: new Date(),
       });
-      await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'media-vault-guardian'`);
-      return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
+      const activated = await activateRegisteredProvenWeapon("media-vault-guardian");
+      return { snapshot, receiptId, activated, autonomousExecutionEnabled: false };
     }),
 
   runCloneIdentityGuardianTruth: ownerProcedure
@@ -419,8 +425,8 @@ export const agentExecutorRouter = router({
         startedAt,
         finishedAt: new Date(),
       });
-      await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'clone-identity-guardian'`);
-      return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
+      const activated = await activateRegisteredProvenWeapon("clone-identity-guardian");
+      return { snapshot, receiptId, activated, autonomousExecutionEnabled: false };
     }),
 
   runPerformanceIntelligenceTruth: ownerProcedure
@@ -522,8 +528,8 @@ export const agentExecutorRouter = router({
         startedAt,
         finishedAt: new Date(),
       });
-      await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'performance-intelligence-agent'`);
-      return { snapshot, receiptId, activated: true, autonomousExecutionEnabled: false };
+      const activated = await activateRegisteredProvenWeapon("performance-intelligence-agent");
+      return { snapshot, receiptId, activated, autonomousExecutionEnabled: false };
     }),
 
   runCreatorGrowthBrief: ownerProcedure
@@ -627,8 +633,8 @@ export const agentExecutorRouter = router({
         startedAt,
         finishedAt: new Date(),
       });
-      await db.db.execute(sql`UPDATE empire_agents SET status = 'active', paused_until = NULL WHERE slug = 'creator-growth-agent'`);
-      return { brief, receiptId, activated: true, autonomousExecutionEnabled: false };
+      const activated = await activateRegisteredProvenWeapon("creator-growth-agent");
+      return { brief, receiptId, activated, autonomousExecutionEnabled: false };
     }),
 
   getHeldRoster: ownerProcedure
