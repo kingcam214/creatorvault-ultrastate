@@ -180,7 +180,6 @@ import EmmaEmpire from "./pages/EmmaEmpire";
 import EmmaHome from "./pages/EmmaHome";
 import EmmaNetworkHome from "./pages/EmmaNetworkHome";
 import FanSubscribe from "./pages/FanSubscribe";
-import GreatestShowStudio from "./pages/GreatestShowStudio";
 import HollywoodAcademy from "./pages/HollywoodAcademy";
 import HollywoodChannel from "./pages/HollywoodChannel";
 import HollywoodEpisode from "./pages/HollywoodEpisode";
@@ -508,7 +507,7 @@ function Router() {
       <Route path={"/owner-control"} component={OwnerControl} />
       <Route path={"/owner-status"} component={OwnerStatus} />
       <Route path={"/greatest-show"} component={GreatestShowLanding} />
-      <Route path={"/greatest-show-studio"} component={GreatestShowStudio} />
+      <Route path={"/greatest-show-studio"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/greatest-show/maily"} component={MailyProfile} />
       <Route path={"/greatest-show/diana"} component={DianaProfile} />
       <Route path={"/greatest-show/emma"} component={EmmaProfile} />
