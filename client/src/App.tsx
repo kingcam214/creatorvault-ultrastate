@@ -206,7 +206,6 @@ import MarketplaceManage from "./pages/MarketplaceManage";
 import MarketplaceProduct from "./pages/MarketplaceProduct";
 import MessageThread from "./pages/MessageThread";
 import Messages from "./pages/Messages";
-import MonetizationPipeline from "./pages/MonetizationPipeline";
 // import { MultiPlatformPosting } from "./pages/MultiPlatformPosting"; // MERGED into SocialHub
 import MySubscriptions from "./pages/MySubscriptions";
 import OperatorDashboard from "./pages/OperatorDashboard";
@@ -392,7 +391,7 @@ function Router() {
       <Route path={"/king/whatsapp-bot"} component={WhatsAppBotDashboard} />
       <Route path={"/studio-slots"} component={StudioSlots} />
       <Route path={"/content-dashboard"}>{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
-      <Route path={"/monetization"} component={MonetizationPipeline} />
+      <Route path={"/monetization"}>{() => { window.location.replace("/creator/earnings"); return null; }}</Route>
       <Route path={"/lead-capture"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/analytics"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/marketplace"} component={Marketplace} />
