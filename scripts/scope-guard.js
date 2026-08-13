@@ -55,6 +55,20 @@ const ALLOWLISTS = {
     'client/src/App.tsx',
     'client/src/components/AppHeader.tsx'
   ],
+  'route-truth-audit': [
+    'client/src/App.tsx',
+    'client/src/pages/OwnerStatus.tsx',
+    'client/src/pages/NurseConsole.tsx',
+    'client/src/pages/ProofGate.tsx',
+    'client/src/pages/HollywoodCreatorDashboard.tsx',
+    'client/src/pages/OnboardingV2.tsx',
+    'client/src/pages/InfluencerOnboarding.tsx',
+    'client/src/pages/CreatorOnboarding.tsx',
+    'client/src/pages/NFCCards.tsx',
+    'client/src/pages/Notifications.tsx',
+    'client/src/pages/EmmaTransparencyLog.tsx',
+    'scripts/scope-guard.js'
+  ],
   distribution: [
     'client/src/pages/WhatsAppContentGenerator.tsx',
     'client/src/pages/TelegramMoneyHub.tsx',
