@@ -156,7 +156,6 @@ import AdminManualPayments from "./pages/AdminManualPayments";
 import AdminPayouts from "./pages/AdminPayouts";
 import AgentRoster from "./pages/AgentRoster";
 import ApparelLab from "./pages/ApparelLab";
-import ArtistStorefront from "./pages/ArtistStorefront";
 import BrandDeals from "./pages/BrandDeals";
 import ChicaCockpit from "./pages/ChicaCockpit";
 import Chuuch from "./pages/Chuuch";
@@ -494,7 +493,7 @@ function Router() {
           <Route path="/king/gallery">{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path="/king/music-composer">{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path={"/music-library"}>{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
-      <Route path={"/artist/storefront"} component={ArtistStorefront} />
+      <Route path={"/artist/storefront"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path="/king/dubbing" component={DubbingAI} />
       <Route path="/business-cards">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/business-cards/editor">{() => { window.location.replace("/king/content"); return null; }}</Route>
