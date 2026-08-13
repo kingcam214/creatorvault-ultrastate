@@ -61,7 +61,6 @@ import EmmaTransparencyLog from "./pages/EmmaTransparencyLog";
 // import Services from "./pages/Services";
 import CreatorDashboard from "./pages/CreatorDashboard";
 import AIBot from "./pages/AIBot";
-import CommandHub from "./pages/CommandHub";
 import OwnerControl from "./pages/OwnerControl";
 import OwnerStatus from "./pages/OwnerStatus";
 import CreatorTools from "./pages/CreatorTools";
@@ -451,8 +450,8 @@ function Router() {
       <Route path={"/ai-bot"} component={AIBot} />
       <Route path={"/adult-sales-bot"} component={AdultSalesBot} />
       <Route path={"/creator-management"} component={CreatorManagement} />
-      <Route path={"/command-hub"} component={CommandHub} />
-      <Route path={"/command-center"} component={CommandHub} />
+      <Route path={"/command-hub"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
+      <Route path={"/command-center"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/onboard"} component={Onboard} />
       <Route path={"/onboard/influencer"} component={InfluencerOnboarding} />
       <Route path={"/onboard/creator"} component={CreatorOnboarding} />
