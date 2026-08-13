@@ -166,7 +166,6 @@ import ApparelLab from "./pages/ApparelLab";
 import ArtistStorefront from "./pages/ArtistStorefront";
 import BrandDeals from "./pages/BrandDeals";
 import ChicaCockpit from "./pages/ChicaCockpit";
-import ChicasEmpire from "./pages/ChicasEmpire";
 import Chuuch from "./pages/Chuuch";
 import ChuuchArchive from "./pages/ChuuchArchive";
 import ChuuchCode from "./pages/ChuuchCode";
@@ -609,7 +608,7 @@ function Router() {
       <Route path={"/onboarding"} component={OnboardingV2} />
       <Route path={"/command-hub-v2"} component={CommandHubV2} />
       <Route path={"/owner-cockpit"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
-      <Route path={"/owner-cockpit/chicas-empire"} component={ChicasEmpire} />
+      <Route path={"/owner-cockpit/chicas-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/presentation-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/presentation-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/owner-cockpit/recruitment"} component={RecruitmentDashboard} />
