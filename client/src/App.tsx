@@ -173,7 +173,6 @@ import ChuuchMedia from "./pages/ChuuchMedia";
 import ChuuchMerch from "./pages/ChuuchMerch";
 import ChuuchTeaching from "./pages/ChuuchTeaching";
 import ChuuchTransition from "./pages/ChuuchTransition";
-import ContentDashboard from "./pages/ContentDashboard";
 // import { ContentScheduler } from "./pages/ContentScheduler"; // MERGED into SocialHub
 import { CreatorAnalyticsDashboard } from "./pages/CreatorAnalyticsDashboard";
 import CreatorEarnings from "./pages/CreatorEarnings";
@@ -418,7 +417,7 @@ function Router() {
       <Route path={"/whatsapp-content"} component={WhatsAppContentGenerator} />
       <Route path={"/king/whatsapp-bot"} component={WhatsAppBotDashboard} />
       <Route path={"/studio-slots"} component={StudioSlots} />
-      <Route path={"/content-dashboard"} component={ContentDashboard} />
+      <Route path={"/content-dashboard"}>{() => { window.location.replace("/king/media-vault"); return null; }}</Route>
       <Route path={"/monetization"} component={MonetizationPipeline} />
       <Route path={"/lead-capture"} component={LeadCapture} />
       <Route path={"/analytics"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
