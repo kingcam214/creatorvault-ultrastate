@@ -355,7 +355,6 @@ function Router() {
       <Route path={"/privacy"} component={PrivacyPage} />
       <Route path={"/dmca"} component={DmcaPage} />
       <Route path={"/2257"} component={Statement2257Page} />
-      <Route path={"/creator/:handle"} component={PublicCreatorLanding} />
       <Route path={"/dashboard"} component={CreatorHome} />
       <Route path={"/operator"} component={OperatorDashboard} />
       <Route path={"/flyer-generator"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
@@ -395,6 +394,7 @@ function Router() {
       <Route path={"/creator/subscriptions"} component={CreatorSubscriptions} />
       <Route path={"/creator/earnings"} component={CreatorEarnings} />
       <Route path={"/creator/analytics"} component={CreatorAnalyticsDashboard} />
+      <Route path={"/creator/:handle"} component={PublicCreatorLanding} />
        <Route path={"/creator-analytics"} component={CreatorAnalyticsDashboard} />
       <Route path={"/tools/viral-optimizer"} component={ViralOptimizer} />
       <Route path={"/ai-bot"} component={AIBot} />
