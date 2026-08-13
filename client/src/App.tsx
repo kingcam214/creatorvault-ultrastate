@@ -307,7 +307,6 @@ import AIChatter from "./pages/AIChatter";
 // import SocialFactory from "./pages/SocialFactory";
 // import SocialPostingHub from "./pages/SocialPostingHub";
 import SpatialComposer from "./pages/SpatialComposer";
-import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import TestCheckout from "./pages/TestCheckout";
 import VaultLiveControlRoom from "./pages/VaultLiveControlRoom";
 import VaultLiveStream from "./pages/VaultLiveStream";
@@ -647,7 +646,7 @@ function Router() {
       <Route path="/social/factory" component={SocialHub} />
       <Route path="/social/posting-hub" component={SocialHub} />
       <Route path="/tools/spatial-composer" component={SpatialComposer} />
-      <Route path="/subscription/success" component={SubscriptionSuccess} />
+      <Route path="/subscription/success">{() => { window.location.replace("/creator/subscriptions"); return null; }}</Route>
       <Route path="/_dev/test-checkout" component={TestCheckout} />
       <Route path="/university/enroll-success">{() => { window.location.replace("/university"); return null; }}</Route>
       <Route path="/vault/cut">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
