@@ -127,7 +127,6 @@ import FeedPage from "./pages/Feed";
 // import PodcastStudio from "./pages/PodcastStudio";
 // import SocialMediaAudit from "./pages/SocialMediaAudit"; // MERGED into SocialHub Audit tab
 import PerformanceInsights from "./pages/PerformanceInsights";
-import LiveDemoControl from "./pages/LiveDemoControl";
 import RecruiterDashboard from "./pages/RecruiterDashboard";
 import PayoutSetup from "./pages/PayoutSetup";
 import AdminTips from "./pages/AdminTips";
@@ -554,7 +553,7 @@ function Router() {
       <Route path={"/shows/:slug"} component={ShowPage} />
       {/* /social-audit merged into SocialHub */}
       <Route path={"/performance-insights"} component={PerformanceInsights} />
-      <Route path={"/live-demo"} component={LiveDemoControl} />
+      <Route path={"/live-demo"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/recruiter"} component={RecruiterDashboard} />
       <Route path={"/payout-setup"} component={PayoutSetup} />
       <Route path={"/telegram-setup"} component={TelegramSetup} />
