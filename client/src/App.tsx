@@ -181,7 +181,6 @@ import EmmaEmpire from "./pages/EmmaEmpire";
 import EmmaHome from "./pages/EmmaHome";
 import EmmaNetworkHome from "./pages/EmmaNetworkHome";
 import EmmaResetDashboard from "./pages/EmmaResetDashboard";
-import Explore from "./pages/Explore";
 import FanSubscribe from "./pages/FanSubscribe";
 import FollowListPage from "./pages/FollowListPage";
 import GreatestShowStudio from "./pages/GreatestShowStudio";
@@ -570,7 +569,7 @@ function Router() {
       <Route path={"/brand-deals"} component={BrandDeals} />
       <Route path={"/subscriptions"} component={Subscriptions} />
       {/* <Route path={"/feed"} component={FeedPage} /> */}
-      <Route path={"/explore"} component={Explore} />
+      <Route path={"/explore"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/profile/edit"} component={EditProfile} />
       <Route path={"/profile/:username"} component={PublicProfile} />
       <Route path="/follow-list/:userId/:type" component={FollowListPage} />
