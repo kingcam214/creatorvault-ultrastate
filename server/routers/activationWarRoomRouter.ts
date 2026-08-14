@@ -1,5 +1,13 @@
 import { router, protectedProcedure } from "../_core/trpc.js";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
+const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.id !== 6 && ctx.user.id !== 33 && ctx.user.role !== "king" && ctx.user.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Owner review is required to change Activation War Room records." });
+  }
+  return next({ ctx });
+});
 import mysql from "mysql2/promise";
 
 async function getDb() {
@@ -833,7 +841,7 @@ export const activationWarRoomRouter = router({
       }
     }),
 
-  refreshSnapshot: protectedProcedure
+  refreshSnapshot: ownerProcedure
     .input(dateInput)
     .mutation(async ({ input }) => {
       const date = isoDate(input.date);
@@ -846,7 +854,7 @@ export const activationWarRoomRouter = router({
       }
     }),
 
-  refreshCreatorStatuses: protectedProcedure
+  refreshCreatorStatuses: ownerProcedure
     .input(dateInput.extend({ limit: z.number().int().min(1).max(200).default(50) }))
     .mutation(async ({ input }) => {
       const date = isoDate(input.date);
@@ -879,7 +887,7 @@ export const activationWarRoomRouter = router({
       }
     }),
 
-  refreshTop5Sprint: protectedProcedure
+  refreshTop5Sprint: ownerProcedure
     .input(dateInput)
     .mutation(async ({ input }) => {
       const date = isoDate(input.date);
@@ -892,7 +900,7 @@ export const activationWarRoomRouter = router({
       }
     }),
 
-  recordTop5OperatorAction: protectedProcedure
+  recordTop5OperatorAction: ownerProcedure
     .input(z.object({
       sprintId: z.number().int().positive(),
       status: z.enum(["active", "in_progress", "blocked", "first_dollar_confirmed", "retained", "payout_ready", "resolved", "closed"]).optional(),
@@ -933,7 +941,7 @@ export const activationWarRoomRouter = router({
       }
     }),
 
-  refreshFirstDollarRecovery: protectedProcedure
+  refreshFirstDollarRecovery: ownerProcedure
     .input(dateInput.extend({ limit: z.number().int().min(1).max(200).default(100) }))
     .mutation(async ({ input }) => {
       const conn = await getDb();
@@ -945,7 +953,7 @@ export const activationWarRoomRouter = router({
       }
     }),
 
-  recordFirstDollarRecoveryAction: protectedProcedure
+  recordFirstDollarRecoveryAction: ownerProcedure
     .input(z.object({
       recoveryId: z.number().int().positive(),
       operatorStatus: z.enum(["new", "reviewing", "contacted_manually", "objection_logged", "checkout_fixed", "recovered_ledger_confirmed", "closed_no_recovery"]).optional(),
@@ -977,7 +985,7 @@ export const activationWarRoomRouter = router({
       }
     }),
 
-  recordFirstDollarClockAction: protectedProcedure
+  recordFirstDollarClockAction: ownerProcedure
     .input(z.object({
       clockId: z.number().int().positive(),
       nextBestMoneyAction: z.string().min(1).max(4000),
@@ -1000,7 +1008,7 @@ export const activationWarRoomRouter = router({
       }
     }),
 
-  recordInterventionReview: protectedProcedure
+  recordInterventionReview: ownerProcedure
     .input(z.object({
       interventionId: z.number().int().positive(),
       status: z.enum(["queued", "in_progress", "reviewed", "resolved", "dismissed"]),
@@ -1024,7 +1032,7 @@ export const activationWarRoomRouter = router({
       }
     }),
 
-  recordBlockerResolution: protectedProcedure
+  recordBlockerResolution: ownerProcedure
     .input(z.object({
       blockerId: z.number().int().positive(),
       resolutionNote: z.string().min(1).max(2000),
