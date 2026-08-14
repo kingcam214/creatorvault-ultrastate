@@ -1245,8 +1245,20 @@ export const vaultxRouter = router({
                 c.total_subscribers, c.language_primary,
                 u.username, u.name
          FROM vaultx_creators c
-         LEFT JOIN users u ON u.id = c.user_id
-         WHERE c.id = ? AND c.is_active = 1 LIMIT 1`,
+         INNER JOIN users u ON u.id = c.user_id
+         WHERE c.id = ?
+           AND c.is_active = 1
+           AND LOWER(COALESCE(u.creator_status, 'pending')) = 'active'
+           AND EXISTS (
+             SELECT 1 FROM vaultx_content playable
+             WHERE playable.creator_id = c.id
+               AND playable.status = 'active'
+               AND playable.content_type = 'video'
+               AND playable.uncensored_url IS NOT NULL
+               AND (playable.uncensored_url LIKE '%.mp4%' OR playable.uncensored_url LIKE '%.webm%' OR playable.uncensored_url LIKE '%.mov%')
+               AND playable.uncensored_url NOT LIKE 'https://replicate.delivery/%'
+           )
+         LIMIT 1`,
         [input.creatorId]
       );
       if (!rows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Creator not found." });
