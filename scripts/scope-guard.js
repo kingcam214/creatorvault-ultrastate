@@ -22,6 +22,7 @@ const ALLOWLISTS = {
   'public-creator-landing': [
     'client/src/pages/PublicCreatorLanding.tsx',
     'client/src/pages/CreatorProfilePage.tsx',
+    'server/routers/marketplace.ts',
     'server/routers/profileRouter.ts',
     'scripts/scope-guard.js'
   ],

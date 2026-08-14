@@ -6,6 +6,13 @@ import { marketplaceProducts, marketplaceOrders } from "../../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { stripe } from "../_core/stripe";
 
+function isPublicMarketplaceProduct(product: any) {
+  const identity = [product?.title, product?.shortDescription, product?.short_description, product?.description]
+    .filter(Boolean)
+    .join(" ");
+  return !/\b(test|audit)\b/i.test(identity);
+}
+
 // Only creators can create/manage products
 const creatorProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "creator" && ctx.user.role !== "influencer" && ctx.user.role !== "celebrity" && ctx.user.role !== "admin" && ctx.user.role !== "king") {
@@ -19,7 +26,8 @@ export const marketplaceRouter = router({
   getProducts: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) return [];
-    return await db.select().from(marketplaceProducts).where(eq(marketplaceProducts.status, "active")).orderBy(desc(marketplaceProducts.createdAt));
+    const activeProducts = await db.select().from(marketplaceProducts).where(eq(marketplaceProducts.status, "active")).orderBy(desc(marketplaceProducts.createdAt));
+    return activeProducts.filter(isPublicMarketplaceProduct);
   }),
 
   // Get single product (public)
@@ -30,7 +38,7 @@ export const marketplaceRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       
       const [product] = await db.select().from(marketplaceProducts).where(eq(marketplaceProducts.id, input.productId));
-      if (!product) {
+      if (!product || !isPublicMarketplaceProduct(product)) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
       }
       
