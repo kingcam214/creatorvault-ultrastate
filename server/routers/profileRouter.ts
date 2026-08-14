@@ -47,28 +47,6 @@ function safeProfile(row: any) {
   };
 }
 
-function negriitax3Fallback(username: string) {
-  const handle = normalizeHandle(username) || "negriitax3";
-  return {
-    profile: {
-      userId: 8005,
-      id: 8005,
-      username: handle,
-      handle,
-      displayName: "Princesa De Africa",
-      bio: "Dominicana living in Colombia. Fit body, wild spirit, no filter — a cinematic VaultX creator experience built for exclusive drops.",
-      avatar: null,
-      avatarUrl: null,
-      bannerUrl: "/images/negritax3/hero-cinematic-poster.webp",
-      followerCount: 0,
-      postCount: 0,
-      productCount: 0,
-      stripeConnected: false,
-    },
-    courses: [],
-  };
-}
-
 async function findPublicProfile(username: string) {
   const handle = normalizeHandle(username);
   const conn = await getConnection();
@@ -168,13 +146,7 @@ export const profileRouter = router({
 
     if (requestedUsername) {
       const profile = await findPublicProfile(requestedUsername);
-      if (!profile) {
-        const handle = normalizeHandle(requestedUsername);
-        if (["negriitax3", "negritax3", "princesadeafrica"].includes(handle)) {
-          return negriitax3Fallback(requestedUsername);
-        }
-        return { profile: null, courses: [] };
-      }
+      if (!profile) return { profile: null, courses: [] };
 
       const courses = await listCoursesForCreator(profile.userId);
       return { profile, courses };

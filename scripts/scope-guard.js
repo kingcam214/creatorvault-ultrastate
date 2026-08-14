@@ -19,6 +19,11 @@ const ALLOWLISTS = {
     'client/src/pages/Login.tsx',
     'scripts/scope-guard.js'
   ],
+  'public-creator-landing': [
+    'client/src/pages/PublicCreatorLanding.tsx',
+    'server/routers/profileRouter.ts',
+    'scripts/scope-guard.js'
+  ],
   editor: [
     'server/services/bodyCinemaProviderRouter.ts',
     'server/services/complianceVault.ts',
