@@ -120,6 +120,12 @@ const ALLOWLISTS = {
     'server/services/thumbnailGenerator.ts',
     'scripts/scope-guard.js'
   ],
+  'viral-optimizer-hold': [
+    'client/src/pages/tools/ViralOptimizer.tsx',
+    'server/routers/viralOptimizer.ts',
+    'server/services/viralOptimizer.ts',
+    'scripts/scope-guard.js'
+  ],
   'design-image-pilot': [
     'server/services/governedPolloService.ts',
     'server/routers/designImagePilotRouter.ts',

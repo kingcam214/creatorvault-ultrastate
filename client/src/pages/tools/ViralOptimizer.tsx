@@ -63,27 +63,16 @@ export default function ViralOptimizer() {
 
   // @ts-ignore
   const optimize = trpc.viralOptimizer.analyze.useMutation();
-  // @ts-ignore
-  const history = trpc.viralOptimizer.getHistory.useQuery({ limit: 20 });
+  // Legacy scorecards are deliberately hidden until analyses are grounded in real CreatorVault source evidence.
+  const history = { data: [] as any[] };
 
   const platforms = isAdult ? ADULT_PLATFORMS : SFW_PLATFORMS;
 
   const handleOptimize = async () => {
-    if (!title.trim()) {
-      toast({ title: "Title required", description: "Enter a content title to analyze.", variant: "destructive" });
-      return;
-    }
-    try {
-      const res = await optimize.mutateAsync({
-        title,
-        description: `[${niche}] ${description}`,
-        platform: platform as any,
-      });
-      setResult(res);
-      history.refetch();
-    } catch (err: any) {
-      toast({ title: "Analysis failed", description: err.message, variant: "destructive" });
-    }
+    toast({
+      title: "Built from real footage next",
+      description: "This tool is being rebuilt around your saved CreatorVault media and real connected results. It will not give you a made-up scorecard in the meantime.",
+    });
   };
 
   const copyToClipboard = (text: string) => {
@@ -118,14 +107,14 @@ export default function ViralOptimizer() {
                 <div>
                   <h1 className="text-2xl font-black">{isAdult ? "VaultX Viral Engine" : "Viral Optimizer"}</h1>
                   <p className="text-xs font-bold uppercase tracking-widest" style={{ color: accentColor }}>
-                    {isAdult ? "PPV Conversion · Teaser Compliance · Desire-Grade Analysis" : "Algorithm Retention · CTR Optimization · Trend Scoring"}
+                    {isAdult ? "Real Footage · Connected Results · Honest Release Decisions" : "Real Footage · Connected Results · Honest Release Decisions"}
                   </p>
                 </div>
               </div>
               <p className="text-gray-400 text-sm max-w-xl">
                 {isAdult
-                  ? "Analyze your content for PPV conversion potential, shadowban risk, and desire-grade aesthetics. Get platform-specific hooks that drive fans from free social to your paid vault."
-                  : "Analyze your content for viral potential, algorithm retention, and engagement hooks. Get platform-native copy that drives views, subscribers, and brand deals."}
+                  ? "This creation weapon is being rebuilt around saved CreatorVault footage and connected release evidence. It will return only what your real source and real channels support."
+                  : "This creation weapon is being rebuilt around saved CreatorVault footage and connected release evidence. It will return only what your real source and real channels support."}
               </p>
             </div>
             <CreatorModeSwitcher compact />
@@ -182,12 +171,12 @@ export default function ViralOptimizer() {
                   <p className="text-xs text-gray-500 mt-1">Analysis includes platform-specific compliance scoring to avoid content restrictions on SFW funnels.</p>
                 </div>
               )}
-              <Button onClick={handleOptimize} disabled={optimize.isPending || !title.trim()} className="w-full font-bold py-3 text-sm border-0"
+              <Button onClick={handleOptimize} disabled className="w-full font-bold py-3 text-sm border-0"
                 style={{ background: optimize.isPending ? "#ffffff20" : `linear-gradient(135deg,${accentColor},${isAdult ? "#ec4899" : "#6366f1"})`, color: "white" }}>
                 {optimize.isPending ? (
                   <span className="flex items-center gap-2"><Sparkles className="w-4 h-4 animate-spin" />{isAdult ? "Analyzing PPV Potential..." : "Analyzing Virality..."}</span>
                 ) : (
-                  <span className="flex items-center gap-2"><Flame className="w-4 h-4" />{isAdult ? "Analyze PPV and Viral Potential" : "Optimize for Virality"}</span>
+                  <span className="flex items-center gap-2"><Shield className="w-4 h-4" />Built From Your Real Footage Next</span>
                 )}
               </Button>
             </div>
@@ -272,7 +261,7 @@ export default function ViralOptimizer() {
                 </div>
                 <p className="text-gray-400 font-semibold">{isAdult ? "Analyze your content" : "Run an analysis"}</p>
                 <p className="text-gray-600 text-sm mt-1">
-                  {isAdult ? "Enter a drop title and platform to get your PPV conversion score" : "Enter a title and platform to see your viral potential"}
+                  Your next release intelligence will begin with a saved CreatorVault source, not keywords or a generic scorecard.
                 </p>
               </div>
             )}
@@ -302,7 +291,7 @@ export default function ViralOptimizer() {
             </div>
           ) : (
             <div className="text-center text-gray-600 py-8 text-sm">
-              {isAdult ? "No analyses yet — run your first PPV analysis above" : "No history yet"}
+Previous scorecards are hidden because they were not grounded in your real footage or connected results.
             </div>
           )}
         </div>
