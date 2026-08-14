@@ -402,13 +402,13 @@ export default function CreatorProfilePage() {
         </div>
       </div>
 
-      {/* ── Revenue Ticker ── */}
-      <RevenueTicker stats={{
+      {/* Money Intelligence is owner-only. Public profiles never infer revenue or sales from an unavailable owner read. */}
+      {isOwnProfile && <RevenueTicker stats={{
         totalRevenue: sellerStats?.totalRevenue ?? 0,
         totalSales: sellerStats?.totalSales ?? 0,
         activeProducts: creatorProducts.length,
         followers: profile.followerCount ?? 0,
-      }} />
+      }} />}
 
       {/* ── Content ── */}
       <div className="max-w-6xl mx-auto px-4 py-6">
