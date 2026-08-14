@@ -4242,71 +4242,32 @@ export const vaultxRouter = router({
     }),
 
   distributeContent: protectedProcedure
-    .input(z.object({
-      sourceUrl: z.string().url(),
-      platforms: z.array(z.enum(["onlyfans", "fansly", "mym", "tiktok", "twitter", "telegram"])),
-      title: z.string().optional(),
-      description: z.string().optional(),
-      applyWatermark: z.boolean().default(true),
-      contentType: z.enum(["full_scene", "teaser", "clip", "ppv"]).default("clip"),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      // Map simple platform IDs to full preset IDs
-      const platformMap: Record<string, string> = {
-        onlyfans: "onlyfans_full",
-        onlyfans_trailer: "onlyfans_trailer",
-        fansly: "fansly",
-        mym: "mym",
-        tiktok: "tiktok",
-        twitter: "twitter",
-        instagram_reel: "instagram_reel",
-        telegram: "telegram",
-        ppv: "ppv_preview",
-      };
-      const mappedPlatforms = input.platforms.map((p: string) => platformMap[p] || p);
-      const result = await distributionEngineExport({
-        sourceUrl: input.sourceUrl,
-        creatorId: ctx.user.id,
-        creatorUsername: ctx.user.name || `creator_${ctx.user.id}`,
-        platforms: mappedPlatforms as any,
+    .input(z.any())
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "This Remix move stays closed until CreatorVault can protect your source, create a finished result you can watch, and keep every delivery under your control.",
       });
-      return result;
     }),
 
-  // ─── PROCEDURE 51: enhanceScenes ─────────────────────────────────────────
   enhanceScenes: protectedProcedure
-    .input(z.object({ sourceUrl: z.string().url() }))
-    .mutation(async ({ ctx, input }) => {
-      const result = await enhanceSceneByScene({
-        sourceUrl: input.sourceUrl,
-        creatorId: ctx.user.id,
+    .input(z.any())
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "This Remix move stays closed until CreatorVault can protect your source, create a finished result you can watch, and keep every delivery under your control.",
       });
-      return result;
     }),
 
-  // ─── PROCEDURE 52: buildPpvBundle ─────────────────────────────────────────
   buildPpvBundle: protectedProcedure
-    .input(z.object({
-      sourceUrl: z.string().url(),
-      desireScore: z.number().min(1).max(10).default(7),
-      teaserDurationSec: z.number().optional(),
-      previewDurationSec: z.number().optional(),
-      clientBundleId: z.string().optional(), // client-generated ID for progress tracking sync
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const result = await buildPpvBundle({
-        sourceUrl: input.sourceUrl,
-        creatorId: ctx.user.id,
-        creatorUsername: ctx.user.name || `creator_${ctx.user.id}`,
-        desireScore: input.desireScore,
-        teaserDurationSec: input.teaserDurationSec,
-        previewDurationSec: input.previewDurationSec,
-        clientBundleId: input.clientBundleId,
+    .input(z.any())
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "This Remix move stays closed until CreatorVault can protect your source, create a finished result you can watch, and keep every delivery under your control.",
       });
-      return result;
     }),
 
-  // ─── PROCEDURE 52b: ppvBundleProgress ────────────────────────────────────
   ppvBundleProgress: protectedProcedure
     .input(z.object({
       bundleId: z.string(),

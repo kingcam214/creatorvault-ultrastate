@@ -64,6 +64,11 @@ const ALLOWLISTS = {
     'client/src/pages/VaultX.tsx',
     'scripts/scope-guard.js'
   ],
+  'vault-remix-safety': [
+    'client/src/pages/VaultRemix.tsx',
+    'server/routers/vaultxRouter.ts',
+    'scripts/scope-guard.js'
+  ],
   vaultx: [
     'client/src/pages/VaultX.tsx',
     'client/src/pages/VaultXFanLibrary.tsx',
