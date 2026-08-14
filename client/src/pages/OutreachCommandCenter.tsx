@@ -89,10 +89,10 @@ export default function OutreachCommandCenter() {
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-300 to-violet-500 text-sm font-black text-black">{initials(String(profile.display_name || profile.handle || "Creator"))}</div>
                   <div className="min-w-0 flex-1"><h3 className="truncate text-lg font-black text-white">{profile.display_name || profile.handle}</h3><p className="mt-1 text-xs font-bold uppercase tracking-[0.13em] text-zinc-500">Private relationship</p></div>
                 </div>
-                {profile.bio && <p className="relative mt-5 line-clamp-3 text-sm leading-relaxed text-zinc-300">{profile.bio}</p>}
+                {profile.bio && <><p className="relative mt-5 text-[10px] font-black uppercase tracking-[0.13em] text-zinc-600">Private relationship note</p><p className="relative mt-2 line-clamp-3 text-sm leading-relaxed text-zinc-300">{profile.bio}</p></>}
                 <div className="relative mt-6 grid grid-cols-2 gap-3 border-t border-white/10 pt-4 text-xs">
-                  <div><p className="font-black uppercase tracking-[0.13em] text-zinc-600">Audience note</p><p className="mt-1 font-bold text-white">{Number(profile.followers || 0).toLocaleString()} recorded</p></div>
-                  <div><p className="font-black uppercase tracking-[0.13em] text-zinc-600">Engagement note</p><p className="mt-1 font-bold text-white">{Number(profile.engagement_rate || 0).toFixed(1)}% recorded</p></div>
+                  <div><p className="font-black uppercase tracking-[0.13em] text-zinc-600">Audience note</p><p className="mt-1 font-bold text-white">{typeof profile.followers === "number" ? `${profile.followers.toLocaleString()} recorded` : "Not verified yet"}</p></div>
+                  <div><p className="font-black uppercase tracking-[0.13em] text-zinc-600">Engagement note</p><p className="mt-1 font-bold text-white">{typeof profile.engagement_rate === "number" ? `${profile.engagement_rate.toFixed(1)}% recorded` : "Not verified yet"}</p></div>
                 </div>
                 <div className="relative mt-5 inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-amber-100">Held until she chooses to join</div>
               </article>

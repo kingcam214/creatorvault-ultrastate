@@ -251,13 +251,15 @@ async function listPrivateRecruitmentProfiles(count: number = 20): Promise<any[]
       .replace(/[^a-z0-9]+/g, "_")
       .replace(/^_+|_+$/g, "")
       .slice(0, 80) || `creator_${row.id}`;
+    const followerCount = Number(row.follower_count);
+    const engagementRate = Number(row.engagement_rate);
     return {
       handle,
       display_name: row.stage_name,
       bio: row.bio,
-      followers: Number(row.follower_count || 0),
-      engagement_rate: Number(row.engagement_rate || 0),
-      platforms: ["creatorvault"],
+      followers: Number.isFinite(followerCount) && followerCount > 0 ? followerCount : null,
+      engagement_rate: Number.isFinite(engagementRate) && engagementRate > 0 ? engagementRate : null,
+      platforms: [],
       source_table: "greatest_show_creators",
       source_id: row.id,
       relationshipState: "private_recruitment",
