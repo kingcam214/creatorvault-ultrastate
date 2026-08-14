@@ -1,132 +1,68 @@
-import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
-import { Crown, DollarSign, Zap, TrendingUp, Play, CheckCircle } from 'lucide-react';
-const T = { bg: '#0a0a0a', surface: '#111', border: '#1e1e1e', gold: '#c9a84c', goldDim: 'rgba(201,168,76,0.12)', text: '#f5f0e8', muted: '#6b6b6b', success: '#22c55e', error: '#ef4444', info: '#60a5fa' };
-function ProgressBar({ value, max, color = T.gold }: { value: number; max: number; color?: string }) {
-  const pct = Math.min(100, max > 0 ? (value / max) * 100 : 0);
-  return <div style={{ background: '#1a1a1a', borderRadius: 8, height: 14, overflow: 'hidden', width: '100%' }}><div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg, ${color}, ${color}cc)`, borderRadius: 8, transition: 'width 0.6s ease' }} /></div>;
+import { trpc } from "@/lib/trpc";
+import { Crown, DollarSign, ShieldCheck, WalletCards } from "lucide-react";
+
+const T = {
+  bg: "#070707",
+  panel: "#101010",
+  border: "#242424",
+  gold: "#d5b26a",
+  muted: "#a19b90",
+  green: "#70d6a1",
+};
+
+function money(value: unknown): string {
+  const parsed = Number.parseFloat(String(value ?? 0));
+  return `$${Number.isFinite(parsed) ? parsed.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}`;
 }
+
 export function KingMoneyMission() {
-  const [running, setRunning] = useState(false);
-  const [lastResult, setLastResult] = useState<any>(null);
-  const [cycleError, setCycleError] = useState<string | null>(null);
-  const dashQ = trpc.challengeAutomation.getChallengeDashboard.useQuery(undefined, { refetchInterval: 30000 });
-  const runCycle = trpc.challengeAutomation.runFullCycle.useMutation({
-    onSuccess: (d) => { setLastResult(d); setCycleError(null); setRunning(false); dashQ.refetch(); },
-    onError: (e: any) => { setCycleError(e?.message ?? 'Agent cycle failed before verified DB-backed completion.'); setRunning(false); },
-  });
-  const dash = dashQ.data;
-  const active = dash?.activeChallenge as any;
-  const txns = dash?.recentTransactions ?? [];
-  const stats = dash?.agentStats ?? { totalRuns: 0, successes: 0, totalRevenue: 0 };
-  const dashboardError = dashQ.error?.message ?? null;
-  const challenges = dash?.challenges ?? [];
-  const cur = parseFloat(active?.current_revenue ?? '0');
-  const tgt = parseFloat(active?.target_revenue ?? '5000');
-  const pct = Math.min(100, tgt > 0 ? (cur / tgt) * 100 : 0);
+  const dashboard = trpc.challengeAutomation.getChallengeDashboard.useQuery(undefined, { refetchInterval: 30_000 });
+  const data = dashboard.data;
+  const challenge = data?.activeChallenge as any;
+  const transactions = Array.isArray(data?.recentTransactions) ? data.recentTransactions as any[] : [];
+  const verifiedRevenue = transactions.reduce((sum, tx) => sum + (Number.parseFloat(String(tx.amount ?? 0)) || 0), 0);
+  const targetRevenue = Number.parseFloat(String(challenge?.target_revenue ?? 0)) || 0;
+  const progress = targetRevenue > 0 ? Math.min(100, (verifiedRevenue / targetRevenue) * 100) : 0;
+
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, color: T.text, padding: '24px 20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
-        <Crown size={28} color={T.gold} />
-        <div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>King Money Mission</h1>
-          <p style={{ margin: 0, fontSize: 12, color: T.muted }}>$5k Challenge — AI-Powered Revenue Engine</p>
-        </div>
-        <div style={{ marginLeft: 'auto' }}>
-          <button
-            onClick={() => { setCycleError(null); setRunning(true); runCycle.mutate({ creditToChallenge: true }); }}
-            disabled={running}
-            style={{ background: running ? '#1a1a1a' : T.gold, color: running ? T.muted : '#0a0a0a', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 700, fontSize: 13, cursor: running ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Zap size={15} />{running ? 'Running Agents...' : 'Run Full Agent Cycle'}
-          </button>
-        </div>
-      </div>
-      {dashboardError && (
-        <div style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: T.error }}>Live challenge dashboard failed to load</div>
-          <div style={{ fontSize: 12, color: T.text, marginTop: 4, whiteSpace: 'pre-wrap' }}>{dashboardError}</div>
-        </div>
-      )}
-      {cycleError && (
-        <div style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: T.error }}>Full-cycle execution failed before verified completion</div>
-          <div style={{ fontSize: 12, color: T.text, marginTop: 4, whiteSpace: 'pre-wrap' }}>{cycleError}</div>
-        </div>
-      )}
-      {active && (
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 24, marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-            <div>
-              <div style={{ fontSize: 11, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Week {active.week_number} — Active Challenge</div>
-              <div style={{ fontSize: 20, fontWeight: 800 }}>{active.title}</div>
-            </div>
-            <span style={{ background: T.goldDim, color: T.gold, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textTransform: 'uppercase' }}>{active.status}</span>
+    <main className="min-h-screen bg-[#070707] px-5 pb-20 pt-24 text-[#f7f1e7] sm:px-8 lg:px-12">
+      <section className="mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-[#3a3125] bg-[radial-gradient(circle_at_85%_15%,rgba(213,178,106,0.16),transparent_32%),linear-gradient(145deg,#14110d,#090909)] p-6 shadow-[0_30px_90px_-45px_rgba(213,178,106,0.75)] sm:p-10">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#d5b26a]/30 bg-[#d5b26a]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-[#f4d79a]"><Crown className="h-3.5 w-3.5" /> Revenue Truth Room</div>
+            <h1 className="mt-5 text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">Money only counts<br />when it lands.</h1>
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#c9c1b3] sm:text-lg">This room shows only revenue records that reached CreatorVault’s verified challenge ledger. It does not turn an agent run, a plan, or a forecast into money.</p>
           </div>
-          <div style={{ display: 'flex', gap: 32, marginBottom: 16 }}>
-            <div><div style={{ fontSize: 32, fontWeight: 900, color: T.gold }}>${cur.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div><div style={{ fontSize: 12, color: T.muted }}>earned of ${tgt.toLocaleString()}</div></div>
-            <div><div style={{ fontSize: 32, fontWeight: 900 }}>{pct.toFixed(1)}%</div><div style={{ fontSize: 12, color: T.muted }}>complete</div></div>
-            <div><div style={{ fontSize: 32, fontWeight: 900, color: T.info }}>${Math.max(0, tgt - cur).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div><div style={{ fontSize: 12, color: T.muted }}>remaining</div></div>
+          <div className="rounded-2xl border border-[#d5b26a]/20 bg-black/30 p-5 lg:min-w-[250px]">
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.15em] text-[#a19b90]"><ShieldCheck className="h-4 w-4 text-[#70d6a1]" /> Verified challenge ledger</div>
+            <p className="mt-3 text-4xl font-black text-[#d5b26a]">{money(verifiedRevenue)}</p>
+            <p className="mt-1 text-xs font-bold text-[#a19b90]">{transactions.length} recorded transaction{transactions.length === 1 ? "" : "s"} in this live view</p>
           </div>
-          <ProgressBar value={cur} max={tgt} />
-          <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>{active.description}</div>
         </div>
-      )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
-        {[
-          { label: 'Agent Runs (7d)', value: stats.totalRuns.toLocaleString(), icon: <Play size={16} color={T.gold} /> },
-          { label: 'Successful Tasks', value: stats.successes.toLocaleString(), icon: <CheckCircle size={16} color={T.success} /> },
-          { label: 'AI Revenue (7d)', value: `$${stats.totalRevenue.toFixed(2)}`, icon: <DollarSign size={16} color={T.gold} /> },
-          { label: 'Challenge Txns', value: txns.length.toString(), icon: <TrendingUp size={16} color={T.info} /> },
-        ].map((s, i) => (
-          <div key={i} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>{s.icon}<span style={{ fontSize: 11, color: T.muted }}>{s.label}</span></div>
-            <div style={{ fontSize: 22, fontWeight: 800 }}>{s.value}</div>
-          </div>
-        ))}
-      </div>
-      {lastResult && (
-        <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: T.success }}>Last Cycle: {lastResult.agentsRan} agents — ${lastResult.totalRevenue.toFixed(2)} revenue generated</div>
-          <div style={{ display: 'flex', gap: 16, fontSize: 12, marginTop: 4 }}><span style={{ color: T.success }}>{lastResult.successCount} succeeded</span><span style={{ color: T.error }}>{lastResult.failedCount} failed</span></div>
+      </section>
+
+      <section className="mx-auto mt-8 grid max-w-6xl gap-6 lg:grid-cols-[1.1fr_.9fr]">
+        <div className="rounded-3xl border border-white/10 bg-[#101010] p-6 sm:p-8">
+          <div className="flex items-start justify-between gap-5"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#a19b90]">Current money target</p><h2 className="mt-2 text-2xl font-black text-white">{challenge?.title || "No active target recorded"}</h2></div><WalletCards className="h-6 w-6 text-[#d5b26a]" /></div>
+          <div className="mt-8 flex items-end justify-between gap-5"><div><p className="text-4xl font-black text-[#d5b26a]">{money(verifiedRevenue)}</p><p className="mt-1 text-sm text-[#a19b90]">of {money(targetRevenue)} recorded in the verified ledger</p></div><p className="text-xl font-black text-white">{progress.toFixed(1)}%</p></div>
+          <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-[#8a6628] via-[#d5b26a] to-[#f6d992]" style={{ width: `${progress}%` }} /></div>
+          <p className="mt-5 text-sm leading-relaxed text-[#a19b90]">{transactions.length ? "These are ledger records, not estimated agent revenue." : "No verified challenge transaction is recorded yet. The target stays visible, but it is not presented as progress until a real ledger entry arrives."}</p>
         </div>
-      )}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>AI Challenge Weeks</div>
-          {challenges.map((c: any, i: number) => {
-            const cv = parseFloat(c.current_revenue ?? '0');
-            const tv = parseFloat(c.target_revenue ?? '5000');
-            return (
-              <div key={i} style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 10, marginBottom: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>Week {c.week_number}: {c.title}</span>
-                  <span style={{ fontSize: 11, color: c.status === 'active' ? T.gold : c.status === 'met' ? T.success : T.muted }}>{c.status}</span>
-                </div>
-                <ProgressBar value={cv} max={tv} color={c.status === 'met' ? T.success : T.gold} />
-                <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>${cv.toFixed(2)} / ${tv.toLocaleString()}</div>
-              </div>
-            );
-          })}
-          {challenges.length === 0 && <div style={{ color: T.muted, fontSize: 13 }}>No challenges found.</div>}
+
+        <div className="rounded-3xl border border-white/10 bg-[#101010] p-6 sm:p-8">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#a19b90]">Agent execution</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Held until each move has proof.</h2>
+          <p className="mt-4 text-sm leading-relaxed text-[#c9c1b3]">The old full-swarm trigger could run unverified agent paths and then show operational estimates beside real money. It is held. No new agent cycle can start from this room until each exposed action has a real source, a receipt, and a controlled spend boundary.</p>
+          <div className="mt-6 rounded-2xl border border-amber-200/15 bg-amber-200/5 p-4 text-sm font-bold text-amber-100">No agent activity is being called revenue here.</div>
         </div>
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Recent Revenue Transactions</div>
-          {txns.length === 0 && <div style={{ color: T.muted, fontSize: 13 }}>No verified challenge transactions are present in the live database for this ledger.</div>}
-          {txns.slice(0, 15).map((tx: any, i: number) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${T.border}`, paddingBottom: 8, marginBottom: 8 }}>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600 }}>{tx.source}</div>
-                <div style={{ fontSize: 11, color: T.muted }}>{String(tx.description ?? '').slice(0, 50)}</div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: T.gold }}>${parseFloat(tx.amount).toFixed(2)}</div>
-                <div style={{ fontSize: 10, color: T.muted }}>{tx.recorded_at ? new Date(tx.recorded_at).toLocaleDateString() : ''}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+      </section>
+
+      <section className="mx-auto mt-6 max-w-6xl rounded-3xl border border-white/10 bg-[#101010] p-6 sm:p-8">
+        <div className="flex items-center gap-3"><DollarSign className="h-5 w-5 text-[#d5b26a]" /><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#a19b90]">Recent verified transaction records</p><h2 className="mt-1 text-2xl font-black text-white">What actually landed</h2></div></div>
+        {dashboard.isLoading ? <p className="mt-8 text-sm font-bold text-[#a19b90]">Reading the verified ledger…</p> : transactions.length ? <div className="mt-7 divide-y divide-white/10">{transactions.map((tx, index) => <div key={`${tx.id || tx.recorded_at || "transaction"}-${index}`} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-black text-white">{tx.source || "Verified CreatorVault transaction"}</p><p className="mt-1 text-sm text-[#a19b90]">{tx.description || "Recorded in the live challenge ledger"}</p></div><div className="text-left sm:text-right"><p className="text-xl font-black text-[#d5b26a]">{money(tx.amount)}</p><p className="mt-1 text-xs text-[#a19b90]">{tx.recorded_at ? new Date(tx.recorded_at).toLocaleDateString() : "Recorded"}</p></div></div>)}</div> : <div className="mt-7 rounded-2xl border border-dashed border-white/15 bg-black/20 p-7 text-center"><p className="font-black text-white">No verified challenge transaction is here yet.</p><p className="mt-2 text-sm leading-relaxed text-[#a19b90]">When a real money event reaches the ledger, it will show here. Until then, this room stays honest.</p></div>}
+      </section>
+    </main>
   );
 }
+
 export default KingMoneyMission;

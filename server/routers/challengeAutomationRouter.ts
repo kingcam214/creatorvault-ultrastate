@@ -1507,51 +1507,23 @@ export const challengeAutomationRouter = router({
     return content;
   }),
 
-  // Run a single agent — real execution, no public revenue crediting
+  // Direct agent execution is held until every exposed agent has a current source, action receipt, and governed spend boundary.
   runAgent: ownerProcedure
     .input(z.object({ agentSlug: z.string(), agentName: z.string(), creditToChallenge: z.boolean().default(false) }))
-    .mutation(async ({ input }) => {
-      const { outcome, revenue, status, action } = await executeAgent(input.agentSlug);
-      const meta = AGENT_META[input.agentSlug] ?? { name: input.agentName, category: "infra", taskType: "agent_run" };
-      const eventId = await logTelemetry(input.agentSlug, meta.name, meta.category, meta.taskType, status, outcome, revenue);
-
-      return {
-        agentSlug: input.agentSlug,
-        status,
-        outcome,
-        revenue,
-        action,
-        eventId,
-        creditedToChallenge: false,
-        challengeCreditPolicy: "Agent output is logged as an operational estimate only. Public challenge revenue is credited exclusively by verified Stripe webhook transactions.",
-      };
+    .mutation(async (): Promise<{ agentSlug: string; status: string; outcome: string; revenue: number; action: string; eventId: string | null; creditedToChallenge: false; challengeCreditPolicy: string }> => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Agent execution is being rebuilt around real sources, action receipts, and controlled spend. This money room will not launch an unverified cycle in the meantime.",
+      });
     }),
 
-  // Run ALL agents — full real execution cycle, no public revenue crediting
   runFullCycle: ownerProcedure
     .input(z.object({ creditToChallenge: z.boolean().default(false) }))
-    .mutation(async () => {
-      const allSlugs = Object.keys(AGENT_META);
-      const results: Array<{ agentSlug: string; status: string; revenue: number; outcome: string; action: string }> = [];
-      let totalRevenue = 0;
-
-      for (const slug of allSlugs) {
-        const { outcome, revenue, status, action } = await executeAgent(slug);
-        const meta = AGENT_META[slug];
-        const eventId = await logTelemetry(slug, meta.name, meta.category, meta.taskType, status, outcome, revenue);
-        results.push({ agentSlug: slug, status, revenue, outcome, action, eventId } as any);
-        totalRevenue += revenue;
-      }
-
-      return {
-        agentsRan: allSlugs.length,
-        totalRevenue,
-        creditedToChallenge: false,
-        challengeCreditPolicy: "Agent cycle output is saved for operational review only. Challenge revenue moves only after Stripe webhook proof writes a transaction.",
-        successCount: results.filter(r => r.status === "success").length,
-        failedCount: results.filter(r => r.status === "failed").length,
-        results,
-      };
+    .mutation(async (): Promise<{ agentsRan: number; totalRevenue: number; creditedToChallenge: false; challengeCreditPolicy: string; successCount: number; failedCount: number; results: Array<{ agentSlug: string; status: string; revenue: number; outcome: string; action: string }> }> => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Agent execution is being rebuilt around real sources, action receipts, and controlled spend. This money room will not launch an unverified cycle in the meantime.",
+      });
     }),
 
   getChallengeDashboard: protectedProcedure.query(async () => {

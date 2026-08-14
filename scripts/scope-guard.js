@@ -127,6 +127,11 @@ const ALLOWLISTS = {
     'server/services/viralOptimizer.ts',
     'scripts/scope-guard.js'
   ],
+  'money-mission-hold': [
+    'client/src/pages/KingMoneyMission.tsx',
+    'server/routers/challengeAutomationRouter.ts',
+    'scripts/scope-guard.js'
+  ],
   'design-image-pilot': [
     'server/services/governedPolloService.ts',
     'server/routers/designImagePilotRouter.ts',
