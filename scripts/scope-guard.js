@@ -145,6 +145,16 @@ const ALLOWLISTS = {
     'client/src/pages/AgentRoster.tsx',
     'scripts/scope-guard.js'
   ],
+  'campaign-visual-recovery': [
+    'client/src/pages/CampaignVisualStudio.tsx',
+    'client/src/pages/KingContent.tsx',
+    'client/src/App.tsx',
+    'server/routers/campaignVisualRouter.ts',
+    'server/routers.ts',
+    'server/services/governedPolloService.ts',
+    'server/services/creationProjectService.ts',
+    'scripts/scope-guard.js'
+  ],
   'design-image-pilot': [
     'server/services/governedPolloService.ts',
     'server/routers/designImagePilotRouter.ts',

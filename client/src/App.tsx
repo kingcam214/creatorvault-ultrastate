@@ -283,6 +283,7 @@ import EmmaResetSuccess from "./pages/EmmaResetSuccess";
 import KingCamVault from "./pages/KingCamVault";
 import MediaHubPage from "./pages/MediaHubPage";
 import MotionFlyerAgent from "./pages/MotionFlyerAgent";
+import CampaignVisualStudio from "./pages/CampaignVisualStudio";
 import MusicLibraryAgent from "./pages/MusicLibraryAgent";
 import Shop from "./pages/Shop";
 // import SocialAutoposterAgent from "./pages/SocialAutoposterAgent"; // MERGED into SocialHub
@@ -625,6 +626,7 @@ function Router() {
       <Route path="/mi-panel/marielka-dashboard">{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path="/media/hub" component={MediaHubPage} />
       <Route path="/agents/motion-flyer-agent" component={MotionFlyerAgent} />
+      <Route path="/king/campaign-visual" component={CampaignVisualStudio} />
       <Route path="/music/cover-studio">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/agents/music-library-agent" component={MusicLibraryAgent} />
       <Route path="/oauth/social/callback">{() => { window.location.replace("/social"); return null; }}</Route>

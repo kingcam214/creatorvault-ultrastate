@@ -459,6 +459,26 @@ export default function KingContent() {
             </a>
           </Link>
 
+          {/* Campaign Visual */}
+          <Link href="/king/campaign-visual">
+            <a className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0f] p-6 transition hover:border-[#c9a84c]/45 hover:bg-[#0d0d14]">
+              <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-[#c9a84c]/10 blur-3xl transition group-hover:bg-[#c9a84c]/20" />
+              <div>
+                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#c9a84c]/15 text-[#e8d38b]">
+                  <ImageIcon className="h-5 w-5" />
+                </div>
+                <h2 className="mb-2 text-xl font-black text-white">Campaign Visual</h2>
+                <p className="text-sm leading-relaxed text-zinc-400">
+                  Start with certified CreatorVault footage and make one premium campaign image under a locked cost cap. Nothing enters your Vault until it earns review.
+                </p>
+              </div>
+              <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Premium Still Power</span>
+                <ArrowUpRight className="h-4 w-4 text-zinc-500 transition group-hover:text-[#e8d38b]" />
+              </div>
+            </a>
+          </Link>
+
           {/* Motion Flyer */}
           <Link href="/agents/motion-flyer-agent">
             <a className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0f] p-6 transition hover:border-rose-300/40 hover:bg-[#0d0d14]">

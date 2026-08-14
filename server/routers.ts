@@ -31,6 +31,7 @@ import { cloneTrainingLabRouter } from "./routers/cloneTrainingLabRouter";
 import { godModeRouter } from "./routers/godModeRouter";
 import { homepageMotionPilotRouter } from "./routers/homepageMotionPilotRouter";
 import { designImagePilotRouter } from "./routers/designImagePilotRouter";
+import { campaignVisualRouter } from "./routers/campaignVisualRouter";
 import { agentTrackerRouter } from "./routers/agentTracker";
 import { aiAffiliateOptimizerRouter } from "./routers/aiAffiliateOptimizer";
 import { aiAudienceCloneRouter } from "./routers/aiAudienceClone";
@@ -840,6 +841,7 @@ export const appRouter = router({
   apparel: apparelRouter,
   homepageMotionPilot: homepageMotionPilotRouter,
   designImagePilot: designImagePilotRouter,
+  campaignVisual: campaignVisualRouter,
   artistMusic: artistMusicRouter,
   brandCoordination: brandCoordinationRouter,
   brollGenerator: brollGeneratorRouter,
