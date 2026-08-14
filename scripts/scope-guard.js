@@ -11,6 +11,10 @@ const ALLOWLISTS = {
     'package.json',
     'pnpm-lock.yaml'
   ],
+  signup: [
+    'client/src/pages/SignupPage.tsx',
+    'scripts/scope-guard.js'
+  ],
   editor: [
     'server/services/bodyCinemaProviderRouter.ts',
     'server/services/complianceVault.ts',
