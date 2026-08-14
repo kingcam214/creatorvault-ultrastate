@@ -582,6 +582,8 @@ export default function KingContent() {
             "Dubbing"
           }`}
           maxSelect={pickerTarget === "trailer" ? 6 : 1}
+          emptyActionHref="/king/media-vault"
+          emptyActionLabel="Open My Media Vault"
         />
       )}
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 
 /* ═══════════════════════════════════════════════════════════
@@ -38,6 +39,8 @@ interface MediaPickerProps {
   subtitle?: string;
   confirmLabel?: string;
   maxSelect?: number;
+  emptyActionHref?: string;
+  emptyActionLabel?: string;
 }
 
 /* ── design tokens ── */
@@ -91,6 +94,8 @@ export default function MediaPicker({
   subtitle,
   confirmLabel = "Use Selected",
   maxSelect,
+  emptyActionHref,
+  emptyActionLabel = "Open Media Vault",
 }: MediaPickerProps) {
   const [filter, setFilter] = useState<MediaFilter>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds ?? []);
@@ -271,13 +276,15 @@ export default function MediaPicker({
               <p style={{ margin: 0, fontSize: 14, color: T.muted, maxWidth: 420, lineHeight: 1.6 }}>
                 Your next creation begins with a readable creator-owned source from your Media Vault. This picker will not offer stale or unavailable media.
               </p>
-              <div style={{
-                marginTop: 8, padding: "10px 20px", borderRadius: 10,
-                border: `1px solid ${T.gold}`, color: T.gold,
-                fontSize: 13, fontWeight: 600, letterSpacing: "0.04em",
-              }}>
-                Open Media Vault →
-              </div>
+              {emptyActionHref ? <Link href={emptyActionHref}>
+                <a onClick={onClose} style={{
+                  marginTop: 8, padding: "10px 20px", borderRadius: 10,
+                  border: `1px solid ${T.gold}`, color: T.gold,
+                  fontSize: 13, fontWeight: 600, letterSpacing: "0.04em", textDecoration: "none",
+                }}>
+                  {emptyActionLabel} →
+                </a>
+              </Link> : <p style={{ margin: "8px 0 0", color: T.muted, fontSize: 12 }}>Return to your Media Vault when a verified source is ready.</p>}
             </div>
           ) : (
             /* ── visual gallery grid ── */
