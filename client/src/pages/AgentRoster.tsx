@@ -136,6 +136,24 @@ export function AgentRoster() {
         </div>
       </div>
 
+      <section aria-label="Proven creator weapons" style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.12), rgba(17,17,17,0.98))', border: `1px solid ${T.gold}44`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 10, fontWeight: 900, color: T.gold, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 5 }}>Proven now</div>
+        <div style={{ fontSize: 18, fontWeight: 900, color: T.text }}>Two weapons already earned their place.</div>
+        <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6, marginTop: 5 }}>These open real CreatorVault creation paths with accepted results you can see. The rest of the arsenal stays held until it can meet the same standard.</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 14 }}>
+          <a href="/agents/motion-flyer-agent" style={{ display: 'block', textDecoration: 'none', color: T.text, background: 'rgba(0,0,0,0.28)', border: `1px solid ${T.gold}55`, borderRadius: 11, padding: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}><span style={{ fontSize: 13, fontWeight: 900 }}>Motion Flyer</span><Play size={15} color={T.gold} /></div>
+            <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.5, marginTop: 5 }}>Turn a saved CreatorVault moment into a short moving flyer. An accepted flyer is already watchable.</div>
+            <div style={{ fontSize: 11, color: T.gold, fontWeight: 800, marginTop: 10 }}>Open Motion Flyer →</div>
+          </a>
+          <a href="/king/campaign-visual" style={{ display: 'block', textDecoration: 'none', color: T.text, background: 'rgba(0,0,0,0.28)', border: `1px solid ${T.gold}55`, borderRadius: 11, padding: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}><span style={{ fontSize: 13, fontWeight: 900 }}>Campaign Visual Studio</span><CheckCircle size={15} color={T.gold} /></div>
+            <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.5, marginTop: 5 }}>Start from a certified source and see the accepted CreatorVault campaign visual already saved for review.</div>
+            <div style={{ fontSize: 11, color: T.gold, fontWeight: 800, marginTop: 10 }}>Open Campaign Visual Studio →</div>
+          </a>
+        </div>
+      </section>
+
       {/* Stats */}
       <div className="agent-roster-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
         {[
