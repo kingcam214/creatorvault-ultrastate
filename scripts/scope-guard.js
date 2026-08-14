@@ -6,6 +6,11 @@ import { execSync } from 'child_process';
 const ALLOWLISTS = {
   homepage: [
     'client/src/pages/Home.tsx',
+    'client/src/lib/homepageMediaRegistry.ts',
+    'server/services/governedPolloService.ts',
+    'server/routers/homepageMotionPilotRouter.ts',
+    'server/routers.ts',
+    'scripts/scope-guard.js',
     'client/src/index.css',
     'client/index.html',
     'package.json',

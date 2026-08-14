@@ -29,6 +29,7 @@ import { cloneCommandRouter } from "./routers/cloneCommandRouter";
 import { clonePassportRouter } from "./routers/clonePassportRouter";
 import { cloneTrainingLabRouter } from "./routers/cloneTrainingLabRouter";
 import { godModeRouter } from "./routers/godModeRouter";
+import { homepageMotionPilotRouter } from "./routers/homepageMotionPilotRouter";
 import { agentTrackerRouter } from "./routers/agentTracker";
 import { aiAffiliateOptimizerRouter } from "./routers/aiAffiliateOptimizer";
 import { aiAudienceCloneRouter } from "./routers/aiAudienceClone";
@@ -836,6 +837,7 @@ export const appRouter = router({
   aiScriptSurgeon: aiScriptSurgeonRouter,
   aiTrendProphet: aiTrendProphetRouter,
   apparel: apparelRouter,
+  homepageMotionPilot: homepageMotionPilotRouter,
   artistMusic: artistMusicRouter,
   brandCoordination: brandCoordinationRouter,
   brollGenerator: brollGeneratorRouter,

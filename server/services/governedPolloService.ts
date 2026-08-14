@@ -1,4 +1,6 @@
 import { createHash, randomUUID } from "crypto";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
 import { sql } from "drizzle-orm";
 import { db } from "../db";
 
@@ -111,6 +113,11 @@ export type GovernedPolloProviderQuote = {
 };
 
 const DEFAULT_MODEL_PATH = "pollo/pollo-v1-6";
+const HOMEPAGE_TEXT_TO_VIDEO_MODEL_PATH = "pollo/minimax/hailuo-2-3";
+const HOMEPAGE_TEXT_TO_VIDEO_MODE = "homepage_text2video";
+const HOMEPAGE_TEXT_TO_VIDEO_API_PATH = "minimax/hailuo-2-3";
+const HOMEPAGE_PILOT_PUBLIC_ROOT = "/root/uploads";
+const HOMEPAGE_PILOT_MAX_BYTES = 350 * 1024 * 1024;
 const SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/bytedance-seedance-2-5-ref2video";
 const KLING_SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/kling-v3-omni-ref2video";
 const SOURCE_VIDEO_REFERENCE_MODE = "ref2video";
@@ -224,12 +231,54 @@ function isSourceVideoReferenceJob(job: Pick<GovernedPolloJob, "providerModelPat
   return Boolean(getSourceVideoReferenceContract(job.providerModelPath)) && job.mode === SOURCE_VIDEO_REFERENCE_MODE;
 }
 
+function isHomepageTextToVideoPilot(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "metadata">): boolean {
+  return job.providerModelPath === HOMEPAGE_TEXT_TO_VIDEO_MODEL_PATH
+    && job.mode === HOMEPAGE_TEXT_TO_VIDEO_MODE
+    && job.metadata.homepageMotionPilot === true
+    && job.metadata.ownerDirectedPilot === true
+    && job.metadata.candidateLimit === 1
+    && job.metadata.noAutomaticRetry === true;
+}
+
+function isSingleUseGovernedPilot(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "metadata">): boolean {
+  return isSourceVideoReferenceJob(job) || isHomepageTextToVideoPilot(job);
+}
+
 function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
   const quote = job.metadata.providerQuote;
   return isSourceVideoReferenceJob(job)
     && (Number(job.estimatedCostCredits) === 0 || Number(job.estimatedCostCredits) === 33)
     && job.metadata.verifiedProviderQuote === true
     && Boolean(quote && typeof quote === "object");
+}
+
+function buildHomepageTextToVideoInput(job: Pick<GovernedPolloJob, "prompt" | "resolution" | "durationSeconds">): Record<string, unknown> {
+  if (job.resolution !== "1080p" || job.durationSeconds !== 6) {
+    throw new Error("Homepage motion pilot must remain one 6-second 1080p Hailuo creation.");
+  }
+  return {
+    prompt: job.prompt,
+    resolution: "1080P",
+    length: 6,
+  };
+}
+
+async function persistHomepageTextToVideoOutput(job: GovernedPolloJob, providerUrl: string): Promise<{ durableUrl: string; fingerprint: string }> {
+  const response = await fetch(providerUrl, { redirect: "follow" });
+  if (!response.ok) throw new Error(`Homepage motion output could not be downloaded (${response.status}).`);
+  const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+  if (contentType && !contentType.includes("video/")) throw new Error(`Homepage motion output did not return video data (${contentType}).`);
+  const declaredLength = Number(response.headers.get("content-length") || 0);
+  if (declaredLength > HOMEPAGE_PILOT_MAX_BYTES) throw new Error("Homepage motion output exceeds the durable-storage safety limit.");
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (!bytes.length) throw new Error("Homepage motion output is empty.");
+  if (bytes.length > HOMEPAGE_PILOT_MAX_BYTES) throw new Error("Homepage motion output exceeds the durable-storage safety limit.");
+  const fingerprint = createHash("sha256").update(bytes).digest("hex");
+  const directory = path.join(HOMEPAGE_PILOT_PUBLIC_ROOT, "content-vault", `homepage-motion-${job.id}`);
+  await mkdir(directory, { recursive: true });
+  const fileName = "CreatorVault-Homepage-Motion-Pilot.mp4";
+  await writeFile(path.join(directory, fileName), bytes);
+  return { durableUrl: `https://creatorvault.live/uploads/content-vault/homepage-motion-${job.id}/${fileName}`, fingerprint };
 }
 
 function buildSourceVideoReferenceInput(input: {
@@ -719,7 +768,7 @@ export async function authorizeSingleUseGovernedPolloSubmission(params: {
   await ensureGovernedPolloSchema();
   const job = await getGovernedPolloJob(params.jobId);
   if (!job) throw new Error("Governed media job was not found.");
-  if (!isSourceVideoReferenceJob(job)) throw new Error("Single-use execution permits are restricted to the source-video reference contract.");
+  if (!isSingleUseGovernedPilot(job)) throw new Error("Single-use execution permits are restricted to documented owner-directed governed pilots.");
   if (job.state !== "approved") throw new Error(`Job in state ${job.state} cannot receive a single-use execution permit.`);
   if (job.fingerprint !== params.expectedFingerprint) throw new Error("Single-use permit fingerprint does not match the approved governed request.");
   const hardCreditCap = requireNonNegativeAmount(params.hardCreditCap, "Single-use hard credit cap");
@@ -854,9 +903,9 @@ async function getReservedCredits(scope: string, creatorId?: number): Promise<nu
   return Number(rows[0]?.credits ?? 0);
 }
 
-function isExplicitOwnerDirectedSourcePilot(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
+function isExplicitOwnerDirectedPilot(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
   const cap = Number(job.metadata.hardCreditCap);
-  return isSourceVideoReferenceJob(job)
+  return isSingleUseGovernedPilot(job)
     && job.metadata.ownerDirectedPilot === true
     && job.metadata.candidateLimit === 1
     && job.metadata.noAutomaticRetry === true
@@ -870,7 +919,7 @@ async function reserveBudget(job: GovernedPolloJob, approverId: number): Promise
   const estimated = requirePositiveAmount(job.estimatedCostCredits, "Estimated credit cost");
   const config = getGovernedPolloConfig();
   if (config.perRequestCreditCap <= 0 || config.perUserDailyCreditCap <= 0 || config.globalDailyCreditCap <= 0 || config.maxConcurrentJobs <= 0) {
-    if (!isExplicitOwnerDirectedSourcePilot(job)) {
+    if (!isExplicitOwnerDirectedPilot(job)) {
       throw new Error("Governed Pollo budgets are frozen. Set explicit positive caps only after reviewing the requested job.");
     }
     const reference = `reserve:owner-directed-pilot:${job.requestId}`;
@@ -991,7 +1040,7 @@ export async function claimGovernedPolloJob(params: { jobId: number; workerId: s
   if (job.state !== "approved") throw new Error(`Job in state ${job.state} cannot be leased for submission.`);
 
   const config = getGovernedPolloConfig();
-  if (isSourceVideoReferenceJob(job)) {
+  if (isSingleUseGovernedPilot(job)) {
     return withNamedLock(`governed_pollo_single_use:${job.id}`, async () => {
       const locked = await getGovernedPolloJob(job.id);
       if (!locked || locked.state !== "approved") throw new Error("The single-use governed job is no longer approval-ready.");
@@ -1138,15 +1187,19 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
       resolution: leased.resolution,
       aspectRatio: leased.aspectRatio,
     })
-    : {
-        image: leased.sourceUrl,
-        prompt: leased.prompt,
-        length: leased.durationSeconds,
-        mode: leased.mode,
-      };
+    : isHomepageTextToVideoPilot(leased)
+      ? buildHomepageTextToVideoInput(leased)
+      : {
+          image: leased.sourceUrl,
+          prompt: leased.prompt,
+          length: leased.durationSeconds,
+          mode: leased.mode,
+        };
   const providerUrl = isSourceVideoReferenceJob(leased)
     ? `https://pollo.ai/api/platform/generation/${getSourceVideoReferenceContract(leased.providerModelPath)!.apiPath}`
-    : `https://pollo.ai/api/platform/generation/${leased.providerModelPath.replace("pollo/", "")}`;
+    : isHomepageTextToVideoPilot(leased)
+      ? `https://pollo.ai/api/platform/generation/${HOMEPAGE_TEXT_TO_VIDEO_API_PATH}`
+      : `https://pollo.ai/api/platform/generation/${leased.providerModelPath.replace("pollo/", "")}`;
 
   let response: Response;
   try {
@@ -1256,11 +1309,17 @@ export async function recordGovernedPolloProviderCompletion(params: { jobId: num
   if (job.providerJobId !== params.providerJobId) throw new Error("Provider completion does not match the governed job’s recorded provider task.");
   if (job.state !== "submitted") throw new Error(`Job in state ${job.state} cannot accept provider completion.`);
   const outputUrl = requireNonEmpty(params.outputUrl, "Provider output URL");
+  const durableHomepageMotion = isHomepageTextToVideoPilot(job)
+    ? await persistHomepageTextToVideoOutput(job, outputUrl)
+    : null;
+  const metadata = durableHomepageMotion
+    ? { ...job.metadata, homepageMotionPilotOutput: durableHomepageMotion }
+    : job.metadata;
   await rawExec(
     `UPDATE governed_media_jobs
-     SET state = 'provider_complete', output_url = ?, provider_response_json = ?, updated_at = NOW(), completed_at = NOW()
+     SET state = 'provider_complete', output_url = ?, provider_response_json = ?, metadata_json = ?, updated_at = NOW(), completed_at = NOW()
      WHERE id = ? AND state = 'submitted'`,
-    [outputUrl, safeJson(params.providerResponse), job.id],
+    [outputUrl, safeJson(params.providerResponse), safeJson(metadata), job.id],
   );
   const completed = (await getGovernedPolloJob(job.id))!;
   await appendEvent({
