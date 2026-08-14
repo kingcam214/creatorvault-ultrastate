@@ -110,26 +110,46 @@ async function extractThumbnail(videoPath: string, outputPath: string): Promise<
 
 // Bundle cache to avoid re-bundling the same composition
 let bundleCache: { bundleDir: string; timestamp: number } | null = null;
+let flyerBundleCache: { bundleDir: string; timestamp: number } | null = null;
 const BUNDLE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const RUNTIME_FLYER_ENTRY = path.join(os.tmpdir(), "creatorvault-motion-flyer-runtime-entry.tsx");
 
-async function getOrCreateBundle(): Promise<string> {
+const RUNTIME_FLYER_SOURCE = `import React from "react";
+import { AbsoluteFill, Composition, Video, interpolate, registerRoot, spring, useCurrentFrame, useVideoConfig } from "remotion";
+const color = (value, fallback) => { const raw = String(value || "").trim(); return raw ? (raw.startsWith("#") ? raw : "#" + raw) : fallback; };
+const Flyer = ({ artistName = "CreatorVault", songTitle = "THE MOMENT", subtitle = "Make it impossible to ignore.", callToAction = "ENTER THE VAULT", accentColor = "D4AF37", textColor = "FFFFFF", backgroundVideoUrl = "" }) => {
+  const frame = useCurrentFrame(); const { fps, width, height } = useVideoConfig(); const accent = color(accentColor, "#D4AF37"); const text = color(textColor, "#FFFFFF");
+  const top = spring({ frame: Math.max(0, frame - 4), fps, config: { damping: 18, stiffness: 135 } });
+  const title = spring({ frame: Math.max(0, frame - 13), fps, config: { damping: 17, stiffness: 105 } });
+  const body = spring({ frame: Math.max(0, frame - 30), fps, config: { damping: 18, stiffness: 110 } });
+  const exit = interpolate(frame, [Math.max(0, Math.round(fps * 5.2)), Math.round(fps * 5.85)], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return <AbsoluteFill style={{ backgroundColor: "#080706", overflow: "hidden" }}>
+    {backgroundVideoUrl ? <Video src={backgroundVideoUrl} muted style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center center" }} /> : null}
+    <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(8,7,6,.84) 0%, rgba(8,7,6,.15) 28%, rgba(8,7,6,.22) 56%, rgba(8,7,6,.92) 100%)" }} />
+    <AbsoluteFill style={{ background: "linear-gradient(90deg, rgba(8,7,6,.72) 0%, transparent 57%, rgba(8,7,6,.18) 100%)" }} />
+    <div style={{ position: "absolute", top: height * .075, left: width * .07, right: width * .07, opacity: top * (1 - exit), transform: "translateY(" + interpolate(top, [0,1], [-36,0]) + "px)" }}><div style={{ display: "flex", alignItems: "center", gap: 16 }}><div style={{ height: 2, width: 56, backgroundColor: accent }} /><div style={{ color: accent, fontFamily: "Arial, sans-serif", fontSize: Math.min(width*.026,29), fontWeight: 800, letterSpacing: ".24em", textTransform: "uppercase" }}>{artistName}</div></div></div>
+    <div style={{ position: "absolute", left: width*.07, right: width*.07, bottom: height*.105, opacity: title * (1-exit), transform: "translateY(" + interpolate(title, [0,1], [72,0]) + "px)" }}><div style={{ color: text, fontFamily: "Arial, sans-serif", fontSize: Math.min(width*.148,154), fontWeight: 900, lineHeight: .82, letterSpacing: "-.075em", textTransform: "uppercase", textShadow: "0 8px 32px rgba(0,0,0,.48)" }}>{songTitle}</div><div style={{ width:76, height:3, marginTop:38, backgroundColor:accent, opacity:body }} /><div style={{ marginTop:28, maxWidth:width*.75, color:text, fontFamily:"Arial, sans-serif", fontSize:Math.min(width*.039,42), fontWeight:600, letterSpacing:"-.018em", lineHeight:1.16, opacity:body }}>{subtitle}</div><div style={{ marginTop:42, display:"inline-flex", border:"1px solid " + accent, color:accent, fontFamily:"Arial, sans-serif", fontSize:Math.min(width*.025,28), fontWeight:800, letterSpacing:".12em", padding:"19px 24px", textTransform:"uppercase", opacity:body }}>{callToAction}</div></div>
+  </AbsoluteFill>;
+};
+const Root = () => <Composition id="CreatorVaultRuntimeMotionFlyer" component={Flyer} durationInFrames={180} fps={30} width={1080} height={1920} defaultProps={{}} />;
+registerRoot(Root);`;
+
+async function getOrCreateBundle(contract: RenderContract): Promise<string> {
+  const isRuntimeFlyer = contract.mode === "flyer";
   const now = Date.now();
-  if (bundleCache && now - bundleCache.timestamp < BUNDLE_TTL_MS) {
-    if (fs.existsSync(bundleCache.bundleDir)) {
-      return bundleCache.bundleDir;
-    }
-  }
+  const cached = isRuntimeFlyer ? flyerBundleCache : bundleCache;
+  if (cached && now - cached.timestamp < BUNDLE_TTL_MS && fs.existsSync(cached.bundleDir)) return cached.bundleDir;
 
+  if (isRuntimeFlyer) await fs.promises.writeFile(RUNTIME_FLYER_ENTRY, RUNTIME_FLYER_SOURCE, "utf8");
   console.log("[RemotionRender] Bundling compositions...");
   const { bundle } = await import("@remotion/bundler");
   const bundleDir = await bundle({
-    entryPoint: REMOTION_ROOT,
-    onProgress: (p) => {
-      if (p % 20 === 0) console.log(`[RemotionRender] Bundle progress: ${p}%`);
-    },
+    entryPoint: isRuntimeFlyer ? RUNTIME_FLYER_ENTRY : REMOTION_ROOT,
+    onProgress: (p) => { if (p % 20 === 0) console.log(`[RemotionRender] Bundle progress: ${p}%`); },
   });
 
-  bundleCache = { bundleDir, timestamp: now };
+  const nextCache = { bundleDir, timestamp: now };
+  if (isRuntimeFlyer) flyerBundleCache = nextCache; else bundleCache = nextCache;
   console.log("[RemotionRender] Bundle ready:", bundleDir);
   return bundleDir;
 }
@@ -155,7 +175,7 @@ export async function renderWithRemotion(contract: RenderContract): Promise<Rend
 
   try {
     // 1. Get or create bundle
-    const bundleDir = await getOrCreateBundle();
+    const bundleDir = await getOrCreateBundle(contract);
 
     // 2. Prepare render props
     const renderProps: RenderContract = {
@@ -174,7 +194,7 @@ export async function renderWithRemotion(contract: RenderContract): Promise<Rend
     }
     const { renderMedia, selectComposition } = await import("@remotion/renderer");
 
-    const compositionId = getCompositionId(contract);
+    const compositionId = contract.mode === "flyer" ? "CreatorVaultRuntimeMotionFlyer" : getCompositionId(contract);
     const durationInFrames = Math.round(durationSeconds * fps);
 
     const composition = await selectComposition({
