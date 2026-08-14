@@ -349,7 +349,7 @@ async function persistDesignImageOutput(job: GovernedPolloJob, providerUrl: stri
   return { durableUrl: `https://creatorvault.live/uploads/content-vault/design-image-${job.id}/${fileName}`, fingerprint };
 }
 
-async function ingestAcceptedCampaignVisual(job: GovernedPolloJob, artifactUrl: string): Promise<string | null> {
+export async function ingestAcceptedCampaignVisual(job: GovernedPolloJob, artifactUrl: string): Promise<string | null> {
   if (job.metadata.campaignVisual !== true) return null;
   if (!new RegExp(`^https://creatorvault\\.live/uploads/content-vault/design-image-${job.id}/`).test(artifactUrl)) {
     throw new Error("CreatorVault could not verify the accepted campaign visual storage path.");

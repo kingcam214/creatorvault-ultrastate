@@ -4,7 +4,7 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { createCreationProject, updateCreationProjectLinks } from "../services/creationProjectService";
-import { createGovernedPolloDraft, getGovernedPolloJob } from "../services/governedPolloService";
+import { createGovernedPolloDraft, getGovernedPolloJob, ingestAcceptedCampaignVisual } from "../services/governedPolloService";
 
 const OWNER_IDS = new Set([6, 33]);
 const GOVERNED_IMAGE_MODEL = "pollo/openai-gpt-image-2-0";
@@ -159,6 +159,19 @@ export const campaignVisualRouter = router({
       } catch (error) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "CreatorVault could not prepare this campaign visual." });
       }
+    }),
+
+  backfillAcceptedAsset: protectedProcedure
+    .input(z.object({ jobId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      requireOwner(ctx.user.id);
+      const job = await getGovernedPolloJob(input.jobId);
+      if (!job || job.creatorId !== ctx.user.id || job.metadata.campaignVisual !== true || job.state !== "accepted" || !job.artifactUrl) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "CreatorVault needs an accepted Campaign Visual before it can place it in your Media Vault." });
+      }
+      const assetId = await ingestAcceptedCampaignVisual(job, job.artifactUrl);
+      if (!assetId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "CreatorVault could not place this Campaign Visual in your Media Vault." });
+      return { assetId, projectId: typeof job.metadata.creationProjectId === "string" ? job.metadata.creationProjectId : null, artifactUrl: job.artifactUrl };
     }),
 
   job: protectedProcedure
