@@ -117,24 +117,13 @@ export function AgentRoster() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Bot size={28} color={T.gold} />
           <div>
-            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: '-0.5px' }}>AI Agents Operations Console</h1>
-            <p style={{ margin: 0, fontSize: 12, color: T.muted }}>DB-backed tools, saved reports, and owner-run execution. Verified revenue below comes only from challenge payment transactions.</p>
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: '-0.5px' }}>Agent Arsenal Truth Room</h1>
+            <p style={{ margin: 0, fontSize: 12, color: T.muted }}>This room separates roster records, past receipts, and proven creator weapons. A listed agent is not presented as ready until its source, action receipt, and spend boundary are current.</p>
           </div>
         </div>
-        <button
-          onClick={handleRunAll}
-          disabled={runningAll}
-          style={{
-            background: runningAll ? T.muted2 : `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`,
-            color: '#0a0a0a', border: 'none', borderRadius: 10, padding: '10px 20px',
-            fontSize: 13, fontWeight: 800, cursor: runningAll ? 'not-allowed' : 'pointer',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}
-        >
-          {runningAll
-            ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Running Operations...</>
-            : <><Zap size={14} /> Run Operations Cycle</>}
-        </button>
+        <div style={{ background: T.goldDim, color: T.gold, border: `1px solid ${T.gold}44`, borderRadius: 10, padding: '10px 16px', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ShieldCheckIcon /> Direct agent runs are held for proof
+        </div>
       </div>
 
       <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
@@ -143,7 +132,7 @@ export function AgentRoster() {
           <div style={{ fontSize: 13, fontWeight: 900, color: T.gold }}>Production proof rules</div>
         </div>
         <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.65 }}>
-          This console shows DB-backed agents from <code>empire_agents</code>, saved run reports from <code>empire_agent_reports</code>, and verified challenge money only from <code>empire_challenge_transactions</code>. Agent lifetime numbers and listed-tool prices are not used as public challenge revenue.
+          Roster entries are not proof of working weapons. Past reports stay as dated records only, and direct agent runs remain held until every exposed action has a current source, a real receipt, and controlled spend.
         </div>
       </div>
 
@@ -151,8 +140,8 @@ export function AgentRoster() {
       <div className="agent-roster-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
         {[
           { label: 'Total Agents', value: agents.length, icon: <Users size={14} color={T.gold} />, color: T.gold },
-          { label: 'Active', value: activeCount, icon: <CheckCircle size={14} color={T.success} />, color: T.success },
-          { label: 'Ran This Session', value: ranCount, icon: <Play size={14} color={T.info} />, color: T.info },
+          { label: 'Listed in Roster', value: activeCount, icon: <Users size={14} color={T.gold} />, color: T.gold },
+          { label: 'Direct Runs', value: 'Held', icon: <ShieldCheckIcon />, color: T.gold },
           { label: 'Monetized Tools', value: forSaleCount, icon: <DollarSign size={14} color={T.purple} />, color: T.purple },
           { label: 'Verified Challenge Revenue', value: `$${verifiedChallengeRevenue.toFixed(0)}`, icon: <TrendingUp size={14} color={T.success} />, color: T.success },
           { label: 'Verified Payments', value: verifiedTransactionCount, icon: <CheckCircle size={14} color={T.info} />, color: T.info },
@@ -265,12 +254,12 @@ export function AgentRoster() {
               {/* Operational truth */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10, fontSize: 11 }}>
                 <div style={{ background: T.surface2, border: `1px solid ${T.border}`, borderRadius: 8, padding: 8 }}>
-                  <div style={{ color: T.muted, marginBottom: 2 }}>Execution state</div>
-                  <div style={{ color: agent.status === 'active' ? T.success : T.muted, fontWeight: 700 }}>{agent.status === 'active' ? 'Ready to run' : agent.status}</div>
+                  <div style={{ color: T.muted, marginBottom: 2 }}>Roster state</div>
+                  <div style={{ color: agent.status === 'active' ? T.gold : T.muted, fontWeight: 700 }}>{agent.status === 'active' ? 'Listed — proof required' : agent.status}</div>
                 </div>
                 <div style={{ background: T.surface2, border: `1px solid ${T.border}`, borderRadius: 8, padding: 8 }}>
-                  <div style={{ color: T.muted, marginBottom: 2 }}>Saved proof</div>
-                  <div style={{ color: latestReport ? T.gold : T.muted, fontWeight: 700 }}>{latestReport ? `Report ${new Date(latestReport.created_at).toLocaleDateString()}` : 'Awaiting owner run'}</div>
+                  <div style={{ color: T.muted, marginBottom: 2 }}>Past record</div>
+                  <div style={{ color: latestReport ? T.gold : T.muted, fontWeight: 700 }}>{latestReport ? `Dated record ${new Date(latestReport.created_at).toLocaleDateString()}` : 'No dated record'}</div>
                 </div>
                 {agent.consecutive_failures > 0 && <span style={{ color: T.error, fontWeight: 600, gridColumn: '1 / -1' }}>{agent.consecutive_failures} consecutive failures require owner review</span>}
               </div>
@@ -315,23 +304,19 @@ export function AgentRoster() {
 
               {/* Run Button */}
               <button
-                onClick={() => handleRunAgent(agent)}
-                disabled={isRunning || !!runningAgent || runningAll || agent.status !== 'active'}
+                onClick={() => undefined}
+                disabled
                 style={{
                   width: '100%',
-                  background: isRunning ? T.muted2 : agent.status !== 'active' ? T.surface2 : `${T.gold}22`,
-                  color: isRunning ? T.muted : agent.status !== 'active' ? T.muted2 : T.gold,
-                  border: `1px solid ${isRunning ? T.muted2 : agent.status !== 'active' ? T.border : T.gold + '44'}`,
+                  background: T.surface2,
+                  color: T.muted,
+                  border: `1px solid ${T.border}`,
                   borderRadius: 8, padding: '8px 0', fontSize: 12, fontWeight: 700,
-                  cursor: (isRunning || agent.status !== 'active') ? 'not-allowed' : 'pointer',
+                  cursor: 'not-allowed',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}
               >
-                {isRunning
-                  ? 'Running...'
-                  : agent.status !== 'active'
-                    ? 'Inactive'
-                    : <><Play size={12} /> Run Tool + Save Report</>}
+                <><ShieldCheckIcon /> Held until proof is current</>
               </button>
             </div>
           );

@@ -141,6 +141,10 @@ const ALLOWLISTS = {
     'server/routers/brandDNARouter.ts',
     'scripts/scope-guard.js'
   ],
+  'agent-roster-truth': [
+    'client/src/pages/AgentRoster.tsx',
+    'scripts/scope-guard.js'
+  ],
   'design-image-pilot': [
     'server/services/governedPolloService.ts',
     'server/routers/designImagePilotRouter.ts',
