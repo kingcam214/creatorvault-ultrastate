@@ -192,7 +192,7 @@ export default function KingContent() {
           <div className="max-w-2xl">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-fuchsia-300/30 bg-fuchsia-300/10 px-3 py-1 text-xs font-black uppercase tracking-widest text-fuchsia-200">
               <Crown className="h-3.5 w-3.5" />
-              Owner Command
+              KingCam Command
             </div>
             <h1 className="mb-4 text-4xl font-black text-white sm:text-5xl lg:text-6xl">
               Create the Empire.
@@ -319,8 +319,8 @@ export default function KingContent() {
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="font-bold text-white">Prepare My Sales Package</div>
-                    <div className="text-xs text-zinc-400">Pick a finished video to distribute</div>
+                    <div className="font-bold text-white">Get My Social Drop Ready</div>
+                    <div className="text-xs text-zinc-400">Pick a finished video to share</div>
                   </div>
                 </div>
                 <ArrowUpRight className="h-4 w-4 text-zinc-500" />
@@ -369,11 +369,11 @@ export default function KingContent() {
                 </div>
                 <h2 className="mb-2 text-xl font-black text-white">Clone Command</h2>
                 <p className="text-sm leading-relaxed text-zinc-400">
-                  Review your verified identity material, approved reference, and consent record. Clone generation stays held until its source-preserving governed lane is proven.
+                  Your KingCam identity lives here. Clone creation stays closed until its source-preserving creation lane is ready for real work.
                 </p>
               </div>
               <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Identity Review</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Your Identity</span>
                 <ArrowUpRight className="h-4 w-4 text-zinc-500 transition group-hover:text-fuchsia-300" />
               </div>
             </a>
@@ -449,7 +449,7 @@ export default function KingContent() {
                 </div>
                 <h2 className="mb-2 text-xl font-black text-white">Creator Video Studio</h2>
                 <p className="text-sm leading-relaxed text-zinc-400">
-                  Take precise control. Combine clips, add captions, shape the sound, and prepare the finished package exactly how you want it.
+                  Take precise control. Combine clips, shape the sound, and make every finished moment feel exactly like you want it.
                 </p>
               </div>
               <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
@@ -469,7 +469,7 @@ export default function KingContent() {
                 </div>
                 <h2 className="mb-2 text-xl font-black text-white">Campaign Visual</h2>
                 <p className="text-sm leading-relaxed text-zinc-400">
-                  Start with certified CreatorVault footage and make one premium campaign image under a locked cost cap. Nothing enters your Vault until it earns review.
+                  Start with CreatorVault footage and make one premium campaign image. Every finished visual stays in your Vault only after it looks right.
                 </p>
               </div>
               <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
@@ -509,7 +509,7 @@ export default function KingContent() {
                 </div>
                 <h2 className="mb-2 text-xl font-black text-white">Social Empire</h2>
                 <p className="text-sm leading-relaxed text-zinc-400">
-                  Turn your finished media into ready-to-approve posts. Keep your audience, channels, and launch timing in one place.
+                  Turn your finished media into social moments ready for your say-so. Keep your audience, channels, and launch timing in one place.
                 </p>
               </div>
               <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
@@ -564,7 +564,7 @@ export default function KingContent() {
           {/* Social Empire Preview */}
           <div className="rounded-2xl border border-white/10 bg-[#0a0a0f] p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-500">Recent Sales Packages</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-500">Recent social moments</h3>
               <Link href={CreatorVaultRoute.socialEmpire}>
                 <a className="text-xs font-bold text-indigo-300 transition hover:text-indigo-200">View Empire &rarr;</a>
               </Link>
