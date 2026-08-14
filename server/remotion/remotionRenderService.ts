@@ -143,10 +143,10 @@ export async function renderWithRemotion(contract: RenderContract): Promise<Rend
 
   console.log(`[RemotionRender] Starting job ${jobId}: ${motionPreset} ${width}x${height} ${durationSeconds}s`);
 
-  // Ensure the image is accessible via URL for Remotion
-  // Remotion renders in a browser context, so we need a local HTTP URL
-  const imageFilename = path.basename(contract.baseImagePath);
-  const imageUrl = `http://localhost:${process.env.PORT || 3000}/uploads/${imageFilename}`;
+  // Remotion renders in a browser context. Preserve an intentionally empty still-image
+  // source for motion-first flyers rather than fabricating a broken /uploads/ request.
+  const imageFilename = contract.baseImagePath ? path.basename(contract.baseImagePath) : "";
+  const imageUrl = imageFilename ? `http://localhost:${process.env.PORT || 3000}/uploads/${imageFilename}` : "";
 
   const tmpDir = os.tmpdir();
   const rawVideoPath = path.join(tmpDir, `remotion-raw-${jobId}.mp4`);

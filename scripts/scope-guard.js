@@ -324,6 +324,15 @@ const ALLOWLISTS = {
     'server/routers/agentExecutorRouter.ts',
     'scripts/scope-guard.js'
   ],
+  'flyer-recovery': [
+    'client/src/pages/MotionFlyerAgent.tsx',
+    'server/routers/flyerStudioV2Router.ts',
+    'server/remotion/compositions/MotionFlyerComposition.tsx',
+    'server/remotion/remotionRenderService.ts',
+    'server/remotion/Root.tsx',
+    'server/remotion/types.ts',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',
