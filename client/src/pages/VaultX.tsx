@@ -2563,8 +2563,8 @@ export default function VaultX() {
             <div className="grid grid-cols-2 gap-3 mb-8">
               <a href="/vaultx/trailers" className="flex flex-col gap-2 rounded-2xl border border-[#F2B15B]/30 bg-[#F2B15B]/10 p-4 hover:border-[#F2B15B]/60 transition">
                 <Flame className="h-5 w-5" style={{ color: "#F2B15B" }} />
-                <p className="font-black text-sm">Viral Trailers</p>
-                <p className="text-xs text-zinc-500">Shape the opening that makes them stop</p>
+                <p className="font-black text-sm">Trailer Direction</p>
+                <p className="text-xs text-zinc-500">Shape the opening, feeling, and story for your saved source</p>
               </a>
               <a href="/vaultx/editor" className="flex flex-col gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 hover:border-white/20 transition">
                 <Video className="h-5 w-5 text-red-400" />
