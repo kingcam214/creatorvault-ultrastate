@@ -1,7 +1,7 @@
-import { ArrowUpRight, Play, Sparkles } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, Play, Send, Sparkles, WandSparkles } from "lucide-react";
 import { Link } from "wouter";
 import { CreatorVaultRoute } from "@/lib/productArchitecture";
-import { HOMEPAGE_PUBLIC_SHOWCASE_SEQUENCE, type HomepageMediaAsset } from "@/lib/homepageMediaRegistry";
+import { HOMEPAGE_MEDIA, hasCertifiedPublicProof, type HomepageMediaAsset } from "@/lib/homepageMediaRegistry";
 import { type CSSProperties } from "react";
 
 function ShowcaseMotion({
@@ -13,7 +13,7 @@ function ShowcaseMotion({
   priority = false,
 }: {
   videoSrc: string;
-  posterSrc: string;
+  posterSrc?: string;
   alt: string;
   className?: string;
   style?: CSSProperties;
@@ -36,15 +36,32 @@ function ShowcaseMotion({
   );
 }
 
-function certifiedMotion(assetId: string): HomepageMediaAsset {
-  const asset = HOMEPAGE_PUBLIC_SHOWCASE_SEQUENCE.find((candidate) => candidate.assetId === assetId);
-  if (!asset) throw new Error(`CreatorVault homepage requires an accepted public motion asset: ${assetId}`);
+function acceptedProof(assetId: string): HomepageMediaAsset {
+  const asset = Object.values(HOMEPAGE_MEDIA).find((candidate) => candidate.assetId === assetId);
+  if (!asset || !hasCertifiedPublicProof(asset)) {
+    throw new Error(`CreatorVault homepage requires an accepted public proof asset: ${assetId}`);
+  }
   return asset;
 }
 
+function approvedSourceReference(assetId: string): HomepageMediaAsset {
+  const asset = Object.values(HOMEPAGE_MEDIA).find((candidate) => candidate.assetId === assetId);
+  if (!asset || asset.publicSafeStatus !== "approved" || asset.workingStatus !== "ready" || asset.mediaKind !== "motion") {
+    throw new Error(`CreatorVault homepage requires an approved source reference: ${assetId}`);
+  }
+  return asset;
+}
+
+function ProofLabel({ children }: { children: React.ReactNode }) {
+  return <p className="text-[10px] font-black uppercase tracking-[.25em] text-[#f3d899] sm:text-xs">{children}</p>;
+}
+
 export default function Home() {
-  const kingcamHero = certifiedMotion("kingcam-hero-cam");
-  const creatorMotion = certifiedMotion("homepage-motion-pilot-78");
+  const kingcamHero = acceptedProof("kingcam-hero-cam");
+  const campaignMotion = acceptedProof("homepage-motion-pilot-78");
+  const campaignSource = approvedSourceReference("creatorvault-demo-luxury-gold-room-1080");
+  const campaignVisual = acceptedProof("creatorvault-campaign-visual-80");
+  const motionFlyer = acceptedProof("creatorvault-motion-flyer-b73098d7");
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#080706] text-white selection:bg-[#f0d18a]/40">
@@ -76,44 +93,74 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="relative isolate overflow-hidden bg-[#080706]" aria-label="CreatorVault creation experience">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(121,82,37,.2),transparent_46%)]" />
-        <div className="relative mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
-          <div className="relative min-h-[92svh] overflow-hidden border-x border-white/10">
-            <video
-              src={creatorMotion.livePath}
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="metadata"
-              className="absolute inset-0 h-full w-full object-contain object-center"
-              aria-label="CreatorVault certified female creator campaign motion"
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,7,6,.94)_0%,rgba(8,7,6,.46)_36%,rgba(8,7,6,.12)_55%,rgba(8,7,6,.78)_100%)]" />
-            <div className="absolute inset-x-0 top-0 h-44 bg-[linear-gradient(180deg,#080706,transparent)]" />
-            <div className="absolute inset-x-0 bottom-0 h-56 bg-[linear-gradient(0deg,#080706,transparent)]" />
+      <section className="relative isolate overflow-hidden border-b border-white/10 bg-[#0b0908]" aria-label="Thumbnail transformation proof">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(217,169,71,.18),transparent_32%),radial-gradient(circle_at_84%_72%,rgba(124,69,206,.16),transparent_34%)]" />
+        <div className="relative mx-auto max-w-7xl px-5 py-14 sm:px-8 sm:py-20 lg:px-12 lg:py-24">
+          <div className="mb-10 flex max-w-3xl flex-col gap-4 lg:mb-14">
+            <ProofLabel>01 / The thumbnail changes the room</ProofLabel>
+            <h2 className="text-4xl font-black leading-[.88] tracking-[-.065em] sm:text-6xl lg:text-7xl">The moment you own.<br /><span className="text-[#f3d899]">The frame they cannot pass.</span></h2>
+            <p className="max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">Not a stock replacement. A real CreatorVault source becomes an accepted campaign visual that stays ready in the Media Vault.</p>
+          </div>
 
-            <div className="relative z-10 flex min-h-[92svh] flex-col justify-between px-6 py-8 sm:px-10 sm:py-12 lg:px-14 lg:py-16">
-              <div className="max-w-xl">
-                <p className="text-[10px] font-black uppercase tracking-[.28em] text-[#efd18c] sm:text-xs">CreatorVault in motion</p>
-                <h2 className="mt-5 text-5xl font-black leading-[.83] tracking-[-.075em] sm:text-7xl lg:text-[5.3rem]">Make them<br /><span className="text-[#f3d899]">feel it</span><br />before you say it.</h2>
-                <p className="mt-7 max-w-md text-base leading-relaxed text-zinc-200 sm:text-lg">Your strongest moment should not get buried in somebody else&apos;s feed. Shape it. Package it. Let the release do the talking.</p>
-              </div>
-
-              <div className="grid border-t border-white/25 lg:grid-cols-3">
-                <Link href="/vault-x/studio"><a className="group border-b border-white/15 py-6 transition hover:bg-white/5 lg:border-b-0 lg:border-r lg:px-6 lg:first:pl-0"><p className="text-[10px] font-black uppercase tracking-[.22em] text-[#efd18c]">01 / Body Cinema</p><p className="mt-3 text-2xl font-black leading-tight">Turn the moment into a drop.</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[#f3d899]">Open the studio <ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-1 group-hover:-translate-y-1" /></span></a></Link>
-                <Link href="/creator/video-studio"><a className="group border-b border-white/15 py-6 transition hover:bg-white/5 lg:border-b-0 lg:border-r lg:px-6"><p className="text-[10px] font-black uppercase tracking-[.22em] text-[#efd18c]">02 / Creator Video Studio</p><p className="mt-3 text-2xl font-black leading-tight">Build the cut around the heat.</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[#f3d899]">Start creating <ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-1 group-hover:-translate-y-1" /></span></a></Link>
-                <Link href="/social"><a className="group py-6 transition hover:bg-white/5 lg:pl-6"><p className="text-[10px] font-black uppercase tracking-[.22em] text-[#efd18c]">03 / Social Empire</p><p className="mt-3 text-2xl font-black leading-tight">Carry the feeling farther.</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[#f3d899]">Move with purpose <ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-1 group-hover:-translate-y-1" /></span></a></Link>
-              </div>
+          <div className="grid gap-5 lg:grid-cols-[1fr_auto_1fr] lg:items-stretch">
+            <div className="relative min-h-[28rem] overflow-hidden rounded-[2rem] border border-white/15 bg-black sm:min-h-[36rem]">
+              <ShowcaseMotion videoSrc={campaignSource.livePath} posterSrc={campaignSource.fallbackAsset} alt="Certified CreatorVault source motion" className="absolute inset-0" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,.08),rgba(5,5,5,.75))]" />
+              <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8"><ProofLabel>Before / Certified vault moment</ProofLabel><p className="mt-3 max-w-xs text-2xl font-black leading-tight">A real clip, still carrying the raw moment.</p></div>
             </div>
+
+            <div className="relative z-10 mx-auto grid h-16 w-16 shrink-0 place-items-center self-center rounded-full border border-[#f3d899]/55 bg-[#14100b] text-[#f3d899] shadow-[0_0_45px_rgba(243,216,153,.28)] lg:h-20 lg:w-20"><WandSparkles className="h-7 w-7 lg:h-8 lg:w-8" /></div>
+
+            <div className="relative min-h-[28rem] overflow-hidden rounded-[2rem] border border-[#f3d899]/45 bg-[#13100c] p-2 shadow-[0_35px_100px_-55px_rgba(243,216,153,.65)] sm:min-h-[36rem]">
+              <div className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_70%_18%,rgba(243,216,153,.22),transparent_35%)]" />
+              <img src={campaignVisual.livePath} alt="Accepted CreatorVault campaign visual from the certified source" className="relative h-full w-full rounded-[1.55rem] object-cover" />
+              <div className="absolute inset-x-2 bottom-2 rounded-b-[1.55rem] bg-[linear-gradient(180deg,transparent,rgba(4,4,4,.88))] p-6 sm:p-8"><div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#f3d899]" /><ProofLabel>After / Accepted campaign visual</ProofLabel></div><p className="mt-3 max-w-xs text-2xl font-black leading-tight">The same source, now built to stop the scroll.</p></div>
+            </div>
+          </div>
+
+          <div className="mt-7 flex flex-col justify-between gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center"><p className="max-w-2xl text-sm leading-relaxed text-zinc-400">This visual was created through CreatorVault&apos;s one-output governed campaign path, then accepted and stored as a reusable asset.</p><Link href="/king/campaign-visuals"><a className="inline-flex items-center gap-2 text-sm font-black text-[#f3d899] hover:text-white">Open Campaign Visual Studio <ArrowUpRight className="h-4 w-4" /></a></Link></div>
+        </div>
+      </section>
+
+      <section className="relative isolate overflow-hidden border-b border-white/10 bg-[#070706]" aria-label="Kinetic text on moving media">
+        <ShowcaseMotion videoSrc={campaignMotion.livePath} alt="Certified CreatorVault campaign motion with live typography" className="absolute inset-0 opacity-75" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,7,6,.94),rgba(7,7,6,.25)_52%,rgba(7,7,6,.88))]" />
+        <div className="relative mx-auto flex min-h-[88svh] max-w-7xl items-end px-5 py-14 sm:px-8 sm:py-20 lg:items-center lg:px-12">
+          <div className="max-w-4xl">
+            <ProofLabel>02 / Words inside the moment</ProofLabel>
+            <div className="mt-7 overflow-hidden"><p className="text-5xl font-black leading-[.82] tracking-[-.08em] text-white sm:text-7xl lg:text-[6.8rem]"><span className="block animate-[pulse_2.8s_ease-in-out_infinite]">SAY LESS.</span><span className="mt-2 block text-[#f3d899]">MAKE IT LAND.</span></p></div>
+            <p className="mt-8 max-w-xl text-base leading-relaxed text-zinc-200 sm:text-lg">Typography should stay on the moving media, hold the safe space, and make the message hit before the viewer can move on.</p>
+            <div className="mt-10 flex flex-wrap gap-3"><span className="rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-black uppercase tracking-[.16em] text-white backdrop-blur">Built for the mobile frame</span><span className="rounded-full border border-[#f3d899]/45 bg-[#f3d899]/10 px-4 py-2 text-xs font-black uppercase tracking-[.16em] text-[#f3d899] backdrop-blur">Text lives on the motion</span></div>
           </div>
         </div>
       </section>
 
-      <section className="border-t border-white/10 bg-[#0b0908]">
-        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-5 py-12 sm:px-8 sm:py-16 lg:flex-row lg:items-end lg:px-12">
-          <div className="max-w-3xl"><p className="text-xs font-black uppercase tracking-[.24em] text-[#e8c87e]">Your next release starts here</p><h2 className="mt-4 text-4xl font-black leading-[.9] tracking-[-.06em] sm:text-6xl">Bring what&apos;s yours. Make it impossible to ignore.</h2></div>
+      <section className="relative isolate overflow-hidden border-b border-white/10 bg-[#0b0908]" aria-label="Motion Flyer proof">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_35%,rgba(235,36,154,.18),transparent_32%),radial-gradient(circle_at_15%_70%,rgba(34,211,238,.12),transparent_35%)]" />
+        <div className="relative mx-auto grid min-h-[94svh] max-w-7xl gap-10 px-5 py-14 sm:px-8 sm:py-20 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:px-12">
+          <div className="max-w-xl"><ProofLabel>03 / Motion Flyer</ProofLabel><h2 className="mt-5 text-5xl font-black leading-[.84] tracking-[-.075em] sm:text-7xl">Not an image with words.<br /><span className="text-[#f3d899]">A visual that moves.</span></h2><p className="mt-7 text-base leading-relaxed text-zinc-300 sm:text-lg">This is a real six-second CreatorVault Motion Flyer—rendered, saved, and ready to use. No fake design board. No text-only result.</p><Link href="/agents/motion-flyer-agent"><a className="mt-8 inline-flex min-h-14 items-center gap-2 rounded-full bg-[#f3d899] px-7 font-black text-[#181109] transition hover:bg-white">Make a Motion Flyer <ArrowUpRight className="h-4 w-4" /></a></Link></div>
+          <div className="relative mx-auto w-full max-w-[31rem] overflow-hidden rounded-[2.2rem] border border-white/15 bg-black p-2 shadow-[0_40px_110px_-60px_rgba(235,36,154,.7)]"><div className="absolute -inset-16 bg-[conic-gradient(from_180deg,transparent,rgba(235,36,154,.28),transparent,rgba(34,211,238,.22),transparent)] blur-3xl" /><video src={motionFlyer.livePath} autoPlay loop muted playsInline preload="metadata" className="relative aspect-[9/14] w-full rounded-[1.8rem] object-cover" aria-label="Accepted CreatorVault Motion Flyer" /><div className="pointer-events-none absolute inset-x-2 bottom-2 rounded-b-[1.8rem] bg-[linear-gradient(180deg,transparent,rgba(0,0,0,.85))] p-5"><ProofLabel>Accepted CreatorVault output</ProofLabel></div></div>
+        </div>
+      </section>
+
+      <section className="relative isolate overflow-hidden border-b border-white/10 bg-[#07070a]" aria-label="Social Empire proof">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(217,70,239,.18),transparent_32%),radial-gradient(circle_at_82%_78%,rgba(34,211,238,.14),transparent_34%)]" />
+        <div className="relative mx-auto max-w-7xl px-5 py-14 sm:px-8 sm:py-20 lg:px-12">
+          <div className="max-w-3xl"><ProofLabel>04 / Social Empire</ProofLabel><h2 className="mt-5 text-5xl font-black leading-[.84] tracking-[-.075em] sm:text-7xl">One drop.<br /><span className="bg-gradient-to-r from-fuchsia-300 via-violet-200 to-cyan-200 bg-clip-text text-transparent">A whole world ready to move.</span></h2><p className="mt-7 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">Take one video you already own. Build the CreatorVault post. Prepare the platform packages. You control what leaves the vault and when.</p></div>
+
+          <div className="mt-12 grid gap-4 lg:grid-cols-[1.1fr_auto_1fr] lg:items-center">
+            <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#101015]"><div className="relative aspect-[16/10] bg-black"><video src={motionFlyer.livePath} autoPlay loop muted playsInline preload="metadata" className="h-full w-full object-cover" aria-label="Owned motion flyer ready to package" /><div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,.84))]" /><div className="absolute bottom-0 p-5"><p className="text-[10px] font-black uppercase tracking-[.2em] text-fuchsia-200">Your owned moving drop</p><p className="mt-2 text-xl font-black">Choose the exact media you want to carry.</p></div></div></div>
+            <div className="mx-auto flex items-center gap-2 text-fuchsia-300 lg:flex-col"><span className="h-px w-10 bg-fuchsia-300/60 lg:h-10 lg:w-px" /><Send className="h-6 w-6" /><span className="h-px w-10 bg-cyan-300/60 lg:h-10 lg:w-px" /></div>
+            <div className="grid gap-3 sm:grid-cols-2"><div className="rounded-2xl border border-fuchsia-300/25 bg-fuchsia-400/5 p-5"><p className="text-[10px] font-black uppercase tracking-[.18em] text-fuchsia-200">CreatorVault post</p><p className="mt-3 text-xl font-black">Your home post is built from the real source.</p></div><div className="rounded-2xl border border-cyan-300/25 bg-cyan-400/5 p-5"><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">Packages ready for review</p><p className="mt-3 text-xl font-black">Your outside-platform versions wait for your say-so.</p></div><div className="sm:col-span-2 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-5"><p className="text-sm leading-relaxed text-amber-100/85">Nothing publishes, messages, schedules, or claims outside-platform results without your approval.</p></div></div>
+          </div>
+
+          <div className="mt-8 flex justify-end"><Link href="/social"><a className="inline-flex min-h-14 items-center gap-2 rounded-full border border-white/25 bg-white/5 px-7 font-black text-white transition hover:bg-white hover:text-black">Open Social Empire <ArrowUpRight className="h-4 w-4" /></a></Link></div>
+        </div>
+      </section>
+
+      <section className="bg-[#0b0908]">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-5 py-14 sm:px-8 sm:py-20 lg:flex-row lg:items-end lg:px-12">
+          <div className="max-w-3xl"><ProofLabel>Your next release starts here</ProofLabel><h2 className="mt-4 text-4xl font-black leading-[.9] tracking-[-.06em] sm:text-6xl">Bring what&apos;s yours. Make it impossible to ignore.</h2></div>
           <div className="flex flex-col gap-3 sm:flex-row"><Link href="/signup"><a className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#f3d899] px-7 font-black text-[#19130c] transition hover:bg-white">Start your vault <ArrowUpRight className="h-4 w-4" /></a></Link><Link href="/king/content"><a className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/25 px-7 font-black text-white transition hover:bg-white/10">KingCam&apos;s creation room</a></Link></div>
         </div>
       </section>
