@@ -419,7 +419,7 @@ export default function KingContent() {
           </Link>
 
           {/* Cinematic Trailers */}
-          <Link href="/vaultx/trailers">
+          <Link href="/trailer-maker">
             <a className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0f] p-6 transition hover:border-amber-300/40 hover:bg-[#0d0d14]">
               <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-amber-500/10 blur-3xl transition group-hover:bg-amber-500/20" />
               <div>
@@ -428,7 +428,7 @@ export default function KingContent() {
                 </div>
                 <h2 className="mb-2 text-xl font-black text-white">Cinematic Trailers</h2>
                 <p className="text-sm leading-relaxed text-zinc-400">
-                  Build multi-scene launch trailers. Your clips, music, and pacing come together as one polished campaign asset.
+                  Start with footage you already own and save the opening, story structure, format, and release purpose for your trailer direction.
                 </p>
               </div>
               <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
