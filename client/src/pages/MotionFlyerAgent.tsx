@@ -1,6 +1,7 @@
 import { ArrowUpRight, Film, LoaderCircle, Play, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { HOMEPAGE_MEDIA, hasCertifiedPublicProof } from "@/lib/homepageMediaRegistry";
 
 export function MotionFlyerAgent() {
   const flyersQuery = trpc.flyerStudio.getFlyers.useQuery();
@@ -8,6 +9,10 @@ export function MotionFlyerAgent() {
     onSuccess: () => flyersQuery.refetch(),
   });
   const newestReadyFlyer = flyersQuery.data?.flyers.find((flyer: any) => flyer.status === "ready" && flyer.artifactUrl);
+  const certifiedSample = HOMEPAGE_MEDIA.motionFlyerProof;
+  const sampleIsApproved = hasCertifiedPublicProof(certifiedSample);
+  const visibleFlyerUrl = newestReadyFlyer?.artifactUrl || (sampleIsApproved ? certifiedSample.livePath : null);
+  const isOwnerFlyer = Boolean(newestReadyFlyer?.artifactUrl);
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#080706] text-white">
@@ -40,18 +45,18 @@ export function MotionFlyerAgent() {
             </div>
 
             <div className="relative min-h-[37rem] overflow-hidden border border-white/15 bg-black sm:min-h-[43rem]">
-              {newestReadyFlyer?.artifactUrl ? (
-                <video src={String(newestReadyFlyer.artifactUrl)} autoPlay loop muted playsInline controls className="absolute inset-0 h-full w-full object-cover" aria-label="Completed CreatorVault Motion Flyer" />
+              {visibleFlyerUrl ? (
+                <video src={String(visibleFlyerUrl)} autoPlay loop muted playsInline controls className="absolute inset-0 h-full w-full object-cover" aria-label={isOwnerFlyer ? "Your completed CreatorVault Motion Flyer" : "Accepted CreatorVault Motion Flyer example"} />
               ) : (
                 <div className="absolute inset-0 flex flex-col justify-end bg-[linear-gradient(180deg,rgba(8,7,6,.04),rgba(8,7,6,.94))] p-7 sm:p-10">
                   <div className="mb-auto mt-4 flex h-12 w-12 items-center justify-center rounded-full border border-[#efd18c]/50 bg-black/30"><Play className="ml-0.5 h-4 w-4 fill-[#efd18c] text-[#efd18c]" /></div>
-                  <p className="text-[10px] font-black uppercase tracking-[.25em] text-[#efd18c]">Ready when the first real output is ready</p>
-                  <p className="mt-4 max-w-md text-3xl font-black leading-tight">No made-up previews. The player opens only when there is a real motion flyer to watch.</p>
+                  <p className="text-[10px] font-black uppercase tracking-[.25em] text-[#efd18c]">A real sample is getting ready</p>
+                  <p className="mt-4 max-w-md text-3xl font-black leading-tight">The player opens only for a real moving flyer. Nothing is being faked here.</p>
                 </div>
               )}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(0deg,rgba(8,7,6,.82),transparent)] p-6 sm:p-8">
-                <p className="text-[10px] font-black uppercase tracking-[.2em] text-[#efd18c]">Saved inside CreatorVault</p>
-                <p className="mt-2 text-lg font-black">{newestReadyFlyer?.headline ? String(newestReadyFlyer.headline) : "Your finished motion flyer will live here."}</p>
+                <p className="text-[10px] font-black uppercase tracking-[.2em] text-[#efd18c]">{isOwnerFlyer ? "Saved inside CreatorVault" : "Accepted CreatorVault example"}</p>
+                <p className="mt-2 text-lg font-black">{isOwnerFlyer && newestReadyFlyer?.headline ? String(newestReadyFlyer.headline) : "Watch a real finished motion flyer."}</p>
               </div>
             </div>
           </div>
