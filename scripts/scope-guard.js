@@ -176,6 +176,7 @@ const ALLOWLISTS = {
   'campaign-visual-recovery': [
     'client/src/pages/CampaignVisualStudio.tsx',
     'client/src/pages/KingContent.tsx',
+    'client/src/pages/Home.tsx',
     'client/src/App.tsx',
     'server/routers/campaignVisualRouter.ts',
     'server/routers.ts',

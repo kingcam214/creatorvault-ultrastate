@@ -118,7 +118,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mt-7 flex flex-col justify-between gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center"><p className="max-w-2xl text-sm leading-relaxed text-zinc-400">Built from the moment you already own. Ready whenever you are.</p><Link href="/king/campaign-visuals"><a className="inline-flex items-center gap-2 text-sm font-black text-[#f3d899] hover:text-white">Make a scroll-stopping visual <ArrowUpRight className="h-4 w-4" /></a></Link></div>
+          <div className="mt-7 flex flex-col justify-between gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center"><p className="max-w-2xl text-sm leading-relaxed text-zinc-400">Built from the moment you already own. Ready whenever you are.</p><Link href="/king/campaign-visual"><a className="inline-flex items-center gap-2 text-sm font-black text-[#f3d899] hover:text-white">Make a scroll-stopping visual <ArrowUpRight className="h-4 w-4" /></a></Link></div>
         </div>
       </section>
 

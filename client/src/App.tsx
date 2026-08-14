@@ -627,6 +627,7 @@ function Router() {
       <Route path="/media/hub" component={MediaHubPage} />
       <Route path="/agents/motion-flyer-agent" component={MotionFlyerAgent} />
       <Route path="/king/campaign-visual" component={CampaignVisualStudio} />
+      <Route path="/king/campaign-visuals">{() => { window.location.replace("/king/campaign-visual"); return null; }}</Route>
       <Route path="/music/cover-studio">{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path="/agents/music-library-agent" component={MusicLibraryAgent} />
       <Route path="/oauth/social/callback">{() => { window.location.replace("/social"); return null; }}</Route>
