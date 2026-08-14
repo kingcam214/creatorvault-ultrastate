@@ -81,6 +81,10 @@ const ALLOWLISTS = {
     'public/images/platform/vaultx-hero-fallback.jpg',
     'public/videos/platform/vaultx-hero.mp4'
   ],
+  'auth-runtime': [
+    'client/src/_core/hooks/useAuth.ts',
+    'scripts/scope-guard.js'
+  ],
   navigation: [
     'client/src/App.tsx',
     'client/src/components/AppHeader.tsx'
