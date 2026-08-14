@@ -75,7 +75,7 @@ async function findPublicProfile(username: string) {
         id AS userId,
         COALESCE(username, name, CAST(id AS CHAR)) AS username,
         COALESCE(name, username, CAST(id AS CHAR)) AS displayName,
-        bio,
+        NULL AS bio,
         creator_status AS creatorStatus
        FROM users
        WHERE LOWER(REPLACE(COALESCE(username, name, CAST(id AS CHAR)), '@', '')) = ?
@@ -97,7 +97,7 @@ async function findPublicProfileById(userId: number) {
   try {
     const [rows] = await conn.execute<any[]>(
       `SELECT id AS userId, COALESCE(username, name, CAST(id AS CHAR)) AS username,
-              COALESCE(name, username, CAST(id AS CHAR)) AS displayName, bio, creator_status AS creatorStatus
+              COALESCE(name, username, CAST(id AS CHAR)) AS displayName, NULL AS bio, creator_status AS creatorStatus
        FROM users
        WHERE id = ? AND LOWER(COALESCE(creator_status, 'pending')) = 'active'
        LIMIT 1`,
