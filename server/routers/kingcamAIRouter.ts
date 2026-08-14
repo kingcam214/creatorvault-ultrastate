@@ -32,6 +32,7 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../_core/trpc";
 import {
   generateKingCamImage,
@@ -65,6 +66,13 @@ const styleLevelSchema = z.enum(["editorial", "cinematic", "product", "social", 
 
 function legacyVideoGenerationRetired(feature: string): never {
   throw new Error(`${feature} is retired for credit safety. Create a governed media draft, record a cost cap, obtain owner approval, and submit it through governedPollo instead.`);
+}
+
+function apparelGenerationHeld(): never {
+  throw new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message: "Apparel Lab is held until CreatorVault has a verified design, production, and fulfillment lane. No concept, product, model shoot, file, or sales package has been created.",
+  });
 }
 
 // ─── IMAGE ROUTER ─────────────────────────────────────────────────────────────
@@ -116,11 +124,7 @@ const imageRouter = router({
       colorway: z.string().min(1),
       wornByKingCam: z.boolean().default(true),
     }))
-    .mutation(async ({ input }) => {
-      const result = await generateApparelMockup(input);
-      const asset = buildCrossFeatureAsset(result, input.designDescription, ["apparel", input.garmentType]);
-      return { ...result, asset };
-    }),
+    .mutation(apparelGenerationHeld),
 
   /** Thumbnail Generator: AI-optimized thumbnail */
   generateThumbnail: protectedProcedure

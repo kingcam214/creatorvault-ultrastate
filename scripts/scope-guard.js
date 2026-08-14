@@ -112,6 +112,7 @@ const ALLOWLISTS = {
   'apparel-hold': [
     'client/src/App.tsx',
     'server/routers/apparelRouter.ts',
+    'server/routers/kingcamAIRouter.ts',
     'scripts/scope-guard.js'
   ],
   university: [
