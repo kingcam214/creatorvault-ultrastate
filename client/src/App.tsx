@@ -389,6 +389,7 @@ function Router() {
       <Route path={"/my-subscriptions"}>{() => { window.location.replace("/creator/subscriptions"); return null; }}</Route>
       <Route path={"/creator"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/tools"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
+      <Route path={"/creator-tools"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/toolbox"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator-toolbox"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/video-studio"} component={CreatorVideoStudio} />
