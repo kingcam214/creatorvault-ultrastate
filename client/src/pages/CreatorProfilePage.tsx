@@ -277,6 +277,7 @@ export default function CreatorProfilePage() {
   const requestedUsername = (params as any)?.username as string | undefined;
   const accountUsername = (user as { username?: string | null } | null)?.username ?? undefined;
   const username = requestedUsername ?? accountUsername;
+  const hasPublicHandle = Boolean(requestedUsername || accountUsername);
   // A canonical owner page has no public handle requirement. When there is no route
   // handle and no stored username, the existing authenticated profile read returns
   // the account’s real safe profile instead of pretending the creator is missing.
@@ -367,7 +368,11 @@ export default function CreatorProfilePage() {
               >
                 {profile.displayName ?? profile.username}
               </h1>
-              <p className="text-sm" style={{ color: T.textMuted }}>@{profile.username}</p>
+              {hasPublicHandle ? (
+                <p className="text-sm" style={{ color: T.textMuted }}>@{profile.username}</p>
+              ) : (
+                <p className="text-sm" style={{ color: T.textMuted }}>Your CreatorVault identity</p>
+              )}
               {profile.bio && (
                 <p className="text-sm mt-1 max-w-md" style={{ color: T.textMuted }}>{profile.bio}</p>
               )}
