@@ -2527,6 +2527,7 @@ function VaultXPublicLanding() {
 export default function VaultX() {
   const { user } = useAuth();
   const [verified, setVerified] = useState(false);
+  const [realmTimedOut, setRealmTimedOut] = useState(false);
   const [activeTab, setActiveTab] = useState<"discover" | "feed" | "messages" | "profile" | "telegram" | "xcom" | "earnings">("discover");
 
   const { data: realmData, isLoading } = trpc.vaultx.getRealmStatus.useQuery(undefined, {
@@ -2535,6 +2536,15 @@ export default function VaultX() {
   });
 
   const confirmPpvCheckout = trpc.vaultx.confirmPpvCheckout.useMutation();
+
+  useEffect(() => {
+    if (!user || !isLoading) {
+      setRealmTimedOut(false);
+      return;
+    }
+    const timeout = window.setTimeout(() => setRealmTimedOut(true), 9_000);
+    return () => window.clearTimeout(timeout);
+  }, [user, isLoading]);
 
   useEffect(() => {
     if (!user || confirmPpvCheckout.isPending) return;
@@ -2576,14 +2586,33 @@ export default function VaultX() {
     return <VaultXPublicLanding />;
   }
 
-  if (isLoading) {
+  if (isLoading && !realmTimedOut) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <div className="text-gray-500 text-sm">Loading VaultX...</div>
+          <div className="text-gray-500 text-sm">Opening VaultX...</div>
         </div>
       </div>
+    );
+  }
+
+  if (isLoading && realmTimedOut) {
+    return (
+      <main className="relative min-h-screen overflow-hidden bg-black text-white">
+        <video src={HOMEPAGE_MEDIA.homepageMotionPilot.livePath} autoPlay loop muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover opacity-35" aria-hidden="true" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/80 to-black" />
+        <section className="relative z-10 mx-auto flex min-h-screen max-w-xl flex-col justify-end px-6 pb-14 pt-28">
+          <p className="mb-4 text-[10px] font-black uppercase tracking-[0.2em] text-amber-200">VaultX private access</p>
+          <h1 className="max-w-lg text-5xl font-black leading-[0.9] tracking-[-0.06em] sm:text-6xl">Your private room is still opening.</h1>
+          <p className="mt-6 max-w-md text-base leading-7 text-zinc-300">Your access check is taking longer than it should. Your work is still yours, and nothing is being posted or sold. You can keep moving from the footage already in your Vault.</p>
+          <div className="mt-9 grid gap-3 sm:grid-cols-2">
+            <Link href="/king/media-vault" className="rounded-2xl bg-white px-5 py-4 text-center text-sm font-black text-black transition hover:bg-amber-100">See your Vault</Link>
+            <Link href="/vault-x/studio" className="rounded-2xl border border-white/30 bg-black/40 px-5 py-4 text-center text-sm font-black text-white backdrop-blur transition hover:border-white">Open Body Cinema</Link>
+          </div>
+          <button type="button" onClick={() => window.location.reload()} className="mt-4 self-start text-sm font-bold text-amber-100 underline underline-offset-4">Try VaultX again</button>
+        </section>
+      </main>
     );
   }
 
