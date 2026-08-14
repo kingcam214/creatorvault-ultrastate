@@ -941,6 +941,13 @@ export async function completeVaultxPpvPurchase(input: {
       return { purchaseId, success: true };
 }
 
+const holdVaultxSubscription = (action: string): { success: false; subscriptionId: null; held: true } => {
+  throw new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message: `VaultX memberships are held until a verified checkout can prove payment before access changes. No subscription was ${action}.`,
+  });
+};
+
 export const vaultxRouter = router({
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1902,38 +1909,7 @@ export const vaultxRouter = router({
       tier: z.enum(["basic", "premium", "vip"]),
       stripeSubscriptionId: z.string().optional(),
     }))
-    .mutation(async ({ ctx, input }) => {
-      const creator = await rawQuery("SELECT * FROM vaultx_creators WHERE id = ? LIMIT 1", [input.creatorId]);
-      if (!creator.length) throw new TRPCError({ code: "NOT_FOUND", message: "Creator not found." });
-      const priceMap: Record<string, number> = {
-        basic: creator[0].subscription_price_basic,
-        premium: creator[0].subscription_price_premium,
-        vip: creator[0].subscription_price_vip,
-      };
-      const price = priceMap[input.tier];
-      const now = new Date();
-      const periodEnd = new Date(now);
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-      const existing = await rawQuery(
-        "SELECT id FROM vaultx_subscriptions WHERE fan_id = ? AND creator_id = ? AND status = 'active' LIMIT 1",
-        [ctx.user.id, input.creatorId]
-      );
-      if (existing.length) {
-        await rawExec(
-          "UPDATE vaultx_subscriptions SET tier = ?, price_paid = ?, current_period_end = ? WHERE id = ?",
-          [input.tier, price, periodEnd, existing[0].id]
-        );
-        return { subscriptionId: existing[0].id, success: true };
-      }
-      const result = await rawExec(
-        `INSERT INTO vaultx_subscriptions
-         (fan_id, creator_id, tier, price_paid, stripe_subscription_id, status, current_period_start, current_period_end)
-         VALUES (?, ?, ?, ?, ?, 'active', ?, ?)`,
-        [ctx.user.id, input.creatorId, input.tier, price, input.stripeSubscriptionId || null, now, periodEnd]
-      );
-      await rawExec("UPDATE vaultx_creators SET total_subscribers = total_subscribers + 1 WHERE id = ?", [input.creatorId]);
-      return { subscriptionId: (result as any).insertId, success: true };
-    }),
+    .mutation(async () => holdVaultxSubscription("created or updated")),
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CANONICAL VAULTX REVENUE PACKAGE — creator input → asset → route → checkout
@@ -4169,22 +4145,7 @@ export const vaultxRouter = router({
 
   subscribeToCreator: protectedProcedure
     .input(z.object({ creatorId: z.number(), tier: z.enum(["basic", "premium", "vip"]).optional() }))
-    .mutation(async ({ ctx, input }) => {
-      const creator = await rawQuery("SELECT * FROM vaultx_creators WHERE id = ? LIMIT 1", [input.creatorId]);
-      if (!creator.length) throw new TRPCError({ code: "NOT_FOUND", message: "Creator not found." });
-      const tier = input.tier || "basic";
-      const priceMap: Record<string, number> = {
-        basic: creator[0].subscription_price_basic || 9.99,
-        premium: creator[0].subscription_price_premium || 24.99,
-        vip: creator[0].subscription_price_vip || 49.99,
-      };
-      const result = await rawExec(
-        `INSERT INTO vaultx_subscriptions (fan_id, creator_id, tier, price_paid, status, current_period_start, current_period_end) VALUES (?, ?, ?, ?, 'active', NOW(), DATE_ADD(NOW(), INTERVAL 1 MONTH))`,
-        [ctx.user.id, input.creatorId, tier, priceMap[tier]]
-      );
-      await rawExec("UPDATE vaultx_creators SET total_subscribers = total_subscribers + 1 WHERE id = ?", [input.creatorId]);
-      return { subscriptionId: (result as any).insertId, success: true };
-    }),
+    .mutation(async () => holdVaultxSubscription("created")),
 
   createTipIntent: protectedProcedure
     .input(z.object({ creatorId: z.number(), amountCents: z.number().min(100).max(1000000) }))
@@ -4198,10 +4159,7 @@ export const vaultxRouter = router({
 
   confirmSubscription: protectedProcedure
     .input(z.object({ subscriptionId: z.number(), stripeSubscriptionId: z.string().optional() }))
-    .mutation(async ({ ctx, input }) => {
-      await rawExec("UPDATE vaultx_subscriptions SET status = 'active', stripe_subscription_id = ? WHERE id = ? AND fan_id = ?", [input.stripeSubscriptionId || null, input.subscriptionId, ctx.user.id]);
-      return { success: true };
-    }),
+    .mutation(async () => holdVaultxSubscription("activated")),
 
   linkChannel: protectedProcedure
     .input(z.object({ channelId: z.string().min(1).max(255), channelName: z.string().min(1).max(255), botToken: z.string().optional() }))
