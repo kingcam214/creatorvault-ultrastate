@@ -109,6 +109,22 @@ async function findPublicProfile(username: string) {
   return null;
 }
 
+async function findPublicProfileById(userId: number) {
+  const conn = await getConnection();
+  try {
+    const [rows] = await conn.execute<any[]>(
+      `SELECT id AS userId, name AS displayName, name AS username, NULL AS bio
+       FROM users
+       WHERE id = ?
+       LIMIT 1`,
+      [userId]
+    );
+    return rows[0] ? safeProfile(rows[0]) : null;
+  } finally {
+    await conn.end();
+  }
+}
+
 async function listCoursesForCreator(userId: number) {
   if (!userId) return [];
   const conn = await getConnection();
@@ -208,19 +224,7 @@ export const profileRouter = router({
     }),
 
   getPublicProfile: publicProcedure.input(z.object({ userId: z.number() })).query(async ({ input }) => {
-    const conn = await getConnection();
-    try {
-      const [rows] = await conn.execute<any[]>(
-        `SELECT id AS userId, COALESCE(username, name, CAST(id AS CHAR)) AS username, COALESCE(name, username) AS displayName, bio, avatar
-         FROM users
-         WHERE id = ?
-         LIMIT 1`,
-        [input.userId]
-      );
-      return rows[0] ? safeProfile(rows[0]) : null;
-    } finally {
-      await conn.end();
-    }
+    return findPublicProfileById(input.userId);
   }),
 
   updateSocialLinks: protectedProcedure.input(z.object({ links: z.record(z.string(), z.string()) })).mutation(async ({ ctx, input }) => ({
