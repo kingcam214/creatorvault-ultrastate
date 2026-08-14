@@ -218,6 +218,22 @@ function parseJson(value: unknown): Record<string, unknown> {
   }
 }
 
+async function readPolloAvailableCredits(apiKey: string): Promise<number | null> {
+  try {
+    const response = await fetch("https://pollo.ai/api/platform/credit/balance", {
+      method: "GET",
+      headers: { "x-api-key": apiKey, Accept: "application/json" },
+    });
+    if (!response.ok) return null;
+    const payload = await parseProviderJson(response);
+    const record = payload.data && typeof payload.data === "object" ? payload.data as Record<string, unknown> : payload;
+    const available = Number(record.availableCredits);
+    return Number.isFinite(available) && available >= 0 ? available : null;
+  } catch {
+    return null;
+  }
+}
+
 function safeErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error ?? "Unknown error");
   return message.replace(/x-api-key\s*[:=]\s*[^\s,]+/gi, "x-api-key=[redacted]").slice(0, 1200);
@@ -1203,6 +1219,14 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
       ? `https://pollo.ai/api/platform/generation/${HOMEPAGE_TEXT_TO_VIDEO_API_PATH}`
       : `https://pollo.ai/api/platform/generation/${leased.providerModelPath.replace("pollo/", "")}`;
 
+  const balanceBeforeCredits = await readPolloAvailableCredits(apiKey);
+  if (balanceBeforeCredits !== null) {
+    await rawExec(
+      "UPDATE governed_media_jobs SET metadata_json = ?, updated_at = NOW() WHERE id = ? AND state = 'queued'",
+      [safeJson({ ...leased.metadata, providerBalanceBeforeCredits: balanceBeforeCredits, providerBalanceReadAt: new Date().toISOString() }), leased.id],
+    );
+  }
+
   let response: Response;
   try {
     response = await fetch(providerUrl, {
@@ -1314,14 +1338,22 @@ export async function recordGovernedPolloProviderCompletion(params: { jobId: num
   const durableHomepageMotion = isHomepageTextToVideoPilot(job)
     ? await persistHomepageTextToVideoOutput(job, outputUrl)
     : null;
-  const metadata = durableHomepageMotion
-    ? { ...job.metadata, homepageMotionPilotOutput: durableHomepageMotion }
-    : job.metadata;
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  const balanceAfterCredits = apiKey ? await readPolloAvailableCredits(apiKey) : null;
+  const balanceBeforeCredits = Number(job.metadata.providerBalanceBeforeCredits);
+  const actualCostCredits = Number.isFinite(balanceBeforeCredits) && balanceAfterCredits !== null
+    ? Math.max(0, Number((balanceBeforeCredits - balanceAfterCredits).toFixed(4)))
+    : null;
+  const metadata = {
+    ...job.metadata,
+    ...(durableHomepageMotion ? { homepageMotionPilotOutput: durableHomepageMotion } : {}),
+    ...(balanceAfterCredits !== null ? { providerBalanceAfterCredits: balanceAfterCredits, providerBalanceReadAtCompletion: new Date().toISOString() } : {}),
+  };
   await rawExec(
     `UPDATE governed_media_jobs
-     SET state = 'provider_complete', output_url = ?, provider_response_json = ?, metadata_json = ?, updated_at = NOW(), completed_at = NOW()
+     SET state = 'provider_complete', output_url = ?, provider_response_json = ?, metadata_json = ?, actual_cost_credits = ?, updated_at = NOW(), completed_at = NOW()
      WHERE id = ? AND state = 'submitted'`,
-    [outputUrl, safeJson(params.providerResponse), safeJson(metadata), job.id],
+    [outputUrl, safeJson(params.providerResponse), safeJson(metadata), actualCostCredits, job.id],
   );
   const completed = (await getGovernedPolloJob(job.id))!;
   await appendEvent({

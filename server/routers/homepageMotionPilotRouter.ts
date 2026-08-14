@@ -6,13 +6,13 @@ const OWNER_IDS = new Set([6, 33]);
 const HOMEPAGE_PILOT_MODEL = "pollo/google-veo-3-1";
 const HOMEPAGE_PILOT_MODE = "homepage_text2video";
 const HOMEPAGE_PILOT_CREDIT_CAP = 150;
-const HOMEPAGE_PILOT_IDEMPOTENCY_KEY = "homepage-motion-pilot-female-creator-veo-3-1-v2-safe-brief";
-const HOMEPAGE_PILOT_REQUEST_ID = "homepage-motion-pilot-veo-3-1-v2-safe-brief";
+const HOMEPAGE_PILOT_IDEMPOTENCY_KEY = "homepage-motion-pilot-female-creator-veo-3-1-v3-dynamic-walk";
+const HOMEPAGE_PILOT_REQUEST_ID = "homepage-motion-pilot-veo-3-1-v3-dynamic-walk";
 
 const HOMEPAGE_PILOT_PROMPT = [
   "One original Black woman creative entrepreneur, alone in a warm dark editorial studio with rich black velvet, deep amber practical light, and soft architectural shadows.",
-  "She is fully dressed in a tailored floor-length black evening gown. Her full body remains visible from head to toe throughout the shot; she takes one calm confident step forward, turns naturally toward camera, and holds a powerful relaxed stance.",
-  "Luxury fashion-campaign cinematography, 35mm lens, deliberate slow dolly, natural anatomy, natural hands, realistic skin detail, stable wardrobe and stable face, no cuts.",
+  "She is fully dressed in a tailored floor-length black evening gown. Her full body remains visible from head to toe throughout the complete shot. She crosses the studio floor in three confident natural steps while the camera tracks backward at the same pace, makes a fluid quarter turn at the third second, then continues walking with natural arm swing and gown movement toward a second marked position. Keep her active for all six seconds; do not make a still pose, a frozen fashion portrait, or a slow zoom.",
+  "Luxury fashion-campaign cinematography, 35mm lens, smooth tracking camera, natural anatomy, natural hands, realistic skin detail, stable wardrobe and stable face, no cuts.",
   "Premium CreatorVault campaign visual celebrating female creative ownership. Keep the styling elegant and fully clothed.",
   "No male people, no other people, no phone, no screen, no chart, no dashboard, no watch, no gears, no infographic, no product mockup, no text, no logo, no watermark, no plastic skin, no morphing, no distorted anatomy, no extra limbs.",
 ].join(" ");
