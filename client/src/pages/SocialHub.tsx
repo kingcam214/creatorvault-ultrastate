@@ -31,6 +31,11 @@ function videoPoster(value?: string | null) {
   return /\.(avif|gif|jpe?g|png|webp)(?:$|[?#])/i.test(candidate) ? candidate : undefined;
 }
 
+function displayHandle(value?: string | null) {
+  const handle = String(value || "").replace(/^@+/, "").trim();
+  return handle ? `@${handle}` : null;
+}
+
 export default function SocialHub() {
   const { toast } = useToast();
   const search = useSearch();
@@ -219,7 +224,7 @@ export default function SocialHub() {
             <section className="rounded-[1.5rem] border border-cyan-300/15 bg-[linear-gradient(145deg,rgba(34,211,238,0.09),rgba(255,255,255,0.025))] p-5">
               <div className="flex items-center justify-between"><div><div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/70">Your channel evidence</div><h3 className="mt-1 text-lg font-black">Sources you already confirmed</h3></div><BadgeCheck className="h-5 w-5 text-cyan-300" /></div>
               <div className="mt-4 space-y-2">
-                {manualSources.length ? manualSources.slice(0, 6).map((source: any) => <div key={`${source.platform}-${source.username || source.displayName}`} className="rounded-xl bg-black/30 px-3 py-3"><div className="flex items-center justify-between gap-3"><span className="text-sm font-bold capitalize">{source.platform}</span><span className="text-[10px] font-black uppercase tracking-wide text-amber-200">Source held</span></div><p className="mt-1 truncate text-xs text-zinc-400">{source.username ? `@${source.username}` : source.displayName || "Owner-confirmed channel"}</p></div>) : <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">No owner-confirmed channel source is recorded here yet.</p>}
+                {manualSources.length ? manualSources.slice(0, 6).map((source: any) => <div key={`${source.platform}-${source.username || source.displayName}`} className="rounded-xl bg-black/30 px-3 py-3"><div className="flex items-center justify-between gap-3"><span className="text-sm font-bold capitalize">{source.platform}</span><span className="text-[10px] font-black uppercase tracking-wide text-amber-200">Source held</span></div><p className="mt-1 truncate text-xs text-zinc-400">{displayHandle(source.username) || source.displayName || "Owner-confirmed channel"}</p></div>) : <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">No owner-confirmed channel source is recorded here yet.</p>}
               </div>
               <p className="mt-3 text-xs leading-relaxed text-zinc-500">These are your verified channel sources, not direct publishing connections. Nothing can post, message, schedule, or pull analytics from them here.</p>
             </section>
