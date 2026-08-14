@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { HOMEPAGE_MEDIA } from "@/lib/homepageMediaRegistry";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, BadgeDollarSign, Boxes, Crown, Search, ShieldCheck, ShoppingBag, SlidersHorizontal, Sparkles, TrendingUp } from "lucide-react";
 
@@ -23,11 +24,6 @@ const PUBLIC_TEST_ARTIFACT_PATTERN = /\b(test|testing|audit|botevents|end-to-end
 
 type SortBy = "newest" | "popular" | "price-low" | "price-high";
 
-const VERIFIED_MARKETPLACE_MEDIA: Record<string, string> = {
-  "e7ffb4be-0455-11f1-a4a7-ee2cd6ad3437": "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg",
-  "c49f1146-c9fd-4cbd-9ec8-3d0490194621": "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg",
-};
-
 function money(cents: number) {
   return `$${(Math.max(0, cents) / 100).toFixed(2)}`;
 }
@@ -47,7 +43,11 @@ export default function Marketplace() {
       const shortDescription = String(p.short_description ?? p.shortDescription ?? "");
       const description = String(p.description ?? "");
       const publicText = `${title} ${shortDescription} ${description}`;
-      return status === "active" && !PUBLIC_TEST_ARTIFACT_PATTERN.test(publicText);
+      const playableMotion = p.productVideo ?? p.product_video;
+      return status === "active"
+        && !PUBLIC_TEST_ARTIFACT_PATTERN.test(publicText)
+        && typeof playableMotion === "string"
+        && playableMotion.trim().length > 0;
     });
   }, [products]);
 
@@ -111,7 +111,7 @@ export default function Marketplace() {
             zIndex: 0,
           }}
         >
-          <source src="/videos/platform/marketplace-hero.mp4" type="video/mp4" />
+          <source src={HOMEPAGE_MEDIA.homepageMotionPilot.livePath} type="video/mp4" />
         </video>
         {/* Gradient overlay — dark at bottom so headline is readable */}
         <div style={{
@@ -127,12 +127,12 @@ export default function Marketplace() {
             <span className="text-xs font-black uppercase tracking-[.2em]">CreatorVault Commerce OS</span>
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-[-.06em] leading-[.92] max-w-4xl" style={{ textShadow: "0 2px 24px rgba(0,0,0,0.7)" }}>Premium drops that feel curated, scarce, and ready to buy.</h1>
-          <p className="mt-5 max-w-2xl text-base md:text-lg leading-8" style={{ color: T.muted }}>Browse creator playbooks, premium templates, digital assets, and operator products presented with clear pricing, strong visuals, and a direct path to purchase.</p>
+          <p className="mt-5 max-w-2xl text-base md:text-lg leading-8" style={{ color: T.muted }}>CreatorVault only opens public checkout for a release with real playable motion, clear pricing, and an active creator record. Static catalog filler stays out of this room.</p>
           <div className="flex flex-wrap items-center gap-4 mt-6">
             <a href="#live-drops" className="inline-flex min-h-12 items-center justify-center rounded-2xl px-6 text-sm font-black uppercase tracking-[.14em] transition hover:scale-[1.01]" style={{ background: "linear-gradient(135deg,#00e5ff,#c9a84c)", color: "#050505" }}>See live drops <ArrowRight className="ml-2 h-4 w-4" /></a>
             <div className="flex gap-3 flex-wrap">
               {[
-                { icon: Boxes, label: "Active inventory", value: `${activeCount}`, color: T.cyan },
+                { icon: Boxes, label: "Public moving releases", value: `${activeCount}`, color: T.cyan },
                 { icon: BadgeDollarSign, label: "Catalog value", value: money(catalogValue), color: T.gold },
                 { icon: ShieldCheck, label: "Buyer path", value: "Verified", color: T.green },
               ].map(({ icon: Icon, label, value, color }) => (
@@ -178,15 +178,21 @@ export default function Marketplace() {
             {[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="h-96 animate-pulse rounded-[1.75rem]" style={{ background: T.panel, border: `1px solid ${T.border}` }} />)}
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="py-24 text-center rounded-[2rem]" style={{ background: T.panel, border: `1px solid ${T.border}` }}>
-            <ShoppingBag className="w-12 h-12 mx-auto mb-4" style={{ color: T.faint }} />
-            <p className="text-3xl font-black mb-2 tracking-[-.04em]">No products match this search.</p>
-            <p className="text-sm" style={{ color: T.muted }}>Try another search, category, or sort option.</p>
-          </div>
+          <section className="relative isolate min-h-[32rem] overflow-hidden rounded-[2rem] border" style={{ borderColor: T.border }}>
+            <video autoPlay muted loop playsInline preload="metadata" aria-label="Certified CreatorVault campaign motion" className="absolute inset-0 h-full w-full object-cover">
+              <source src={HOMEPAGE_MEDIA.homepageMotionPilot.livePath} type="video/mp4" />
+            </video>
+            <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,rgba(6,6,6,.16),rgba(6,6,6,.88))" }} />
+            <div className="relative z-10 flex min-h-[32rem] max-w-2xl flex-col justify-end p-7 text-left sm:p-10">
+              <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[.18em]" style={{ borderColor: "rgba(243,216,153,.36)", background: "rgba(0,0,0,.52)", color: "#f3d899" }}><Sparkles className="h-3.5 w-3.5" /> Public release standard</div>
+              <p className="text-4xl font-black leading-[.92] tracking-[-.05em] sm:text-5xl">{publicProducts.length === 0 ? "The next public drop must move." : "No moving release matches this search."}</p>
+              <p className="mt-4 max-w-xl text-sm leading-6" style={{ color: "rgba(255,255,255,.76)" }}>{publicProducts.length === 0 ? "Creator-owned products stay preserved in their owners’ inventory until a real playable release is attached. CreatorVault will not replace that work with static catalog cards or fake demand." : "Clear the search or choose another category to see a real playable public release."}</p>
+            </div>
+          </section>
         ) : (
           <div id="live-drops" className="grid scroll-mt-24 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredProducts.map((product: any) => {
-              const mainImage = product.main_image ?? product.mainImage ?? VERIFIED_MARKETPLACE_MEDIA[String(product.id)] ?? "https://creatorvault.live/uploads/ppv_1778107488797/thumbnail.jpg";
+              const productVideo = product.product_video ?? product.productVideo;
               const rawPrice = product.sale_price ?? product.salePrice ?? product.price_amount ?? product.priceAmount ?? 0;
               const basePrice = product.price_amount ?? product.priceAmount ?? rawPrice;
               const salesCount = product.sales_count ?? product.salesCount ?? 0;
@@ -196,7 +202,7 @@ export default function Marketplace() {
               return (
                 <article key={product.id} className="group cursor-pointer rounded-[1.75rem] overflow-hidden transition-all hover:-translate-y-1" onClick={() => navigate(`/marketplace/${product.id}`)} style={{ background: "linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.026))", border: `1px solid ${T.border}`, boxShadow: "0 24px 80px rgba(0,0,0,.34)" }}>
                   <div className="aspect-[4/3] relative" style={{ background: "rgba(255,255,255,.04)" }}>
-                    {mainImage ? <img src={mainImage} alt={product.title ?? "Marketplace product"} className="w-full h-full object-cover group-hover:scale-[1.035] transition-transform duration-500" /> : <div className="absolute inset-0 flex items-center justify-center"><ShoppingBag className="w-12 h-12" style={{ color: T.faint }} /></div>}
+                    <video src={productVideo} autoPlay loop muted playsInline preload="metadata" aria-label={`${product.title ?? "Marketplace product"} playable release`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.035]" />
                     <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,.72))" }} />
                     <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full text-[10px] uppercase tracking-[.16em] font-black" style={{ background: "rgba(0,0,0,.62)", border: `1px solid ${T.border}`, color: T.cyan }}>{productType}</div>
                     <div className="absolute top-3 right-3 px-3 py-1.5 rounded-full text-[10px] uppercase tracking-[.16em] font-black" style={{ background: "rgba(201,168,76,.18)", border: "1px solid rgba(201,168,76,.42)", color: T.gold }}>{hasDiscount ? "Drop price" : "Acquire"}</div>

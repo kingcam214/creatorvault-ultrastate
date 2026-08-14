@@ -25,6 +25,7 @@ const ALLOWLISTS = {
     'scripts/scope-guard.js'
   ],
   'public-marketplace-motion-gate': [
+    'client/src/pages/Marketplace.tsx',
     'client/src/pages/PublicCreatorLanding.tsx',
     'server/routers/marketplace.ts',
     'scripts/scope-guard.js'
