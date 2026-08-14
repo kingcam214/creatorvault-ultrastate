@@ -748,7 +748,7 @@ function MessagingTab({ userId }: { userId: number }) {
           <div className="text-center py-12 text-gray-600">
             <Inbox className="w-10 h-10 mx-auto mb-3 opacity-30" />
             <div className="font-semibold">No messages yet</div>
-            <div className="text-sm mt-1">Subscribe to a creator and send them a DM</div>
+            <div className="text-sm mt-1">Messages open here when the path to reach someone is real and ready.</div>
           </div>
         ) : (
           <div className="space-y-2">
