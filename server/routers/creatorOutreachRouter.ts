@@ -12,6 +12,18 @@ import crypto from "crypto";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const isOwner = ctx.user.id === 6 || ctx.user.id === 33 || ctx.user.role === "king" || ctx.user.role === "admin";
+  if (!isOwner) throw new Error("This private creator relationship workspace is reserved for the owner.");
+  return next({ ctx });
+});
+
+function requireOutreachExecutionEnabled() {
+  if (process.env.CREATORVAULT_OUTREACH_EXECUTION_ENABLED !== "true") {
+    throw new Error("Creator outreach is held. Review the relationship privately before any message, follow-up, or distribution action is enabled.");
+  }
+}
+
 function extractRows(result: any): any[] {
   if (!result) return [];
   if (Array.isArray(result) && result.length >= 1 && Array.isArray(result[0])) return result[0] as any[];
@@ -224,7 +236,7 @@ async function scrapeRedditProfiles(subreddit: string, count: number = 20): Prom
   }
 }
 
-async function scrapeProductionCreatorProfiles(count: number = 20): Promise<any[]> {
+async function listPrivateRecruitmentProfiles(count: number = 20): Promise<any[]> {
   const rows = extractRows(await db.execute(sql`
     SELECT id, stage_name, sub_group, bio, follower_count, engagement_rate, subscription_price, monthly_revenue, status
     FROM greatest_show_creators
@@ -245,12 +257,12 @@ async function scrapeProductionCreatorProfiles(count: number = 20): Promise<any[
       bio: row.bio,
       followers: Number(row.follower_count || 0),
       engagement_rate: Number(row.engagement_rate || 0),
-      recent_post: `${row.sub_group || "creator"} membership offer at $${Number(row.subscription_price || 0).toFixed(2)}`,
       platforms: ["creatorvault"],
       source_table: "greatest_show_creators",
       source_id: row.id,
-      subscription_price: Number(row.subscription_price || 0),
-      monthly_revenue: Number(row.monthly_revenue || 0),
+      relationshipState: "private_recruitment",
+      publicVisibility: "private",
+      monetizationState: "not_verified_by_creator",
     };
   });
 }
@@ -352,7 +364,7 @@ async function generateReplyToCreator(
 export const creatorOutreachRouter = router({
 
   // Scrape and score creator profiles from Twitter + Reddit
-  scrapeCreators: protectedProcedure
+  scrapeCreators: ownerProcedure
     .input(z.object({
       platform: z.enum(["twitter", "reddit", "both"]),
       niche: z.string().default("body positive adult creator"),
@@ -403,8 +415,17 @@ export const creatorOutreachRouter = router({
       };
     }),
 
-  // Generate and queue 50 personalized outreach messages
-  queueDailyOutreach: protectedProcedure
+  getPrivateRecruitmentProfiles: ownerProcedure
+    .input(z.object({ limit: z.number().min(1).max(100).default(25) }).default({ limit: 25 }))
+    .query(async ({ input }) => ({
+      profiles: await listPrivateRecruitmentProfiles(input.limit),
+      visibility: "private_owner_review_only",
+      outboundAction: "held",
+      monetization: "not_verified_by_creator",
+    })),
+
+  // Legacy outbound actions remain default-deny until the owner deliberately enables a controlled outreach window.
+  queueDailyOutreach: ownerProcedure
     .input(z.object({
       creators: z.array(z.object({
         handle: z.string(),
@@ -419,6 +440,7 @@ export const creatorOutreachRouter = router({
       dailyLimit: z.number().default(50),
     }))
     .mutation(async ({ input }) => {
+      requireOutreachExecutionEnabled();
       await ensureOutreachLeadsTable();
       const results = [];
       const toContact = input.creators.slice(0, input.dailyLimit);
@@ -520,12 +542,13 @@ export const creatorOutreachRouter = router({
     }),
 
   // Send outreach via Telegram bot (for Telegram creators)
-  sendTelegramOutreach: protectedProcedure
+  sendTelegramOutreach: ownerProcedure
     .input(z.object({
       telegramUsername: z.string(),
       message: z.string(),
     }))
     .mutation(async ({ input }) => {
+      requireOutreachExecutionEnabled();
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN not configured");
 
@@ -544,7 +567,7 @@ export const creatorOutreachRouter = router({
     }),
 
   // AI Chat Assistant — handles creator replies and closes the deal
-  handleCreatorReply: protectedProcedure
+  handleCreatorReply: ownerProcedure
     .input(z.object({
       creatorHandle: z.string(),
       creatorMessage: z.string(),
@@ -554,6 +577,7 @@ export const creatorOutreachRouter = router({
       })).default([]),
     }))
     .mutation(async ({ input }) => {
+      requireOutreachExecutionEnabled();
       const reply = await generateReplyToCreator(
         input.creatorHandle,
         input.creatorMessage,
@@ -578,19 +602,20 @@ export const creatorOutreachRouter = router({
     }),
 
   // Run the production-backed acquisition → outreach → distribution → telemetry closing loop
-  runCreatorClosingLoop: protectedProcedure
+  runCreatorClosingLoop: ownerProcedure
     .input(z.object({
       platform: z.enum(["reddit", "twitter", "production_table"]).default("production_table"),
       niche: z.string().default("creator economy"),
       count: z.number().min(1).max(25).default(5),
     }))
     .mutation(async ({ ctx, input }) => {
+      requireOutreachExecutionEnabled();
       await ensureOutreachLeadsTable();
 
       const profiles = input.platform === "twitter"
         ? await scrapeTwitterProfiles(input.niche, input.count)
         : input.platform === "production_table"
-          ? await scrapeProductionCreatorProfiles(input.count)
+          ? await listPrivateRecruitmentProfiles(input.count)
           : await scrapeRedditProfiles(input.niche.replace(/^r\//, ""), input.count);
 
       const scored = profiles
@@ -758,7 +783,7 @@ export const creatorOutreachRouter = router({
       };
     }),
 
-  getClosingLoopLeads: protectedProcedure
+  getClosingLoopLeads: ownerProcedure
     .input(z.object({ limit: z.number().min(1).max(100).default(25) }).default({ limit: 25 }))
     .query(async ({ input }) => {
       await ensureOutreachLeadsTable();
@@ -774,7 +799,7 @@ export const creatorOutreachRouter = router({
     }),
 
   // Get outreach stats for revenue reporting
-  getOutreachStats: protectedProcedure
+  getOutreachStats: ownerProcedure
     .query(async () => {
       try {
         const stats = await db.execute(sql`
@@ -796,7 +821,7 @@ export const creatorOutreachRouter = router({
     }),
 
   // Mark lead as replied/onboarded
-  updateLeadStatus: protectedProcedure
+  updateLeadStatus: ownerProcedure
     .input(z.object({
       handle: z.string(),
       status: z.enum(["queued", "sent", "replied", "onboarded", "declined"]),
@@ -811,7 +836,7 @@ export const creatorOutreachRouter = router({
     }),
 
   // Generate the full onboarding portal content for a Magic Link token
-  getOnboardingContent: protectedProcedure
+  getOnboardingContent: ownerProcedure
     .input(z.object({
       token: z.string(),
       ref: z.string(),

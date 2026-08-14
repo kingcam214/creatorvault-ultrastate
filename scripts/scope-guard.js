@@ -285,6 +285,10 @@ const ALLOWLISTS = {
     'server/services/systemRegistry.ts',
     'scripts/scope-guard.js'
   ],
+  'recruitment-consent': [
+    'server/routers/creatorOutreachRouter.ts',
+    'scripts/scope-guard.js'
+  ],
   'agent-command-authority': [
     'server/routers/agentExecutorRouter.ts',
     'server/routers/empireAgents.ts',
