@@ -2648,7 +2648,7 @@ export default function VaultX() {
             <div className="mb-8">
               <p className="text-xs font-black uppercase tracking-[0.2em] mb-2" style={{ color: "#c9a84c" }}>VaultX</p>
               <h1 className="text-3xl font-black leading-tight mb-3">{t("hub.tagline")}</h1>
-              <p className="text-sm text-zinc-400 leading-relaxed">Upload a video. Pick a style. Set your price. VaultX generates the cinematic preview, attaches checkout, and publishes to Telegram — all in one flow.</p>
+              <p className="text-sm text-zinc-400 leading-relaxed">Start with a saved video. Choose the feeling. Shape the access. Your direction, offer, and review stay together before anything goes live.</p>
             </div>
 
             {/* Primary CTA — the one thing to do */}
@@ -2659,7 +2659,7 @@ export default function VaultX() {
             >
               <div>
                 <p className="text-lg font-black">{t("hub.cta_create")}</p>
-                <p className="text-sm font-medium opacity-70">Upload → Pick style → Set price → Launch</p>
+                <p className="text-sm font-medium opacity-70">Choose your moment → Set the feeling → Shape the access</p>
               </div>
               <div className="text-2xl">→</div>
             </a>
@@ -2667,9 +2667,9 @@ export default function VaultX() {
             {/* What VaultX does — 3 things */}
             <div className="grid gap-3 mb-8">
               {[
-                { emoji: "🎬", title: "Body Cinema", desc: "Your video becomes a cinematic teaser + paid unlock. Fans pay to see the full version.", href: "/vaultx/drop" },
-                { emoji: "💰", title: "Paid Drops", desc: "Set a price. Stripe handles checkout. You get 85% of every sale.", href: "/vaultx/drop" },
-                { emoji: "📱", title: "Telegram Distribution", desc: "Your drop gets published to your Telegram channel automatically with a tracked link.", href: "/vaultx/drop" },
+                { emoji: "🎬", title: "Body Cinema", desc: "Keep your real source, its treatment, and its premium direction in one place. A finished piece earns its next move.", href: "/vaultx/drop" },
+                { emoji: "💰", title: "Paid Drops", desc: "Set the access on a finished moment. You keep 85% of every real sale.", href: "/vaultx/drop" },
+                { emoji: "📱", title: "Your channel-ready drop", desc: "Prepare a version for the places you actually use. Nothing goes out until you decide.", href: "/vaultx/drop" },
               ].map(item => (
                 <a key={item.title} href={item.href} className="flex items-start gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 hover:border-white/20 transition">
                   <span className="text-2xl flex-shrink-0 mt-0.5">{item.emoji}</span>
@@ -2686,12 +2686,12 @@ export default function VaultX() {
               <a href="/vaultx/trailers" className="flex flex-col gap-2 rounded-2xl border border-[#F2B15B]/30 bg-[#F2B15B]/10 p-4 hover:border-[#F2B15B]/60 transition">
                 <Flame className="h-5 w-5" style={{ color: "#F2B15B" }} />
                 <p className="font-black text-sm">Viral Trailers</p>
-                <p className="text-xs text-zinc-500">Auto-cut teasers built to convert</p>
+                <p className="text-xs text-zinc-500">Shape the opening that makes them stop</p>
               </a>
               <a href="/vaultx/editor" className="flex flex-col gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 hover:border-white/20 transition">
                 <Video className="h-5 w-5 text-red-400" />
-                <p className="font-black text-sm">Video Editor</p>
-                <p className="text-xs text-zinc-500">Trim, style, export with Body Cinema</p>
+                <p className="font-black text-sm">Creator Video Studio</p>
+                <p className="text-xs text-zinc-500">Turn a real moment into a stronger next move</p>
               </a>
             </div>
 
@@ -2700,10 +2700,10 @@ export default function VaultX() {
               <p className="text-xs font-black uppercase tracking-[0.16em] text-zinc-500 mb-4">How it works</p>
               <div className="space-y-4">
                 {[
-                  ["1", "Upload your video", "Any clip you own. Phone video, studio footage — anything."],
-                  ["2", "Pick a Body Cinema preset", "Abs, curves, silhouette, mirror moment — one tap sets the cinematic style."],
-                  ["3", "Set your unlock price", "$19, $29, $49 — you decide. Fans pay to unlock the full version."],
-                  ["4", "Hit Launch", "AI generates the cinematic version, Stripe attaches checkout, Telegram publishes."],
+                  ["1", "Choose your saved video", "Start with a real moment already inside your CreatorVault."],
+                  ["2", "Choose the treatment", "Pick the feeling that fits your footage and the people you want to pull in."],
+                  ["3", "Shape the access", "Decide what the finished moment is worth when it has earned its place."],
+                  ["4", "Get your drop ready", "Your source, direction, offer, and review stay together before anything goes public."],
                 ].map(([n, title, desc]) => (
                   <div key={n} className="flex gap-4">
                     <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black" style={{ background: "rgba(201,168,76,0.15)", color: "#c9a84c" }}>{n}</div>
