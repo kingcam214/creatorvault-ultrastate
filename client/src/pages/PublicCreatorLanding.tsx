@@ -12,6 +12,13 @@ function creatorIdFrom(product: any) {
   return Number(product.creatorId ?? product.creator_id ?? 0);
 }
 
+function isPublicOffer(product: any) {
+  const identity = [product?.title, product?.shortDescription, product?.short_description, product?.description]
+    .filter(Boolean)
+    .join(" ");
+  return !/\b(test|audit)\b/i.test(identity);
+}
+
 export default function PublicCreatorLanding() {
   const [, params] = useRoute("/creator/:handle");
   const handle = (params as { handle?: string } | null)?.handle?.replace(/^@/, "").toLowerCase() ?? "";
@@ -30,7 +37,7 @@ export default function PublicCreatorLanding() {
   const profile = profileQuery.data?.profile ?? null;
   const offers = useMemo(() => {
     const products = Array.isArray(productsQuery.data) ? productsQuery.data : [];
-    return profile ? products.filter((product: any) => creatorIdFrom(product) === Number(profile.userId)).slice(0, 12) : [];
+    return profile ? products.filter((product: any) => creatorIdFrom(product) === Number(profile.userId) && isPublicOffer(product)).slice(0, 12) : [];
   }, [productsQuery.data, profile]);
   const heroOffer = offers.find((offer: any) => Boolean(offer.productVideo ?? offer.product_video));
 
