@@ -1529,199 +1529,24 @@ function MyProfileTab({ userId }: { userId: number }) {
 // ============================================================================
 // TELEGRAM TAB
 // ============================================================================
-function TelegramTab({ userId }: { userId: number }) {
-  // ── Real tRPC state ────────────────────────────────────────────────────
-  const utils = trpc.useUtils();
-
-  // Query: load the currently linked channel from the DB on mount
-  const { data: linkedChannel, isLoading: channelLoading } =
-    trpc.vaultx.getLinkedChannel.useQuery(undefined, { retry: false });
-
-  // Mutation: upsert a channel row into telegram_channels
-  const linkMutation = trpc.vaultx.linkChannel.useMutation({
-    onSuccess: (row) => {
-      utils.vaultx.getLinkedChannel.invalidate();
-      setChannelUsername(row?.channel_id ?? "");
-      toast.success(
-        row?.channel_id
-          ? `Channel @${row.channel_id} linked to VaultX!`
-          : "Channel linked!"
-      );
-    },
-    onError: (err) => {
-      toast.error(err.message ?? "Failed to link channel");
-    },
-  });
-
-  // ── Local UI state ────────────────────────────────────────────────────
-  const [channelUsername, setChannelUsername] = useState("");
-  const [channelPrice, setChannelPrice] = useState("9.99");
-  const [botToken, setBotToken] = useState("");
-  const [copied, setCopied] = useState(false);
-
-  // Pre-fill the input once the query resolves
-  const prevLinkedRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (linkedChannel?.channel_id && linkedChannel.channel_id !== prevLinkedRef.current) {
-      prevLinkedRef.current = linkedChannel.channel_id;
-      setChannelUsername(linkedChannel.channel_id);
-    }
-  }, [linkedChannel]);
-
-  const linked = Boolean(linkedChannel?.channel_id);
-  const vaultxBotUsername = "@VaultXBot";
-  const inviteLink = `https://t.me/VaultXBot?start=sub_${userId}`;
-  const copyLink = () => {
-    navigator.clipboard.writeText(inviteLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-  const handleLinkChannel = () => {
-    if (!channelUsername.trim()) return toast.error("Enter your channel username");
-    linkMutation.mutate({
-      channelId: channelUsername.trim().replace(/^@/, ""),
-      channelName: channelUsername.trim().replace(/^@/, ""),
-    });
-  };
-
+function TelegramTab({ userId: _userId }: { userId: number }) {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-white font-black text-xl mb-1">Telegram Integration</h2>
-        <p className="text-gray-500 text-sm">Link your Telegram channel. Fans pay VaultX to get added automatically.</p>
+        <h2 className="text-xl font-black text-white">Messages need a real delivery lane.</h2>
+        <p className="mt-1 text-sm text-zinc-400">This room will not pretend a channel is connected, sell recurring access, send an invite, or tell you a fan was added automatically when that path is not proven end to end.</p>
       </div>
 
-      {/* How It Works */}
-      <div className="bg-gray-900/60 border border-blue-900/30 rounded-2xl p-5">
-        <div className="text-blue-400 font-bold text-sm mb-4 flex items-center gap-2">
-          <Bot className="w-4 h-4" /> How VaultX Telegram Works
-        </div>
-        <div className="space-y-3">
-          {[
-            { step: "1", text: "Link your private Telegram channel below" },
-            { step: "2", text: "Set your monthly access price" },
-            { step: "3", text: "Share your VaultX subscribe link" },
-            { step: "4", text: "Fans pay → VaultX bot auto-adds them to your channel" },
-            { step: "5", text: "Expired subscriptions = auto-removed. Zero manual work." },
-          ].map(({ step, text }) => (
-            <div key={step} className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold flex items-center justify-center flex-shrink-0">{step}</div>
-              <span className="text-gray-400 text-sm">{text}</span>
-            </div>
-          ))}
-        </div>
+      <div className="rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,.14),transparent_52%),#101015] p-6">
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-200">What stays protected</p>
+        <p className="mt-3 text-lg font-black text-white">Your channel and your people stay in your hands.</p>
+        <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-300">CreatorVault will open this room only after it can prove the whole path: the right channel, a real payment, the access someone receives, and a message you can actually see delivered. Until then, no channel connection or paid-message action runs here.</p>
       </div>
 
-      {/* Link Channel */}
-      <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-5 space-y-4">
-        <div className="text-white font-bold text-sm flex items-center gap-2">
-          <Link2 className="w-4 h-4 text-blue-400" /> Link Your Channel
-        </div>
-
-        <div>
-          <label className="text-gray-500 text-xs uppercase tracking-wider block mb-2">Channel Username</label>
-          <div className="flex gap-2">
-            <div className="flex items-center bg-gray-800 border border-gray-700 rounded-xl px-3 text-gray-500 text-sm">@</div>
-            <input
-              value={channelUsername}
-              onChange={(e) => setChannelUsername(e.target.value.replace("@", ""))}
-              placeholder="yourchannelname"
-              className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="text-gray-500 text-xs uppercase tracking-wider block mb-2">Monthly Access Price ($)</label>
-          <input
-            type="number"
-            value={channelPrice}
-            onChange={(e) => setChannelPrice(e.target.value)}
-            min="4.99"
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="text-gray-500 text-xs uppercase tracking-wider block mb-2">Setup Instructions</label>
-          <div className="bg-gray-800 rounded-xl p-4 text-xs text-gray-400 space-y-1.5">
-            <div>1. Add <span className="text-blue-400 font-mono">{vaultxBotUsername}</span> as admin to your channel</div>
-            <div>2. Give it "Add Members" permission</div>
-            <div>3. Enter your channel username above and click Link</div>
-          </div>
-        </div>
-
-        {/* Linked status badge */}
-        {channelLoading ? (
-          <div className="text-gray-500 text-xs">Checking linked channel…</div>
-        ) : linked ? (
-          <div className="flex items-center gap-2 text-green-400 text-xs font-semibold">
-            <CheckCircle className="w-4 h-4" />
-            Linked to: @{linkedChannel!.channel_id}
-          </div>
-        ) : null}
-
-        <button
-          onClick={handleLinkChannel}
-          disabled={linkMutation.isPending}
-          className={`w-full font-bold py-3 rounded-xl text-sm transition-colors ${
-            linkMutation.isPending
-              ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-              : linked
-              ? "bg-green-600 text-white hover:bg-green-700"
-              : "bg-blue-600 text-white hover:bg-blue-700"
-          }`}
-        >
-          {linkMutation.isPending
-            ? "Linking…"
-            : linked
-            ? "Update Channel"
-            : "Link Channel"}
-        </button>
-
-        {/* Inline error */}
-        {linkMutation.isError && (
-          <p className="text-red-400 text-xs mt-1">
-            {linkMutation.error?.message ?? "Failed to link channel"}
-          </p>
-        )}
-      </div>
-
-      {/* Subscribe Link */}
-      <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-5">
-        <div className="text-white font-bold text-sm flex items-center gap-2 mb-3">
-          <Send className="w-4 h-4 text-blue-400" /> Your Subscribe Link
-        </div>
-        <div className="bg-gray-800 rounded-xl p-3 flex items-center gap-3">
-          <div className="flex-1 text-blue-400 text-xs font-mono truncate">{inviteLink}</div>
-          <button onClick={copyLink} className="text-gray-400 hover:text-white transition-colors">
-            {copied ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-          </button>
-        </div>
-        <div className="text-gray-600 text-xs mt-2">Share this link on X, Instagram, or anywhere. Fans click → pay → get added automatically.</div>
-      </div>
-
-      {/* Telegram Content Ideas */}
-      <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-5">
-        <div className="text-white font-bold text-sm flex items-center gap-2 mb-4">
-          <Sparkles className="w-4 h-4 text-amber-400" /> What to Post in Your VaultX Channel
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { icon: "🔥", label: "Daily exclusives", desc: "Content fans can't get anywhere else" },
-            { icon: "💬", label: "Voice messages", desc: "Personal audio for subscribers" },
-            { icon: "📸", label: "Behind the scenes", desc: "Raw, unfiltered moments" },
-            { icon: "⚡", label: "Flash PPV drops", desc: "Limited-time premium content" },
-            { icon: "🎁", label: "Subscriber rewards", desc: "Loyalty bonuses and gifts" },
-            { icon: "🗳️", label: "Polls & requests", desc: "Let fans vote on content" },
-          ].map(({ icon, label, desc }) => (
-            <div key={label} className="bg-gray-800 rounded-xl p-3">
-              <div className="text-lg mb-1">{icon}</div>
-              <div className="text-white text-xs font-semibold">{label}</div>
-              <div className="text-gray-500 text-xs">{desc}</div>
-            </div>
-          ))}
-        </div>
+      <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+        <p className="text-sm font-black text-white">Your next move is still live.</p>
+        <p className="mt-2 text-sm leading-relaxed text-zinc-400">Keep your source, treatment, and next paid-drop direction together in Body Cinema. That work stays connected to real media you own.</p>
+        <a href="/vaultx/drop" className="mt-4 inline-flex items-center rounded-xl bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-zinc-200">Open Body Cinema →</a>
       </div>
     </div>
   );

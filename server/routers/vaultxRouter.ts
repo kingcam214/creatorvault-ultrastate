@@ -4172,22 +4172,11 @@ export const vaultxRouter = router({
 
   linkChannel: protectedProcedure
     .input(z.object({ channelId: z.string().min(1).max(255), channelName: z.string().min(1).max(255), botToken: z.string().optional() }))
-    .mutation(async ({ ctx, input }) => {
-      const bots = await rawQuery("SELECT id FROM telegram_bots WHERE created_by = ? LIMIT 1", [ctx.user.id]);
-      let botId: string;
-      if (bots.length === 0) {
-        botId = randomUUID();
-        await rawExec(`INSERT INTO telegram_bots (id, name, bot_token, status, created_by) VALUES (?, ?, '', 'active', ?)`, [botId, `VaultX Bot - ${input.channelName}`, ctx.user.id]);
-      } else { botId = bots[0].id; }
-      const existing = await rawQuery("SELECT id FROM telegram_channels WHERE creator_id = ? LIMIT 1", [ctx.user.id]);
-      if (existing.length === 0) {
-        const chanId = randomUUID();
-        await rawExec(`INSERT INTO telegram_channels (id, bot_id, channel_id, channel_name, channel_type, creator_id) VALUES (?, ?, ?, ?, 'private', ?)`, [chanId, botId, input.channelId, input.channelName, ctx.user.id]);
-      } else {
-        await rawExec("UPDATE telegram_channels SET channel_id = ?, channel_name = ? WHERE creator_id = ?", [input.channelId, input.channelName, ctx.user.id]);
-      }
-      const rows = await rawQuery("SELECT * FROM telegram_channels WHERE creator_id = ? LIMIT 1", [ctx.user.id]);
-      return rows[0] || null;
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Channel access stays closed until CreatorVault can prove payment, delivery, and the access a fan receives together.",
+      });
     }),
 
   getLinkedChannel: protectedProcedure.query(async ({ ctx }) => {
