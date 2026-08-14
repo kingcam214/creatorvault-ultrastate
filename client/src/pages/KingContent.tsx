@@ -459,6 +459,26 @@ export default function KingContent() {
             </a>
           </Link>
 
+          {/* Motion Flyer */}
+          <Link href="/agents/motion-flyer-agent">
+            <a className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0f] p-6 transition hover:border-rose-300/40 hover:bg-[#0d0d14]">
+              <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-rose-500/10 blur-3xl transition group-hover:bg-rose-500/20" />
+              <div>
+                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/20 text-rose-200">
+                  <Film className="h-5 w-5" />
+                </div>
+                <h2 className="mb-2 text-xl font-black text-white">Motion Flyer</h2>
+                <p className="text-sm leading-relaxed text-zinc-400">
+                  Turn a saved CreatorVault moment into a moving campaign piece with real footage, premium type, and a finished video you can watch before you use it.
+                </p>
+              </div>
+              <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Moving Campaigns</span>
+                <ArrowUpRight className="h-4 w-4 text-zinc-500 transition group-hover:text-rose-200" />
+              </div>
+            </a>
+          </Link>
+
           {/* Social Empire Handoff */}
           <Link href={CreatorVaultRoute.socialEmpire}>
             <a className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0f] p-6 transition hover:border-indigo-300/40 hover:bg-[#0d0d14]">
