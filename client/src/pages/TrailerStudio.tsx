@@ -182,7 +182,7 @@ export default function TrailerStudio() {
         {/* ═══ MODE SELECTION ═══ */}
         {step === "mode" && (
           <div>
-            <p style={{ fontSize: 11, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 6 }}>VaultX · Viral Trailers</p>
+            <p style={{ fontSize: 11, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 6 }}>VaultX · Trailer Maker</p>
             <h1 style={{ fontSize: 34, fontFamily: "Bebas Neue, sans-serif", lineHeight: 1, margin: "0 0 8px" }}>{t("trailer.mode_title")}</h1>
             <p style={{ fontSize: 14, color: MUTED, marginBottom: 20, lineHeight: 1.6 }}>Start with the footage you already own. The Director keeps the selected source, opening, story structure, and release purpose together before any finishing lane is considered.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -222,7 +222,7 @@ export default function TrailerStudio() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(90px,1fr))", gap: 10, marginBottom: 16 }}>
               {clips.map((c, i) => (
                 <div key={i} style={{ position: "relative", aspectRatio: "9/16", borderRadius: 10, background: CARD, border: `1px solid ${BORDER}`, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {c.name.match(/\.(jpg|jpeg|png|webp)$/i) ? <img src={c.src} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <video src={c.src} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                  {c.name.match(/\.(jpg|jpeg|png|webp)$/i) ? <img src={c.src} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <video src={c.src} muted autoPlay loop playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
                   <button onClick={() => setClips(p => p.filter((_, j) => j !== i))} style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,0.8)", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={12} /></button>
                   <span style={{ position: "absolute", bottom: 3, left: 4, fontSize: 9, color: MUTED }}>#{i + 1}</span>
                 </div>
@@ -242,8 +242,8 @@ export default function TrailerStudio() {
         {/* ═══ TEMPLATE ═══ */}
         {step === "template" && (
           <div>
-            <h2 style={{ fontSize: 26, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 6px" }}>Pick your viral structure.</h2>
-            <p style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>Each template is a proven trailer formula. One tap sets vibe, pacing, body-focus rotation, and CTA.</p>
+            <h2 style={{ fontSize: 26, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 6px" }}>Pick your story structure.</h2>
+            <p style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>Each direction sets the opening, pace, focus, and final ask around the source you chose.</p>
             <div style={{ display: "grid", gap: 8, marginBottom: 20 }}>
               {templates.map((t: any) => (
                 <button key={t.id} onClick={() => setTemplateId(t.id)} style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", background: templateId === t.id ? GOLD_DIM : CARD, border: `1px solid ${templateId === t.id ? GOLD : BORDER}`, borderRadius: 14, padding: "14px", cursor: "pointer" }}>
@@ -292,8 +292,8 @@ export default function TrailerStudio() {
 
             {/* Info & CTA */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
-              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Your name / handle (watermark + CTA)" style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none" }} />
-              <input value={priceLine} onChange={e => setPriceLine(e.target.value)} placeholder='CTA line (e.g. "Unlock $29" or "Link in bio")' style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none" }} />
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Name this trailer" style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none" }} />
+              <input value={priceLine} onChange={e => setPriceLine(e.target.value)} placeholder="What should they do next?" style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, color: "#fff", fontSize: 14, padding: "12px 14px", outline: "none" }} />
               <div style={{ background: CARD, border: `1px solid ${audioAssetId ? GREEN : BORDER}`, borderRadius: 12, padding: "12px 14px" }}>
                 <p style={{ margin: "0 0 7px", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", gap: 7 }}><Music size={15} color={audioAssetId ? GREEN : GOLD} /> Soundtrack direction</p>
                 {audioAssetId ? (
