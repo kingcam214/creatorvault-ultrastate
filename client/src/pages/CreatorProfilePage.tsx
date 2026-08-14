@@ -390,7 +390,7 @@ export default function CreatorProfilePage() {
           <div className="flex items-center gap-2 pb-1">
             {isOwnProfile ? (
               <button
-                onClick={() => navigate("/settings/profile")}
+                onClick={() => navigate("/profile/edit")}
                 className="px-4 py-2 text-xs font-bold uppercase tracking-widest"
                 style={{ border: `1px solid ${T.border}`, color: T.text, borderRadius: "2px" }}
               >
