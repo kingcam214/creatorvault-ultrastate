@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import {
   createSubscriptionTier,
@@ -8,6 +9,13 @@ import {
   processSubscriptionPayment,
   getCreatorBalance,
 } from "../services/subscriptionManagement";
+
+const subscriptionCheckoutHeld = () => {
+  throw new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message: "Creator subscriptions are held until CreatorVault has a verified checkout-to-access path. No tier, access, or balance record was changed.",
+  });
+};
 
 export const subscriptionsRouter = router({
   /**
@@ -22,8 +30,8 @@ export const subscriptionsRouter = router({
         description: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      return await createSubscriptionTier(input);
+    .mutation(async () => {
+      return subscriptionCheckoutHeld();
     }),
 
   /**
@@ -55,8 +63,8 @@ export const subscriptionsRouter = router({
         stripeSubscriptionId: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      return await subscribeFanToTier(input);
+    .mutation(async () => {
+      return subscriptionCheckoutHeld();
     }),
 
   /**
@@ -72,18 +80,8 @@ export const subscriptionsRouter = router({
         notes: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      const subscription = await subscribeFanToTier({
-        fanId: input.fanId,
-        tierId: input.tierId,
-      });
-
-      return {
-        success: true,
-    // @ts-ignore
-        subscriptionId: subscription.id,
-        status: "pending_verification",
-      };
+    .mutation(async () => {
+      return subscriptionCheckoutHeld();
     }),
 
   /**
@@ -97,12 +95,8 @@ export const subscriptionsRouter = router({
         stripePaymentIntentId: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      return await processSubscriptionPayment(
-        input.subscriptionId,
-        input.amountInCents,
-        input.stripePaymentIntentId
-      );
+    .mutation(async () => {
+      return subscriptionCheckoutHeld();
     }),
 
   /**
