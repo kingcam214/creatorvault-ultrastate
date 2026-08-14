@@ -172,8 +172,9 @@ async function processCaptionJob(captionId: string, videoUrl: string, style: any
   }
 }
 
+const HELD_CAPTION_MESSAGE = "CreatorVault is holding this legacy caption path until it can create real timed captions on moving media without a basic text burn or an ungoverned language call.";
+
 export const smartCaptionsRouter = router({
-  // ─── Transcribe Video ──────────────────────────────────────────────────
   transcribe: protectedProcedure
     .input(z.object({
       videoUrl: z.string().url(),
@@ -185,43 +186,30 @@ export const smartCaptionsRouter = router({
       }).optional(),
       captionStyleId: z.string().optional(),
     }))
-    .mutation(async ({ ctx, input }) => {
-      const captionId = randomUUID();
-      await rawExec(
-        `INSERT INTO caption_jobs
-         (id, user_id, video_url, style_json, processing_status, created_at)
-         VALUES (?, ?, ?, ?, 'queued', NOW())`,
-        [captionId, ctx.user.id, input.videoUrl, JSON.stringify(input.style || {})]
-      );
-      // Fire-and-forget async processing
-      processCaptionJob(captionId, input.videoUrl, input.style || {}, ctx.user.id).catch(console.error);
-      return { captionId, status: "queued" };
+    .mutation(async () => {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: HELD_CAPTION_MESSAGE });
     }),
 
-  // ─── Poll Caption Job ──────────────────────────────────────────────────
   getCaptionById: protectedProcedure
     .input(z.object({ captionId: z.string() }))
     .query(async ({ ctx, input }) => {
       const rows = await rawQuery(
-        "SELECT * FROM caption_jobs WHERE id = ? AND user_id = ? LIMIT 1",
-        [input.captionId, ctx.user.id]
+        "SELECT id FROM caption_jobs WHERE id = ? AND user_id = ? LIMIT 1",
+        [input.captionId, ctx.user.id],
       );
       if (!rows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Caption job not found" });
-      const job = rows[0];
       return {
-        captionId: job.id,
-        processingStatus: job.processing_status,
-        transcript: job.transcript || null,
-        captionedVideoUrl: job.captioned_video_url || null,
-        errorMessage: job.error_message || null,
+        captionId: input.captionId,
+        processingStatus: "held",
+        transcript: null,
+        captionedVideoUrl: null,
+        errorMessage: HELD_CAPTION_MESSAGE,
       };
     }),
 
-  // ─── Apply Caption Style (re-burn with new style) ─────────────────────
   applyCaptionStyle: protectedProcedure
     .input(z.object({
       captionId: z.string(),
-      // Accept either a direct style object OR styleId + customizations (from VaultXVideoEditor)
       style: z.object({
         fontSize: z.number().optional(),
         fontColor: z.string().optional(),
@@ -235,105 +223,30 @@ export const smartCaptionsRouter = router({
         fontColor: z.string().optional(),
       }).optional(),
     }))
-    .mutation(async ({ ctx, input }) => {
-      const rows = await rawQuery(
-        "SELECT * FROM caption_jobs WHERE id = ? AND user_id = ? LIMIT 1",
-        [input.captionId, ctx.user.id]
-      );
-      if (!rows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Caption job not found" });
-      const job = rows[0];
-      if (!job.video_url) throw new TRPCError({ code: "BAD_REQUEST", message: "No source video on this job" });
-      // Resolve style: if styleId provided, look it up from getCaptionStyles list and merge customizations
-      const BUILTIN_STYLES: Record<string, { fontSize: number; fontColor: string; bgColor: string; position: "top"|"bottom"|"center" }> = {
-        "clean-white":  { fontSize: 28, fontColor: "white",  bgColor: "black@0.5", position: "bottom" },
-        "bold-yellow":  { fontSize: 32, fontColor: "yellow", bgColor: "black@0.7", position: "bottom" },
-        "minimal-top":  { fontSize: 24, fontColor: "white",  bgColor: "black@0.3", position: "top"    },
-        "cinematic":    { fontSize: 26, fontColor: "white",  bgColor: "black@0.6", position: "bottom" },
-        "fire-red":     { fontSize: 30, fontColor: "red",    bgColor: "black@0.5", position: "bottom" },
-        "neon-green":   { fontSize: 28, fontColor: "#00FF41",bgColor: "black@0.6", position: "bottom" },
-        "luxury-gold":  { fontSize: 30, fontColor: "#FFD700",bgColor: "black@0.7", position: "bottom" },
-      };
-      let resolvedStyle: { fontSize?: number; fontColor?: string; bgColor?: string; position?: "top"|"bottom"|"center" };
-      if (input.styleId) {
-        const base = BUILTIN_STYLES[input.styleId] || BUILTIN_STYLES["clean-white"];
-        resolvedStyle = {
-          ...base,
-          ...(input.customizations?.fontSize ? { fontSize: input.customizations.fontSize } : {}),
-          ...(input.customizations?.fontColor ? { fontColor: input.customizations.fontColor } : {}),
-          ...(input.customizations?.placement ? { position: input.customizations.placement } : {}),
-        };
-      } else {
-        resolvedStyle = input.style || {};
-      }
-      // Reset and reprocess with resolved style
-      await rawExec(
-        "UPDATE caption_jobs SET processing_status = \'queued\', style_json = ?, captioned_video_url = NULL WHERE id = ?",
-        [JSON.stringify(resolvedStyle), input.captionId]
-      );
-      processCaptionJob(input.captionId, job.video_url, resolvedStyle, ctx.user.id).catch(console.error);
-      return { captionId: input.captionId, status: "queued" };
+    .mutation(async () => {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: HELD_CAPTION_MESSAGE });
     }),
 
-  // ─── Get Caption Styles ────────────────────────────────────────────────
   getCaptionStyles: protectedProcedure
     .input(z.object({ premiumOnly: z.boolean().optional() }))
-    .query(async () => {
-      return [
-        { id: "clean-white", name: "Clean White", fontSize: 28, fontColor: "white", bgColor: "black@0.5", position: "bottom", premium: false },
-        { id: "bold-yellow", name: "Bold Yellow", fontSize: 32, fontColor: "yellow", bgColor: "black@0.7", position: "bottom", premium: false },
-        { id: "minimal-top", name: "Minimal Top", fontSize: 24, fontColor: "white", bgColor: "black@0.3", position: "top", premium: false },
-        { id: "cinematic", name: "Cinematic", fontSize: 26, fontColor: "white", bgColor: "black@0.6", position: "bottom", premium: true },
-        { id: "fire-red", name: "Fire Red", fontSize: 30, fontColor: "red", bgColor: "black@0.5", position: "bottom", premium: true },
-        { id: "neon-pink", name: "Neon Pink", fontSize: 30, fontColor: "#FF1493", bgColor: "black@0.5", position: "bottom", premium: true },
-      ];
-    }),
+    .query(async () => []),
 
-  // ─── Text caption generation (kept from original) ─────────────────────
   generateCaption: protectedProcedure
-    .input(z.object({
-      content: z.string(),
-      platform: z.string(),
-      tone: z.string().optional(),
-      includeHashtags: z.boolean().default(true),
-    }))
-    .mutation(async ({ input }) => {
-      const c = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{
-          role: "user",
-          content: `Write a smart caption for ${input.platform}:\nContent: ${input.content}\nTone: ${input.tone || "engaging"}\n${input.includeHashtags ? "Include relevant hashtags." : "No hashtags."}\nMake it scroll-stopping and authentic.`,
-        }],
-        max_tokens: 300,
-      });
-      return { caption: c.choices[0].message.content };
+    .input(z.object({ content: z.string(), platform: z.string(), tone: z.string().optional(), includeHashtags: z.boolean().default(true) }))
+    .mutation(async () => {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: HELD_CAPTION_MESSAGE });
     }),
 
   generateCaptionVariants: protectedProcedure
     .input(z.object({ content: z.string(), platform: z.string(), count: z.number().default(3) }))
-    .mutation(async ({ input }) => {
-      const c = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{
-          role: "user",
-          content: `Generate ${input.count} different caption variants for this ${input.platform} content:\n${input.content}\nEach should have a different angle/tone.`,
-        }],
-        max_tokens: 400,
-      });
-      return { variants: c.choices[0].message.content };
+    .mutation(async () => {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: HELD_CAPTION_MESSAGE });
     }),
 
   analyzeCaption: protectedProcedure
     .input(z.object({ caption: z.string(), platform: z.string() }))
-    .mutation(async ({ input }) => {
-      const c = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{
-          role: "user",
-          content: `Analyze this ${input.platform} caption and score it:\n"${input.caption}"\nScore (1-10): hook, clarity, engagement potential, CTA strength. Provide improvement suggestions.`,
-        }],
-        max_tokens: 300,
-      });
-      return { analysis: c.choices[0].message.content };
+    .mutation(async () => {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: HELD_CAPTION_MESSAGE });
     }),
 });
 
