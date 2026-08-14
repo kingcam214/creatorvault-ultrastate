@@ -4224,130 +4224,23 @@ export const vaultxRouter = router({
   // and Viral-Clip-Pack template. This is not optional. This is the standard.
   // ═══════════════════════════════════════════════════════════════════════════
   automatedDirectorExport: protectedProcedure
-    .input(z.object({
-      sourceUrl: z.string(),
-      platform: z.enum(["onlyfans", "fansly", "tiktok", "instagram_reel", "master"]).default("master"),
-      hookText: z.string().max(80).optional(),
-      ctaText: z.string().max(80).optional(),
-      enableAIPacing: z.boolean().default(true),
-      projectId: z.number().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const creatorId = await getCreatorId(ctx.user.id);
-      const cid = creatorId || ctx.user.id;
-      const dir = await ensureUploadDir(cid);
-
-      // Resolve source path — relative URL → absolute file path
-      let sourcePath = input.sourceUrl;
-      if (sourcePath.startsWith("/uploads/") || sourcePath.startsWith("/videos/")) {
-        sourcePath = `/root/creatorvault/dist/public${sourcePath}`;
-      }
-      if (!fs.existsSync(sourcePath) && !sourcePath.startsWith("http")) {
-        throw new TRPCError({ code: "NOT_FOUND", message: `Source video not found: ${sourcePath}` });
-      }
-
-      const profileRows = await rawQuery(
-        "SELECT display_name FROM vaultx_creator_profiles WHERE creator_id = ? LIMIT 1",
-        [cid]
-      );
-      const creatorName = profileRows[0]?.display_name || "CREATORVAULT";
-
-      const result = await runAutomatedDirector({
-        sourceUrl: sourcePath,
-        outputDir: dir,
-        creatorName,
-        hookText: input.hookText,
-        ctaText: input.ctaText,
-        platform: input.platform,
-        enableAIPacing: input.enableAIPacing,
-        enableDesireGrade: true,
-        enableTemplate: true,
+    .input(z.any())
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "This creation move stays closed until CreatorVault can make a real result you can watch without using unverified effects or unapproved generation.",
       });
-
-      if (input.projectId) {
-        await rawExec(
-          "UPDATE vaultx_editor_projects SET output_url = ?, status = 'completed', updated_at = NOW() WHERE id = ? AND creator_id = ?",
-          [result.outputUrl, input.projectId, cid]
-        );
-      }
-
-      await rawExec(
-        `INSERT INTO vaultx_editor_exports (project_id, creator_id, export_format, export_preset, output_url, file_size_bytes, processing_time_seconds, status)
-         VALUES (?, ?, 'mp4_hd', ?, ?, ?, ?, 'completed')`,
-        [input.projectId || null, cid, input.platform, result.outputUrl, result.fileSizeBytes, Math.round(result.processingTimeMs / 1000)]
-      );
-
-      return {
-        outputUrl: result.outputUrl,
-        fileSizeBytes: result.fileSizeBytes,
-        processingTimeMs: result.processingTimeMs,
-        processingSteps: result.processingSteps,
-        scenesDetected: result.scenesDetected,
-        duration: result.duration,
-        success: true,
-      };
     }),
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // PROCEDURE 49 — generateDesireTeaser
-  // Full Tease Engine: AI desire peak detection → beauty enhance (Replicate
-  // zsxkib/pulid) → AI animation (Replicate minimax/video-01-live) →
-  // drip-reveal teaser → censored preview for subscriber paywall
-  // ═══════════════════════════════════════════════════════════════════════════
   generateDesireTeaser: protectedProcedure
-    .input(z.object({
-      sourceUrl: z.string().url(),
-      contentId: z.number().optional(),
-      teaserDurationSeconds: z.number().min(10).max(60).default(30),
-      enableAIAnimation: z.boolean().default(true),
-      enableBeautyEnhance: z.boolean().default(true),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const creatorId = await getCreatorId(ctx.user.id);
-      const cid = creatorId || ctx.user.id;
-      const userRows = await rawQuery("SELECT display_name, username FROM users WHERE id = ?", [ctx.user.id]);
-      const displayName = userRows[0]?.display_name || userRows[0]?.username || "Creator";
-
-      const result = await runTeaseEngine({
-        sourceUrl: input.sourceUrl,
-        creatorId: cid,
-        creatorDisplayName: displayName,
-        teaserDurationSeconds: input.teaserDurationSeconds,
-        enableAIAnimation: input.enableAIAnimation,
-        enableBeautyEnhance: input.enableBeautyEnhance,
+    .input(z.any())
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "This creation move stays closed until CreatorVault can make a real result you can watch without using unverified effects or unapproved generation.",
       });
-
-      if (input.contentId) {
-        await rawExec(
-          "UPDATE vaultx_content SET teaser_url = ?, censored_url = ?, thumbnail_url = COALESCE(?, thumbnail_url) WHERE id = ? AND creator_id = ?",
-          [result.teaserUrl, result.censoredPreviewUrl, result.desirePeakFrameUrl || null, input.contentId, cid]
-        ).catch(() => {});
-      }
-
-      await rawExec(
-        "INSERT INTO vaultx_export_history (creator_id, content_id, export_type, output_url, file_size_bytes, processing_time_seconds, created_at) VALUES (?, ?, 'desire_teaser', ?, 0, ?, NOW())",
-        [cid, input.contentId || null, result.teaserUrl, Math.round(result.processingTimeMs / 1000)]
-      ).catch(() => {});
-
-      return {
-        teaserUrl: result.teaserUrl,
-        censoredPreviewUrl: result.censoredPreviewUrl,
-        desirePeakFrameUrl: result.desirePeakFrameUrl,
-        aiAnimatedClipUrl: result.aiAnimatedClipUrl,
-        beautyEnhancedFrameUrl: result.beautyEnhancedFrameUrl,
-        ctaText: result.ctaText,
-        hooks: result.hooks,
-        suggestedPrice: result.suggestedPrice,
-        peakTimeSeconds: result.peakTimeSeconds,
-        energyScore: result.energyScore,
-        sceneDescription: result.sceneDescription,
-        processingSteps: result.processingSteps,
-        processingTimeMs: result.processingTimeMs,
-        success: true,
-      };
     }),
 
-  // ─── PROCEDURE 50: distributeContent ─────────────────────────────────────
   distributeContent: protectedProcedure
     .input(z.object({
       sourceUrl: z.string().url(),
@@ -5720,339 +5613,50 @@ Generate a ${input.weeks}-week content calendar. Return ONLY valid JSON array wh
   // ─── PROCEDURE: enhanceBodyRegion ────────────────────────────────────────
   // Targeted AI enhancement for a specific body region using inpainting
   enhanceBodyRegion: protectedProcedure
-    .input(z.object({
-      projectId: z.number(),
-      sourceUrl: z.string().url(),
-      region: z.enum(["face", "bust", "abdomen", "hips", "glutes", "legs", "full"]),
-      intensity: z.enum(["subtle", "natural", "enhanced"]).default("enhanced"),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN || "";
-      if (!REPLICATE_TOKEN) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "REPLICATE_API_TOKEN not configured" });
-
-      // Region-specific enhancement prompts — never generic, always specific
-      const regionPrompts: Record<string, Record<string, string>> = {
-        face: {
-          subtle: "flawless skin, natural glow, bright eyes, soft lighting, photorealistic, body-positive beauty",
-          natural: "beautiful face, smooth skin, natural radiance, soft glamour lighting, photorealistic",
-          enhanced: "perfect skin, radiant glow, defined features, glamour lighting, editorial quality, desire-driven beauty",
-        },
-        bust: {
-          subtle: "soft natural lighting on chest, smooth skin, gentle enhancement, body-positive",
-          natural: "glamour lighting on decolletage, luminous skin, natural curves, warm lighting",
-          enhanced: "glamour lighting on decolletage, luminous skin, beautiful natural curves, desire-driven lighting, editorial quality",
-        },
-        abdomen: {
-          subtle: "smooth skin, subtle definition, natural lighting, body-positive",
-          natural: "defined abdomen, smooth skin, warm lighting, natural athletic beauty",
-          enhanced: "defined abs, sculpted waist, strong lighting contrast on abdomen, athletic and sexy, desire-driven",
-        },
-        hips: {
-          subtle: "smooth skin, natural curves, warm lighting, body-positive",
-          natural: "natural hip curves, smooth skin, warm golden lighting",
-          enhanced: "hourglass silhouette, defined hip curve, golden warm lighting emphasizing waist-to-hip ratio, desire-driven",
-        },
-        glutes: {
-          subtle: "smooth skin, natural shape, warm lighting, body-positive",
-          natural: "natural glute shape, smooth skin, warm lighting",
-          enhanced: "lifted and defined glutes, warm golden lighting, shape emphasis, desire-driven composition",
-        },
-        legs: {
-          subtle: "smooth skin, natural tone, even lighting, body-positive",
-          natural: "smooth legs, natural tone, warm lighting",
-          enhanced: "toned defined legs, lengthening composition, smooth luminous skin, editorial quality, desire-driven",
-        },
-        full: {
-          subtle: "natural beauty enhancement, soft glow, balanced lighting across figure, body-positive",
-          natural: "beautiful woman, full body glow, natural curves, warm cinematic lighting",
-          enhanced: "goddess figure, full body glow, cinematic lighting, perfect curves, luxury editorial quality, desire-driven",
-        },
-      };
-
-      const prompt = regionPrompts[input.region][input.intensity];
-      const negativePrompt = "ugly, distorted, unnatural, over-processed, plastic skin, blurry, low quality, deformed";
-
-      // Use Stability AI SDXL inpainting for targeted region enhancement
-      const strengthMap: Record<string, number> = { subtle: 0.25, natural: 0.4, enhanced: 0.55 };
-      const strength = strengthMap[input.intensity];
-
-      let enhancedUrl = input.sourceUrl;
-      let predictionId: string | undefined;
-
-      try {
-        // Primary: SDXL img2img with region-specific prompt
-        const resp = await fetch("https://api.replicate.com/v1/predictions", {
-          method: "POST",
-          headers: { Authorization: `Token ${REPLICATE_TOKEN}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            version: "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
-            input: {
-              image: input.sourceUrl,
-              prompt,
-              negative_prompt: negativePrompt,
-              prompt_strength: strength,
-              num_inference_steps: 35,
-              guidance_scale: 7.5,
-              scheduler: "K_EULER",
-            },
-          }),
-        });
-        const pred = await resp.json();
-        predictionId = pred.id;
-      } catch (e: any) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Enhancement failed: ${e.message}` });
-      }
-
-      // Save enhancement record
-      const existingEnhancements = await rawQuery(
-        "SELECT body_enhancements_applied FROM vaultx_editor_projects WHERE id = ? AND creator_id = ? LIMIT 1",
-        [input.projectId, ctx.user.id]
-      );
-      const enhancements = existingEnhancements[0]?.body_enhancements_applied
-        ? JSON.parse(existingEnhancements[0].body_enhancements_applied)
-        : {};
-      enhancements[input.region] = { intensity: input.intensity, predictionId, status: "processing", timestamp: Date.now() };
-
-      await rawQuery(
-        "UPDATE vaultx_editor_projects SET body_enhancements_applied = ?, updated_at = NOW() WHERE id = ? AND creator_id = ?",
-        [JSON.stringify(enhancements), input.projectId, ctx.user.id]
-      );
-
-      return {
-        projectId: input.projectId,
-        region: input.region,
-        intensity: input.intensity,
-        predictionId,
-        status: "processing",
-        prompt,
-        message: `${input.region.toUpperCase()} enhancement started — ${input.intensity} intensity`,
-      };
+    .input(z.any())
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "This creation move stays closed until CreatorVault can make a real result you can watch without using unverified effects or unapproved generation.",
+      });
     }),
 
-  // ─── PROCEDURE: generateRevealShot ───────────────────────────────────────
-  // Kling 2.0 via Pollo AI: cinematic slow bottom-to-top reveal shot
   generateRevealShot: protectedProcedure
-    .input(z.object({
-      projectId: z.number(),
-      enhancedImageUrl: z.string().url(),
-      bodyType: z.string().default("beautiful woman"),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const POLLO_KEY = process.env.POLLO_API_KEY || "";
-      if (!POLLO_KEY) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "POLLO_API_KEY not configured" });
-
-      const { generateKingCamVideo } = await import("../services/kingcamAI");
-
-      const revealPrompt = `Ultra slow motion cinematic reveal shot, camera starts at feet and slowly travels up full body to face, ${input.bodyType}, luxury environment, golden warm lighting, desire-driven cinematography, silk sheets or luxury backdrop, smooth dolly camera movement, 4K quality, 8 seconds duration`;
-
-      const result = await generateKingCamVideo({
-        prompt: revealPrompt,
-        model: "kling-3.0",
-        imageUrl: input.enhancedImageUrl,
-        duration: 5,
-        mode: "pro",
-        aspectRatio: "9:16",
-        injectDNA: false,
+    .input(z.any())
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "This creation move stays closed until CreatorVault can make a real result you can watch without using unverified effects or unapproved generation.",
       });
-
-      await rawQuery(
-        "UPDATE vaultx_editor_projects SET reveal_shot_url = ?, updated_at = NOW() WHERE id = ? AND creator_id = ?",
-        [result.url, input.projectId, ctx.user.id]
-      );
-
-      return { projectId: input.projectId, revealShotUrl: result.url, model: result.model };
     }),
 
-  // ─── PROCEDURE: generateBodyFocusClip ────────────────────────────────────
-  // Kling: 3-5 second close-up clip focused on specified body region
   generateBodyFocusClip: protectedProcedure
-    .input(z.object({
-      projectId: z.number(),
-      region: z.enum(["bust", "abdomen", "glutes", "legs", "full"]),
-      enhancedImageUrl: z.string().url(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const POLLO_KEY = process.env.POLLO_API_KEY || "";
-      if (!POLLO_KEY) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "POLLO_API_KEY not configured" });
-
-      const { generateKingCamVideo } = await import("../services/kingcamAI");
-
-      const regionPrompts: Record<string, string> = {
-        bust: "Slow cinematic zoom on decolletage and chest, soft glamour lighting, smooth luminous skin, desire-driven close up, 4K, 5 seconds",
-        abdomen: "Slow reveal of toned abdomen, defined muscles highlighted by dramatic lighting, cinematic close up, body-positive, 4K, 5 seconds",
-        glutes: "Slow warm cinematic pan across glutes, golden lighting, shape emphasis, desire-driven close up, 4K, 5 seconds",
-        legs: "Slow cinematic camera move along legs from feet upward, smooth luminous skin, editorial quality, 4K, 5 seconds",
-        full: "Full body slow orbit camera move, complete figure, golden lighting, goddess energy, desire-driven, 4K, 5 seconds",
-      };
-
-      const result = await generateKingCamVideo({
-        prompt: regionPrompts[input.region],
-        model: "kling-3.0",
-        imageUrl: input.enhancedImageUrl,
-        duration: 5,
-        mode: "pro",
-        aspectRatio: "9:16",
-        injectDNA: false,
+    .input(z.any())
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "This creation move stays closed until CreatorVault can make a real result you can watch without using unverified effects or unapproved generation.",
       });
-
-      // Save to focus_clips
-      const existingProject = await rawQuery(
-        "SELECT focus_clips FROM vaultx_editor_projects WHERE id = ? AND creator_id = ? LIMIT 1",
-        [input.projectId, ctx.user.id]
-      );
-      const focusClips = existingProject[0]?.focus_clips ? JSON.parse(existingProject[0].focus_clips) : {};
-      focusClips[input.region] = result.url;
-
-      await rawQuery(
-        "UPDATE vaultx_editor_projects SET focus_clips = ?, updated_at = NOW() WHERE id = ? AND creator_id = ?",
-        [JSON.stringify(focusClips), input.projectId, ctx.user.id]
-      );
-
-      return { projectId: input.projectId, region: input.region, clipUrl: result.url, model: result.model };
     }),
 
-  // ─── PROCEDURE: assembleHighlightReel ────────────────────────────────────
-  // Remotion composition: reveal shot + focus clips + creator branding + CTA
   assembleHighlightReel: protectedProcedure
-    .input(z.object({
-      projectId: z.number(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const projects = await rawQuery(
-        "SELECT * FROM vaultx_editor_projects WHERE id = ? AND creator_id = ? LIMIT 1",
-        [input.projectId, ctx.user.id]
-      );
-      if (!projects.length) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
-      const project = projects[0];
-
-      const creators = await rawQuery(
-        "SELECT display_name FROM vaultx_creator_profiles WHERE user_id = ? LIMIT 1",
-        [ctx.user.id]
-      );
-      const creatorName = creators[0]?.display_name || ctx.user.name || "VaultX Creator";
-
-      const revealUrl = project.reveal_shot_url;
-      const focusClips = project.focus_clips ? JSON.parse(project.focus_clips) : {};
-      const bodyMap = project.body_map ? JSON.parse(project.body_map) : {};
-      const strongestAssets = bodyMap.strongest_assets || ["full"];
-
-      // Build Remotion composition data
-      const compositionData = {
-        creatorName,
-        brandColors: { primary: "#00D9FF", accent: "#C9A84C", bg: "#0A0A0A" },
-        scenes: [
-          // 0-8s: Reveal shot
-          revealUrl ? { start: 0, end: 8, type: "video", url: revealUrl, label: "REVEAL" } : null,
-          // 8-13s: Strongest body focus clip
-          strongestAssets[0] && focusClips[strongestAssets[0]]
-            ? { start: 8, end: 13, type: "video", url: focusClips[strongestAssets[0]], label: strongestAssets[0].toUpperCase() }
-            : null,
-          // 13-18s: Second focus clip
-          strongestAssets[1] && focusClips[strongestAssets[1]]
-            ? { start: 13, end: 18, type: "video", url: focusClips[strongestAssets[1]], label: strongestAssets[1].toUpperCase() }
-            : null,
-          // 18s+: Main enhanced content
-          { start: 18, end: 28, type: "video", url: project.source_url || project.output_url, label: "MAIN" },
-          // Final 3s: CTA
-          { start: 25, end: 28, type: "cta", text: "SEE MORE ON VAULTX", animation: "fade_up", color: "#00D9FF" },
-        ].filter(Boolean),
-        watermark: { text: creatorName, position: "bottom_left", color: "#C9A84C", font: "Playfair Display" },
-        cta: { text: "SUBSCRIBE FOR MORE", color: "#00D9FF", timing: 25 },
-        totalDuration: 28,
-      };
-
-      await rawQuery(
-        "UPDATE vaultx_editor_projects SET remotion_composition_data = ?, highlight_reel_url = ?, updated_at = NOW() WHERE id = ? AND creator_id = ?",
-        [JSON.stringify(compositionData), `remotion:${input.projectId}`, input.projectId, ctx.user.id]
-      );
-
-      return { projectId: input.projectId, compositionData, message: "Highlight reel assembled — ready for Remotion render" };
-    }),
-
-  // ─── PROCEDURE: generateBodyCaptions ─────────────────────────────────────
-  // GPT generates body-specific captions, PPV pitch, hashtags based on body analysis
-  generateBodyCaptions: protectedProcedure
-    .input(z.object({
-      projectId: z.number(),
-      captionStyle: z.enum(["teaser", "explicit", "ppv_pitch"]).default("teaser"),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const { OpenAI } = await import("openai");
-      const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-      const projects = await rawQuery(
-        "SELECT body_map, source_analysis FROM vaultx_editor_projects WHERE id = ? AND creator_id = ? LIMIT 1",
-        [input.projectId, ctx.user.id]
-      );
-      const bodyMap = projects[0]?.body_map ? JSON.parse(projects[0].body_map) : {};
-      const analysis = projects[0]?.source_analysis ? JSON.parse(projects[0].source_analysis) : {};
-      const strongestAssets = bodyMap.strongest_assets || ["figure"];
-
-      const creators = await rawQuery(
-        "SELECT display_name FROM vaultx_creator_profiles WHERE user_id = ? LIMIT 1",
-        [ctx.user.id]
-      );
-      const creatorName = creators[0]?.display_name || "your creator";
-
-      const systemPrompt = `You are an adult content caption expert for VaultX. Creator: "${creatorName}". Strongest visual assets: ${strongestAssets.join(", ")}. Body type: ${bodyMap.body_type || "beautiful"}. Caption style: ${input.captionStyle}.
-
-Generate body-focused captions and return ONLY valid JSON:
-{
-  "teaser_caption": "censored desire-building caption safe for social media, references body assets",
-  "subscriber_caption": "explicit caption for subscribers, body-focused",
-  "ppv_pitch": "compelling PPV sales message focused on body assets",
-  "mass_message_template": "mass DM template referencing specific body assets",
-  "hashtag_sets": {
-    "onlyfans": ["10 body-focused hashtags"],
-    "twitter": ["10 hashtags"],
-    "instagram": ["10 safe body-positive hashtags"],
-    "telegram": ["10 hashtags"]
-  }
-}`;
-
-      const gptResp = await openaiClient.chat.completions.create({
-        model: "gpt-4.1-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: "Generate body-focused captions. Return only JSON." },
-        ],
-        max_tokens: 600,
-        temperature: 0.85,
+    .input(z.any())
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "This creation move stays closed until CreatorVault can make a real result you can watch without using unverified effects or unapproved generation.",
       });
-
-      let captions: any = {};
-      try {
-        const rawText = gptResp.choices[0].message.content || "{}";
-        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-        captions = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
-      } catch {
-        captions = {
-          teaser_caption: `The ${strongestAssets[0] || "figure"} is everything today 🔥`,
-          subscriber_caption: `You asked for it... here's what you've been waiting for 💋`,
-          ppv_pitch: `Unlock the full uncensored version — every detail, nothing hidden 🔥`,
-          mass_message_template: `Hey babe 💕 Just dropped something special — you're going to love this one`,
-          hashtag_sets: {
-            onlyfans: ["#onlyfans", "#vaultx", "#bodypositivity"],
-            twitter: ["#nsfw", "#adult", "#bodypositivity"],
-            instagram: ["#fitness", "#lifestyle", "#bodypositivity"],
-            telegram: ["#vaultx", "#exclusive", "#bodypositivity"],
-          },
-        };
-      }
-
-      if (input.projectId) {
-        await rawExec(
-          "UPDATE vaultx_editor_projects SET body_captions = ?, updated_at = NOW() WHERE id = ? AND creator_id = ?",
-          [JSON.stringify(captions), input.projectId, ctx.user.id]
-        ).catch(() => null);
-      }
-
-      return { projectId: input.projectId, captions, strongestAssets, captionStyle: input.captionStyle };
     }),
 
+  generateBodyCaptions: protectedProcedure
+    .input(z.any())
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "This creation move stays closed until CreatorVault can make a real result you can watch without using unverified effects or unapproved generation.",
+      });
+    }),
 
-  // ─── PROCEDURE: createBodyCinemaCollection ─────────────────────────────────
-  // Body Cinema Collection: packages reveal shot, body-focus clips, captions, pricing, and platform plan into one sellable asset collection.
   createBodyCinemaCollection: protectedProcedure
     .input(z.object({
       projectId: z.number(),
