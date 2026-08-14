@@ -2123,7 +2123,7 @@ function VaultXPublicLanding() {
     },
     {
       title: "Private membership",
-      body: "A steady place for the fans who want to stay close to you.",
+      body: "Membership access opens only when payment, access, and your money record can stay tied together for real.",
     },
     {
       title: "Private messages",
