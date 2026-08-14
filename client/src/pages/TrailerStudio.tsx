@@ -74,7 +74,7 @@ export default function TrailerStudio() {
     { enabled: selectedVaultAssetIds.length > 0, staleTime: 30_000 },
   );
   const statusQ = (trpc as any).trailer.getStatus.useQuery({ jobId: jobId || "" }, { enabled: Boolean(jobId) && step === "building", refetchInterval: 3000, retry: false });
-  const templates = templatesQ.data?.templates || [];
+  const templates = (templatesQ.data?.templates || []).filter((template: any) => !template.aiRemix && !template.polish && !template.transitions);
 
   useEffect(() => {
     const j = statusQ.data; if (!j) return;
@@ -251,7 +251,6 @@ export default function TrailerStudio() {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <p style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>{t.name}</p>
-                      <span style={{ fontSize: 10, color: GOLD, background: GOLD_DIM, padding: "2px 6px", borderRadius: 6 }}>{t.conversionScore}/10</span>
                     </div>
                     <p style={{ fontSize: 11, color: MUTED, margin: "2px 0 0", lineHeight: 1.4 }}>{t.tagline}</p>
                   </div>

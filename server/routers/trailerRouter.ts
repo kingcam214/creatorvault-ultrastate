@@ -183,8 +183,21 @@ async function prepareTrailerShotPath(input: {
 
 export const trailerRouter = router({
   getTemplates: protectedProcedure.query(() => ({
-    templates: TRAILER_TEMPLATES,
-    stats: { total: TRAILER_TEMPLATES.length, avgConversion: (TRAILER_TEMPLATES.reduce((s, t) => s + t.conversionScore, 0) / TRAILER_TEMPLATES.length).toFixed(1) },
+    templates: TRAILER_TEMPLATES
+      .filter((template) => !template.aiRemix && !template.polish && !template.transitions)
+      .map(({ id, name, emoji, tagline, vibe, intensity, focusRotation, hookText, ctaText, ctaSubText, bestFor }) => ({
+        id,
+        name,
+        emoji,
+        tagline,
+        vibe,
+        intensity,
+        focusRotation,
+        hookText,
+        ctaText,
+        ctaSubText,
+        bestFor,
+      })),
   })),
 
   build: protectedProcedure
