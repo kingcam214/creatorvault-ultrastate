@@ -1274,79 +1274,14 @@ function DiscoverTab() {
 // ============================================================================
 function CreatorProfile({ creator, onBack }: { creator: any; onBack: () => void }) {
   const tier = TIER_CONFIG[creator.tier as keyof typeof TIER_CONFIG] || TIER_CONFIG.emerging;
-  const [subStep, setSubStep] = useState<"idle" | "tiers" | "pay" | "done">("idle");
-  const [selectedTier, setSelectedTier] = useState<{ id: number; name: string; price: number } | null>(null);
-  const [subIntentData, setSubIntentData] = useState<{ clientSecret: string; intentId: string; amountCents: number; tierId: number } | null>(null);
   const [showTip, setShowTip] = useState(false);
-  const subscribeIntent = trpc.vaultx.subscribeToCreator.useMutation();
-  const confirmSub = trpc.vaultx.confirmSubscription.useMutation();
-  const { data: tiersData } = trpc.vaultx.getCreatorProfile.useQuery(
-    { creatorId: creator.creator_id },
-    { retry: false, enabled: !!creator.creator_id }
-  );
   const { data: contentData } = trpc.vaultx.getCreatorContent.useQuery(
     { creatorId: creator.creator_id, limit: 12, offset: 0 },
     { retry: false, enabled: !!creator.creator_id }
   );
-  const isSubscribed = (contentData as any)?.isSubscribed || subStep === "done";
-
-  // Build tiers: use DB tiers if available, else derive from creator's base price
-  const tiers = (tiersData as any)?.creator?.tiers?.length > 0
-    ? (tiersData as any).creator.tiers
-    : [
-        { id: 1, name: "Fan", price: creator.base_subscription_price || 9.99, description: "Access to all posts and DMs", perks: ["All posts unlocked", "DM access", "Subscriber badge"] },
-        { id: 2, name: "Super Fan", price: (creator.base_subscription_price || 9.99) * 2, description: "Everything in Fan + PPV discounts", perks: ["All Fan perks", "20% PPV discount", "Priority DM reply", "Exclusive content"] },
-        { id: 3, name: "VIP", price: (creator.base_subscription_price || 9.99) * 5, description: "Full access + custom requests", perks: ["All Super Fan perks", "1 custom request/month", "VIP badge", "First access to new content"] },
-      ];
-
-  const handleSubscribe = async (tierOverride?: { id: number; price: number }) => {
-    const t = tierOverride || selectedTier;
-    if (!t) { setSubStep("tiers"); return; }
-    try {
-      const result = await subscribeIntent.mutateAsync({ creatorId: creator.creator_id, tier: (t.id === 1 ? "basic" : t.id === 2 ? "premium" : "vip") as any });
-      setSubIntentData({
-        clientSecret: "",
-        intentId: String(result.subscriptionId),
-        amountCents: Math.round((t.price || 9.99) * 100),
-        tierId: t.id,
-      });
-      setSubStep("pay");
-    } catch (e: any) {
-      if (e.message?.includes("Already subscribed")) {
-        toast.info("You are already subscribed");
-        setSubStep("done");
-      } else {
-        toast.error(e.message || "Failed to start subscription");
-      }
-    }
-  };
-
-  const handleSubSuccess = async () => {
-    if (!subIntentData) return;
-    try {
-      await confirmSub.mutateAsync({
-        subscriptionId: Number(subIntentData.intentId),
-      });
-      setSubStep("done");
-      toast.success(`Subscribed to ${creator.display_name}!`);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to confirm subscription");
-    }
-  };
-
   return (
     <div className="space-y-4">
       {showTip && <TipModal creator={creator} onClose={() => setShowTip(false)} />}
-      {subStep === "pay" && subIntentData && (
-        <StripePaymentModal
-          clientSecret={subIntentData.clientSecret}
-          intentId={subIntentData.intentId}
-          amountCents={subIntentData.amountCents}
-          label={`Subscribe to ${creator.display_name}`}
-          onSuccess={handleSubSuccess}
-          onClose={() => setSubStep("idle")}
-        />
-      )}
       <button onClick={onBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
         ← Back to Discover
       </button>
@@ -1381,72 +1316,15 @@ function CreatorProfile({ creator, onBack }: { creator: any; onBack: () => void 
               <div className="text-gray-500 text-xs">Posts</div>
             </div>
             <div className="bg-gray-900 rounded-xl p-3 text-center">
-              <div className="text-red-400 font-bold">${creator.base_subscription_price || "—"}</div>
-              <div className="text-gray-500 text-xs">Per Month</div>
+              <div className="text-amber-200 font-bold">—</div>
+              <div className="text-gray-500 text-xs">Memberships held</div>
             </div>
           </div>
 
-          {/* 3-Tier Subscription Modal */}
-          {subStep === "tiers" && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setSubStep("idle")}>
-              <div className="bg-gray-950 border border-red-900/40 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                <div className="text-center mb-5">
-                  <div className="text-xl font-black text-white">Subscribe to {creator.display_name}</div>
-                  <div className="text-gray-500 text-sm mt-1">Choose your tier</div>
-                </div>
-                <div className="space-y-3">
-                  {tiers.map((t: any, i: number) => (
-                    <button
-                      key={t.id}
-                      onClick={() => { setSelectedTier(t); handleSubscribe(t); }}
-                      disabled={subscribeIntent.isPending}
-                      className={`w-full text-left border rounded-2xl p-4 transition-all hover:border-red-500/60 ${
-                        i === 1 ? "border-red-500/50 bg-red-950/20" : "border-gray-800 bg-gray-900/60"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          {i === 1 && <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">POPULAR</span>}
-                          <span className="text-white font-bold">{t.name}</span>
-                        </div>
-                        <span className="text-red-400 font-black">${typeof t.price === "number" ? t.price.toFixed(2) : t.price}<span className="text-gray-600 font-normal text-xs">/mo</span></span>
-                      </div>
-                      <div className="text-gray-500 text-xs mb-2">{t.description || t.perks?.[0]}</div>
-                      <div className="space-y-1">
-                        {(t.perks || []).map((perk: string) => (
-                          <div key={perk} className="flex items-center gap-2 text-xs text-gray-400">
-                            <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
-                            {perk}
-                          </div>
-                        ))}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-                <button onClick={() => setSubStep("idle")} className="w-full mt-3 py-2 text-gray-500 text-sm hover:text-gray-300">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Actions */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => isSubscribed ? null : setSubStep("tiers")}
-              disabled={subscribeIntent.isPending}
-              className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold py-3 rounded-xl text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {subscribeIntent.isPending ? "Loading..." : isSubscribed ? "✓ Subscribed" : `Subscribe from $${creator.base_subscription_price || "9.99"}/mo`}
-            </button>
-            {creator.tips_enabled && (
-              <button
-                onClick={() => setShowTip(true)}
-                className="bg-gray-800 text-white font-bold py-3 px-4 rounded-xl text-sm hover:bg-gray-700 transition-colors"
-              >
-                <Gift className="w-4 h-4" />
-              </button>
-            )}
+          <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-4 py-3">
+            <p className="text-sm font-black text-amber-100">Membership access is not open for sale yet.</p>
+            <p className="mt-1 text-xs leading-relaxed text-zinc-400">This profile will only offer membership access after payment, access, and the creator’s money record are connected for real.</p>
           </div>
         </div>
       </div>
@@ -1481,13 +1359,13 @@ function CreatorProfile({ creator, onBack }: { creator: any; onBack: () => void 
             ))}
           </div>
         </div>
-      ) : !isSubscribed ? (
+      ) : (
         <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-6 text-center">
           <Lock className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-          <div className="text-white font-bold mb-1">Content is locked</div>
-          <div className="text-gray-500 text-sm">Subscribe to unlock all posts, videos, and DMs</div>
+          <div className="text-white font-bold mb-1">Nothing is posted here yet.</div>
+          <div className="text-gray-500 text-sm">When this creator shares a finished piece, it will show up here.</div>
         </div>
-      ) : null}
+      )}
 
       {/* PPV */}
       {creator.ppv_enabled && (
