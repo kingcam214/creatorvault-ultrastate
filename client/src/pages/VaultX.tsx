@@ -1978,114 +1978,42 @@ function XComTab({ userId }: { userId: number }) {
 // ============================================================================
 // EARNINGS TAB
 // ============================================================================
-function EarningsTab({ userId }: { userId: number }) {
-  const { data: revenueData } = trpc.vaultx.getRevenueStats.useQuery(undefined, { retry: false });
-  const stats = (revenueData as any) || {};
-
-  const earningsBreakdown = [
-    { label: "Subscriptions", amount: stats.subscription_revenue || 0, icon: "👥", color: "text-red-400" },
-    { label: "Pay-Per-View", amount: stats.ppv_revenue || 0, icon: "🔐", color: "text-orange-400" },
-    { label: "Tips", amount: stats.tip_revenue || 0, icon: "💝", color: "text-pink-400" },
-    { label: "Custom Requests", amount: stats.custom_revenue || 0, icon: "✨", color: "text-purple-400" },
-  ];
-
-  const totalEarnings = earningsBreakdown.reduce((sum, e) => sum + e.amount, 0);
+function EarningsTab({ userId: _userId }: { userId: number }) {
+  const { data: revenueData, isLoading } = trpc.vaultx.getRevenueAnalytics.useQuery(undefined, { retry: false });
+  const totals = (revenueData as any)?.totals ?? {};
+  const paidDropRecord = Number(totals.total_ppv ?? 0) || 0;
+  const paidMessageRecord = Number(totals.total_messages ?? 0) || 0;
+  const realPaidRecord = paidDropRecord + paidMessageRecord;
 
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-white font-black text-xl mb-1">Earnings Dashboard</h2>
-        <p className="text-gray-500 text-sm">Your VaultX revenue breakdown.</p>
+        <h2 className="text-xl font-black text-white">Money that has a real record.</h2>
+        <p className="mt-1 text-sm text-zinc-400">This room shows completed paid-drop and paid-message records only. It does not guess at future money or offer cash-out controls that are not connected yet.</p>
       </div>
 
-      {/* Total */}
-      <div className="bg-[#0a0a0a] from-red-950/60 to-orange-950/40 border border-red-900/30 rounded-2xl p-6 text-center">
-        <div className="text-gray-400 text-sm mb-1">Total VaultX Earnings</div>
-        <div className="text-5xl font-black text-white mb-1">${totalEarnings.toFixed(2)}</div>
-        <div className="text-red-400 text-xs">85% revenue share on all sales</div>
+      <div className="rounded-2xl border border-amber-200/20 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,.14),transparent_48%),#101015] p-6">
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-100">Completed paid records</p>
+        <p className="mt-3 text-5xl font-black tracking-[-0.06em] text-white">{isLoading ? "—" : `$${realPaidRecord.toFixed(2)}`}</p>
+        <p className="mt-3 max-w-lg text-sm leading-relaxed text-zinc-300">{realPaidRecord > 0 ? "This number comes from completed paid records already tied to your VaultX history." : "No completed paid-drop or paid-message record is connected to this account yet. Start with a real moment and keep the sale path honest."}</p>
       </div>
 
-      {/* Breakdown */}
       <div className="grid grid-cols-2 gap-3">
-        {earningsBreakdown.map(({ label, amount, icon, color }) => (
-          <div key={label} className="bg-gray-900/60 border border-gray-800 rounded-2xl p-4">
-            <div className="text-2xl mb-2">{icon}</div>
-            <div className={`text-xl font-black ${color}`}>${amount.toFixed(2)}</div>
-            <div className="text-gray-500 text-xs">{label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Stats */}
-      <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-5">
-        <div className="text-white font-bold text-sm mb-4 flex items-center gap-2">
-          <BarChart2 className="w-4 h-4 text-red-400" /> Creator Stats
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">Paid drops</p>
+          <p className="mt-2 text-2xl font-black text-white">{isLoading ? "—" : `$${paidDropRecord.toFixed(2)}`}</p>
+          <p className="mt-2 text-xs leading-relaxed text-zinc-500">Completed PPV records only.</p>
         </div>
-        <div className="space-y-3">
-          {[
-            { label: "Total Subscribers", value: stats.total_subscribers || 0 },
-            { label: "Active Subscribers", value: stats.active_subscribers || 0 },
-            { label: "Total Posts", value: stats.total_posts || 0 },
-            { label: "Avg Monthly Revenue", value: `$${(stats.avg_monthly_revenue || 0).toFixed(2)}` },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex justify-between items-center py-2 border-b border-gray-800 last:border-0">
-              <span className="text-gray-400 text-sm">{label}</span>
-              <span className="text-white font-bold">{value}</span>
-            </div>
-          ))}
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">Paid messages</p>
+          <p className="mt-2 text-2xl font-black text-white">{isLoading ? "—" : `$${paidMessageRecord.toFixed(2)}`}</p>
+          <p className="mt-2 text-xs leading-relaxed text-zinc-500">Completed unlock records only.</p>
         </div>
       </div>
 
-      {/* Payout */}
-      <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-5">
-        <div className="text-white font-bold text-sm mb-4 flex items-center gap-2">
-          <Wallet className="w-4 h-4 text-green-400" /> Payout Settings
-        </div>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400 text-sm">Payout Schedule</span>
-            <span className="text-white text-sm font-semibold">Weekly (Fridays)</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400 text-sm">Minimum Payout</span>
-            <span className="text-white text-sm font-semibold">$50</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400 text-sm">Methods</span>
-            <span className="text-white text-sm font-semibold">CashApp, Zelle, Crypto</span>
-          </div>
-        </div>
-        <button className="w-full mt-4 bg-green-600 text-white font-bold py-3 rounded-xl text-sm hover:bg-green-700 transition-colors">
-          Request Payout
-        </button>
-      </div>
-
-      {/* Revenue Projections */}
-      <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-5">
-        <div className="text-white font-bold text-sm mb-4 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-amber-400" /> Revenue Projections
-        </div>
-        <div className="text-gray-500 text-xs mb-4">Based on $9.99/mo subscription price:</div>
-        <div className="space-y-2">
-          {[
-            { subs: 50, monthly: 424, annual: 5088 },
-            { subs: 100, monthly: 849, annual: 10188 },
-            { subs: 250, monthly: 2122, annual: 25464 },
-            { subs: 500, monthly: 4245, annual: 50940 },
-            { subs: 1000, monthly: 8490, annual: 101880 },
-          ].map(({ subs, monthly, annual }) => (
-            <div key={subs} className="flex items-center gap-3">
-              <div className="w-20 text-gray-500 text-xs">{subs} subs</div>
-              <div className="flex-1 bg-gray-800 rounded-full h-2">
-                <div
-                  className="bg-[#0a0a0a] from-red-500 to-orange-500 h-2 rounded-full"
-                  style={{ width: `${Math.min((subs / 1000) * 100, 100)}%` }}
-                />
-              </div>
-              <div className="text-white text-xs font-bold w-16 text-right">${monthly}/mo</div>
-            </div>
-          ))}
-        </div>
+      <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+        <p className="text-sm font-black text-white">What comes next</p>
+        <p className="mt-2 text-sm leading-relaxed text-zinc-400">Cash-out options and recurring membership money will appear here only after CreatorVault can prove the full path from what a fan pays to what they receive and what belongs to you. Until then, this page stays read-only and real.</p>
       </div>
     </div>
   );
