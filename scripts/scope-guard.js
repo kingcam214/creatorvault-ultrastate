@@ -91,6 +91,7 @@ const ALLOWLISTS = {
   ],
   'creator-subscriptions-hold': [
     'client/src/pages/CreatorSubscriptions.tsx',
+    'client/src/pages/CreatorSubscriptionTiers.tsx',
     'server/routers/subscriptions.ts',
     'scripts/scope-guard.js'
   ],
