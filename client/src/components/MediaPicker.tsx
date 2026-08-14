@@ -27,6 +27,8 @@ export interface MediaAssetItem {
   height?: number | null;
   fileSize?: number | null;
   createdAt?: string | null;
+  status?: string | null;
+  storagePath?: string | null;
 }
 
 interface MediaPickerProps {
@@ -65,6 +67,13 @@ const T = {
 /* ── utility ── */
 function isVideo(a: MediaAssetItem) {
   return (a.assetType ?? "").toLowerCase() === "video" || (a.mimeType ?? "").startsWith("video/");
+}
+
+function isReadySource(a: MediaAssetItem) {
+  const sourceUrl = String(a.publicUrl || a.storagePath || "");
+  return String(a.status || "ready").toLowerCase() === "ready"
+    && Boolean(sourceUrl)
+    && !/^https?:\/\/replicate\.delivery\//i.test(sourceUrl);
 }
 function videoPoster(a: MediaAssetItem) {
   const candidate = a.thumbnailUrl ?? "";
@@ -121,7 +130,7 @@ export default function MediaPicker({
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
-  const assets = (mediaQuery.data ?? []) as MediaAssetItem[];
+  const assets = ((mediaQuery.data ?? []) as MediaAssetItem[]).filter(isReadySource);
   const selectedAssets = useMemo(
     () => assets.filter((a) => selectedIds.includes(a.id)),
     [assets, selectedIds]

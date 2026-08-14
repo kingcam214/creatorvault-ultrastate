@@ -15,6 +15,17 @@ function isAudio(asset: MediaAssetItem) {
   return asset.assetType === "audio" || Boolean(asset.mimeType?.startsWith("audio/"));
 }
 
+function isReadySource(asset: MediaAssetItem) {
+  const sourceUrl = String(asset.publicUrl || asset.storagePath || "");
+  return String(asset.status || "ready").toLowerCase() === "ready"
+    && Boolean(sourceUrl)
+    && !/^https?:\/\/replicate\.delivery\//i.test(sourceUrl);
+}
+
+function isLegacyDelivery(asset: MediaAssetItem) {
+  return /^https?:\/\/replicate\.delivery\//i.test(String(asset.publicUrl || asset.storagePath || ""));
+}
+
 function videoPoster(asset: MediaAssetItem) {
   const candidate = asset.thumbnailUrl ?? "";
   return /\.(avif|gif|jpe?g|png|webp)(?:$|[?#])/i.test(candidate) ? candidate : undefined;
@@ -48,7 +59,9 @@ export function KingCamVault() {
   const [filter, setFilter] = useState<VaultFilter>("all");
   const [activeAssetId, setActiveAssetId] = useState<string | null>(null);
   const mediaQuery = trpc.mediaAssets.list.useQuery({ limit: 120 }, { staleTime: 30_000, enabled: Boolean(user && isKingCamOwner) });
-  const media = Array.isArray(mediaQuery.data) ? mediaQuery.data as MediaAssetItem[] : [];
+  const allMedia = Array.isArray(mediaQuery.data) ? mediaQuery.data as MediaAssetItem[] : [];
+  const media = allMedia.filter(isReadySource);
+  const legacyDeliveryCount = allMedia.filter(isLegacyDelivery).length;
   const shownMedia = media.filter((asset) => {
     if (filter === "all") return true;
     if (filter === "video") return isVideo(asset);
@@ -79,7 +92,7 @@ export function KingCamVault() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex w-fit flex-wrap rounded-xl border border-white/10 bg-white/5 p-1">{([ ["all", "Everything"], ["video", "Videos"], ["audio", "Soundtracks"], ["image", "Images"] ] as Array<[VaultFilter, string]>).map(([value, label]) => <button key={value} type="button" onClick={() => setFilter(value)} className={`rounded-lg px-4 py-2 text-xs font-black transition ${filter === value ? "bg-white text-black" : "text-zinc-400 hover:text-white"}`}>{label}</button>)}</div><p className="text-sm text-zinc-400">Select any source to watch or listen full size.</p></div>
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex w-fit flex-wrap rounded-xl border border-white/10 bg-white/5 p-1">{([ ["all", "Everything"], ["video", "Videos"], ["audio", "Soundtracks"], ["image", "Images"] ] as Array<[VaultFilter, string]>).map(([value, label]) => <button key={value} type="button" onClick={() => setFilter(value)} className={`rounded-lg px-4 py-2 text-xs font-black transition ${filter === value ? "bg-white text-black" : "text-zinc-400 hover:text-white"}`}>{label}</button>)}</div><div className="text-right"><p className="text-sm text-zinc-400">Select any source to watch or listen full size.</p>{legacyDeliveryCount > 0 && <p className="mt-1 text-xs text-amber-200/75">{legacyDeliveryCount} historical delivery record{legacyDeliveryCount === 1 ? " is" : "s are"} held outside creation choices.</p>}</div></div>
 
         {mediaQuery.isLoading ? <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, index) => <div key={index} className="aspect-[3/4] animate-pulse rounded-2xl border border-white/5 bg-white/[0.04]" />)}</div> : shownMedia.length === 0 ? <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-16 text-center"><Film className="mx-auto h-10 w-10 text-zinc-600" /><h2 className="mt-4 text-xl font-black">No verified sources in this view yet.</h2><p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-400">This library shows only media that CreatorVault can actually open and use. Switch the view or add a source through your normal creation flow.</p></div> : <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">{shownMedia.map((asset) => {
           const video = isVideo(asset);
