@@ -663,11 +663,17 @@ export async function listNativeFeed(userId: number, input: { cursor?: number; l
 
 export async function getSocialCommandSummary(userId: number): Promise<any> {
   const creatorId = await getCreatorId(userId);
-  const [accounts, distribution, money, audience, packages] = await Promise.all([
+  const [accounts, manualSources, distribution, money, audience, packages] = await Promise.all([
     rawQuery(`SELECT platform, connection_status, can_post, can_schedule, can_read_analytics, automation_enabled,
                      requires_approval, updated_at FROM connected_accounts ca
               JOIN channel_identities ci ON ci.id = ca.channel_identity_id
-              WHERE ci.owner_id = ?`, [userId]).catch(() => []),
+              WHERE ci.owner_id = ? AND ca.connection_status <> 'manual'`, [userId]).catch(() => []),
+    rawQuery(`SELECT ca.platform, ca.username, ca.display_name, ci.display_name AS channel_name, ca.updated_at
+              FROM connected_accounts ca
+              JOIN channel_identities ci ON ci.id = ca.channel_identity_id
+              WHERE (ci.owner_id = ? OR ci.owner_type IN ('vaultx_brand', 'creatorvault_brand'))
+                AND ca.connection_status = 'manual'
+              ORDER BY ca.platform ASC, ca.id ASC`, [userId]).catch(() => []),
     rawQuery(`SELECT status, COUNT(*) AS count FROM distribution_jobs dj
               LEFT JOIN vaultx_creators vc ON vc.id = dj.creator_id
               WHERE vc.user_id = ? OR dj.creator_id = ? GROUP BY status`, [userId, userId]).catch(() => []),
@@ -678,7 +684,22 @@ export async function getSocialCommandSummary(userId: number): Promise<any> {
                      (SELECT COUNT(*) FROM conversations WHERE creator_id = ?) AS conversations`, [userId, creatorId, userId]).catch(() => []),
     rawQuery(`SELECT state, COUNT(*) AS count FROM social_packages WHERE creator_user_id = ? GROUP BY state`, [userId]).catch(() => []),
   ]);
-  return { version: SOCIAL_SPINE_VERSION, accounts, distribution, money: money[0] || {}, audience: audience[0] || {}, packages };
+  return {
+    version: SOCIAL_SPINE_VERSION,
+    accounts,
+    manualSources: manualSources.map((source: any) => ({
+      platform: String(source.platform),
+      username: source.username || null,
+      displayName: source.display_name || source.channel_name || null,
+      evidenceState: 'owner_confirmed_source',
+      outboundState: 'held',
+      updatedAt: source.updated_at,
+    })),
+    distribution,
+    money: money[0] || {},
+    audience: audience[0] || {},
+    packages,
+  };
 }
 
 export async function listSocialNotifications(userId: number, limit: number): Promise<any[]> {

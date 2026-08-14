@@ -66,6 +66,7 @@ export default function SocialHub() {
 
   const connected = Array.isArray(command.data?.accounts) ? command.data.accounts : [];
   const activeAccounts = connected.filter((account: any) => account.connection_status === "active" || account.connection_status === "legacy_imported");
+  const manualSources = Array.isArray(command.data?.manualSources) ? command.data.manualSources : [];
   const distribution = Array.isArray(command.data?.distribution) ? command.data.distribution : [];
   const awaitingApproval = distribution.filter((row: any) => ["draft", "ready", "scheduled"].includes(row.status)).reduce((sum: number, row: any) => sum + Number(row.count || 0), 0);
   const readyMedia = Array.isArray(media.data) ? media.data : [];
@@ -84,11 +85,11 @@ export default function SocialHub() {
 
   const canPrepare = Boolean(selectedAssetId && selectedChannelId && selectedPlatforms.length && caption.trim());
   const creatorMetrics = useMemo(() => [
-    { label: "Linked accounts", value: activeAccounts.length, icon: BadgeCheck, tone: "text-cyan-300" },
+    { label: "Owner-confirmed sources", value: manualSources.length, icon: BadgeCheck, tone: "text-cyan-300" },
     { label: "Posts ready for you", value: awaitingApproval, icon: Send, tone: "text-amber-300" },
     { label: "People following", value: Number(command.data?.audience?.followers || 0), icon: Users, tone: "text-violet-300" },
     { label: "Direct earnings", value: money(command.data?.money?.creator_earnings_cents), icon: Wallet, tone: "text-emerald-300" },
-  ], [activeAccounts.length, awaitingApproval, command.data]);
+  ], [activeAccounts.length, manualSources.length, awaitingApproval, command.data]);
 
   function togglePlatform(platform: string) {
     setSelectedPlatforms((current) => current.includes(platform) ? current.filter((entry) => entry !== platform) : [...current, platform]);
@@ -215,10 +216,18 @@ export default function SocialHub() {
               <p className="mt-4 text-xs leading-relaxed text-zinc-500">These are your real CreatorVault numbers. Your other platform numbers appear here once that account is linked.</p>
             </section>
 
-            <section className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5">
-              <div className="flex items-center justify-between"><div><div className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Your social accounts</div><h3 className="mt-1 text-lg font-black">Where your next drop can go</h3></div><CheckCircle2 className="h-5 w-5 text-emerald-300" /></div>
+            <section className="rounded-[1.5rem] border border-cyan-300/15 bg-[linear-gradient(145deg,rgba(34,211,238,0.09),rgba(255,255,255,0.025))] p-5">
+              <div className="flex items-center justify-between"><div><div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/70">Your channel evidence</div><h3 className="mt-1 text-lg font-black">Sources you already confirmed</h3></div><BadgeCheck className="h-5 w-5 text-cyan-300" /></div>
               <div className="mt-4 space-y-2">
-                {accounts.isLoading ? <div className="h-16 animate-pulse rounded-xl bg-white/5" /> : activeAccounts.length ? activeAccounts.slice(0, 5).map((account: any) => <div key={`${account.platform}-${account.id}`} className="flex items-center justify-between rounded-xl bg-black/30 px-3 py-2.5"><span className="text-sm font-bold capitalize">{account.platform}</span><span className="text-[10px] font-black uppercase tracking-wide text-emerald-300">{account.connection_status}</span></div>) : <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">No social account is linked here yet. You can still create your CreatorVault post and have the rest ready when you are.</p>}
+                {manualSources.length ? manualSources.slice(0, 6).map((source: any) => <div key={`${source.platform}-${source.username || source.displayName}`} className="rounded-xl bg-black/30 px-3 py-3"><div className="flex items-center justify-between gap-3"><span className="text-sm font-bold capitalize">{source.platform}</span><span className="text-[10px] font-black uppercase tracking-wide text-amber-200">Source held</span></div><p className="mt-1 truncate text-xs text-zinc-400">{source.username ? `@${source.username}` : source.displayName || "Owner-confirmed channel"}</p></div>) : <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">No owner-confirmed channel source is recorded here yet.</p>}
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-zinc-500">These are your verified channel sources, not direct publishing connections. Nothing can post, message, schedule, or pull analytics from them here.</p>
+            </section>
+
+            <section className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5">
+              <div className="flex items-center justify-between"><div><div className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Direct publishing accounts</div><h3 className="mt-1 text-lg font-black">Where your next drop can go</h3></div><CheckCircle2 className="h-5 w-5 text-emerald-300" /></div>
+              <div className="mt-4 space-y-2">
+                {accounts.isLoading ? <div className="h-16 animate-pulse rounded-xl bg-white/5" /> : activeAccounts.length ? activeAccounts.slice(0, 5).map((account: any) => <div key={`${account.platform}-${account.id}`} className="flex items-center justify-between rounded-xl bg-black/30 px-3 py-2.5"><span className="text-sm font-bold capitalize">{account.platform}</span><span className="text-[10px] font-black uppercase tracking-wide text-emerald-300">{account.connection_status}</span></div>) : <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">No direct publishing account is connected here yet. You can still build a CreatorVault post and prepare the rest for your own review.</p>}
               </div>
             </section>
 
