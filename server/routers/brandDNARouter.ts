@@ -1,60 +1,39 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
-import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const BRAND_DNA_HELD_MESSAGE =
+  "Brand DNA recovery is anchored to the owner-authored CreatorVault visual law and verified creator material. The old tool could invent a generic profile or call an ungoverned model, so it is held until real saved style evidence is connected.";
 
+function held(): never {
+  throw new Error(BRAND_DNA_HELD_MESSAGE);
+}
+
+/**
+ * Truth boundary for the legacy Brand DNA router.
+ *
+ * The actual governing visual direction remains in BRAND_DNA_QUALITY_LAW.md.
+ * This old route is not a source of truth because it returned a hardcoded,
+ * generic profile and could create unsupervised model output.
+ */
 export const brandDNARouter = router({
-  extractBrandDNA: protectedProcedure.input(z.object({
-    brandName: z.string(),
-    description: z.string(),
-    existingContent: z.array(z.string()).optional(),
-    competitors: z.array(z.string()).optional(),
-  })).mutation(async ({ input }) => {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        role: "user",
-        content: `Extract the brand DNA for ${input.brandName}:
-Description: ${input.description}
-Sample content: ${(input.existingContent || []).slice(0, 3).join(" | ")}
-Competitors: ${(input.competitors || []).join(", ")}
+  extractBrandDNA: protectedProcedure
+    .input(z.object({
+      brandName: z.string(),
+      description: z.string(),
+      existingContent: z.array(z.string()).optional(),
+      competitors: z.array(z.string()).optional(),
+    }))
+    .mutation(async (): Promise<{ dna: string }> => held()),
 
-Define: core values, brand archetype, unique differentiators, emotional promise, visual DNA, and verbal DNA.`,
-      }],
-      max_tokens: 700,
-    });
-    return { dna: completion.choices[0].message.content };
-  }),
+  applyBrandDNA: protectedProcedure
+    .input(z.object({
+      content: z.string(),
+      brandDNA: z.string(),
+      contentType: z.string(),
+    }))
+    .mutation(async (): Promise<{ rewritten: string }> => held()),
 
-  applyBrandDNA: protectedProcedure.input(z.object({
-    content: z.string(),
-    brandDNA: z.string(),
-    contentType: z.string(),
-  })).mutation(async ({ input }) => {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        role: "user",
-        content: `Rewrite this ${input.contentType} to perfectly match this brand DNA:
-Brand DNA: ${input.brandDNA}
-Content: ${input.content}`,
-      }],
-      max_tokens: 500,
-    });
-    return { rewritten: completion.choices[0].message.content };
-  }),
-  getBrandProfile: protectedProcedure.input(z.object({ brandId: z.string() })).query(async ({ ctx, input }) => {
-    return {
-      brandId: input.brandId,
-      userId: ctx.user.id,
-      name: "KingCam Empire",
-      colors: ["#c9a84c", "#0a0a0a", "#00D9FF"],
-      fonts: ["BebasNeue", "Montserrat"],
-      voice: "Confident, motivational, authentic",
-      mission: "Empower creators to build 7-figure empires",
-      values: ["Authenticity", "Excellence", "Empire Building"],
-      targetAudience: "Aspiring creators aged 18-35",
-    };
-  })
+  getBrandProfile: protectedProcedure
+    .input(z.object({ brandId: z.string() }))
+    .query(async (): Promise<{ brandId: string; name: string; colors: string[]; fonts: string[]; voice: string; mission: string; values: string[]; targetAudience: string }> => held()),
 });

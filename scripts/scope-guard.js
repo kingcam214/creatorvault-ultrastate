@@ -136,6 +136,10 @@ const ALLOWLISTS = {
     'server/routers/activationWarRoomRouter.ts',
     'scripts/scope-guard.js'
   ],
+  'brand-dna-hold': [
+    'server/routers/brandDNARouter.ts',
+    'scripts/scope-guard.js'
+  ],
   'design-image-pilot': [
     'server/services/governedPolloService.ts',
     'server/routers/designImagePilotRouter.ts',
