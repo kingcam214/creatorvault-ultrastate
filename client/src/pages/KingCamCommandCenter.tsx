@@ -232,10 +232,6 @@ export default function KingCamCommandCenter() {
     enabled: user?.role === "king",
   });
 
-  const brandDNA = trpc.brandDNA.getBrandProfile.useQuery({ brandId: "kingcam" }, {
-    enabled: user?.role === "king",
-  });
-
   const empireEntityMap = trpc.empireAgents.getEntityMap.useQuery(undefined, {
     enabled: user?.role === "king",
   });
@@ -562,26 +558,22 @@ export default function KingCamCommandCenter() {
               }}
             />
 
-            {/* Brand DNA */}
+            {/* Brand Direction */}
             <AgentTile
               id="brandDNA"
               icon={Sparkles}
-              title="Brand DNA"
-              description="Extracts and displays your KingCam brand profile — colors, style, mood, and identity."
-              badge="brandDNA"
+              title="Brand Direction"
+              description="Your CreatorVault visual law is protected. Live style extraction stays off until it is rebuilt from your real saved work and approved references."
+              badge="style held"
               color="bg-[#0a0a0a] from-[#141414] to-[#141414]"
               result={getResult("brandDNA")}
-              onRun={() => {
-                if (brandDNA.data) {
-                  setResult("brandDNA", { status: "done", output: brandDNA.data });
-                } else {
-                  setResult("brandDNA", { status: "running" });
-                  brandDNA.refetch().then(r => {
-                    if (r.data) setResult("brandDNA", { status: "done", output: r.data });
-                    else setResult("brandDNA", { status: "error", output: { message: "No profile yet" } });
-                  });
-                }
-              }}
+              onRun={() => setResult("brandDNA", {
+                status: "done",
+                output: {
+                  state: "held",
+                  message: "The old profile was generic. Your approved visual law remains the source of truth until real saved style references are connected.",
+                },
+              })}
             />
 
             {/* AI Platform Dominator */}

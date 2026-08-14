@@ -137,6 +137,7 @@ const ALLOWLISTS = {
     'scripts/scope-guard.js'
   ],
   'brand-dna-hold': [
+    'client/src/pages/KingCamCommandCenter.tsx',
     'server/routers/brandDNARouter.ts',
     'scripts/scope-guard.js'
   ],
