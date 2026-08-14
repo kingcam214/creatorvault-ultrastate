@@ -468,11 +468,11 @@ export default function KingContent() {
                 </div>
                 <h2 className="mb-2 text-xl font-black text-white">Creator Video Studio</h2>
                 <p className="text-sm leading-relaxed text-zinc-400">
-                  Take precise control. Combine clips, shape the sound, and make every finished moment feel exactly like you want it.
+                  Start with a saved moment, choose its next direction, and keep every move tied to the source you own.
                 </p>
               </div>
               <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Hands-On Control</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Your Direction</span>
                 <ArrowUpRight className="h-4 w-4 text-zinc-500 transition group-hover:text-emerald-300" />
               </div>
             </a>
