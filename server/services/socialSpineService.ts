@@ -283,6 +283,9 @@ async function requireReadyOwnedAsset(userId: number, assetId: string): Promise<
   }
   const publicUrl = asset.public_url || asset.storage_path;
   if (!publicUrl) throw new Error("The selected creator video has no durable source path");
+  if (/^https?:\/\/replicate\.delivery\//i.test(String(publicUrl))) {
+    throw new Error("That video uses an expired delivery link and cannot safely power a social package. Choose a ready video from your Media Vault.");
+  }
   return asset;
 }
 
