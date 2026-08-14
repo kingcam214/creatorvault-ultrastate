@@ -11,6 +11,25 @@ function videoPoster(asset: MediaAssetItem) {
   return /\.(avif|gif|jpe?g|png|webp)(?:$|[?#])/i.test(candidate) ? candidate : undefined;
 }
 
+function creatorDate(value: unknown) {
+  const date = new Date(String(value || ""));
+  return Number.isNaN(date.getTime()) ? "Just added" : date.toLocaleDateString();
+}
+
+function mediaKindLabel(asset: MediaAssetItem) {
+  if (asset.assetType === "video" || asset.mimeType?.startsWith("video/")) return "Video";
+  if (asset.assetType === "audio" || asset.mimeType?.startsWith("audio/")) return "Audio";
+  if (asset.assetType === "image" || asset.mimeType?.startsWith("image/")) return "Image";
+  return "Saved media";
+}
+
+function socialPlaceLabel(value: unknown) {
+  const visibility = String(value || "").toLowerCase();
+  if (visibility === "public") return "Visible in CreatorVault";
+  if (visibility === "private") return "Just for you";
+  return "CreatorVault moment";
+}
+
 export default function KingContent() {
   const { user, isLoading } = useAuth();
   const isKingCamOwner = user?.id === 6 || user?.id === 33 || user?.role === "king" || user?.role === "admin";
@@ -548,7 +567,7 @@ export default function KingContent() {
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-bold text-white">{asset.fileName}</div>
                       <div className="text-xs text-zinc-500">
-                        {asset.assetType} &bull; {new Date(asset.createdAt || "").toLocaleDateString()}
+                        {mediaKindLabel(asset)} &bull; {creatorDate(asset.createdAt)}
                       </div>
                     </div>
                   </div>
@@ -580,9 +599,9 @@ export default function KingContent() {
                       <div className="truncate text-sm font-bold text-white">{post.body || "No caption"}</div>
                       <div className="flex items-center gap-2 text-xs text-zinc-500">
                         <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase text-zinc-300">
-                          {post.visibility}
+                          {socialPlaceLabel(post.visibility)}
                         </span>
-                        &bull; {new Date(post.createdAt || "").toLocaleDateString()}
+                        &bull; {creatorDate(post.createdAt)}
                       </div>
                     </div>
                   </div>
