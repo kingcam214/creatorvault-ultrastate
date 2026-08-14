@@ -1,18 +1,27 @@
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
+import { ArrowUpRight, CheckCircle2, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import { safeStorage } from "@/lib/safeStorage";
+import { HOMEPAGE_MEDIA_SEQUENCE } from "@/lib/homepageMediaRegistry";
 
 export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
+  const entryMotion = HOMEPAGE_MEDIA_SEQUENCE.find((asset) => asset.assetId === "platform-marketplace-hero");
+  const inputClass = "w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3.5 text-sm font-medium text-white outline-none transition placeholder:text-zinc-600 focus:border-[#efd18c]/70 focus:bg-white/[0.07] focus:ring-2 focus:ring-[#efd18c]/15";
+
+  if (!entryMotion) {
+    throw new Error("CreatorVault login requires certified public motion.");
+  }
 
   const doLogin = async (emailVal: string, passwordVal: string) => {
     if (!emailVal || !passwordVal) {
-      setError("Please enter your email and password.");
+      setError("Add your email and password to enter your CreatorVault.");
       return;
     }
+
     setError("");
     setLoading(true);
     try {
@@ -24,7 +33,7 @@ export default function Login() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error || "Invalid email or password");
+        setError(data.error || "That email and password did not match. Try again.");
         setLoading(false);
         return;
       }
@@ -33,240 +42,66 @@ export default function Login() {
         try { localStorage.setItem("authToken", data.token); } catch (_) {}
       }
       await new Promise(resolve => setTimeout(resolve, 150));
-      const userRole = data.user?.role || '';
-      if (userRole === 'chica') {
-        window.location.replace('/chica');
-      } else if (userRole === 'king' || userRole === 'admin') {
-        window.location.replace('/owner-cockpit');
+      const userRole = data.user?.role || "";
+      if (userRole === "chica") {
+        window.location.replace("/chica");
+      } else if (userRole === "king" || userRole === "admin") {
+        window.location.replace("/owner-cockpit");
       } else {
-        window.location.replace('/dashboard');
+        window.location.replace("/dashboard");
       }
     } catch (err) {
       console.error("Login error:", err);
-      setError("Network error. Please try again.");
+      setError("CreatorVault could not reach your account right now. Please try again.");
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const emailVal = emailRef.current?.value ?? "";
-    const passwordVal = passwordRef.current?.value ?? "";
-    await doLogin(emailVal, passwordVal);
-  };
-
-  const handleButtonClick = async () => {
-    const emailVal = emailRef.current?.value ?? "";
-    const passwordVal = passwordRef.current?.value ?? "";
-    await doLogin(emailVal, passwordVal);
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    await doLogin(emailRef.current?.value ?? "", passwordRef.current?.value ?? "");
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#050508",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "20px",
-      fontFamily: "'Inter', sans-serif",
-    }}>
-      {/* Ambient background glow */}
-      <div style={{
-        position: "fixed",
-        inset: 0,
-        background: "radial-gradient(ellipse 60% 40% at 50% 30%, rgba(201,168,76,0.06) 0%, transparent 70%)",
-        pointerEvents: "none",
-        zIndex: 0,
-      }} />
+    <main className="min-h-screen overflow-hidden bg-[#070606] text-white selection:bg-[#f0d18a]/40">
+      <div className="grid min-h-screen lg:grid-cols-[1.08fr_.92fr]">
+        <section className="relative isolate min-h-[37rem] overflow-hidden border-b border-white/10 lg:min-h-screen lg:border-b-0 lg:border-r">
+          <video src={entryMotion.livePath} poster={entryMotion.fallbackAsset} autoPlay loop muted playsInline preload="auto" className="absolute inset-0 h-full w-full object-cover" aria-label="CreatorVault creator and audience motion" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,3,3,.18),rgba(4,3,3,.1)_32%,rgba(4,3,3,.92)_100%)]" />
+          <div className="absolute inset-y-0 left-0 w-full bg-[radial-gradient(circle_at_16%_58%,rgba(0,0,0,.3),transparent_48%)]" />
 
-      <div style={{
-        position: "relative",
-        zIndex: 1,
-        width: "100%",
-        maxWidth: "400px",
-      }}>
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: "40px" }}>
-          <img
-            src="/logo-white.png"
-            alt="CreatorVault"
-            style={{ height: 48, objectFit: "contain", margin: "0 auto" }}
-          />
-          <p style={{
-            marginTop: "12px",
-            fontSize: "11px",
-            fontWeight: 700,
-            letterSpacing: "0.25em",
-            textTransform: "uppercase",
-            color: "#c9a84c",
-          }}>
-            Empire OS
-          </p>
-        </div>
-
-        {/* Card */}
-        <div style={{
-          background: "rgba(20,20,20,0.95)",
-          border: "1px solid rgba(201,168,76,0.15)",
-          borderRadius: "16px",
-          padding: "36px 32px",
-          backdropFilter: "blur(20px)",
-        }}>
-          <h1 style={{
-            fontFamily: "'Playfair Display', serif",
-            fontSize: "28px",
-            fontWeight: 700,
-            color: "#f5f0e8",
-            marginBottom: "6px",
-            textAlign: "center",
-          }}>
-            Welcome Back
-          </h1>
-          <p style={{
-            fontSize: "13px",
-            color: "rgba(255,255,255,0.4)",
-            textAlign: "center",
-            marginBottom: "28px",
-          }}>
-            Sign in to your CreatorVault account
-          </p>
-
-          {error && (
-            <div style={{
-              background: "rgba(239,68,68,0.1)",
-              border: "1px solid rgba(239,68,68,0.4)",
-              color: "#ef4444",
-              padding: "12px 16px",
-              borderRadius: "8px",
-              fontSize: "13px",
-              marginBottom: "20px",
-            }}>
-              {error}
+          <div className="relative z-10 flex min-h-[37rem] flex-col p-6 sm:p-9 lg:min-h-screen lg:p-12 xl:p-16">
+            <Link href="/"><a className="inline-flex w-fit items-center gap-3"><img src="/logo-white.png" alt="CreatorVault" className="h-8" /><span className="border-l border-white/25 pl-3 text-[10px] font-black uppercase tracking-[.22em] text-[#f2d99c]">Creator return</span></a></Link>
+            <div className="mt-auto max-w-xl pb-3 sm:pb-7 lg:pb-12">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#efd18c]/45 bg-black/35 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.2em] text-[#f7dfa6] backdrop-blur-md"><Sparkles className="h-3.5 w-3.5" /> Pick up where your work left off</div>
+              <h1 className="mt-6 text-5xl font-black leading-[.84] tracking-[-.075em] sm:text-7xl">Come back to<br /><span className="text-[#f1d599]">your world.</span></h1>
+              <p className="mt-6 max-w-lg text-base leading-relaxed text-zinc-100 sm:text-lg">Your next creation, saved media, private release, and every decision around them live in one place that is still yours.</p>
+              <div className="mt-8 grid gap-3 border-t border-white/20 pt-5 text-sm font-bold text-zinc-100 sm:grid-cols-3 sm:text-xs"><span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#efd18c]" /> Your media</span><span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#efd18c]" /> Your direction</span><span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#efd18c]" /> Your next move</span></div>
             </div>
-          )}
+          </div>
+        </section>
 
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{
-                display: "block",
-                fontSize: "11px",
-                fontWeight: 600,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "rgba(255,255,255,0.5)",
-                marginBottom: "8px",
-              }}>
-                Email
-              </label>
-              <input
-                ref={emailRef}
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                placeholder="your@email.com"
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "8px",
-                  color: "#f5f0e8",
-                  fontSize: "14px",
-                  outline: "none",
-                  boxSizing: "border-box",
-                  transition: "border-color 0.2s",
-                }}
-                onFocus={e => { e.target.style.borderColor = "rgba(201,168,76,0.5)"; }}
-                onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }}
-              />
-            </div>
+        <section className="relative flex min-h-screen items-center justify-center bg-[#0b0908] px-5 py-10 sm:px-8 lg:px-12">
+          <div className="pointer-events-none absolute -right-36 top-[-8rem] h-[30rem] w-[30rem] rounded-full bg-[#d7a75a]/10 blur-[110px]" />
+          <div className="relative w-full max-w-md">
+            <div className="mb-8 flex items-end justify-between border-b border-white/10 pb-5"><div><p className="text-[10px] font-black uppercase tracking-[.22em] text-[#ebce88]">Welcome back</p><h2 className="mt-2 text-3xl font-black tracking-[-.05em]">Enter your CreatorVault.</h2></div><span className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.14em] text-zinc-300">Private entry</span></div>
 
-            <div style={{ marginBottom: "24px" }}>
-              <label style={{
-                display: "block",
-                fontSize: "11px",
-                fontWeight: 600,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "rgba(255,255,255,0.5)",
-                marginBottom: "8px",
-              }}>
-                Password
-              </label>
-              <input
-                ref={passwordRef}
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                placeholder="••••••••"
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "8px",
-                  color: "#f5f0e8",
-                  fontSize: "14px",
-                  outline: "none",
-                  boxSizing: "border-box",
-                  transition: "border-color 0.2s",
-                }}
-                onFocus={e => { e.target.style.borderColor = "rgba(201,168,76,0.5)"; }}
-                onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }}
-              />
-            </div>
+            {error && <p role="alert" className="mb-5 rounded-2xl border border-rose-300/25 bg-rose-300/10 px-4 py-3 text-sm font-bold text-rose-100">{error}</p>}
 
-            <button
-              type="submit"
-              disabled={loading}
-              onClick={handleButtonClick}
-              style={{
-                width: "100%",
-                padding: "14px",
-                background: loading ? "rgba(201,168,76,0.4)" : "#c9a84c",
-                border: "none",
-                borderRadius: "8px",
-                color: "#050508",
-                fontSize: "14px",
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                cursor: loading ? "not-allowed" : "pointer",
-                transition: "background 0.2s, transform 0.1s",
-                boxShadow: loading ? "none" : "0 4px 20px rgba(201,168,76,0.3)",
-              }}
-              onMouseEnter={e => { if (!loading) (e.target as HTMLButtonElement).style.background = "#d4b05c"; }}
-              onMouseLeave={e => { if (!loading) (e.target as HTMLButtonElement).style.background = "#c9a84c"; }}
-            >
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+              <Field label="Email"><input ref={emailRef} id="email" name="email" type="email" autoComplete="email" required placeholder="you@example.com" className={inputClass} /></Field>
+              <Field label="Password"><input ref={passwordRef} id="password" name="password" type="password" autoComplete="current-password" required placeholder="Your password" className={inputClass} /></Field>
+              <button type="submit" disabled={loading} className="group inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-[#f3d899] px-6 py-4 text-sm font-black text-[#181109] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50">{loading ? "Opening your room…" : "Enter my CreatorVault"}{!loading && <ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />}</button>
+            </form>
 
-          <p style={{
-            textAlign: "center",
-            marginTop: "20px",
-            fontSize: "13px",
-            color: "rgba(255,255,255,0.35)",
-          }}>
-            Don't have an account?{" "}
-            <Link to="/signup">
-              <span style={{
-                color: "#c9a84c",
-                cursor: "pointer",
-                fontWeight: 600,
-                textDecoration: "none",
-              }}>
-                Sign up
-              </span>
-            </Link>
-          </p>
-        </div>
+            <div className="mt-8 border-t border-white/10 pt-6 text-center text-sm text-zinc-400">New to CreatorVault? <Link href="/signup"><a className="font-black text-[#f0d18a] transition hover:text-white">Open your account</a></Link></div>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[.16em] text-zinc-400">{label}</span>{children}</label>;
 }

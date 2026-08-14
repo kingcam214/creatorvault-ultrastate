@@ -15,6 +15,10 @@ const ALLOWLISTS = {
     'client/src/pages/SignupPage.tsx',
     'scripts/scope-guard.js'
   ],
+  login: [
+    'client/src/pages/Login.tsx',
+    'scripts/scope-guard.js'
+  ],
   editor: [
     'server/services/bodyCinemaProviderRouter.ts',
     'server/services/complianceVault.ts',
