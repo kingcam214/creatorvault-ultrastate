@@ -3335,7 +3335,7 @@ export const vaultxRouter = router({
                AND playable.status = 'active'
                AND playable.content_type = 'video'
                AND playable.uncensored_url IS NOT NULL
-               AND LOWER(SUBSTRING_INDEX(SUBSTRING_INDEX(playable.uncensored_url, '?', 1), '.', -1)) IN ('mp4', 'webm', 'mov')
+               AND (playable.uncensored_url LIKE '%.mp4%' OR playable.uncensored_url LIKE '%.webm%' OR playable.uncensored_url LIKE '%.mov%')
                AND playable.uncensored_url NOT LIKE 'https://replicate.delivery/%'
            ) ${langWhere}
          ORDER BY ${sortCol}
@@ -3361,7 +3361,7 @@ export const vaultxRouter = router({
       const conditions: string[] = [
         "c.is_active = 1",
         "LOWER(COALESCE(u.creator_status, 'pending')) = 'active'",
-        "EXISTS (SELECT 1 FROM vaultx_content playable WHERE playable.creator_id = c.id AND playable.status = 'active' AND playable.content_type = 'video' AND playable.uncensored_url IS NOT NULL AND LOWER(SUBSTRING_INDEX(SUBSTRING_INDEX(playable.uncensored_url, '?', 1), '.', -1)) IN ('mp4', 'webm', 'mov') AND playable.uncensored_url NOT LIKE 'https://replicate.delivery/%')",
+        "EXISTS (SELECT 1 FROM vaultx_content playable WHERE playable.creator_id = c.id AND playable.status = 'active' AND playable.content_type = 'video' AND playable.uncensored_url IS NOT NULL AND (playable.uncensored_url LIKE '%.mp4%' OR playable.uncensored_url LIKE '%.webm%' OR playable.uncensored_url LIKE '%.mov%') AND playable.uncensored_url NOT LIKE 'https://replicate.delivery/%')",
       ];
       const params: any[] = [];
       if (input.query) {
