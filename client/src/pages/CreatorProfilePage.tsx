@@ -273,15 +273,17 @@ export default function CreatorProfilePage() {
   const [activeTab, setActiveTab] = useState<"stream" | "showcase" | "vault">("stream");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
-  // @ts-ignore
-  const username = params?.username ?? user?.username;
-  // @ts-ignore
-  const isOwnProfile = username === user?.username;
+  // Wouter's typed route helper does not infer this legacy route parameter shape.
+  const requestedUsername = (params as any)?.username as string | undefined;
+  const accountUsername = (user as { username?: string | null } | null)?.username ?? undefined;
+  const username = requestedUsername ?? accountUsername;
+  // A canonical owner page has no public handle requirement. When there is no route
+  // handle and no stored username, the existing authenticated profile read returns
+  // the account’s real safe profile instead of pretending the creator is missing.
+  const isOwnProfile = !requestedUsername || username === accountUsername;
 
   const { data: profileData, isLoading } = trpc.profile.getProfile.useQuery(
-  // @ts-ignore
-    { username: username! },
-    { enabled: !!username }
+    username ? { username } : undefined
   );
 
   // @ts-ignore
