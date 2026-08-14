@@ -1,3 +1,7 @@
+import { like } from "drizzle-orm";
+import { getDb } from "../db";
+import { thumbnailAnalyses } from "../../drizzle/schema";
+
 /**
  * Thumbnail creation boundary.
  *
@@ -38,9 +42,18 @@ export interface ThumbnailGeneratorOutput {
 export const THUMBNAIL_CREATION_HELD_MESSAGE =
   "Thumbnail creation is being rebuilt around real CreatorVault media. The previous version could show a placeholder instead of a finished visual, so it is not available for new work yet.";
 
+async function purgeLegacyPlaceholderThumbnails(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .delete(thumbnailAnalyses)
+    .where(like(thumbnailAnalyses.imageUrl, "https://via.placeholder.com/%"));
+}
+
 export async function runThumbnailGenerator(
   _userId: number,
   _input: ThumbnailGeneratorInput,
 ): Promise<ThumbnailGeneratorOutput> {
+  await purgeLegacyPlaceholderThumbnails();
   throw new Error(THUMBNAIL_CREATION_HELD_MESSAGE);
 }
