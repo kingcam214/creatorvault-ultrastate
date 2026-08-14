@@ -156,10 +156,10 @@ export default function KingContent() {
             metadata: { trailerProjectId: trailerProject.trailerProjectId, nextDestination: "trailer_studio" },
           });
           const sourceAssetIds = selected.map((selectedAsset) => selectedAsset.id).join(",");
-          setLocation(`/vaultx/trailers?sourceAssetIds=${encodeURIComponent(sourceAssetIds)}&sourceAssetId=${asset.id}&projectId=${trailerProject.trailerProjectId}&creationProjectId=${creationProject.id}`);
+          setLocation(`/trailer-maker?sourceAssetIds=${encodeURIComponent(sourceAssetIds)}&sourceAssetId=${asset.id}&projectId=${trailerProject.trailerProjectId}&creationProjectId=${creationProject.id}`);
         } catch {
           // The studio remains available even if a future destination is temporarily unavailable.
-          setLocation(`/vaultx/trailers?sourceAssetId=${asset.id}${creationProjectId ? `&creationProjectId=${creationProjectId}` : ""}`);
+          setLocation(`/trailer-maker?sourceAssetId=${asset.id}${creationProjectId ? `&creationProjectId=${creationProjectId}` : ""}`);
         }
         break;
       }
