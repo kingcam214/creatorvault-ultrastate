@@ -1,907 +1,116 @@
-/**
- * VaultX Outreach Command Center
- * Live lead pipeline | 50 daily outreach messages | Hourly revenue summary
- * AI Chat Assistant for creator replies | Automated Director status
- */
-import { useState, useEffect } from "react";
-import { MediaUpload } from "@/components/MediaUpload";
-import { trpc } from "../lib/trpc";
-import { useToast } from "../hooks/use-toast";
+import { Link } from "wouter";
+import { LockKeyhole, ShieldCheck, Users, ArrowUpRight } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { trpc } from "@/lib/trpc";
 
-const PLATFORM_COLORS: Record<string, string> = {
-  twitter: "#1DA1F2",
-  reddit: "#FF4500",
-  instagram: "#E1306C",
-  telegram: "#0088cc",
-};
-
-const SCORE_COLOR = (score: number) =>
-  score >= 80 ? "#00ff88" : score >= 60 ? "#ffcc00" : "#ff6b6b";
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "CV";
+}
 
 export default function OutreachCommandCenter() {
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"warroom" | "pipeline" | "director" | "revenue">("warroom");
-  const [selectedCreators, setSelectedCreators] = useState<any[]>([]);
-  const [replyModal, setReplyModal] = useState<{ handle: string; message: string } | null>(null);
-  const [replyInput, setReplyInput] = useState("");
-  const [replyHistory, setReplyHistory] = useState<any[]>([]);
-  const [isScanning, setIsScanning] = useState(false);
-  const [directorImageUrl, setDirectorImageUrl] = useState("");
-  const [directorStyle, setDirectorStyle] = useState<"desire" | "velvet" | "sunrise" | "midnight" | "natural">("desire");
-
-  // tRPC calls
-  const scrapeCreators = trpc.creatorOutreach.scrapeCreators.useMutation();
-  const queueOutreach = trpc.creatorOutreach.queueDailyOutreach.useMutation();
-  const handleReply = trpc.creatorOutreach.handleCreatorReply.useMutation();
-  const { data: outreachStats } = trpc.creatorOutreach.getOutreachStats.useQuery();
-  const { data: hourlySummary, refetch: refetchSummary } = trpc.revenueReporting.getHourlySummary.useQuery();
-  const { data: revenueBreakdown } = trpc.revenueReporting.getRevenueBreakdown.useQuery({ period: "day" });
-  const { data: pipelineHealth } = trpc.revenueReporting.getPipelineHealth.useQuery();
-  const { data: creditCheck } = trpc.automatedDirector.checkCredits.useQuery();
-  const applyMotion = trpc.automatedDirector.applyMotion.useMutation();
-  const applyStyle = trpc.automatedDirector.applyStyle.useMutation();
-  const applyEnhance = trpc.automatedDirector.applyEnhance.useMutation();
-  const runPipeline = trpc.automatedDirector.runFullPipeline.useMutation();
-  const vaultxConfigQuery = trpc.vaultxAcquisition.getConfig.useQuery(undefined, { retry: false, refetchInterval: 45000 });
-  const vaultxBoardQuery = trpc.vaultxAcquisition.getBoard.useQuery({ limit: 80 }, { retry: false, refetchInterval: 30000 });
-  const vaultxProofQuery = trpc.vaultxAcquisition.getProof.useQuery({ limit: 80 }, { retry: false, refetchInterval: 30000 });
-  const bootstrapAcquisition = trpc.vaultxAcquisition.bootstrap.useMutation({
-    onSuccess: () => {
-      vaultxConfigQuery.refetch();
-      vaultxBoardQuery.refetch();
-      vaultxProofQuery.refetch();
-    },
-  });
-  const runAcquisitionNow = trpc.vaultxAcquisition.runNow.useMutation({
-    onSuccess: () => {
-      vaultxBoardQuery.refetch();
-      vaultxProofQuery.refetch();
-    },
-  });
-  const configureAcquisition = trpc.vaultxAcquisition.configure.useMutation({
-    onSuccess: () => {
-      vaultxConfigQuery.refetch();
-      vaultxBoardQuery.refetch();
-      vaultxProofQuery.refetch();
-    },
-  });
-
-  const acquisitionConfig = ((vaultxConfigQuery.data as any)?.config ?? {}) as any;
-  const acquisitionBoard = ((vaultxBoardQuery.data ?? {}) as any);
-  const acquisitionProof = ((vaultxProofQuery.data ?? {}) as any);
-  const acquisitionLeads = ((acquisitionBoard.leads ?? []) as any[]);
-  const acquisitionActions = ((acquisitionBoard.actions ?? []) as any[]);
-  const acquisitionHandoffs = ((acquisitionBoard.handoffs ?? []) as any[]);
-  const acquisitionRuns = ((acquisitionBoard.runs ?? []) as any[]);
-  const acquisitionTelemetry = ((acquisitionProof.telemetry ?? []) as any[]);
-  const acquisitionSummary = ((acquisitionProof.summary ?? {}) as any);
-  const ownerAutopilot = acquisitionConfig.ownerAutopilot ?? {};
-  const ownerAutopilotApproved = ownerAutopilot.enabled === true && Boolean(ownerAutopilot.approvedBy && ownerAutopilot.approvedAt);
-  const acquisitionModeLabel = ownerAutopilotApproved ? "Guarded owner autopilot" : acquisitionConfig.enabled === true ? "Proof-only until standing approval" : "Operator paused";
-  const acquisitionModeColor = ownerAutopilotApproved ? "#00ff88" : acquisitionConfig.enabled === true ? "#ffcc00" : "#ff6b6b";
-  const acquisitionLiveEnabled = ownerAutopilotApproved || acquisitionConfig.liveSendsEnabled === true;
-  const acquisitionBusy = bootstrapAcquisition.isPending || runAcquisitionNow.isPending || configureAcquisition.isPending;
-
-  const refreshAcquisitionWarRoom = () => {
-    vaultxConfigQuery.refetch();
-    vaultxBoardQuery.refetch();
-    vaultxProofQuery.refetch();
-  };
-
-  const handleBootstrapAcquisition = async () => {
-    try {
-      await bootstrapAcquisition.mutateAsync();
-      toast({ title: "Acquisition schema verified", description: "The operator tables and proof ledger are ready." });
-    } catch (e: any) {
-      toast({ title: "Bootstrap failed", description: e.message, variant: "destructive" });
-    }
-  };
-
-  const handleRunAcquisition = async (mode: "test" | "manual" | "auto") => {
-    try {
-      const result = await runAcquisitionNow.mutateAsync({ mode, sourceLimit: 80, outreachLimit: 50, followUpLimit: 50 });
-      const proof = result as any;
-      const title = mode === "test" ? "Proof-only sweep complete" : mode === "auto" ? "Owner autopilot sweep complete" : "Guarded acquisition sweep complete";
-      toast({
-        title,
-        description: `Found ${proof?.sourced ?? 0}, queued ${proof?.queued ?? 0}, sent ${proof?.sent ?? 0}, held back ${proof?.handoff ?? 0}, failed ${proof?.failed ?? 0}. ${proof?.platformCapability || "The platform only counts real sent actions as contacted."}`,
-      });
-    } catch (e: any) {
-      toast({ title: "Acquisition sweep failed", description: e.message, variant: "destructive" });
-    }
-  };
-
-  const handleApproveOwnerAutopilot = async () => {
-    try {
-      await configureAcquisition.mutateAsync({
-        enabled: true,
-        ownerAutopilot: {
-          enabled: true,
-          approvedBy: "owner-command-center",
-          approvedAt: new Date().toISOString(),
-          policyVersion: ownerAutopilot.policyVersion ?? "vaultx-owner-autopilot-v1",
-          minScore: ownerAutopilot.minScore ?? 85,
-          dailySendLimit: ownerAutopilot.dailySendLimit ?? 50,
-          allowedChannels: ownerAutopilot.allowedChannels ?? ["telegram", "webhook"],
-          allowedStages: ownerAutopilot.allowedStages ?? ["first_touch", "follow_up_1", "follow_up_2", "follow_up_3", "final_cta"],
-          requireDirectDelivery: ownerAutopilot.requireDirectDelivery ?? true,
-          stopOnRiskSignals: ownerAutopilot.stopOnRiskSignals ?? true,
-          plainEnglishSummary: ownerAutopilot.plainEnglishSummary ?? "Find hot creator leads, send approved VaultX outreach only through real delivery connections, follow up inside the daily cap, and interrupt the owner only for risk, missing delivery setup, failed sends, or ready-to-close replies.",
-        },
-      });
-      toast({ title: "Owner autopilot approved", description: "VaultX can now run the approved acquisition strategy automatically, but it still stops for missing delivery setup, risk signals, daily caps, or ready-to-close exceptions." });
-    } catch (e: any) {
-      toast({ title: "Autopilot approval failed", description: e.message, variant: "destructive" });
-    }
-  };
-
-  // Auto-refresh revenue summary every 60 seconds
-  useEffect(() => {
-    const interval = setInterval(() => refetchSummary(), 60000);
-    return () => clearInterval(interval);
-  }, [refetchSummary]);
-
-  const handleScanAndQueue = async () => {
-    setIsScanning(true);
-    try {
-      const result = await scrapeCreators.mutateAsync({
-        platform: "both",
-        niche: "body positive adult creator fitness wellness",
-        count: 60,
-      });
-      setSelectedCreators(result.creators);
-      toast({ title: `Found ${result.total} creators`, description: `${result.highIntent} high-intent leads` });
-
-      // Auto-queue top 50
-      const queued = await queueOutreach.mutateAsync({
-        creators: result.creators.slice(0, 50),
-        dailyLimit: 50,
-      });
-      toast({
-        title: `${queued.queued} messages queued`,
-        description: "Daily outreach pipeline armed. Messages ready to send.",
-      });
-    } catch (e: any) {
-      toast({ title: "Scan error", description: e.message, variant: "destructive" });
-    } finally {
-      setIsScanning(false);
-    }
-  };
-
-  const handleCreatorReply = async () => {
-    if (!replyModal || !replyInput.trim()) return;
-    try {
-      const result = await handleReply.mutateAsync({
-        creatorHandle: replyModal.handle,
-        creatorMessage: replyInput,
-        conversationHistory: replyHistory,
-      });
-      setReplyHistory(prev => [
-        ...prev,
-        { role: "user", content: replyInput },
-        { role: "assistant", content: result.reply },
-      ]);
-      setReplyInput("");
-      if (result.isReady && result.magicLink) {
-        toast({ title: "Creator ready to sign up!", description: `Magic Link: ${result.magicLink}` });
-      }
-    } catch (e: any) {
-      toast({ title: "Reply error", description: e.message, variant: "destructive" });
-    }
-  };
-
-  const handleRunDirector = async () => {
-    if (!directorImageUrl) {
-      toast({ title: "No image URL", description: "Enter a creator image URL to process", variant: "destructive" });
-      return;
-    }
-    try {
-      const result = await runPipeline.mutateAsync({
-        imageUrl: directorImageUrl,
-        creatorId: "manual",
-        style: directorStyle,
-        enhanceType: "full",
-        outputType: "video",
-      });
-      toast({ title: "Pipeline complete!", description: `Output: ${result.finalUrl}` });
-      window.open(result.finalUrl, "_blank");
-    } catch (e: any) {
-      toast({ title: "Director error", description: e.message, variant: "destructive" });
-    }
-  };
-
-  const statusDot = (ok: boolean | undefined) => (
-    <span style={{
-      display: "inline-block",
-      width: 8,
-      height: 8,
-      borderRadius: "50%",
-      background: ok ? "#00ff88" : "#ff4444",
-      marginRight: 6,
-    }} />
+  const { user, isLoading } = useAuth();
+  const isOwner = user?.id === 6 || user?.id === 33 || user?.role === "king" || user?.role === "admin";
+  const privateReview = (trpc as any).creatorOutreach.getPrivateRecruitmentProfiles.useQuery(
+    { limit: 100 },
+    { enabled: Boolean(isOwner) },
   );
+  const relationshipData = (privateReview.data ?? {}) as any;
+  const profiles = Array.isArray(relationshipData.profiles) ? relationshipData.profiles : [];
+
+  if (isLoading) return <div className="min-h-screen bg-[#050505]" aria-busy="true" />;
+
+  if (!isOwner) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#050505] px-6 text-center">
+        <LockKeyhole className="mb-4 h-10 w-10 text-zinc-600" />
+        <h1 className="text-2xl font-black text-white">Owner-only relationships</h1>
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-zinc-400">This private room is reserved for Cameron’s creator relationships.</p>
+        <Link href="/dashboard"><a className="mt-6 rounded-xl bg-white px-5 py-3 text-sm font-black text-black">Return to Creator OS</a></Link>
+      </div>
+    );
+  }
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #0a0a0f 0%, #0d0d1a 50%, #0a0a0f 100%)",
-      color: "#fff",
-      fontFamily: "'Inter', sans-serif",
-      padding: "24px",
-    }}>
-      {/* Header */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
-          <div style={{
-            width: 48,
-            height: 48,
-            borderRadius: 12,
-            background: "linear-gradient(135deg, #7c3aed, #db2777)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 24,
-          }}>⚡</div>
-          <div>
-            <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: "-0.5px" }}>
-              Outreach Command Center
-            </h1>
-            <p style={{ color: "#888", margin: 0, fontSize: 14 }}>
-              Autonomous Creator Onboarding & Monetization Pipeline
+    <main className="min-h-screen overflow-hidden bg-[#050505] pb-24 pt-20 text-white">
+      <section className="relative border-b border-white/10 bg-[radial-gradient(circle_at_82%_0%,rgba(192,132,252,0.18),transparent_30%),radial-gradient(circle_at_20%_30%,rgba(34,211,238,0.12),transparent_36%)]">
+        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-fuchsia-300/30 bg-fuchsia-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-100">
+              <LockKeyhole className="h-3.5 w-3.5" /> Private creator relationships
+            </div>
+            <h1 className="mt-5 text-4xl font-black tracking-[-0.055em] text-white sm:text-6xl">Build the room before you open the doors.</h1>
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">
+              These are people you plan to bring into CreatorVault yourself. Their audience signals stay private. Nothing here claims they have joined, earned, posted, sold, or agreed to anything.
             </p>
           </div>
-          <div style={{ marginLeft: "auto", textAlign: "right" }}>
-            <div style={{
-              background: "rgba(0,255,136,0.1)",
-              border: "1px solid rgba(0,255,136,0.3)",
-              borderRadius: 8,
-              padding: "8px 16px",
-              fontSize: 13,
-              color: "#00ff88",
-            }}>
-              {statusDot(pipelineHealth?.status === "Active")}
-              {pipelineHealth?.status || "Checking..."}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
+        <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+          <div className="rounded-3xl border border-emerald-300/20 bg-[linear-gradient(135deg,rgba(16,185,129,0.14),rgba(5,5,5,0.7))] p-6 sm:p-8">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-300/15 text-emerald-200"><ShieldCheck className="h-6 w-6" /></div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">Relationship protection is live</p>
+                <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white">No outreach leaves CreatorVault from this room.</h2>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-300">Messages, follow-ups, distribution, public activation, and money claims are held. A creator’s public presence begins only after she chooses to join and controls what becomes visible.</p>
+              </div>
             </div>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Private launch list</p>
+            <div className="mt-4 flex items-end gap-3"><span className="text-5xl font-black tracking-[-0.06em] text-white">{profiles.length}</span><span className="pb-1 text-sm font-bold text-zinc-400">relationships in review</span></div>
+            <p className="mt-4 text-sm leading-relaxed text-zinc-400">Audience and engagement are relationship notes—not promises of revenue, enrollment, or sales.</p>
           </div>
         </div>
 
-        {/* Hourly Summary Bar */}
-        {hourlySummary && (
-          <div style={{
-            background: "rgba(124,58,237,0.15)",
-            border: "1px solid rgba(124,58,237,0.3)",
-            borderRadius: 10,
-            padding: "12px 20px",
-            fontFamily: "monospace",
-            fontSize: 13,
-            color: "#c4b5fd",
-            marginTop: 12,
-          }}>
-            {hourlySummary.summary}
+        <div className="mt-10 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200">Your private list</p>
+            <h2 className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">Creator relationships</h2>
           </div>
+          <Link href="/king/content"><a className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">Open creation arsenal <ArrowUpRight className="h-4 w-4" /></a></Link>
+        </div>
+
+        {privateReview.isLoading ? (
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-52 animate-pulse rounded-3xl border border-white/5 bg-white/[0.035]" />)}</div>
+        ) : profiles.length > 0 ? (
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {profiles.map((profile: any) => (
+              <article key={profile.source_id ?? profile.handle} className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02))] p-6 transition hover:border-fuchsia-300/35 hover:bg-white/[0.06]">
+                <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-fuchsia-400/10 blur-3xl transition group-hover:bg-fuchsia-400/20" />
+                <div className="relative flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-300 to-violet-500 text-sm font-black text-black">{initials(String(profile.display_name || profile.handle || "Creator"))}</div>
+                  <div className="min-w-0 flex-1"><h3 className="truncate text-lg font-black text-white">{profile.display_name || profile.handle}</h3><p className="mt-1 text-xs font-bold uppercase tracking-[0.13em] text-zinc-500">Private relationship</p></div>
+                </div>
+                {profile.bio && <p className="relative mt-5 line-clamp-3 text-sm leading-relaxed text-zinc-300">{profile.bio}</p>}
+                <div className="relative mt-6 grid grid-cols-2 gap-3 border-t border-white/10 pt-4 text-xs">
+                  <div><p className="font-black uppercase tracking-[0.13em] text-zinc-600">Audience note</p><p className="mt-1 font-bold text-white">{Number(profile.followers || 0).toLocaleString()} recorded</p></div>
+                  <div><p className="font-black uppercase tracking-[0.13em] text-zinc-600">Engagement note</p><p className="mt-1 font-bold text-white">{Number(profile.engagement_rate || 0).toFixed(1)}% recorded</p></div>
+                </div>
+                <div className="relative mt-5 inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-amber-100">Held until she chooses to join</div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-6 rounded-3xl border border-dashed border-white/15 bg-white/[0.025] p-10 text-center"><Users className="mx-auto h-10 w-10 text-zinc-600" /><h3 className="mt-4 text-xl font-black text-white">Your private list is clear.</h3><p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-400">When you add a real relationship record, it stays private here until that creator chooses to join CreatorVault.</p></div>
         )}
-      </div>
 
-      {/* Stats Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
-        {[
-          { label: "Creators Onboarded", value: hourlySummary?.onboarded ?? 0, icon: "👤", color: "#7c3aed" },
-          { label: "Leads Contacted", value: hourlySummary?.leadsContacted ?? 0, icon: "📨", color: "#db2777" },
-          { label: "Today's Revenue", value: `$${(hourlySummary?.totalRevenue ?? 0).toFixed(2)}`, icon: "💰", color: "#00ff88" },
-          { label: "Platform Fees (15%)", value: `$${(hourlySummary?.platformFees ?? 0).toFixed(2)}`, icon: "📊", color: "#ffcc00" },
-        ].map((stat) => (
-          <div key={stat.label} style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 12,
-            padding: "20px",
-          }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>{stat.icon}</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: stat.color }}>{stat.value}</div>
-            <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{stat.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 4 }}>
-        {(["warroom", "pipeline", "director", "revenue"] as const).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              flex: 1,
-              padding: "10px 20px",
-              borderRadius: 8,
-              border: "none",
-              cursor: "pointer",
-              fontSize: 13,
-              fontWeight: 600,
-              transition: "all 0.2s",
-              background: activeTab === tab ? "linear-gradient(135deg, #7c3aed, #db2777)" : "transparent",
-              color: activeTab === tab ? "#fff" : "#888",
-            }}
-          >
-            {tab === "warroom" ? "Same-Day War Room" : tab === "pipeline" ? "Outreach Pipeline" : tab === "director" ? "Automated Director" : "Revenue Reports"}
-          </button>
-        ))}
-      </div>
-
-
-      {/* ── Tab: Same-Day Acquisition War Room ── */}
-      {activeTab === "warroom" && (
-        <div>
-          <div style={{
-            background: acquisitionLiveEnabled ? "rgba(255,204,0,0.10)" : "rgba(0,255,136,0.08)",
-            border: `1px solid ${acquisitionLiveEnabled ? "rgba(255,204,0,0.35)" : "rgba(0,255,136,0.28)"}`,
-            borderRadius: 14,
-            padding: 18,
-            marginBottom: 18,
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-              <div style={{ maxWidth: 860 }}>
-                <div style={{ fontSize: 12, color: acquisitionLiveEnabled ? "#ffcc00" : "#00ff88", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>
-                  {acquisitionModeLabel}
-                </div>
-                <h2 style={{ margin: 0, fontSize: 24, fontWeight: 850 }}>Same-Day Acquisition War Room</h2>
-                <p style={{ margin: "8px 0 0", color: "#aaa", lineHeight: 1.6, fontSize: 14 }}>
-                  This is the owner-side cheat-code view. The platform can scout creators, score who is worth chasing, write the outreach, send only inside owner-approved guardrails, and interrupt you only when risk, missing delivery setup, failed sends, or ready-to-close replies need attention.
-                </p>
-              </div>
-              <button
-                onClick={refreshAcquisitionWarRoom}
-                style={{ height: 42, padding: "10px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.06)", color: "#fff", cursor: "pointer", fontWeight: 700 }}
-              >
-                Refresh proof
-              </button>
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(150px, 1fr))", gap: 12, marginBottom: 18 }}>
-            {[
-              { label: "Total leads", value: acquisitionSummary.total_leads ?? acquisitionLeads.length, color: "#7c3aed" },
-              { label: "Hot leads", value: acquisitionSummary.hot_leads ?? acquisitionLeads.filter(l => l.priority_band === "hot").length, color: "#db2777" },
-              { label: "Queued actions", value: acquisitionActions.filter(a => a.status === "queued" || a.status === "pending").length, color: "#ffcc00" },
-              { label: "Contacted w/proof", value: acquisitionSummary.contacted ?? acquisitionActions.filter(a => a.status === "sent" && (a.external_message_id || a.proof)).length, color: "#00ff88" },
-              { label: "Human handoffs", value: acquisitionSummary.handoff_required ?? acquisitionHandoffs.length, color: "#60a5fa" },
-            ].map(metric => (
-              <div key={metric.label} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 16 }}>
-                <div style={{ fontSize: 26, fontWeight: 850, color: metric.color }}>{metric.value ?? 0}</div>
-                <div style={{ fontSize: 11, color: "#777", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>{metric.label}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 360px", gap: 16, marginBottom: 18 }}>
-            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 18 }}>
-              <h3 style={{ margin: "0 0 10px", fontSize: 16, fontWeight: 800 }}>Today’s execution controls</h3>
-              <p style={{ margin: "0 0 16px", color: "#999", fontSize: 13, lineHeight: 1.6 }}>
-                Proof-only mode shows what would happen without sending. Guarded sweep obeys approval gates. Owner autopilot runs the approved strategy automatically: find, score, write, send when safe, follow up, and only stop when the action falls outside the rules.
-              </p>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button onClick={handleBootstrapAcquisition} disabled={acquisitionBusy} style={{ padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.06)", color: "#fff", cursor: acquisitionBusy ? "not-allowed" : "pointer", fontWeight: 750 }}>
-                  Verify schema
-                </button>
-                <button onClick={() => handleRunAcquisition("test")} disabled={acquisitionBusy} style={{ padding: "11px 16px", borderRadius: 10, border: "none", background: acquisitionBusy ? "#333" : "linear-gradient(135deg, #7c3aed, #db2777)", color: "#fff", cursor: acquisitionBusy ? "not-allowed" : "pointer", fontWeight: 750 }}>
-                  Run test sweep
-                </button>
-                <button onClick={() => handleRunAcquisition("manual")} disabled={acquisitionBusy} style={{ padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(0,255,136,0.32)", background: acquisitionBusy ? "#333" : "rgba(0,255,136,0.10)", color: "#a7f3d0", cursor: acquisitionBusy ? "not-allowed" : "pointer", fontWeight: 750 }}>
-                  Run guarded sweep
-                </button>
-                <button onClick={handleApproveOwnerAutopilot} disabled={acquisitionBusy || ownerAutopilotApproved} style={{ padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(255,204,0,0.35)", background: acquisitionBusy || ownerAutopilotApproved ? "#333" : "rgba(255,204,0,0.12)", color: acquisitionBusy || ownerAutopilotApproved ? "#777" : "#ffe08a", cursor: acquisitionBusy || ownerAutopilotApproved ? "not-allowed" : "pointer", fontWeight: 850 }}>
-                  Approve autopilot rules once
-                </button>
-                <button onClick={() => handleRunAcquisition("auto")} disabled={acquisitionBusy || !ownerAutopilotApproved} style={{ padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(0,255,136,0.42)", background: acquisitionBusy || !ownerAutopilotApproved ? "#333" : "linear-gradient(135deg, #00a86b, #00ff88)", color: acquisitionBusy || !ownerAutopilotApproved ? "#777" : "#04110a", cursor: acquisitionBusy || !ownerAutopilotApproved ? "not-allowed" : "pointer", fontWeight: 850 }}>
-                  Run owner autopilot
-                </button>
-              </div>
-            </div>
-
-            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 18 }}>
-              <h3 style={{ margin: "0 0 10px", fontSize: 16, fontWeight: 800 }}>Proof state</h3>
-              <div style={{ fontSize: 13, color: "#aaa", lineHeight: 1.7 }}>
-                <div>Mode: <strong style={{ color: acquisitionModeColor }}>{acquisitionModeLabel}</strong></div>
-                <div>Standing approval: <strong style={{ color: ownerAutopilotApproved ? "#00ff88" : "#ffcc00" }}>{ownerAutopilotApproved ? `approved by ${ownerAutopilot.approvedBy}` : "not active yet"}</strong></div>
-                <div>Autopilot rules: <strong style={{ color: "#fff" }}>score {ownerAutopilot.minScore ?? 85}+ · cap {ownerAutopilot.dailySendLimit ?? 50}/day · {(ownerAutopilot.allowedChannels ?? ["telegram", "webhook"]).join(", ")}</strong></div>
-                <div>Last run: <strong style={{ color: "#fff" }}>{acquisitionRuns[0]?.started_at || acquisitionTelemetry[0]?.created_at || "not recorded"}</strong></div>
-                <div>Proof events: <strong style={{ color: "#fff" }}>{acquisitionTelemetry.length}</strong></div>
-                <div>API status: <strong style={{ color: vaultxBoardQuery.error ? "#ff6b6b" : "#00ff88" }}>{vaultxBoardQuery.error ? vaultxBoardQuery.error.message : "responding"}</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.15fr) minmax(340px, 0.85fr)", gap: 16 }}>
-            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 18, overflow: "hidden" }}>
-              <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800 }}>Lead board: autopilot chases only safe, high-score creators</h3>
-              <div style={{ display: "grid", gap: 10 }}>
-                {acquisitionLeads.slice(0, 12).map((lead) => (
-                  <div key={lead.id || lead.uuid || `${lead.platform}-${lead.handle}`} style={{ display: "grid", gridTemplateColumns: "1.1fr 0.55fr 0.55fr 1fr", gap: 12, alignItems: "center", padding: "12px", borderRadius: 10, background: "rgba(0,0,0,0.18)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <div>
-                      <div style={{ fontWeight: 800 }}>@{lead.handle}</div>
-                      <div style={{ color: "#777", fontSize: 12 }}>{lead.platform} · {lead.source || lead.niche || "sourced"}</div>
-                    </div>
-                    <div style={{ color: SCORE_COLOR(Number(lead.score || 0)), fontWeight: 800 }}>{lead.priority_band || "unscored"} · {Number(lead.score || 0)}</div>
-                    <div style={{ color: lead.status === "contacted" ? "#00ff88" : lead.handoff_required ? "#ffcc00" : "#aaa", fontSize: 12, fontWeight: 750 }}>{lead.status || "queued"}</div>
-                    <div style={{ color: "#aaa", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lead.handoff_reason || lead.cta_url || "next action pending"}</div>
-                  </div>
-                ))}
-                {acquisitionLeads.length === 0 && (
-                  <div style={{ color: "#777", padding: 18, textAlign: "center", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 10 }}>
-                    No acquisition leads are visible yet. Verify schema, then run a test sweep to source and score today’s prospects.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 18 }}>
-              <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800 }}>Recent outbound actions and autopilot holds</h3>
-              <div style={{ display: "grid", gap: 10, maxHeight: 520, overflowY: "auto" }}>
-                {acquisitionActions.slice(0, 12).map((action) => (
-                  <div key={action.id || action.uuid} style={{ padding: 12, borderRadius: 10, background: "rgba(0,0,0,0.18)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
-                      <strong>@{action.handle}</strong>
-                      <span style={{ color: action.status === "sent" ? "#00ff88" : action.status === "failed" ? "#ff6b6b" : "#ffcc00", fontSize: 12, fontWeight: 800 }}>{action.status}</span>
-                    </div>
-                    <div style={{ color: "#888", fontSize: 12, marginBottom: 8 }}>{action.channel} · {action.stage} · attempts {action.attempt_count ?? 0}</div>
-                    <div style={{ color: "#aaa", fontSize: 12, lineHeight: 1.5 }}>{action.error_message || action.external_message_id || action.cta_url || "No external delivery proof attached yet."}</div>
-                  </div>
-                ))}
-                {acquisitionActions.length === 0 && (
-                  <div style={{ color: "#777", padding: 18, textAlign: "center", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 10 }}>
-                    No outbound actions yet. Generated leads will appear here with their send status and proof fields.
-                  </div>
-                )}
-              </div>
-            </div>
+        <div className="mt-10 rounded-3xl border border-white/10 bg-black/35 p-6 sm:p-8">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">What this room means</p>
+          <div className="mt-5 grid gap-5 md:grid-cols-3">
+            <div><h3 className="font-black text-white">Their profile is not public</h3><p className="mt-2 text-sm leading-relaxed text-zinc-400">Private relationship notes never become a public creator page by themselves.</p></div>
+            <div><h3 className="font-black text-white">Their money is not assumed</h3><p className="mt-2 text-sm leading-relaxed text-zinc-400">Follower and engagement information never turns into claimed income, sales, or monetization.</p></div>
+            <div><h3 className="font-black text-white">Their choice opens the next step</h3><p className="mt-2 text-sm leading-relaxed text-zinc-400">Only a creator’s own decision to join can unlock her Creator HQ, offers, media, or public presence.</p></div>
           </div>
         </div>
-      )}
-
-      {/* ── Tab: Pipeline ── */}
-      {activeTab === "pipeline" && (
-        <div>
-          {/* Action Bar */}
-          <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
-            <button
-              onClick={handleScanAndQueue}
-              disabled={isScanning}
-              style={{
-                padding: "12px 24px",
-                borderRadius: 10,
-                border: "none",
-                cursor: isScanning ? "not-allowed" : "pointer",
-                background: isScanning ? "#333" : "linear-gradient(135deg, #7c3aed, #db2777)",
-                color: "#fff",
-                fontSize: 14,
-                fontWeight: 700,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              {isScanning ? "⏳ Scanning..." : "🚀 Scan & Queue 50 Outreach Messages"}
-            </button>
-            <div style={{
-              flex: 1,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 10,
-              padding: "12px 16px",
-              fontSize: 13,
-              color: "#888",
-              display: "flex",
-              alignItems: "center",
-            }}>
-              {selectedCreators.length > 0
-                ? `${selectedCreators.length} creators found — ${selectedCreators.filter(c => c.score >= 70).length} high-intent`
-                : "Click Scan to find and queue today's 50 outreach targets"}
-            </div>
-          </div>
-
-          {/* Creator Cards */}
-          {selectedCreators.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
-              {selectedCreators.slice(0, 20).map((creator, i) => (
-                <div key={i} style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 12,
-                  padding: 20,
-                  position: "relative",
-                }}>
-                  {/* Score Badge */}
-                  <div style={{
-                    position: "absolute",
-                    top: 16,
-                    right: 16,
-                    background: SCORE_COLOR(creator.score || 0),
-                    color: "#000",
-                    borderRadius: 6,
-                    padding: "2px 8px",
-                    fontSize: 12,
-                    fontWeight: 700,
-                  }}>
-                    {creator.score || 0}
-                  </div>
-
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                    <div style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: "50%",
-                      background: `linear-gradient(135deg, ${PLATFORM_COLORS[creator.platforms?.[0]] || "#7c3aed"}, #db2777)`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 18,
-                      fontWeight: 800,
-                    }}>
-                      {(creator.display_name || creator.handle || "?")[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 15 }}>@{creator.handle}</div>
-                      <div style={{ fontSize: 12, color: PLATFORM_COLORS[creator.platforms?.[0]] || "#888" }}>
-                        {creator.platforms?.[0] || "twitter"} · {(creator.followers || 0).toLocaleString()} followers
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ fontSize: 12, color: "#aaa", marginBottom: 12, lineHeight: 1.5 }}>
-                    {creator.bio || "No bio available"}
-                  </div>
-
-                  <div style={{ fontSize: 11, color: "#666", marginBottom: 16 }}>
-                    Recent: "{creator.recent_post || "—"}"
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      onClick={() => {
-                        setReplyModal({ handle: creator.handle, message: creator.message || "" });
-                        setReplyHistory([]);
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: "8px",
-                        borderRadius: 8,
-                        border: "1px solid rgba(124,58,237,0.4)",
-                        background: "rgba(124,58,237,0.1)",
-                        color: "#c4b5fd",
-                        cursor: "pointer",
-                        fontSize: 12,
-                        fontWeight: 600,
-                      }}
-                    >
-                      💬 Chat
-                    </button>
-                    <button
-                      style={{
-                        flex: 1,
-                        padding: "8px",
-                        borderRadius: 8,
-                        border: "1px solid rgba(219,39,119,0.4)",
-                        background: "rgba(219,39,119,0.1)",
-                        color: "#f9a8d4",
-                        cursor: "pointer",
-                        fontSize: 12,
-                        fontWeight: 600,
-                      }}
-                    >
-                      📨 View Message
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Tab: Automated Director ── */}
-      {activeTab === "director" && (
-        <div>
-          {/* Credit Status */}
-          <div style={{
-            background: creditCheck?.hasCredits ? "rgba(0,255,136,0.08)" : "rgba(255,68,68,0.08)",
-            border: `1px solid ${creditCheck?.hasCredits ? "rgba(0,255,136,0.3)" : "rgba(255,68,68,0.3)"}`,
-            borderRadius: 10,
-            padding: "16px 20px",
-            marginBottom: 24,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}>
-            <span style={{ fontSize: 24 }}>{creditCheck?.hasCredits ? "✅" : "❌"}</span>
-            <div>
-              <div style={{ fontWeight: 700, color: creditCheck?.hasCredits ? "#00ff88" : "#ff4444" }}>
-                Replicate: {creditCheck?.hasCredits ? `Active — @${creditCheck.username}` : "No Credits / Not Configured"}
-              </div>
-              <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>
-                {creditCheck?.error || (creditCheck?.hasCredits ? "All 3 models ready: Motion (Kling 2.1) · Style (Flux) · Enhance (GFPGAN)" : "Add REPLICATE_API_TOKEN to VPS .env to activate")}
-              </div>
-            </div>
-          </div>
-
-          {/* Pipeline Models */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
-            {[
-              { label: "Model A: Motion", model: "Kling 2.1", desc: "Cinematic slow motion, 5s video from still image", icon: "🎬", color: "#7c3aed" },
-              { label: "Model B: Style", model: "Flux 1.1 Pro", desc: "Desire-Grade color/LUT — 5 signature looks", icon: "🎨", color: "#db2777" },
-              { label: "Model C: Enhance", model: "GFPGAN + Real-ESRGAN", desc: "2x facial & texture enhancement", icon: "✨", color: "#00ff88" },
-            ].map(m => (
-              <div key={m.label} style={{
-                background: "rgba(255,255,255,0.04)",
-                border: `1px solid ${m.color}33`,
-                borderRadius: 12,
-                padding: 20,
-              }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>{m.icon}</div>
-                <div style={{ fontWeight: 700, color: m.color, fontSize: 14 }}>{m.label}</div>
-                <div style={{ fontSize: 13, color: "#aaa", marginTop: 4 }}>{m.model}</div>
-                <div style={{ fontSize: 12, color: "#666", marginTop: 8 }}>{m.desc}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Run Pipeline */}
-          <div style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 12,
-            padding: 24,
-          }}>
-            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700 }}>Run Full Pipeline</h3>
-            <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-              <input
-                value={directorImageUrl}
-                onChange={e => setDirectorImageUrl(e.target.value)}
-                placeholder="Tap to upload creator photo"
-                style={{
-                  flex: 1,
-                  padding: "12px 16px",
-                  borderRadius: 8,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.06)",
-                  color: "#fff",
-                  fontSize: 14,
-                }}
-              />
-              <select
-                value={directorStyle}
-                onChange={e => setDirectorStyle(e.target.value as any)}
-                style={{
-                  padding: "12px 16px",
-                  borderRadius: 8,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.06)",
-                  color: "#fff",
-                  fontSize: 14,
-                  cursor: "pointer",
-                }}
-              >
-                <option value="desire">Desire Grade</option>
-                <option value="velvet">Velvet</option>
-                <option value="sunrise">Sunrise</option>
-                <option value="midnight">Midnight</option>
-                <option value="natural">Natural</option>
-              </select>
-            </div>
-            <button
-              onClick={handleRunDirector}
-              disabled={runPipeline.isPending || !creditCheck?.hasCredits}
-              style={{
-                width: "100%",
-                padding: "14px",
-                borderRadius: 10,
-                border: "none",
-                cursor: runPipeline.isPending || !creditCheck?.hasCredits ? "not-allowed" : "pointer",
-                background: runPipeline.isPending || !creditCheck?.hasCredits
-                  ? "#333"
-                  : "linear-gradient(135deg, #7c3aed, #db2777)",
-                color: "#fff",
-                fontSize: 15,
-                fontWeight: 700,
-              }}
-            >
-              {runPipeline.isPending
-                ? "⏳ Processing: Enhance → Style → Motion..."
-                : !creditCheck?.hasCredits
-                ? "❌ Replicate Credits Required"
-                : "🎬 Run Full Pipeline (Enhance → Style → Motion)"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Tab: Revenue Reports ── */}
-      {activeTab === "revenue" && (
-        <div>
-          {/* Pipeline Health */}
-          <div style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 12,
-            padding: 20,
-            marginBottom: 24,
-          }}>
-            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700 }}>Pipeline Health</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              {pipelineHealth?.checks && Object.entries(pipelineHealth.checks).map(([key, ok]) => (
-                <div key={key} style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 14px",
-                  background: ok ? "rgba(0,255,136,0.06)" : "rgba(255,68,68,0.06)",
-                  border: `1px solid ${ok ? "rgba(0,255,136,0.2)" : "rgba(255,68,68,0.2)"}`,
-                  borderRadius: 8,
-                }}>
-                  {statusDot(ok as boolean)}
-                  <span style={{ fontSize: 13, textTransform: "capitalize" }}>
-                    {key.replace(/([A-Z])/g, " $1").trim()}
-                  </span>
-                </div>
-              ))}
-            </div>
-            {pipelineHealth?.errors && (
-              <div style={{ marginTop: 12, padding: 12, background: "rgba(255,68,68,0.08)", borderRadius: 8, fontSize: 12, color: "#ff8888", fontFamily: "monospace" }}>
-                {Object.entries(pipelineHealth.errors).map(([k, v]) => (
-                  <div key={k}>[{k}] {v as string}</div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Revenue Breakdown */}
-          {revenueBreakdown && (
-            <div style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 12,
-              padding: 20,
-            }}>
-              <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700 }}>Today's Revenue Breakdown</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-                {[
-                  { label: "Subscriptions", value: revenueBreakdown.breakdown.subscriptions, color: "#7c3aed" },
-                  { label: "PPV Purchases", value: revenueBreakdown.breakdown.ppv, color: "#db2777" },
-                  { label: "Tips", value: revenueBreakdown.breakdown.tips, color: "#00ff88" },
-                  { label: "Custom Requests", value: revenueBreakdown.breakdown.customRequests, color: "#ffcc00" },
-                  { label: "Active Creators", value: revenueBreakdown.breakdown.activeCreators, color: "#60a5fa", prefix: "" },
-                  { label: "New Subscribers", value: revenueBreakdown.breakdown.newSubscribers, color: "#f472b6", prefix: "" },
-                ].map(item => (
-                  <div key={item.label} style={{
-                    padding: "16px",
-                    background: "rgba(255,255,255,0.03)",
-                    borderRadius: 10,
-                    border: `1px solid ${item.color}22`,
-                  }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: item.color }}>
-                      {item.prefix !== "" ? "$" : ""}{typeof item.value === "number" ? item.value.toFixed(item.prefix !== "" ? 2 : 0) : item.value}
-                    </div>
-                    <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{item.label}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{
-                marginTop: 16,
-                padding: "16px",
-                background: "rgba(0,255,136,0.06)",
-                borderRadius: 10,
-                display: "flex",
-                justifyContent: "space-between",
-              }}>
-                <div>
-                  <div style={{ fontSize: 12, color: "#666" }}>Total Revenue</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: "#00ff88" }}>
-                    ${revenueBreakdown.breakdown.total.toFixed(2)}
-                  </div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 12, color: "#666" }}>Platform Fees (15%)</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: "#ffcc00" }}>
-                    ${revenueBreakdown.breakdown.platformFees.toFixed(2)}
-                  </div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 12, color: "#666" }}>Creator Earnings (85%)</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: "#c4b5fd" }}>
-                    ${revenueBreakdown.breakdown.creatorEarnings.toFixed(2)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Reply Modal ── */}
-      {replyModal && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.85)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000,
-          padding: 24,
-        }}>
-          <div style={{
-            background: "#0d0d1a",
-            border: "1px solid rgba(124,58,237,0.4)",
-            borderRadius: 16,
-            padding: 24,
-            width: "100%",
-            maxWidth: 560,
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>AI Chat — @{replyModal.handle}</h3>
-              <button
-                onClick={() => { setReplyModal(null); setReplyHistory([]); }}
-                style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: 20 }}
-              >×</button>
-            </div>
-
-            {/* Conversation */}
-            <div style={{ height: 300, overflowY: "auto", marginBottom: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-              {replyHistory.length === 0 && (
-                <div style={{ color: "#666", fontSize: 13, textAlign: "center", marginTop: 80 }}>
-                  Type a creator's reply to generate an AI response that closes the deal
-                </div>
-              )}
-              {replyHistory.map((msg, i) => (
-                <div key={i} style={{
-                  alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                  maxWidth: "80%",
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  background: msg.role === "user" ? "rgba(124,58,237,0.3)" : "rgba(255,255,255,0.06)",
-                  fontSize: 13,
-                  lineHeight: 1.5,
-                }}>
-                  {msg.content}
-                </div>
-              ))}
-            </div>
-
-            {/* Input */}
-            <div style={{ display: "flex", gap: 8 }}>
-              <input
-                value={replyInput}
-                onChange={e => setReplyInput(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleCreatorReply()}
-                placeholder="Enter creator's reply..."
-                style={{
-                  flex: 1,
-                  padding: "10px 14px",
-                  borderRadius: 8,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.06)",
-                  color: "#fff",
-                  fontSize: 13,
-                }}
-              />
-              <button
-                onClick={handleCreatorReply}
-                disabled={handleReply.isPending}
-                style={{
-                  padding: "10px 20px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: "linear-gradient(135deg, #7c3aed, #db2777)",
-                  color: "#fff",
-                  cursor: "pointer",
-                  fontSize: 13,
-                  fontWeight: 700,
-                }}
-              >
-                {handleReply.isPending ? "..." : "Send"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      </section>
+    </main>
   );
 }

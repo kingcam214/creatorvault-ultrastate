@@ -286,6 +286,7 @@ const ALLOWLISTS = {
     'scripts/scope-guard.js'
   ],
   'recruitment-consent': [
+    'client/src/pages/OutreachCommandCenter.tsx',
     'server/routers/creatorOutreachRouter.ts',
     'scripts/scope-guard.js'
   ],
