@@ -120,6 +120,12 @@ const ALLOWLISTS = {
     'server/services/thumbnailGenerator.ts',
     'scripts/scope-guard.js'
   ],
+  'design-image-pilot': [
+    'server/services/governedPolloService.ts',
+    'server/routers/designImagePilotRouter.ts',
+    'server/routers.ts',
+    'scripts/scope-guard.js'
+  ],
   university: [
     'client/src/pages/University.tsx',
     'client/src/pages/UniversityEnrollSuccess.tsx',

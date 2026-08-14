@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import path from "path";
 import { sql } from "drizzle-orm";
 import { db } from "../db";
@@ -118,6 +120,12 @@ const HOMEPAGE_TEXT_TO_VIDEO_MODE = "homepage_text2video";
 const HOMEPAGE_TEXT_TO_VIDEO_API_PATH = "google/veo3-1";
 const HOMEPAGE_PILOT_PUBLIC_ROOT = "/root/uploads";
 const HOMEPAGE_PILOT_MAX_BYTES = 350 * 1024 * 1024;
+const DESIGN_IMAGE_MODEL_PATH = "pollo/openai-gpt-image-2-0";
+const DESIGN_IMAGE_MODE = "design_image_reference_thumbnail";
+const DESIGN_IMAGE_API_PATH = "openai/gpt-image-2-0/image";
+const DESIGN_IMAGE_PUBLIC_ROOT = "/root/uploads";
+const DESIGN_IMAGE_MAX_BYTES = 50 * 1024 * 1024;
+const execFileAsync = promisify(execFile);
 const SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/bytedance-seedance-2-5-ref2video";
 const KLING_SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/kling-v3-omni-ref2video";
 const SOURCE_VIDEO_REFERENCE_MODE = "ref2video";
@@ -256,8 +264,17 @@ function isHomepageTextToVideoPilot(job: Pick<GovernedPolloJob, "providerModelPa
     && job.metadata.noAutomaticRetry === true;
 }
 
+function isDesignImagePilot(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "metadata">): boolean {
+  return job.providerModelPath === DESIGN_IMAGE_MODEL_PATH
+    && job.mode === DESIGN_IMAGE_MODE
+    && job.metadata.designImagePilot === true
+    && job.metadata.ownerDirectedPilot === true
+    && job.metadata.candidateLimit === 1
+    && job.metadata.noAutomaticRetry === true;
+}
+
 function isSingleUseGovernedPilot(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "metadata">): boolean {
-  return isSourceVideoReferenceJob(job) || isHomepageTextToVideoPilot(job);
+  return isSourceVideoReferenceJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
 }
 
 function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
@@ -297,6 +314,39 @@ async function persistHomepageTextToVideoOutput(job: GovernedPolloJob, providerU
   const fileName = "CreatorVault-Homepage-Motion-Pilot.mp4";
   await writeFile(path.join(directory, fileName), bytes);
   return { durableUrl: `https://creatorvault.live/uploads/content-vault/homepage-motion-${job.id}/${fileName}`, fingerprint };
+}
+
+async function buildDesignImageInput(job: GovernedPolloJob): Promise<{ input: Record<string, unknown>; referenceFrameUrl: string }> {
+  if (job.resolution !== "1080p" || job.aspectRatio !== "16:9" || job.durationSeconds !== 1) {
+    throw new Error("Design image pilot must remain one 16:9 image request with the fixed source contract.");
+  }
+  if (!/^https:\/\//i.test(job.sourceUrl)) throw new Error("Design image pilot requires a secure CreatorVault source URL.");
+  const directory = path.join(DESIGN_IMAGE_PUBLIC_ROOT, "content-vault", `design-image-${job.id}`);
+  await mkdir(directory, { recursive: true });
+  const fileName = "CreatorVault-Design-Reference.jpg";
+  const destination = path.join(directory, fileName);
+  await execFileAsync("ffmpeg", ["-y", "-ss", "00:00:02", "-i", job.sourceUrl, "-frames:v", "1", "-q:v", "2", destination], { timeout: 90_000 });
+  const referenceFrameUrl = `https://creatorvault.live/uploads/content-vault/design-image-${job.id}/${fileName}`;
+  return {
+    referenceFrameUrl,
+    input: { prompt: job.prompt, aspectRatio: "16:9", resolution: "2K", quality: "high", imageUrl: referenceFrameUrl },
+  };
+}
+
+async function persistDesignImageOutput(job: GovernedPolloJob, providerUrl: string): Promise<{ durableUrl: string; fingerprint: string }> {
+  const response = await fetch(providerUrl, { redirect: "follow" });
+  if (!response.ok) throw new Error(`Design image output could not be downloaded (${response.status}).`);
+  const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+  if (contentType && !contentType.startsWith("image/")) throw new Error(`Design image output did not return image data (${contentType}).`);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (!bytes.length || bytes.length > DESIGN_IMAGE_MAX_BYTES) throw new Error("Design image output failed durable-storage validation.");
+  const fingerprint = createHash("sha256").update(bytes).digest("hex");
+  const directory = path.join(DESIGN_IMAGE_PUBLIC_ROOT, "content-vault", `design-image-${job.id}`);
+  await mkdir(directory, { recursive: true });
+  const extension = contentType.includes("png") ? "png" : "jpg";
+  const fileName = `CreatorVault-Design-Image-Pilot.${extension}`;
+  await writeFile(path.join(directory, fileName), bytes);
+  return { durableUrl: `https://creatorvault.live/uploads/content-vault/design-image-${job.id}/${fileName}`, fingerprint };
 }
 
 function buildSourceVideoReferenceInput(input: {
@@ -1196,6 +1246,13 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
     return failGovernedPolloJob({ jobId: leased.id, code: "provider_key_missing", error: new Error("POLLO_API_KEY is not configured"), releaseBudget: true });
   }
 
+  const designImage = isDesignImagePilot(leased) ? await buildDesignImageInput(leased) : null;
+  if (designImage) {
+    await rawExec(
+      "UPDATE governed_media_jobs SET metadata_json = ?, updated_at = NOW() WHERE id = ? AND state = 'queued'",
+      [safeJson({ ...leased.metadata, designImageReferenceFrameUrl: designImage.referenceFrameUrl }), leased.id],
+    );
+  }
   const requestBody = isSourceVideoReferenceJob(leased)
     ? buildSourceVideoReferenceInput({
       providerModelPath: leased.providerModelPath,
@@ -1207,7 +1264,9 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
     })
     : isHomepageTextToVideoPilot(leased)
       ? buildHomepageTextToVideoInput(leased)
-      : {
+      : designImage
+        ? designImage.input
+        : {
           image: leased.sourceUrl,
           prompt: leased.prompt,
           length: leased.durationSeconds,
@@ -1217,7 +1276,9 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
     ? `https://pollo.ai/api/platform/generation/${getSourceVideoReferenceContract(leased.providerModelPath)!.apiPath}`
     : isHomepageTextToVideoPilot(leased)
       ? `https://pollo.ai/api/platform/generation/${HOMEPAGE_TEXT_TO_VIDEO_API_PATH}`
-      : `https://pollo.ai/api/platform/generation/${leased.providerModelPath.replace("pollo/", "")}`;
+      : isDesignImagePilot(leased)
+        ? `https://pollo.ai/api/platform/generation/${DESIGN_IMAGE_API_PATH}`
+        : `https://pollo.ai/api/platform/generation/${leased.providerModelPath.replace("pollo/", "")}`;
 
   const balanceBeforeCredits = await readPolloAvailableCredits(apiKey);
   if (balanceBeforeCredits !== null) {
@@ -1338,6 +1399,9 @@ export async function recordGovernedPolloProviderCompletion(params: { jobId: num
   const durableHomepageMotion = isHomepageTextToVideoPilot(job)
     ? await persistHomepageTextToVideoOutput(job, outputUrl)
     : null;
+  const durableDesignImage = isDesignImagePilot(job)
+    ? await persistDesignImageOutput(job, outputUrl)
+    : null;
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
   const balanceAfterCredits = apiKey ? await readPolloAvailableCredits(apiKey) : null;
   const balanceBeforeCredits = Number(job.metadata.providerBalanceBeforeCredits);
@@ -1347,6 +1411,7 @@ export async function recordGovernedPolloProviderCompletion(params: { jobId: num
   const metadata = {
     ...job.metadata,
     ...(durableHomepageMotion ? { homepageMotionPilotOutput: durableHomepageMotion } : {}),
+    ...(durableDesignImage ? { designImagePilotOutput: durableDesignImage } : {}),
     ...(balanceAfterCredits !== null ? { providerBalanceAfterCredits: balanceAfterCredits, providerBalanceReadAtCompletion: new Date().toISOString() } : {}),
   };
   await rawExec(
