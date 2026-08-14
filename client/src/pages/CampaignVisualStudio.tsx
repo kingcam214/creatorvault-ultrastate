@@ -46,6 +46,7 @@ export default function CampaignVisualStudio() {
     [sources, selectedSourceId],
   );
   const outputUrl = durableOutput(job);
+  const acceptedToVault = job?.state === "accepted" && Boolean(job?.metadata?.acceptedCampaignVisualAssetId);
 
   const prepare = async () => {
     if (!selectedSource) return;
@@ -190,7 +191,7 @@ export default function CampaignVisualStudio() {
           </aside>
         </section>
 
-        {outputUrl && <section className="mt-8 overflow-hidden rounded-[1.75rem] border border-[#c9a84c]/35 bg-[#101010] p-5 sm:p-7"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#c9a84c]">Finished candidate</p><h2 className="mt-2 text-2xl font-black text-white">Your visual is here for review.</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">CreatorVault kept this visual out of your Media Vault until it clears the same female-only, source-preservation, and no-generic-image quality gate.</p></div><ShieldCheck className="h-6 w-6 text-[#c9a84c]" /></div><img src={outputUrl} alt="Finished CreatorVault campaign visual awaiting review" className="w-full rounded-2xl border border-white/10 bg-black object-cover" /></section>}
+        {outputUrl && <section className="mt-8 overflow-hidden rounded-[1.75rem] border border-[#c9a84c]/35 bg-[#101010] p-5 sm:p-7"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#c9a84c]">{acceptedToVault ? "Approved campaign visual" : "Finished candidate"}</p><h2 className="mt-2 text-2xl font-black text-white">{acceptedToVault ? "Your visual is ready in the Vault." : "Your visual is here for review."}</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">{acceptedToVault ? "CreatorVault accepted this visual after review and saved it as a ready reusable asset in your Media Vault." : "CreatorVault keeps this visual out of your Media Vault until it clears the same female-only, source-preservation, and no-generic-image quality gate."}</p>{acceptedToVault && <Link href="/king/media-vault"><a className="mt-4 inline-flex items-center gap-2 text-sm font-black text-[#e8d38b] hover:text-white">Open in Media Vault <ArrowUpRight className="h-4 w-4" /></a></Link>}</div><ShieldCheck className="h-6 w-6 text-[#c9a84c]" /></div><img src={outputUrl} alt={acceptedToVault ? "Accepted CreatorVault campaign visual" : "Finished CreatorVault campaign visual awaiting review"} className="w-full rounded-2xl border border-white/10 bg-black object-cover" /></section>}
       </div>
     </main>
   );
