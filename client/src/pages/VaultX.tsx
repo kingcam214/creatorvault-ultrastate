@@ -7,7 +7,9 @@
  * ============================================================================
  */
 import { useState, useEffect, useRef, type CSSProperties } from "react";
+import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { HOMEPAGE_MEDIA } from "@/lib/homepageMediaRegistry";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -334,13 +336,27 @@ function ForYouFeed() {
   }
 
   if (allItems.length === 0) {
+    const openingMotion = HOMEPAGE_MEDIA.womenCreatorAudienceMotion;
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center space-y-4 px-8">
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-red-900/40 to-purple-900/40 flex items-center justify-center">
-          <Play className="w-8 h-8 text-red-400" />
+      <div className="relative h-full min-h-[620px] overflow-hidden bg-black">
+        <MediaFallback
+          videoSrc={openingMotion.livePath}
+          posterSrc={openingMotion.fallbackAsset}
+          alt="CreatorVault platform motion"
+          className="absolute inset-0 h-full w-full"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/10" />
+        <div className="relative z-10 flex h-full min-h-[620px] max-w-lg flex-col justify-end px-7 pb-12 pt-20 text-left sm:px-10">
+          <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-black/55 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-white/80 backdrop-blur-md">
+            <Play className="h-3.5 w-3.5 text-[#f3d899]" /> CreatorVault visual experience
+          </div>
+          <h3 className="max-w-md text-4xl font-black leading-[0.95] tracking-[-0.045em] text-white sm:text-5xl">VaultX opens with real creator releases.</h3>
+          <p className="mt-5 max-w-md text-sm leading-6 text-white/75 sm:text-base">We do not fill your feed with unjoined women, fake fan counts, or placeholder drops. A public release appears here only after its creator is active, has approved visibility, and has a real playable video ready.</p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Link href="/signup?vertical=vaultx"><a className="inline-flex min-h-14 items-center justify-center rounded-2xl bg-[#f3d899] px-6 text-sm font-black text-[#19130c] transition hover:bg-white">Open your creator account <ArrowUpRight className="ml-2 h-4 w-4" /></a></Link>
+            <Link href="/"><a className="inline-flex min-h-14 items-center justify-center rounded-2xl border border-white/25 bg-black/30 px-6 text-sm font-black text-white backdrop-blur-md transition hover:border-white">Explore CreatorVault</a></Link>
+          </div>
         </div>
-        <h3 className="text-white font-bold text-xl">No Content Yet</h3>
-        <p className="text-gray-400 text-sm">Be the first creator to go live on VaultX.</p>
       </div>
     );
   }

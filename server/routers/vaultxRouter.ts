@@ -3326,8 +3326,18 @@ export const vaultxRouter = router({
                  WHERE creator_id = c.id AND status = 'active'
                  ORDER BY created_at DESC LIMIT 1) AS latest_view_count
          FROM vaultx_creators c
-         LEFT JOIN users u ON u.id = c.user_id
-         WHERE c.is_active = 1 ${langWhere}
+         INNER JOIN users u ON u.id = c.user_id
+         WHERE c.is_active = 1
+           AND LOWER(COALESCE(u.creator_status, 'pending')) = 'active'
+           AND EXISTS (
+             SELECT 1 FROM vaultx_content playable
+             WHERE playable.creator_id = c.id
+               AND playable.status = 'active'
+               AND playable.content_type = 'video'
+               AND playable.uncensored_url IS NOT NULL
+               AND LOWER(SUBSTRING_INDEX(SUBSTRING_INDEX(playable.uncensored_url, '?', 1), '.', -1)) IN ('mp4', 'webm', 'mov')
+               AND playable.uncensored_url NOT LIKE 'https://replicate.delivery/%'
+           ) ${langWhere}
          ORDER BY ${sortCol}
          LIMIT ? OFFSET ?`,
         params
@@ -3348,7 +3358,11 @@ export const vaultxRouter = router({
       offset: z.number().min(0).default(0),
     }))
     .query(async ({ input }) => {
-      const conditions: string[] = ["c.is_active = 1"];
+      const conditions: string[] = [
+        "c.is_active = 1",
+        "LOWER(COALESCE(u.creator_status, 'pending')) = 'active'",
+        "EXISTS (SELECT 1 FROM vaultx_content playable WHERE playable.creator_id = c.id AND playable.status = 'active' AND playable.content_type = 'video' AND playable.uncensored_url IS NOT NULL AND LOWER(SUBSTRING_INDEX(SUBSTRING_INDEX(playable.uncensored_url, '?', 1), '.', -1)) IN ('mp4', 'webm', 'mov') AND playable.uncensored_url NOT LIKE 'https://replicate.delivery/%')",
+      ];
       const params: any[] = [];
       if (input.query) {
         conditions.push("(c.display_name LIKE ? OR c.bio LIKE ?)");
