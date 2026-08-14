@@ -24,6 +24,11 @@ const ALLOWLISTS = {
     'client/src/pages/Login.tsx',
     'scripts/scope-guard.js'
   ],
+  'public-marketplace-motion-gate': [
+    'client/src/pages/PublicCreatorLanding.tsx',
+    'server/routers/marketplace.ts',
+    'scripts/scope-guard.js'
+  ],
   'public-creator-landing': [
     'client/src/pages/PublicCreatorLanding.tsx',
     'client/src/pages/CreatorProfilePage.tsx',

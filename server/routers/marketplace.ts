@@ -10,7 +10,10 @@ function isPublicMarketplaceProduct(product: any) {
   const identity = [product?.title, product?.shortDescription, product?.short_description, product?.description]
     .filter(Boolean)
     .join(" ");
-  return !/\b(test|audit)\b/i.test(identity);
+  const playableMotion = product?.productVideo ?? product?.product_video;
+  return !/\b(test|audit)\b/i.test(identity)
+    && typeof playableMotion === "string"
+    && playableMotion.trim().length > 0;
 }
 
 // Only creators can create/manage products
