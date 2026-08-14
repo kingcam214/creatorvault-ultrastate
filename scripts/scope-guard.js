@@ -85,6 +85,10 @@ const ALLOWLISTS = {
     'client/src/pages/GodModeAI.tsx',
     'scripts/scope-guard.js'
   ],
+  'greatest-show-consent': [
+    'client/src/App.tsx',
+    'scripts/scope-guard.js'
+  ],
   distribution: [
     'client/src/pages/WhatsAppContentGenerator.tsx',
     'client/src/pages/TelegramMoneyHub.tsx',

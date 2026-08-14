@@ -502,25 +502,26 @@ function Router() {
       <Route path={"/empire-command"} component={AgentCommand} />
       <Route path={"/owner-control"} component={OwnerControl} />
       <Route path={"/owner-status"} component={OwnerStatus} />
-      <Route path={"/greatest-show"} component={GreatestShowLanding} />
+      {/* Greatest Show contained static, non-consented creator personas and unsupported public money claims. Hold it behind real creator consent. */}
+      <Route path={"/greatest-show"}>{() => { window.location.replace("/"); return null; }}</Route>
       <Route path={"/greatest-show-studio"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
-      <Route path={"/greatest-show/maily"} component={MailyProfile} />
-      <Route path={"/greatest-show/diana"} component={DianaProfile} />
-      <Route path={"/greatest-show/emma"} component={EmmaProfile} />
-      <Route path={"/greatest-show/thebiggestb"} component={TheBiggestBProfile} />
-          <Route path={"/greatest-show/delbania"} component={DelBaniaProfile} />
-          <Route path={"/greatest-show/aderly"} component={AderlyProfile} />
-      <Route path={"/greatest-show/canisha"} component={CanishaProfile} />
-      <Route path={"/greatest-show/luvroxie"} component={LuvRoxieProfile} />
-      <Route path={"/greatest-show/lirys"} component={LirysProfile} />
-      <Route path={"/greatest-show/leslie"} component={LeslieProfile} />
-      <Route path={"/greatest-show/fitness"} component={FitnessGoddesses} />
-      <Route path={"/greatest-show/pole"} component={PoleArtists} />
-      <Route path={"/greatest-show/lifestyle"} component={LifestyleGoddesses} />
-      <Route path={"/greatest-show/dance"} component={EliteDancers} />
-      <Route path={"/greatest-show/adult"} component={AdultContent} />
-      <Route path={"/greatest-show/apply"} component={CreatorApplication} />
-      <Route path={"/greatest-show/subscribe"} component={FanSubscription} />
+      <Route path={"/greatest-show/maily"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/diana"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/emma"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/thebiggestb"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/delbania"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/aderly"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/canisha"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/luvroxie"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/lirys"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/leslie"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/fitness"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/pole"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/lifestyle"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/dance"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/adult"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/apply"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/subscribe"}>{() => { window.location.replace("/"); return null; }}</Route>
       <Route path={"/king/flyer-generator"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/king/flyer-design-studio"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/king/video-lab"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
@@ -675,9 +676,9 @@ function Router() {
       <Route path="/vaultx-video-editor">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/video-os">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/waitlist" component={Waitlist} />
-      <Route path="/greatest-show/lirys-missed-revenue" component={LirysMissedRevenue} />
-      <Route path="/greatest-show/marielka-profile" component={MarielkaProfile} />
-      <Route path="/greatest-show/subscribe-success" component={SubscribeSuccess} />
+      <Route path="/greatest-show/lirys-missed-revenue">{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path="/greatest-show/marielka-profile">{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path="/greatest-show/subscribe-success">{() => { window.location.replace("/"); return null; }}</Route>
       <Route path="/king/clone-command">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
       <Route path="/clone/command-center">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
       <Route path="/clone">{() => { window.location.replace("/clone-empire-home"); return null; }}</Route>
