@@ -142,6 +142,7 @@ export function AgentRoster() {
         <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6, marginTop: 5 }}>These open real CreatorVault creation paths with accepted results you can see. The rest of the arsenal stays held until it can meet the same standard.</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 14 }}>
           <a href="/agents/motion-flyer-agent" style={{ display: 'block', textDecoration: 'none', color: T.text, background: 'rgba(0,0,0,0.28)', border: `1px solid ${T.gold}55`, borderRadius: 11, padding: 13 }}>
+            <video src="https://creatorvault.live/uploads/motion-b73098d7-098b-4366-a1fd-a83e36e802b6.mp4" autoPlay muted loop playsInline preload="metadata" aria-label="Accepted CreatorVault Motion Flyer proof" style={{ width: '100%', height: 176, objectFit: 'cover', borderRadius: 8, marginBottom: 11, background: '#050505' }} />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}><span style={{ fontSize: 13, fontWeight: 900 }}>Motion Flyer</span><Play size={15} color={T.gold} /></div>
             <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.5, marginTop: 5 }}>Turn a saved CreatorVault moment into a short moving flyer. An accepted flyer is already watchable.</div>
             <div style={{ fontSize: 11, color: T.gold, fontWeight: 800, marginTop: 10 }}>Open Motion Flyer →</div>
