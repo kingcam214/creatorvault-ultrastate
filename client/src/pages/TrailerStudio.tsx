@@ -125,12 +125,24 @@ export default function TrailerStudio() {
     try {
       let projectId = trailerProjectId;
       if (!projectId) {
+        const selectedTemplate = templates.find((template: any) => template.id === templateId);
+        if (!selectedTemplate) { toast.error("Pick a trailer direction"); return; }
+        const trailerHooks = [selectedTemplate.hookText, selectedTemplate.ctaText, selectedTemplate.ctaSubText].filter(Boolean);
+        const directedSegments = selectedTemplate.focusRotation.map((focus: string, sceneIndex: number) => ({
+          sceneIndex,
+          text: sceneIndex === 0 ? (selectedTemplate.hookText || selectedTemplate.name) : sceneIndex === selectedTemplate.focusRotation.length - 1 ? selectedTemplate.ctaText : "",
+          visualDescription: `${selectedTemplate.name}: ${focus} focus within the selected CreatorVault source.`,
+          duration: selectedTemplate.intensity === "slow" ? 3 : selectedTemplate.intensity === "minimal" ? 4 : 1.5,
+        }));
         const project = await createTrailerProjectMut.mutateAsync({
           projectName: title || "Directed trailer",
           projectType: "launch_trailer",
           format: aspect,
           title: title || undefined,
-          concept: priceLine || undefined,
+          concept: [priceLine, `${selectedTemplate.name} · ${selectedTemplate.vibe}`].filter(Boolean).join(" · "),
+          scriptText: `${selectedTemplate.name} direction. ${selectedTemplate.tagline}`,
+          hooks: trailerHooks,
+          segments: directedSegments,
           selectedAssetIds,
         });
         projectId = project.trailerProjectId;
@@ -139,7 +151,7 @@ export default function TrailerStudio() {
       setDirectionSaved(true);
       toast.success("Your real sources and trailer direction are saved. CreatorVault will not substitute visual effects for a finished premium trailer.");
     } catch (e: any) { toast.error(e?.message || "Trailer direction could not be saved"); }
-  }, [templateId, clips, title, priceLine, aspect, trailerProjectId, selectedAssetIds]);
+  }, [templateId, clips, title, priceLine, aspect, trailerProjectId, selectedAssetIds, templates]);
 
   const reset = () => { setStep("mode"); setClips([]); setSelectedAssetIds([]); setTemplateId(null); setTitle(""); setPriceLine(""); setMusicUrl(null); setAudioAssetId(null); setTrailerProjectId(null); setJobId(null); setOutputUrl(null); setDirectionSaved(false); setPct(0); setChroma(false); setLightLeaks(false); setLetterbox(false); setGlitch(false); };
 
@@ -248,7 +260,7 @@ export default function TrailerStudio() {
               ))}
             </div>
             <button onClick={() => setStep("fx")} disabled={!templateId} style={{ width: "100%", padding: "16px", borderRadius: 12, background: templateId ? GOLD : CARD, color: templateId ? "#000" : MUTED, fontSize: 16, fontWeight: 900, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.06em", border: "none", cursor: templateId ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              Next: Effects & Options <ChevronRight size={18} />
+              Next: Release direction <ChevronRight size={18} />
             </button>
           </div>
         )}
@@ -256,7 +268,7 @@ export default function TrailerStudio() {
         {/* ═══ FX & OPTIONS ═══ */}
         {step === "fx" && (
           <div>
-            <h2 style={{ fontSize: 26, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 6px" }}>{t("trailer.fx_title")}</h2>
+            <h2 style={{ fontSize: 26, fontFamily: "Bebas Neue, sans-serif", margin: "0 0 6px" }}>Lock the trailer direction.</h2>
             <p style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>Set the release details around your real source. CreatorVault does not use cosmetic effects as a substitute for a finished premium trailer.</p>
             {directionSaved && <div style={{ marginBottom: 16, border: `1px solid rgba(0,230,118,0.35)`, background: "rgba(0,230,118,0.08)", borderRadius: 12, padding: "12px 14px", color: GREEN, fontSize: 12, lineHeight: 1.45 }}>Your selected footage and direction are saved together. This is not presented as a finished trailer until there is a watchable result that clears review.</div>}
 
