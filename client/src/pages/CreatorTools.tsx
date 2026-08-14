@@ -127,7 +127,7 @@ export default function CreatorTools() {
             </p>
           </div>
           <Button asChild variant="outline" size="lg">
-            <a href="/creator-video-studio">
+            <a href="/creator/video-studio">
               <Sparkles className="w-4 h-4 mr-2" />
               AI Video Studio
             </a>

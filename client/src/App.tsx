@@ -392,6 +392,7 @@ function Router() {
       <Route path={"/creator/toolbox"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator-toolbox"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/video-studio"} component={CreatorVideoStudio} />
+      <Route path={"/creator-video-studio"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/subscriptions"} component={CreatorSubscriptions} />
       <Route path={"/creator/earnings"} component={CreatorEarnings} />
       <Route path={"/creator/analytics"} component={CreatorAnalyticsDashboard} />
@@ -476,10 +477,10 @@ function Router() {
       <Route path={"/guia"} component={GuiaCreador} />
       <Route path={"/vault-guardian"}>{() => { window.location.replace("/vault-x"); return null; }}</Route>
       <Route path={"/vault-remix"}>{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
-      <Route path={"/video-lab"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
-      <Route path={"/video-lab-pro"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
-      <Route path={"/video-studio"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
-      <Route path={"/video-production-studio"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
+      <Route path={"/video-lab"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
+      <Route path={"/video-lab-pro"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
+      <Route path={"/video-studio"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
+      <Route path={"/video-production-studio"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/vault-x"} component={VaultX} />
       <Route path={"/culture-selection"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/thumbnail-generator"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
@@ -524,7 +525,7 @@ function Router() {
       <Route path={"/greatest-show/subscribe"}>{() => { window.location.replace("/"); return null; }}</Route>
       <Route path={"/king/flyer-generator"}>{() => { window.location.replace("/agents/motion-flyer-agent"); return null; }}</Route>
       <Route path={"/king/flyer-design-studio"}>{() => { window.location.replace("/agents/motion-flyer-agent"); return null; }}</Route>
-      <Route path={"/king/video-lab"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
+      <Route path={"/king/video-lab"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/king/analytics"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/king/content"} component={KingContent} />
       <Route path={"/king/waitlist"} component={KingWaitlist} />
@@ -622,7 +623,7 @@ function Router() {
       <Route path="/funnels">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/sector/haiti">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/kingcam/vault" component={KingCamVault} />
-      <Route path="/studio/lipsync">{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
+      <Route path="/studio/lipsync">{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path="/mi-panel/marielka-dashboard">{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path="/media/hub" component={MediaHubPage} />
       <Route path="/agents/motion-flyer-agent" component={MotionFlyerAgent} />

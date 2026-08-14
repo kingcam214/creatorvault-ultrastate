@@ -185,7 +185,7 @@ export default function Dashboard() {
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <ActionCard href="/vault-x/studio" eyebrow="Cinema lane" title="Body Cinema" detail="Inspect your real footage, see the measured moments, and choose a treatment from source truth." icon={Film} featured />
-            <ActionCard href="/creator-video-studio" eyebrow="Source first" title="Creator Video Studio" detail="Open saved footage in the creation lane that actually fits the job." icon={WandSparkles} />
+            <ActionCard href="/creator/video-studio" eyebrow="Source first" title="Creator Video Studio" detail="Open saved footage in the creation lane that actually fits the job." icon={WandSparkles} />
             <ActionCard href="/king/media-vault" eyebrow="Your originals" title="Media Vault" detail="Watch, hear, and select verified video, image, and governed soundtrack assets." icon={FolderOpen} />
             <ActionCard href="/social" eyebrow="Distribution" title="Social Empire" detail="Take the exact source you selected into a real packaging and distribution workspace." icon={Crown} />
           </div>

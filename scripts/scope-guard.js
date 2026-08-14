@@ -173,6 +173,12 @@ const ALLOWLISTS = {
     'client/src/pages/AgentRoster.tsx',
     'scripts/scope-guard.js'
   ],
+  'creator-video-studio-route': [
+    'client/src/App.tsx',
+    'client/src/pages/Dashboard.tsx',
+    'client/src/pages/CreatorTools.tsx',
+    'scripts/scope-guard.js'
+  ],
   'campaign-visual-recovery': [
     'client/src/pages/CampaignVisualStudio.tsx',
     'client/src/pages/KingContent.tsx',
