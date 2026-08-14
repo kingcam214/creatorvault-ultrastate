@@ -2296,11 +2296,12 @@ function VaultXPublicLanding() {
         >
           {/* BACKGROUND VIDEO — fullscreen behind everything */}
           <video
+            src={HOMEPAGE_MEDIA.vaultxRevenueVisual.livePath}
             autoPlay
             muted
             loop
             playsInline
-            poster="/images/platform/vaultx-hero-fallback.jpg?v=vaultx-approved-woman-20260625-2318"
+            preload="metadata"
             style={{
               position: "absolute",
               inset: 0,
@@ -2309,24 +2310,6 @@ function VaultXPublicLanding() {
               objectFit: "cover",
               objectPosition: "center top",
               zIndex: 0,
-            }}
-          >
-            <source src="/videos/platform/vaultx-hero.mp4?v=vaultx-approved-woman-20260625-2318" type="video/mp4" />
-          </video>
-
-          {/* FALLBACK IMAGE — static woman visual if video playback is unavailable */}
-          <img
-            src="/images/platform/vaultx-hero-fallback.jpg?v=vaultx-approved-woman-20260625-2318"
-            alt=""
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center top",
-              zIndex: -1,
             }}
           />
 
