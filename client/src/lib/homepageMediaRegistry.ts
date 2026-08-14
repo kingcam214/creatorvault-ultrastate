@@ -53,6 +53,27 @@ export const HOMEPAGE_MEDIA: Record<string, HomepageMediaAsset> = {
     livePath: "/videos/kingcam-hero-cam.mp4",
     workingStatus: "ready",
   },
+  homepageMotionPilot: {
+    assetId: "homepage-motion-pilot-78",
+    publicProofEligibility: "owner_certified_public_proof",
+    sourceSystem: "CreatorVault governed homepage motion pilot",
+    creatorOwner: "CreatorVault",
+    publicSafeStatus: "approved",
+    consentUsageStatus: "CreatorVault-owned, provider-generated public campaign motion. Owner-authorized, independently inspected, and accepted after durable CreatorVault storage.",
+    mediaKind: "motion",
+    mobileSafe: true,
+    desktopSafe: true,
+    resolution: "1080x1920",
+    durationSeconds: 6,
+    type: "Certified female-creator campaign motion",
+    whatItProves: "A governed CreatorVault campaign visual was created, stored durably, independently reviewed, and accepted. It is promotional motion, not a creator-result, revenue, or activity claim.",
+    sourceAsset: "creatorvault://homepage-motion-brief/female-creator-v1",
+    outputAsset: "https://creatorvault.live/uploads/content-vault/homepage-motion-78/CreatorVault-Homepage-Motion-Pilot.mp4",
+    proofStatus: "watchable-platform-visual",
+    fallbackAsset: "",
+    livePath: "https://creatorvault.live/uploads/content-vault/homepage-motion-78/CreatorVault-Homepage-Motion-Pilot.mp4",
+    workingStatus: "ready",
+  },
   womenCreatorMotion: {
     assetId: "platform-dashboard-hero",
     publicProofEligibility: "legacy_verified_campaign",
@@ -496,6 +517,8 @@ export function isPublicHomepageEligible(asset: HomepageMediaAsset): boolean {
   return asset.mediaKind === "motion" && hasCertifiedPublicProof(asset);
 }
 
+// Legacy sequence remains temporarily available to route-specific surfaces that still require
+// their own audit. It is not the authority for the corrected public homepage.
 export const HOMEPAGE_MEDIA_SEQUENCE = [
   HOMEPAGE_MEDIA.kingcamHero,
   HOMEPAGE_MEDIA.womenCreatorMotion,
@@ -505,6 +528,13 @@ export const HOMEPAGE_MEDIA_SEQUENCE = [
   HOMEPAGE_MEDIA.kingcamCampaignSource,
   HOMEPAGE_MEDIA.kingcamPlatformTrailer,
   HOMEPAGE_MEDIA.premiumUnlockVisual,
+].filter(isPublicHomepageEligible);
+
+// The corrected homepage may use only the locked KingCam identity hero plus the
+// separately owner-authorized, independently accepted female-creator motion proof.
+export const HOMEPAGE_PUBLIC_SHOWCASE_SEQUENCE = [
+  HOMEPAGE_MEDIA.kingcamHero,
+  HOMEPAGE_MEDIA.homepageMotionPilot,
 ].filter(isPublicHomepageEligible);
 
 export const MEDIA_FALLBACKS = {

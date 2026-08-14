@@ -1,8 +1,8 @@
 import { ArrowUpRight, Play, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import { CreatorVaultRoute } from "@/lib/productArchitecture";
-import { HOMEPAGE_MEDIA_SEQUENCE, type HomepageMediaAsset } from "@/lib/homepageMediaRegistry";
-import { type CSSProperties, type ReactNode } from "react";
+import { HOMEPAGE_PUBLIC_SHOWCASE_SEQUENCE, type HomepageMediaAsset } from "@/lib/homepageMediaRegistry";
+import { type CSSProperties } from "react";
 
 function ShowcaseMotion({
   videoSrc,
@@ -23,7 +23,7 @@ function ShowcaseMotion({
     <div className={`overflow-hidden bg-[#090806] ${className}`} style={style} aria-label={alt}>
       <video
         src={videoSrc}
-        poster={posterSrc}
+        poster={posterSrc || undefined}
         autoPlay
         loop
         muted
@@ -36,59 +36,22 @@ function ShowcaseMotion({
   );
 }
 
-function MotionStage({
-  asset,
-  label,
-  className = "",
-  objectPosition = "object-center",
-  children,
-}: {
-  asset: HomepageMediaAsset;
-  label: string;
-  className?: string;
-  objectPosition?: string;
-  children?: ReactNode;
-}) {
-  return (
-    <div className={`relative isolate overflow-hidden bg-[#0b0908] ${className}`}>
-      <video
-        src={asset.livePath}
-        poster={asset.fallbackAsset}
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="metadata"
-        className={`absolute inset-0 h-full w-full object-cover ${objectPosition}`}
-        aria-label={label}
-      />
-      {children}
-    </div>
-  );
-}
-
 function certifiedMotion(assetId: string): HomepageMediaAsset {
-  const asset = HOMEPAGE_MEDIA_SEQUENCE.find((candidate) => candidate.assetId === assetId);
-  if (!asset) {
-    throw new Error(`CreatorVault homepage requires certified motion asset: ${assetId}`);
-  }
+  const asset = HOMEPAGE_PUBLIC_SHOWCASE_SEQUENCE.find((candidate) => candidate.assetId === assetId);
+  if (!asset) throw new Error(`CreatorVault homepage requires an accepted public motion asset: ${assetId}`);
   return asset;
 }
 
 export default function Home() {
-  const showcase = certifiedMotion("kingcam-hero-cam");
-  const creatorAtWork = certifiedMotion("platform-dashboard-hero");
-  const creatorAndAudience = certifiedMotion("platform-marketplace-hero");
-  const vaultxVisual = certifiedMotion("vaultx-hero");
-  const vaultxTrailer = certifiedMotion("vaultx-cinematic-trailer");
-  const premiumUnlock = certifiedMotion("vaultx-final-drop");
+  const kingcamHero = certifiedMotion("kingcam-hero-cam");
+  const creatorMotion = certifiedMotion("homepage-motion-pilot-78");
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#080706] text-white selection:bg-[#f0d18a]/40">
       <section className="relative isolate min-h-[100svh] overflow-hidden border-b border-white/10" aria-label="CreatorVault showcase hero">
-        <ShowcaseMotion videoSrc={showcase.livePath} posterSrc={showcase.fallbackAsset} alt="KingCam Clone moving identity backdrop" className="absolute inset-0" priority />
+        <ShowcaseMotion videoSrc={kingcamHero.livePath} posterSrc={kingcamHero.fallbackAsset} alt="KingCam Clone moving identity backdrop" className="absolute inset-0" priority />
         <div className="pointer-events-none absolute inset-0 flex items-end justify-center overflow-hidden sm:justify-end">
-          <video src={showcase.livePath} poster={showcase.fallbackAsset} autoPlay loop muted playsInline preload="auto" className="h-full w-full max-w-full object-contain object-bottom sm:w-auto" aria-label="KingCam Clone full-body moving identity hero" />
+          <video src={kingcamHero.livePath} poster={kingcamHero.fallbackAsset || undefined} autoPlay loop muted playsInline preload="auto" className="h-full w-full max-w-full object-contain object-bottom sm:w-auto" aria-label="KingCam Clone full-body moving identity hero" />
         </div>
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,4,3,.18)_0%,rgba(5,4,3,.04)_30%,rgba(5,4,3,.72)_88%,#080706_100%)]" />
         <div className="absolute inset-y-0 left-0 w-full bg-[radial-gradient(circle_at_16%_52%,rgba(0,0,0,.28),transparent_42%)]" />
@@ -113,47 +76,45 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-b border-white/10 bg-[#0d0b09]">
-        <div className="mx-auto grid max-w-7xl gap-5 px-5 py-8 sm:px-8 sm:py-12 lg:grid-cols-[.92fr_1.08fr] lg:px-12">
-          <MotionStage asset={creatorAtWork} label="CreatorVault creator-at-work motion" className="min-h-[34rem] sm:min-h-[42rem]" objectPosition="object-center">
-            <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent,rgba(5,4,3,.9))] p-6 sm:p-8"><p className="text-[10px] font-black uppercase tracking-[.22em] text-[#efd18c]">Creator in motion</p><p className="mt-3 max-w-sm text-xl font-black leading-tight">Your work should look alive before anyone reads a word.</p></div>
-          </MotionStage>
-          <div className="flex min-h-[34rem] flex-col justify-between bg-[#17110b] p-7 sm:min-h-[42rem] sm:p-10 lg:p-14">
-            <div><p className="text-xs font-black uppercase tracking-[.25em] text-[#e8c87e]">The creation floor</p><h2 className="mt-5 max-w-2xl text-5xl font-black leading-[.86] tracking-[-.07em] sm:text-7xl">Your media already has a story. Give it a place to land.</h2><p className="mt-7 max-w-xl text-base leading-relaxed text-zinc-300 sm:text-lg">Bring in the moments you own. Build around the strongest one. Keep the visual, the offer, and the next move in the same world.</p></div>
-            <div className="mt-10 border-t border-[#e8c87e]/25 pt-6"><Link href="/creator/video-studio"><a className="inline-flex min-h-14 items-center gap-3 rounded-full bg-[#f3d899] px-7 font-black text-[#1b1209] transition hover:bg-white">Open Creator Video Studio <ArrowUpRight className="h-4 w-4" /></a></Link></div>
-          </div>
-        </div>
-      </section>
+      <section className="relative isolate overflow-hidden bg-[#080706]" aria-label="CreatorVault creation experience">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(121,82,37,.2),transparent_46%)]" />
+        <div className="relative mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
+          <div className="relative min-h-[92svh] overflow-hidden border-x border-white/10">
+            <video
+              src={creatorMotion.livePath}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              className="absolute inset-0 h-full w-full object-contain object-center"
+              aria-label="CreatorVault certified female creator campaign motion"
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,7,6,.94)_0%,rgba(8,7,6,.46)_36%,rgba(8,7,6,.12)_55%,rgba(8,7,6,.78)_100%)]" />
+            <div className="absolute inset-x-0 top-0 h-44 bg-[linear-gradient(180deg,#080706,transparent)]" />
+            <div className="absolute inset-x-0 bottom-0 h-56 bg-[linear-gradient(0deg,#080706,transparent)]" />
 
-      <section className="border-b border-white/10 bg-[#080706]">
-        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-24 lg:px-12">
-          <div className="max-w-3xl"><p className="text-xs font-black uppercase tracking-[.25em] text-[#e8c87e]">One creation. More than one move.</p><h2 className="mt-4 text-4xl font-black leading-[.9] tracking-[-.06em] sm:text-6xl">The visual can be the invitation, the private moment, and the reason they come back.</h2></div>
-          <div className="mt-10 grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
-            <MotionStage asset={vaultxTrailer} label="CreatorVault VaultX product walkthrough motion" className="min-h-[23rem] sm:min-h-[32rem]" objectPosition="object-center"><div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,4,3,.05),rgba(5,4,3,.78))]" /><div className="absolute inset-x-0 bottom-0 p-6 sm:p-9"><p className="text-[10px] font-black uppercase tracking-[.22em] text-[#efd18c]">VaultX in motion</p><p className="mt-3 max-w-xl text-2xl font-black leading-tight sm:text-4xl">Build the visual. Prepare the offer. Decide when it moves.</p></div></MotionStage>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-              <MotionStage asset={vaultxVisual} label="VaultX premium product motion" className="min-h-[18rem]" objectPosition="object-center"><div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(5,4,3,.72))]" /><p className="absolute inset-x-0 bottom-0 p-5 text-lg font-black leading-tight">Private does not have to feel small.</p></MotionStage>
-              <MotionStage asset={premiumUnlock} label="CreatorVault premium unlock motion" className="min-h-[18rem]" objectPosition="object-center"><div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(5,4,3,.72))]" /><p className="absolute inset-x-0 bottom-0 p-5 text-lg font-black leading-tight">The next drop can feel like access, not another post.</p></MotionStage>
+            <div className="relative z-10 flex min-h-[92svh] flex-col justify-between px-6 py-8 sm:px-10 sm:py-12 lg:px-14 lg:py-16">
+              <div className="max-w-xl">
+                <p className="text-[10px] font-black uppercase tracking-[.28em] text-[#efd18c] sm:text-xs">CreatorVault in motion</p>
+                <h2 className="mt-5 text-5xl font-black leading-[.83] tracking-[-.075em] sm:text-7xl lg:text-[5.3rem]">Make them<br /><span className="text-[#f3d899]">feel it</span><br />before you say it.</h2>
+                <p className="mt-7 max-w-md text-base leading-relaxed text-zinc-200 sm:text-lg">Your strongest moment should not get buried in somebody else&apos;s feed. Shape it. Package it. Let the release do the talking.</p>
+              </div>
+
+              <div className="grid border-t border-white/25 lg:grid-cols-3">
+                <Link href="/vault-x/studio"><a className="group border-b border-white/15 py-6 transition hover:bg-white/5 lg:border-b-0 lg:border-r lg:px-6 lg:first:pl-0"><p className="text-[10px] font-black uppercase tracking-[.22em] text-[#efd18c]">01 / Body Cinema</p><p className="mt-3 text-2xl font-black leading-tight">Turn the moment into a drop.</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[#f3d899]">Open the studio <ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-1 group-hover:-translate-y-1" /></span></a></Link>
+                <Link href="/creator/video-studio"><a className="group border-b border-white/15 py-6 transition hover:bg-white/5 lg:border-b-0 lg:border-r lg:px-6"><p className="text-[10px] font-black uppercase tracking-[.22em] text-[#efd18c]">02 / Creator Video Studio</p><p className="mt-3 text-2xl font-black leading-tight">Build the cut around the heat.</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[#f3d899]">Start creating <ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-1 group-hover:-translate-y-1" /></span></a></Link>
+                <Link href="/social"><a className="group py-6 transition hover:bg-white/5 lg:pl-6"><p className="text-[10px] font-black uppercase tracking-[.22em] text-[#efd18c]">03 / Social Empire</p><p className="mt-3 text-2xl font-black leading-tight">Carry the feeling farther.</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[#f3d899]">Move with purpose <ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-1 group-hover:-translate-y-1" /></span></a></Link>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="border-b border-white/10 bg-[#120d09]">
-        <div className="mx-auto grid max-w-7xl gap-5 px-5 py-8 sm:px-8 sm:py-12 lg:grid-cols-[1.05fr_.95fr] lg:px-12">
-          <div className="flex min-h-[31rem] flex-col justify-between p-7 sm:min-h-[38rem] sm:p-10 lg:p-14">
-            <div><p className="text-xs font-black uppercase tracking-[.25em] text-[#e8c87e]">The room after the visual</p><h2 className="mt-5 text-5xl font-black leading-[.86] tracking-[-.07em] sm:text-7xl">Creator attention and fan attention belong in the same experience.</h2><p className="mt-7 max-w-xl text-base leading-relaxed text-zinc-300 sm:text-lg">Make the content feel like a world. Then bring the people who matter closer to the next release on your terms.</p></div>
-            <div className="mt-10 flex flex-col gap-3 sm:flex-row"><Link href="/vault-x/studio"><a className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#f3d899] px-7 font-black text-[#19130c] transition hover:bg-white">Open VaultX Studio <ArrowUpRight className="h-4 w-4" /></a></Link><Link href="/social"><a className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/25 px-7 font-black text-white transition hover:bg-white/10">Open Social Empire</a></Link></div>
-          </div>
-          <MotionStage asset={creatorAndAudience} label="CreatorVault creator and audience motion" className="min-h-[31rem] sm:min-h-[38rem]" objectPosition="object-center"><div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_48%,rgba(5,4,3,.74))]" /><div className="absolute inset-x-0 bottom-0 p-6 sm:p-8"><p className="text-[10px] font-black uppercase tracking-[.22em] text-[#efd18c]">Social presence</p><p className="mt-3 max-w-sm text-2xl font-black leading-tight">The right people should feel the heat before the release arrives.</p></div></MotionStage>
-        </div>
-      </section>
-
-      <section className="relative isolate overflow-hidden bg-[#f3eadb] text-[#19130c]">
-        <MotionStage asset={vaultxTrailer} label="CreatorVault closing motion" className="absolute inset-0 opacity-20" objectPosition="object-center" />
-        <div className="absolute inset-0 bg-[#f3eadb]/85" />
-        <div className="relative mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-5 py-16 sm:px-8 sm:py-24 lg:flex-row lg:items-end lg:px-12">
-          <div className="max-w-3xl"><p className="text-xs font-black uppercase tracking-[.24em] text-[#765b2f]">Make the next move count</p><h2 className="mt-4 text-4xl font-black leading-[.9] tracking-[-.06em] sm:text-6xl">The next thing they see can feel completely different.</h2><p className="mt-5 max-w-xl text-base leading-relaxed text-[#574936] sm:text-lg">Bring your own media into CreatorVault and build the release around the moment that matters.</p></div>
-          <div className="flex flex-col gap-3 sm:flex-row"><Link href="/signup"><a className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#19130c] px-7 font-black text-white transition hover:bg-[#3d2c17]">Create your vault <ArrowUpRight className="h-4 w-4" /></a></Link><Link href="/king/content"><a className="inline-flex min-h-14 items-center justify-center rounded-full border border-[#19130c]/25 px-7 font-black transition hover:bg-black/5">See KingCam&apos;s creation room</a></Link></div>
+      <section className="border-t border-white/10 bg-[#0b0908]">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-5 py-12 sm:px-8 sm:py-16 lg:flex-row lg:items-end lg:px-12">
+          <div className="max-w-3xl"><p className="text-xs font-black uppercase tracking-[.24em] text-[#e8c87e]">Your next release starts here</p><h2 className="mt-4 text-4xl font-black leading-[.9] tracking-[-.06em] sm:text-6xl">Bring what&apos;s yours. Make it impossible to ignore.</h2></div>
+          <div className="flex flex-col gap-3 sm:flex-row"><Link href="/signup"><a className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#f3d899] px-7 font-black text-[#19130c] transition hover:bg-white">Start your vault <ArrowUpRight className="h-4 w-4" /></a></Link><Link href="/king/content"><a className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/25 px-7 font-black text-white transition hover:bg-white/10">KingCam&apos;s creation room</a></Link></div>
         </div>
       </section>
     </main>
