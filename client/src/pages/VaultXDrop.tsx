@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { analyzeBodyCinemaSourceLocally } from "@/lib/bodyCinemaPerception";
+import { HOMEPAGE_MEDIA } from "@/lib/homepageMediaRegistry";
 import MediaPicker, { type MediaAssetItem } from "@/components/MediaPicker";
 import { toast } from "sonner";
 
@@ -92,13 +93,6 @@ const QUICK_PRESETS: QuickPreset[] = [
   { id: "luxury-reveal", name: "Luxury Reveal", direction: "Warm private-campaign detail that unfolds slowly into a polished reveal.", focus: "Private campaign" },
   { id: "vip-tease", name: "VIP Tease", direction: "A decisive first second, a measured hold, and an unresolved private-access finish.", focus: "Access hook" },
 ];
-
-const TREATMENT_PREVIEW: Record<string, string> = {
-  "the-arch": "/assets/preview-arch.mp4",
-  "silhouette": "/assets/preview-silhouette.mp4",
-  "luxury-reveal": "/assets/preview-mirror.mp4",
-  "vip-tease": "/assets/preview-curves-360.mp4",
-};
 
 function stepIndex(step: Step) {
   return STEP_ORDER.indexOf(step);
@@ -666,9 +660,9 @@ export default function VaultXDrop() {
         {step === "upload" && (
           <section style={{ animation: "fadeIn 0.6s cubic-bezier(0.23,1,0.32,1)" }}>
             <div style={{ position: "relative", borderRadius: 24, overflow: "hidden", marginBottom: 32, border: `1px solid ${BORDER}`, boxShadow: "0 20px 40px rgba(0,0,0,0.6)" }}>
-              <video src="/assets/hero-transformation.mp4" autoPlay loop muted playsInline style={{ width: "100%", display: "block" }} />
+              <video src={HOMEPAGE_MEDIA.homepageMotionPilot.livePath} autoPlay loop muted playsInline preload="metadata" style={{ width: "100%", display: "block" }} />
               <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 24, background: "linear-gradient(to top, rgba(0,0,0,0.9), transparent)" }}>
-                <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 8px", textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>Your Footage, Refined</p>
+                <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 8px", textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>CreatorVault Motion Reference</p>
                 <h1 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 48, letterSpacing: "0.025em", lineHeight: 0.98, margin: 0, textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>Your Body.<br /><span style={{ color: GOLD }}>Your Empire.</span></h1>
               </div>
             </div>
@@ -684,28 +678,27 @@ export default function VaultXDrop() {
             </button>
 
             <div style={{ margin: "44px -16px 0", padding: "32px 16px", background: "linear-gradient(180deg, rgba(213,183,96,0.06), transparent)", borderTop: `1px solid ${BORDER}` }}>
-              <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", textAlign: "center", margin: "0 0 10px" }}>See the treatments move</p>
-              <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 38, lineHeight: 0.95, letterSpacing: "0.03em", textAlign: "center", margin: "0 0 12px" }}>Pick a world.<br /><span style={{ color: GOLD }}>Start the plan.</span></h2>
-              <p style={{ maxWidth: 440, margin: "0 auto 24px", color: MUTED, fontSize: 13, lineHeight: 1.55, textAlign: "center" }}>Every look begins as a moving treatment—your clip, your identity, your version of the plan.</p>
+              <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", textAlign: "center", margin: "0 0 10px" }}>Choose your cinematic direction</p>
+              <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 38, lineHeight: 0.95, letterSpacing: "0.03em", textAlign: "center", margin: "0 0 12px" }}>Your source decides<br /><span style={{ color: GOLD }}>what hits hardest.</span></h2>
+              <p style={{ maxWidth: 440, margin: "0 auto 24px", color: MUTED, fontSize: 13, lineHeight: 1.55, textAlign: "center" }}>Body Cinema reads your real footage first, then brings forward the directions that fit it. A finished version of your own footage appears only after it is made and accepted.</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
                 {QUICK_PRESETS.map(preset => (
-                  <div key={`showcase-${preset.id}`} style={{ position: "relative", overflow: "hidden", aspectRatio: "3 / 4", borderRadius: 16, background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 8px 20px rgba(0,0,0,0.35)" }}>
-                    <video src={TREATMENT_PREVIEW[preset.id]} autoPlay loop muted playsInline preload="metadata" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 65%)" }} />
-                    <div style={{ position: "absolute", left: 12, right: 12, bottom: 12 }}>
-                      <p style={{ margin: 0, color: "#fff", fontSize: 15, fontWeight: 900, textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>{preset.name}</p>
-                      <p style={{ margin: "3px 0 0", color: GOLD, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 800 }}>{preset.focus}</p>
+                  <div key={`showcase-${preset.id}`} style={{ minHeight: 138, borderRadius: 16, background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 8px 20px rgba(0,0,0,0.35)", padding: 16, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                    <Film size={18} color={GOLD} />
+                    <div>
+                      <p style={{ margin: 0, color: "#fff", fontSize: 15, fontWeight: 900 }}>{preset.name}</p>
+                      <p style={{ margin: "5px 0 0", color: GOLD, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 800 }}>{preset.focus}</p>
                     </div>
                   </div>
                 ))}
               </div>
               <div style={{ position: "relative", overflow: "hidden", borderRadius: 20, marginTop: 20, aspectRatio: "9 / 16", maxHeight: 520, background: "#000", border: `1px solid ${GOLD_BORDER}`, boxShadow: "0 14px 36px rgba(213,183,96,0.12)" }}>
-                <video src="/assets/final-drop.mp4" autoPlay loop muted playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <video src={HOMEPAGE_MEDIA.premiumUnlockVisual.livePath} autoPlay loop muted playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.05) 65%)" }} />
                 <div style={{ position: "absolute", left: 20, right: 20, bottom: 20 }}>
-                  <p style={{ margin: 0, color: GOLD, fontSize: 10, fontFamily: "monospace", letterSpacing: "0.16em", textTransform: "uppercase" }}>Demo Drop Preview</p>
-                  <p style={{ margin: "8px 0 0", color: "#fff", fontSize: 24, fontWeight: 900, lineHeight: 1.05 }}>This is one example of the energy a finished drop can carry.</p>
-                  <p style={{ margin: "8px 0 0", color: "rgba(255,255,255,0.75)", fontSize: 12, lineHeight: 1.45 }}>A premium teaser, built around the footage you own and the treatment you choose.</p>
+                  <p style={{ margin: 0, color: GOLD, fontSize: 10, fontFamily: "monospace", letterSpacing: "0.16em", textTransform: "uppercase" }}>CreatorVault Motion Reference</p>
+                  <p style={{ margin: "8px 0 0", color: "#fff", fontSize: 24, fontWeight: 900, lineHeight: 1.05 }}>Your Body Cinema result belongs here only after it is real.</p>
+                  <p style={{ margin: "8px 0 0", color: "rgba(255,255,255,0.75)", fontSize: 12, lineHeight: 1.45 }}>This is an accepted CreatorVault visual reference, not a result made from your source.</p>
                 </div>
               </div>
             </div>
@@ -786,22 +779,15 @@ export default function VaultXDrop() {
             {sourceEvidence?.analysisStatus === "rejected" && <div style={{ background: "rgba(255,124,124,0.1)", border: "1px solid rgba(255,124,124,0.3)", borderRadius: 16, padding: 16, marginBottom: 20, color: RED, fontSize: 13, lineHeight: 1.5 }}>{(sourceEvidence.rejectionReasons || ["We need a clearer clip to build a high-quality drop."]).map((reason: string) => <p key={reason} style={{ margin: "4px 0" }}>{reason}</p>)}</div>}
             
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-              {QUICK_PRESETS.map(preset => {
-                const videoSrc = TREATMENT_PREVIEW[preset.id];
-                return (
-                  <button key={preset.id} type="button" className="body-cinema-button" onClick={() => void handleSelectPreset(preset)} disabled={analyzingSource || sourceEvidence?.analysisStatus !== "verified"} style={{ position: "relative", overflow: "hidden", minHeight: 240, padding: 0, textAlign: "left", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, color: "#fff", cursor: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? "not-allowed" : "pointer", opacity: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? 0.4 : 1, boxShadow: "0 4px 15px rgba(0,0,0,0.3)" }}>
-                    <video src={videoSrc} autoPlay loop muted playsInline style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.6 }} />
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.6) 100%)" }} />
-                    <div style={{ position: "relative", zIndex: 1, padding: 20, height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                      <div><span style={{ display: "inline-block", background: "rgba(0,0,0,0.7)", border: `1px solid ${BORDER}`, padding: "4px 10px", borderRadius: 999, fontSize: 9, color: GOLD, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", backdropFilter: "blur(4px)" }}>{preset.focus}</span></div>
-                      <div>
-                        <p style={{ fontSize: 20, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.01em", textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>{preset.name}</p>
-                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", lineHeight: 1.4, margin: 0, textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}>{preset.direction}</p>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+              {QUICK_PRESETS.map(preset => (
+                <button key={preset.id} type="button" className="body-cinema-button" onClick={() => void handleSelectPreset(preset)} disabled={analyzingSource || sourceEvidence?.analysisStatus !== "verified"} style={{ minHeight: 240, padding: 20, textAlign: "left", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, color: "#fff", cursor: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? "not-allowed" : "pointer", opacity: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? 0.4 : 1, boxShadow: "0 4px 15px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                  <div><Film size={20} color={GOLD} /><span style={{ display: "inline-block", marginTop: 14, background: GOLD_DIM, border: `1px solid ${GOLD_BORDER}`, padding: "4px 10px", borderRadius: 999, fontSize: 9, color: GOLD, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase" }}>{preset.focus}</span></div>
+                  <div>
+                    <p style={{ fontSize: 20, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.01em" }}>{preset.name}</p>
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", lineHeight: 1.4, margin: 0 }}>{preset.direction}</p>
+                  </div>
+                </button>
+              ))}
             </div>
           </section>
         )}
