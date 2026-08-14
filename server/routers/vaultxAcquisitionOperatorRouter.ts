@@ -36,6 +36,18 @@ const leadInput = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
+const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const isOwner = ctx.user.id === 6 || ctx.user.id === 33 || ctx.user.role === "king" || ctx.user.role === "admin";
+  if (!isOwner) throw new Error("VaultX acquisition records are private to the owner.");
+  return next({ ctx });
+});
+
+function requireVaultXAcquisitionExecutionEnabled() {
+  if (process.env.CREATORVAULT_VAULTX_ACQUISITION_EXECUTION_ENABLED !== "true") {
+    throw new Error("Private creator acquisition is held. No scouting, queueing, follow-up, or delivery can run until a separate owner-controlled execution window is enabled.");
+  }
+}
+
 const ownerAutopilotPatch = z.object({
   enabled: z.boolean().optional(),
   approvedBy: z.string().max(120).optional(),
@@ -79,25 +91,25 @@ const configPatch = z.object({
 });
 
 export const vaultxAcquisitionOperatorRouter = router({
-  bootstrap: protectedProcedure.mutation(async () => {
+  bootstrap: ownerProcedure.mutation(async () => {
     await ensureVaultXAcquisitionSchema();
     return { success: true };
   }),
 
-  getConfig: protectedProcedure.query(async () => {
+  getConfig: ownerProcedure.query(async () => {
     return { config: await getVaultXAcquisitionConfig() };
   }),
 
-  configure: protectedProcedure.input(configPatch).mutation(async ({ input }) => {
+  configure: ownerProcedure.input(configPatch).mutation(async ({ input }) => {
     return { config: await updateVaultXAcquisitionConfig(input as any) };
   }),
 
-  ingestLead: protectedProcedure.input(leadInput).mutation(async ({ input }) => {
+  ingestLead: ownerProcedure.input(leadInput).mutation(async ({ input }) => {
     const lead = await upsertVaultXLead(input, "manual_ingest");
     return { success: true, lead };
   }),
 
-  ingestLeads: protectedProcedure.input(z.object({ leads: z.array(leadInput).min(1).max(500) })).mutation(async ({ input }) => {
+  ingestLeads: ownerProcedure.input(z.object({ leads: z.array(leadInput).min(1).max(500) })).mutation(async ({ input }) => {
     const results = [];
     for (const leadInput of input.leads) results.push(await upsertVaultXLead(leadInput, "manual_bulk_ingest"));
     return { success: true, count: results.length, leads: results };
@@ -109,10 +121,11 @@ export const vaultxAcquisitionOperatorRouter = router({
     outreachLimit: z.number().int().min(1).max(1000).optional(),
     followUpLimit: z.number().int().min(1).max(1000).optional(),
   }).optional()).mutation(async ({ input }) => {
+    requireVaultXAcquisitionExecutionEnabled();
     return await runVaultXAcquisitionTick(input || { mode: "manual" });
   }),
 
-  markReply: protectedProcedure.input(z.object({
+  markReply: ownerProcedure.input(z.object({
     leadId: z.number().int().positive().optional(),
     platform: z.string().optional(),
     handle: z.string().optional(),
@@ -120,22 +133,23 @@ export const vaultxAcquisitionOperatorRouter = router({
     intentScore: z.number().int().min(0).max(100).optional(),
     notes: z.string().max(5000).optional(),
   }).refine(v => Boolean(v.leadId || (v.platform && v.handle)), { message: "Provide leadId or platform+handle." })).mutation(async ({ input }) => {
+    requireVaultXAcquisitionExecutionEnabled();
     return await markVaultXLeadReply(input);
   }),
 
-  getBoard: protectedProcedure.input(z.object({ limit: z.number().int().min(1).max(500).default(100) }).optional()).query(async ({ input }) => {
+  getBoard: ownerProcedure.input(z.object({ limit: z.number().int().min(1).max(500).default(100) }).optional()).query(async ({ input }) => {
     return await getVaultXAcquisitionBoard(input?.limit || 100);
   }),
 
-  getProof: protectedProcedure.input(z.object({ limit: z.number().int().min(1).max(500).default(100) }).optional()).query(async ({ input }) => {
+  getProof: ownerProcedure.input(z.object({ limit: z.number().int().min(1).max(500).default(100) }).optional()).query(async ({ input }) => {
     return await getVaultXExecutionProof(input?.limit || 100);
   }),
 
-  startCron: protectedProcedure.mutation(async () => startVaultXAcquisitionCron()),
-  stopCron: protectedProcedure.mutation(async () => stopVaultXAcquisitionCron()),
-
-  publicHealth: publicProcedure.query(async () => {
-    const proof = await getVaultXExecutionProof(10);
-    return { ok: true, summary: proof.summary };
+  startCron: ownerProcedure.mutation(async () => {
+    requireVaultXAcquisitionExecutionEnabled();
+    return startVaultXAcquisitionCron();
   }),
+  stopCron: ownerProcedure.mutation(async () => stopVaultXAcquisitionCron()),
+
+  publicHealth: publicProcedure.query(async () => ({ ok: true, mode: "private_relationship_acquisition_held" })),
 });

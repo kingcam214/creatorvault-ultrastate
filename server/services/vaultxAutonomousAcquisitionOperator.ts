@@ -115,6 +115,14 @@ const DEFAULT_CONFIG: VaultXOperatorConfig = {
 let cronHandle: NodeJS.Timeout | null = null;
 let running = false;
 
+function isVaultXAcquisitionExecutionEnabled() {
+  return process.env.CREATORVAULT_VAULTX_ACQUISITION_EXECUTION_ENABLED === "true";
+}
+
+function acquisitionHoldReason() {
+  return "Private creator acquisition is held. No scouting, queueing, follow-up, or delivery can run until a separate owner-controlled execution window is enabled.";
+}
+
 function assertDb() {
   if (!db) throw new Error("DATABASE_URL is required for VaultX autonomous acquisition execution.");
 }
@@ -156,12 +164,14 @@ function getVaultXAcquisitionLiveApproval(config?: VaultXOperatorConfig) {
   const envApproved = Boolean(enabled && outboundApproved && proofId && reviewer);
   const autopilot = config?.ownerAutopilot;
   const ownerAutopilotApproved = Boolean(autopilot?.enabled && autopilot?.approvedBy && autopilot?.approvedAt);
-  const approved = envApproved || ownerAutopilotApproved;
+  const executionEnabled = isVaultXAcquisitionExecutionEnabled();
+  const approved = executionEnabled && (envApproved || ownerAutopilotApproved);
   return {
     approved,
     envApproved,
     ownerAutopilotApproved,
-    mode: envApproved ? "live-approved" : ownerAutopilotApproved ? "owner-autopilot" : "dry-run-only",
+    mode: !executionEnabled ? "held" : envApproved ? "live-approved" : ownerAutopilotApproved ? "owner-autopilot" : "dry-run-only",
+    executionEnabled,
     enabled,
     outboundApproved,
     hasProofId: Boolean(proofId),
@@ -802,6 +812,7 @@ async function importRecruiterProfiles(runId: string, limit: number) {
 }
 
 export async function runVaultXAcquisitionTick(options: { mode?: "auto" | "manual" | "test"; sourceLimit?: number; outreachLimit?: number; followUpLimit?: number } = {}) {
+  if (!isVaultXAcquisitionExecutionEnabled()) return { held: true, reason: acquisitionHoldReason() };
   if (running) return { skipped: true, reason: "previous_run_still_active" };
   running = true;
   const runId = randomUUID();
@@ -867,6 +878,7 @@ export async function getVaultXExecutionProof(limit = 100) {
 }
 
 export async function startVaultXAcquisitionCron() {
+  if (!isVaultXAcquisitionExecutionEnabled()) return { started: false, reason: acquisitionHoldReason() };
   if (cronHandle) return { started: false, reason: "already_started" };
   const config = await getVaultXAcquisitionConfig();
   if (!config.enabled) return { started: false, reason: "disabled" };

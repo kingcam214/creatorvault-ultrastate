@@ -290,6 +290,11 @@ const ALLOWLISTS = {
     'server/routers/creatorOutreachRouter.ts',
     'scripts/scope-guard.js'
   ],
+  'vaultx-acquisition-consent': [
+    'server/routers/vaultxAcquisitionOperatorRouter.ts',
+    'server/services/vaultxAutonomousAcquisitionOperator.ts',
+    'scripts/scope-guard.js'
+  ],
   'agent-command-authority': [
     'server/routers/agentExecutorRouter.ts',
     'server/routers/empireAgents.ts',
