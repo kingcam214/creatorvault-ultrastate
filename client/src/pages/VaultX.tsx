@@ -2240,20 +2240,20 @@ function VaultXPublicLanding() {
 
   const featureCards = [
     {
-      title: "PPV Content",
-      body: "Set your price. Fans pay to unlock. You see the money instantly.",
+      title: "Private paid moments",
+      body: "Set the access. Fans unlock when they choose. A real sale shows up after it happens.",
     },
     {
-      title: "Subscriptions",
-      body: "Monthly recurring income from fans who can't get enough.",
+      title: "Private membership",
+      body: "A steady place for the fans who want to stay close to you.",
     },
     {
-      title: "Direct Messaging",
-      body: "Charge for access to your DMs. Your time has a price. Set it.",
+      title: "Private messages",
+      body: "Your time has value. Decide how close people can get to you.",
     },
     {
-      title: "Multi-Platform Publishing",
-      body: "Prepare tracked, approval-controlled drafts for the channels your creator has actually connected.",
+      title: "Your channel-ready versions",
+      body: "Prepare versions for the places you actually use. Nothing goes out until you decide.",
     },
   ];
 
@@ -2361,7 +2361,7 @@ function VaultXPublicLanding() {
                 margin: "0 0 32px 0",
               }}
             >
-              CreatorVault’s private-sales vertical for adult creators who want ownership, access, and revenue paths in one governed workflow.
+              CreatorVault’s private-sales vertical for adult creators who want ownership, access, and stronger money paths in one private creation space.
             </p>
 
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
@@ -2404,17 +2404,17 @@ function VaultXPublicLanding() {
             <div className="max-w-3xl">
               <div className="text-sm font-black uppercase tracking-[.22em] mb-4" style={{ color: "#c9a84c" }}>BODY CINEMA</div>
               <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">
-                Choose creator-owned media.<br />
-                Prepare a product with direction.
+                Choose what you own.<br />
+                Give it a feeling they remember.
               </h2>
               <p className="text-base md:text-lg leading-8 mb-8" style={{ color: "#b8b8b8" }}>
-                Body Cinema begins with creator-owned media, consent, and a recorded direction. Any paid cinematic creation, cost, finished piece, and quality decision stays visible before a moment can become a commercial draft. It is the protected production lane inside the VaultX vertical.
+                Body Cinema starts with your own footage, your consent, and a clear feeling. You see the cost, the finished piece, and the quality call before a moment earns its place in a private release.
               </p>
               <div className="grid gap-3 mb-8 md:grid-cols-3" style={{ color: "#f5f0e8" }}>
                 {[
-                  ["Governed intake", "Consent, ownership, adult-content gating, and source-media readiness come first."],
-                  ["Commercial preparation", "A reviewed moment can become an offer, access draft, price decision, and approval-controlled distribution package."],
-                  ["Record-backed delivery", "Checkout, channel attribution, and delivery receipts appear only when their corresponding records exist."],
+                  ["Start clean", "Your footage, your consent, and a clear body direction come first."],
+                  ["Shape the moment", "A reviewed moment can become a private offer with the access and price you choose."],
+                  ["Know what happened", "A sale, a payment, and the unlock appear only after they really happen."],
                 ].map(([title, body]) => (
                   <div key={title} className="rounded-[1.25rem] border border-white/10 bg-white/[.035] p-4">
                     <p className="text-sm font-black text-white">{title}</p>
@@ -2429,10 +2429,10 @@ function VaultXPublicLanding() {
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.22)_36%,rgba(0,0,0,.94))]" />
               <div className="absolute inset-x-4 top-4 flex flex-wrap items-center gap-2"><span className="rounded-full border border-white/20 bg-black/55 px-3 py-2 text-[10px] font-black uppercase tracking-[.18em] text-white backdrop-blur">Silhouette style reference</span><span className="rounded-full border border-[#c9a84c]/40 bg-[#c9a84c]/15 px-3 py-2 text-[10px] font-black uppercase tracking-[.18em] text-[#f5df98] backdrop-blur">Library motion</span></div>
               <figcaption className="absolute inset-x-4 bottom-4 space-y-3">
-                <div className="rounded-[1.35rem] border border-white/10 bg-black/70 p-4 backdrop-blur-xl"><p className="text-lg font-black text-white">See the direction before you choose it.</p><p className="mt-2 text-xs leading-5 text-zinc-300">This looping library piece demonstrates the Silhouette editorial language. It is not presented as a result from a creator’s current source.</p></div>
+                <div className="rounded-[1.35rem] border border-white/10 bg-black/70 p-4 backdrop-blur-xl"><p className="text-lg font-black text-white">See the direction before you choose it.</p><p className="mt-2 text-xs leading-5 text-zinc-300">This looping library piece demonstrates the Silhouette editorial language. It is not presented as a result from a creator’s current video.</p></div>
                 {[
-                  { step: "01", title: "Owned source", detail: "Choose a saved CreatorVault video. Consent and readiness come first." },
-                  { step: "02", title: "Direction with receipts", detail: "The chosen visual direction, offer plan, and spend control stay connected." },
+                  { step: "01", title: "Your saved video", detail: "Choose a video already inside CreatorVault. Consent and readiness come first." },
+                  { step: "02", title: "Direction you can feel", detail: "The treatment, the offer, and the cost stay together so you stay in control." },
                   { step: "03", title: "A result earns its place", detail: "A finished piece appears for sale only after it clears its quality decision." },
                 ].map((item) => (
                   <div key={item.step} className="flex gap-3 rounded-[1.35rem] border border-white/10 bg-black/70 p-3 backdrop-blur-xl">
@@ -2448,14 +2448,14 @@ function VaultXPublicLanding() {
         <section className="vx-shell pb-16 md:pb-24">
           <div className="rounded-[2rem] p-7 md:p-12" style={{ background: "linear-gradient(180deg,rgba(20,20,20,.86),rgba(10,10,10,.76))", border: "1px solid rgba(201,168,76,.18)", boxShadow: "0 24px 80px rgba(0,0,0,.48)" }}>
             <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">
-              Revenue rules stay visible.<br />
-              Always reviewable.
+              Your money story stays real.<br />
+              Always yours to see.
             </h2>
             <p className="text-base md:text-lg leading-8 max-w-3xl mb-8" style={{ color: "#b8b8b8" }}>
-              VaultX keeps offer, checkout, payout, and attribution decisions attached to the creator record instead of hiding the money path behind a dashboard claim.
+              VaultX keeps what you offered, what fans paid, what you received, and where it came from together instead of making you chase the story behind your money.
             </p>
             <p className="text-base md:text-lg leading-8 max-w-3xl mb-8" style={{ color: "#b8b8b8" }}>
-              Earnings appear when real transactions and settlement records exist. CreatorVault does not promise a fixed outcome or present an estimated result as earned money.
+              Money shows up only after a real payment has cleared. CreatorVault never dresses up a guess as money you earned.
             </p>
             <button onClick={startVaultXOnboarding} className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Create Your Free Profile</button>
           </div>
@@ -2477,9 +2477,9 @@ function VaultXPublicLanding() {
 
         <section className="vx-shell pb-16 md:pb-24">
           <div className="max-w-3xl">
-            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">Creator-owned work. Record-backed outcomes.</h2>
+            <h2 className="text-4xl md:text-6xl font-black tracking-[-.04em] leading-none mb-6">Your work. Your choices. What really happened.</h2>
             <p className="text-base md:text-lg leading-8 mb-8" style={{ color: "#b8b8b8" }}>
-              VaultX gives adult creators a focused CreatorVault lane for private storefronts, controlled access, and source-backed commercial preparation. No earnings or delivery outcome is claimed before its record exists.
+              VaultX gives adult creators a focused CreatorVault place for private offers, fan access, and moments prepared from real creator-owned media. No money story is told before it is real.
             </p>
             <button onClick={startVaultXOnboarding} className="vx-btn inline-flex items-center rounded-2xl px-7 py-4 font-black">Request Your Invite</button>
           </div>
@@ -2488,7 +2488,7 @@ function VaultXPublicLanding() {
         <section className="px-5 pb-20 md:pb-28">
           <div className="max-w-5xl mx-auto text-center rounded-[2rem] p-7 md:p-12" style={{ background: "linear-gradient(135deg,rgba(201,168,76,.22),rgba(6,182,212,.10),rgba(239,68,68,.10))", border: "1px solid rgba(201,168,76,.25)" }}>
             <h2 className="text-4xl md:text-6xl font-black tracking-[-.045em] leading-none mb-6">Own the creator relationship.</h2>
-            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>Enter CreatorVault, then open the VaultX vertical when your business needs private access, premium offers, and accountable delivery.</p>
+            <p className="text-base md:text-lg leading-8 max-w-3xl mx-auto mb-8" style={{ color: "#f5f0e8" }}>Enter CreatorVault, then open VaultX when your business needs private access, premium offers, and a stronger way to take care of your people.</p>
             <button onClick={startVaultXOnboarding} className="vx-btn inline-flex items-center justify-center rounded-2xl px-9 py-4 font-black">Get Started Free</button>
           </div>
         </section>
