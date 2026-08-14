@@ -117,35 +117,32 @@ export function AgentRoster() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Bot size={28} color={T.gold} />
           <div>
-            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: '-0.5px' }}>Agent Arsenal Truth Room</h1>
-            <p style={{ margin: 0, fontSize: 12, color: T.muted }}>This room separates roster records, past receipts, and proven creator weapons. A listed agent is not presented as ready until its source, action receipt, and spend boundary are current.</p>
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: '-0.5px' }}>Your Arsenal</h1>
+            <p style={{ margin: 0, fontSize: 12, color: T.muted }}>The weapons meant to move your world forward. Nothing gets opened just because it has a name—only real work earns its place here.</p>
           </div>
         </div>
         <div style={{ background: T.goldDim, color: T.gold, border: `1px solid ${T.gold}44`, borderRadius: 10, padding: '10px 16px', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <ShieldCheckIcon /> Direct agent runs are held for proof
+          <ShieldCheckIcon /> Nothing runs loose
         </div>
       </div>
 
       <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
           <ShieldCheckIcon />
-          <div style={{ fontSize: 13, fontWeight: 900, color: T.gold }}>Production proof rules</div>
+          <div style={{ fontSize: 13, fontWeight: 900, color: T.gold }}>What makes a weapon ready</div>
         </div>
         <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.65 }}>
-          Roster entries are not proof of working weapons. Past reports stay as dated records only, and direct agent runs remain held until every exposed action has a current source, a real receipt, and controlled spend.
+          A name alone does not make a weapon. One gets opened only after it has a real starting point, a real result, and a cost you can see.
         </div>
       </div>
 
       {/* Stats */}
       <div className="agent-roster-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
         {[
-          { label: 'Total Agents', value: agents.length, icon: <Users size={14} color={T.gold} />, color: T.gold },
-          { label: 'Listed in Roster', value: activeCount, icon: <Users size={14} color={T.gold} />, color: T.gold },
-          { label: 'Direct Runs', value: 'Held', icon: <ShieldCheckIcon />, color: T.gold },
-          { label: 'Monetized Tools', value: forSaleCount, icon: <DollarSign size={14} color={T.purple} />, color: T.purple },
-          { label: 'Verified Challenge Revenue', value: `$${verifiedChallengeRevenue.toFixed(0)}`, icon: <TrendingUp size={14} color={T.success} />, color: T.success },
-          { label: 'Verified Payments', value: verifiedTransactionCount, icon: <CheckCircle size={14} color={T.info} />, color: T.info },
-          { label: 'Saved Agent Reports', value: savedReportCount, icon: <FileText size={14} color={T.muted} />, color: T.muted },
+          { label: 'Weapons in your arsenal', value: agents.length, icon: <Users size={14} color={T.gold} />, color: T.gold },
+          { label: 'On deck', value: activeCount, icon: <Users size={14} color={T.gold} />, color: T.gold },
+          { label: 'Next controlled move', value: 'Held', icon: <ShieldCheckIcon />, color: T.gold },
+          { label: 'Tools with a price', value: forSaleCount, icon: <DollarSign size={14} color={T.purple} />, color: T.purple },
         ].map((s, i) => (
           <div key={i} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>{s.icon}<span style={{ fontSize: 11, color: T.muted }}>{s.label}</span></div>
@@ -188,8 +185,8 @@ export function AgentRoster() {
 
       {dataSourceError && (
         <div style={{ background: T.errorDim, border: `1px solid ${T.error}66`, borderRadius: 12, padding: 14, marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: T.error, marginBottom: 4 }}>Live DB-backed roster failed to load</div>
-          <div style={{ fontSize: 12, color: T.text, whiteSpace: 'pre-wrap' }}>{dataSourceError}</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: T.error, marginBottom: 4 }}>Your arsenal did not load</div>
+          <div style={{ fontSize: 12, color: T.text }}>The weapon list is not ready to show right now. Nothing has been changed.</div>
         </div>
       )}
 
@@ -233,7 +230,7 @@ export function AgentRoster() {
                     )}
                     {agent.is_for_sale && (
                       <span style={{ background: T.goldDim, color: T.gold, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4 }}>
-                        LISTED TOOL ${((agent.base_price_cents ?? 0) / 100).toLocaleString()}
+                        AVAILABLE TOOL ${((agent.base_price_cents ?? 0) / 100).toLocaleString()}
                       </span>
                     )}
                   </div>
@@ -247,19 +244,19 @@ export function AgentRoster() {
               {/* Description */}
               {agent.description && (
                 <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.5, marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                  {agent.description}
+                  Built to handle when it earns a real place: {agent.description}
                 </div>
               )}
 
               {/* Operational truth */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10, fontSize: 11 }}>
                 <div style={{ background: T.surface2, border: `1px solid ${T.border}`, borderRadius: 8, padding: 8 }}>
-                  <div style={{ color: T.muted, marginBottom: 2 }}>Roster state</div>
-                  <div style={{ color: agent.status === 'active' ? T.gold : T.muted, fontWeight: 700 }}>{agent.status === 'active' ? 'Listed — proof required' : agent.status}</div>
+                  <div style={{ color: T.muted, marginBottom: 2 }}>Where it stands</div>
+                  <div style={{ color: agent.status === 'active' ? T.gold : T.muted, fontWeight: 700 }}>{agent.status === 'active' ? 'On deck — proof required' : agent.status === 'inactive' ? 'Waiting for proof' : agent.status === 'paused' ? 'Waiting' : 'Needs attention'}</div>
                 </div>
                 <div style={{ background: T.surface2, border: `1px solid ${T.border}`, borderRadius: 8, padding: 8 }}>
-                  <div style={{ color: T.muted, marginBottom: 2 }}>Past record</div>
-                  <div style={{ color: latestReport ? T.gold : T.muted, fontWeight: 700 }}>{latestReport ? `Dated record ${new Date(latestReport.created_at).toLocaleDateString()}` : 'No dated record'}</div>
+                  <div style={{ color: T.muted, marginBottom: 2 }}>Last real record</div>
+                  <div style={{ color: latestReport ? T.gold : T.muted, fontWeight: 700 }}>{latestReport ? `Recorded ${new Date(latestReport.created_at).toLocaleDateString()}` : 'No real record yet'}</div>
                 </div>
                 {agent.consecutive_failures > 0 && <span style={{ color: T.error, fontWeight: 600, gridColumn: '1 / -1' }}>{agent.consecutive_failures} consecutive failures require owner review</span>}
               </div>
@@ -316,7 +313,7 @@ export function AgentRoster() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}
               >
-                <><ShieldCheckIcon /> Held until proof is current</>
+                <><ShieldCheckIcon /> Not opened yet</>
               </button>
             </div>
           );
@@ -324,7 +321,7 @@ export function AgentRoster() {
 
         {filtered.length === 0 && !agentsQuery.isPending && (
           <div style={{ color: T.muted, fontSize: 13, gridColumn: '1/-1', padding: 40, textAlign: 'center' }}>
-            No DB-backed agents matched the selected filters. Clear the filters or repair the production agent seed data.
+            Nothing in this corner matches right now. Change the view to see the rest of your arsenal.
           </div>
         )}
       </div>
