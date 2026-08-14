@@ -104,6 +104,11 @@ const ALLOWLISTS = {
     'client/src/pages/Dashboard.tsx',
     'scripts/scope-guard.js'
   ],
+  'apparel-hold': [
+    'client/src/App.tsx',
+    'server/routers/apparelRouter.ts',
+    'scripts/scope-guard.js'
+  ],
   university: [
     'client/src/pages/University.tsx',
     'client/src/pages/UniversityEnrollSuccess.tsx',

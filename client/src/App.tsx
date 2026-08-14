@@ -155,7 +155,6 @@ import FanSubscription from "./pages/greatest-show/FanSubscription";
 import AdminManualPayments from "./pages/AdminManualPayments";
 import AdminPayouts from "./pages/AdminPayouts";
 import AgentRoster from "./pages/AgentRoster";
-import ApparelLab from "./pages/ApparelLab";
 import BrandDeals from "./pages/BrandDeals";
 import ChicaCockpit from "./pages/ChicaCockpit";
 import Chuuch from "./pages/Chuuch";
@@ -538,7 +537,7 @@ function Router() {
       <Route path={"/agent-tracker"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/emma-ai-agents"}>{() => { window.location.replace("/emma/network"); return null; }}</Route>
       <Route path={"/empire-brain-showrunner"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
-      <Route path={"/apparel-lab"} component={ApparelLab} />
+      <Route path={"/apparel-lab"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
       <Route path={"/mark-cuban-agent"} component={MarkCubanAgent} />
       <Route path={"/real-estate-empire"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/viral-optimizer"}>{() => { window.location.replace("/social-hub"); return null; }}</Route>
