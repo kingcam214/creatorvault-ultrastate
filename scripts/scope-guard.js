@@ -123,6 +123,7 @@ const ALLOWLISTS = {
   'viral-optimizer-hold': [
     'client/src/pages/tools/ViralOptimizer.tsx',
     'server/routers/viralOptimizer.ts',
+    'server/routers/viralOptimizerRouter.ts',
     'server/services/viralOptimizer.ts',
     'scripts/scope-guard.js'
   ],
