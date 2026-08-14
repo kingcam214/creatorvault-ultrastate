@@ -1289,6 +1289,15 @@ export const vaultxRouter = router({
     return { creator: rows[0] || null };
   }),
 
+  // Creator-facing identity editor: reads the same record updated by updateCreatorProfile.
+  getEditableCreatorProfile: protectedProcedure.query(async ({ ctx }) => {
+    const rows = await rawQuery(
+      "SELECT * FROM vaultx_creator_profiles WHERE creator_id = ? LIMIT 1",
+      [ctx.user.id]
+    );
+    return { profile: rows[0] || null };
+  }),
+
   // ═══════════════════════════════════════════════════════════════════════════
   // PROCEDURE 4 — uploadContent
   // ═══════════════════════════════════════════════════════════════════════════

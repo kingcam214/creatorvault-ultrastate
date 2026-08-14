@@ -1400,16 +1400,11 @@ function MyProfileTab({ userId }: { userId: number }) {
     displayName: "",
     bio: "",
     contentStyle: "",
-    subscriptionPrice: "9.99",
-    ppvEnabled: true,
-    tipsEnabled: true,
-    customRequestsEnabled: true,
-    dmPaywallEnabled: false,
     categories: [] as string[],
   });
   const [saved, setSaved] = useState(false);
 
-  const { data: profileData } = trpc.vaultx.getMyCreatorProfile.useQuery(undefined, { retry: false });
+  const { data: profileData } = trpc.vaultx.getEditableCreatorProfile.useQuery(undefined, { retry: false });
 
   useEffect(() => {
     if (profileData && (profileData as any).profile) {
@@ -1418,12 +1413,9 @@ function MyProfileTab({ userId }: { userId: number }) {
         displayName: p.display_name || "",
         bio: p.bio || "",
         contentStyle: p.content_style || "",
-        subscriptionPrice: p.base_subscription_price?.toString() || "9.99",
-        ppvEnabled: p.ppv_enabled ?? true,
-        tipsEnabled: p.tips_enabled ?? true,
-        customRequestsEnabled: p.custom_requests_enabled ?? true,
-        dmPaywallEnabled: p.dm_paywall_enabled ?? false,
-        categories: p.categories || [],
+        categories: Array.isArray(p.categories) ? p.categories : (() => {
+          try { return p.categories ? JSON.parse(p.categories) : []; } catch { return []; }
+        })(),
       });
     }
   }, [profileData]);
@@ -1447,11 +1439,12 @@ function MyProfileTab({ userId }: { userId: number }) {
       displayName: form.displayName,
       bio: form.bio,
       contentStyle: form.contentStyle,
-      subscriptionPrice: parseFloat(form.subscriptionPrice),
-      ppvEnabled: form.ppvEnabled,
-      tipsEnabled: form.tipsEnabled,
-      customRequestsEnabled: form.customRequestsEnabled,
-      dmPaywallEnabled: form.dmPaywallEnabled,
+      // Membership and cash controls stay off until checkout and access are proven together.
+      subscriptionPrice: 0,
+      ppvEnabled: false,
+      tipsEnabled: false,
+      customRequestsEnabled: false,
+      dmPaywallEnabled: false,
       categories: form.categories,
     });
   };
@@ -1459,13 +1452,13 @@ function MyProfileTab({ userId }: { userId: number }) {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-white font-black text-xl">My VaultX Profile</h2>
+        <h2 className="text-white font-black text-xl">Your VaultX identity</h2>
         <button
           onClick={handleSave}
           disabled={updateProfile.isPending}
           className="bg-red-500 text-white font-bold px-5 py-2 rounded-xl text-sm hover:bg-red-600 transition-colors disabled:opacity-50"
         >
-          {saved ? "✓ Saved" : updateProfile.isPending ? "Saving..." : "Save Profile"}
+          {saved ? "✓ Saved" : updateProfile.isPending ? "Saving..." : "Save My Identity"}
         </button>
       </div>
 
@@ -1475,26 +1468,26 @@ function MyProfileTab({ userId }: { userId: number }) {
           <Camera className="w-4 h-4 text-red-400" /> Identity
         </div>
         <div>
-          <label className="text-gray-500 text-xs uppercase tracking-wider block mb-2">Display Name</label>
+          <label className="text-gray-500 text-xs uppercase tracking-wider block mb-2">Your name</label>
           <input
             value={form.displayName}
             onChange={(e) => setForm(f => ({ ...f, displayName: e.target.value }))}
-            placeholder="Your creator name on VaultX"
+            placeholder="The name people see on VaultX"
             className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500"
           />
         </div>
         <div>
-          <label className="text-gray-500 text-xs uppercase tracking-wider block mb-2">Bio</label>
+          <label className="text-gray-500 text-xs uppercase tracking-wider block mb-2">In your words</label>
           <textarea
             value={form.bio}
             onChange={(e) => setForm(f => ({ ...f, bio: e.target.value }))}
-            placeholder="Tell subscribers what you offer..."
+            placeholder="Tell people what they should feel when they land here..."
             rows={3}
             className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500 resize-none"
           />
         </div>
         <div>
-          <label className="text-gray-500 text-xs uppercase tracking-wider block mb-2">Content Style</label>
+          <label className="text-gray-500 text-xs uppercase tracking-wider block mb-2">Your vibe</label>
           <input
             value={form.contentStyle}
             onChange={(e) => setForm(f => ({ ...f, contentStyle: e.target.value }))}
@@ -1526,68 +1519,9 @@ function MyProfileTab({ userId }: { userId: number }) {
         </div>
       </div>
 
-      {/* Monetization */}
-      <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-5 space-y-4">
-        <div className="text-white font-bold text-sm flex items-center gap-2">
-          <DollarSign className="w-4 h-4 text-red-400" /> Monetization
-        </div>
-        <div>
-          <label className="text-gray-500 text-xs uppercase tracking-wider block mb-2">Monthly Subscription Price ($)</label>
-          <input
-            type="number"
-            value={form.subscriptionPrice}
-            onChange={(e) => setForm(f => ({ ...f, subscriptionPrice: e.target.value }))}
-            min="4.99"
-            step="0.01"
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500"
-          />
-          <div className="text-gray-600 text-xs mt-1">You keep 85% — platform takes 15%</div>
-        </div>
-
-        {/* Toggles */}
-        {[
-          { key: "ppvEnabled", label: "Pay-Per-View", desc: "Sell individual posts/videos" },
-          { key: "tipsEnabled", label: "Tips", desc: "Accept tips from fans" },
-          { key: "customRequestsEnabled", label: "Custom Requests", desc: "Accept custom content orders" },
-          { key: "dmPaywallEnabled", label: "DM Paywall", desc: "Charge to unlock your DMs" },
-        ].map(({ key, label, desc }) => (
-          <div key={key} className="flex items-center justify-between py-3 border-t border-gray-800">
-            <div>
-              <div className="text-white text-sm font-semibold">{label}</div>
-              <div className="text-gray-500 text-xs">{desc}</div>
-            </div>
-            <button
-              onClick={() => setForm(f => ({ ...f, [key]: !f[key as keyof typeof f] }))}
-              className={`w-12 h-6 rounded-full transition-colors relative ${
-                form[key as keyof typeof form] ? "bg-red-500" : "bg-gray-700"
-              }`}
-            >
-              <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${
-                form[key as keyof typeof form] ? "translate-x-6" : "translate-x-0.5"
-              }`} />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Revenue Share Info */}
-      <div className="bg-[#0a0a0a] from-red-950/50 to-orange-950/30 border border-red-900/30 rounded-2xl p-5">
-        <div className="text-red-400 font-bold text-sm mb-3 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4" /> Your Revenue Breakdown
-        </div>
-        <div className="space-y-2 text-sm">
-          {[
-            { label: "Subscriptions", pct: "85%" },
-            { label: "Pay-Per-View", pct: "85%" },
-            { label: "Tips", pct: "90%" },
-            { label: "Custom Requests", pct: "85%" },
-          ].map(({ label, pct }) => (
-            <div key={label} className="flex justify-between">
-              <span className="text-gray-400">{label}</span>
-              <span className="text-white font-bold">{pct} to you</span>
-            </div>
-          ))}
-        </div>
+      <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+        <p className="text-sm font-black text-white">Selling access comes later.</p>
+        <p className="mt-2 text-sm leading-relaxed text-zinc-400">Individual paid drops remain tied to a finished moment. Recurring memberships, tips, custom requests, direct-message charges, and cash-out settings will appear here only when CreatorVault can prove the full path from what a fan pays to what they receive and what belongs to you.</p>
       </div>
     </div>
   );
