@@ -355,7 +355,7 @@ export default function KingContent() {
         )}
 
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-black text-white">Creation History & Engines</h2>
+          <h2 className="text-xl font-black text-white">Your Creation Arsenal</h2>
           <div className="h-px flex-1 ml-6 bg-gradient-to-r from-white/10 to-transparent" />
         </div>
         <div className="mb-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">

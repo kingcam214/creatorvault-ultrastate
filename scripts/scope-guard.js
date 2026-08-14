@@ -186,6 +186,7 @@ const ALLOWLISTS = {
   'kingcam-content': [
     'client/src/App.tsx',
     'client/src/components/AppHeader.tsx',
+    'client/src/components/MediaPicker.tsx',
     'client/src/lib/productArchitecture.ts',
     'client/src/pages/KingContent.tsx',
     'scripts/scope-guard.js'
