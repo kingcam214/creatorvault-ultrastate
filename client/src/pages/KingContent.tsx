@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { CreatorVaultRoute } from "@/lib/productArchitecture";
 import MediaPicker, { MediaAssetItem } from "@/components/MediaPicker";
 import { trpc } from "@/lib/trpc";
+import { HOMEPAGE_MEDIA } from "@/lib/homepageMediaRegistry";
 
 function videoPoster(asset: MediaAssetItem) {
   const candidate = asset.thumbnailUrl ?? "";
@@ -216,51 +217,12 @@ export default function KingContent() {
             <h1 className="mb-4 text-4xl font-black text-white sm:text-5xl lg:text-6xl">
               Create the Empire.
             </h1>
-            <p className="text-lg leading-relaxed text-zinc-400 sm:text-xl mb-8">
-              Your personal creation arsenal. Build clone video, shape your voice, make cinematic trailers, and command every source clip in your private vault.
+            <p className="text-lg leading-relaxed text-zinc-300 sm:text-xl mb-8">
+              Your private creation arsenal. Start from the moments you already own, then use the weapons that have earned real proof you can see.
             </p>
-
-            {/* Intent Command Bar */}
-            <div className="relative max-w-xl">
-              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-fuchsia-500/20 via-cyan-500/20 to-amber-500/20 blur-lg transition-opacity duration-500" />
-              <div className="relative flex items-center gap-3 rounded-xl border border-white/10 bg-[#0d0d14] p-2 shadow-2xl">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/5 text-zinc-400">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <input
-                  type="text"
-                  value={intent}
-                  onChange={(e) => setIntent(e.target.value)}
-                  placeholder="What do you want to create?"
-                  className="flex-1 bg-transparent text-base font-medium text-white placeholder:text-zinc-600 focus:outline-none"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && intent.trim()) {
-                      setActiveStage("orchestrating");
-                    }
-                  }}
-                />
-                <button
-                  onClick={() => intent.trim() && setActiveStage("orchestrating")}
-                  disabled={!intent.trim()}
-                  className="shrink-0 rounded-lg bg-white px-6 py-2.5 text-sm font-black text-black transition hover:bg-zinc-200 disabled:opacity-50 disabled:hover:bg-white"
-                >
-                  Start
-                </button>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {["Clone teaser", "Cinematic trailer", "Voice dub", "Social drop"].map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => {
-                      setIntent(suggestion);
-                      setActiveStage("orchestrating");
-                    }}
-                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-zinc-400 transition hover:bg-white/10 hover:text-white"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/agents/motion-flyer-agent"><a className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-zinc-200">Make a Motion Flyer <ArrowUpRight className="h-4 w-4" /></a></Link>
+              <Link href="/king/campaign-visual"><a className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-black/45 px-5 py-3 text-sm font-black text-white transition hover:border-amber-300/80">Open Campaign Visual <ArrowUpRight className="h-4 w-4" /></a></Link>
             </div>
           </div>
         </div>
@@ -270,18 +232,19 @@ export default function KingContent() {
         <section className="mb-10 overflow-hidden rounded-3xl border border-emerald-300/20 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.15),transparent_42%),linear-gradient(135deg,#0c1210,#080909)] p-6 shadow-[0_20px_55px_-30px_rgba(52,211,153,0.45)] sm:p-8">
           <div className="flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
             <div className="max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200"><Shield className="h-3.5 w-3.5" /> Your Proof Vault</div>
-              <h2 className="text-3xl font-black tracking-[-0.05em] text-white sm:text-4xl">Finished work earns its place.</h2>
-              <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-300 sm:text-base">Only a finished piece that has been watched all the way through, checked against its source, and signed off can stand as public proof. A plan is never counted as a finished creation.</p>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200"><Shield className="h-3.5 w-3.5" /> Accepted CreatorVault proof</div>
+              <h2 className="text-3xl font-black tracking-[-0.05em] text-white sm:text-4xl">Two real pieces are ready to see.</h2>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-300 sm:text-base">These are finished CreatorVault creations that were accepted after review. They are here because you can actually open them—not because a plan or a route exists.</p>
             </div>
             <div className="grid grid-cols-3 overflow-hidden rounded-2xl border border-white/10 bg-black/25 text-center">
-              <div className="min-w-24 border-r border-white/10 px-4 py-4"><p className="text-2xl font-black text-emerald-300">{certifiedProofs.length}</p><p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-zinc-500">Signed off</p></div>
-              <div className="min-w-24 border-r border-white/10 px-4 py-4"><p className="text-2xl font-black text-amber-200">{candidateProofs.length}</p><p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-zinc-500">Under review</p></div>
-              <div className="min-w-24 px-4 py-4"><p className="text-2xl font-black text-rose-300">{rejectedProofs.length}</p><p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-zinc-500">Kept out</p></div>
+              <div className="min-w-24 border-r border-white/10 px-4 py-4"><p className="text-2xl font-black text-emerald-300">2</p><p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-zinc-500">Accepted pieces</p></div>
+              <div className="min-w-24 border-r border-white/10 px-4 py-4"><p className="text-2xl font-black text-amber-200">1</p><p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-zinc-500">Moving piece</p></div>
+              <div className="min-w-24 px-4 py-4"><p className="text-2xl font-black text-fuchsia-200">1</p><p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-zinc-500">Campaign visual</p></div>
             </div>
           </div>
-          <div className="mt-7 border-t border-white/10 pt-5">
-            {creationProofQ.isLoading ? <p className="text-sm font-bold text-zinc-400">Checking your finished-work library…</p> : certifiedProofs.length > 0 ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{certifiedProofs.slice(0, 3).map((proof) => <div key={proof.id} className="rounded-2xl border border-emerald-300/20 bg-black/25 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-200">{proof.proofClass === "flagship" ? "Flagship proof" : proof.proofClass === "public_showcase" ? "Public showcase" : "Gold standard"}</p><p className="mt-2 text-sm font-black text-white">{proof.overallScore}/100 visual standard</p></div><Shield className="h-5 w-5 shrink-0 text-emerald-300" /></div><p className="mt-3 line-clamp-2 text-xs leading-relaxed text-zinc-400">{proof.reviewNotes || "Reviewed against the finished watchable piece."}</p></div>)}</div> : <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-white/15 bg-black/20 p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-black text-white">No finished work has been signed off yet.</p><p className="mt-1 text-sm text-zinc-400">Nothing appears here because a route exists or a plan was saved. A piece earns its place only after you can watch it and it clears the visual standard.</p></div><Link href="/vault-x/studio"><a className="inline-flex shrink-0 items-center gap-2 text-sm font-black text-emerald-200 transition hover:text-white">Open Body Cinema <ArrowUpRight className="h-4 w-4" /></a></Link></div>}
+          <div className="mt-7 grid gap-4 border-t border-white/10 pt-5 lg:grid-cols-2">
+            <Link href="/agents/motion-flyer-agent"><a className="group overflow-hidden rounded-2xl border border-white/10 bg-black/25 transition hover:border-emerald-300/60"><video src={HOMEPAGE_MEDIA.motionFlyerProof.livePath} autoPlay muted loop playsInline preload="metadata" className="h-64 w-full object-cover" /><div className="p-5"><div className="flex items-center justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-200">Accepted Motion Flyer</p><p className="mt-2 text-lg font-black text-white">A moving piece you can watch right now.</p></div><Play className="h-5 w-5 text-emerald-200" /></div><p className="mt-3 text-sm leading-relaxed text-zinc-400">Built from approved CreatorVault material and kept as a durable finished flyer.</p></div></a></Link>
+            <Link href="/king/campaign-visual"><a className="group overflow-hidden rounded-2xl border border-white/10 bg-black/25 transition hover:border-amber-300/60"><img src={HOMEPAGE_MEDIA.campaignVisualProof.livePath} alt="Accepted CreatorVault campaign visual" className="h-64 w-full object-cover" /><div className="p-5"><div className="flex items-center justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.15em] text-amber-200">Accepted Campaign Visual</p><p className="mt-2 text-lg font-black text-white">A finished visual already saved in your Vault.</p></div><ImageIcon className="h-5 w-5 text-amber-200" /></div><p className="mt-3 text-sm leading-relaxed text-zinc-400">Made from a certified CreatorVault source, reviewed, then kept because it met the visual standard.</p></div></a></Link>
           </div>
         </section>
         {activeStage === "orchestrating" && (
