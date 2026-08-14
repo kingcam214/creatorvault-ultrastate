@@ -76,7 +76,7 @@ export default function SocialHub() {
   const distribution = Array.isArray(command.data?.distribution) ? command.data.distribution : [];
   const awaitingApproval = distribution.filter((row: any) => ["draft", "ready", "scheduled"].includes(row.status)).reduce((sum: number, row: any) => sum + Number(row.count || 0), 0);
   const readyMedia = Array.isArray(media.data) ? media.data : [];
-  const feedItems = feed.data?.items || [];
+  const feedItems = (feed.data?.items || []).filter((post: any) => Boolean(post.mediaUrl));
 
   useEffect(() => {
     if (!handedOffSourceAssetId || selectedAssetId || !readyMedia.length) return;
