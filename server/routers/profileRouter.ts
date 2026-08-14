@@ -78,7 +78,7 @@ async function findPublicProfile(username: string) {
         NULL AS bio,
         creator_status AS creatorStatus
        FROM users
-       WHERE LOWER(REPLACE(COALESCE(username, name, CAST(id AS CHAR)), '@', '')) = ?
+       WHERE LOWER(REPLACE(COALESCE(username, name, CAST(id AS CHAR)), '@', '')) = CONVERT(? USING utf8mb4) COLLATE utf8mb4_bin
          AND LOWER(COALESCE(creator_status, 'pending')) = 'active'
        LIMIT 1`,
       [handle]
