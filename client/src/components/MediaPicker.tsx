@@ -43,6 +43,7 @@ interface MediaPickerProps {
   maxSelect?: number;
   emptyActionHref?: string;
   emptyActionLabel?: string;
+  assetEligibility?: (asset: MediaAssetItem) => boolean;
 }
 
 /* ── design tokens ── */
@@ -105,6 +106,7 @@ export default function MediaPicker({
   maxSelect,
   emptyActionHref,
   emptyActionLabel = "Open Media Vault",
+  assetEligibility,
 }: MediaPickerProps) {
   const [filter, setFilter] = useState<MediaFilter>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds ?? []);
@@ -130,7 +132,7 @@ export default function MediaPicker({
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
-  const assets = ((mediaQuery.data ?? []) as MediaAssetItem[]).filter(isReadySource);
+  const assets = ((mediaQuery.data ?? []) as MediaAssetItem[]).filter((asset) => isReadySource(asset) && (assetEligibility ? assetEligibility(asset) : true));
   const selectedAssets = useMemo(
     () => assets.filter((a) => selectedIds.includes(a.id)),
     [assets, selectedIds]

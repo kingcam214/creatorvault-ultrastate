@@ -8,6 +8,15 @@ function isVideo(asset: MediaAssetItem) {
   return asset.assetType === "video" || Boolean(asset.mimeType?.startsWith("video/"));
 }
 
+function isLockedKingCamHero(asset: MediaAssetItem) {
+  const reference = [asset.publicUrl, asset.fileName, asset.originalName].filter(Boolean).join(" ").toLowerCase();
+  return reference.includes("/videos/kingcam-hero-cam.mp4") || reference.includes("kingcam-continuous-hero-loop");
+}
+
+function isEligibleCreatorVideo(asset: MediaAssetItem) {
+  return isVideo(asset) && Boolean(asset.publicUrl) && !isLockedKingCamHero(asset);
+}
+
 function videoPoster(asset: MediaAssetItem) {
   const candidate = asset.thumbnailUrl ?? "";
   return /\.(avif|gif|jpe?g|png|webp)(?:$|[?#])/i.test(candidate) ? candidate : undefined;
@@ -28,7 +37,7 @@ export default function CreatorVideoStudio() {
   const mediaQuery = trpc.mediaAssets.list.useQuery({ filter: "videos", limit: 120 }, { staleTime: 30_000 });
   const verifiedVideoSources = useMemo(() => {
     const media = Array.isArray(mediaQuery.data) ? mediaQuery.data as MediaAssetItem[] : [];
-    return media.filter((asset) => isVideo(asset) && Boolean(asset.publicUrl));
+    return media.filter(isEligibleCreatorVideo);
   }, [mediaQuery.data]);
   const activeSource = selectedAsset || verifiedVideoSources[0] || null;
 
@@ -38,7 +47,7 @@ export default function CreatorVideoStudio() {
       setPickerOpen(true);
       return;
     }
-    const path = destination === "body-cinema" ? "/vault-x/studio" : "/vaultx/trailers";
+    const path = destination === "body-cinema" ? "/vault-x/studio" : "/trailer-maker";
     setLocation(`${path}?sourceAssetId=${encodeURIComponent(activeSource.id)}`);
   };
 
@@ -83,8 +92,9 @@ export default function CreatorVideoStudio() {
         title="Choose Your Video Source"
         subtitle="Only saved CreatorVault videos that can be opened and used are offered here."
         confirmLabel="Use This Video"
+        assetEligibility={isEligibleCreatorVideo}
         onConfirm={(assets) => {
-          const source = assets.find((asset) => isVideo(asset) && Boolean(asset.publicUrl));
+          const source = assets.find(isEligibleCreatorVideo);
           if (!source) { setSelectionMessage("Choose a ready video source from your vault."); return; }
           setSelectedAsset(source);
           setSelectionMessage(null);
