@@ -349,6 +349,37 @@ async function persistDesignImageOutput(job: GovernedPolloJob, providerUrl: stri
   return { durableUrl: `https://creatorvault.live/uploads/content-vault/design-image-${job.id}/${fileName}`, fingerprint };
 }
 
+async function ingestAcceptedCampaignVisual(job: GovernedPolloJob, artifactUrl: string): Promise<string | null> {
+  if (job.metadata.campaignVisual !== true) return null;
+  if (!new RegExp(`^https://creatorvault\\.live/uploads/content-vault/design-image-${job.id}/`).test(artifactUrl)) {
+    throw new Error("CreatorVault could not verify the accepted campaign visual storage path.");
+  }
+
+  const existing = await rawQuery("SELECT id FROM media_assets WHERE user_id = ? AND public_url = ? LIMIT 1", [job.creatorId, artifactUrl]);
+  const assetId = existing[0]?.id ? String(existing[0].id) : randomUUID();
+  if (!existing.length) {
+    const extension = artifactUrl.toLowerCase().endsWith(".png") ? "png" : "jpg";
+    const fileName = `CreatorVault-Campaign-Visual-${job.id}.${extension}`;
+    await rawExec(
+      `INSERT INTO media_assets
+        (id, user_id, source_type, asset_type, file_name, original_name, mime_type, storage_path, public_url, thumbnail_url, status, created_by_feature)
+       VALUES (?, ?, 'generated', 'image', ?, ?, ?, ?, ?, ?, 'ready', 'governed_campaign_visual')`,
+      [assetId, job.creatorId, fileName, fileName, `image/${extension === "png" ? "png" : "jpeg"}`, artifactUrl, artifactUrl, artifactUrl],
+    );
+  }
+
+  const projectId = typeof job.metadata.creationProjectId === "string" ? job.metadata.creationProjectId : null;
+  if (projectId) {
+    await rawExec(
+      `UPDATE creation_projects
+          SET accepted_media_asset_id = ?, state = 'accepted', updated_at = NOW()
+        WHERE id = ? AND creator_id = ?`,
+      [assetId, projectId, job.creatorId],
+    );
+  }
+  return assetId;
+}
+
 function buildSourceVideoReferenceInput(input: {
   providerModelPath: string;
   sourceUrl: string;
@@ -1440,12 +1471,18 @@ export async function reviewGovernedPolloOutput(params: { jobId: number; reviewe
   if (job.state !== "provider_complete" && job.state !== "quality_review") throw new Error(`Job in state ${job.state} cannot be quality-reviewed.`);
   if (params.accepted && !String(params.artifactUrl || "").trim()) throw new Error("An accepted output requires a durable CreatorVault artifact URL.");
   const nextState: GovernedPolloJobState = params.accepted ? "accepted" : "rejected";
+  const artifactUrl = params.accepted ? String(params.artifactUrl) : null;
+  const acceptedCampaignVisualAssetId = artifactUrl ? await ingestAcceptedCampaignVisual(job, artifactUrl) : null;
+  const reviewedMetadata = {
+    ...job.metadata,
+    ...(acceptedCampaignVisualAssetId ? { acceptedCampaignVisualAssetId } : {}),
+  };
   await rawExec(
     `UPDATE governed_media_jobs
-     SET state = ?, artifact_url = ?, quality_state = ?, quality_score = ?, quality_reason = ?, lease_owner = NULL, lease_expires_at = NULL,
+     SET state = ?, artifact_url = ?, quality_state = ?, quality_score = ?, quality_reason = ?, metadata_json = ?, lease_owner = NULL, lease_expires_at = NULL,
          updated_at = NOW(), completed_at = NOW()
      WHERE id = ? AND state IN ('provider_complete', 'quality_review')`,
-    [nextState, params.accepted ? String(params.artifactUrl) : null, params.accepted ? "accepted" : "rejected", params.qualityScore ?? null, params.reason.slice(0, 3000), job.id],
+    [nextState, artifactUrl, params.accepted ? "accepted" : "rejected", params.qualityScore ?? null, params.reason.slice(0, 3000), safeJson(reviewedMetadata), job.id],
   );
   const reviewed = (await getGovernedPolloJob(job.id))!;
   await appendEvent({
@@ -1455,7 +1492,7 @@ export async function reviewGovernedPolloOutput(params: { jobId: number; reviewe
     toState: nextState,
     actorId: params.reviewerId,
     correlationId: reviewed.requestId,
-    detail: { accepted: params.accepted, qualityScore: params.qualityScore ?? null, reason: params.reason },
+    detail: { accepted: params.accepted, qualityScore: params.qualityScore ?? null, reason: params.reason, acceptedCampaignVisualAssetId },
   });
   if (!params.accepted) await releaseGovernedPolloBudget({ jobId: reviewed.id, actorId: params.reviewerId, reason: "quality_rejected" });
   return reviewed;
