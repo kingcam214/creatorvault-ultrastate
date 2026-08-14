@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, ArrowUpRight, CheckCircle2, Crown, Image as ImageIcon, Loader2, ShieldCheck, Sparkles, Video } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { HOMEPAGE_MEDIA, hasCertifiedPublicProof } from "@/lib/homepageMediaRegistry";
 
 const T = {
   bg: "#070707",
@@ -45,8 +46,12 @@ export default function CampaignVisualStudio() {
     () => sources.find((source) => source.id === selectedSourceId) ?? null,
     [sources, selectedSourceId],
   );
-  const outputUrl = durableOutput(job);
-  const acceptedToVault = job?.state === "accepted" && Boolean(job?.metadata?.acceptedCampaignVisualAssetId);
+  const jobOutputUrl = durableOutput(job);
+  const acceptedCampaignProof = HOMEPAGE_MEDIA.campaignVisualProof;
+  const acceptedProofUrl = hasCertifiedPublicProof(acceptedCampaignProof) ? acceptedCampaignProof.livePath : null;
+  const outputUrl = jobOutputUrl || acceptedProofUrl;
+  const acceptedToVault = Boolean(jobOutputUrl) && job?.state === "accepted" && Boolean(job?.metadata?.acceptedCampaignVisualAssetId);
+  const showingAcceptedExample = !jobOutputUrl && Boolean(acceptedProofUrl);
 
   const prepare = async () => {
     if (!selectedSource) return;
@@ -56,10 +61,10 @@ export default function CampaignVisualStudio() {
       const result = await createDraft.mutateAsync({ sourceAssetId: selectedSource.id });
       setJob(result.job);
       setNotice(result.reused
-        ? "Your governed campaign visual is already staged. Its one-output limit and review gate remain in force."
-        : "Your campaign visual is staged from the certified source. Nothing has been sent out yet.");
+        ? "This visual is already lined up. The one-visual ceiling and quality check stay in place."
+        : "Your visual is lined up from the certified source. Nothing has been made yet.");
     } catch (error: any) {
-      setNotice(error?.message ?? "CreatorVault could not prepare this campaign visual.");
+      setNotice("CreatorVault could not get your visual ready right now. Nothing was made.");
     } finally {
       setWorking(null);
     }
@@ -80,9 +85,9 @@ export default function CampaignVisualStudio() {
       });
       const submitted = await submit.mutateAsync({ jobId: job.id, workerId: "campaign-visual-studio" });
       setJob(submitted);
-      setNotice("Your one campaign visual is being made. CreatorVault will keep it out of your Vault until the finished image clears review.");
+      setNotice("Your visual is being made. It stays out of your Media Vault until the finished image meets the standard.");
     } catch (error: any) {
-      setNotice(error?.message ?? "CreatorVault could not start this controlled campaign visual.");
+      setNotice("CreatorVault could not begin your visual right now. Nothing was made.");
     } finally {
       setWorking(null);
     }
@@ -97,10 +102,10 @@ export default function CampaignVisualStudio() {
       setJob(updated);
       const finished = durableOutput(updated);
       setNotice(finished
-        ? "Your finished campaign visual is ready for visual review. It will not be added to your Vault until it earns acceptance."
-        : "Your campaign visual is still in progress. CreatorVault did not request another output.");
+        ? "Your finished visual is ready to look at. It stays out of your Media Vault until it meets the standard."
+        : "Your visual is still being made. No second visual was started.");
     } catch (error: any) {
-      setNotice(error?.message ?? "CreatorVault could not check this campaign visual yet.");
+      setNotice("CreatorVault could not check your visual right now. Nothing new was made.");
     } finally {
       setWorking(null);
     }
@@ -122,7 +127,7 @@ export default function CampaignVisualStudio() {
           <div className="relative max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#c9a84c]/40 bg-[#c9a84c]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-[#e8d38b]"><Crown className="h-3.5 w-3.5" /> Owner campaign visual</div>
             <h1 className="mt-5 font-serif text-4xl font-black tracking-[-0.045em] text-white sm:text-6xl">Turn a real vault moment into campaign power.</h1>
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">This lane never asks for a link or re-upload. It starts with a certified CreatorVault source, keeps the woman in the shot, and makes one premium visual under a locked spend limit.</p>
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">This lane never asks for a link or re-upload. It starts with a certified CreatorVault source, keeps the woman in the shot, and makes one premium visual with the cost visible before anything happens.</p>
           </div>
         </section>
 
@@ -168,20 +173,20 @@ export default function CampaignVisualStudio() {
               {[
                 ["Source", selectedSource ? "Certified saved CreatorVault media" : "Choose your certified source"],
                 ["Visual", "One 16:9 premium campaign image"],
-                ["Spend", "Maximum 100 Pollo credits; one output only"],
-                ["Finish", "Durable delivery, then visual review before Vault placement"],
+                ["Cost", "A firm 100-credit ceiling. One visual only."],
+                ["Finish", "The finished image is checked before it reaches your Media Vault."],
               ].map(([label, value]) => <div key={label} className="rounded-xl border border-white/10 bg-black/20 p-4"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">{label}</p><p className="mt-1 text-sm font-bold text-zinc-200">{value}</p></div>)}
             </div>
 
             {!staged ? (
               <button disabled={!sourceReady || working === "draft"} onClick={prepare} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#c9a84c] px-5 py-4 text-sm font-black text-black transition hover:bg-[#e0c165] disabled:cursor-not-allowed disabled:opacity-40">
-                {working === "draft" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />} Stage My Campaign Visual
+                {working === "draft" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />} Get My Visual Ready
               </button>
             ) : !submitted ? (
               <button disabled={working === "start"} onClick={start} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#c9a84c] px-5 py-4 text-sm font-black text-black transition hover:bg-[#e0c165] disabled:opacity-50">
-                {working === "start" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Make One Campaign Visual
+                {working === "start" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Make My Visual
               </button>
-            ) : !outputUrl ? (
+            ) : !jobOutputUrl ? (
               <button disabled={working === "check"} onClick={check} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-[#00d9ff]/45 bg-[#00d9ff]/10 px-5 py-4 text-sm font-black text-[#a7efff] transition hover:bg-[#00d9ff]/15 disabled:opacity-50">
                 {working === "check" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Check My Finished Visual
               </button>
@@ -191,7 +196,7 @@ export default function CampaignVisualStudio() {
           </aside>
         </section>
 
-        {outputUrl && <section className="mt-8 overflow-hidden rounded-[1.75rem] border border-[#c9a84c]/35 bg-[#101010] p-5 sm:p-7"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#c9a84c]">{acceptedToVault ? "Approved campaign visual" : "Finished candidate"}</p><h2 className="mt-2 text-2xl font-black text-white">{acceptedToVault ? "Your visual is ready in the Vault." : "Your visual is here for review."}</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">{acceptedToVault ? "CreatorVault accepted this visual after review and saved it as a ready reusable asset in your Media Vault." : "CreatorVault keeps this visual out of your Media Vault until it clears the same female-only, source-preservation, and no-generic-image quality gate."}</p>{acceptedToVault && <Link href="/king/media-vault"><a className="mt-4 inline-flex items-center gap-2 text-sm font-black text-[#e8d38b] hover:text-white">Open in Media Vault <ArrowUpRight className="h-4 w-4" /></a></Link>}</div><ShieldCheck className="h-6 w-6 text-[#c9a84c]" /></div><img src={outputUrl} alt={acceptedToVault ? "Accepted CreatorVault campaign visual" : "Finished CreatorVault campaign visual awaiting review"} className="w-full rounded-2xl border border-white/10 bg-black object-cover" /></section>}
+        {outputUrl && <section className="mt-8 overflow-hidden rounded-[1.75rem] border border-[#c9a84c]/35 bg-[#101010] p-5 sm:p-7"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#c9a84c]">{showingAcceptedExample ? "Accepted CreatorVault visual" : acceptedToVault ? "Your accepted visual" : "Your finished visual"}</p><h2 className="mt-2 text-2xl font-black text-white">{showingAcceptedExample ? "See what a finished campaign visual looks like." : acceptedToVault ? "Your visual is ready in the Vault." : "Your visual is here to look at."}</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">{showingAcceptedExample ? "This is a real accepted CreatorVault campaign image made from certified source media. It is here to show the level—not to stand in for your own visual." : acceptedToVault ? "This visual met the standard and is saved as a ready reusable piece in your Media Vault." : "This visual stays out of your Media Vault until it meets the same female-only, source-preserving, no-generic-image standard."}</p>{(acceptedToVault || showingAcceptedExample) && <Link href="/king/media-vault"><a className="mt-4 inline-flex items-center gap-2 text-sm font-black text-[#e8d38b] hover:text-white">See it in Media Vault <ArrowUpRight className="h-4 w-4" /></a></Link>}</div><ShieldCheck className="h-6 w-6 text-[#c9a84c]" /></div><img src={outputUrl} alt={showingAcceptedExample || acceptedToVault ? "Accepted CreatorVault campaign visual" : "Finished CreatorVault campaign visual awaiting review"} className="w-full rounded-2xl border border-white/10 bg-black object-cover" /></section>}
       </div>
     </main>
   );
