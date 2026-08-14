@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "../hooks/use-toast";
+import { HOMEPAGE_MEDIA } from "@/lib/homepageMediaRegistry";
 import {
   ArrowUpRight, BadgeCheck, Bell, Bookmark, CheckCircle2, ChevronRight,
   CircleDollarSign, Flame, Heart, Loader2, MessageCircle, Play, Plus,
@@ -9,12 +10,12 @@ import {
 } from "lucide-react";
 
 const packagePlatforms = [
-  { id: "native", label: "CreatorVault", sub: "Native post", tone: "from-violet-500 to-fuchsia-500" },
-  { id: "telegram", label: "Telegram", sub: "Tracked drop", tone: "from-sky-500 to-cyan-500" },
-  { id: "instagram", label: "Instagram", sub: "Vertical teaser", tone: "from-pink-500 to-orange-400" },
-  { id: "tiktok", label: "TikTok", sub: "Vertical teaser", tone: "from-cyan-400 to-slate-900" },
-  { id: "youtube", label: "YouTube", sub: "Short", tone: "from-red-500 to-rose-700" },
-  { id: "twitter", label: "X", sub: "Hook post", tone: "from-slate-500 to-slate-900" },
+  { id: "native", label: "CreatorVault", sub: "Your home post", tone: "from-violet-500 to-fuchsia-500" },
+  { id: "telegram", label: "Telegram", sub: "A personal drop", tone: "from-sky-500 to-cyan-500" },
+  { id: "instagram", label: "Instagram", sub: "A scroll-stopper", tone: "from-pink-500 to-orange-400" },
+  { id: "tiktok", label: "TikTok", sub: "A fast-hit clip", tone: "from-cyan-400 to-slate-900" },
+  { id: "youtube", label: "YouTube", sub: "A short-form cut", tone: "from-red-500 to-rose-700" },
+  { id: "twitter", label: "X", sub: "A sharp hook", tone: "from-slate-500 to-slate-900" },
 ] as const;
 
 const ctas = [
@@ -58,12 +59,12 @@ export default function SocialHub() {
 
   const packageMut = trpc.socialSpine.packageFromMedia.useMutation({
     onSuccess: (result) => {
-      toast({ title: "Your posts are ready", description: `${result.distributionJobIds.length} post${result.distributionJobIds.length === 1 ? "" : "s"} are ready for your review.` });
+      toast({ title: "Your drops are ready", description: `${result.distributionJobIds.length} piece${result.distributionJobIds.length === 1 ? "" : "s"} is ready for you to look over.` });
       setPackageOpen(false);
       utils.socialSpine.commandSummary.invalidate();
       utils.socialSpine.feed.invalidate();
     },
-    onError: (error) => toast({ title: "Package not prepared", description: error.message, variant: "destructive" }),
+    onError: (error) => toast({ title: "Your drop is not ready yet", description: error.message, variant: "destructive" }),
   });
   const followMut = trpc.socialSpine.follow.useMutation({ onSuccess: () => utils.socialSpine.feed.invalidate() });
   const reactMut = trpc.socialSpine.react.useMutation({ onSuccess: () => utils.socialSpine.feed.invalidate() });
@@ -90,10 +91,10 @@ export default function SocialHub() {
 
   const canPrepare = Boolean(selectedAssetId && selectedChannelId && selectedPlatforms.length && caption.trim());
   const creatorMetrics = useMemo(() => [
-    { label: "Owner-confirmed sources", value: manualSources.length, icon: BadgeCheck, tone: "text-cyan-300" },
-    { label: "Posts ready for you", value: awaitingApproval, icon: Send, tone: "text-amber-300" },
-    { label: "People following", value: Number(command.data?.audience?.followers || 0), icon: Users, tone: "text-violet-300" },
-    { label: "Direct earnings", value: money(command.data?.money?.creator_earnings_cents), icon: Wallet, tone: "text-emerald-300" },
+    { label: "Your channels", value: manualSources.length, icon: BadgeCheck, tone: "text-cyan-300" },
+    { label: "Pieces waiting on you", value: awaitingApproval, icon: Send, tone: "text-amber-300" },
+    { label: "Your people", value: Number(command.data?.audience?.followers || 0), icon: Users, tone: "text-violet-300" },
+    { label: "Money made here", value: money(command.data?.money?.creator_earnings_cents), icon: Wallet, tone: "text-emerald-300" },
   ], [activeAccounts.length, manualSources.length, awaitingApproval, command.data]);
 
   function togglePlatform(platform: string) {
@@ -132,16 +133,16 @@ export default function SocialHub() {
               Your content is not a post. <span className="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 via-violet-300 to-cyan-300">It is your empire.</span>
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-400">
-              Turn one of your saved videos into a CreatorVault post and posts ready for your other platforms. Nothing goes outside CreatorVault until you say so.
+              Start with one of your saved videos, shape it for CreatorVault and your other places, then decide exactly when it goes anywhere.
             </p>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-right sm:block">
               <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">You control every release</div>
-              <div className="mt-1 flex items-center justify-end gap-2 text-sm font-bold text-amber-200"><span className="h-2 w-2 rounded-full bg-amber-400" /> Nothing goes out without you</div>
+              <div className="mt-1 flex items-center justify-end gap-2 text-sm font-bold text-amber-200"><span className="h-2 w-2 rounded-full bg-amber-400" /> Nothing moves without you</div>
             </div>
             <button onClick={() => setPackageOpen(true)} className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-fuchsia-100">
-              <Plus className="h-4 w-4" /> Build My Social Package
+              <Plus className="h-4 w-4" /> Get My Drop Ready
             </button>
           </div>
         </header>
@@ -160,16 +161,16 @@ export default function SocialHub() {
           <div>
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <div className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">CreatorVault Live Feed</div>
-                <h2 className="mt-1 text-2xl font-black tracking-tight">Visual proof of your creator world</h2>
+                <div className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Your CreatorVault feed</div>
+                <h2 className="mt-1 text-2xl font-black tracking-tight">Show people what you are building</h2>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-1">
+              {Boolean(feedItems.length) && <div className="rounded-xl border border-white/10 bg-white/[0.04] p-1">
                 {(["for_you", "following"] as const).map((mode) => (
                   <button key={mode} onClick={() => setFeedMode(mode)} className={`rounded-lg px-3 py-2 text-xs font-bold transition ${feedMode === mode ? "bg-white text-black" : "text-zinc-400 hover:text-white"}`}>
                     {mode === "for_you" ? "For You" : "Following"}
                   </button>
                 ))}
-              </div>
+              </div>}
             </div>
 
             {feed.isLoading ? <FeedSkeleton /> : feedItems.length ? (
@@ -199,12 +200,18 @@ export default function SocialHub() {
                 ))}
               </div>
             ) : (
-              <section className="overflow-hidden rounded-[2rem] border border-dashed border-white/15 bg-gradient-to-br from-violet-950/45 via-[#12111b] to-cyan-950/25 p-7 sm:p-10">
-                <div className="max-w-md">
-                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-black"><Play className="h-5 w-5 fill-current" /></div>
-                  <h3 className="mt-6 text-3xl font-black tracking-tight">Your first visual moment starts with a real clip.</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-zinc-400">Choose a video already inside CreatorVault. Turn that exact video into a CreatorVault post and posts ready for your other platforms—no download, no re-upload, no fake publish.</p>
-                  <button onClick={() => setPackageOpen(true)} className="mt-6 inline-flex items-center gap-2 text-sm font-black text-fuchsia-300 hover:text-fuchsia-200">Choose an existing video <ArrowUpRight className="h-4 w-4" /></button>
+              <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-violet-950/45 via-[#12111b] to-cyan-950/25 p-5 sm:p-7">
+                <div className="grid items-center gap-7 sm:grid-cols-[10rem_minmax(0,1fr)]">
+                  <div className="relative mx-auto aspect-[9/14] w-full max-w-[10rem] overflow-hidden rounded-[1.4rem] border border-white/15 bg-black shadow-2xl shadow-fuchsia-950/40">
+                    <video src={HOMEPAGE_MEDIA.motionFlyerProof.livePath} className="h-full w-full object-cover" muted loop autoPlay playsInline preload="metadata" />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-3 pb-3 pt-10 text-[9px] font-black uppercase tracking-[0.14em] text-white">Made in CreatorVault</div>
+                  </div>
+                  <div className="max-w-md">
+                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-black"><Play className="h-5 w-5 fill-current" /></div>
+                    <h3 className="mt-5 text-3xl font-black tracking-tight">Start with something people can feel.</h3>
+                    <p className="mt-3 text-sm leading-relaxed text-zinc-400">There is not a live post in this feed yet. Your next one starts with a real video already in CreatorVault—no download, no re-upload, no pretending it went anywhere.</p>
+                    <button onClick={() => setPackageOpen(true)} className="mt-6 inline-flex items-center gap-2 text-sm font-black text-fuchsia-300 hover:text-fuchsia-200">Get your drop ready <ArrowUpRight className="h-4 w-4" /></button>
+                  </div>
                 </div>
               </section>
             )}
@@ -218,21 +225,21 @@ export default function SocialHub() {
                 <MiniMetric label="Subscribers" value={command.data?.audience?.subscribers || 0} />
                 <MiniMetric label="Conversations" value={command.data?.audience?.conversations || 0} />
               </div>
-              <p className="mt-4 text-xs leading-relaxed text-zinc-500">These are your real CreatorVault numbers. Your other platform numbers appear here once that account is linked.</p>
+              <p className="mt-4 text-xs leading-relaxed text-zinc-500">These are your real CreatorVault numbers. Your numbers from other places can live here when you bring them in.</p>
             </section>
 
             <section className="rounded-[1.5rem] border border-cyan-300/15 bg-[linear-gradient(145deg,rgba(34,211,238,0.09),rgba(255,255,255,0.025))] p-5">
-              <div className="flex items-center justify-between"><div><div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/70">Your channel evidence</div><h3 className="mt-1 text-lg font-black">Sources you already confirmed</h3></div><BadgeCheck className="h-5 w-5 text-cyan-300" /></div>
+              <div className="flex items-center justify-between"><div><div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/70">Your channels</div><h3 className="mt-1 text-lg font-black">The places you show up</h3></div><BadgeCheck className="h-5 w-5 text-cyan-300" /></div>
               <div className="mt-4 space-y-2">
-                {manualSources.length ? manualSources.slice(0, 6).map((source: any) => <div key={`${source.platform}-${source.username || source.displayName}`} className="rounded-xl bg-black/30 px-3 py-3"><div className="flex items-center justify-between gap-3"><span className="text-sm font-bold capitalize">{source.platform}</span><span className="text-[10px] font-black uppercase tracking-wide text-amber-200">Source held</span></div><p className="mt-1 truncate text-xs text-zinc-400">{displayHandle(source.username) || source.displayName || "Owner-confirmed channel"}</p></div>) : <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">No owner-confirmed channel source is recorded here yet.</p>}
+                {manualSources.length ? manualSources.slice(0, 6).map((source: any) => <div key={`${source.platform}-${source.username || source.displayName}`} className="rounded-xl bg-black/30 px-3 py-3"><div className="flex items-center justify-between gap-3"><span className="text-sm font-bold capitalize">{source.platform}</span><span className="text-[10px] font-black uppercase tracking-wide text-amber-200">Your channel</span></div><p className="mt-1 truncate text-xs text-zinc-400">{displayHandle(source.username) || source.displayName || "Your channel"}</p></div>) : <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">The places you show up will live here.</p>}
               </div>
-              <p className="mt-3 text-xs leading-relaxed text-zinc-500">These are your verified channel sources, not direct publishing connections. Nothing can post, message, schedule, or pull analytics from them here.</p>
+              <p className="mt-3 text-xs leading-relaxed text-zinc-500">These are the places you have told CreatorVault you show up. They help you decide where a drop belongs. Nothing goes out without you.</p>
             </section>
 
             <section className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5">
-              <div className="flex items-center justify-between"><div><div className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Direct publishing accounts</div><h3 className="mt-1 text-lg font-black">Where your next drop can go</h3></div><CheckCircle2 className="h-5 w-5 text-emerald-300" /></div>
+              <div className="flex items-center justify-between"><div><div className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Ready to post</div><h3 className="mt-1 text-lg font-black">Where your next drop can go</h3></div><CheckCircle2 className="h-5 w-5 text-emerald-300" /></div>
               <div className="mt-4 space-y-2">
-                {accounts.isLoading ? <div className="h-16 animate-pulse rounded-xl bg-white/5" /> : activeAccounts.length ? activeAccounts.slice(0, 5).map((account: any) => <div key={`${account.platform}-${account.id}`} className="flex items-center justify-between rounded-xl bg-black/30 px-3 py-2.5"><span className="text-sm font-bold capitalize">{account.platform}</span><span className="text-[10px] font-black uppercase tracking-wide text-emerald-300">{account.connection_status}</span></div>) : <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">No direct publishing account is connected here yet. You can still build a CreatorVault post and prepare the rest for your own review.</p>}
+                {accounts.isLoading ? <div className="h-16 animate-pulse rounded-xl bg-white/5" /> : activeAccounts.length ? activeAccounts.slice(0, 5).map((account: any) => <div key={`${account.platform}-${account.id}`} className="flex items-center justify-between rounded-xl bg-black/30 px-3 py-2.5"><span className="text-sm font-bold capitalize">{account.platform}</span><span className="text-[10px] font-black uppercase tracking-wide text-emerald-300">Ready with you</span></div>) : <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">No posting account connected yet. You can still get your drop ready and decide where it goes.</p>}
               </div>
             </section>
 
@@ -249,7 +256,7 @@ export default function SocialHub() {
       {packageOpen && <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-4 backdrop-blur-md sm:p-8">
         <div className="mx-auto max-w-4xl rounded-[2rem] border border-white/10 bg-[#111117] shadow-2xl shadow-black">
           <div className="flex items-start justify-between border-b border-white/10 p-6">
-            <div><div className="text-[10px] font-black uppercase tracking-[0.22em] text-fuchsia-300">Put your drop everywhere</div><h2 className="mt-1 text-3xl font-black tracking-tight">Build your social package</h2><p className="mt-2 max-w-xl text-sm text-zinc-400">This turns one video you own into your CreatorVault post plus posts ready for your other platforms. You decide when anything goes out.</p></div>
+            <div><div className="text-[10px] font-black uppercase tracking-[0.22em] text-fuchsia-300">Get your drop ready</div><h2 className="mt-1 text-3xl font-black tracking-tight">Shape your next social moment</h2><p className="mt-2 max-w-xl text-sm text-zinc-400">Start with one video you own, make versions for the places you show up, then decide when anything goes out.</p></div>
             <button onClick={() => setPackageOpen(false)} className="rounded-xl bg-white/5 px-3 py-2 text-sm font-bold text-zinc-400 hover:bg-white/10 hover:text-white">Close</button>
           </div>
           <div className="grid gap-7 p-6 lg:grid-cols-[1.1fr_.9fr]">
@@ -259,10 +266,10 @@ export default function SocialHub() {
               <div><label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-zinc-500">3. Build money into the moment</label><div className="flex flex-wrap gap-2">{ctas.map(([id, label]) => <button key={id} onClick={() => setCtaType(id)} className={`rounded-full px-3 py-2 text-xs font-black ${ctaType === id ? "bg-white text-black" : "border border-white/10 text-zinc-400 hover:text-white"}`}>{label}</button>)}</div></div>
             </div>
             <div className="space-y-6 rounded-[1.5rem] border border-white/10 bg-black/25 p-5">
-              <div><label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-zinc-500">Post as</label><select value={selectedChannelId} onChange={(event) => setSelectedChannelId(event.target.value)} className="w-full rounded-xl border border-white/10 bg-[#16161f] px-3 py-3 text-sm text-white focus:outline-none"> <option value="">Choose your CreatorVault identity</option>{(channels.data || []).map((channel: any) => <option key={channel.id} value={channel.id}>{channel.display_name} · {channel.brand_lane}</option>)}</select>{selectedChannel && <p className="mt-2 text-xs text-zinc-500">Your selected brand lane keeps this post within the limits you set.</p>}</div>
-              <div><label className="mb-3 block text-xs font-black uppercase tracking-[0.16em] text-zinc-500">Choose your package</label><div className="space-y-2">{packagePlatforms.map((platform) => <button key={platform.id} onClick={() => togglePlatform(platform.id)} className={`flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left transition ${selectedPlatforms.includes(platform.id) ? "border-transparent bg-gradient-to-r " + platform.tone + " text-white" : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-white/25"}`}><span><span className="block text-sm font-black">{platform.label}</span><span className="block text-[11px] opacity-70">{platform.sub}</span></span>{selectedPlatforms.includes(platform.id) && <CheckCircle2 className="h-4 w-4" />}</button>)}</div></div>
-              <div className="rounded-xl border border-amber-300/15 bg-amber-300/5 p-3 text-xs leading-relaxed text-amber-100/70"><Zap className="mr-1 inline h-3.5 w-3.5 text-amber-300" /> Your outside-platform posts stay ready for your review. Nothing is scheduled or sent without you.</div>
-              <button disabled={!canPrepare || packageMut.isPending} onClick={preparePackage} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-4 text-sm font-black text-black transition hover:bg-fuchsia-100 disabled:cursor-not-allowed disabled:opacity-40">{packageMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Prepare My Social Package</button>
+              <div><label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-zinc-500">Make this yours</label><select value={selectedChannelId} onChange={(event) => setSelectedChannelId(event.target.value)} className="w-full rounded-xl border border-white/10 bg-[#16161f] px-3 py-3 text-sm text-white focus:outline-none"> <option value="">Choose the name you want on it</option>{(channels.data || []).map((channel: any) => <option key={channel.id} value={channel.id}>{channel.display_name} · {channel.brand_lane}</option>)}</select>{selectedChannel && <p className="mt-2 text-xs text-zinc-500">The name you chose keeps this moment where you want it.</p>}</div>
+              <div><label className="mb-3 block text-xs font-black uppercase tracking-[0.16em] text-zinc-500">Choose where you want it</label><div className="space-y-2">{packagePlatforms.map((platform) => <button key={platform.id} onClick={() => togglePlatform(platform.id)} className={`flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left transition ${selectedPlatforms.includes(platform.id) ? "border-transparent bg-gradient-to-r " + platform.tone + " text-white" : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-white/25"}`}><span><span className="block text-sm font-black">{platform.label}</span><span className="block text-[11px] opacity-70">{platform.sub}</span></span>{selectedPlatforms.includes(platform.id) && <CheckCircle2 className="h-4 w-4" />}</button>)}</div></div>
+              <div className="rounded-xl border border-amber-300/15 bg-amber-300/5 p-3 text-xs leading-relaxed text-amber-100/70"><Zap className="mr-1 inline h-3.5 w-3.5 text-amber-300" /> Your social versions wait for your say-so. Nothing gets scheduled or sent without you.</div>
+              <button disabled={!canPrepare || packageMut.isPending} onClick={preparePackage} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-4 text-sm font-black text-black transition hover:bg-fuchsia-100 disabled:cursor-not-allowed disabled:opacity-40">{packageMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Get My Drop Ready</button>
             </div>
           </div>
         </div>
