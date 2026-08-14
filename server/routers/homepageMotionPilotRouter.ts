@@ -3,11 +3,11 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { createGovernedPolloDraft, getGovernedPolloJobByRequestId } from "../services/governedPolloService";
 
 const OWNER_IDS = new Set([6, 33]);
-const HOMEPAGE_PILOT_MODEL = "pollo/minimax/hailuo-2-3";
+const HOMEPAGE_PILOT_MODEL = "pollo/google-veo-3-1";
 const HOMEPAGE_PILOT_MODE = "homepage_text2video";
-const HOMEPAGE_PILOT_CREDIT_CAP = 50;
-const HOMEPAGE_PILOT_IDEMPOTENCY_KEY = "homepage-motion-pilot-female-creator-v1";
-const HOMEPAGE_PILOT_REQUEST_ID = "homepage-motion-pilot-v1";
+const HOMEPAGE_PILOT_CREDIT_CAP = 150;
+const HOMEPAGE_PILOT_IDEMPOTENCY_KEY = "homepage-motion-pilot-female-creator-veo-3-1-v1";
+const HOMEPAGE_PILOT_REQUEST_ID = "homepage-motion-pilot-veo-3-1-v1";
 
 const HOMEPAGE_PILOT_PROMPT = [
   "One original adult female creator, Black woman, alone in a warm dark editorial studio with rich black velvet, deep amber practical light, and soft architectural shadows.",
@@ -41,7 +41,7 @@ export const homepageMotionPilotRouter = router({
         mode: HOMEPAGE_PILOT_MODE,
         outputCount: 1,
         estimatedCostCredits: HOMEPAGE_PILOT_CREDIT_CAP,
-        costEvidenceReference: "Official Pollo Hailuo 2.3 API and pricing catalog reviewed 2026-08-14; the documented generation API exposes no task-specific estimate endpoint. This owner-authorized pilot is hard-capped at 50 Pollo credits and permits exactly one 6-second 1080p output.",
+        costEvidenceReference: "Official Pollo Veo 3.1 API and pricing catalog reviewed 2026-08-14; the documented generation API exposes no task-specific estimate endpoint. This owner-authorized pilot is hard-capped at 150 Pollo credits and permits exactly one 6-second 1080p output.",
         ownershipConfirmed: true,
         consentConfirmed: true,
         idempotencyKey: HOMEPAGE_PILOT_IDEMPOTENCY_KEY,
@@ -60,7 +60,7 @@ export const homepageMotionPilotRouter = router({
       return {
         ...draft,
         executionPlan: {
-          provider: "Pollo / MiniMax Hailuo 2.3",
+          provider: "Pollo / Google Veo 3.1",
           maximumOutputs: 1,
           hardCreditCap: HOMEPAGE_PILOT_CREDIT_CAP,
           durationSeconds: 6,

@@ -113,9 +113,9 @@ export type GovernedPolloProviderQuote = {
 };
 
 const DEFAULT_MODEL_PATH = "pollo/pollo-v1-6";
-const HOMEPAGE_TEXT_TO_VIDEO_MODEL_PATH = "pollo/minimax/hailuo-2-3";
+const HOMEPAGE_TEXT_TO_VIDEO_MODEL_PATH = "pollo/google-veo-3-1";
 const HOMEPAGE_TEXT_TO_VIDEO_MODE = "homepage_text2video";
-const HOMEPAGE_TEXT_TO_VIDEO_API_PATH = "minimax/hailuo-2-3";
+const HOMEPAGE_TEXT_TO_VIDEO_API_PATH = "google/veo3-1";
 const HOMEPAGE_PILOT_PUBLIC_ROOT = "/root/uploads";
 const HOMEPAGE_PILOT_MAX_BYTES = 350 * 1024 * 1024;
 const SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/bytedance-seedance-2-5-ref2video";
@@ -254,12 +254,14 @@ function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerMod
 
 function buildHomepageTextToVideoInput(job: Pick<GovernedPolloJob, "prompt" | "resolution" | "durationSeconds">): Record<string, unknown> {
   if (job.resolution !== "1080p" || job.durationSeconds !== 6) {
-    throw new Error("Homepage motion pilot must remain one 6-second 1080p Hailuo creation.");
+    throw new Error("Homepage motion pilot must remain one 6-second 1080p Veo creation.");
   }
   return {
     prompt: job.prompt,
-    resolution: "1080P",
+    resolution: "1080p",
     length: 6,
+    aspectRatio: "9:16",
+    generateAudio: false,
   };
 }
 
