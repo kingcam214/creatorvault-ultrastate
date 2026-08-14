@@ -408,7 +408,7 @@ export default function KingContent() {
                 </div>
                 <h2 className="mb-2 text-xl font-black text-white">Voice & Dubbing</h2>
                 <p className="text-sm leading-relaxed text-zinc-400">
-                  Create voiceovers in your sound. Translate and dub your existing videos for a wider audience.
+                  Keep your source ready for real voice work. This room stays closed until it can give you a playable track that matches your video.
                 </p>
               </div>
               <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
