@@ -29,7 +29,7 @@ function MediaFallback({
   objectFit = "cover"
 }: {
   videoSrc: string;
-  posterSrc: string;
+  posterSrc?: string;
   alt: string;
   className?: string;
   style?: CSSProperties;
@@ -40,11 +40,11 @@ function MediaFallback({
 
   return (
     <div className={`relative overflow-hidden bg-black ${className}`} style={style} aria-label={alt}>
-      <img
+      {posterSrc ? <img
         src={posterSrc}
         alt={alt}
         className={`absolute inset-0 h-full w-full object-${objectFit} transition-opacity duration-700 ${loaded && !error ? "opacity-0" : "opacity-100"}`}
-      />
+      /> : null}
       {!error && (
         <video
           src={videoSrc}
@@ -336,13 +336,13 @@ function ForYouFeed() {
   }
 
   if (allItems.length === 0) {
-    const openingMotion = HOMEPAGE_MEDIA.womenCreatorAudienceMotion;
+    const openingMotion = HOMEPAGE_MEDIA.homepageMotionPilot;
     return (
       <div className="relative h-full min-h-[620px] overflow-hidden bg-black">
         <MediaFallback
           videoSrc={openingMotion.livePath}
           posterSrc={openingMotion.fallbackAsset}
-          alt="CreatorVault platform motion"
+          alt="Certified CreatorVault female-creator campaign motion"
           className="absolute inset-0 h-full w-full"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/10" />

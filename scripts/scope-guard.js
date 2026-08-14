@@ -54,6 +54,10 @@ const ALLOWLISTS = {
     'server/_core/stripeWebhook.ts',
     'scripts/scope-guard.js'
   ],
+  'vaultx-public-motion': [
+    'client/src/pages/VaultX.tsx',
+    'scripts/scope-guard.js'
+  ],
   vaultx: [
     'client/src/pages/VaultX.tsx',
     'client/src/pages/VaultXFanLibrary.tsx',
