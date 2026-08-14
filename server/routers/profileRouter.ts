@@ -47,79 +47,65 @@ function safeProfile(row: any) {
   };
 }
 
+async function hasPublishedPublicCreatorRecord(conn: mysql.Connection, userId: number) {
+  const checks = [
+    "SELECT 1 FROM marketplace_products WHERE creator_id = ? AND status = 'active' LIMIT 1",
+    "SELECT 1 FROM university_courses WHERE creator_id = ? AND status IN ('published', 'active') LIMIT 1",
+    "SELECT 1 FROM social_native_posts WHERE creator_user_id = ? AND status = 'published' AND visibility = 'public' LIMIT 1",
+  ];
+
+  for (const statement of checks) {
+    try {
+      const [rows] = await conn.execute<any[]>(statement, [userId]);
+      if (rows[0]) return true;
+    } catch {
+      // A published-record table can be absent in older deployments; another canonical record may still qualify the creator.
+    }
+  }
+  return false;
+}
+
 async function findPublicProfile(username: string) {
   const handle = normalizeHandle(username);
   const conn = await getConnection();
 
   try {
-    const [directRows] = await conn.execute<any[]>(
+    const [rows] = await conn.execute<any[]>(
       `SELECT
         id AS userId,
         COALESCE(username, name, CAST(id AS CHAR)) AS username,
         COALESCE(name, username, CAST(id AS CHAR)) AS displayName,
         bio,
-        avatar,
-        banner_url AS bannerUrl,
-        follower_count AS followerCount,
-        post_count AS postCount,
-        product_count AS productCount,
-        stripe_connected AS stripeConnected
-      FROM users
-      WHERE LOWER(REPLACE(COALESCE(username, name, CAST(id AS CHAR)), '@', '')) = ?
-      LIMIT 1`,
-      [handle]
-    );
-
-    if (directRows[0]) return safeProfile(directRows[0]);
-  } catch (error) {
-    try {
-      const [minimalRows] = await conn.execute<any[]>(
-        `SELECT id AS userId, name AS displayName, name AS username, NULL AS bio
-         FROM users
-         WHERE LOWER(REPLACE(COALESCE(name, CAST(id AS CHAR)), '@', '')) = ?
-         LIMIT 1`,
-        [handle]
-      );
-      if (minimalRows[0]) return safeProfile(minimalRows[0]);
-    } catch {
-      // Continue to acquisition/sprint tables and curated alias fallback below.
-    }
-  }
-
-  try {
-    const [creatorRows] = await conn.execute<any[]>(
-      `SELECT
-        user_id AS userId,
-        handle,
-        display_name AS displayName,
-        bio,
-        followers AS followerCount
-       FROM creator_prospects
-       WHERE LOWER(REPLACE(handle, '@', '')) = ?
+        creator_status AS creatorStatus
+       FROM users
+       WHERE LOWER(REPLACE(COALESCE(username, name, CAST(id AS CHAR)), '@', '')) = ?
+         AND LOWER(COALESCE(creator_status, 'pending')) = 'active'
        LIMIT 1`,
       [handle]
     );
-    if (creatorRows[0]) return safeProfile({ username: creatorRows[0].handle, ...creatorRows[0] });
-  } catch {
-    // Table is optional in older deployments.
+
+    const row = rows[0];
+    if (!row || !(await hasPublishedPublicCreatorRecord(conn, Number(row.userId)))) return null;
+    return safeProfile(row);
   } finally {
     await conn.end();
   }
-
-  return null;
 }
 
 async function findPublicProfileById(userId: number) {
   const conn = await getConnection();
   try {
     const [rows] = await conn.execute<any[]>(
-      `SELECT id AS userId, name AS displayName, name AS username, NULL AS bio
+      `SELECT id AS userId, COALESCE(username, name, CAST(id AS CHAR)) AS username,
+              COALESCE(name, username, CAST(id AS CHAR)) AS displayName, bio, creator_status AS creatorStatus
        FROM users
-       WHERE id = ?
+       WHERE id = ? AND LOWER(COALESCE(creator_status, 'pending')) = 'active'
        LIMIT 1`,
       [userId]
     );
-    return rows[0] ? safeProfile(rows[0]) : null;
+    const row = rows[0];
+    if (!row || !(await hasPublishedPublicCreatorRecord(conn, Number(row.userId)))) return null;
+    return safeProfile(row);
   } finally {
     await conn.end();
   }
