@@ -311,6 +311,13 @@ export default function CreatorProfilePage() {
   }
 
   const profile = profileData?.profile ?? null;
+  const hasProfileActivity = Boolean(
+    (sellerStats?.totalRevenue ?? 0) > 0 ||
+    (sellerStats?.totalSales ?? 0) > 0 ||
+    creatorProducts.length > 0 ||
+    (profile?.followerCount ?? 0) > 0 ||
+    (posts?.posts?.length ?? 0) > 0
+  );
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: T.bg }}>
@@ -409,8 +416,8 @@ export default function CreatorProfilePage() {
         </div>
       </div>
 
-      {/* Money Intelligence is owner-only. Public profiles never infer revenue or sales from an unavailable owner read. */}
-      {isOwnProfile && <RevenueTicker stats={{
+      {/* Money appears only once this profile has real recorded activity. */}
+      {isOwnProfile && hasProfileActivity && <RevenueTicker stats={{
         totalRevenue: sellerStats?.totalRevenue ?? 0,
         totalSales: sellerStats?.totalSales ?? 0,
         activeProducts: creatorProducts.length,
@@ -465,16 +472,25 @@ export default function CreatorProfilePage() {
                     style={{ border: `1px solid ${T.border}`, borderRadius: "2px" }}
                   >
                     <p className="text-lg mb-2" style={{ color: T.text, fontFamily: "Playfair Display, serif" }}>
-                      No posts yet.
+                      Nothing with your name on it is here yet.
                     </p>
                     {isOwnProfile && (
-                      <button
-                        onClick={() => navigate("/compose")}
-                        className="mt-4 px-6 py-2.5 text-xs font-bold uppercase tracking-widest"
-                        style={{ background: T.gold, color: "#0a0a0a", borderRadius: "2px" }}
-                      >
-                        Post Your First Win
-                      </button>
+                      <div className="mt-4 flex flex-wrap justify-center gap-3">
+                        <button
+                          onClick={() => navigate("/vault-x/studio")}
+                          className="px-6 py-2.5 text-xs font-bold uppercase tracking-widest"
+                          style={{ background: T.gold, color: "#0a0a0a", borderRadius: "2px" }}
+                        >
+                          Start with Body Cinema
+                        </button>
+                        <button
+                          onClick={() => navigate("/social-hub")}
+                          className="px-6 py-2.5 text-xs font-bold uppercase tracking-widest"
+                          style={{ border: `1px solid ${T.border}`, color: T.text, borderRadius: "2px" }}
+                        >
+                          Get a moment ready
+                        </button>
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -585,6 +601,7 @@ export default function CreatorProfilePage() {
           </div>
 
           {/* ── Right sidebar ── */}
+          {hasProfileActivity && (
           <aside className="hidden lg:block w-64 flex-shrink-0">
             <MonetizationGauge profile={{
               bio: profile.bio,
@@ -595,6 +612,7 @@ export default function CreatorProfilePage() {
               stripeConnected: profile.stripeConnected,
             }} />
           </aside>
+          )}
         </div>
       </div>
 
