@@ -292,6 +292,13 @@ function normalizeStatus(raw: string | undefined | null, provider: string): "que
 }
 
 // ─── Cost Estimator ───────────────────────────────────────────────────────────
+function legacyCloneCreationHeld(operation: string): never {
+  throw new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message: `Clone ${operation} is held until CreatorVault has a governed, source-verified identity creation lane. No provider, training, promotion, or distribution action was started.`,
+  });
+}
+
 function estimateCost(type: string, provider: string, options: Record<string, any>): { credits: number; usd: number; breakdown: string } {
   const costs: Record<string, { credits: number; usd: number }> = {
     "image:replicate-fluxdevcam": { credits: 5, usd: 0.05 },
@@ -319,11 +326,13 @@ export const cloneEngineRouter = router({
     return {
       providers: PROVIDERS.map(p => ({
         ...p,
+        status: "held",
+        availabilityNote: "This legacy provider path is held until it is connected to CreatorVault’s governed identity lane.",
         // Mask internal keys
         version: undefined,
         voiceId: undefined,
       })),
-      activeCount: PROVIDERS.filter(p => p.status === "active").length,
+      activeCount: 0,
       totalCount: PROVIDERS.length,
     };
   }),
@@ -1040,6 +1049,7 @@ export const cloneEngineRouter = router({
       provider: z.enum(["replicate", "local"]).default("replicate"),
     }))
     .mutation(async ({ ctx, input }) => {
+      legacyCloneCreationHeld("training");
       const jobId = crypto.randomUUID();
       const db = await getDb();
       try {
@@ -1152,6 +1162,7 @@ export const cloneEngineRouter = router({
       label: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      legacyCloneCreationHeld("model promotion");
       const db = await getDb();
       try {
         const versionId = crypto.randomUUID();
@@ -1290,6 +1301,7 @@ export const cloneEngineRouter = router({
       scheduledAt: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      legacyCloneCreationHeld("distribution");
       const db = await getDb();
       try {
         const distributionId = crypto.randomUUID();

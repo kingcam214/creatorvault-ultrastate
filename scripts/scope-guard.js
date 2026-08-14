@@ -109,6 +109,10 @@ const ALLOWLISTS = {
     'client/src/pages/Dashboard.tsx',
     'scripts/scope-guard.js'
   ],
+  'clone-engine-hold': [
+    'server/routers/cloneEngineRouter.ts',
+    'scripts/scope-guard.js'
+  ],
   'apparel-hold': [
     'client/src/App.tsx',
     'server/routers/apparelRouter.ts',
