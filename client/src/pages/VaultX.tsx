@@ -2522,25 +2522,35 @@ export default function VaultX() {
         {/* ── HOME VIEW ─────────────────────────────────────────────────── */}
         {activeTab === "discover" && (
           <div>
-            {/* Welcome */}
-            <div className="mb-8">
-              <p className="text-xs font-black uppercase tracking-[0.2em] mb-2" style={{ color: "#c9a84c" }}>VaultX</p>
-              <h1 className="text-3xl font-black leading-tight mb-3">{t("hub.tagline")}</h1>
-              <p className="text-sm text-zinc-400 leading-relaxed">Start with a saved video. Choose the feeling. Shape the access. Your direction, offer, and review stay together before anything goes live.</p>
-            </div>
-
-            {/* Primary CTA — the one thing to do */}
-            <a
-              href="/vaultx/drop"
-              className="flex items-center justify-between w-full rounded-2xl p-5 mb-4 transition hover:brightness-110"
-              style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)", color: "#050505" }}
-            >
-              <div>
-                <p className="text-lg font-black">{t("hub.cta_create")}</p>
-                <p className="text-sm font-medium opacity-70">Choose your moment → Set the feeling → Shape the access</p>
+            <section aria-label="VaultX moving creator opening" className="relative -mx-4 -mt-6 mb-8 min-h-[540px] overflow-hidden bg-black sm:rounded-[2rem]">
+              <video
+                src={HOMEPAGE_MEDIA.homepageMotionPilot.livePath}
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="metadata"
+                className="absolute inset-0 h-full w-full object-cover object-center"
+                aria-hidden="true"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,5,.9)_0%,rgba(5,5,5,.48)_54%,rgba(5,5,5,.18)_100%),linear-gradient(0deg,rgba(5,5,5,.9)_0%,rgba(5,5,5,.05)_58%,rgba(5,5,5,.4)_100%)]" />
+              <div className="relative z-10 flex min-h-[540px] flex-col justify-end px-6 pb-7 pt-20 sm:px-10 sm:pb-10">
+                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.24em] text-amber-200">VaultX · your private money room</p>
+                <h1 className="max-w-md text-5xl font-black leading-[0.86] tracking-[-0.075em] text-white sm:text-6xl">{t("hub.tagline")}</h1>
+                <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/80">Start with a saved video. Choose the feeling. Shape the access. Your direction, offer, and review stay together before anything goes live.</p>
+                <a
+                  href="/vaultx/drop"
+                  className="mt-7 flex w-full max-w-md items-center justify-between rounded-2xl px-5 py-4 transition hover:brightness-110"
+                  style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)", color: "#050505" }}
+                >
+                  <div>
+                    <p className="text-lg font-black">{t("hub.cta_create")}</p>
+                    <p className="text-sm font-medium opacity-70">Choose your moment → Set the feeling → Shape the access</p>
+                  </div>
+                  <div className="text-2xl">→</div>
+                </a>
               </div>
-              <div className="text-2xl">→</div>
-            </a>
+            </section>
 
             {/* What VaultX does — 3 things */}
             <div className="grid gap-3 mb-8">
