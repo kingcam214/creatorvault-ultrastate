@@ -115,6 +115,11 @@ const ALLOWLISTS = {
     'server/routers/kingcamAIRouter.ts',
     'scripts/scope-guard.js'
   ],
+  'thumbnail-hold': [
+    'client/src/pages/CreatorTools.tsx',
+    'server/services/thumbnailGenerator.ts',
+    'scripts/scope-guard.js'
+  ],
   university: [
     'client/src/pages/University.tsx',
     'client/src/pages/UniversityEnrollSuccess.tsx',

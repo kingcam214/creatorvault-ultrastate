@@ -1001,10 +1001,10 @@ export default function CreatorTools() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-red-500" />
-                YouTube Thumbnail Generator
+                Thumbnail Studio
               </CardTitle>
               <CardDescription>
-                Generate high-CTR YouTube thumbnails with AI optimization
+Your real-media thumbnail lane is being rebuilt. Nothing leaves this screen until it can become a finished visual you can actually use.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1051,12 +1051,10 @@ export default function CreatorTools() {
                 />
               </div>
               <Button 
-                onClick={handleRunThumbnailGenerator} 
-                disabled={runThumbnailGenerator.isPending || !thumbTitle.trim() || !thumbNiche.trim()}
+                disabled
                 className="w-full"
               >
-                {runThumbnailGenerator.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Generate Thumbnail
+                Real Thumbnail Creation Is Rebuilding
               </Button>
               {runThumbnailGenerator.data && (
                 <div className="mt-6 space-y-6">
@@ -1159,9 +1157,9 @@ export default function CreatorTools() {
                   </div>
                 </div>
               )}
-              {runThumbnailGenerator.error && (
-                <p className="text-sm text-destructive">Error: {runThumbnailGenerator.error.message}</p>
-              )}
+              <p className="rounded-lg border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+                The old thumbnail tool could show a placeholder instead of a finished visual. It is held until the real CreatorVault image lane can deliver a saved, reviewable design.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
