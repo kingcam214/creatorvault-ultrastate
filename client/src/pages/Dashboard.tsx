@@ -78,7 +78,12 @@ export default function Dashboard() {
   const { data: audioLibrary, isLoading: audioLoading } = trpc.audioIntelligence.listAssets.useQuery(undefined, { staleTime: 30_000 });
   const { data: proofs, isLoading: proofLoading } = trpc.creationProof.getMine.useQuery(undefined, { staleTime: 30_000 });
 
-  const assets = mediaAssets ?? [];
+  const assets = (mediaAssets ?? []).filter((asset: any) => {
+    const sourceUrl = String(asset.publicUrl || asset.storagePath || "");
+    return String(asset.status || "").toLowerCase() === "ready"
+      && Boolean(sourceUrl)
+      && !/^https?:\/\/replicate\.delivery\//i.test(sourceUrl);
+  });
   const videos = assets.filter((asset) => String(asset.assetType ?? asset.mimeType ?? "").toLowerCase().includes("video"));
   const images = assets.filter((asset) => String(asset.assetType ?? asset.mimeType ?? "").toLowerCase().includes("image"));
   const certifiedProofs = (proofs ?? []).filter((proof: any) => proof.status === "certified");
@@ -114,7 +119,7 @@ export default function Dashboard() {
         </header>
 
         <section className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <TruthMetric label="Verified sources" value={assets.length} note={loading ? "Reading your vault…" : "Ready media available for real creation."} icon={LibraryBig} tone="cyan" />
+          <TruthMetric label="Ready sources" value={assets.length} note={loading ? "Reading your vault…" : "Readable media available for real creation."} icon={LibraryBig} tone="cyan" />
           <TruthMetric label="Video sources" value={videos.length} note="Real footage ready to inspect and direct." icon={Video} tone="gold" />
           <TruthMetric label="Soundtracks ready" value={soundtrackCount} note="Cleared audio with saved rhythm intelligence." icon={AudioLines} tone="violet" />
           <TruthMetric label="Signed-off proof" value={certifiedProofs.length} note={reviewQueue.length ? `${reviewQueue.length} piece${reviewQueue.length === 1 ? "" : "s"} awaiting review.` : "Only accepted watchable work appears here."} icon={BadgeCheck} tone="emerald" />
