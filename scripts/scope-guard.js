@@ -85,6 +85,10 @@ const ALLOWLISTS = {
     'client/src/_core/hooks/useAuth.ts',
     'scripts/scope-guard.js'
   ],
+  'creator-identity': [
+    'client/src/pages/EditProfile.tsx',
+    'scripts/scope-guard.js'
+  ],
   navigation: [
     'client/src/App.tsx',
     'client/src/components/AppHeader.tsx'
