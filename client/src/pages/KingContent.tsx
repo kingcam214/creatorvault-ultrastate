@@ -369,11 +369,11 @@ export default function KingContent() {
                 </div>
                 <h2 className="mb-2 text-xl font-black text-white">Clone Command</h2>
                 <p className="text-sm leading-relaxed text-zinc-400">
-                  Build talking-head video and full-body motion from your signature identity. Put your clone to work on social drops and PPV teasers.
+                  Review your verified identity material, approved reference, and consent record. Clone generation stays held until its source-preserving governed lane is proven.
                 </p>
               </div>
               <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Your Signature</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Identity Review</span>
                 <ArrowUpRight className="h-4 w-4 text-zinc-500 transition group-hover:text-fuchsia-300" />
               </div>
             </a>
