@@ -23,10 +23,12 @@ export default function CreatorEarnings() {
   const { data: balance, refetch: refetchBalance } = trpc.payouts.getMyBalance.useQuery();
   const { data: payouts, refetch: refetchPayouts } = trpc.payouts.getMyPayouts.useQuery();
   const { data: payoutRails } = trpc.payouts.getRails.useQuery();
+  const availableBalanceInCents = balance?.availableBalanceInCents ?? 0;
+  const canRequestPayout = availableBalanceInCents >= 1000;
   
   const requestPayoutMutation = trpc.payouts.requestPayout.useMutation({
     onSuccess: () => {
-      toast.success("Your cash-out request is in. Fast payment options start moving right away when available.");
+      toast.success("Your request is in. We will only call it paid after the money is confirmed.");
       setPayoutAmount("");
       setPaymentDetails("");
       refetchBalance();
@@ -77,9 +79,9 @@ export default function CreatorEarnings() {
   return (
     <div className="container py-8 space-y-8">
       <div>
-        <h1 className="text-4xl font-bold">Creator Earnings</h1>
+        <h1 className="text-4xl font-bold">Your Money Room</h1>
         <p className="text-muted-foreground mt-2">
-          Manage your balance and request payouts
+          See what is ready for you, what is already moving, and what is real.
         </p>
       </div>
 
@@ -87,48 +89,49 @@ export default function CreatorEarnings() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Available Balance</CardTitle>
+            <CardTitle className="text-sm font-medium">Ready for you</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600">
               {balance ? formatCurrency(balance.availableBalanceInCents) : "$0.00"}
             </div>
             <p className="text-sm text-muted-foreground mt-2">
-              Ready to withdraw
+              Money you can collect now
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Pending Balance</CardTitle>
+            <CardTitle className="text-sm font-medium">On the way</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-yellow-600">
               {balance ? formatCurrency(balance.pendingBalanceInCents) : "$0.00"}
             </div>
             <p className="text-sm text-muted-foreground mt-2">
-              Cash-outs on the way
+              Money you already asked for
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Lifetime Earnings</CardTitle>
+            <CardTitle className="text-sm font-medium">All-time money</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-blue-600">
               {balance ? formatCurrency(balance.lifetimeEarningsInCents) : "$0.00"}
             </div>
             <p className="text-sm text-muted-foreground mt-2">
-              Total earned
+              Real money that has landed here
             </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Payout Request Form */}
+      {canRequestPayout ? (
       <Card>
         <CardHeader>
           <CardTitle>Request Payout</CardTitle>
@@ -204,11 +207,23 @@ export default function CreatorEarnings() {
           </Button>
         </CardContent>
       </Card>
-
+      ) : (
       <Card>
         <CardHeader>
-          <CardTitle>Cash-Out Options</CardTitle>
-          <CardDescription>Choose the payment option that gets your money where you need it. Every completed payment is matched to its confirmation.</CardDescription>
+          <CardTitle>Nothing is ready to collect here yet.</CardTitle>
+          <CardDescription>When real money lands in this room, you will see it before CreatorVault asks where you want it to go.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <a href="/vault-x/studio" className="inline-flex rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground">Make your next private moment</a>
+        </CardContent>
+      </Card>
+      )}
+
+      {canRequestPayout && (
+      <Card>
+        <CardHeader>
+          <CardTitle>Ways to collect</CardTitle>
+          <CardDescription>Choose where you want real money to go. Nothing is called paid until the payment is confirmed.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -222,6 +237,7 @@ export default function CreatorEarnings() {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Payout History */}
       <Card>
@@ -231,7 +247,7 @@ export default function CreatorEarnings() {
         <CardContent>
           {!payouts || payouts.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              No payout requests yet
+              No money has landed in this room yet
             </p>
           ) : (
             <div className="space-y-4">
