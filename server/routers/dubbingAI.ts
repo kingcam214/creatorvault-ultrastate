@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
-import OpenAI from "openai";
+import { TRPCError } from "@trpc/server";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const DUBBING_HOLD_MESSAGE = "Voice direction is held until CreatorVault can analyze the saved source, create a governed spoken track, and return a real playable dub. No language model or audio provider was called.";
 
 export const dubbingAIRouter = router({
   generateDubbingScript: protectedProcedure.input(z.object({
@@ -10,21 +10,11 @@ export const dubbingAIRouter = router({
     sourceLanguage: z.string(),
     targetLanguage: z.string(),
     preserveTiming: z.boolean().default(true),
-  })).mutation(async ({ input }) => {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        role: "user",
-        content: `Translate and adapt this script for dubbing from ${input.sourceLanguage} to ${input.targetLanguage}:
-
-${input.originalScript}
-
-${input.preserveTiming ? "Adapt the translation to match the original timing and lip movements where possible." : ""}
-Maintain the emotional tone and cultural context.`,
-      }],
-      max_tokens: 700,
+  })).mutation(async () => {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: DUBBING_HOLD_MESSAGE,
     });
-    return { dubbedScript: completion.choices[0].message.content };
   }),
 
   getDubbingLanguages: protectedProcedure.query(async () => {
@@ -39,6 +29,8 @@ Maintain the emotional tone and cultural context.`,
         { code: "ar", name: "Arabic", nativeName: "العربية" },
         { code: "hi", name: "Hindi", nativeName: "हिन्दी" },
       ],
+      availability: "held",
+      message: DUBBING_HOLD_MESSAGE,
     };
   }),
 });

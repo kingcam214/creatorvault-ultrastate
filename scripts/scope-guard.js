@@ -119,6 +119,12 @@ const ALLOWLISTS = {
     'client/src/pages/Dashboard.tsx',
     'scripts/scope-guard.js'
   ],
+  'dubbing-ai-hold': [
+    'client/src/pages/DubbingAI.tsx',
+    'client/src/pages/KingContent.tsx',
+    'server/routers/dubbingAI.ts',
+    'scripts/scope-guard.js'
+  ],
   'clone-engine-hold': [
     'server/routers/cloneEngineRouter.ts',
     'scripts/scope-guard.js'
