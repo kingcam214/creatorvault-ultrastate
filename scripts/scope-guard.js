@@ -325,6 +325,7 @@ const ALLOWLISTS = {
     'scripts/scope-guard.js'
   ],
   'flyer-recovery': [
+    'client/src/App.tsx',
     'client/src/pages/MotionFlyerAgent.tsx',
     'server/routers/flyerStudioV2Router.ts',
     'server/remotion/compositions/MotionFlyerComposition.tsx',

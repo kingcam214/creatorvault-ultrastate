@@ -357,11 +357,11 @@ function Router() {
       <Route path={"/2257"} component={Statement2257Page} />
       <Route path={"/dashboard"} component={CreatorHome} />
       <Route path={"/operator"} component={OperatorDashboard} />
-      <Route path={"/flyer-generator"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
-      <Route path={"/animated-flyer-studio"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
+      <Route path={"/flyer-generator"}>{() => { window.location.replace("/agents/motion-flyer-agent"); return null; }}</Route>
+      <Route path={"/animated-flyer-studio"}>{() => { window.location.replace("/agents/motion-flyer-agent"); return null; }}</Route>
       <Route path={"/image-lab"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
-      <Route path={"/flyer-composer"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
-      <Route path={"/flyer-design-studio"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
+      <Route path={"/flyer-composer"}>{() => { window.location.replace("/agents/motion-flyer-agent"); return null; }}</Route>
+      <Route path={"/flyer-design-studio"}>{() => { window.location.replace("/agents/motion-flyer-agent"); return null; }}</Route>
       <Route path={"/dayshift-doctor"} component={DayShiftDoctor} />
       <Route path={"/nurse"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/design-department"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
@@ -521,8 +521,8 @@ function Router() {
       <Route path={"/greatest-show/adult"}>{() => { window.location.replace("/"); return null; }}</Route>
       <Route path={"/greatest-show/apply"}>{() => { window.location.replace("/"); return null; }}</Route>
       <Route path={"/greatest-show/subscribe"}>{() => { window.location.replace("/"); return null; }}</Route>
-      <Route path={"/king/flyer-generator"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
-      <Route path={"/king/flyer-design-studio"}>{() => { window.location.replace("/king/content"); return null; }}</Route>
+      <Route path={"/king/flyer-generator"}>{() => { window.location.replace("/agents/motion-flyer-agent"); return null; }}</Route>
+      <Route path={"/king/flyer-design-studio"}>{() => { window.location.replace("/agents/motion-flyer-agent"); return null; }}</Route>
       <Route path={"/king/video-lab"}>{() => { window.location.replace("/creator-video-studio"); return null; }}</Route>
       <Route path={"/king/analytics"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/king/content"} component={KingContent} />
@@ -617,7 +617,7 @@ function Router() {
       <Route path="/demos-home" component={Demos} />
       <Route path="/emma/reset-home" component={EmmaReset} />
       <Route path="/emma/reset-success" component={EmmaResetSuccess} />
-      <Route path="/flyer-studio-v2">{() => { window.location.replace("/king/content"); return null; }}</Route>
+      <Route path="/flyer-studio-v2">{() => { window.location.replace("/agents/motion-flyer-agent"); return null; }}</Route>
       <Route path="/funnels">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/sector/haiti">{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path="/kingcam/vault" component={KingCamVault} />
