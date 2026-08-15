@@ -108,17 +108,13 @@ function formatMoment(timestampMs?: number) {
   return `${(Number(timestampMs) / 1000).toFixed(Number(timestampMs) < 10_000 ? 1 : 0)}s`;
 }
 
-const VERIFIED_BODY_CINEMA_SOURCE_ASSET_IDS = [
-  "15f7d906-4f43-4b7f-8c84-ddcb4d3db557",
-] as const;
-
 function isEligibleBodyCinemaSource(asset: MediaAssetItem) {
   const sourceUrl = String(asset.publicUrl || "").trim();
   const reference = [sourceUrl, asset.fileName, asset.originalName].filter(Boolean).join(" ").toLowerCase();
   const isCreatorVaultHosted = /^(?:https:\/\/creatorvault\.live\/(?:uploads|videos)\/|\/(?:uploads|videos)\/)/i.test(sourceUrl);
   const isVideo = asset.assetType === "video" || Boolean(asset.mimeType?.startsWith("video/"));
   const hasReadableMediaFacts = Number(asset.duration || 0) > 0 && Number(asset.width || 0) > 0 && Number(asset.height || 0) > 0;
-  const isRecoveredOriginal = (VERIFIED_BODY_CINEMA_SOURCE_ASSET_IDS as readonly string[]).includes(String(asset.id));
+  const isRecoveredOriginal = asset.bodyCinemaEligible === true;
   const isFinishedPiece = String(asset.classification || "").toLowerCase() === "finished_showcase";
   const unsafeName = /demo|showcase|pilot|sample|test|placeholder|kingcam|flyer|trailer|screen.?record/i.test(reference);
   return isVideo && isCreatorVaultHosted && hasReadableMediaFacts && isRecoveredOriginal && !isFinishedPiece && !unsafeName;

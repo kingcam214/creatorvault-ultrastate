@@ -227,6 +227,7 @@ export const mediaAssetsRouter = router({
           : row.created_by_feature === "creatorvault_approved_demo"
             ? "approved_demo"
             : "creator_owned_or_generated",
+        bodyCinemaEligible: row.created_by_feature === "body_cinema_verified_source",
         fileName: row.file_name ?? row.original_name ?? "Untitled",
         originalName: row.original_name ?? null,
         mimeType: row.mime_type ?? null,

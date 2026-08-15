@@ -31,6 +31,7 @@ export interface MediaAssetItem {
   storagePath?: string | null;
   sourceType?: string | null;
   classification?: string | null;
+  bodyCinemaEligible?: boolean | null;
 }
 
 interface MediaPickerProps {

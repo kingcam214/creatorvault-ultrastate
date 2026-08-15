@@ -196,6 +196,13 @@ export const bodyCinemaRouter = router({
         ? (existingResult as any)[0]
         : Array.isArray(existingResult) ? existingResult as any[] : ((existingResult as any)?.rows || []);
       if (existingRows[0]) {
+        if (String(existingRows[0].created_by_feature || "") !== "body_cinema_verified_source") {
+          await db.execute(sql`
+            UPDATE media_assets
+            SET created_by_feature = 'body_cinema_verified_source'
+            WHERE id = ${String(existingRows[0].id)} AND user_id = ${creatorId}
+          ` as any);
+        }
         return { mediaAssetId: String(existingRows[0].id), recovered: false, sourceMapId: sourceMap.id, editBlueprintId: blueprint.id };
       }
       const sourceHead = await fetch(evidence.sourceMediaUrl, { method: "HEAD" });
@@ -210,7 +217,7 @@ export const bodyCinemaRouter = router({
         INSERT INTO media_assets
           (id, user_id, source_type, asset_type, file_name, original_name, mime_type, file_size, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
         VALUES
-          (${assetId}, ${creatorId}, 'upload', 'video', ${originalName}, ${originalName}, 'video/mp4', ${Math.round(fileSize)}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${durationSeconds}, ${Number(frame?.width || 0)}, ${Number(frame?.height || 0)}, 'ready', 'body_cinema_source_recovery')
+          (${assetId}, ${creatorId}, 'upload', 'video', ${originalName}, ${originalName}, 'video/mp4', ${Math.round(fileSize)}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${durationSeconds}, ${Number(frame?.width || 0)}, ${Number(frame?.height || 0)}, 'ready', 'body_cinema_verified_source')
       ` as any);
       return {
         mediaAssetId: assetId,
