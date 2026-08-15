@@ -46,6 +46,7 @@ const ALLOWLISTS = {
   ],
   'vaultlive-hold': [
     'client/src/pages/JoinVaultLive.tsx',
+    'client/src/pages/VaultLiveSimple.tsx',
     'scripts/scope-guard.js'
   ],
   'legacy-messages-hold': [
