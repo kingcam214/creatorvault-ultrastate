@@ -4,6 +4,10 @@ import { execSync } from 'child_process';
 
 // Task allowlists
 const ALLOWLISTS = {
+  'vaultx-onboarding-hold': [
+    'client/src/pages/VaultXOnboarding.tsx',
+    'scripts/scope-guard.js'
+  ],
   'vaultlive-hold': [
     'client/src/pages/JoinVaultLive.tsx',
     'scripts/scope-guard.js'
