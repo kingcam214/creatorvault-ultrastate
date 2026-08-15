@@ -4,6 +4,10 @@ import { execSync } from 'child_process';
 
 // Task allowlists
 const ALLOWLISTS = {
+  'vaultlive-hold': [
+    'client/src/pages/JoinVaultLive.tsx',
+    'scripts/scope-guard.js'
+  ],
   'legacy-messages-hold': [
     'client/src/pages/Messages.tsx',
     'client/src/pages/MessageThread.tsx',
