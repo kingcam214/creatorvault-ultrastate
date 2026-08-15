@@ -98,22 +98,6 @@ export const bodyCinemaRouter = router({
     return getBodyCinemaSavedSourceInventory();
   }),
 
-  ownerMediaAssetSchema: protectedProcedure.query(async ({ ctx }) => {
-    if (![6, 33].includes(Number(ctx.user.id))) {
-      throw new TRPCError({ code: "FORBIDDEN", message: "This private contract check is reserved for the owner workspace." });
-    }
-    const database = await getDb();
-    const result: any = await database.execute(sql.raw("SHOW COLUMNS FROM media_assets"));
-    const rows = Array.isArray(result?.[0]) ? result[0] : Array.isArray(result) ? result : (result?.rows || []);
-    return rows.map((row: any) => ({
-      field: String(row.Field || row.field || ""),
-      type: String(row.Type || row.type || ""),
-      nullable: String(row.Null || row.null || ""),
-      defaultValue: row.Default ?? row.default ?? null,
-      extra: String(row.Extra || row.extra || ""),
-    }));
-  }),
-
   getProviders: protectedProcedure.query(() => {
     return cinemaRouter.getProviders().map(p => ({
       name: p.name,
@@ -201,7 +185,7 @@ export const bodyCinemaRouter = router({
         INSERT INTO media_assets
           (id, user_id, source_type, asset_type, file_name, original_name, mime_type, file_size, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
         VALUES
-          (${assetId}, ${creatorId}, 'creator_upload', 'video', ${originalName}, ${originalName}, 'video/mp4', ${Math.round(fileSize)}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${durationSeconds}, ${Number(frame?.width || 0)}, ${Number(frame?.height || 0)}, 'ready', 'body_cinema_source_recovery')
+          (${assetId}, ${creatorId}, 'upload', 'video', ${originalName}, ${originalName}, 'video/mp4', ${Math.round(fileSize)}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${durationSeconds}, ${Number(frame?.width || 0)}, ${Number(frame?.height || 0)}, 'ready', 'body_cinema_source_recovery')
       ` as any);
       return {
         mediaAssetId: assetId,
