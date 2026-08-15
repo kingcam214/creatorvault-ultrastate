@@ -7,6 +7,7 @@ const ALLOWLISTS = {
   'marketplace-hold': [
     'client/src/pages/Marketplace.tsx',
     'client/src/pages/MarketplaceProduct.tsx',
+    'client/src/pages/MarketplaceManage.tsx',
     'scripts/scope-guard.js'
   ],
   'public-profile-hold': [
