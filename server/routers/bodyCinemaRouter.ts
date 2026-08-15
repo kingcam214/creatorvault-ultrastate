@@ -349,6 +349,7 @@ export const bodyCinemaRouter = router({
     outputAssetUrl: z.string().url(),
     outputFingerprint: z.string().regex(/^[0-9a-f]{64}$/i),
     frameEvidence: z.array(frameEvidenceInput).min(1).max(24),
+    reviewClass: z.enum(["creative_treatment", "technical_source_preservation"]).default("creative_treatment"),
     audioAssetId: z.string().uuid().optional(),
     audioAnalysisId: z.string().uuid().optional(),
   })).mutation(async ({ ctx, input }) => {
