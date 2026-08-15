@@ -11,11 +11,7 @@ import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { HOMEPAGE_MEDIA } from "@/lib/homepageMediaRegistry";
 import { useAuth } from "@/contexts/AuthContext";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
-const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -834,235 +830,28 @@ function MessagingTab({ userId }: { userId: number }) {
 }
 
 // ============================================================================
-// STRIPE PAYMENT MODAL — Real card input via Stripe Elements
+// MONEY PATH — HELD UNTIL PAYMENT, ACCESS, DELIVERY, AND PAYOUT ARE PROVEN
 // ============================================================================
-function StripePaymentForm({
-  clientSecret,
-  intentId,
-  amountCents,
-  label,
-  onSuccess,
-  onError,
-}: {
-  clientSecret: string;
-  intentId: string;
-  amountCents: number;
-  label: string;
-  onSuccess: () => void;
-  onError: (msg: string) => void;
-}) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [loading, setLoading] = useState(false);
-  const [cardError, setCardError] = useState<string | null>(null);
-
-  const handlePay = async () => {
-    if (!stripe || !elements) return;
-    const cardEl = elements.getElement(CardElement);
-    if (!cardEl) return;
-    setLoading(true);
-    setCardError(null);
-    try {
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: { card: cardEl },
-      });
-      if (error) throw new Error(error.message);
-      if (paymentIntent?.status !== "succeeded") throw new Error("Payment did not complete");
-      onSuccess();
-    } catch (e: any) {
-      setCardError(e.message || "Payment failed");
-      onError(e.message || "Payment failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+function MoneyPathHeld({ label, onClose }: { label: string; onClose?: () => void }) {
   return (
-    <div className="space-y-4">
-      <div className="bg-gray-800 rounded-xl p-4">
-        <p className="text-gray-400 text-xs mb-3 font-semibold uppercase tracking-wider">Card Details</p>
-        <CardElement
-          options={{
-            style: {
-              base: { color: "#fff", fontSize: "16px", "::placeholder": { color: "#6B7280" } },
-              invalid: { color: "#EF4444" },
-            },
-          }}
-        />
-      </div>
-      {cardError && <p className="text-red-400 text-sm">{cardError}</p>}
-      <button
-        onClick={handlePay}
-        disabled={loading || !stripe}
-        className="w-full py-3 rounded-xl font-black text-white text-sm transition-opacity"
-        style={{
-          background: loading ? "rgba(239,68,68,0.3)" : "linear-gradient(135deg, #EF4444, #F97316)",
-          cursor: loading ? "not-allowed" : "pointer",
-          opacity: loading ? 0.7 : 1,
-        }}
-      >
-        {loading ? "Processing..." : `Pay $${(amountCents / 100).toFixed(2)} — ${label}`}
-      </button>
+    <div className="rounded-2xl border border-white/10 bg-black/35 p-5 text-center">
+      <p className="text-sm font-black text-white">${label}</p>
+      <p className="mt-2 text-sm leading-relaxed text-zinc-400">CreatorVault will not collect payment or tell anyone access is ready until the complete fan-to-creator money path is proven.</p>
+      {onClose ? <button onClick={onClose} className="mt-4 rounded-xl border border-white/15 px-4 py-2 text-sm font-black text-white">Close</button> : null}
     </div>
   );
 }
 
-function StripePaymentModal({
-  clientSecret,
-  intentId,
-  amountCents,
-  label,
-  onSuccess,
-  onClose,
-}: {
-  clientSecret: string;
-  intentId: string;
-  amountCents: number;
-  label: string;
-  onSuccess: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={onClose}>
-      <div
-        className="bg-gray-950 border border-red-900/40 rounded-2xl p-8 w-full max-w-sm mx-4 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-center mb-6">
-          <h2 className="text-xl font-black text-white">{label}</h2>
-          <p className="text-3xl font-black text-red-400 mt-2">${(amountCents / 100).toFixed(2)}</p>
-        </div>
-        <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <StripePaymentForm
-            clientSecret={clientSecret}
-            intentId={intentId}
-            amountCents={amountCents}
-            label={label}
-            onSuccess={onSuccess}
-            onError={(msg) => toast.error(msg)}
-          />
-        </Elements>
-        <button
-          onClick={onClose}
-          className="w-full mt-3 py-2 text-gray-500 text-sm hover:text-gray-300 transition-colors"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
+function StripePaymentForm(_: { clientSecret: string; intentId: string; amountCents: number; label: string; onSuccess: () => void; onError: (msg: string) => void }) {
+  return <MoneyPathHeld label="Card payment is not open yet." />;
 }
 
-// ============================================================================
-// TIP MODAL
-// ============================================================================
-function TipModal({ creator, onClose }: { creator: any; onClose: () => void }) {
-  const [amount, setAmount] = useState(5);
-  const [message, setMessage] = useState("");
-  const [step, setStep] = useState<"input" | "pay">("input");
-  const [intentData, setIntentData] = useState<{ clientSecret: string; intentId: string; amountCents: number } | null>(null);
-  const createTipIntent = trpc.vaultx.createTipIntent.useMutation();
-  const confirmTip = trpc.vaultx.confirmTip.useMutation();
+function StripePaymentModal({ onClose }: { clientSecret: string; intentId: string; amountCents: number; label: string; onSuccess: () => void; onClose: () => void }) {
+  return <MoneyPathHeld label="Card payment is not open yet." onClose={onClose} />;
+}
 
-  const handleCreateIntent = async () => {
-    try {
-      const result = await createTipIntent.mutateAsync({
-        creatorId: creator.creator_id,
-        amountCents: Math.round(amount * 100),
-      });
-      setIntentData({ clientSecret: result.clientSecret ?? "", intentId: String(result.tipId), amountCents: Math.round(amount * 100) });
-      setStep("pay");
-    } catch (e: any) {
-      toast.error(e.message || "Failed to create tip");
-    }
-  };
-
-  const handleTipSuccess = async () => {
-    if (!intentData) return;
-    try {
-      await confirmTip.mutateAsync({ tipId: Number(intentData.intentId) });
-      toast.success(`Tip sent to ${creator.display_name}!`);
-      onClose();
-    } catch (e: any) {
-      toast.error(e.message || "Failed to confirm tip");
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={onClose}>
-      <div
-        className="bg-gray-950 border border-pink-900/40 rounded-2xl p-8 w-full max-w-sm mx-4 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-xl font-black text-white mb-6 text-center">Send a Tip to {creator.display_name}</h2>
-        {step === "input" ? (
-          <div className="space-y-4">
-            <div>
-              <p className="text-gray-400 text-xs mb-2 uppercase tracking-wider font-semibold">Amount</p>
-              <div className="flex gap-2 flex-wrap">
-                {[1, 5, 10, 20, 50, 100].map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setAmount(v)}
-                    className="px-4 py-2 rounded-xl text-sm font-bold transition-colors"
-                    style={{
-                      background: amount === v ? "#EC4899" : "rgba(255,255,255,0.05)",
-                      color: amount === v ? "white" : "#9CA3AF",
-                      border: `1px solid ${amount === v ? "#EC4899" : "rgba(255,255,255,0.1)"}`,
-                    }}
-                  >
-                    ${v}
-                  </button>
-                ))}
-              </div>
-              <input
-                type="number"
-                min={1}
-                max={1000}
-                value={amount}
-                onChange={(e) => setAmount(Math.max(1, Math.min(1000, Number(e.target.value))))}
-                className="w-full mt-3 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-pink-500"
-                placeholder="Custom amount"
-              />
-            </div>
-            <div>
-              <p className="text-gray-400 text-xs mb-2 uppercase tracking-wider font-semibold">Message (optional)</p>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                maxLength={500}
-                rows={3}
-                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-pink-500 resize-none"
-                placeholder="Leave a message..."
-              />
-            </div>
-            <button
-              onClick={handleCreateIntent}
-              disabled={createTipIntent.isPending}
-              className="w-full py-3 rounded-xl font-black text-white text-sm"
-              style={{ background: "linear-gradient(135deg, #EC4899, #F43F5E)" }}
-            >
-              {createTipIntent.isPending ? "Processing..." : `Send $${amount} Tip`}
-            </button>
-          </div>
-        ) : intentData ? (
-          <Elements stripe={stripePromise} options={{ clientSecret: intentData.clientSecret }}>
-            <StripePaymentForm
-              clientSecret={intentData.clientSecret}
-              intentId={intentData.intentId}
-              amountCents={intentData.amountCents}
-              label={`Tip to ${creator.display_name}`}
-              onSuccess={handleTipSuccess}
-              onError={(msg) => toast.error(msg)}
-            />
-          </Elements>
-        ) : null}
-        <button onClick={onClose} className="w-full mt-3 py-2 text-gray-500 text-sm hover:text-gray-300 transition-colors">
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
+function TipModal({ onClose }: { creator: any; onClose: () => void }) {
+  return <MoneyPathHeld label="Tips are not open yet." onClose={onClose} />;
 }
 
 function DiscoverTab() {
