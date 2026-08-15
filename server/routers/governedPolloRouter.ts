@@ -22,6 +22,7 @@ import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } fro
 import {
   buildPolloCapabilitySummary,
   getLatestPolloCapabilitySnapshot,
+  getLatestControlledSourceVideoAttemptDetail,
   preflightBodyCinemaSourceVideo,
   refreshPolloCapabilitySnapshot,
   runNextControlledSourceVideoAccessAttempt,
@@ -204,6 +205,11 @@ export const governedPolloRouter = router({
     } catch (error) {
       return asPrecondition(error);
     }
+  }),
+
+  latestControlledSourceVideoAttempt: protectedProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    return getLatestControlledSourceVideoAttemptDetail(ctx.user.id);
   }),
 
   preflightSourceVideo: protectedProcedure.input(z.object({

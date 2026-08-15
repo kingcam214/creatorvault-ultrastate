@@ -554,6 +554,37 @@ export type ControlledAccessAttemptResult = {
   message: string;
 };
 
+export async function getLatestControlledSourceVideoAttemptDetail(ownerId: number): Promise<{
+  modelKey: string;
+  accessState: ControlledModelAccessState;
+  failureReason: string | null;
+  providerIssues: string[];
+  verifiedAt: string;
+} | null> {
+  if (!OWNER_IDS.has(Number(ownerId))) throw new Error("Owner approval is required to read controlled provider attempt details.");
+  await ensurePolloCapabilityRegistrySchema();
+  const rows = await rawQuery<any>(
+    "SELECT model_key, access_state, failure_reason, metadata_json, verified_at FROM provider_model_access_memory WHERE provider = 'pollo' AND account_scope = ? ORDER BY verified_at DESC LIMIT 1",
+    [`owner:${ownerId}`],
+  );
+  const record = rows[0];
+  if (!record) return null;
+  const metadata = parseJson<Record<string, unknown>>(record.metadata_json, {});
+  const providerResponse = isObject(metadata.providerResponse) ? metadata.providerResponse : {};
+  const rawIssues = Array.isArray((providerResponse as any).issues) ? (providerResponse as any).issues : [];
+  const providerIssues = rawIssues
+    .map((issue: any) => safeError(isObject(issue) ? issue.message || issue.code || "Provider validation issue" : issue))
+    .filter(Boolean)
+    .slice(0, 8);
+  return {
+    modelKey: String(record.model_key),
+    accessState: String(record.access_state) as ControlledModelAccessState,
+    failureReason: record.failure_reason ? safeError(record.failure_reason) : null,
+    providerIssues,
+    verifiedAt: new Date(record.verified_at).toISOString(),
+  };
+}
+
 export async function readPolloBalance(): Promise<PolloBalanceRead> {
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
   if (!apiKey) throw new Error("POLLO_API_KEY is not configured; CreatorVault cannot verify balance before a controlled access attempt.");
