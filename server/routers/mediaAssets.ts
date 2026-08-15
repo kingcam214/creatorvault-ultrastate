@@ -188,14 +188,45 @@ export const mediaAssetsRouter = router({
       `;
 
       const result = await db.execute(query as any);
-      const rows = extractRows(result);
+      const flyerRows = await db.execute(sql`
+        SELECT
+          id,
+          creator_id AS user_id,
+          'video' AS asset_type,
+          'finished_motion_flyer' AS source_type,
+          'recovered_finished_motion_flyer' AS created_by_feature,
+          CONCAT(headline, ' — Motion Flyer') AS file_name,
+          CONCAT(headline, ' — Motion Flyer') AS original_name,
+          'video/mp4' AS mime_type,
+          NULL AS file_size,
+          artifact_url AS public_url,
+          thumbnail_url,
+          NULL AS storage_path,
+          6 AS duration,
+          1080 AS width,
+          1920 AS height,
+          'ready' AS status,
+          created_at
+        FROM motion_flyer_projects
+        WHERE creator_id = ${ctx.user.id}
+          AND status = 'ready'
+          AND artifact_url IS NOT NULL
+          AND artifact_url <> ''
+        ORDER BY created_at DESC
+        LIMIT ${limit}
+      ` as any).then(extractRows).catch(() => [] as any[]);
+      const rows = [...extractRows(result), ...flyerRows];
 
       return rows.map((row: any) => ({
         id: String(row.id),
         userId: Number(row.user_id),
         assetType: row.asset_type ?? null,
         sourceType: row.source_type ?? null,
-        classification: row.created_by_feature === "creatorvault_approved_demo" ? "approved_demo" : "creator_owned_or_generated",
+        classification: row.created_by_feature === "recovered_finished_motion_flyer"
+          ? "finished_showcase"
+          : row.created_by_feature === "creatorvault_approved_demo"
+            ? "approved_demo"
+            : "creator_owned_or_generated",
         fileName: row.file_name ?? row.original_name ?? "Untitled",
         originalName: row.original_name ?? null,
         mimeType: row.mime_type ?? null,

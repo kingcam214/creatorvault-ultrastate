@@ -494,6 +494,12 @@ const ALLOWLISTS = {
     'server/remotion/types.ts',
     'scripts/scope-guard.js'
   ],
+  'media-vault-recovery': [
+    'client/src/components/MediaPicker.tsx',
+    'client/src/pages/KingCamVault.tsx',
+    'server/routers/mediaAssets.ts',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',

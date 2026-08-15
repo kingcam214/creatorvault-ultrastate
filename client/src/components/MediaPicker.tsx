@@ -29,6 +29,8 @@ export interface MediaAssetItem {
   createdAt?: string | null;
   status?: string | null;
   storagePath?: string | null;
+  sourceType?: string | null;
+  classification?: string | null;
 }
 
 interface MediaPickerProps {
