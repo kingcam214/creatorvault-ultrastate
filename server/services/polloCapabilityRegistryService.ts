@@ -74,6 +74,7 @@ export type ControlledSourceVideoCandidate = {
   resolution: "720p" | "768P" | "720P";
   aspectRatio: "9:16";
   creativeStrength: string;
+  includeGenerateAudio?: boolean;
   priceStatus: "price_not_yet_returned";
   accountAccess: ControlledModelAccessState;
   lastVerifiedAt: string | null;
@@ -133,6 +134,17 @@ const REJECTED_SOURCE_VIDEO_MODELS = new Map<string, string>([
 const CONTROLLED_SOURCE_VIDEO_LADDER = [
   {
     rank: 1,
+    modelKey: "alibaba/happyhorse-1-0",
+    providerApiPath: "/generation/wanx/happyhorse-1-0/ref2video",
+    documentedInputSupport: "refs[].type=video with HTTPS video URL",
+    durationSeconds: 6,
+    resolution: "720P",
+    aspectRatio: "9:16",
+    creativeStrength: "Reference-guided multi-shot identity continuity with natural motion and cinematic camera control.",
+    includeGenerateAudio: false,
+  },
+  {
+    rank: 2,
     modelKey: "minimax/minimax-h3",
     providerApiPath: "/generation/minimax/minimax-h3/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
@@ -142,7 +154,7 @@ const CONTROLLED_SOURCE_VIDEO_LADDER = [
     creativeStrength: "Reference-guided multi-shot motion with documented character, style, and scene anchoring.",
   },
   {
-    rank: 2,
+    rank: 3,
     modelKey: "bytedance/seedance-2-5",
     providerApiPath: "/generation/bytedance/seedance-2-5/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
@@ -152,7 +164,7 @@ const CONTROLLED_SOURCE_VIDEO_LADDER = [
     creativeStrength: "Multimodal reference anchoring for controlled short-form visual continuity.",
   },
   {
-    rank: 3,
+    rank: 4,
     modelKey: "kling-ai/kling-v3-omni",
     providerApiPath: "/generation/kling-ai/kling-v3-omni/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
@@ -551,16 +563,15 @@ export async function readPolloBalance(): Promise<PolloBalanceRead> {
 
 function buildControlledSourceVideoRequest(candidate: typeof CONTROLLED_SOURCE_VIDEO_LADDER[number], sourceUrl: string, prompt: string): Record<string, unknown> {
   if (!/^https:\/\//i.test(sourceUrl)) throw new Error("Controlled source-video access requires a secure HTTPS CreatorVault source URL.");
-  return {
-    input: {
-      prompt,
-      refs: [{ type: "video", name: "creatorvault_verified_source", video: sourceUrl, order: 1 }],
-      duration: candidate.durationSeconds,
-      resolution: candidate.resolution,
-      aspectRatio: candidate.aspectRatio,
-      generateAudio: false,
-    },
+  const generationInput: Record<string, unknown> = {
+    prompt,
+    refs: [{ type: "video", name: "creatorvault_verified_source", video: sourceUrl, order: 1 }],
+    duration: candidate.durationSeconds,
+    resolution: candidate.resolution,
+    aspectRatio: candidate.aspectRatio,
   };
+  if ("includeGenerateAudio" in candidate && candidate.includeGenerateAudio) generationInput.generateAudio = false;
+  return { input: generationInput };
 }
 
 export async function runNextControlledSourceVideoAccessAttempt(input: {
