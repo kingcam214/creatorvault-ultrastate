@@ -41,7 +41,8 @@ function isEligibleSocialSource(asset: any) {
   const sourceUrl = String(asset?.publicUrl || "").trim();
   const reference = [sourceUrl, asset?.fileName, asset?.originalName].filter(Boolean).join(" ").toLowerCase();
   const isCreatorVaultHosted = /^(?:https:\/\/creatorvault\.live\/(?:uploads|videos)\/|\/(?:uploads|videos)\/)/i.test(sourceUrl);
-  return isCreatorVaultHosted && !reference.includes("kingcam");
+  const hasReadableMediaFacts = Number(asset?.duration || 0) > 0 && Number(asset?.width || 0) > 0 && Number(asset?.height || 0) > 0;
+  return isCreatorVaultHosted && hasReadableMediaFacts && !reference.includes("kingcam");
 }
 
 export default function SocialHub() {
