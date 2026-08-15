@@ -110,7 +110,8 @@ function resolveInsight(
   kind: "hook" | "thumbnail" | "motion" | "framing" | "weakest",
   fallbackTimestampMs: number,
 ): { timestampMs: number; label: string; evidence: string; use: string } {
-  const insight = evidence.editorFindings?.insights?.find((item) => item.id === kind) as BodyCinemaPerformanceInsight | undefined;
+  const evidenceInsightId = kind === "hook" ? "opening" : kind;
+  const insight = evidence.editorFindings?.insights?.find((item) => item.id === evidenceInsightId) as BodyCinemaPerformanceInsight | undefined;
   if (insight) {
     return { timestampMs: insight.timestampMs, label: insight.label, evidence: insight.why, use: insight.action };
   }
@@ -231,7 +232,6 @@ export async function getOrCreateBodyCinemaEditBlueprint(input: {
   sourceMediaUrl: string;
 }): Promise<BodyCinemaEditBlueprint> {
   const existing = await getBodyCinemaEditBlueprint({ creatorId: input.creatorId, evidenceId: input.evidenceId });
-  if (existing) return existing;
 
   const evidenceContext = await assertBodyCinemaEvidenceReady({
     creatorId: input.creatorId,
@@ -244,19 +244,24 @@ export async function getOrCreateBodyCinemaEditBlueprint(input: {
     sourceMediaUrl: input.sourceMediaUrl,
     route: "source_preserving_assembly",
   });
-  const blueprint = buildBlueprint({
+  const freshBlueprint = buildBlueprint({
     creatorId: input.creatorId,
     evidence: evidenceContext.evidence,
     direction: evidenceContext.direction,
     sourceMap,
   });
+  const blueprint = { ...freshBlueprint, id: existing?.id || freshBlueprint.id };
 
   await ensureBodyCinemaEditBlueprintSchema();
   await execute(
     `INSERT INTO body_cinema_edit_blueprints
       (id, creator_id, evidence_id, source_map_id, treatment_id, blueprint_json)
       VALUES (?, ?, ?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP`,
+      ON DUPLICATE KEY UPDATE
+        source_map_id = VALUES(source_map_id),
+        treatment_id = VALUES(treatment_id),
+        blueprint_json = VALUES(blueprint_json),
+        updated_at = CURRENT_TIMESTAMP`,
     [
       blueprint.id,
       blueprint.creatorId,
