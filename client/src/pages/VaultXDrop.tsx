@@ -108,9 +108,13 @@ function formatMoment(timestampMs?: number) {
   return `${(Number(timestampMs) / 1000).toFixed(Number(timestampMs) < 10_000 ? 1 : 0)}s`;
 }
 
-function isLockedKingCamHero(asset: MediaAssetItem) {
-  const reference = [asset.publicUrl, asset.fileName, asset.originalName].filter(Boolean).join(" ").toLowerCase();
-  return reference.includes("/videos/kingcam-hero-cam.mp4") || reference.includes("kingcam-continuous-hero-loop");
+function isEligibleBodyCinemaSource(asset: MediaAssetItem) {
+  const sourceUrl = String(asset.publicUrl || "").trim();
+  const reference = [sourceUrl, asset.fileName, asset.originalName].filter(Boolean).join(" ").toLowerCase();
+  const isCreatorVaultHosted = /^(?:https:\/\/creatorvault\.live\/(?:uploads|videos)\/|\/(?:uploads|videos)\/)/i.test(sourceUrl);
+  const isVideo = asset.assetType === "video" || Boolean(asset.mimeType?.startsWith("video/"));
+  const hasReadableMediaFacts = Number(asset.duration || 0) > 0 && Number(asset.width || 0) > 0 && Number(asset.height || 0) > 0;
+  return isVideo && isCreatorVaultHosted && hasReadableMediaFacts && !reference.includes("kingcam");
 }
 
 function statusCopy(state?: string | null) {
@@ -362,12 +366,8 @@ export default function VaultXDrop() {
   const handleExistingMediaSelection = useCallback(async (selected: MediaAssetItem[]) => {
     const asset = selected[0];
     setMediaLibraryOpen(false);
-    if (asset && isLockedKingCamHero(asset)) {
-      toast.error("KingCam’s protected hero stays in its own spotlight and cannot be used as a Body Cinema source.");
-      return;
-    }
-    if (!asset?.publicUrl) {
-      toast.error("That video is not ready to use yet. Choose another video from your Vault.");
+    if (!asset || !isEligibleBodyCinemaSource(asset)) {
+      toast.error("Choose a ready CreatorVault video with a verified length and frame size.");
       return;
     }
 
@@ -440,7 +440,7 @@ export default function VaultXDrop() {
 
   useEffect(() => {
     const videos = Array.isArray(existingVideosQuery.data) ? existingVideosQuery.data as MediaAssetItem[] : [];
-    const usableVideos = videos.filter((asset) => asset.publicUrl && (asset.assetType === "video" || asset.mimeType?.startsWith("video/")) && !isLockedKingCamHero(asset));
+    const usableVideos = videos.filter(isEligibleBodyCinemaSource);
     const requestedVaultVideo = selectedVaultAssetId ? usableVideos.find((asset) => asset.id === selectedVaultAssetId) : null;
     const sourceToUse = requestedVaultVideo || usableVideos[0];
     if (!sourceToUse || autoSelectedMediaIdRef.current || uploading || videoUrl || sourceEvidence) return;
@@ -667,6 +667,7 @@ export default function VaultXDrop() {
         title="Your Vault"
         subtitle="Choose a video you have already uploaded. Body Cinema will analyze this exact source."
         confirmLabel="Use this video"
+        assetEligibility={isEligibleBodyCinemaSource}
       />
       <main style={{ maxWidth: 620, margin: "0 auto", padding: "24px 16px" }}>
         {step === "upload" && (
