@@ -311,15 +311,19 @@ function isSupportedReceiptVideo(fileName: string, mime: unknown): boolean {
 }
 
 async function listAllExistingCreatorVideos(): Promise<ExistingVideoAsset[]> {
-  const [mediaAssets, contentAssets, cloneTrainingAssets, vaultxContentAssets, receiptAssets] = await Promise.all([listExistingCreatorVideos(), listCreatorContentVideos(), listCloneTrainingVideos(), listVaultxCreatorVideos(), listVerifiedDirectUploadVideos()]);
+  // Automatic VaultX Body Cinema selection is intentionally narrower than the
+  // full media library. It may use only a creator's verified direct-upload
+  // receipt with a matching checksum; seed, demo, hero, clone, render, and
+  // generic media-library records require a separate explicit classification.
+  const receiptAssets = await listVerifiedDirectUploadVideos();
   const seen = new Set<string>();
-  return [...mediaAssets, ...contentAssets, ...cloneTrainingAssets, ...vaultxContentAssets, ...receiptAssets]
+  return receiptAssets
     .sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))
     .filter((asset) => {
       const key = `${asset.creatorId}:${asset.sourceUrl}`;
       if (seen.has(key)) return false;
       seen.add(key);
-      return !excludedSourceReason(asset);
+      return asset.ownershipBasis === "verified_upload_receipt" && Boolean(asset.declaredChecksum) && !excludedSourceReason(asset);
     })
     .slice(0, MAX_CANDIDATES);
 }
@@ -604,6 +608,7 @@ async function restorePersistedPreProviderAttestation(): Promise<boolean> {
     })();
     const sourceAssetId = metadataSourceAssetId || urlSourceAssetId;
     if (!evidenceId || !treatmentId || !sourceAssetId || !job.sourceChecksum) continue;
+    if (job.metadata.sourceOwnershipBasis !== "verified direct-upload receipt creatorId matches governed creator_id and receipt checksum matches durable source bytes") continue;
     const restoredAsset = { id: sourceAssetId, creatorId: job.creatorId, sourceUrl: job.sourceUrl, storagePath: null, fileName: path.basename(new URL(job.sourceUrl).pathname), ownershipBasis: "media_asset_record" as const, declaredChecksum: null, durationSeconds: null, width: null, height: null, createdAt: null };
     if (excludedSourceReason(restoredAsset)) continue;
     const evidence = await getBodyCinemaSourceEvidence(job.creatorId, evidenceId);
