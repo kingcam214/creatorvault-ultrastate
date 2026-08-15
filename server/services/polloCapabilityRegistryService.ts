@@ -135,6 +135,11 @@ const CONTRACT_INCOMPATIBLE_SOURCE_VIDEO_MODELS = new Map<string, string>([
   ["alibaba/happyhorse-1-0", "Live Pollo API returned that Happy Horse 1.0 does not support video references; no task or credit charge occurred."],
 ]);
 
+const ACCOUNT_UNAVAILABLE_SOURCE_VIDEO_MODELS = new Map<string, string>([
+  ["google/veo-3-1", "Live Pollo API refused this documented source-video route for the current account before task creation; no credit charge occurred."],
+  ["alibaba/wan-v2-6", "Live Pollo API refused this documented source-video route for the current account before task creation; no credit charge occurred."],
+]);
+
 const CONTROLLED_SOURCE_VIDEO_LADDER = [
   {
     rank: 1,
@@ -883,6 +888,8 @@ export async function preflightBodyCinemaSourceVideo(input: {
     .filter((candidate) => REJECTED_SOURCE_VIDEO_MODELS.has(candidate.modelKey));
   const contractIncompatibleCandidates = CONTROLLED_SOURCE_VIDEO_LADDER
     .filter((candidate) => CONTRACT_INCOMPATIBLE_SOURCE_VIDEO_MODELS.has(candidate.modelKey));
+  const accountUnavailableCandidates = CONTROLLED_SOURCE_VIDEO_LADDER
+    .filter((candidate) => ACCOUNT_UNAVAILABLE_SOURCE_VIDEO_MODELS.has(candidate.modelKey));
   const qualityExclusions = [
     ...(rejectedCandidates.length
       ? [`Recorded Body Cinema quality rejection excludes: ${rejectedCandidates.map((candidate) => candidate.modelKey).join(", ")}.`]
@@ -890,11 +897,15 @@ export async function preflightBodyCinemaSourceVideo(input: {
     ...(contractIncompatibleCandidates.length
       ? [`Recorded provider-contract exclusion: ${contractIncompatibleCandidates.map((candidate) => candidate.modelKey).join(", ")}.`]
       : []),
+    ...(accountUnavailableCandidates.length
+      ? [`Recorded account-access exclusion with no charge: ${accountUnavailableCandidates.map((candidate) => candidate.modelKey).join(", ")}.`]
+      : []),
   ];
   const candidates: ControlledSourceVideoCandidate[] = CONTROLLED_SOURCE_VIDEO_LADDER
     .filter((candidate) => catalogKeys.has(candidate.modelKey))
     .filter((candidate) => !REJECTED_SOURCE_VIDEO_MODELS.has(candidate.modelKey))
     .filter((candidate) => !CONTRACT_INCOMPATIBLE_SOURCE_VIDEO_MODELS.has(candidate.modelKey))
+    .filter((candidate) => !ACCOUNT_UNAVAILABLE_SOURCE_VIDEO_MODELS.has(candidate.modelKey))
     .map((candidate) => {
       const learning = memory.get(candidate.modelKey);
       const accessState = String(learning?.access_state || "unknown") as ControlledModelAccessState;

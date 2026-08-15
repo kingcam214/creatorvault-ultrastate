@@ -413,6 +413,7 @@ const ALLOWLISTS = {
     'scripts/scope-guard.js'
   ],
   'creation-arsenal': [
+    'server/services/polloCapabilityRegistryService.ts',
     'server/services/creationModelRegistry.ts',
     'server/services/creationModelRegistry.test.ts',
     'server/services/creationModelSelection.ts',
