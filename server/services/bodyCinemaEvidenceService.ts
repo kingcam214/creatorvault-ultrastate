@@ -720,13 +720,37 @@ export async function invalidateBodyCinemaSourceEvidenceForUrl(input: {
 }): Promise<{ invalidatedCount: number; evidenceIds: string[] }> {
   await ensureBodyCinemaEvidenceSchema();
   const rows = await rawClient<any>(
-    "SELECT id FROM body_cinema_source_evidence WHERE creator_id = ? AND source_asset_url = ? AND analysis_status <> 'rejected'",
+    "SELECT id, analysis_status FROM body_cinema_source_evidence WHERE creator_id = ? AND source_asset_url = ?",
     [input.creatorId, input.sourceMediaUrl],
   );
-  if (!rows.length) throw new Error("No reusable Body Cinema source evidence matched that saved asset.");
+
+  if (!rows.length) {
+    const evidenceId = randomUUID();
+    const sourceFingerprint = createHash("sha256").update(input.sourceMediaUrl).digest("hex");
+    const emptyEvidence = JSON.stringify({
+      bodyMap: {},
+      frameEvidence: [],
+      scenes: [],
+      shotRankings: [],
+      directions: [],
+      editorFindings: null,
+      sourceBlock: { reason: input.reason, inspectedBy: input.invalidatedBy, recordedAt: new Date().toISOString() },
+    });
+    await rawExec(
+      `INSERT INTO body_cinema_source_evidence
+        (id, creator_id, source_asset_url, source_fingerprint, source_type, analysis_version, evidence_json, analysis_status, review_status, selected_direction_id, analysis_score, rejection_reasons)
+       VALUES (?, ?, ?, ?, 'video', 'source-integrity-block/v1', ?, 'rejected', 'blocked', NULL, 0, ?)`,
+      [evidenceId, input.creatorId, input.sourceMediaUrl, sourceFingerprint, emptyEvidence, JSON.stringify([input.reason])],
+    );
+    return { invalidatedCount: 1, evidenceIds: [evidenceId] };
+  }
 
   const evidenceIds: string[] = [];
   for (const row of rows) {
+    if (String(row.analysis_status) === "rejected") {
+      evidenceIds.push(String(row.id));
+      continue;
+    }
     const evidence = await invalidateBodyCinemaSourceEvidence({
       creatorId: input.creatorId,
       evidenceId: String(row.id),
