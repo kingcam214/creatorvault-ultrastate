@@ -574,6 +574,7 @@ async function restorePersistedPreProviderAttestation(): Promise<boolean> {
     const evidence = await getBodyCinemaSourceEvidence(job.creatorId, evidenceId);
     if (!evidence || evidence.analysisStatus !== "verified" || evidence.reviewStatus !== "ready" || evidence.selectedDirectionId !== treatmentId) continue;
     if (evidence.sourceMediaUrl !== job.sourceUrl || evidence.sourceFingerprint !== job.sourceChecksum) continue;
+    await persistBodyCinemaSourceMap({ creatorId: job.creatorId, evidenceId });
     updateAttestation({
       state: "ready",
       creatorId: job.creatorId,
