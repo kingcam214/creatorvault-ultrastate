@@ -349,8 +349,16 @@ function protectedKingCamHeroReason(asset: ExistingVideoAsset): string | null {
   return null;
 }
 
+function demonstrationMediaReason(asset: ExistingVideoAsset): string | null {
+  const identifier = `${asset.sourceUrl} ${asset.fileName}`.toLowerCase();
+  if (/(^|[-_\s])(demo|showcase|pilot|sample|test|placeholder)([-_\s.]|$)/.test(identifier)) {
+    return "Seed, demo, showcase, pilot, sample, test, and placeholder media are never eligible for automatic Body Cinema source selection.";
+  }
+  return null;
+}
+
 function excludedSourceReason(asset: ExistingVideoAsset): string | null {
-  return protectedKingCamHeroReason(asset) || derivedSourceReason(asset);
+  return protectedKingCamHeroReason(asset) || demonstrationMediaReason(asset) || derivedSourceReason(asset);
 }
 
 function sourceIntegrityRejections(asset: ExistingVideoAsset, video: { durationSeconds: number }, frameEvidence: BodyCinemaFrameEvidence[]): string[] {
