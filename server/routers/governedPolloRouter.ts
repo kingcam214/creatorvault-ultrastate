@@ -24,6 +24,7 @@ import {
   markGovernedPolloSubmitted,
   ingestCompletedGovernedRunwayAlephVideoEditOutput,
   reviewCompletedGovernedRunwayAlephVideoEditOutput,
+  recordGovernedRunwayAlephVideoEditFailure,
 } from "../services/governedPolloService";
 import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } from "../services/bodyCinemaEvidenceService";
 import {
@@ -350,6 +351,15 @@ export const governedPolloRouter = router({
   submitReplicateWanVideoEditPilot: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Replicate remains reserved for the Clone workflow and cannot be used by Body Cinema." });
+  }),
+
+  recordRunwayAlephVideoEditFailure: protectedProcedure.input(z.object({ jobId: z.number().int().positive(), reason: z.string().trim().min(3).max(1200) })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await recordGovernedRunwayAlephVideoEditFailure({ jobId: input.jobId, ownerId: ctx.user.id, reason: input.reason });
+    } catch (error) {
+      return asPrecondition(error);
+    }
   }),
 
   ingestRunwayAlephVideoEditOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {

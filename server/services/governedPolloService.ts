@@ -1746,6 +1746,20 @@ export async function ingestCompletedGovernedReplicateWanVideoEditOutput(params:
   }
 }
 
+export async function recordGovernedRunwayAlephVideoEditFailure(params: { jobId: number; ownerId: number; reason: string }): Promise<GovernedPolloJob> {
+  requireOwner(params.ownerId);
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isRunwayAlephVideoEditJob(job)) throw new Error("A submitted governed Runway Aleph benchmark is required to record this provider failure.");
+  if (job.state !== "submitted") throw new Error(`Runway Aleph benchmark in state ${job.state} cannot record a provider failure.`);
+  return failGovernedPolloJob({
+    jobId: job.id,
+    actorId: params.ownerId,
+    code: "runway_plan_gated",
+    error: new Error(params.reason),
+    releaseBudget: true,
+  });
+}
+
 export async function ingestCompletedGovernedRunwayAlephVideoEditOutput(params: { jobId: number; ownerId: number }): Promise<{ outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number; outputFingerprint: string }> {
   requireOwner(params.ownerId);
   await ensureGovernedPolloSchema();
