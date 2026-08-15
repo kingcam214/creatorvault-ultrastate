@@ -19,9 +19,15 @@ type Step = "mode" | "clips" | "template" | "fx" | "building" | "done";
 type Mode = "original" | "ai_remix" | "ai_full_shoot" | "hybrid" | "photo_cinematic";
 interface Clip { src: string; name: string; }
 
-function isLockedKingCamHero(asset: MediaAssetItem) {
-  const reference = [asset.publicUrl, asset.fileName, asset.originalName].filter(Boolean).join(" ").toLowerCase();
-  return reference.includes("/videos/kingcam-hero-cam.mp4") || reference.includes("kingcam-continuous-hero-loop");
+function isVaultXTrailerSource(asset: MediaAssetItem) {
+  const sourceUrl = String(asset.publicUrl || "").trim();
+  const reference = [sourceUrl, asset.fileName, asset.originalName].filter(Boolean).join(" ").toLowerCase();
+  const isCreatorVaultHosted = /^(?:https:\/\/creatorvault\.live\/(?:uploads|videos)\/|\/(?:uploads|videos)\/)/i.test(sourceUrl);
+  const video = asset.assetType === "video" || Boolean(asset.mimeType?.startsWith("video/"));
+  const hasMediaFacts = video
+    ? Number(asset.duration || 0) > 0 && Number(asset.width || 0) > 0 && Number(asset.height || 0) > 0
+    : Number(asset.width || 0) > 0 && Number(asset.height || 0) > 0;
+  return isCreatorVaultHosted && hasMediaFacts && !reference.includes("kingcam");
 }
 
 const MODES: { id: Mode; emoji: string; name: string; desc: string; badge?: string; aiTime?: string }[] = [
@@ -92,8 +98,8 @@ export default function TrailerStudio() {
     if (selectedVaultAssetIds.length === 0 || selectedAssetIds.length > 0) return;
     const media = Array.isArray(selectedVaultSourceQ.data) ? selectedVaultSourceQ.data as MediaAssetItem[] : [];
     const selectedAssets = selectedVaultAssetIds
-      .map((assetId) => media.find((asset) => asset.id === assetId && Boolean(asset.publicUrl)))
-      .filter((asset): asset is MediaAssetItem => Boolean(asset?.publicUrl) && !isLockedKingCamHero(asset));
+      .map((assetId) => media.find((asset) => asset.id === assetId && isVaultXTrailerSource(asset)))
+      .filter((asset): asset is MediaAssetItem => Boolean(asset));
     if (selectedAssets.length === 0) return;
     setClips(selectedAssets.map((asset) => ({ src: asset.publicUrl!, name: asset.originalName || asset.fileName })));
     setSelectedAssetIds(selectedAssets.map((asset) => asset.id));
@@ -368,12 +374,9 @@ export default function TrailerStudio() {
         title="Choose Trailer Sources"
         subtitle="Pick the saved videos and images that already belong to your CreatorVault."
         confirmLabel="Use These Sources"
+        assetEligibility={isVaultXTrailerSource}
         onConfirm={(assets: MediaAssetItem[]) => {
-          const protectedSelections = assets.filter(isLockedKingCamHero);
-          if (protectedSelections.length > 0) {
-            toast.error("KingCam’s protected hero stays in its own spotlight and cannot be used as a VaultX trailer source.");
-          }
-          const usable = assets.filter((asset) => Boolean(asset.publicUrl) && !isLockedKingCamHero(asset));
+          const usable = assets.filter(isVaultXTrailerSource);
           setClips(usable.map((asset) => ({ src: asset.publicUrl!, name: asset.originalName || asset.fileName })));
           setSelectedAssetIds(usable.map((asset) => asset.id));
           setTrailerProjectId(null);
