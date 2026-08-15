@@ -226,6 +226,26 @@ export async function getBodyCinemaEditBlueprint(input: { creatorId: number; evi
   return parseBlueprint(rowsOf(result)[0]);
 }
 
+export async function assertBodyCinemaEditBlueprintReady(input: {
+  creatorId: number;
+  evidenceId: string;
+  sourceMediaUrl: string;
+  editBlueprintId?: string | null;
+}): Promise<BodyCinemaEditBlueprint> {
+  const blueprint = await getBodyCinemaEditBlueprint({ creatorId: input.creatorId, evidenceId: input.evidenceId });
+  if (!blueprint) throw new Error("A real Body Cinema edit blueprint is required before this source can move forward.");
+  if (input.editBlueprintId && blueprint.id !== input.editBlueprintId) {
+    throw new Error("The supplied Body Cinema edit blueprint belongs to a different protected source plan.");
+  }
+  if (blueprint.sourceMediaUrl !== input.sourceMediaUrl) {
+    throw new Error("The Body Cinema edit blueprint belongs to a different saved source.");
+  }
+  if (blueprint.state !== "ready_no_spend" || !blueprint.noSpendBoundary.sourceOnly || blueprint.noSpendBoundary.providerCallMade || blueprint.noSpendBoundary.renderStarted) {
+    throw new Error("The Body Cinema edit blueprint is not in a valid protected source state.");
+  }
+  return blueprint;
+}
+
 export async function getOrCreateBodyCinemaEditBlueprint(input: {
   creatorId: number;
   evidenceId: string;

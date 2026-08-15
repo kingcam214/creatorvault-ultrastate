@@ -7,6 +7,7 @@ import { sql } from "drizzle-orm";
 import { db } from "../db";
 import { buildFrameEvidence, probeVideo } from "./bodyCinemaExistingMediaProofService";
 import { reviewBodyCinemaOutput, type BodyCinemaOutputReview } from "./bodyCinemaOutputReviewService";
+import { assertBodyCinemaEditBlueprintReady } from "./bodyCinemaEditBlueprintService";
 
 export type GovernedPolloJobState =
   | "draft"
@@ -289,7 +290,9 @@ function isRunwayAlephVideoEditJob(job: Pick<GovernedPolloJob, "provider" | "pro
     && job.metadata.ownerDirectedPilot === true
     && job.metadata.candidateLimit === 1
     && job.metadata.noAutomaticRetry === true
-    && job.metadata.sourcePreservationRequired === true;
+    && job.metadata.sourcePreservationRequired === true
+    && typeof job.metadata.bodyCinemaEditBlueprintId === "string"
+    && job.metadata.bodyCinemaBlueprintState === "ready_no_spend";
 }
 
 function isHomepageTextToVideoPilot(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "metadata">): boolean {
@@ -1051,9 +1054,16 @@ export async function createGovernedRunwayAlephVideoEditDraft(input: {
   ownershipConfirmed: boolean;
   consentConfirmed: boolean;
   evidenceId: string;
+  editBlueprintId: string;
   idempotencyKey?: string | null;
   metadata?: Record<string, unknown>;
 }): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  const blueprint = await assertBodyCinemaEditBlueprintReady({
+    creatorId: input.creatorId,
+    evidenceId: input.evidenceId,
+    sourceMediaUrl: input.sourceUrl,
+    editBlueprintId: input.editBlueprintId,
+  });
   const durationSeconds = requirePositiveDuration(input.durationSeconds, "Runway Aleph source duration");
   if (durationSeconds < 2 || durationSeconds > 30) {
     throw new Error("Runway Aleph source-preserving edits require a real source clip between 2 and 30 seconds.");
@@ -1083,6 +1093,9 @@ export async function createGovernedRunwayAlephVideoEditDraft(input: {
     metadata: {
       ...(input.metadata || {}),
       bodyCinemaEvidenceId: input.evidenceId,
+      bodyCinemaEditBlueprintId: blueprint.id,
+      bodyCinemaBlueprintSceneCount: blueprint.scenes.length,
+      bodyCinemaBlueprintState: blueprint.state,
       runwayReferenceVideoUrl: input.runwayReferenceVideoUrl,
       providerContract: "runway_aleph_2_in_context_source_video_edit",
       sourcePreservationRequired: true,

@@ -207,6 +207,11 @@ export const bodyCinemaRouter = router({
         sourceMediaUrl: input.sourceAssetUrl,
         route: "source_preserving_assembly",
       });
+      const editBlueprint = await getOrCreateBodyCinemaEditBlueprint({
+        creatorId,
+        evidenceId: input.evidenceId,
+        sourceMediaUrl: input.sourceAssetUrl,
+      });
       const project = await getCreationProject(creatorId, input.creationProjectId);
       if (!project) throw new Error("CreatorVault could not find the creation attached to this master.");
       if (project.sourceEvidenceId && project.sourceEvidenceId !== input.evidenceId) {
@@ -253,6 +258,9 @@ export const bodyCinemaRouter = router({
             finishingLane: "source_preserving_assembly",
             sourceMapId: sourceMap.id,
             sourceMapVersion: sourceMap.analysisVersion,
+            editBlueprintId: editBlueprint.id,
+            editBlueprintState: editBlueprint.state,
+            editBlueprintSceneCount: editBlueprint.scenes.length,
             treatmentGrammar: evidenceContext.direction.grammar,
             creatorSummary: recipe.creatorSummary,
             assemblyRecipe: recipe.treatmentId,

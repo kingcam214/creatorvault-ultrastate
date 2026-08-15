@@ -27,6 +27,7 @@ import {
   recordGovernedRunwayAlephVideoEditFailure,
 } from "../services/governedPolloService";
 import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } from "../services/bodyCinemaEvidenceService";
+import { getOrCreateBodyCinemaEditBlueprint } from "../services/bodyCinemaEditBlueprintService";
 import {
   buildPolloCapabilitySummary,
   getLatestPolloCapabilitySnapshot,
@@ -295,6 +296,7 @@ export const governedPolloRouter = router({
     aspectRatio: z.enum(["9:16", "16:9", "1:1"]),
     ownershipConfirmed: z.literal(true),
     consentConfirmed: z.literal(true),
+    editBlueprintId: z.string().uuid().optional(),
     idempotencyKey: z.string().trim().min(12).max(191).optional(),
   })).mutation(async ({ ctx, input }) => {
     ownerOnly(ctx.user.id);
@@ -302,6 +304,10 @@ export const governedPolloRouter = router({
     if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
     try {
       const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
+      const editBlueprint = await getOrCreateBodyCinemaEditBlueprint({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
+      if (input.editBlueprintId && input.editBlueprintId !== editBlueprint.id) {
+        throw new Error("The supplied Body Cinema edit blueprint belongs to a different protected source plan.");
+      }
       return await createGovernedRunwayAlephVideoEditDraft({
         creatorId,
         requestedBy: ctx.user.id,
@@ -315,10 +321,12 @@ export const governedPolloRouter = router({
         ownershipConfirmed: input.ownershipConfirmed,
         consentConfirmed: input.consentConfirmed,
         evidenceId: evidenceContext.evidence.id,
+        editBlueprintId: editBlueprint.id,
         idempotencyKey: input.idempotencyKey,
         metadata: {
           bodyCinemaDirectionId: evidenceContext.direction.id,
           bodyCinemaTimeline: evidenceContext.direction.timeline,
+          bodyCinemaEditBlueprintId: editBlueprint.id,
         },
       });
     } catch (error) {
