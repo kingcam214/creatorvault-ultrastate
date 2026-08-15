@@ -37,6 +37,11 @@ function displayHandle(value?: string | null) {
   return handle ? `@${handle}` : null;
 }
 
+function isLockedKingCamHero(asset: any) {
+  const reference = [asset?.publicUrl, asset?.fileName, asset?.originalName].filter(Boolean).join(" ").toLowerCase();
+  return reference.includes("/videos/kingcam-hero-cam.mp4") || reference.includes("kingcam-continuous-hero-loop");
+}
+
 export default function SocialHub() {
   const { toast } = useToast();
   const search = useSearch();
@@ -75,7 +80,7 @@ export default function SocialHub() {
   const manualSources = Array.isArray(command.data?.manualSources) ? command.data.manualSources : [];
   const distribution = Array.isArray(command.data?.distribution) ? command.data.distribution : [];
   const awaitingApproval = distribution.filter((row: any) => ["draft", "ready", "scheduled"].includes(row.status)).reduce((sum: number, row: any) => sum + Number(row.count || 0), 0);
-  const readyMedia = Array.isArray(media.data) ? media.data : [];
+  const readyMedia = (Array.isArray(media.data) ? media.data : []).filter((asset: any) => !isLockedKingCamHero(asset));
   const feedItems = (feed.data?.items || []).filter((post: any) => {
     const mediaUrl = String(post.mediaUrl || "");
     return Boolean(mediaUrl) && !mediaUrl.includes("/api/media/asset/");
