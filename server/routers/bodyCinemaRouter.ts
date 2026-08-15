@@ -2,7 +2,10 @@
  * Body Cinema tRPC Router — connects the multi-model provider router to the app
  */
 import { z } from "zod";
+import { randomUUID } from "crypto";
+import { sql } from "drizzle-orm";
 import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
+import { getDb } from "../db";
 import { TRPCError } from "@trpc/server";
 import { BodyCinemaRouter, createDefaultProviderProfiles } from "../services/bodyCinemaProviderRouter";
 import { complianceVault } from "../services/complianceVault";
@@ -140,6 +143,56 @@ export const bodyCinemaRouter = router({
       });
     } catch (error: any) {
       throw evidencePrecondition(error?.message || "Body Cinema could not prepare this source-backed edit blueprint.");
+    }
+  }),
+
+  recoverAcceptedSavedSourceToVault: protectedProcedure.input(z.object({ evidenceId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
+    const creatorId = Number(ctx.user.id);
+    try {
+      const evidence = await getBodyCinemaSourceEvidence(creatorId, input.evidenceId);
+      if (!evidence) throw new Error("Body Cinema source evidence was not found.");
+      await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: evidence.sourceMediaUrl });
+      const sourceMap = await assertBodyCinemaSourceMapReady({
+        creatorId,
+        evidenceId: input.evidenceId,
+        sourceMediaUrl: evidence.sourceMediaUrl,
+        route: "source_preserving_assembly",
+      });
+      const blueprint = await getOrCreateBodyCinemaEditBlueprint({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: evidence.sourceMediaUrl });
+      const db = await getDb();
+      if (!db) throw new Error("CreatorVault Media Vault is unavailable.");
+      const existingResult = await db.execute(sql`
+        SELECT id, status, public_url, source_type, created_by_feature
+        FROM media_assets
+        WHERE user_id = ${creatorId} AND public_url = ${evidence.sourceMediaUrl}
+        LIMIT 1
+      ` as any);
+      const existingRows: any[] = Array.isArray(existingResult) && Array.isArray((existingResult as any)[0])
+        ? (existingResult as any)[0]
+        : Array.isArray(existingResult) ? existingResult as any[] : ((existingResult as any)?.rows || []);
+      if (existingRows[0]) {
+        return { mediaAssetId: String(existingRows[0].id), recovered: false, sourceMapId: sourceMap.id, editBlueprintId: blueprint.id };
+      }
+      const frame = evidence.frameEvidence[0];
+      const durationSeconds = Math.max(1, Math.round(Number(sourceMap.analysis.sourceDurationMs || 0) / 1000));
+      const assetId = randomUUID();
+      const originalName = evidence.sourceMediaUrl.split("/").pop()?.split("?")[0] || "CreatorVault verified creator source.mp4";
+      await db.execute(sql`
+        INSERT INTO media_assets
+          (id, user_id, source_type, asset_type, file_name, original_name, mime_type, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
+        VALUES
+          (${assetId}, ${creatorId}, 'creator_upload', 'video', ${originalName}, ${originalName}, 'video/mp4', ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${durationSeconds}, ${Number(frame?.width || 0)}, ${Number(frame?.height || 0)}, 'ready', 'body_cinema_recovered_verified_creator_source')
+      ` as any);
+      return {
+        mediaAssetId: assetId,
+        recovered: true,
+        sourceMapId: sourceMap.id,
+        editBlueprintId: blueprint.id,
+        sourceMediaUrl: evidence.sourceMediaUrl,
+        durationSeconds,
+      };
+    } catch (error: any) {
+      throw evidencePrecondition(error?.message || "Body Cinema could not restore this verified source to your Media Vault.");
     }
   }),
 
