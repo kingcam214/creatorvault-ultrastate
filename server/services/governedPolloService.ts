@@ -1773,6 +1773,31 @@ export async function recordGovernedRunwayAlephVideoEditFailure(params: { jobId:
   });
 }
 
+export async function reconcileGovernedRunwayAlephSubmissionTimeout(params: {
+  jobId: number;
+  ownerId: number;
+  reason: string;
+}): Promise<GovernedPolloJob> {
+  requireOwner(params.ownerId);
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isRunwayAlephVideoEditJob(job)) {
+    throw new Error("A leased governed Runway Aleph benchmark is required to reconcile this timeout.");
+  }
+  if (job.state !== "queued" && job.state !== "submission_unknown") {
+    throw new Error(`Runway Aleph benchmark in state ${job.state} cannot reconcile a pre-task submission timeout.`);
+  }
+  if (job.providerJobId || job.outputUrl) {
+    throw new Error("A Runway provider task or output is already recorded; use the completed-provider path instead.");
+  }
+  return failGovernedPolloJob({
+    jobId: job.id,
+    actorId: params.ownerId,
+    code: "runway_submission_timeout_no_task",
+    error: new Error(params.reason),
+    releaseBudget: true,
+  });
+}
+
 export async function ingestCompletedGovernedRunwayAlephVideoEditOutput(params: { jobId: number; ownerId: number }): Promise<{ outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number; outputFingerprint: string }> {
   requireOwner(params.ownerId);
   await ensureGovernedPolloSchema();

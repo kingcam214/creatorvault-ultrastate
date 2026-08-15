@@ -25,6 +25,7 @@ import {
   ingestCompletedGovernedRunwayAlephVideoEditOutput,
   reviewCompletedGovernedRunwayAlephVideoEditOutput,
   recordGovernedRunwayAlephVideoEditFailure,
+  reconcileGovernedRunwayAlephSubmissionTimeout,
 } from "../services/governedPolloService";
 import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } from "../services/bodyCinemaEvidenceService";
 import { getOrCreateBodyCinemaEditBlueprint } from "../services/bodyCinemaEditBlueprintService";
@@ -365,6 +366,22 @@ export const governedPolloRouter = router({
     ownerOnly(ctx.user.id);
     try {
       return await recordGovernedRunwayAlephVideoEditFailure({ jobId: input.jobId, ownerId: ctx.user.id, reason: input.reason });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  reconcileRunwayAlephSubmissionTimeout: protectedProcedure.input(z.object({
+    jobId: z.number().int().positive(),
+    reason: z.string().trim().min(3).max(1200),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await reconcileGovernedRunwayAlephSubmissionTimeout({
+        jobId: input.jobId,
+        ownerId: ctx.user.id,
+        reason: input.reason,
+      });
     } catch (error) {
       return asPrecondition(error);
     }
