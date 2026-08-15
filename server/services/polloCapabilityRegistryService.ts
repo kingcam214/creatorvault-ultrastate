@@ -1,7 +1,13 @@
 import { createHash, randomUUID } from "crypto";
 import { sql } from "drizzle-orm";
+import { execFile } from "node:child_process";
+import { mkdir, stat, unlink, writeFile } from "node:fs/promises";
+import { promisify } from "node:util";
+import path from "node:path";
 import { db } from "../db";
 import { assertBodyCinemaEvidenceReady } from "./bodyCinemaEvidenceService";
+
+const execFileAsync = promisify(execFile);
 
 export type PolloGenerationType =
   | "text2video"
@@ -111,6 +117,8 @@ const POLLO_PUBLIC_MODEL_CATALOG = "https://api.pollo.ai/api/v1/model-specs";
 const POLLO_PLATFORM_BASE = "https://pollo.ai/api/platform";
 const MAX_MODEL_COUNT = 1_000;
 const REQUEST_TIMEOUT_MS = 12_000;
+const DURABLE_CONTENT_VAULT_ROOT = "/root/uploads/content-vault";
+const MAX_PROVIDER_OUTPUT_BYTES = 150 * 1024 * 1024;
 
 // These routes are verified against Pollo's official OpenAPI reference. They use the
 // exact CreatorVault source video as a typed video reference and preserve the provider's documented output contract.
@@ -669,6 +677,87 @@ export async function settleControlledSourceVideoTask(input: {
     [balanceAfter.availableCredits, safeJson(metadata), record.id],
   );
   return { taskId: input.taskId, modelKey: String(record.model_key), status, providerOutputUrl, durableOutputUrl: input.durableOutputUrl, balanceBeforeCredits, balanceAfterCredits: balanceAfter.availableCredits, actualCostCredits, providerResponse };
+}
+
+type VerifiedProviderVideo = {
+  durationSeconds: number;
+  width: number;
+  height: number;
+  sizeBytes: number;
+};
+
+async function inspectProviderVideo(filePath: string): Promise<VerifiedProviderVideo> {
+  const { stdout } = await execFileAsync("ffprobe", [
+    "-v", "error", "-show_entries", "format=duration:stream=codec_type,width,height", "-of", "json", filePath,
+  ]);
+  const parsed = parseJson<Record<string, any>>(stdout, {});
+  const videoStream = Array.isArray(parsed.streams)
+    ? parsed.streams.find((stream: any) => String(stream?.codec_type) === "video")
+    : null;
+  const durationSeconds = Number(parsed?.format?.duration);
+  const width = Number(videoStream?.width);
+  const height = Number(videoStream?.height);
+  const fileStat = await stat(filePath);
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || !Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0 || fileStat.size < 1024) {
+    throw new Error("Provider result was not a readable video with duration and dimensions; it was not added to Media Vault.");
+  }
+  return { durationSeconds: Number(durationSeconds.toFixed(3)), width, height, sizeBytes: fileStat.size };
+}
+
+export async function ingestAndSettleControlledSourceVideoTask(input: {
+  ownerId: number;
+  taskId: string;
+}): Promise<ControlledSourceVideoTaskSettlement & { mediaAssetId: string; verifiedVideo: VerifiedProviderVideo }> {
+  if (!OWNER_IDS.has(Number(input.ownerId))) throw new Error("Owner approval is required to ingest a controlled provider task.");
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!apiKey) throw new Error("POLLO_API_KEY is not configured; completed provider output cannot be ingested.");
+  const statusResponse = await fetch(`${POLLO_PLATFORM_BASE}/generation/${encodeURIComponent(input.taskId)}/status`, {
+    method: "GET", headers: { "x-api-key": apiKey, Accept: "application/json" },
+  });
+  const providerResponse = await fetchJsonResponse(statusResponse);
+  if (!statusResponse.ok) throw new Error(`Pollo task status returned ${statusResponse.status}; provider output was not ingested.`);
+  const generation = isObject((providerResponse as any).data) && Array.isArray(((providerResponse as any).data as any).generations)
+    ? ((providerResponse as any).data as any).generations[0]
+    : null;
+  const rawStatus = String((generation as any)?.status || (providerResponse as any)?.data?.status || "processing").toLowerCase();
+  if (rawStatus !== "succeed") throw new Error(`Provider task is ${rawStatus}; CreatorVault will not ingest an unfinished or failed result.`);
+  const providerOutputUrl = typeof (generation as any)?.url === "string" ? String((generation as any).url).trim() : "";
+  if (!/^https:\/\//i.test(providerOutputUrl)) throw new Error("Provider marked the task complete without a readable HTTPS video URL.");
+
+  const folder = `body-cinema-governed-${input.taskId.replace(/[^a-z0-9_-]/gi, "")}`;
+  const filename = "Body-Cinema-Governed-Proof.mp4";
+  const directory = path.join(DURABLE_CONTENT_VAULT_ROOT, folder);
+  const localPath = path.join(directory, filename);
+  const durableOutputUrl = `https://creatorvault.live/uploads/content-vault/${folder}/${filename}`;
+  const existing = await rawQuery<any>("SELECT id FROM media_assets WHERE user_id = ? AND storage_path = ? LIMIT 1", [input.ownerId, durableOutputUrl]);
+  let mediaAssetId = existing[0] ? String(existing[0].id) : randomUUID();
+  let verifiedVideo: VerifiedProviderVideo;
+  if (existing[0]) {
+    verifiedVideo = await inspectProviderVideo(localPath);
+  } else {
+    await mkdir(directory, { recursive: true });
+    try {
+      const outputResponse = await fetch(providerOutputUrl);
+      if (!outputResponse.ok || !outputResponse.body) throw new Error(`Provider output download returned ${outputResponse.status}.`);
+      const declaredLength = Number(outputResponse.headers.get("content-length") || 0);
+      if (declaredLength > MAX_PROVIDER_OUTPUT_BYTES) throw new Error("Provider output exceeded the governed Media Vault size limit.");
+      const bytes = new Uint8Array(await outputResponse.arrayBuffer());
+      if (bytes.byteLength < 1024 || bytes.byteLength > MAX_PROVIDER_OUTPUT_BYTES) throw new Error("Provider output size failed the governed Media Vault safety limit.");
+      await writeFile(localPath, bytes);
+      verifiedVideo = await inspectProviderVideo(localPath);
+      await rawExec(
+        `INSERT INTO media_assets
+          (id, user_id, source_type, asset_type, file_name, original_name, mime_type, file_size, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
+         VALUES (?, ?, 'generated', 'video', ?, ?, 'video/mp4', ?, ?, ?, ?, ?, ?, ?, 'ready', 'body_cinema_governed_provider')`,
+        [mediaAssetId, input.ownerId, filename, filename, verifiedVideo.sizeBytes, durableOutputUrl, durableOutputUrl, durableOutputUrl, verifiedVideo.durationSeconds, verifiedVideo.width, verifiedVideo.height],
+      );
+    } catch (error) {
+      await unlink(localPath).catch(() => undefined);
+      throw error;
+    }
+  }
+  const settlement = await settleControlledSourceVideoTask({ ownerId: input.ownerId, taskId: input.taskId, durableOutputUrl });
+  return { ...settlement, mediaAssetId, verifiedVideo };
 }
 
 export async function getLatestPolloCapabilitySnapshot(): Promise<PolloCapabilitySnapshot | null> {
