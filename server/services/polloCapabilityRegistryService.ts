@@ -80,6 +80,7 @@ export type BodyCinemaSourceVideoPreflight = {
   status: "access_attempt_ready" | "blocked";
   candidates: ControlledSourceVideoCandidate[];
   blockingReasons: string[];
+  qualityExclusions: string[];
   requiredBeforeSubmission: string[];
   executionPolicy: {
     defaultDeny: true;
@@ -698,9 +699,9 @@ export async function preflightBodyCinemaSourceVideo(input: {
   const memory = await getControlledModelAccessMemory(input.creatorId);
   const rejectedCandidates = CONTROLLED_SOURCE_VIDEO_LADDER
     .filter((candidate) => REJECTED_SOURCE_VIDEO_MODELS.has(candidate.modelKey));
-  if (rejectedCandidates.length) {
-    blockingReasons.push(`Recorded Body Cinema quality rejection blocks: ${rejectedCandidates.map((candidate) => candidate.modelKey).join(", ")}.`);
-  }
+  const qualityExclusions = rejectedCandidates.length
+    ? [`Recorded Body Cinema quality rejection excludes: ${rejectedCandidates.map((candidate) => candidate.modelKey).join(", ")}.`]
+    : [];
   const candidates: ControlledSourceVideoCandidate[] = CONTROLLED_SOURCE_VIDEO_LADDER
     .filter((candidate) => catalogKeys.has(candidate.modelKey))
     .filter((candidate) => !REJECTED_SOURCE_VIDEO_MODELS.has(candidate.modelKey))
@@ -729,6 +730,7 @@ export async function preflightBodyCinemaSourceVideo(input: {
     status: blockingReasons.length ? "blocked" : "access_attempt_ready",
     candidates,
     blockingReasons,
+    qualityExclusions,
     requiredBeforeSubmission: [
       "verified_source_evidence",
       "approved_evidence_backed_treatment",
