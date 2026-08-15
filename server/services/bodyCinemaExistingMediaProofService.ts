@@ -14,6 +14,7 @@ import {
   approveBodyCinemaDirection,
   buildEvidenceBackedDirectionPrompt,
   getBodyCinemaSourceEvidence,
+  getBodyCinemaSourceUrlBlock,
   type BodyCinemaFrameEvidence,
   persistBodyCinemaSourceEvidence,
 } from "./bodyCinemaEvidenceService";
@@ -650,6 +651,11 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
     try {
     for (const asset of candidates) {
       try {
+        const blockedSource = await getBodyCinemaSourceUrlBlock(asset.creatorId, asset.sourceUrl);
+        if (blockedSource) {
+          failures.push(`${asset.id}: previously rejected Body Cinema source remains blocked. ${blockedSource.reasons.slice(-1).join(" ")}`);
+          continue;
+        }
         const { localPath, sourceChecksum, sourceReadOrigin } = await downloadSource(asset, workspace);
         const video = await probeVideo(localPath);
         const frameEvidence = await buildFrameEvidence(localPath, video);

@@ -701,6 +701,17 @@ export async function invalidateBodyCinemaSourceEvidence(input: {
   return invalidated;
 }
 
+export async function getBodyCinemaSourceUrlBlock(creatorId: number, sourceMediaUrl: string): Promise<{ evidenceId: string; reasons: string[] } | null> {
+  await ensureBodyCinemaEvidenceSchema();
+  const rows = await rawClient<any>(
+    "SELECT id, rejection_reasons FROM body_cinema_source_evidence WHERE creator_id = ? AND source_asset_url = ? AND analysis_status = 'rejected' AND review_status = 'blocked' ORDER BY updated_at DESC LIMIT 1",
+    [creatorId, sourceMediaUrl],
+  );
+  if (!rows.length) return null;
+  const rawReasons = typeof rows[0].rejection_reasons === "string" ? JSON.parse(rows[0].rejection_reasons || "[]") : rows[0].rejection_reasons;
+  return { evidenceId: String(rows[0].id), reasons: Array.isArray(rawReasons) ? rawReasons.map(String) : [] };
+}
+
 export async function invalidateBodyCinemaSourceEvidenceForUrl(input: {
   creatorId: number;
   sourceMediaUrl: string;
