@@ -63,10 +63,11 @@ describe("Pollo capability registry zero-spend policy", () => {
 
   it("ranks only documented source-video candidates and never labels unknown pricing as free", () => {
     expect(getControlledSourceVideoLadder()).toEqual([
-      expect.objectContaining({ rank: 1, modelKey: "alibaba/happyhorse-1-0", durationSeconds: 6, resolution: "720P", aspectRatio: "9:16", priceStatus: "price_not_yet_returned" }),
-      expect.objectContaining({ rank: 2, modelKey: "minimax/minimax-h3", durationSeconds: 6, resolution: "768P", aspectRatio: "9:16", priceStatus: "price_not_yet_returned" }),
-      expect.objectContaining({ rank: 3, modelKey: "bytedance/seedance-2-5", durationSeconds: 6, resolution: "720p", aspectRatio: "9:16", priceStatus: "price_not_yet_returned" }),
-      expect.objectContaining({ rank: 4, modelKey: "kling-ai/kling-v3-omni", durationSeconds: 6, resolution: "720P", aspectRatio: "9:16", priceStatus: "price_not_yet_returned" }),
+      expect.objectContaining({ rank: 1, modelKey: "alibaba/wan-v2-6", durationSeconds: 5, resolution: "720P", aspectRatio: "9:16", priceStatus: "price_not_yet_returned" }),
+      expect.objectContaining({ rank: 2, modelKey: "alibaba/happyhorse-1-0", durationSeconds: 6, resolution: "720P", aspectRatio: "9:16", priceStatus: "price_not_yet_returned" }),
+      expect.objectContaining({ rank: 3, modelKey: "minimax/minimax-h3", durationSeconds: 6, resolution: "768P", aspectRatio: "9:16", priceStatus: "price_not_yet_returned" }),
+      expect.objectContaining({ rank: 4, modelKey: "bytedance/seedance-2-5", durationSeconds: 6, resolution: "720p", aspectRatio: "9:16", priceStatus: "price_not_yet_returned" }),
+      expect.objectContaining({ rank: 5, modelKey: "kling-ai/kling-v3-omni", durationSeconds: 6, resolution: "720P", aspectRatio: "9:16", priceStatus: "price_not_yet_returned" }),
     ]);
   });
 

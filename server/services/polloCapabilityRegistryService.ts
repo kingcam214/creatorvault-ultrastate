@@ -134,6 +134,16 @@ const REJECTED_SOURCE_VIDEO_MODELS = new Map<string, string>([
 const CONTROLLED_SOURCE_VIDEO_LADDER = [
   {
     rank: 1,
+    modelKey: "alibaba/wan-v2-6",
+    providerApiPath: "/generation/wanx/wan-v2-6/ref2video",
+    documentedInputSupport: "refs[].type=video with HTTPS video URL",
+    durationSeconds: 5,
+    resolution: "720P",
+    aspectRatio: "9:16",
+    creativeStrength: "Documented source-video conditioning with multi-shot control and source-audio-aware reference support.",
+  },
+  {
+    rank: 2,
     modelKey: "alibaba/happyhorse-1-0",
     providerApiPath: "/generation/wanx/happyhorse-1-0/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
@@ -144,7 +154,7 @@ const CONTROLLED_SOURCE_VIDEO_LADDER = [
     includeGenerateAudio: false,
   },
   {
-    rank: 2,
+    rank: 3,
     modelKey: "minimax/minimax-h3",
     providerApiPath: "/generation/minimax/minimax-h3/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
@@ -154,7 +164,7 @@ const CONTROLLED_SOURCE_VIDEO_LADDER = [
     creativeStrength: "Reference-guided multi-shot motion with documented character, style, and scene anchoring.",
   },
   {
-    rank: 3,
+    rank: 4,
     modelKey: "bytedance/seedance-2-5",
     providerApiPath: "/generation/bytedance/seedance-2-5/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
@@ -164,7 +174,7 @@ const CONTROLLED_SOURCE_VIDEO_LADDER = [
     creativeStrength: "Multimodal reference anchoring for controlled short-form visual continuity.",
   },
   {
-    rank: 4,
+    rank: 5,
     modelKey: "kling-ai/kling-v3-omni",
     providerApiPath: "/generation/kling-ai/kling-v3-omni/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
