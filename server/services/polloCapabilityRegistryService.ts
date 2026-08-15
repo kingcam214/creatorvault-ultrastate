@@ -63,7 +63,7 @@ export type ControlledSourceVideoCandidate = {
   providerApiPath: string;
   documentedInputSupport: string;
   durationSeconds: number;
-  resolution: "720p";
+  resolution: "720p" | "768P" | "720P";
   aspectRatio: "9:16";
   creativeStrength: string;
   priceStatus: "price_not_yet_returned";
@@ -112,7 +112,7 @@ const MAX_MODEL_COUNT = 1_000;
 const REQUEST_TIMEOUT_MS = 12_000;
 
 // These routes are verified against Pollo's official OpenAPI reference. They use the
-// exact CreatorVault source video as a typed video reference and support 6s, 720p, 9:16.
+// exact CreatorVault source video as a typed video reference and preserve the provider's documented output contract.
 const REJECTED_SOURCE_VIDEO_MODELS = new Map<string, string>([
   ["bytedance/seedance-2-5", "Rejected after Body Cinema quality review: the result did not meet source-preservation and motion-quality standards."],
   ["kling-ai/kling-v3-omni", "Rejected after Body Cinema quality review: the result did not meet source-preservation and motion-quality standards."],
@@ -121,16 +121,32 @@ const REJECTED_SOURCE_VIDEO_MODELS = new Map<string, string>([
 const CONTROLLED_SOURCE_VIDEO_LADDER = [
   {
     rank: 1,
-    modelKey: "bytedance/seedance-2-5",
-    providerApiPath: "/generation/bytedance/seedance-2-5/ref2video",
+    modelKey: "minimax/minimax-h3",
+    providerApiPath: "/generation/minimax/minimax-h3/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
-    creativeStrength: "Multimodal reference anchoring for controlled short-form visual continuity.",
+    durationSeconds: 6,
+    resolution: "768P",
+    aspectRatio: "9:16",
+    creativeStrength: "Reference-guided multi-shot motion with documented character, style, and scene anchoring.",
   },
   {
     rank: 2,
+    modelKey: "bytedance/seedance-2-5",
+    providerApiPath: "/generation/bytedance/seedance-2-5/ref2video",
+    documentedInputSupport: "refs[].type=video with HTTPS video URL",
+    durationSeconds: 6,
+    resolution: "720p",
+    aspectRatio: "9:16",
+    creativeStrength: "Multimodal reference anchoring for controlled short-form visual continuity.",
+  },
+  {
+    rank: 3,
     modelKey: "kling-ai/kling-v3-omni",
     providerApiPath: "/generation/kling-ai/kling-v3-omni/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
+    durationSeconds: 6,
+    resolution: "720P",
+    aspectRatio: "9:16",
     creativeStrength: "High-resolution omni-modal reference control and cinematic motion continuity.",
   },
 ] as const;
@@ -401,20 +417,16 @@ export async function refreshPolloCapabilitySnapshot(requestedBy: number): Promi
       warnings.push("Pollo balance could not be verified through the read-only account endpoint.");
     }
 
-    try {
-      const modelAccessPayload = await fetchJson(`${POLLO_PLATFORM_BASE}/config/video/models`, headers);
-      const tokens = collectModelTokens(modelAccessPayload);
-      accountTokens = tokens;
-      account.modelAccess = {
-        state: "available",
-        modelTokens: [...tokens].sort().slice(0, MAX_MODEL_COUNT),
-        failureReason: null,
-      };
-    } catch (error) {
-      account.modelAccess.state = "unavailable";
-      account.modelAccess.failureReason = safeError(error);
-      warnings.push("Pollo account model access could not be verified through the read-only model endpoint; all provider execution remains blocked.");
-    }
+    // Pollo's official OpenAPI documents public model discovery and credit reads, but not a
+    // read-only API-key entitlement endpoint. The previous undocumented call returned 400 and
+    // falsely blocked every controlled source-video attempt. Availability is instead learned
+    // from a single governed access attempt, recorded durably with before/after balance evidence.
+    account.modelAccess = {
+      state: "not_checked",
+      modelTokens: [],
+      failureReason: null,
+    };
+    warnings.push("Pollo does not publish a read-only model-entitlement endpoint; source-video access will be established only through the governed one-use access ladder.");
   }
 
   const models = normalizePolloModelCatalog(catalogPayload, accountTokens);
@@ -487,7 +499,7 @@ async function getControlledModelAccessMemory(ownerId: number): Promise<Map<stri
 }
 
 export function getControlledSourceVideoLadder(): ReadonlyArray<Omit<ControlledSourceVideoCandidate, "accountAccess" | "lastVerifiedAt" | "failureReason">> {
-  return CONTROLLED_SOURCE_VIDEO_LADDER.map((candidate) => ({ ...candidate, durationSeconds: 6, resolution: "720p", aspectRatio: "9:16", priceStatus: "price_not_yet_returned" }));
+  return CONTROLLED_SOURCE_VIDEO_LADDER.map((candidate) => ({ ...candidate, priceStatus: "price_not_yet_returned" }));
 }
 
 export type PolloBalanceRead = {
@@ -531,9 +543,9 @@ function buildControlledSourceVideoRequest(candidate: typeof CONTROLLED_SOURCE_V
     input: {
       prompt,
       refs: [{ type: "video", name: "creatorvault_verified_source", video: sourceUrl, order: 1 }],
-      duration: 6,
-      resolution: candidate.modelKey === "kling-ai/kling-v3-omni" ? "720P" : "720p",
-      aspectRatio: "9:16",
+      duration: candidate.durationSeconds,
+      resolution: candidate.resolution,
+      aspectRatio: candidate.aspectRatio,
       generateAudio: false,
     },
   };
@@ -697,10 +709,10 @@ export async function preflightBodyCinemaSourceVideo(input: {
       const accessState = String(learning?.access_state || "unknown") as ControlledModelAccessState;
       return {
         ...candidate,
-        durationSeconds: 6,
-        resolution: "720p" as const,
-        aspectRatio: "9:16" as const,
-        priceStatus: "price_not_yet_returned" as const,
+      durationSeconds: candidate.durationSeconds,
+      resolution: candidate.resolution,
+      aspectRatio: candidate.aspectRatio,
+      priceStatus: "price_not_yet_returned" as const,
         accountAccess: accessState,
         lastVerifiedAt: learning?.verified_at ? String(learning.verified_at) : null,
         failureReason: learning?.failure_reason ? String(learning.failure_reason) : null,
