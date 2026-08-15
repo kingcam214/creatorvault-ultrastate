@@ -432,6 +432,7 @@ const ALLOWLISTS = {
     'server/services/bodyCinemaAssemblyRecipe.ts',
     'server/services/bodyCinemaSourceMapService.ts',
     'server/services/bodyCinemaEditBlueprintService.ts',
+    'server/services/bodyCinemaGoldStandardService.ts',
     'server/services/bodyCinemaExistingMediaProofService.ts',
     'server/routers.ts',
     'client/src/pages/KingContent.tsx',

@@ -39,6 +39,7 @@ import {
 import { getBodyCinemaSavedSourceInventory } from "../services/bodyCinemaExistingMediaProofService";
 import { buildBodyCinemaAssemblyRecipe } from "../services/bodyCinemaAssemblyRecipe";
 import { getOrCreateBodyCinemaEditBlueprint } from "../services/bodyCinemaEditBlueprintService";
+import { listBodyCinemaGoldStandardBaselines, registerAcceptedTechnicalSourceBaseline } from "../services/bodyCinemaGoldStandardService";
 import { buildAudioDirectedTimeline } from "../services/audioTimelinePlanner";
 import { getCanonicalAudioAsset } from "../services/audioIntelligenceService";
 import { startRender } from "../services/realRenderEngine";
@@ -96,6 +97,30 @@ export const bodyCinemaRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "This private source inventory is reserved for the owner workspace." });
     }
     return getBodyCinemaSavedSourceInventory();
+  }),
+
+  goldStandardBaselines: protectedProcedure.query(async ({ ctx }) => {
+    const creatorId = Number(ctx.user.id);
+    if (![6, 33].includes(creatorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "This internal proof library is reserved for the owner workspace." });
+    }
+    return listBodyCinemaGoldStandardBaselines(creatorId);
+  }),
+
+  registerAcceptedTechnicalBaseline: protectedProcedure.input(z.object({
+    evidenceId: z.string().uuid(),
+    sourceMediaUrl: z.string().url(),
+    outputFingerprint: z.string().regex(/^[0-9a-f]{64}$/i),
+  })).mutation(async ({ ctx, input }) => {
+    const creatorId = Number(ctx.user.id);
+    if (![6, 33].includes(creatorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "This internal proof library is reserved for the owner workspace." });
+    }
+    try {
+      return await registerAcceptedTechnicalSourceBaseline({ creatorId, ...input });
+    } catch (error: any) {
+      throw evidencePrecondition(error?.message || "CreatorVault could not register this internal proof baseline.");
+    }
   }),
 
   getProviders: protectedProcedure.query(() => {
