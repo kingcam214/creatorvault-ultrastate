@@ -19,6 +19,11 @@ type Step = "mode" | "clips" | "template" | "fx" | "building" | "done";
 type Mode = "original" | "ai_remix" | "ai_full_shoot" | "hybrid" | "photo_cinematic";
 interface Clip { src: string; name: string; }
 
+function isLockedKingCamHero(asset: MediaAssetItem) {
+  const reference = [asset.publicUrl, asset.fileName, asset.originalName].filter(Boolean).join(" ").toLowerCase();
+  return reference.includes("/videos/kingcam-hero-cam.mp4") || reference.includes("kingcam-continuous-hero-loop");
+}
+
 const MODES: { id: Mode; emoji: string; name: string; desc: string; badge?: string; aiTime?: string }[] = [
   { id: "original", emoji: "🎬", name: "Trailer Direction", desc: "Keep your footage intact. Build a source-backed story, opening, pacing, and payoff around the strongest moments you already own.", badge: "SOURCE FIRST" },
 ];
@@ -88,7 +93,7 @@ export default function TrailerStudio() {
     const media = Array.isArray(selectedVaultSourceQ.data) ? selectedVaultSourceQ.data as MediaAssetItem[] : [];
     const selectedAssets = selectedVaultAssetIds
       .map((assetId) => media.find((asset) => asset.id === assetId && Boolean(asset.publicUrl)))
-      .filter((asset): asset is MediaAssetItem => Boolean(asset?.publicUrl));
+      .filter((asset): asset is MediaAssetItem => Boolean(asset?.publicUrl) && !isLockedKingCamHero(asset));
     if (selectedAssets.length === 0) return;
     setClips(selectedAssets.map((asset) => ({ src: asset.publicUrl!, name: asset.originalName || asset.fileName })));
     setSelectedAssetIds(selectedAssets.map((asset) => asset.id));
@@ -364,7 +369,11 @@ export default function TrailerStudio() {
         subtitle="Pick the saved videos and images that already belong to your CreatorVault."
         confirmLabel="Use These Sources"
         onConfirm={(assets: MediaAssetItem[]) => {
-          const usable = assets.filter((asset) => Boolean(asset.publicUrl));
+          const protectedSelections = assets.filter(isLockedKingCamHero);
+          if (protectedSelections.length > 0) {
+            toast.error("KingCam’s protected hero stays in its own spotlight and cannot be used as a VaultX trailer source.");
+          }
+          const usable = assets.filter((asset) => Boolean(asset.publicUrl) && !isLockedKingCamHero(asset));
           setClips(usable.map((asset) => ({ src: asset.publicUrl!, name: asset.originalName || asset.fileName })));
           setSelectedAssetIds(usable.map((asset) => asset.id));
           setTrailerProjectId(null);
