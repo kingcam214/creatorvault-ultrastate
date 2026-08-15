@@ -130,7 +130,8 @@ const execFileAsync = promisify(execFile);
 const SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/bytedance-seedance-2-5-ref2video";
 const REPLICATE_WAN_VIDEO_EDIT_MODEL_PATH = "replicate/wan-video/wan-2.7-videoedit";
 const REPLICATE_WAN_VIDEO_EDIT_MODE = "replicate_source_video_edit";
-const REPLICATE_WAN_VIDEO_EDIT_MAX_BYTES = 350 * 1024 * 1024;
+const REPLICATE_WAN_VIDEO_EDIT_MAX_BYTES = 200 * 1024 * 1024;
+const REPLICATE_BODY_CINEMA_EXECUTION_ENABLED = false;
 const REPLICATE_WAN_VIDEO_EDIT_HARD_SPEND_CAP = 2;
 const KLING_SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/kling-v3-omni-ref2video";
 const SOURCE_VIDEO_REFERENCE_MODE = "ref2video";
@@ -973,6 +974,9 @@ export async function createGovernedReplicateWanVideoEditDraft(input: {
   idempotencyKey?: string | null;
   metadata?: Record<string, unknown>;
 }): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  if (!REPLICATE_BODY_CINEMA_EXECUTION_ENABLED) {
+    throw new Error("Replicate is reserved for Clone workflow use and is not available for Body Cinema generation.");
+  }
   if (!Number.isInteger(input.durationSeconds) || input.durationSeconds < 2 || input.durationSeconds > 10) {
     throw new Error("Replicate Wan VideoEdit requires a real source clip between 2 and 10 seconds.");
   }

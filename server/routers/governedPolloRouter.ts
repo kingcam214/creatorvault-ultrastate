@@ -277,17 +277,9 @@ export const governedPolloRouter = router({
     }
   }),
 
-  submitReplicateWanVideoEditPilot: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+  submitReplicateWanVideoEditPilot: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
-    try {
-      const job = await getGovernedPolloJob(input.jobId);
-      if (!job) throw new Error("Governed media request was not found.");
-      const approved = await approveGovernedPolloJob({ jobId: job.id, approverId: ctx.user.id, expectedFingerprint: job.fingerprint, reason: "Owner-directed single Wan 2.7 VideoEdit Body Cinema proof." });
-      await authorizeSingleUseGovernedPolloSubmission({ jobId: approved.id, ownerId: ctx.user.id, expectedFingerprint: approved.fingerprint, hardCreditCap: 2, reason: "One bounded Replicate Wan 2.7 VideoEdit proof with no automatic retry." });
-      return await submitGovernedPolloJob({ jobId: approved.id, workerId: `replicate-wan-owner-${ctx.user.id}` });
-    } catch (error) {
-      return asPrecondition(error);
-    }
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Replicate remains reserved for the Clone workflow and cannot be used by Body Cinema." });
   }),
 
   ingestReplicateWanVideoEditOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
