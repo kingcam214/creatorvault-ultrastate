@@ -16,10 +16,16 @@ function isAudio(asset: MediaAssetItem) {
 }
 
 function isReadySource(asset: MediaAssetItem) {
-  const sourceUrl = String(asset.publicUrl || asset.storagePath || "");
+  const sourceUrl = String(asset.publicUrl || asset.storagePath || "").trim();
+  const isCreatorVaultHosted = /^(?:https:\/\/creatorvault\.live\/(?:uploads|videos)\/|\/(?:uploads|videos)\/)/i.test(sourceUrl);
+  const hasVideoFacts = !isVideo(asset) || (Number(asset.duration || 0) > 0 && Number(asset.width || 0) > 0 && Number(asset.height || 0) > 0);
+  const hasAudioFacts = !isAudio(asset) || Number(asset.duration || 0) > 0;
+  const hasImageFacts = isVideo(asset) || isAudio(asset) || (Number(asset.width || 0) > 0 && Number(asset.height || 0) > 0);
   return String(asset.status || "ready").toLowerCase() === "ready"
-    && Boolean(sourceUrl)
-    && !/^https?:\/\/replicate\.delivery\//i.test(sourceUrl);
+    && isCreatorVaultHosted
+    && hasVideoFacts
+    && hasAudioFacts
+    && hasImageFacts;
 }
 
 function isLegacyDelivery(asset: MediaAssetItem) {
