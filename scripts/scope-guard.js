@@ -71,6 +71,7 @@ const ALLOWLISTS = {
   ],
   vaultx: [
     'client/src/pages/VaultX.tsx',
+    'client/src/lib/vaultxI18n.tsx',
     'client/src/pages/VaultXFanLibrary.tsx',
     'client/src/pages/VaultXEditor.tsx',
     'client/src/pages/VaultXStudio.tsx',

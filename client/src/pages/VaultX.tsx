@@ -2243,7 +2243,7 @@ export default function VaultX() {
             <div className="grid gap-3 mb-8">
               {[
                 { emoji: "🎬", title: "Body Cinema", desc: "Keep your real source, its treatment, and its premium direction in one place. A finished piece earns its next move.", href: "/vaultx/drop" },
-                { emoji: "💰", title: "Paid Drops", desc: "Set the access on a finished moment. You keep 85% of every real sale.", href: "/vaultx/drop" },
+                { emoji: "💰", title: "Paid Drops", desc: "Set the access on a finished moment. A sale opens only after CreatorVault can prove the full payment, access, and payout path.", href: "/vaultx/drop" },
                 { emoji: "📱", title: "Your channel-ready drop", desc: "Prepare a version for the places you actually use. Nothing goes out until you decide.", href: "/vaultx/drop" },
               ].map(item => (
                 <a key={item.title} href={item.href} className="flex items-start gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 hover:border-white/20 transition">

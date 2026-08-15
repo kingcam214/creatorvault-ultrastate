@@ -25,9 +25,9 @@ const TRANSLATIONS: Record<string, [string, string, string]> = {
 
   // ── VaultX Hub ──────────────────────────────────────────────────────────────
   "hub.title":          ["VaultX",                    "VaultX",                     "VaultX"],
-  "hub.tagline":        ["Turn your content into paid drops. Keep 85%.",
-                         "Tounen kontni ou an lajan. Kenbe 85%.",
-                         "Convierte tu contenido en drops de pago. Quédate el 85%."],
+  "hub.tagline":        ["Turn your saved content into a drop plan.",
+                         "Prepare kontni ou deja sere pou yon plan drop.",
+                         "Convierte tu contenido guardado en un plan de drop."],
   "hub.cta_create":     ["Create a Drop",             "Kreye yon Drop",             "Crear un Drop"],
   "hub.cta_start":      ["Start Creating",            "Kòmanse Kreye",              "Empieza a Crear"],
   "hub.how_it_works":   ["How it works",              "Kijan sa travay",            "Cómo funciona"],
