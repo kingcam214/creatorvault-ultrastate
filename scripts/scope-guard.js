@@ -4,6 +4,10 @@ import { execSync } from 'child_process';
 
 // Task allowlists
 const ALLOWLISTS = {
+  'public-profile-hold': [
+    'client/src/pages/PublicCreatorLanding.tsx',
+    'scripts/scope-guard.js'
+  ],
   'vaultx-distribution-hold': [
     'client/src/pages/VaultXDistribution.tsx',
     'scripts/scope-guard.js'
