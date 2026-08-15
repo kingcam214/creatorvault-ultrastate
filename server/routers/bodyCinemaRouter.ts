@@ -268,8 +268,35 @@ export const bodyCinemaRouter = router({
     evidenceId: z.string().uuid(),
     directionId: z.enum(["the-arch", "silhouette", "luxury-reveal", "vip-tease"]),
   })).mutation(async ({ ctx, input }) => {
+    const creatorId = Number(ctx.user.id);
     try {
-      return await approveBodyCinemaDirection(Number(ctx.user.id), input.evidenceId, input.directionId);
+      const direction = await approveBodyCinemaDirection(creatorId, input.evidenceId, input.directionId);
+      const evidence = await getBodyCinemaSourceEvidence(creatorId, input.evidenceId);
+      if (!evidence) throw new Error("Body Cinema source evidence was not found.");
+      await assertBodyCinemaSourceMapReady({
+        creatorId,
+        evidenceId: input.evidenceId,
+        sourceMediaUrl: evidence.sourceMediaUrl,
+        route: "source_preserving_assembly",
+      });
+      await getOrCreateBodyCinemaEditBlueprint({
+        creatorId,
+        evidenceId: input.evidenceId,
+        sourceMediaUrl: evidence.sourceMediaUrl,
+      });
+      const db = await getDb();
+      if (!db) throw new Error("CreatorVault Media Vault is unavailable.");
+      await db.execute(sql`
+        UPDATE media_assets
+        SET created_by_feature = 'body_cinema_verified_source'
+        WHERE user_id = ${creatorId}
+          AND public_url = ${evidence.sourceMediaUrl}
+          AND status = 'ready'
+          AND source_type = 'creator_upload'
+          AND asset_type = 'video'
+          AND created_by_feature = 'body_cinema_direct_upload'
+      ` as any);
+      return direction;
     } catch (error: any) {
       throw evidencePrecondition(error?.message || "Body Cinema direction approval failed.");
     }
