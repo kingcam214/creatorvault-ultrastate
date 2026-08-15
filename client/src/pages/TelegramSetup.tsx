@@ -1,128 +1,18 @@
-import { useState } from "react";
-import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { Link } from "wouter";
 
 export default function TelegramSetup() {
-  const [webhookUrl, setWebhookUrl] = useState(window.location.origin);
-
-  const { data: webhookInfo, refetch } = trpc.telegram.getWebhookInfo.useQuery();
-
-  const setWebhookMutation = trpc.telegram.setWebhook.useMutation({
-    onSuccess: (result) => {
-      if (result.ok) {
-        toast.success("Webhook configured successfully!");
-        refetch();
-      } else {
-        toast.error("Failed to set webhook: " + result.description);
-      }
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
-
-  const handleSetWebhook = () => {
-    if (!webhookUrl) {
-      toast.error("Please enter a webhook URL");
-      return;
-    }
-    setWebhookMutation.mutate({ url: webhookUrl });
-  };
-
   return (
-    <div className="container max-w-4xl py-8 space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Telegram Bot Setup</CardTitle>
-          <CardDescription>
-            Configure webhook to receive messages from your Telegram bot
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Webhook Configuration */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="webhook-url">Webhook URL</Label>
-              <Input
-                id="webhook-url"
-                placeholder="https://your-domain.com"
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Telegram will send messages to: {webhookUrl}/api/trpc/telegram.webhook
-              </p>
-            </div>
-            <Button 
-              onClick={handleSetWebhook}
-              disabled={setWebhookMutation.isPending}
-            >
-              Set Webhook
-            </Button>
-          </div>
-
-          {/* Current Status */}
-          {webhookInfo && (
-            <div className="space-y-4 pt-4 border-t">
-              <h3 className="font-semibold">Current Status</h3>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  {webhookInfo.result?.url ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-red-600" />
-                  )}
-                  <span className="text-sm">
-                    {webhookInfo.result?.url ? "Webhook Active" : "No Webhook Set"}
-                  </span>
-                </div>
-                {webhookInfo.result?.url && (
-                  <div className="text-sm text-muted-foreground">
-                    URL: {webhookInfo.result.url}
-                  </div>
-                )}
-                {webhookInfo.result?.pending_update_count !== undefined && (
-                  <div className="text-sm text-muted-foreground">
-                    Pending updates: {webhookInfo.result.pending_update_count}
-                  </div>
-                )}
-                {webhookInfo.result?.last_error_message && (
-                  <div className="text-sm text-red-600">
-                    Last error: {webhookInfo.result.last_error_message}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Bot Commands */}
-          <div className="space-y-4 pt-4 border-t">
-            <h3 className="font-semibold">Available Bot Commands</h3>
-            <div className="space-y-2 text-sm">
-              <div><code>/start</code> - Welcome message with onboarding link</div>
-              <div><code>/balance</code> - Check creator earnings</div>
-              <div><code>/golive</code> - Quick link to start streaming</div>
-              <div><code>/payout</code> - Request payout instructions</div>
-            </div>
-          </div>
-
-          {/* Bot Info */}
-          <div className="space-y-2 pt-4 border-t">
-            <h3 className="font-semibold">Bot Token</h3>
-            <p className="text-sm text-muted-foreground">
-              Token is configured in environment variables (TELEGRAM_BOT_TOKEN)
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Bot username: @YourBotUsername (check with @BotFather on Telegram)
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <main className="flex min-h-screen items-center justify-center bg-[#070707] px-5 py-20 text-white">
+      <section className="w-full max-w-2xl overflow-hidden rounded-[2rem] border border-amber-200/20 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.16),transparent_42%),linear-gradient(145deg,#181208,#070707)] p-7 shadow-[0_28px_90px_-48px_rgba(245,158,11,.65)] sm:p-10">
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-200">CreatorVault channels</p>
+        <h1 className="mt-4 text-4xl font-black leading-[0.9] tracking-[-0.065em] sm:text-5xl">Private channel access is not open yet.</h1>
+        <p className="mt-6 max-w-xl text-base leading-relaxed text-zinc-300">CreatorVault will not expose a channel control, private endpoint, message command, fan access promise, balance, live-room action, or payout instruction before the complete channel, access, payment, and creator-money path is proven.</p>
+        <div className="mt-7 rounded-2xl border border-white/10 bg-black/25 p-5">
+          <p className="text-sm font-black text-white">What stays protected</p>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-400">No channel setting is being changed here, and no internal connection detail is being shown. Private channel access returns only after it is safe, real, and ready for creators and fans.</p>
+        </div>
+        <Link href="/demos-home"><a className="mt-7 inline-flex min-h-12 items-center justify-center rounded-xl bg-amber-200 px-5 text-sm font-black text-black transition hover:bg-white">Watch accepted CreatorVault work</a></Link>
+      </section>
+    </main>
   );
 }

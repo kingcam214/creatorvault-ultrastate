@@ -4,6 +4,10 @@ import { execSync } from 'child_process';
 
 // Task allowlists
 const ALLOWLISTS = {
+  'private-channel-hold': [
+    'client/src/pages/TelegramSetup.tsx',
+    'scripts/scope-guard.js'
+  ],
   'recruiter-hold': [
     'client/src/pages/RecruiterDashboard.tsx',
     'scripts/scope-guard.js'
