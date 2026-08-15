@@ -445,8 +445,13 @@ export async function probeVideo(localPath: string): Promise<{ durationSeconds: 
 }
 
 function sampleTimes(durationSeconds: number): number[] {
-  const start = Math.min(0.18, durationSeconds * 0.05);
-  const end = Math.max(start, durationSeconds - Math.min(0.08, durationSeconds * 0.02));
+  // Container duration can extend beyond the last decodable frame. Keep every
+  // evidence sample well inside the real frame range instead of asking FFmpeg
+  // for a final frame that does not exist.
+  const startPadding = Math.min(0.5, Math.max(0.12, durationSeconds * 0.025));
+  const endPadding = Math.min(1, Math.max(0.35, durationSeconds * 0.04));
+  const start = Math.min(startPadding, Math.max(0, durationSeconds / 4));
+  const end = Math.max(start, durationSeconds - endPadding);
   return Array.from({ length: SAMPLE_COUNT }, (_, index) => start + ((end - start) * index) / Math.max(1, SAMPLE_COUNT - 1));
 }
 
@@ -574,6 +579,7 @@ export async function buildFrameEvidence(localPath: string, video: { durationSec
     const evidence: BodyCinemaFrameEvidence[] = [];
     for (const seconds of sampleTimes(video.durationSeconds)) {
       const png = await extractFrame(localPath, seconds);
+      if (png.length < 256) throw new Error(`Could not decode a usable video frame at ${seconds.toFixed(3)} seconds.`);
       const image = await loadImage(png);
       const canvas = createCanvas(image.width, image.height);
       canvas.getContext("2d").drawImage(image, 0, 0, image.width, image.height);
