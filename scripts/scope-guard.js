@@ -4,6 +4,10 @@ import { execSync } from 'child_process';
 
 // Task allowlists
 const ALLOWLISTS = {
+  'vaultx-audience-hold': [
+    'client/src/pages/ForYouFeed.tsx',
+    'scripts/scope-guard.js'
+  ],
   'admin-payouts-hold': [
     'client/src/pages/AdminPayouts.tsx',
     'scripts/scope-guard.js'
