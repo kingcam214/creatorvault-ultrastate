@@ -10,6 +10,7 @@
 
 import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { getCreatorBalance } from "../db-vaultlive";
 import { ENV } from "../_core/env";
 import { qualityGate } from "../services/qualityGate";
@@ -137,28 +138,21 @@ export const telegramRouter = router({
       return { ok: true };
     }),
 
-  // Set webhook URL (call this once to configure Telegram)
+  // Private channel setup is held until safe channel access, payment, access delivery, and creator payouts are proven together.
   setWebhook: protectedProcedure
     .input(z.object({ url: z.string().url() }))
-    .mutation(async ({ input }) => {
-      const webhookUrl = `${input.url}/api/trpc/telegram.webhook`;
-      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`;
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: webhookUrl }),
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Private channel setup is not open yet.",
       });
-
-      const result = await response.json();
-      return result;
     }),
 
-  // Get webhook info (for debugging)
   getWebhookInfo: protectedProcedure
     .query(async () => {
-      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo`;
-      const response = await fetch(url);
-      return response.json();
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Private channel details are not available while access is held.",
+      });
     }),
 });

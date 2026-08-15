@@ -6,6 +6,7 @@ import { execSync } from 'child_process';
 const ALLOWLISTS = {
   'private-channel-hold': [
     'client/src/pages/TelegramSetup.tsx',
+    'server/routers/telegram.ts',
     'scripts/scope-guard.js'
   ],
   'recruiter-hold': [
