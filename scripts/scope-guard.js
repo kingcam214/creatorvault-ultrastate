@@ -4,6 +4,12 @@ import { execSync } from 'child_process';
 
 // Task allowlists
 const ALLOWLISTS = {
+  'legacy-messages-hold': [
+    'client/src/pages/Messages.tsx',
+    'client/src/pages/MessageThread.tsx',
+    'client/src/App.tsx',
+    'scripts/scope-guard.js'
+  ],
   homepage: [
     'client/src/pages/Home.tsx',
     'client/src/lib/homepageMediaRegistry.ts',
