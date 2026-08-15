@@ -71,10 +71,18 @@ function isVideo(a: MediaAssetItem) {
 }
 
 function isReadySource(a: MediaAssetItem) {
-  const sourceUrl = String(a.publicUrl || a.storagePath || "");
+  const sourceUrl = String(a.publicUrl || a.storagePath || "").trim();
+  const isCreatorVaultHosted = /^(?:https:\/\/creatorvault\.live\/(?:uploads|videos)\/|\/(?:uploads|videos)\/)/i.test(sourceUrl);
+  const video = isVideo(a);
+  const audio = (a.assetType ?? "").toLowerCase() === "audio" || (a.mimeType ?? "").startsWith("audio/");
+  const hasVideoFacts = !video || (Number(a.duration || 0) > 0 && Number(a.width || 0) > 0 && Number(a.height || 0) > 0);
+  const hasAudioFacts = !audio || Number(a.duration || 0) > 0;
+  const hasImageFacts = video || audio || (Number(a.width || 0) > 0 && Number(a.height || 0) > 0);
   return String(a.status || "ready").toLowerCase() === "ready"
-    && Boolean(sourceUrl)
-    && !/^https?:\/\/replicate\.delivery\//i.test(sourceUrl);
+    && isCreatorVaultHosted
+    && hasVideoFacts
+    && hasAudioFacts
+    && hasImageFacts;
 }
 function videoPoster(a: MediaAssetItem) {
   const candidate = a.thumbnailUrl ?? "";
