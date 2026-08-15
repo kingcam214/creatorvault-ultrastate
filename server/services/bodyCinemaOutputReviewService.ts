@@ -16,6 +16,7 @@ export type BodyCinemaOutputReview = {
   outputAssetUrl: string;
   outputFingerprint: string;
   status: "accepted" | "rejected";
+  reviewClass: "creative_treatment" | "technical_source_preservation";
   overallScore: number;
   treatmentScore: number;
   bodyIntegrityScore: number;
@@ -41,6 +42,7 @@ export type OutputReviewInput = {
   outputAssetUrl: string;
   outputFingerprint: string;
   frameEvidence: BodyCinemaFrameEvidence[];
+  reviewClass?: "creative_treatment" | "technical_source_preservation";
   audioAssetId?: string;
   audioAnalysisId?: string;
 };
@@ -161,6 +163,7 @@ export type PriorBodyCinemaOutput = {
 
 export type BodyCinemaOutputAssessment = {
   status: "accepted" | "rejected";
+  reviewClass: "creative_treatment" | "technical_source_preservation";
   overallScore: number;
   treatmentScore: number;
   bodyIntegrityScore: number;
@@ -207,10 +210,11 @@ function measureSourceMapPreservation(source: BodyCinemaEvidenceRecord, sourceMa
 
 export function assessBodyCinemaOutput(
   source: BodyCinemaEvidenceRecord,
-  input: Pick<OutputReviewInput, "outputFingerprint" | "frameEvidence">,
+  input: Pick<OutputReviewInput, "outputFingerprint" | "frameEvidence" | "reviewClass">,
   priorOutputs: PriorBodyCinemaOutput[] = [],
   sourceMap: BodyCinemaSourceMap | null = null,
 ): BodyCinemaOutputAssessment {
+  const reviewClass = input.reviewClass || "creative_treatment";
   const outputAnalysis = deriveBodyCinemaDirections(input.frameEvidence);
   const reasons: string[] = [];
   const technicalScore = average(outputAnalysis.shotRankings.map((shot) => shot.score));
@@ -220,18 +224,20 @@ export function assessBodyCinemaOutput(
   const preservationScore = preservation.score;
   let duplicateSimilarity = visualDuplicateSimilarity(source, input.frameEvidence);
 
-  if (input.outputFingerprint.toLowerCase() === source.sourceFingerprint.toLowerCase()) {
-    duplicateSimilarity = 1;
-    reasons.push("Rejected: output fingerprint is identical to the source asset, so no material treatment change occurred.");
-  }
-
-  for (const prior of priorOutputs) {
-    if (prior.outputFingerprint.toLowerCase() === input.outputFingerprint.toLowerCase()) {
+  if (reviewClass === "creative_treatment") {
+    if (input.outputFingerprint.toLowerCase() === source.sourceFingerprint.toLowerCase()) {
       duplicateSimilarity = 1;
-      reasons.push("Rejected: this exact output was already reviewed for the selected source and treatment.");
-      break;
+      reasons.push("Rejected: output fingerprint is identical to the source asset, so no material treatment change occurred.");
     }
-    duplicateSimilarity = Math.max(duplicateSimilarity, fingerprintOverlap(prior.frameEvidence, input.frameEvidence));
+
+    for (const prior of priorOutputs) {
+      if (prior.outputFingerprint.toLowerCase() === input.outputFingerprint.toLowerCase()) {
+        duplicateSimilarity = 1;
+        reasons.push("Rejected: this exact output was already reviewed for the selected source and treatment.");
+        break;
+      }
+      duplicateSimilarity = Math.max(duplicateSimilarity, fingerprintOverlap(prior.frameEvidence, input.frameEvidence));
+    }
   }
 
   reasons.push(...preservation.reasons);
@@ -241,15 +247,17 @@ export function assessBodyCinemaOutput(
   if (bodyIntegrityScore < 65) reasons.push(`Rejected: body integrity is ${bodyIntegrityScore}/100; the result does not retain enough stable pose evidence.`);
   if (treatmentScore < 60) reasons.push(`Rejected: treatment compliance is ${treatmentScore}/100; the output does not retain the selected direction's supported regions or motion.`);
   if (technicalScore < 65) reasons.push(`Rejected: visual-quality score is ${technicalScore}/100; the ranked frames are too weak for acceptance.`);
-  if (duplicateSimilarity >= 0.92) reasons.push(`Rejected: visual fingerprint overlap is ${Math.round(duplicateSimilarity * 100)}%, indicating a duplicate or near-duplicate treatment.`);
+  if (reviewClass === "creative_treatment" && duplicateSimilarity >= 0.92) reasons.push(`Rejected: visual fingerprint overlap is ${Math.round(duplicateSimilarity * 100)}%, indicating a duplicate or near-duplicate treatment.`);
   if (preservationScore < 65) reasons.push(`Rejected: source-preservation evidence is ${preservationScore}/100; this output cannot be accepted as a protected Body Cinema result.`);
 
   const overallScore = Math.round(technicalScore * 0.25 + bodyIntegrityScore * 0.25 + treatmentScore * 0.2 + preservationScore * 0.3);
   const status = reasons.length ? "rejected" : "accepted";
   if (status === "accepted") {
-    reasons.push(`Accepted: treatment ${source.selectedDirectionId} preserved source-supported body regions, passed technical ranking, and differed materially from the source.`);
+    reasons.push(reviewClass === "technical_source_preservation"
+      ? "Accepted: technical source-preservation proof retained the measured source evidence. This internal proof cannot be packaged, sold, or shown as a creative treatment."
+      : `Accepted: treatment ${source.selectedDirectionId} preserved source-supported body regions, passed technical ranking, and differed materially from the source.`);
   }
-  return { status, overallScore, treatmentScore, bodyIntegrityScore, technicalScore, duplicateSimilarity, preservationScore, preservationEvidence: preservation.evidence, reasons, outputAnalysis };
+  return { status, reviewClass, overallScore, treatmentScore, bodyIntegrityScore, technicalScore, duplicateSimilarity, preservationScore, preservationEvidence: preservation.evidence, reasons, outputAnalysis };
 }
 
 function serialiseReview(row: any): BodyCinemaOutputReview {
@@ -261,6 +269,7 @@ function serialiseReview(row: any): BodyCinemaOutputReview {
     outputAssetUrl: String(row.output_asset_url),
     outputFingerprint: String(row.output_fingerprint),
     status: row.status,
+    reviewClass: review.reviewClass === "technical_source_preservation" ? "technical_source_preservation" : "creative_treatment",
     overallScore: Number(row.overall_score),
     treatmentScore: Number(review.treatmentScore),
     bodyIntegrityScore: Number(review.bodyIntegrityScore),
@@ -312,6 +321,7 @@ export async function reviewBodyCinemaOutput(creatorId: number, input: OutputRev
 
   const id = randomUUID();
   const reviewJson = {
+    reviewClass: assessment.reviewClass,
     outputAnalysis: assessment.outputAnalysis,
     outputFrameEvidence: input.frameEvidence,
     treatmentScore: assessment.treatmentScore,
@@ -359,6 +369,7 @@ export async function assertAcceptedBodyCinemaOutputReview(input: {
   const review = rows[0] ? serialiseReview(rows[0]) : null;
   if (!review) throw new Error("An output-review record is required before package finalization.");
   if (review.status !== "accepted") throw new Error("The selected output review was not accepted; rejected or duplicate output cannot be persisted or published.");
+  if (review.reviewClass === "technical_source_preservation") throw new Error("A technical source-preservation proof cannot be packaged, sold, or placed in a creator-facing Vault.");
   if (!review.preservationEvidence.sourceMapId || review.preservationScore < 65) {
     throw new Error("The selected output lacks passing Source Map preservation evidence and cannot be packaged or published.");
   }
