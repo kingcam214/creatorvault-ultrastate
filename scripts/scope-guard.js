@@ -4,6 +4,10 @@ import { execSync } from 'child_process';
 
 // Task allowlists
 const ALLOWLISTS = {
+  'admin-payouts-hold': [
+    'client/src/pages/AdminPayouts.tsx',
+    'scripts/scope-guard.js'
+  ],
   'demos-proof': [
     'client/src/pages/Demos.tsx',
     'scripts/scope-guard.js'
