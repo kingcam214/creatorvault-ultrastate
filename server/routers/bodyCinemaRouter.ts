@@ -185,7 +185,7 @@ export const bodyCinemaRouter = router({
         INSERT INTO media_assets
           (id, user_id, source_type, asset_type, file_name, original_name, mime_type, file_size, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
         VALUES
-          (${assetId}, ${creatorId}, 'creator_upload', 'video', ${originalName}, ${originalName}, 'video/mp4', ${Math.round(fileSize)}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${durationSeconds}, ${Number(frame?.width || 0)}, ${Number(frame?.height || 0)}, 'ready', 'body_cinema_recovered_verified_creator_source')
+          (${assetId}, ${creatorId}, 'creator_upload', 'video', ${originalName}, ${originalName}, 'video/mp4', ${Math.round(fileSize)}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${durationSeconds}, ${Number(frame?.width || 0)}, ${Number(frame?.height || 0)}, 'ready', 'body_cinema_source_recovery')
       ` as any);
       return {
         mediaAssetId: assetId,
