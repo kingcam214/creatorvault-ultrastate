@@ -6,6 +6,7 @@ import { execSync } from 'child_process';
 const ALLOWLISTS = {
   'marketplace-hold': [
     'client/src/pages/Marketplace.tsx',
+    'client/src/pages/MarketplaceProduct.tsx',
     'scripts/scope-guard.js'
   ],
   'public-profile-hold': [
