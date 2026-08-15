@@ -7,6 +7,7 @@ import {
   type BodyCinemaEvidenceRecord,
   type BodyCinemaFrameEvidence,
 } from "./bodyCinemaEvidenceService";
+import { type BodyCinemaSourceMap, getBodyCinemaSourceMap } from "./bodyCinemaSourceMapService";
 
 export type BodyCinemaOutputReview = {
   id: string;
@@ -20,6 +21,14 @@ export type BodyCinemaOutputReview = {
   bodyIntegrityScore: number;
   technicalScore: number;
   duplicateSimilarity: number;
+  preservationScore: number;
+  preservationEvidence: {
+    sourceMapId: string | null;
+    faceVisibility: number;
+    bodyContinuity: number;
+    motionContinuity: number;
+    identityVerification: "not_available";
+  };
   reasons: string[];
   outputAnalysis: ReturnType<typeof deriveBodyCinemaDirections>;
   audioAssetId?: string;
@@ -157,20 +166,58 @@ export type BodyCinemaOutputAssessment = {
   bodyIntegrityScore: number;
   technicalScore: number;
   duplicateSimilarity: number;
+  preservationScore: number;
+  preservationEvidence: {
+    sourceMapId: string | null;
+    faceVisibility: number;
+    bodyContinuity: number;
+    motionContinuity: number;
+    identityVerification: "not_available";
+  };
   reasons: string[];
   outputAnalysis: ReturnType<typeof deriveBodyCinemaDirections>;
 };
+
+function supportedPoseFrameCount(frames: BodyCinemaFrameEvidence[]): number {
+  return frames.filter((frame) => frame.landmarks.filter((landmark) => (landmark.visibility ?? 1) >= 0.55).length >= 8).length;
+}
+
+function measureSourceMapPreservation(source: BodyCinemaEvidenceRecord, sourceMap: BodyCinemaSourceMap | null, output: ReturnType<typeof deriveBodyCinemaDirections>, outputFrames: BodyCinemaFrameEvidence[]) {
+  const unavailable = { sourceMapId: sourceMap?.id || null, faceVisibility: 0, bodyContinuity: 0, motionContinuity: 0, identityVerification: "not_available" as const };
+  if (!sourceMap || sourceMap.status !== "ready") return { score: 0, evidence: unavailable, reasons: ["Rejected: no ready Source Map protects this source during output review."] };
+  if (!sourceMap.routes.allowed.includes("source_preserving_assembly")) return { score: 0, evidence: unavailable, reasons: ["Rejected: this source is not eligible for the source-preserving assembly lane."] };
+  const sourceFace = sourceMap.analysis.protectedSubject.face;
+  const outputFaceFrames = outputFrames.filter((frame) => frame.face?.present).length;
+  const faceVisibility = sourceFace.state === "verified" ? clamp(outputFaceFrames / Math.max(3, Math.min(sourceFace.supportedFrameCount, 6))) : 1;
+  const focusRegions = source.directions.find((direction) => direction.id === source.selectedDirectionId)?.bodyFocus || [];
+  const sourceBody = average(focusRegions.map((region) => Number(source.bodyMap[region] || 0)));
+  const outputBody = average(focusRegions.map((region) => Number(output.bodyMap[region] || 0)));
+  const bodyContinuity = clamp(outputBody / Math.max(0.01, sourceBody));
+  const sourceMotion = Number(sourceMap.analysis.protectedSubject.motion.averageEnergy || 0);
+  const outputMotion = average(output.shotRankings.map((shot) => Number(shot.motionEnergy || 0)));
+  const motionContinuity = sourceMap.analysis.protectedSubject.motion.state === "verified" ? clamp(1 - Math.abs(outputMotion - sourceMotion) / Math.max(0.15, sourceMotion)) : 1;
+  const evidence = { sourceMapId: sourceMap.id, faceVisibility: Number(faceVisibility.toFixed(3)), bodyContinuity: Number(bodyContinuity.toFixed(3)), motionContinuity: Number(motionContinuity.toFixed(3)), identityVerification: "not_available" as const };
+  const reasons: string[] = [];
+  if (sourceFace.state === "verified" && outputFaceFrames < 3) reasons.push("Rejected: the output does not retain enough visible face evidence to preserve the measured source presence.");
+  if (supportedPoseFrameCount(outputFrames) < 3) reasons.push("Rejected: the output does not retain enough stable pose frames for source-body continuity review.");
+  if (bodyContinuity < 0.6) reasons.push(`Rejected: protected body-region continuity is ${Math.round(bodyContinuity * 100)}%, below the source-preservation floor.`);
+  if (sourceMap.analysis.protectedSubject.motion.state === "verified" && motionContinuity < 0.45) reasons.push(`Rejected: natural motion continuity is ${Math.round(motionContinuity * 100)}%, showing a timing or movement break against the source.`);
+  return { score: Math.round((faceVisibility * 0.3 + bodyContinuity * 0.45 + motionContinuity * 0.25) * 100), evidence, reasons };
+}
 
 export function assessBodyCinemaOutput(
   source: BodyCinemaEvidenceRecord,
   input: Pick<OutputReviewInput, "outputFingerprint" | "frameEvidence">,
   priorOutputs: PriorBodyCinemaOutput[] = [],
+  sourceMap: BodyCinemaSourceMap | null = null,
 ): BodyCinemaOutputAssessment {
   const outputAnalysis = deriveBodyCinemaDirections(input.frameEvidence);
   const reasons: string[] = [];
   const technicalScore = average(outputAnalysis.shotRankings.map((shot) => shot.score));
   const bodyIntegrityScore = Math.round(clamp(outputAnalysis.bodyMap.frameCoverage * 0.6 + Math.min(1, outputAnalysis.shotRankings.length / 3) * 0.4) * 100);
   const treatmentScore = Math.round(selectedDirectionSupport(source, outputAnalysis.bodyMap) * 100);
+  const preservation = measureSourceMapPreservation(source, sourceMap, outputAnalysis, input.frameEvidence);
+  const preservationScore = preservation.score;
   let duplicateSimilarity = visualDuplicateSimilarity(source, input.frameEvidence);
 
   if (input.outputFingerprint.toLowerCase() === source.sourceFingerprint.toLowerCase()) {
@@ -187,6 +234,7 @@ export function assessBodyCinemaOutput(
     duplicateSimilarity = Math.max(duplicateSimilarity, fingerprintOverlap(prior.frameEvidence, input.frameEvidence));
   }
 
+  reasons.push(...preservation.reasons);
   if (outputAnalysis.rejectionReasons.length) {
     reasons.push(...outputAnalysis.rejectionReasons.map((reason) => `Rejected: ${reason}`));
   }
@@ -194,13 +242,14 @@ export function assessBodyCinemaOutput(
   if (treatmentScore < 60) reasons.push(`Rejected: treatment compliance is ${treatmentScore}/100; the output does not retain the selected direction's supported regions or motion.`);
   if (technicalScore < 65) reasons.push(`Rejected: visual-quality score is ${technicalScore}/100; the ranked frames are too weak for acceptance.`);
   if (duplicateSimilarity >= 0.92) reasons.push(`Rejected: visual fingerprint overlap is ${Math.round(duplicateSimilarity * 100)}%, indicating a duplicate or near-duplicate treatment.`);
+  if (preservationScore < 65) reasons.push(`Rejected: source-preservation evidence is ${preservationScore}/100; this output cannot be accepted as a protected Body Cinema result.`);
 
-  const overallScore = Math.round(technicalScore * 0.35 + bodyIntegrityScore * 0.35 + treatmentScore * 0.3);
+  const overallScore = Math.round(technicalScore * 0.25 + bodyIntegrityScore * 0.25 + treatmentScore * 0.2 + preservationScore * 0.3);
   const status = reasons.length ? "rejected" : "accepted";
   if (status === "accepted") {
     reasons.push(`Accepted: treatment ${source.selectedDirectionId} preserved source-supported body regions, passed technical ranking, and differed materially from the source.`);
   }
-  return { status, overallScore, treatmentScore, bodyIntegrityScore, technicalScore, duplicateSimilarity, reasons, outputAnalysis };
+  return { status, overallScore, treatmentScore, bodyIntegrityScore, technicalScore, duplicateSimilarity, preservationScore, preservationEvidence: preservation.evidence, reasons, outputAnalysis };
 }
 
 function serialiseReview(row: any): BodyCinemaOutputReview {
@@ -217,6 +266,8 @@ function serialiseReview(row: any): BodyCinemaOutputReview {
     bodyIntegrityScore: Number(review.bodyIntegrityScore),
     technicalScore: Number(review.technicalScore),
     duplicateSimilarity: Number(review.duplicateSimilarity),
+    preservationScore: Number(review.preservationScore || 0),
+    preservationEvidence: review.preservationEvidence || { sourceMapId: null, faceVisibility: 0, bodyContinuity: 0, motionContinuity: 0, identityVerification: "not_available" },
     reasons: review.reasons || [],
     outputAnalysis: review.outputAnalysis,
     audioAssetId: review.audioAssetId,
@@ -256,7 +307,8 @@ export async function reviewBodyCinemaOutput(creatorId: number, input: OutputRev
       frameEvidence: (priorReview?.outputFrameEvidence || []) as BodyCinemaFrameEvidence[],
     };
   });
-  const assessment = assessBodyCinemaOutput(source, input, priorOutputs);
+  const sourceMap = await getBodyCinemaSourceMap(creatorId, input.evidenceId);
+  const assessment = assessBodyCinemaOutput(source, input, priorOutputs, sourceMap);
 
   const id = randomUUID();
   const reviewJson = {
@@ -266,6 +318,8 @@ export async function reviewBodyCinemaOutput(creatorId: number, input: OutputRev
     bodyIntegrityScore: assessment.bodyIntegrityScore,
     technicalScore: assessment.technicalScore,
     duplicateSimilarity: assessment.duplicateSimilarity,
+    preservationScore: assessment.preservationScore,
+    preservationEvidence: assessment.preservationEvidence,
     reasons: assessment.reasons,
     audioAssetId: input.audioAssetId,
     audioAnalysisId: input.audioAnalysisId,
@@ -305,5 +359,8 @@ export async function assertAcceptedBodyCinemaOutputReview(input: {
   const review = rows[0] ? serialiseReview(rows[0]) : null;
   if (!review) throw new Error("An output-review record is required before package finalization.");
   if (review.status !== "accepted") throw new Error("The selected output review was not accepted; rejected or duplicate output cannot be persisted or published.");
+  if (!review.preservationEvidence.sourceMapId || review.preservationScore < 65) {
+    throw new Error("The selected output lacks passing Source Map preservation evidence and cannot be packaged or published.");
+  }
   return review;
 }

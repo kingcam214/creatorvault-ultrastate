@@ -428,6 +428,7 @@ const ALLOWLISTS = {
     'server/routers/bodyCinemaRouter.ts',
     'server/routers/cloneEmpireRouter.ts',
     'server/services/bodyCinemaEvidenceService.ts',
+    'server/services/bodyCinemaOutputReviewService.ts',
     'server/services/bodyCinemaSourceMapService.ts',
     'server/services/bodyCinemaExistingMediaProofService.ts',
     'server/routers.ts',
