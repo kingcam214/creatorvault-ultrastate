@@ -17,6 +17,8 @@ import {
   quoteGovernedPolloSourceVideoReference,
   createQuotedGovernedPolloSourceVideoDraft,
   authorizeSingleUseGovernedPolloSubmission,
+  createGovernedReplicateWanVideoEditDraft,
+  ingestCompletedGovernedReplicateWanVideoEditOutput,
 } from "../services/governedPolloService";
 import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } from "../services/bodyCinemaEvidenceService";
 import {
@@ -231,6 +233,91 @@ export const governedPolloRouter = router({
       };
     } catch {
       return { configured: true, reachable: false, provider: "replicate", message: "Existing Replicate account could not be reached from CreatorVault." };
+    }
+  }),
+
+  createReplicateWanVideoEditDraft: protectedProcedure.input(z.object({
+    creatorId: z.number().int().positive().optional(),
+    evidenceId: z.string().uuid(),
+    sourceUrl: z.string().url().max(4000),
+    sourceChecksum: z.string().trim().max(128).optional().nullable(),
+    prompt: z.string().trim().min(8).max(6000),
+    resolution: z.enum(["720p", "1080p"]),
+    durationSeconds: z.number().int().min(2).max(10),
+    aspectRatio: z.enum(["9:16", "16:9", "1:1"]),
+    ownershipConfirmed: z.literal(true),
+    consentConfirmed: z.literal(true),
+    idempotencyKey: z.string().trim().min(12).max(191).optional(),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    const creatorId = input.creatorId ?? ctx.user.id;
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    try {
+      const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
+      return await createGovernedReplicateWanVideoEditDraft({
+        creatorId,
+        requestedBy: ctx.user.id,
+        sourceUrl: input.sourceUrl,
+        sourceChecksum: input.sourceChecksum,
+        prompt: [buildEvidenceBackedDirectionPrompt(evidenceContext.direction), input.prompt].join(" "),
+        resolution: input.resolution,
+        durationSeconds: input.durationSeconds,
+        aspectRatio: input.aspectRatio,
+        ownershipConfirmed: input.ownershipConfirmed,
+        consentConfirmed: input.consentConfirmed,
+        evidenceId: input.evidenceId,
+        idempotencyKey: input.idempotencyKey,
+        metadata: {
+          bodyCinemaDirectionId: evidenceContext.direction.id,
+          bodyCinemaTimeline: evidenceContext.direction.timeline,
+        },
+      });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  submitReplicateWanVideoEditPilot: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      const job = await getGovernedPolloJob(input.jobId);
+      if (!job) throw new Error("Governed media request was not found.");
+      const approved = await approveGovernedPolloJob({ jobId: job.id, approverId: ctx.user.id, expectedFingerprint: job.fingerprint, reason: "Owner-directed single Wan 2.7 VideoEdit Body Cinema proof." });
+      await authorizeSingleUseGovernedPolloSubmission({ jobId: approved.id, ownerId: ctx.user.id, expectedFingerprint: approved.fingerprint, hardCreditCap: 2, reason: "One bounded Replicate Wan 2.7 VideoEdit proof with no automatic retry." });
+      return await submitGovernedPolloJob({ jobId: approved.id, workerId: `replicate-wan-owner-${ctx.user.id}` });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  ingestReplicateWanVideoEditOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await ingestCompletedGovernedReplicateWanVideoEditOutput({ jobId: input.jobId, ownerId: ctx.user.id });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  reviewReplicateWanVideoEditOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive(), evidenceId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      const job = await getGovernedPolloJob(input.jobId);
+      if (!job?.providerJobId) throw new Error("A completed governed Replicate prediction is required before review.");
+      const output = await reviewIngestedControlledSourceVideoTask({ ownerId: ctx.user.id, evidenceId: input.evidenceId, taskId: job.providerJobId });
+      const accepted = output.review.status === "accepted";
+      const reason = Array.isArray(output.review.reasons) ? output.review.reasons.join(" ") : "Real-frame Body Cinema output review completed.";
+      const reviewedJob = await reviewGovernedPolloOutput({
+        jobId: job.id,
+        reviewerId: ctx.user.id,
+        accepted,
+        artifactUrl: accepted ? output.outputAssetUrl : null,
+        qualityScore: Number(output.review.overallScore ?? 0),
+        reason,
+      });
+      return { reviewedJob, outputReview: output.review, outputAssetUrl: output.outputAssetUrl, frameCount: output.frameCount };
+    } catch (error) {
+      return asPrecondition(error);
     }
   }),
 

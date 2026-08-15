@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, stat, writeFile } from "fs/promises";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
@@ -33,6 +33,7 @@ export type GovernedPolloConfig = {
 
 export type CreateGovernedPolloDraftInput = {
   creatorId: number;
+  provider?: "pollo" | "replicate";
   requestedBy: number;
   sourceUrl: string;
   sourceChecksum?: string | null;
@@ -65,7 +66,7 @@ export type GovernedPolloJob = {
   sourceUrl: string;
   sourceChecksum: string | null;
   prompt: string;
-  provider: "pollo";
+  provider: "pollo" | "replicate";
   providerModelPath: string;
   resolution: string;
   durationSeconds: number;
@@ -127,6 +128,10 @@ const DESIGN_IMAGE_PUBLIC_ROOT = "/root/uploads";
 const DESIGN_IMAGE_MAX_BYTES = 50 * 1024 * 1024;
 const execFileAsync = promisify(execFile);
 const SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/bytedance-seedance-2-5-ref2video";
+const REPLICATE_WAN_VIDEO_EDIT_MODEL_PATH = "replicate/wan-video/wan-2.7-videoedit";
+const REPLICATE_WAN_VIDEO_EDIT_MODE = "replicate_source_video_edit";
+const REPLICATE_WAN_VIDEO_EDIT_MAX_BYTES = 350 * 1024 * 1024;
+const REPLICATE_WAN_VIDEO_EDIT_HARD_SPEND_CAP = 2;
 const KLING_SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/kling-v3-omni-ref2video";
 const SOURCE_VIDEO_REFERENCE_MODE = "ref2video";
 const SOURCE_VIDEO_REFERENCE_CONTRACTS = {
@@ -255,6 +260,15 @@ function isSourceVideoReferenceJob(job: Pick<GovernedPolloJob, "providerModelPat
   return Boolean(getSourceVideoReferenceContract(job.providerModelPath)) && job.mode === SOURCE_VIDEO_REFERENCE_MODE;
 }
 
+function isReplicateWanVideoEditJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
+  return job.provider === "replicate"
+    && job.providerModelPath === REPLICATE_WAN_VIDEO_EDIT_MODEL_PATH
+    && job.mode === REPLICATE_WAN_VIDEO_EDIT_MODE
+    && job.metadata.ownerDirectedPilot === true
+    && job.metadata.candidateLimit === 1
+    && job.metadata.noAutomaticRetry === true;
+}
+
 function isHomepageTextToVideoPilot(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "metadata">): boolean {
   return job.providerModelPath === HOMEPAGE_TEXT_TO_VIDEO_MODEL_PATH
     && job.mode === HOMEPAGE_TEXT_TO_VIDEO_MODE
@@ -273,8 +287,8 @@ function isDesignImagePilot(job: Pick<GovernedPolloJob, "providerModelPath" | "m
     && job.metadata.noAutomaticRetry === true;
 }
 
-function isSingleUseGovernedPilot(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "metadata">): boolean {
-  return isSourceVideoReferenceJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
+function isSingleUseGovernedPilot(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
+  return isSourceVideoReferenceJob(job) || isReplicateWanVideoEditJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
 }
 
 function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
@@ -423,7 +437,7 @@ function createFingerprint(input: Omit<CreateGovernedPolloDraftInput, "metadata"
     sourceUrl: String(input.sourceUrl).trim(),
     sourceChecksum: String(input.sourceChecksum ?? "").trim(),
     prompt: String(input.prompt).trim(),
-    provider: "pollo",
+    provider: input.provider ?? "pollo",
     providerModelPath: String(input.providerModelPath).trim(),
     resolution: String(input.resolution),
     durationSeconds: Number(input.durationSeconds),
@@ -451,7 +465,7 @@ function normaliseJob(row: any): GovernedPolloJob {
     sourceUrl: String(row.source_url),
     sourceChecksum: row.source_checksum ? String(row.source_checksum) : null,
     prompt: String(row.prompt),
-    provider: "pollo",
+    provider: String(row.provider || "pollo") === "replicate" ? "replicate" : "pollo",
     providerModelPath: String(row.provider_model_path),
     resolution: String(row.resolution),
     durationSeconds: Number(row.duration_seconds),
@@ -722,15 +736,18 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
   if (!input.ownershipConfirmed || !input.consentConfirmed) {
     throw new Error("Creator ownership and consent attestations are required before a media draft can be created.");
   }
+  const provider = input.provider ?? "pollo";
   const providerModelPath = requireNonEmpty(input.providerModelPath ?? DEFAULT_MODEL_PATH, "Provider model path");
-  if (!providerModelPath.startsWith("pollo/")) {
-    throw new Error("Only approved Pollo platform model paths may be requested through the governed workflow.");
+  const approvedPolloModel = provider === "pollo" && providerModelPath.startsWith("pollo/");
+  const approvedReplicateModel = provider === "replicate" && providerModelPath === REPLICATE_WAN_VIDEO_EDIT_MODEL_PATH;
+  if (!approvedPolloModel && !approvedReplicateModel) {
+    throw new Error("Only an approved governed provider model path may be requested through this workflow.");
   }
   const requestedEstimate = input.estimatedCostCredits === null || input.estimatedCostCredits === undefined
     ? null
     : Number(input.estimatedCostCredits);
   const sourceVideoQuote = input.metadata?.providerQuote;
-  const verifiedZeroProviderQuote = providerModelPath === SOURCE_VIDEO_REFERENCE_MODEL_PATH
+  const verifiedZeroProviderQuote = provider === "pollo" && providerModelPath === SOURCE_VIDEO_REFERENCE_MODEL_PATH
     && input.mode === SOURCE_VIDEO_REFERENCE_MODE
     && requestedEstimate === 0
     && input.metadata?.verifiedProviderQuote === true
@@ -743,7 +760,7 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
   const costEvidenceReference = input.costEvidenceReference ? String(input.costEvidenceReference).trim() : null;
   const state: GovernedPolloJobState = estimatedCostCredits !== null && costEvidenceReference ? "awaiting_approval" : "cost_pending";
   const fingerprint = createFingerprint({ ...input, sourceUrl, prompt, providerModelPath, durationSeconds, outputCount, estimatedCostCredits, costEvidenceReference });
-  const idempotencyKey = String(input.idempotencyKey || `governed-pollo:${input.creatorId}:${fingerprint}`).slice(0, 191);
+  const idempotencyKey = String(input.idempotencyKey || `governed-${provider}:${input.creatorId}:${fingerprint}`).slice(0, 191);
 
   const existing = await rawQuery("SELECT * FROM governed_media_jobs WHERE idempotency_key = ? LIMIT 1", [idempotencyKey]);
   if (existing[0]) {
@@ -761,7 +778,7 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
       (request_id, creator_id, requested_by, state, idempotency_key, fingerprint, source_url, source_checksum, prompt,
        provider, provider_model_path, resolution, duration_seconds, aspect_ratio, render_mode, output_count,
        estimated_cost_credits, cost_evidence_reference, metadata_json, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pollo', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
     [
       requestId,
       input.creatorId,
@@ -772,6 +789,7 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
       sourceUrl,
       input.sourceChecksum ? String(input.sourceChecksum).trim() : null,
       prompt,
+      provider,
       providerModelPath,
       input.resolution,
       durationSeconds,
@@ -940,6 +958,56 @@ export async function createQuotedGovernedPolloSourceVideoDraft(input: {
   return { ...draft, quote };
 }
 
+export async function createGovernedReplicateWanVideoEditDraft(input: {
+  creatorId: number;
+  requestedBy: number;
+  sourceUrl: string;
+  sourceChecksum?: string | null;
+  prompt: string;
+  resolution: "720p" | "1080p";
+  durationSeconds: number;
+  aspectRatio: "9:16" | "16:9" | "1:1";
+  ownershipConfirmed: boolean;
+  consentConfirmed: boolean;
+  evidenceId: string;
+  idempotencyKey?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  if (!Number.isInteger(input.durationSeconds) || input.durationSeconds < 2 || input.durationSeconds > 10) {
+    throw new Error("Replicate Wan VideoEdit requires a real source clip between 2 and 10 seconds.");
+  }
+  if (!/^https:\/\//i.test(input.sourceUrl)) throw new Error("Replicate Wan VideoEdit requires a secure CreatorVault source URL.");
+  return createGovernedPolloDraft({
+    creatorId: input.creatorId,
+    requestedBy: input.requestedBy,
+    provider: "replicate",
+    sourceUrl: input.sourceUrl,
+    sourceChecksum: input.sourceChecksum,
+    prompt: input.prompt,
+    providerModelPath: REPLICATE_WAN_VIDEO_EDIT_MODEL_PATH,
+    resolution: input.resolution,
+    durationSeconds: input.durationSeconds,
+    aspectRatio: input.aspectRatio,
+    mode: REPLICATE_WAN_VIDEO_EDIT_MODE,
+    outputCount: 1,
+    estimatedCostCredits: REPLICATE_WAN_VIDEO_EDIT_HARD_SPEND_CAP,
+    costEvidenceReference: "Owner-directed single-use Replicate Wan 2.7 VideoEdit proof; hard maximum spend $2 USD; official provider model page verifies source-video edit contract; no automatic retry.",
+    ownershipConfirmed: input.ownershipConfirmed,
+    consentConfirmed: input.consentConfirmed,
+    idempotencyKey: input.idempotencyKey,
+    metadata: {
+      ...(input.metadata || {}),
+      bodyCinemaEvidenceId: input.evidenceId,
+      providerCostCurrency: "USD",
+      hardSpendCapUsd: REPLICATE_WAN_VIDEO_EDIT_HARD_SPEND_CAP,
+      ownerDirectedPilot: true,
+      candidateLimit: 1,
+      noAutomaticRetry: true,
+      providerContract: "replicate_wan_2_7_videoedit_source_video",
+    },
+  });
+}
+
 export async function setGovernedPolloCostEstimate(params: { jobId: number; ownerId: number; estimatedCostCredits: number; costEvidenceReference: string; reason?: string | null }): Promise<GovernedPolloJob> {
   requireOwner(params.ownerId);
   await ensureGovernedPolloSchema();
@@ -1002,7 +1070,7 @@ async function getReservedCredits(scope: string, creatorId?: number): Promise<nu
   return Number(rows[0]?.credits ?? 0);
 }
 
-function isExplicitOwnerDirectedPilot(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
+function isExplicitOwnerDirectedPilot(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
   const cap = Number(job.metadata.hardCreditCap);
   return isSingleUseGovernedPilot(job)
     && job.metadata.ownerDirectedPilot === true
@@ -1270,8 +1338,56 @@ export async function failGovernedPolloJob(params: { jobId: number; actorId?: nu
   return job;
 }
 
+async function submitGovernedReplicateWanVideoEditJob(leased: GovernedPolloJob, workerId: string): Promise<GovernedPolloJob> {
+  const token = String(process.env.REPLICATE_API_TOKEN || "").trim();
+  if (!token) {
+    return failGovernedPolloJob({ jobId: leased.id, code: "replicate_key_missing", error: new Error("REPLICATE_API_TOKEN is not configured"), releaseBudget: true });
+  }
+  const payload = {
+    input: {
+      video: leased.sourceUrl,
+      prompt: leased.prompt,
+      resolution: leased.resolution,
+      aspect_ratio: leased.aspectRatio,
+      audio_setting: "origin",
+      duration: Math.max(2, Math.min(10, Math.round(leased.durationSeconds))),
+    },
+  };
+  let response: Response;
+  try {
+    response = await fetch("https://api.replicate.com/v1/models/wan-video/wan-2.7-videoedit/predictions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "Cancel-After": "2m",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId, error });
+  }
+  const providerResponse = await parseProviderJson(response);
+  if (!response.ok) {
+    if (response.status >= 500 || response.status === 408 || response.status === 429) {
+      return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId, error: new Error(`Replicate submission returned ${response.status}: ${safeErrorMessage(providerResponse.detail ?? providerResponse.error ?? providerResponse.responseText ?? "unknown error")}`) });
+    }
+    return failGovernedPolloJob({
+      jobId: leased.id,
+      code: `replicate_http_${response.status}`,
+      error: new Error(`Replicate submission returned ${response.status}: ${safeErrorMessage(providerResponse.detail ?? providerResponse.error ?? providerResponse.responseText ?? "unknown error")}`),
+      releaseBudget: true,
+    });
+  }
+  const providerJobId = providerResponse.id;
+  if (!providerJobId) return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId, error: new Error("Replicate accepted the request without a prediction ID") });
+  return markGovernedPolloSubmitted({ jobId: leased.id, workerId, providerJobId: String(providerJobId), providerResponse });
+}
+
 export async function submitGovernedPolloJob(params: { jobId: number; workerId: string }): Promise<GovernedPolloJob> {
   const leased = await claimGovernedPolloJob(params);
+  if (isReplicateWanVideoEditJob(leased)) return submitGovernedReplicateWanVideoEditJob(leased, params.workerId);
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
   if (!apiKey) {
     return failGovernedPolloJob({ jobId: leased.id, code: "provider_key_missing", error: new Error("POLLO_API_KEY is not configured"), releaseBudget: true });
@@ -1365,6 +1481,33 @@ export async function pollGovernedPolloProviderJob(params: { jobId: number; acto
   if (!job) throw new Error("Governed media job was not found.");
   if (job.state !== "submitted") throw new Error(`Job in state ${job.state} cannot be polled for provider completion.`);
   if (!job.providerJobId) throw new Error("The governed media job has no provider task ID to poll.");
+
+  if (isReplicateWanVideoEditJob(job)) {
+    const token = String(process.env.REPLICATE_API_TOKEN || "").trim();
+    if (!token) throw new Error("REPLICATE_API_TOKEN is not configured; provider status cannot be read.");
+    const response = await fetch(`https://api.replicate.com/v1/predictions/${encodeURIComponent(job.providerJobId)}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
+    const providerResponse = await parseProviderJson(response);
+    if (!response.ok) throw new Error(`Replicate prediction status returned ${response.status}: ${safeErrorMessage(providerResponse.detail ?? providerResponse.error ?? providerResponse.responseText ?? "unknown error")}`);
+    const rawStatus = String(providerResponse.status || "processing").toLowerCase();
+    const providerOutput = Array.isArray(providerResponse.output) ? providerResponse.output[providerResponse.output.length - 1] : providerResponse.output;
+    const outputUrl = typeof providerOutput === "string" ? providerOutput.trim() : "";
+    if (["succeeded", "success", "completed"].includes(rawStatus)) {
+      if (!/^https:\/\//i.test(outputUrl)) throw new Error("Replicate completed the prediction without a readable HTTPS video URL.");
+      return recordGovernedPolloProviderCompletion({ jobId: job.id, providerJobId: job.providerJobId, outputUrl, providerResponse });
+    }
+    if (["failed", "canceled", "cancelled"].includes(rawStatus)) {
+      return failGovernedPolloJob({ jobId: job.id, actorId: params.actorId, code: "replicate_prediction_failed", error: new Error(String(providerResponse.error ?? `Replicate prediction ${rawStatus}`)), releaseBudget: true });
+    }
+    await rawExec(
+      "UPDATE governed_media_jobs SET provider_response_json = ?, updated_at = NOW() WHERE id = ? AND state = 'submitted'",
+      [safeJson(providerResponse), job.id],
+    );
+    await appendEvent({ jobId: job.id, eventType: "provider_status_polled", fromState: "submitted", toState: "submitted", actorId: params.actorId, correlationId: job.requestId, detail: { providerJobId: job.providerJobId, status: rawStatus } });
+    return (await getGovernedPolloJob(job.id))!;
+  }
 
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
   if (!apiKey) throw new Error("POLLO_API_KEY is not configured; provider status cannot be read.");
@@ -1461,6 +1604,56 @@ export async function recordGovernedPolloProviderCompletion(params: { jobId: num
     detail: { providerJobId: params.providerJobId },
   });
   return completed;
+}
+
+export async function ingestCompletedGovernedReplicateWanVideoEditOutput(params: { jobId: number; ownerId: number }): Promise<{ outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number }> {
+  requireOwner(params.ownerId);
+  await ensureGovernedPolloSchema();
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isReplicateWanVideoEditJob(job)) throw new Error("A completed governed Replicate Wan job is required for durable output ingestion.");
+  if (job.state !== "provider_complete" || !job.providerJobId || !job.outputUrl) throw new Error("CreatorVault will only ingest a completed Replicate provider output.");
+  const folder = `body-cinema-governed-${job.providerJobId.replace(/[^a-z0-9_-]/gi, "")}`;
+  const fileName = "Body-Cinema-Governed-Proof.mp4";
+  const directory = path.join("/root/uploads", "content-vault", folder);
+  const localPath = path.join(directory, fileName);
+  const outputAssetUrl = `https://creatorvault.live/uploads/content-vault/${folder}/${fileName}`;
+  let sizeBytes = 0;
+  if (!(await stat(localPath).then(() => true).catch(() => false))) {
+    await mkdir(directory, { recursive: true });
+    const response = await fetch(job.outputUrl);
+    if (!response.ok) throw new Error(`Replicate output download returned ${response.status}.`);
+    const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+    if (contentType && !contentType.includes("video/")) throw new Error(`Replicate output did not return video data (${contentType}).`);
+    const declaredLength = Number(response.headers.get("content-length") || 0);
+    if (declaredLength > REPLICATE_WAN_VIDEO_EDIT_MAX_BYTES) throw new Error("Replicate output exceeded the governed Media Vault size limit.");
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length < 1024 || bytes.length > REPLICATE_WAN_VIDEO_EDIT_MAX_BYTES) throw new Error("Replicate output failed the governed Media Vault size limit.");
+    await writeFile(localPath, bytes);
+  }
+  try {
+    const { stdout } = await execFileAsync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type,width,height", "-of", "json", localPath]);
+    const inspected = parseJson(stdout) as Record<string, any>;
+    const video = Array.isArray(inspected.streams) ? inspected.streams.find((stream: any) => String(stream?.codec_type) === "video") : null;
+    const durationSeconds = Number(inspected?.format?.duration);
+    const width = Number(video?.width);
+    const height = Number(video?.height);
+    sizeBytes = Number((await stat(localPath)).size);
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || !Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0 || sizeBytes < 1024) throw new Error("Replicate output was not a readable video with duration and dimensions.");
+    const existing = await rawQuery("SELECT id FROM media_assets WHERE user_id = ? AND public_url = ? LIMIT 1", [job.creatorId, outputAssetUrl]);
+    if (!existing[0]) {
+      await rawExec(
+        `INSERT INTO media_assets (id, user_id, source_type, asset_type, file_name, original_name, mime_type, file_size, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
+         VALUES (?, ?, 'generated', 'video', ?, ?, 'video/mp4', ?, ?, ?, ?, ?, ?, ?, 'ready', 'body_cinema_governed_replicate')`,
+        [randomUUID(), job.creatorId, fileName, fileName, sizeBytes, outputAssetUrl, outputAssetUrl, outputAssetUrl, Number(durationSeconds.toFixed(3)), width, height],
+      );
+    }
+    const metadata = { ...job.metadata, durableOutputUrl: outputAssetUrl, verifiedProviderVideo: { durationSeconds: Number(durationSeconds.toFixed(3)), width, height, sizeBytes, provider: "replicate" } };
+    await rawExec("UPDATE governed_media_jobs SET metadata_json = ?, updated_at = NOW() WHERE id = ? AND state = 'provider_complete'", [safeJson(metadata), job.id]);
+    await appendEvent({ jobId: job.id, eventType: "provider_output_durably_ingested", fromState: "provider_complete", toState: "provider_complete", actorId: params.ownerId, correlationId: job.requestId, detail: { outputAssetUrl, durationSeconds: Number(durationSeconds.toFixed(3)), width, height, sizeBytes } });
+    return { outputAssetUrl, durationSeconds: Number(durationSeconds.toFixed(3)), width, height, sizeBytes };
+  } catch (error) {
+    throw new Error(`Completed Replicate output could not enter Media Vault: ${safeErrorMessage(error)}`);
+  }
 }
 
 export async function reviewGovernedPolloOutput(params: { jobId: number; reviewerId: number; accepted: boolean; artifactUrl?: string | null; qualityScore?: number | null; reason: string }): Promise<GovernedPolloJob> {
