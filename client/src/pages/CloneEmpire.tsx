@@ -10,7 +10,8 @@ function isVideo(asset: MediaAssetItem) {
 }
 
 function isPlayableCloneUrl(url?: string | null) {
-  return Boolean(url) && !/^https:\/\/replicate\.delivery\//i.test(String(url));
+  const value = String(url || "").trim();
+  return /^(?:https:\/\/creatorvault\.live\/(?:uploads|videos)\/|\/(?:uploads|videos)\/)/i.test(value);
 }
 
 function videoPoster(asset: MediaAssetItem) {
