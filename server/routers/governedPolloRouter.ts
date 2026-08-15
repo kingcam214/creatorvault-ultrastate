@@ -297,6 +297,8 @@ export const governedPolloRouter = router({
     aspectRatio: z.enum(["9:16", "16:9", "1:1"]),
     ownershipConfirmed: z.literal(true),
     consentConfirmed: z.literal(true),
+    keyframeUrl: z.string().url().max(4000).optional(),
+    keyframeTimestampSeconds: z.number().min(0).max(30).optional(),
     editBlueprintId: z.string().uuid().optional(),
     idempotencyKey: z.string().trim().min(12).max(191).optional(),
   })).mutation(async ({ ctx, input }) => {
@@ -328,6 +330,8 @@ export const governedPolloRouter = router({
           bodyCinemaDirectionId: evidenceContext.direction.id,
           bodyCinemaTimeline: evidenceContext.direction.timeline,
           bodyCinemaEditBlueprintId: editBlueprint.id,
+          runwayKeyframeUrl: input.keyframeUrl ?? null,
+          runwayKeyframeTimestampSeconds: input.keyframeTimestampSeconds ?? null,
         },
       });
     } catch (error) {
