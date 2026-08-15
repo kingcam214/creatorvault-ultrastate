@@ -416,7 +416,10 @@ export default function VaultXDrop() {
         codec: asset.mimeType || "video/mp4",
         width: asset.width || 0,
         height: asset.height || 0,
-        durationSec: asset.duration || 0,
+        durationSec: Math.max(
+          Number(asset.duration || 0),
+          ...localAnalysis.frameEvidence.map((frame) => Number(frame.timestampMs || 0) / 1000),
+        ),
       });
       setUploadProgress(100);
       setStep("preset");
