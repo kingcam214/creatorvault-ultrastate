@@ -173,15 +173,19 @@ export const bodyCinemaRouter = router({
       if (existingRows[0]) {
         return { mediaAssetId: String(existingRows[0].id), recovered: false, sourceMapId: sourceMap.id, editBlueprintId: blueprint.id };
       }
+      const sourceHead = await fetch(evidence.sourceMediaUrl, { method: "HEAD" });
+      if (!sourceHead.ok) throw new Error("CreatorVault could not re-read the verified source file for Media Vault recovery.");
+      const fileSize = Number(sourceHead.headers.get("content-length") || 0);
+      if (!Number.isFinite(fileSize) || fileSize <= 0) throw new Error("CreatorVault could not confirm the verified source file size for Media Vault recovery.");
       const frame = evidence.frameEvidence[0];
       const durationSeconds = Math.max(1, Math.round(Number(sourceMap.analysis.sourceDurationMs || 0) / 1000));
       const assetId = randomUUID();
       const originalName = evidence.sourceMediaUrl.split("/").pop()?.split("?")[0] || "CreatorVault verified creator source.mp4";
       await db.execute(sql`
         INSERT INTO media_assets
-          (id, user_id, source_type, asset_type, file_name, original_name, mime_type, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
+          (id, user_id, source_type, asset_type, file_name, original_name, mime_type, file_size, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
         VALUES
-          (${assetId}, ${creatorId}, 'creator_upload', 'video', ${originalName}, ${originalName}, 'video/mp4', ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${durationSeconds}, ${Number(frame?.width || 0)}, ${Number(frame?.height || 0)}, 'ready', 'body_cinema_recovered_verified_creator_source')
+          (${assetId}, ${creatorId}, 'creator_upload', 'video', ${originalName}, ${originalName}, 'video/mp4', ${Math.round(fileSize)}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${evidence.sourceMediaUrl}, ${durationSeconds}, ${Number(frame?.width || 0)}, ${Number(frame?.height || 0)}, 'ready', 'body_cinema_recovered_verified_creator_source')
       ` as any);
       return {
         mediaAssetId: assetId,
