@@ -1,11 +1,13 @@
 import { createHash, randomUUID } from "crypto";
 import { sql } from "drizzle-orm";
 import { execFile } from "node:child_process";
-import { mkdir, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import path from "node:path";
 import { db } from "../db";
 import { assertBodyCinemaEvidenceReady } from "./bodyCinemaEvidenceService";
+import { buildFrameEvidence, probeVideo } from "./bodyCinemaExistingMediaProofService";
+import { reviewBodyCinemaOutput } from "./bodyCinemaOutputReviewService";
 
 const execFileAsync = promisify(execFile);
 
@@ -758,6 +760,29 @@ export async function ingestAndSettleControlledSourceVideoTask(input: {
   }
   const settlement = await settleControlledSourceVideoTask({ ownerId: input.ownerId, taskId: input.taskId, durableOutputUrl });
   return { ...settlement, mediaAssetId, verifiedVideo };
+}
+
+export async function reviewIngestedControlledSourceVideoTask(input: {
+  ownerId: number;
+  evidenceId: string;
+  taskId: string;
+}): Promise<{ outputAssetUrl: string; outputFingerprint: string; frameCount: number; review: Awaited<ReturnType<typeof reviewBodyCinemaOutput>> }> {
+  if (!OWNER_IDS.has(Number(input.ownerId))) throw new Error("Owner approval is required to review a controlled provider output.");
+  const folder = `body-cinema-governed-${input.taskId.replace(/[^a-z0-9_-]/gi, "")}`;
+  const filename = "Body-Cinema-Governed-Proof.mp4";
+  const localPath = path.join(DURABLE_CONTENT_VAULT_ROOT, folder, filename);
+  const outputAssetUrl = `https://creatorvault.live/uploads/content-vault/${folder}/${filename}`;
+  const video = await probeVideo(localPath);
+  const bytes = await readFile(localPath);
+  const outputFingerprint = createHash("sha256").update(bytes).digest("hex");
+  const frameEvidence = await buildFrameEvidence(localPath, video);
+  const review = await reviewBodyCinemaOutput(input.ownerId, {
+    evidenceId: input.evidenceId,
+    outputAssetUrl,
+    outputFingerprint,
+    frameEvidence,
+  });
+  return { outputAssetUrl, outputFingerprint, frameCount: frameEvidence.length, review };
 }
 
 export async function getLatestPolloCapabilitySnapshot(): Promise<PolloCapabilitySnapshot | null> {

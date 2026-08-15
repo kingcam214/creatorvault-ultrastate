@@ -26,6 +26,7 @@ import {
   refreshPolloCapabilitySnapshot,
   runNextControlledSourceVideoAccessAttempt,
   ingestAndSettleControlledSourceVideoTask,
+  reviewIngestedControlledSourceVideoTask,
   settleControlledSourceVideoTask,
 } from "../services/polloCapabilityRegistryService";
 
@@ -252,6 +253,18 @@ export const governedPolloRouter = router({
     ownerOnly(ctx.user.id);
     try {
       return await ingestAndSettleControlledSourceVideoTask({ ownerId: ctx.user.id, taskId: input.taskId });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  reviewIngestedControlledSourceVideoTask: protectedProcedure.input(z.object({
+    evidenceId: z.string().uuid(),
+    taskId: z.string().trim().min(8).max(191),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await reviewIngestedControlledSourceVideoTask({ ownerId: ctx.user.id, evidenceId: input.evidenceId, taskId: input.taskId });
     } catch (error) {
       return asPrecondition(error);
     }

@@ -385,7 +385,7 @@ async function downloadSource(asset: ExistingVideoAsset, directory: string): Pro
   return { localPath, sourceChecksum: createHash("sha256").update(buffer).digest("hex"), sourceReadOrigin: "public_url" };
 }
 
-async function probeVideo(localPath: string): Promise<{ durationSeconds: number; width: number; height: number }> {
+export async function probeVideo(localPath: string): Promise<{ durationSeconds: number; width: number; height: number }> {
   const { stdout } = await execFileAsync("ffprobe", [
     "-v", "error", "-show_entries", "format=duration:stream=width,height", "-of", "json", localPath,
   ]);
@@ -517,7 +517,7 @@ function composition(keypoints: any[], width: number, height: number): Pick<Body
   };
 }
 
-async function buildFrameEvidence(localPath: string, video: { durationSeconds: number; width: number; height: number }): Promise<BodyCinemaFrameEvidence[]> {
+export async function buildFrameEvidence(localPath: string, video: { durationSeconds: number; width: number; height: number }): Promise<BodyCinemaFrameEvidence[]> {
   const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, {
     modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
     enableSmoothing: true,
