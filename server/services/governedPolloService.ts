@@ -1000,6 +1000,7 @@ export async function createGovernedReplicateWanVideoEditDraft(input: {
       bodyCinemaEvidenceId: input.evidenceId,
       providerCostCurrency: "USD",
       hardSpendCapUsd: REPLICATE_WAN_VIDEO_EDIT_HARD_SPEND_CAP,
+      hardCreditCap: REPLICATE_WAN_VIDEO_EDIT_HARD_SPEND_CAP,
       ownerDirectedPilot: true,
       candidateLimit: 1,
       noAutomaticRetry: true,
