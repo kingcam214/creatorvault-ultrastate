@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
-import { Users, CheckCircle, XCircle, DollarSign, TrendingUp, Play, Zap, RefreshCw, FileText, Bot } from 'lucide-react';
+import { Users, CheckCircle, XCircle, TrendingUp, Play, Zap, RefreshCw, FileText, Bot } from 'lucide-react';
 
 const T = {
   bg: '#0a0a0a', surface: '#111', surface2: '#161616', border: '#1e1e1e',
@@ -62,7 +62,6 @@ export function AgentRoster() {
   const verifiedChallengeRevenue = challengeProgress.reduce((s: number, c: any) => s + parseFloat(c.verified_revenue ?? '0'), 0);
   const verifiedTransactionCount = challengeProgress.reduce((s: number, c: any) => s + Number(c.transaction_count ?? 0), 0);
   const activeCount = agents.filter((a: any) => a.status === 'active').length;
-  const forSaleCount = agents.filter((a: any) => a.is_for_sale).length;
   const ranCount = Object.keys(lastRunResult).length;
 
   const handleRunAgent = async (agent: any) => {
@@ -161,7 +160,7 @@ export function AgentRoster() {
           { label: 'Weapons in your arsenal', value: agents.length, icon: <Users size={14} color={T.gold} />, color: T.gold },
           { label: 'On deck', value: activeCount, icon: <Users size={14} color={T.gold} />, color: T.gold },
           { label: 'Next controlled move', value: 'Held', icon: <ShieldCheckIcon />, color: T.gold },
-          { label: 'Tools with a price', value: forSaleCount, icon: <DollarSign size={14} color={T.purple} />, color: T.purple },
+          { label: 'Proven right now', value: 2, icon: <CheckCircle size={14} color={T.success} />, color: T.success },
         ].map((s, i) => (
           <div key={i} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>{s.icon}<span style={{ fontSize: 11, color: T.muted }}>{s.label}</span></div>
@@ -245,11 +244,6 @@ export function AgentRoster() {
                     {agent.entity_name && (
                       <span style={{ background: T.surface2, color: T.muted, fontSize: 9, padding: '2px 6px', borderRadius: 4 }}>
                         {agent.entity_name}
-                      </span>
-                    )}
-                    {agent.is_for_sale && (
-                      <span style={{ background: T.goldDim, color: T.gold, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4 }}>
-                        AVAILABLE TOOL ${((agent.base_price_cents ?? 0) / 100).toLocaleString()}
                       </span>
                     )}
                   </div>
