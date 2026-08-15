@@ -306,6 +306,11 @@ export const governedPolloRouter = router({
     const creatorId = input.creatorId ?? ctx.user.id;
     if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
     try {
+      const providerVideo = new URL(input.runwayReferenceVideoUrl);
+      const signedRunwayVideo = providerVideo.hostname === "d2jqrm6oza8nb6.cloudfront.net" && providerVideo.searchParams.has("_jwt");
+      if (!signedRunwayVideo) {
+        throw new Error("The protected Runway source-video link is incomplete. Re-register the approved source before a video can be prepared.");
+      }
       const hasKeyframeUrl = Boolean(input.keyframeUrl);
       const hasKeyframeTimestamp = input.keyframeTimestampSeconds !== undefined;
       if (hasKeyframeUrl !== hasKeyframeTimestamp) {
@@ -342,6 +347,7 @@ export const governedPolloRouter = router({
           bodyCinemaDirectionId: evidenceContext.direction.id,
           bodyCinemaTimeline: evidenceContext.direction.timeline,
           bodyCinemaEditBlueprintId: editBlueprint.id,
+          runwaySignedSourceVideoUrl: input.runwayReferenceVideoUrl,
           runwayKeyframeUrl: input.keyframeUrl ?? null,
           runwayKeyframeTimestampSeconds: input.keyframeTimestampSeconds ?? null,
         },
