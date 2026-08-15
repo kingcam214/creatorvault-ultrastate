@@ -108,10 +108,8 @@ function formatMoment(timestampMs?: number) {
   return `${(Number(timestampMs) / 1000).toFixed(Number(timestampMs) < 10_000 ? 1 : 0)}s`;
 }
 
-const VERIFIED_VAULTX_REAL_MOTION_SOURCE_URLS = [
-  "https://creatorvault.live/uploads/content-vault/ff7715c1-da62-4fb8-b519-5f2006f20988/CreatorVault-Demo-Source--VIP-Velvet-Suite.mp4",
-  "https://creatorvault.live/uploads/content-vault/ef19f63d-2d3c-4c10-a259-691cd4b315fd/CreatorVault-Demo-Source--Silhouette-Afterhours.mp4",
-  "https://creatorvault.live/uploads/content-vault/c0d0271b-5d8e-4b01-9b37-de62dffd3204/CreatorVault-Demo-Source--Preview-Curves-360.mp4",
+const VERIFIED_BODY_CINEMA_SOURCE_ASSET_IDS = [
+  "15f7d906-4f43-4b7f-8c84-ddcb4d3db557",
 ] as const;
 
 function isEligibleBodyCinemaSource(asset: MediaAssetItem) {
@@ -120,8 +118,10 @@ function isEligibleBodyCinemaSource(asset: MediaAssetItem) {
   const isCreatorVaultHosted = /^(?:https:\/\/creatorvault\.live\/(?:uploads|videos)\/|\/(?:uploads|videos)\/)/i.test(sourceUrl);
   const isVideo = asset.assetType === "video" || Boolean(asset.mimeType?.startsWith("video/"));
   const hasReadableMediaFacts = Number(asset.duration || 0) > 0 && Number(asset.width || 0) > 0 && Number(asset.height || 0) > 0;
-  const isCertifiedRealMotion = (VERIFIED_VAULTX_REAL_MOTION_SOURCE_URLS as readonly string[]).includes(sourceUrl);
-  return isVideo && isCreatorVaultHosted && hasReadableMediaFacts && isCertifiedRealMotion && !reference.includes("kingcam");
+  const isRecoveredOriginal = (VERIFIED_BODY_CINEMA_SOURCE_ASSET_IDS as readonly string[]).includes(String(asset.id));
+  const isFinishedPiece = String(asset.classification || "").toLowerCase() === "finished_showcase";
+  const unsafeName = /demo|showcase|pilot|sample|test|placeholder|kingcam|flyer|trailer|screen.?record/i.test(reference);
+  return isVideo && isCreatorVaultHosted && hasReadableMediaFacts && isRecoveredOriginal && !isFinishedPiece && !unsafeName;
 }
 
 function statusCopy(state?: string | null) {
@@ -374,7 +374,7 @@ export default function VaultXDrop() {
     const asset = selected[0];
     setMediaLibraryOpen(false);
     if (!asset || !isEligibleBodyCinemaSource(asset)) {
-      toast.error("Choose one of the verified moving VaultX sources. Static previews and KingCam footage stay out of Body Cinema.");
+      toast.error("Choose your verified original footage. Finished pieces and anything not ready stay separate from Body Cinema.");
       return;
     }
 
@@ -449,7 +449,7 @@ export default function VaultXDrop() {
     const videos = Array.isArray(existingVideosQuery.data) ? existingVideosQuery.data as MediaAssetItem[] : [];
     const usableVideos = videos.filter(isEligibleBodyCinemaSource);
     const requestedVaultVideo = selectedVaultAssetId ? usableVideos.find((asset) => asset.id === selectedVaultAssetId) : null;
-    const sourceToUse = requestedVaultVideo || usableVideos.find((asset) => asset.publicUrl === VERIFIED_VAULTX_REAL_MOTION_SOURCE_URLS[0]) || usableVideos[0];
+    const sourceToUse = requestedVaultVideo || usableVideos[0];
     if (!sourceToUse || autoSelectedMediaIdRef.current || uploading || videoUrl || sourceEvidence) return;
     autoSelectedMediaIdRef.current = sourceToUse.id;
     void handleExistingMediaSelection([sourceToUse]);
@@ -689,7 +689,7 @@ export default function VaultXDrop() {
             
             <p style={{ fontSize: 16, color: "#fff", lineHeight: 1.65, margin: "0 0 20px", textAlign: "center", fontWeight: 500 }}>Start with a video you already have in CreatorVault. We read its movement and framing, then help you choose a cinematic plan for your next drop.</p>
             {existingVideosQuery.isLoading && <p style={{ color: GOLD, fontSize: 12, textAlign: "center", margin: "-8px 0 20px" }}>Finding your saved videos…</p>}
-            {!existingVideosQuery.isLoading && Array.isArray(existingVideosQuery.data) && existingVideosQuery.data.length > 0 && <p style={{ color: GREEN, fontSize: 12, textAlign: "center", margin: "-8px 0 20px" }}>Your newest saved video is selected automatically. You can choose another below.</p>}
+            {!existingVideosQuery.isLoading && Array.isArray(existingVideosQuery.data) && existingVideosQuery.data.length > 0 && <p style={{ color: GREEN, fontSize: 12, textAlign: "center", margin: "-8px 0 20px" }}>Your verified original footage is ready. You can choose it below.</p>}
 
             <button type="button" className="body-cinema-button" onClick={() => setMediaLibraryOpen(true)} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, minHeight: 150, padding: 24, borderRadius: 24, border: `1px solid ${GOLD_BORDER}`, background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, cursor: "pointer", textAlign: "center", boxShadow: "0 8px 30px rgba(213,183,96,0.1)", color: "#fff" }}>
               <div style={{ width: 58, height: 58, borderRadius: 18, background: `linear-gradient(135deg, ${GOLD}, #b09140)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(213,183,96,0.25)" }}><Film size={26} color="#080808" /></div>
