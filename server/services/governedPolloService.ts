@@ -1,10 +1,12 @@
 import { createHash, randomUUID } from "crypto";
-import { mkdir, stat, writeFile } from "fs/promises";
+import { mkdir, readFile, stat, writeFile } from "fs/promises";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import { sql } from "drizzle-orm";
 import { db } from "../db";
+import { buildFrameEvidence, probeVideo } from "./bodyCinemaExistingMediaProofService";
+import { reviewBodyCinemaOutput, type BodyCinemaOutputReview } from "./bodyCinemaOutputReviewService";
 
 export type GovernedPolloJobState =
   | "draft"
@@ -33,7 +35,7 @@ export type GovernedPolloConfig = {
 
 export type CreateGovernedPolloDraftInput = {
   creatorId: number;
-  provider?: "pollo" | "replicate";
+  provider?: "pollo" | "replicate" | "runway";
   requestedBy: number;
   sourceUrl: string;
   sourceChecksum?: string | null;
@@ -66,7 +68,7 @@ export type GovernedPolloJob = {
   sourceUrl: string;
   sourceChecksum: string | null;
   prompt: string;
-  provider: "pollo" | "replicate";
+  provider: "pollo" | "replicate" | "runway";
   providerModelPath: string;
   resolution: string;
   durationSeconds: number;
@@ -133,6 +135,10 @@ const REPLICATE_WAN_VIDEO_EDIT_MODE = "replicate_source_video_edit";
 const REPLICATE_WAN_VIDEO_EDIT_MAX_BYTES = 200 * 1024 * 1024;
 const REPLICATE_BODY_CINEMA_EXECUTION_ENABLED = false;
 const REPLICATE_WAN_VIDEO_EDIT_HARD_SPEND_CAP = 2;
+const RUNWAY_ALEPH_2_VIDEO_EDIT_MODEL_PATH = "runway/aleph-2-video-edit";
+const RUNWAY_ALEPH_2_VIDEO_EDIT_MODE = "runway_aleph_2_source_video_edit";
+const RUNWAY_ALEPH_2_VIDEO_EDIT_MAX_BYTES = 200 * 1024 * 1024;
+const RUNWAY_ALEPH_2_CREDITS_PER_SOURCE_SECOND = 28;
 const KLING_SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/kling-v3-omni-ref2video";
 const SOURCE_VIDEO_REFERENCE_MODE = "ref2video";
 const SOURCE_VIDEO_REFERENCE_CONTRACTS = {
@@ -194,6 +200,12 @@ function requirePositiveInteger(value: number | null | undefined, label: string)
     throw new Error(`${label} must be a positive integer.`);
   }
   return Number(value);
+}
+
+function requirePositiveDuration(value: number | null | undefined, label: string): number {
+  const duration = Number(value);
+  if (!Number.isFinite(duration) || duration <= 0) throw new Error(`${label} must be a positive duration.`);
+  return Math.round(duration * 1000) / 1000;
 }
 
 function requirePositiveAmount(value: number | null | undefined, label: string): number {
@@ -270,6 +282,16 @@ function isReplicateWanVideoEditJob(job: Pick<GovernedPolloJob, "provider" | "pr
     && job.metadata.noAutomaticRetry === true;
 }
 
+function isRunwayAlephVideoEditJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
+  return job.provider === "runway"
+    && job.providerModelPath === RUNWAY_ALEPH_2_VIDEO_EDIT_MODEL_PATH
+    && job.mode === RUNWAY_ALEPH_2_VIDEO_EDIT_MODE
+    && job.metadata.ownerDirectedPilot === true
+    && job.metadata.candidateLimit === 1
+    && job.metadata.noAutomaticRetry === true
+    && job.metadata.sourcePreservationRequired === true;
+}
+
 function isHomepageTextToVideoPilot(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "metadata">): boolean {
   return job.providerModelPath === HOMEPAGE_TEXT_TO_VIDEO_MODEL_PATH
     && job.mode === HOMEPAGE_TEXT_TO_VIDEO_MODE
@@ -289,7 +311,7 @@ function isDesignImagePilot(job: Pick<GovernedPolloJob, "providerModelPath" | "m
 }
 
 function isSingleUseGovernedPilot(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
-  return isSourceVideoReferenceJob(job) || isReplicateWanVideoEditJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
+  return isSourceVideoReferenceJob(job) || isReplicateWanVideoEditJob(job) || isRunwayAlephVideoEditJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
 }
 
 function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
@@ -466,7 +488,9 @@ function normaliseJob(row: any): GovernedPolloJob {
     sourceUrl: String(row.source_url),
     sourceChecksum: row.source_checksum ? String(row.source_checksum) : null,
     prompt: String(row.prompt),
-    provider: String(row.provider || "pollo") === "replicate" ? "replicate" : "pollo",
+    provider: ["pollo", "replicate", "runway"].includes(String(row.provider || "pollo"))
+      ? String(row.provider || "pollo") as "pollo" | "replicate" | "runway"
+      : "pollo",
     providerModelPath: String(row.provider_model_path),
     resolution: String(row.resolution),
     durationSeconds: Number(row.duration_seconds),
@@ -678,7 +702,7 @@ export async function ensureGovernedPolloSchema(): Promise<void> {
     UNIQUE KEY governed_media_single_use_permits_job (job_id),
     KEY governed_media_single_use_permits_state (state, expires_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
-  await rawExec("ALTER TABLE governed_media_jobs MODIFY COLUMN estimated_cost_credits DECIMAL(12,2) NULL, MODIFY COLUMN actual_cost_credits DECIMAL(12,2) NULL");
+  await rawExec("ALTER TABLE governed_media_jobs MODIFY COLUMN estimated_cost_credits DECIMAL(12,2) NULL, MODIFY COLUMN actual_cost_credits DECIMAL(12,2) NULL, MODIFY COLUMN duration_seconds DECIMAL(8,3) NOT NULL");
   await rawExec("ALTER TABLE governed_media_approvals MODIFY COLUMN estimated_cost_credits DECIMAL(12,2) NOT NULL");
   await rawExec("ALTER TABLE governed_media_budget_ledger MODIFY COLUMN credits DECIMAL(12,2) NOT NULL");
 }
@@ -731,7 +755,7 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
   await ensureGovernedPolloSchema();
   const sourceUrl = requireNonEmpty(input.sourceUrl, "Source URL");
   const prompt = requireNonEmpty(input.prompt, "Prompt");
-  const durationSeconds = requirePositiveInteger(input.durationSeconds, "Duration");
+  const durationSeconds = requirePositiveDuration(input.durationSeconds, "Duration");
   const outputCount = requirePositiveInteger(input.outputCount ?? 1, "Output count");
   if (outputCount !== 1) throw new Error("Governed Pollo requests currently allow exactly one output per approved job.");
   if (!input.ownershipConfirmed || !input.consentConfirmed) {
@@ -741,7 +765,8 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
   const providerModelPath = requireNonEmpty(input.providerModelPath ?? DEFAULT_MODEL_PATH, "Provider model path");
   const approvedPolloModel = provider === "pollo" && providerModelPath.startsWith("pollo/");
   const approvedReplicateModel = provider === "replicate" && providerModelPath === REPLICATE_WAN_VIDEO_EDIT_MODEL_PATH;
-  if (!approvedPolloModel && !approvedReplicateModel) {
+  const approvedRunwayModel = provider === "runway" && providerModelPath === RUNWAY_ALEPH_2_VIDEO_EDIT_MODEL_PATH;
+  if (!approvedPolloModel && !approvedReplicateModel && !approvedRunwayModel) {
     throw new Error("Only an approved governed provider model path may be requested through this workflow.");
   }
   const requestedEstimate = input.estimatedCostCredits === null || input.estimatedCostCredits === undefined
@@ -1009,6 +1034,66 @@ export async function createGovernedReplicateWanVideoEditDraft(input: {
       candidateLimit: 1,
       noAutomaticRetry: true,
       providerContract: "replicate_wan_2_7_videoedit_source_video",
+    },
+  });
+}
+
+export async function createGovernedRunwayAlephVideoEditDraft(input: {
+  creatorId: number;
+  requestedBy: number;
+  sourceUrl: string;
+  sourceChecksum: string;
+  runwayReferenceVideoUrl: string;
+  prompt: string;
+  resolution: "720p" | "1080p";
+  durationSeconds: number;
+  aspectRatio: "9:16" | "16:9" | "1:1";
+  ownershipConfirmed: boolean;
+  consentConfirmed: boolean;
+  evidenceId: string;
+  idempotencyKey?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  const durationSeconds = requirePositiveDuration(input.durationSeconds, "Runway Aleph source duration");
+  if (durationSeconds < 2 || durationSeconds > 30) {
+    throw new Error("Runway Aleph source-preserving edits require a real source clip between 2 and 30 seconds.");
+  }
+  if (!/^https:\/\//i.test(input.sourceUrl) || !/^https:\/\//i.test(input.runwayReferenceVideoUrl)) {
+    throw new Error("Runway Aleph requires secure CreatorVault source proof and a Runway-hosted source reference.");
+  }
+  const estimatedCostCredits = Number((durationSeconds * RUNWAY_ALEPH_2_CREDITS_PER_SOURCE_SECOND).toFixed(2));
+  return createGovernedPolloDraft({
+    creatorId: input.creatorId,
+    requestedBy: input.requestedBy,
+    provider: "runway",
+    sourceUrl: input.sourceUrl,
+    sourceChecksum: input.sourceChecksum,
+    prompt: input.prompt,
+    providerModelPath: RUNWAY_ALEPH_2_VIDEO_EDIT_MODEL_PATH,
+    resolution: input.resolution,
+    durationSeconds,
+    aspectRatio: input.aspectRatio,
+    mode: RUNWAY_ALEPH_2_VIDEO_EDIT_MODE,
+    outputCount: 1,
+    estimatedCostCredits,
+    costEvidenceReference: `Runway Aleph 2.0 documented source-edit estimate: ${durationSeconds}s source × ${RUNWAY_ALEPH_2_CREDITS_PER_SOURCE_SECOND} credits/second = ${estimatedCostCredits} credits. Single owner-directed preservation benchmark; no automatic retry.`,
+    ownershipConfirmed: input.ownershipConfirmed,
+    consentConfirmed: input.consentConfirmed,
+    idempotencyKey: input.idempotencyKey,
+    metadata: {
+      ...(input.metadata || {}),
+      bodyCinemaEvidenceId: input.evidenceId,
+      runwayReferenceVideoUrl: input.runwayReferenceVideoUrl,
+      providerContract: "runway_aleph_2_in_context_source_video_edit",
+      sourcePreservationRequired: true,
+      preserve: ["identity", "face", "body_anatomy", "natural_skin", "wardrobe", "original_performance", "original_motion_timing", "camera_movement", "framing", "environment_geometry", "original_audio"],
+      authorizedChangeSet: "Lighting only: warm private-suite ambience with natural sculpted highlights. No style transfer, animation, subject replacement, geometry change, or audio change.",
+      ownerDirectedPilot: true,
+      candidateLimit: 1,
+      noAutomaticRetry: true,
+      hardCreditCap: estimatedCostCredits,
+      sourceDurationSeconds: durationSeconds,
+      creditRatePerSourceSecond: RUNWAY_ALEPH_2_CREDITS_PER_SOURCE_SECOND,
     },
   });
 }
@@ -1581,10 +1666,10 @@ export async function recordGovernedPolloProviderCompletion(params: { jobId: num
   const durableDesignImage = isDesignImagePilot(job)
     ? await persistDesignImageOutput(job, outputUrl)
     : null;
-  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  const apiKey = job.provider === "pollo" ? String(process.env.POLLO_API_KEY || "").trim() : "";
   const balanceAfterCredits = apiKey ? await readPolloAvailableCredits(apiKey) : null;
   const balanceBeforeCredits = Number(job.metadata.providerBalanceBeforeCredits);
-  const actualCostCredits = Number.isFinite(balanceBeforeCredits) && balanceAfterCredits !== null
+  const actualCostCredits = job.provider === "pollo" && Number.isFinite(balanceBeforeCredits) && balanceAfterCredits !== null
     ? Math.max(0, Number((balanceBeforeCredits - balanceAfterCredits).toFixed(4)))
     : null;
   const metadata = {
@@ -1659,6 +1744,89 @@ export async function ingestCompletedGovernedReplicateWanVideoEditOutput(params:
   } catch (error) {
     throw new Error(`Completed Replicate output could not enter Media Vault: ${safeErrorMessage(error)}`);
   }
+}
+
+export async function ingestCompletedGovernedRunwayAlephVideoEditOutput(params: { jobId: number; ownerId: number }): Promise<{ outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number; outputFingerprint: string }> {
+  requireOwner(params.ownerId);
+  await ensureGovernedPolloSchema();
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isRunwayAlephVideoEditJob(job)) throw new Error("A completed governed Runway Aleph benchmark is required for Media Vault ingestion.");
+  if (job.state !== "provider_complete" || !job.providerJobId || !job.outputUrl) throw new Error("CreatorVault will only ingest a completed Runway provider output.");
+  const folder = `body-cinema-runway-aleph-${job.id}`;
+  const fileName = "Body-Cinema-Runway-Aleph-Benchmark.mp4";
+  const directory = path.join("/root/uploads", "content-vault", folder);
+  const localPath = path.join(directory, fileName);
+  const outputAssetUrl = `https://creatorvault.live/uploads/content-vault/${folder}/${fileName}`;
+  if (!(await stat(localPath).then(() => true).catch(() => false))) {
+    await mkdir(directory, { recursive: true });
+    const response = await fetch(job.outputUrl, { redirect: "follow" });
+    if (!response.ok) throw new Error(`Runway output download returned ${response.status}.`);
+    const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+    if (contentType && !contentType.includes("video/")) throw new Error(`Runway output did not return video data (${contentType}).`);
+    const declaredLength = Number(response.headers.get("content-length") || 0);
+    if (declaredLength > RUNWAY_ALEPH_2_VIDEO_EDIT_MAX_BYTES) throw new Error("Runway output exceeded the governed Media Vault size limit.");
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length < 1024 || bytes.length > RUNWAY_ALEPH_2_VIDEO_EDIT_MAX_BYTES) throw new Error("Runway output failed the governed Media Vault size limit.");
+    await writeFile(localPath, bytes);
+  }
+  try {
+    const { stdout } = await execFileAsync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type,width,height", "-of", "json", localPath]);
+    const inspected = parseJson(stdout) as Record<string, any>;
+    const video = Array.isArray(inspected.streams) ? inspected.streams.find((stream: any) => String(stream?.codec_type) === "video") : null;
+    const durationSeconds = Number(inspected?.format?.duration);
+    const width = Number(video?.width);
+    const height = Number(video?.height);
+    const sizeBytes = Number((await stat(localPath)).size);
+    const outputFingerprint = createHash("sha256").update(await readFile(localPath)).digest("hex");
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || !Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0 || sizeBytes < 1024) throw new Error("Runway output was not a readable video with duration and dimensions.");
+    const existing = await rawQuery("SELECT id FROM media_assets WHERE user_id = ? AND public_url = ? LIMIT 1", [job.creatorId, outputAssetUrl]);
+    if (!existing[0]) {
+      await rawExec(
+        `INSERT INTO media_assets (id, user_id, source_type, asset_type, file_name, original_name, mime_type, file_size, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
+         VALUES (?, ?, 'generated', 'video', ?, ?, 'video/mp4', ?, ?, ?, ?, ?, ?, ?, 'ready', 'body_cinema_governed_runway_aleph')`,
+        [randomUUID(), job.creatorId, fileName, fileName, sizeBytes, localPath, outputAssetUrl, outputAssetUrl, Number(durationSeconds.toFixed(3)), width, height],
+      );
+    }
+    const metadata = {
+      ...job.metadata,
+      durableOutputUrl: outputAssetUrl,
+      outputFingerprint,
+      actualCostState: "Runway account balance is not exposed by the connected edit contract; recorded estimate is the hard cap and actual charge remains unreconciled.",
+      verifiedProviderVideo: { durationSeconds: Number(durationSeconds.toFixed(3)), width, height, sizeBytes, provider: "runway" },
+    };
+    await rawExec("UPDATE governed_media_jobs SET metadata_json = ?, updated_at = NOW() WHERE id = ? AND state = 'provider_complete'", [safeJson(metadata), job.id]);
+    await appendEvent({ jobId: job.id, eventType: "provider_output_durably_ingested", fromState: "provider_complete", toState: "provider_complete", actorId: params.ownerId, correlationId: job.requestId, detail: { outputAssetUrl, durationSeconds: Number(durationSeconds.toFixed(3)), width, height, sizeBytes, outputFingerprint } });
+    return { outputAssetUrl, durationSeconds: Number(durationSeconds.toFixed(3)), width, height, sizeBytes, outputFingerprint };
+  } catch (error) {
+    throw new Error(`Completed Runway output could not enter Media Vault: ${safeErrorMessage(error)}`);
+  }
+}
+
+export async function reviewCompletedGovernedRunwayAlephVideoEditOutput(params: { jobId: number; ownerId: number }): Promise<{ reviewedJob: GovernedPolloJob; outputReview: BodyCinemaOutputReview; outputAssetUrl: string }> {
+  requireOwner(params.ownerId);
+  const ingested = await ingestCompletedGovernedRunwayAlephVideoEditOutput({ jobId: params.jobId, ownerId: params.ownerId });
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isRunwayAlephVideoEditJob(job)) throw new Error("A completed governed Runway Aleph benchmark is required for output review.");
+  const evidenceId = typeof job.metadata.bodyCinemaEvidenceId === "string" ? job.metadata.bodyCinemaEvidenceId : "";
+  if (!evidenceId) throw new Error("The governed Runway benchmark has no Body Cinema source evidence reference.");
+  const localPath = path.join("/root/uploads", "content-vault", `body-cinema-runway-aleph-${job.id}`, "Body-Cinema-Runway-Aleph-Benchmark.mp4");
+  const video = await probeVideo(localPath);
+  const frameEvidence = await buildFrameEvidence(localPath, video);
+  const outputReview = await reviewBodyCinemaOutput(job.creatorId, {
+    evidenceId,
+    outputAssetUrl: ingested.outputAssetUrl,
+    outputFingerprint: ingested.outputFingerprint,
+    frameEvidence,
+  });
+  const reviewedJob = await reviewGovernedPolloOutput({
+    jobId: job.id,
+    reviewerId: params.ownerId,
+    accepted: outputReview.status === "accepted",
+    artifactUrl: outputReview.status === "accepted" ? ingested.outputAssetUrl : null,
+    qualityScore: outputReview.overallScore,
+    reason: outputReview.reasons.join(" "),
+  });
+  return { reviewedJob, outputReview, outputAssetUrl: ingested.outputAssetUrl };
 }
 
 export async function reviewGovernedPolloOutput(params: { jobId: number; reviewerId: number; accepted: boolean; artifactUrl?: string | null; qualityScore?: number | null; reason: string }): Promise<GovernedPolloJob> {

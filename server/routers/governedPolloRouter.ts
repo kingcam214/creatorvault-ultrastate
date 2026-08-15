@@ -19,6 +19,11 @@ import {
   authorizeSingleUseGovernedPolloSubmission,
   createGovernedReplicateWanVideoEditDraft,
   ingestCompletedGovernedReplicateWanVideoEditOutput,
+  createGovernedRunwayAlephVideoEditDraft,
+  claimGovernedPolloJob,
+  markGovernedPolloSubmitted,
+  ingestCompletedGovernedRunwayAlephVideoEditOutput,
+  reviewCompletedGovernedRunwayAlephVideoEditOutput,
 } from "../services/governedPolloService";
 import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } from "../services/bodyCinemaEvidenceService";
 import {
@@ -277,9 +282,92 @@ export const governedPolloRouter = router({
     }
   }),
 
+  createRunwayAlephVideoEditBenchmarkDraft: protectedProcedure.input(z.object({
+    creatorId: z.number().int().positive().optional(),
+    evidenceId: z.string().uuid(),
+    sourceUrl: z.string().url().max(4000),
+    sourceChecksum: z.string().trim().regex(/^[a-f0-9]{64}$/i),
+    runwayReferenceVideoUrl: z.string().url().max(4000),
+    prompt: z.string().trim().min(8).max(6000),
+    resolution: z.enum(["720p", "1080p"]),
+    durationSeconds: z.number().min(2).max(30),
+    aspectRatio: z.enum(["9:16", "16:9", "1:1"]),
+    ownershipConfirmed: z.literal(true),
+    consentConfirmed: z.literal(true),
+    idempotencyKey: z.string().trim().min(12).max(191).optional(),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    const creatorId = input.creatorId ?? ctx.user.id;
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    try {
+      const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
+      return await createGovernedRunwayAlephVideoEditDraft({
+        creatorId,
+        requestedBy: ctx.user.id,
+        sourceUrl: input.sourceUrl,
+        sourceChecksum: input.sourceChecksum,
+        runwayReferenceVideoUrl: input.runwayReferenceVideoUrl,
+        prompt: [buildEvidenceBackedDirectionPrompt(evidenceContext.direction), input.prompt].join(" "),
+        resolution: input.resolution,
+        durationSeconds: input.durationSeconds,
+        aspectRatio: input.aspectRatio,
+        ownershipConfirmed: input.ownershipConfirmed,
+        consentConfirmed: input.consentConfirmed,
+        evidenceId: evidenceContext.evidence.id,
+        idempotencyKey: input.idempotencyKey,
+        metadata: {
+          bodyCinemaDirectionId: evidenceContext.direction.id,
+          bodyCinemaTimeline: evidenceContext.direction.timeline,
+        },
+      });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  leaseRunwayAlephVideoEditPilot: protectedProcedure.input(z.object({ jobId: z.number().int().positive(), workerId: z.string().trim().min(3).max(191) })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      const job = await getGovernedPolloJob(input.jobId);
+      if (!job || job.provider !== "runway" || job.mode !== "runway_aleph_2_source_video_edit") throw new Error("A prepared Runway Aleph benchmark is required.");
+      return await claimGovernedPolloJob({ jobId: input.jobId, workerId: input.workerId });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  recordRunwayAlephVideoEditSubmission: protectedProcedure.input(z.object({ jobId: z.number().int().positive(), workerId: z.string().trim().min(3).max(191), providerTaskId: z.string().trim().min(2).max(191), providerResponse: z.record(z.string(), z.unknown()).optional() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      const job = await getGovernedPolloJob(input.jobId);
+      if (!job || job.provider !== "runway" || job.mode !== "runway_aleph_2_source_video_edit") throw new Error("A queued Runway Aleph benchmark is required.");
+      return await markGovernedPolloSubmitted({ jobId: input.jobId, workerId: input.workerId, providerJobId: input.providerTaskId, providerResponse: input.providerResponse });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
   submitReplicateWanVideoEditPilot: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Replicate remains reserved for the Clone workflow and cannot be used by Body Cinema." });
+  }),
+
+  ingestRunwayAlephVideoEditOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await ingestCompletedGovernedRunwayAlephVideoEditOutput({ jobId: input.jobId, ownerId: ctx.user.id });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  reviewRunwayAlephVideoEditOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await reviewCompletedGovernedRunwayAlephVideoEditOutput({ jobId: input.jobId, ownerId: ctx.user.id });
+    } catch (error) {
+      return asPrecondition(error);
+    }
   }),
 
   ingestReplicateWanVideoEditOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
