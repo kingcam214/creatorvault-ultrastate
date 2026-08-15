@@ -74,7 +74,7 @@ export type ControlledSourceVideoCandidate = {
   resolution: "720p" | "768P" | "720P";
   aspectRatio: "9:16";
   creativeStrength: string;
-  includeGenerateAudio?: boolean;
+  disableNativeAudio?: boolean;
   priceStatus: "price_not_yet_returned";
   accountAccess: ControlledModelAccessState;
   lastVerifiedAt: string | null;
@@ -131,9 +131,24 @@ const REJECTED_SOURCE_VIDEO_MODELS = new Map<string, string>([
   ["kling-ai/kling-v3-omni", "Rejected after Body Cinema quality review: the result did not meet source-preservation and motion-quality standards."],
 ]);
 
+const CONTRACT_INCOMPATIBLE_SOURCE_VIDEO_MODELS = new Map<string, string>([
+  ["alibaba/happyhorse-1-0", "Live Pollo API returned that Happy Horse 1.0 does not support video references; no task or credit charge occurred."],
+]);
+
 const CONTROLLED_SOURCE_VIDEO_LADDER = [
   {
     rank: 1,
+    modelKey: "google/veo-3-1",
+    providerApiPath: "/generation/google/veo-3-1/ref2video",
+    documentedInputSupport: "refs[].type=video with HTTPS video URL",
+    durationSeconds: 8,
+    resolution: "720p",
+    aspectRatio: "9:16",
+    creativeStrength: "Official video-reference conditioning with eight-second high-fidelity vertical motion and preserved scene context.",
+    disableNativeAudio: true,
+  },
+  {
+    rank: 2,
     modelKey: "alibaba/wan-v2-6",
     providerApiPath: "/generation/wanx/wan-v2-6/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
@@ -143,7 +158,7 @@ const CONTROLLED_SOURCE_VIDEO_LADDER = [
     creativeStrength: "Documented source-video conditioning with multi-shot control and source-audio-aware reference support.",
   },
   {
-    rank: 2,
+    rank: 3,
     modelKey: "alibaba/happyhorse-1-0",
     providerApiPath: "/generation/wanx/happyhorse-1-0/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
@@ -151,10 +166,10 @@ const CONTROLLED_SOURCE_VIDEO_LADDER = [
     resolution: "720P",
     aspectRatio: "9:16",
     creativeStrength: "Reference-guided multi-shot identity continuity with natural motion and cinematic camera control.",
-    includeGenerateAudio: false,
+
   },
   {
-    rank: 3,
+    rank: 4,
     modelKey: "minimax/minimax-h3",
     providerApiPath: "/generation/minimax/minimax-h3/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
@@ -164,7 +179,7 @@ const CONTROLLED_SOURCE_VIDEO_LADDER = [
     creativeStrength: "Reference-guided multi-shot motion with documented character, style, and scene anchoring.",
   },
   {
-    rank: 4,
+    rank: 5,
     modelKey: "bytedance/seedance-2-5",
     providerApiPath: "/generation/bytedance/seedance-2-5/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
@@ -174,7 +189,7 @@ const CONTROLLED_SOURCE_VIDEO_LADDER = [
     creativeStrength: "Multimodal reference anchoring for controlled short-form visual continuity.",
   },
   {
-    rank: 5,
+    rank: 6,
     modelKey: "kling-ai/kling-v3-omni",
     providerApiPath: "/generation/kling-ai/kling-v3-omni/ref2video",
     documentedInputSupport: "refs[].type=video with HTTPS video URL",
@@ -611,7 +626,7 @@ function buildControlledSourceVideoRequest(candidate: typeof CONTROLLED_SOURCE_V
     resolution: candidate.resolution,
     aspectRatio: candidate.aspectRatio,
   };
-  if ("includeGenerateAudio" in candidate && candidate.includeGenerateAudio) generationInput.generateAudio = false;
+  if ("disableNativeAudio" in candidate && candidate.disableNativeAudio) generationInput.generateAudio = false;
   return { input: generationInput };
 }
 
@@ -866,12 +881,20 @@ export async function preflightBodyCinemaSourceVideo(input: {
   const memory = await getControlledModelAccessMemory(input.creatorId);
   const rejectedCandidates = CONTROLLED_SOURCE_VIDEO_LADDER
     .filter((candidate) => REJECTED_SOURCE_VIDEO_MODELS.has(candidate.modelKey));
-  const qualityExclusions = rejectedCandidates.length
-    ? [`Recorded Body Cinema quality rejection excludes: ${rejectedCandidates.map((candidate) => candidate.modelKey).join(", ")}.`]
-    : [];
+  const contractIncompatibleCandidates = CONTROLLED_SOURCE_VIDEO_LADDER
+    .filter((candidate) => CONTRACT_INCOMPATIBLE_SOURCE_VIDEO_MODELS.has(candidate.modelKey));
+  const qualityExclusions = [
+    ...(rejectedCandidates.length
+      ? [`Recorded Body Cinema quality rejection excludes: ${rejectedCandidates.map((candidate) => candidate.modelKey).join(", ")}.`]
+      : []),
+    ...(contractIncompatibleCandidates.length
+      ? [`Recorded provider-contract exclusion: ${contractIncompatibleCandidates.map((candidate) => candidate.modelKey).join(", ")}.`]
+      : []),
+  ];
   const candidates: ControlledSourceVideoCandidate[] = CONTROLLED_SOURCE_VIDEO_LADDER
     .filter((candidate) => catalogKeys.has(candidate.modelKey))
     .filter((candidate) => !REJECTED_SOURCE_VIDEO_MODELS.has(candidate.modelKey))
+    .filter((candidate) => !CONTRACT_INCOMPATIBLE_SOURCE_VIDEO_MODELS.has(candidate.modelKey))
     .map((candidate) => {
       const learning = memory.get(candidate.modelKey);
       const accessState = String(learning?.access_state || "unknown") as ControlledModelAccessState;
