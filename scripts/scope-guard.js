@@ -4,6 +4,10 @@ import { execSync } from 'child_process';
 
 // Task allowlists
 const ALLOWLISTS = {
+  'marketplace-hold': [
+    'client/src/pages/Marketplace.tsx',
+    'scripts/scope-guard.js'
+  ],
   'public-profile-hold': [
     'client/src/pages/PublicCreatorLanding.tsx',
     'scripts/scope-guard.js'
