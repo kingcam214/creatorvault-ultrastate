@@ -318,7 +318,7 @@ async function listAllExistingCreatorVideos(): Promise<ExistingVideoAsset[]> {
       const key = `${asset.creatorId}:${asset.sourceUrl}`;
       if (seen.has(key)) return false;
       seen.add(key);
-      return true;
+      return !derivedSourceReason(asset);
     })
     .slice(0, MAX_CANDIDATES);
 }
@@ -326,6 +326,26 @@ async function listAllExistingCreatorVideos(): Promise<ExistingVideoAsset[]> {
 function safeExtension(name: string): string {
   const extension = path.extname(name).toLowerCase();
   return [".mp4", ".mov", ".webm", ".mkv", ".avi", ".m4v"].includes(extension) ? extension : ".mp4";
+}
+
+function derivedSourceReason(asset: ExistingVideoAsset): string | null {
+  const source = asset.sourceUrl.toLowerCase();
+  const fileName = asset.fileName.toLowerCase();
+  if (source.includes("/uploads/renders/")) return "CreatorVault render outputs cannot be reused as Body Cinema source footage.";
+  if (/^(vaultx-edit|body-cinema|homepage-motion|motion-)/.test(fileName)) return "Known CreatorVault derived media cannot be reused as Body Cinema source footage.";
+  return null;
+}
+
+function sourceIntegrityRejections(asset: ExistingVideoAsset, video: { durationSeconds: number }, frameEvidence: BodyCinemaFrameEvidence[]): string[] {
+  const reasons: string[] = [];
+  const derived = derivedSourceReason(asset);
+  if (derived) reasons.push(derived);
+  if (video.durationSeconds < 4) reasons.push("Body Cinema requires at least four seconds of original recorded footage for source-motion review.");
+  const tail = frameEvidence.slice(-2);
+  if (tail.length === 2 && tail.every((frame) => Number(frame.brightness || 0) < 0.035)) {
+    reasons.push("The source ends in near-black frames and cannot support a protected Body Cinema finish.");
+  }
+  return reasons;
 }
 
 async function checksumFile(filePath: string): Promise<string> {
@@ -571,6 +591,8 @@ async function restorePersistedPreProviderAttestation(): Promise<boolean> {
     })();
     const sourceAssetId = metadataSourceAssetId || urlSourceAssetId;
     if (!evidenceId || !treatmentId || !sourceAssetId || !job.sourceChecksum) continue;
+    const restoredAsset = { id: sourceAssetId, creatorId: job.creatorId, sourceUrl: job.sourceUrl, storagePath: null, fileName: path.basename(new URL(job.sourceUrl).pathname), ownershipBasis: "media_asset_record" as const, declaredChecksum: null, durationSeconds: null, width: null, height: null, createdAt: null };
+    if (derivedSourceReason(restoredAsset)) continue;
     const evidence = await getBodyCinemaSourceEvidence(job.creatorId, evidenceId);
     if (!evidence || evidence.analysisStatus !== "verified" || evidence.reviewStatus !== "ready" || evidence.selectedDirectionId !== treatmentId) continue;
     if (evidence.sourceMediaUrl !== job.sourceUrl || evidence.sourceFingerprint !== job.sourceChecksum) continue;
@@ -619,6 +641,11 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
         const { localPath, sourceChecksum, sourceReadOrigin } = await downloadSource(asset, workspace);
         const video = await probeVideo(localPath);
         const frameEvidence = await buildFrameEvidence(localPath, video);
+        const integrityRejections = sourceIntegrityRejections(asset, video, frameEvidence);
+        if (integrityRejections.length) {
+          failures.push(`${asset.id}: ${integrityRejections.join(" ")}`);
+          continue;
+        }
         const evidence = await persistBodyCinemaSourceEvidence(asset.creatorId, {
           sourceMediaUrl: asset.sourceUrl,
           sourceType: "video",
