@@ -318,22 +318,21 @@ export function AgentRoster() {
                 </div>
               )}
 
-              {/* Run Button */}
-              <button
-                onClick={() => undefined}
-                disabled
+              {/* Truth boundary — deliberately not an action button */}
+              <div
+                role="status"
                 style={{
                   width: '100%',
-                  background: T.surface2,
+                  background: 'rgba(255,255,255,0.02)',
                   color: T.muted,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: 8, padding: '8px 0', fontSize: 12, fontWeight: 700,
-                  cursor: 'not-allowed',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  borderTop: `1px solid ${T.border}`,
+                  padding: '10px 0 0', fontSize: 11, lineHeight: 1.45,
+                  display: 'flex', alignItems: 'flex-start', gap: 7,
                 }}
               >
-                <><ShieldCheckIcon /> Not opened yet</>
-              </button>
+                <ShieldCheckIcon />
+                <span>This weapon has no finished CreatorVault result to show yet.</span>
+              </div>
             </div>
           );
         })}
