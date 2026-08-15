@@ -1,87 +1,18 @@
-import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { useLocation } from "wouter";
+import { Link } from "wouter";
 
 export default function PayoutSetup() {
-  const { user } = useAuth();
-  const [, setLocation] = useLocation();
-  // @ts-ignore
-  const [cashappHandle, setCashappHandle] = useState(user?.cashappHandle || "");
-  // @ts-ignore
-  const [paypalEmail, setPaypalEmail] = useState(user?.paypalEmail || "");
-
-  const updatePayoutMutation = trpc.auth.updateProfile.useMutation({
-    onSuccess: () => {
-      toast.success("Payout details saved!");
-      setLocation("/vaultlive");
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!cashappHandle && !paypalEmail) {
-      toast.error("Please enter at least one payout method");
-      return;
-    }
-
-    updatePayoutMutation.mutate({
-      cashappHandle: cashappHandle || undefined,
-      paypalEmail: paypalEmail || undefined,
-    });
-  };
-
   return (
-    <div className="container max-w-2xl py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Payout Setup</CardTitle>
-          <CardDescription>
-            Enter your payout details to receive earnings from VaultLive tips
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="cashapp">Cash App Handle (optional)</Label>
-              <Input
-                id="cashapp"
-                placeholder="$YourCashApp"
-                value={cashappHandle}
-                onChange={(e) => setCashappHandle(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="paypal">PayPal Email (optional)</Label>
-              <Input
-                id="paypal"
-                type="email"
-                placeholder="your@email.com"
-                value={paypalEmail}
-                onChange={(e) => setPaypalEmail(e.target.value)}
-              />
-            </div>
-
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={updatePayoutMutation.isPending}
-            >
-              {updatePayoutMutation.isPending ? "Saving..." : "Save & Continue to VaultLive"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <main className="flex min-h-screen items-center justify-center bg-[#070707] px-5 py-20 text-white">
+      <section className="w-full max-w-2xl overflow-hidden rounded-[2rem] border border-amber-200/20 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.16),transparent_42%),linear-gradient(145deg,#181208,#070707)] p-7 shadow-[0_28px_90px_-48px_rgba(245,158,11,.65)] sm:p-10">
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-200">CreatorVault money path</p>
+        <h1 className="mt-4 text-4xl font-black leading-[0.9] tracking-[-0.065em] sm:text-5xl">Payout setup is not open yet.</h1>
+        <p className="mt-6 max-w-xl text-base leading-relaxed text-zinc-300">CreatorVault will not collect a Cash App handle, PayPal address, or any payout detail until the full money path is real: payment received, access delivered, earnings recorded, and payout completed safely.</p>
+        <div className="mt-7 rounded-2xl border border-white/10 bg-black/25 p-5">
+          <p className="text-sm font-black text-white">What stays protected</p>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-400">No financial detail is being saved here, and no tip or payout is being promised. The payout room returns only when that entire chain can be proven in real life.</p>
+        </div>
+        <Link href="/demos-home"><a className="mt-7 inline-flex min-h-12 items-center justify-center rounded-xl bg-amber-200 px-5 text-sm font-black text-black transition hover:bg-white">Watch accepted CreatorVault work</a></Link>
+      </section>
+    </main>
   );
 }
