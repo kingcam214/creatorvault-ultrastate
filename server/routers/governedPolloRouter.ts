@@ -212,6 +212,28 @@ export const governedPolloRouter = router({
     return getLatestControlledSourceVideoAttemptDetail(ctx.user.id);
   }),
 
+  existingReplicateAccountAccess: protectedProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    const token = String(process.env.REPLICATE_API_TOKEN || "").trim();
+    if (!token) return { configured: false, reachable: false, provider: "replicate", message: "No existing Replicate runtime credential is configured for CreatorVault." };
+    try {
+      const response = await fetch("https://api.replicate.com/v1/account", {
+        headers: { Authorization: `Token ${token}`, Accept: "application/json" },
+      });
+      return {
+        configured: true,
+        reachable: response.ok,
+        provider: "replicate",
+        statusCode: response.status,
+        message: response.ok
+          ? "Existing Replicate account access is available for a separate governed capability review."
+          : "Existing Replicate credential did not receive account access.",
+      };
+    } catch {
+      return { configured: true, reachable: false, provider: "replicate", message: "Existing Replicate account could not be reached from CreatorVault." };
+    }
+  }),
+
   preflightSourceVideo: protectedProcedure.input(z.object({
     creatorId: z.number().int().positive().optional(),
     evidenceId: z.string().uuid(),
