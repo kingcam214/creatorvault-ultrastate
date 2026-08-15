@@ -119,12 +119,13 @@ function MonetizationGauge({ profile }: { profile: any }) {
 }
 
 // ── Product Card (Showcase tab) ───────────────────────────────────────────────
-function ProductCard({ product, onBuy }: { product: any; onBuy: (p: any) => void }) {
+function ProductCard({ product, onSelect }: { product: any; onSelect: (p: any) => void }) {
   return (
-    <div
-      className="cursor-pointer group"
+    <button
+      type="button"
+      className="group w-full text-left"
       style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: "2px", overflow: "hidden" }}
-      onClick={() => onBuy(product)}
+      onClick={() => onSelect(product)}
     >
       <div className="aspect-square relative" style={{ background: T.surfaceHigh }}>
         {product.main_image ? (
@@ -134,94 +135,32 @@ function ProductCard({ product, onBuy }: { product: any; onBuy: (p: any) => void
             <ShoppingBag className="w-8 h-8" style={{ color: T.textMuted }} />
           </div>
         )}
-        <div
-          className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ background: "rgba(0,0,0,0.6)" }}
-        >
-          <button
-            className="px-4 py-2 text-xs font-bold uppercase tracking-widest"
-            style={{ background: T.gold, color: "#0a0a0a", borderRadius: "2px" }}
-          >
-            Acquire
-          </button>
-        </div>
       </div>
       <div className="p-3">
-        <p className="text-sm font-semibold truncate mb-1" style={{ color: T.text }}>{product.title}</p>
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-bold" style={{ color: T.gold, fontFamily: "Playfair Display, serif" }}>
-            ${(product.price_amount / 100).toFixed(0)}
-          </span>
-          <span className="text-xs" style={{ color: T.textMuted }}>
-            {product.sales_count ?? 0} sold
-          </span>
-        </div>
+        <p className="text-sm font-semibold truncate" style={{ color: T.text }}>{product.title}</p>
+        <p className="mt-2 text-xs font-bold uppercase tracking-widest" style={{ color: T.gold }}>Saved listing · not open for sale</p>
       </div>
-    </div>
+    </button>
   );
 }
 
 // ── Course Card (Vault tab) ───────────────────────────────────────────────────
 function CourseCard({ course }: { course: any }) {
   return (
-    <div
-      style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: "2px", overflow: "hidden" }}
-    >
-      <div className="aspect-video relative" style={{ background: T.surfaceHigh }}>
-        {course.intro_video_url || course.promo_video_url ? (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div
-              className="w-12 h-12 flex items-center justify-center"
-              style={{ background: "rgba(0,0,0,0.7)", border: `1px solid ${T.border}`, borderRadius: "2px" }}
-            >
-              <Play className="w-4 h-4" style={{ color: T.text }} />
-            </div>
-          </div>
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <BookOpen className="w-8 h-8" style={{ color: T.textMuted }} />
-          </div>
-        )}
-        {course.is_free && (
-          <div
-            className="absolute top-2 right-2 px-2 py-0.5 text-xs font-bold uppercase tracking-widest"
-            style={{ background: "#00c896", color: "#0a0a0a", borderRadius: "2px" }}
-          >
-            Free
-          </div>
-        )}
+    <article style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: "2px", overflow: "hidden" }}>
+      <div className="flex aspect-video items-center justify-center" style={{ background: T.surfaceHigh }}>
+        <BookOpen className="w-8 h-8" style={{ color: T.textMuted }} />
       </div>
       <div className="p-3">
-        <p className="text-sm font-semibold mb-1" style={{ color: T.text }}>{course.title}</p>
-        <div className="flex items-center justify-between">
-          <span className="text-xs" style={{ color: T.textMuted }}>
-            {course.estimated_duration_minutes ? `${course.estimated_duration_minutes} min` : "Self-paced"}
-          </span>
-          {!course.is_free && (
-            <span className="text-sm font-bold" style={{ color: T.gold, fontFamily: "Playfair Display, serif" }}>
-              ${(course.price_amount / 100).toFixed(0)}
-            </span>
-          )}
-        </div>
+        <p className="text-sm font-semibold" style={{ color: T.text }}>{course.title}</p>
+        <p className="mt-2 text-xs font-bold uppercase tracking-widest" style={{ color: T.gold }}>Saved course idea · not open for enrollment</p>
       </div>
-    </div>
+    </article>
   );
 }
 
 // ── Purchase Drawer ──────────────────────────────────────────────────────────
 function PurchaseDrawer({ product, onClose }: { product: any; onClose: () => void }) {
-  const createCheckout = trpc.marketplace.createCheckoutSession?.useMutation?.();
-
-  const handlePurchase = async () => {
-    if (!createCheckout) return;
-    try {
-      const result = await createCheckout.mutateAsync({ productId: product.id });
-      if (result?.url) window.location.href = result.url;
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center"
@@ -231,35 +170,20 @@ function PurchaseDrawer({ product, onClose }: { product: any; onClose: () => voi
       <div
         className="w-full max-w-lg rounded-t-2xl p-6"
         style={{ background: T.surface, border: `1px solid ${T.border}`, borderBottom: "none" }}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
       >
         <div className="w-10 h-1 rounded-full mx-auto mb-6" style={{ background: T.border }} />
-        <div className="flex gap-4 mb-6">
-          {product.main_image && (
-            <img src={product.main_image} alt={product.title} className="w-20 h-20 object-cover rounded" style={{ border: `1px solid ${T.border}` }} />
-          )}
-          <div className="flex-1">
-            <p className="text-xs uppercase tracking-widest mb-1" style={{ color: T.gold }}>Digital Product</p>
-            <h3 className="text-lg font-bold mb-1" style={{ color: T.text, fontFamily: "Playfair Display, serif" }}>{product.title}</h3>
-            <p className="text-sm" style={{ color: T.textMuted }}>{product.short_description}</p>
-          </div>
-        </div>
-        <div className="flex items-center justify-between mb-6 py-4" style={{ borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}` }}>
-          <span style={{ color: T.textMuted }}>Total</span>
-          <span className="text-2xl font-bold" style={{ color: T.text, fontFamily: "Playfair Display, serif" }}>
-            ${(product.price_amount / 100).toFixed(2)}
-          </span>
-        </div>
+        <p className="text-xs uppercase tracking-widest mb-2" style={{ color: T.gold }}>Saved listing</p>
+        <h3 className="text-lg font-bold" style={{ color: T.text, fontFamily: "Playfair Display, serif" }}>{product.title}</h3>
+        <p className="mt-4 text-sm leading-relaxed" style={{ color: T.textMuted }}>This listing is saved with the creator, but it is not open for sale. CreatorVault will not collect money or promise delivery from this room until the full payment, access, and payout path is proven.</p>
         <button
-          onClick={handlePurchase}
-          className="w-full py-4 font-bold text-sm uppercase tracking-widest transition-opacity hover:opacity-90"
+          type="button"
+          onClick={onClose}
+          className="mt-6 w-full py-4 font-bold text-sm uppercase tracking-widest"
           style={{ background: T.gold, color: "#0a0a0a", borderRadius: "2px" }}
         >
-          Acquire Now
+          Back to profile
         </button>
-        <p className="text-center text-xs mt-3" style={{ color: T.textMuted }}>
-          Secure checkout via Stripe · Instant delivery
-        </p>
       </div>
     </div>
   );
@@ -397,20 +321,9 @@ export default function CreatorProfilePage() {
                 Edit Profile
               </button>
             ) : (
-              <>
-                <button
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-widest"
-                  style={{ background: T.gold, color: "#0a0a0a", borderRadius: "2px" }}
-                >
-                  Follow
-                </button>
-                <button
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-widest"
-                  style={{ border: `1px solid ${T.border}`, color: T.text, borderRadius: "2px" }}
-                >
-                  Message
-                </button>
-              </>
+              <p className="max-w-xs text-right text-xs leading-relaxed" style={{ color: T.textMuted }}>
+                Following and private messages open only when CreatorVault can prove the real connection behind them.
+              </p>
             )}
           </div>
         </div>
@@ -548,20 +461,12 @@ export default function CreatorProfilePage() {
                     <p className="text-lg mb-2" style={{ color: T.text, fontFamily: "Playfair Display, serif" }}>
                       No products live yet.
                     </p>
-                    {isOwnProfile && (
-                      <button
-                        onClick={() => navigate("/marketplace/create")}
-                        className="mt-4 px-6 py-2.5 text-xs font-bold uppercase tracking-widest"
-                        style={{ background: T.gold, color: "#0a0a0a", borderRadius: "2px" }}
-                      >
-                        Create Your First Product
-                      </button>
-                    )}
+                    {isOwnProfile && <p className="mt-4 text-sm leading-relaxed" style={{ color: T.textMuted }}>Product creation stays closed until a real purchase and delivery path is ready.</p>}
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {creatorProducts.map((p: any) => (
-                      <ProductCard key={p.id} product={p} onBuy={setSelectedProduct} />
+                      <ProductCard key={p.id} product={p} onSelect={setSelectedProduct} />
                     ))}
                   </div>
                 )}
@@ -579,15 +484,7 @@ export default function CreatorProfilePage() {
                     <p className="text-lg mb-2" style={{ color: T.text, fontFamily: "Playfair Display, serif" }}>
                       No courses published yet.
                     </p>
-                    {isOwnProfile && (
-                      <button
-                        onClick={() => navigate("/university/create")}
-                        className="mt-4 px-6 py-2.5 text-xs font-bold uppercase tracking-widest"
-                        style={{ background: T.gold, color: "#0a0a0a", borderRadius: "2px" }}
-                      >
-                        Create a Course
-                      </button>
-                    )}
+                    {isOwnProfile && <p className="mt-4 text-sm leading-relaxed" style={{ color: T.textMuted }}>Course creation stays closed until real enrollment and delivery are ready.</p>}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
