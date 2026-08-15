@@ -306,6 +306,18 @@ export const governedPolloRouter = router({
     const creatorId = input.creatorId ?? ctx.user.id;
     if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
     try {
+      const hasKeyframeUrl = Boolean(input.keyframeUrl);
+      const hasKeyframeTimestamp = input.keyframeTimestampSeconds !== undefined;
+      if (hasKeyframeUrl !== hasKeyframeTimestamp) {
+        throw new Error("A protected Runway keyframe needs both its signed image link and exact source moment.");
+      }
+      if (input.keyframeUrl) {
+        const keyframe = new URL(input.keyframeUrl);
+        const signedRunwayKeyframe = keyframe.hostname === "dnznrvs05pmza.cloudfront.net" && keyframe.searchParams.has("_jwt");
+        if (!signedRunwayKeyframe) {
+          throw new Error("The protected Runway keyframe link is incomplete. Create a fresh reviewed keyframe before a video can be prepared.");
+        }
+      }
       const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
       const editBlueprint = await getOrCreateBodyCinemaEditBlueprint({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
       if (input.editBlueprintId && input.editBlueprintId !== editBlueprint.id) {
