@@ -35,6 +35,7 @@ import {
 } from "../services/bodyCinemaSourceMapService";
 import { getBodyCinemaSavedSourceInventory } from "../services/bodyCinemaExistingMediaProofService";
 import { buildBodyCinemaAssemblyRecipe } from "../services/bodyCinemaAssemblyRecipe";
+import { getOrCreateBodyCinemaEditBlueprint } from "../services/bodyCinemaEditBlueprintService";
 import { buildAudioDirectedTimeline } from "../services/audioTimelinePlanner";
 import { getCanonicalAudioAsset } from "../services/audioIntelligenceService";
 import { startRender } from "../services/realRenderEngine";
@@ -125,6 +126,21 @@ export const bodyCinemaRouter = router({
     const evidence = await getBodyCinemaSourceEvidence(creatorId, input.evidenceId);
     if (!evidence) throw new TRPCError({ code: "NOT_FOUND", message: "Body Cinema source evidence was not found." });
     return { ...evidence, sourceMap: await getBodyCinemaSourceMap(creatorId, input.evidenceId) };
+  }),
+
+  getEditBlueprint: protectedProcedure.input(z.object({
+    evidenceId: z.string().uuid(),
+    sourceMediaUrl: z.string().url(),
+  })).query(async ({ ctx, input }) => {
+    try {
+      return await getOrCreateBodyCinemaEditBlueprint({
+        creatorId: Number(ctx.user.id),
+        evidenceId: input.evidenceId,
+        sourceMediaUrl: input.sourceMediaUrl,
+      });
+    } catch (error: any) {
+      throw evidencePrecondition(error?.message || "Body Cinema could not prepare this source-backed edit blueprint.");
+    }
   }),
 
   invalidateSourceEvidence: protectedProcedure.input(z.object({
