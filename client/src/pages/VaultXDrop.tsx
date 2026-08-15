@@ -863,7 +863,7 @@ export default function VaultXDrop() {
             <div style={{ textAlign: "center", marginBottom: 20 }}>
               <div style={{ width: 58, height: 58, borderRadius: 19, background: currentStatus.tone === "ready" ? "rgba(69,227,138,0.13)" : currentStatus.tone === "failed" ? "rgba(255,124,124,0.11)" : GOLD_DIM, border: `1px solid ${currentStatus.tone === "ready" ? "rgba(69,227,138,0.42)" : currentStatus.tone === "failed" ? "rgba(255,124,124,0.35)" : GOLD_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>{currentStatus.tone === "ready" ? <Check size={25} color={GREEN} /> : currentStatus.tone === "failed" ? <ShieldCheck size={25} color={RED} /> : <Loader2 size={25} color={GOLD} className="body-cinema-spin" />}</div>
               <p style={{ fontSize: 10, color: currentStatus.tone === "ready" ? GREEN : currentStatus.tone === "failed" ? RED : GOLD, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", margin: "0 0 6px" }}>{currentStatus.label}</p>
-              <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 35, letterSpacing: "0.035em", margin: "0 0 7px" }}>{acceptedAsset ? "Asset accepted." : "Your request is protected."}</h2>
+              <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 35, letterSpacing: "0.035em", margin: "0 0 7px" }}>{acceptedAsset ? "Your finished drop passed." : "Your footage is protected."}</h2>
               <p style={{ color: MUTED, fontSize: 12, lineHeight: 1.55, margin: 0 }}>{currentStatus.detail}</p>
             </div>
             <div style={{ position: "relative", borderRadius: 24, overflow: "hidden", background: "#000", aspectRatio: "9/16", maxHeight: 560, margin: "0 auto 24px", border: `1px solid ${BORDER}`, boxShadow: "0 20px 40px rgba(0,0,0,0.6)" }}>
@@ -895,27 +895,16 @@ export default function VaultXDrop() {
             </div>}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 16 }}><button type="button" className="body-cinema-button" onClick={handleDownload} disabled={!acceptedAsset} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${acceptedAsset ? GOLD_BORDER : BORDER}`, background: acceptedAsset ? GOLD_DIM : CARD, color: acceptedAsset ? GOLD : MUTED, fontWeight: 800, cursor: acceptedAsset ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><Download size={16} /> Download</button><button type="button" className="body-cinema-button" onClick={reuseSource} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${BORDER}`, background: CARD, color: "#fff", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><RotateCcw size={16} /> Reuse source</button></div>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, padding: "10px 20px", marginBottom: 20, boxShadow: "0 4px 15px rgba(0,0,0,0.2)" }}>
-              <StatusRow label="Source Ownership" value="Verified & Bound" state="ready" />
+              <StatusRow label="Your footage" value="Verified original" state="ready" />
               {currentJob.audioAssetId && <StatusRow label="Music Direction" value="Rights verified" state="ready" />}
-              <StatusRow label="Production Status" value={currentJob.state.replace(/_/g, " ")} state={currentStatus.tone} />
-              <StatusRow label="Cost Cap" value={currentJob.estimatedCostCredits ? `${currentJob.estimatedCostCredits} credits` : "Awaiting Approval"} state={currentJob.estimatedCostCredits ? "working" : "locked"} />
+              <StatusRow label="Your drop" value={currentStatus.label} state={currentStatus.tone} />
+              <StatusRow label="Creation budget" value={currentJob.estimatedCostCredits ? "Set for this drop" : "Not set yet"} state={currentJob.estimatedCostCredits ? "working" : "locked"} />
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "14px 0" }}><span style={{ fontSize: 13, color: MUTED }}>Sales & Distribution</span><span style={{ fontSize: 13, color: MUTED, fontWeight: 800 }}>Requires Final Creator Review</span></div>
             </div>
             
             <div style={{ background: `linear-gradient(145deg, ${CARD_SOFT}, ${CARD})`, border: `1px solid ${GOLD_BORDER}`, borderRadius: 20, padding: "20px", marginBottom: 20, boxShadow: "0 8px 24px rgba(213,183,96,0.08)" }}>
-              <p style={{ fontSize: 11, color: GOLD, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", margin: "0 0 8px", display: "flex", alignItems: "center", gap: 6 }}><ShieldCheck size={14} /> Immutable Production Record</p>
-              <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, margin: "0 0 16px" }}>This production plan is locked. Your identity, source framing, and chosen cinematic treatment cannot be altered or retried without your explicit consent.</p>
-              <div style={{ display: "grid", gap: 10, fontSize: 12, color: MUTED, background: "rgba(0,0,0,0.4)", padding: 16, borderRadius: 12, border: `1px solid ${BORDER}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff", fontWeight: 800 }}>Plan ID</span><span style={{ fontFamily: "monospace", color: GOLD }}>{currentJob.requestId.slice(0, 12)}...</span></div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff", fontWeight: 800 }}>Security Fingerprint</span><span style={{ fontFamily: "monospace", color: GOLD }}>{currentJob.fingerprint.slice(0, 12)}...</span></div>
-                {currentJob.costEvidenceReference && <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff", fontWeight: 800 }}>Cost Evidence</span><span style={{ fontFamily: "monospace", color: GREEN }}>Verified</span></div>}
-                {currentJob.qualityReason && <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}><span style={{ color: "#fff", fontWeight: 800, display: "block", marginBottom: 4 }}>Quality Review</span>{currentJob.qualityReason}</div>}
-                {currentJob.failureMessage && <div style={{ color: RED, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}><span style={{ fontWeight: 800, display: "block", marginBottom: 4 }}>Safe Failure</span>{currentJob.failureMessage}</div>}
-              </div>
-              <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                {typeof currentJob?.id === "number" && currentJob.id > 0 ? <a href={`/vault-x/library/${currentJob.id}`} style={{ color: GOLD, fontSize: 11, fontWeight: 800, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}><ShieldCheck size={12} /> View Truth Library Record</a> : <span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Creation record saved</span>}
-                <CopyButton text={currentJob.requestId} label="Copy Plan ID" />
-              </div>
+              <p style={{ fontSize: 11, color: GOLD, fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase", margin: "0 0 8px", display: "flex", alignItems: "center", gap: 6 }}><ShieldCheck size={14} /> Your creation promise</p>
+              <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, margin: 0 }}>CreatorVault keeps your original footage, framing, and chosen direction together. Nothing is remade or changed behind your back.</p>
             </div>
           </section>
         )}
