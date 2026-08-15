@@ -8,13 +8,12 @@ function isVideo(asset: MediaAssetItem) {
   return asset.assetType === "video" || Boolean(asset.mimeType?.startsWith("video/"));
 }
 
-function isLockedKingCamHero(asset: MediaAssetItem) {
-  const reference = [asset.publicUrl, asset.fileName, asset.originalName].filter(Boolean).join(" ").toLowerCase();
-  return reference.includes("/videos/kingcam-hero-cam.mp4") || reference.includes("kingcam-continuous-hero-loop");
-}
-
 function isEligibleDubbingSource(asset: MediaAssetItem) {
-  return isVideo(asset) && Boolean(asset.publicUrl) && !isLockedKingCamHero(asset);
+  const sourceUrl = String(asset.publicUrl || "").trim();
+  const reference = [sourceUrl, asset.fileName, asset.originalName].filter(Boolean).join(" ").toLowerCase();
+  const isCreatorVaultHosted = /^(?:https:\/\/creatorvault\.live\/(?:uploads|videos)\/|\/(?:uploads|videos)\/)/i.test(sourceUrl);
+  const hasReadableMediaFacts = Number(asset.duration || 0) > 0 && Number(asset.width || 0) > 0 && Number(asset.height || 0) > 0;
+  return isVideo(asset) && isCreatorVaultHosted && hasReadableMediaFacts && !reference.includes("kingcam");
 }
 
 function videoPoster(asset: MediaAssetItem) {
