@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
-import { listCanonicalAudioAssets } from "../services/audioIntelligenceService";
+import { getAudioAnalysis, listCanonicalAudioAssets } from "../services/audioIntelligenceService";
 
-function toLibraryTrack(asset: Awaited<ReturnType<typeof listCanonicalAudioAssets>>[number]) {
+async function toLibraryTrack(asset: Awaited<ReturnType<typeof listCanonicalAudioAssets>>[number]) {
+  const analysis = await getAudioAnalysis(asset.creatorId, asset.id);
   return {
     id: asset.id,
     title: asset.title,
@@ -16,13 +17,15 @@ function toLibraryTrack(asset: Awaited<ReturnType<typeof listCanonicalAudioAsset
     attributionRequired: asset.rights.attributionRequired,
     attributionText: asset.rights.attributionText,
     status: asset.status,
+    bpm: analysis?.bpm ?? null,
+    timingState: analysis?.analysisStatus ?? "not_recorded",
   };
 }
 
 export const musicLibrary = router({
   getLibrary: protectedProcedure.query(async ({ ctx }) => {
     const assets = await listCanonicalAudioAssets(Number(ctx.user.id));
-    return { tracks: assets.map(toLibraryTrack), playlists: [], userId: ctx.user.id };
+    return { tracks: await Promise.all(assets.map(toLibraryTrack)), playlists: [], userId: ctx.user.id };
   }),
 
   searchLibrary: protectedProcedure
@@ -30,14 +33,21 @@ export const musicLibrary = router({
     .query(async ({ ctx, input }) => {
       const normalized = input.query.toLocaleLowerCase();
       const assets = await listCanonicalAudioAssets(Number(ctx.user.id));
-      return { results: assets.filter(asset => asset.title.toLocaleLowerCase().includes(normalized)).map(toLibraryTrack), query: input.query };
+      const tracks = await Promise.all(
+        assets
+          .filter(asset => asset.title.toLocaleLowerCase().includes(normalized))
+          .map(toLibraryTrack),
+      );
+      return { results: tracks, query: input.query };
     }),
 
   getLicensedTracks: protectedProcedure.query(async ({ ctx }) => {
     const assets = await listCanonicalAudioAssets(Number(ctx.user.id));
-    const tracks = assets
-      .filter(asset => asset.rights.state === "creator_owned" || asset.rights.state === "licensed_for_creation")
-      .map(toLibraryTrack);
+    const tracks = await Promise.all(
+      assets
+        .filter(asset => asset.rights.state === "creator_owned" || asset.rights.state === "licensed_for_creation")
+        .map(toLibraryTrack),
+    );
     return {
       tracks,
       message: tracks.length

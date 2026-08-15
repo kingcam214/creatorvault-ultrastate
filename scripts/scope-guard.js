@@ -291,6 +291,7 @@ const ALLOWLISTS = {
     'client/src/pages/VaultXEditor.tsx',
     'client/src/pages/VaultXDrop.tsx',
     'client/src/pages/SocialHub.tsx',
+    'client/src/pages/MusicLibraryAgent.tsx',
     'package.json',
     'pnpm-lock.yaml',
     'scripts/scope-guard.js'
