@@ -33,6 +33,7 @@ import {
   getBodyCinemaSourceMap,
   persistBodyCinemaSourceMap,
 } from "../services/bodyCinemaSourceMapService";
+import { getBodyCinemaSavedSourceInventory } from "../services/bodyCinemaExistingMediaProofService";
 import { buildBodyCinemaAssemblyRecipe } from "../services/bodyCinemaAssemblyRecipe";
 import { buildAudioDirectedTimeline } from "../services/audioTimelinePlanner";
 import { getCanonicalAudioAsset } from "../services/audioIntelligenceService";
@@ -86,6 +87,13 @@ function evidencePrecondition(message: string): TRPCError {
 }
 
 export const bodyCinemaRouter = router({
+  savedSourceInventory: protectedProcedure.query(async ({ ctx }) => {
+    if (![6, 33].includes(Number(ctx.user.id))) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "This private source inventory is reserved for the owner workspace." });
+    }
+    return getBodyCinemaSavedSourceInventory();
+  }),
+
   getProviders: protectedProcedure.query(() => {
     return cinemaRouter.getProviders().map(p => ({
       name: p.name,

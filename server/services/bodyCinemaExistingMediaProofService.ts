@@ -47,6 +47,7 @@ type ExistingVideoAsset = {
   width: number | null;
   height: number | null;
   createdAt: string | null;
+  sourceType?: string | null;
 };
 
 type PreProviderAttestation = {
@@ -120,7 +121,7 @@ async function queryRows<T = any>(query: string, values: unknown[] = []): Promis
 async function listExistingCreatorVideos(): Promise<ExistingVideoAsset[]> {
   const placeholders = OWNER_CREATOR_IDS.map(() => "?").join(", ");
   const rows = await queryRows<any>(
-    `SELECT id, user_id, public_url, storage_path, file_name, original_name, duration, width, height, created_at
+    `SELECT id, user_id, public_url, storage_path, file_name, original_name, source_type, duration, width, height, created_at
        FROM media_assets
       WHERE user_id IN (${placeholders})
         AND status = 'ready'
@@ -143,6 +144,7 @@ async function listExistingCreatorVideos(): Promise<ExistingVideoAsset[]> {
     width: row.width === null || row.width === undefined ? null : Number(row.width),
     height: row.height === null || row.height === undefined ? null : Number(row.height),
     createdAt: row.created_at ? String(row.created_at) : null,
+    sourceType: row.source_type ? String(row.source_type) : null,
   }));
 }
 
@@ -774,4 +776,62 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
     updateAttestation({ state: "failed", rejectionSummary: error instanceof Error ? error.message : String(error) });
     return getBodyCinemaPreProviderAttestation();
   }
+}
+
+export type BodyCinemaSavedSourceInventoryItem = {
+  sourceAssetId: string;
+  creatorId: number;
+  sourceUrl: string;
+  fileName: string;
+  ownershipBasis: ExistingVideoAsset["ownershipBasis"];
+  sourceType: string | null;
+  classification: "generated" | "derived_or_protected" | "unclassified_creator_media" | "candidate_pending_private_review";
+  eligibility: "ineligible" | "pending_private_review";
+  reasons: string[];
+  createdAt: string | null;
+};
+
+async function listAllSavedCreatorVideosForInventory(): Promise<ExistingVideoAsset[]> {
+  const [mediaAssets, contentAssets, cloneTrainingAssets, vaultxContentAssets, receiptAssets] = await Promise.all([
+    listExistingCreatorVideos(), listCreatorContentVideos(), listCloneTrainingVideos(), listVaultxCreatorVideos(), listVerifiedDirectUploadVideos(),
+  ]);
+  const seen = new Set<string>();
+  return [...mediaAssets, ...contentAssets, ...cloneTrainingAssets, ...vaultxContentAssets, ...receiptAssets]
+    .sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))
+    .filter((asset) => {
+      const key = `${asset.creatorId}:${asset.sourceUrl}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function inventoryItem(asset: ExistingVideoAsset): BodyCinemaSavedSourceInventoryItem {
+  const reasons = [excludedSourceReason(asset)].filter((reason): reason is string => Boolean(reason));
+  if (String(asset.sourceType || "").toLowerCase() === "generated") reasons.push("This Media Vault record is classified as generated media, not original creator footage.");
+  const verifiedReceipt = asset.ownershipBasis === "verified_upload_receipt" && Boolean(asset.declaredChecksum);
+  if (!verifiedReceipt && !reasons.length) reasons.push("This saved video is creator-linked but lacks the verified direct-upload receipt required for automatic Body Cinema use.");
+  const eligible = verifiedReceipt && !reasons.length;
+  return {
+    sourceAssetId: asset.id,
+    creatorId: asset.creatorId,
+    sourceUrl: asset.sourceUrl,
+    fileName: asset.fileName,
+    ownershipBasis: asset.ownershipBasis,
+    sourceType: asset.sourceType || null,
+    classification: String(asset.sourceType || "").toLowerCase() === "generated"
+      ? "generated"
+      : reasons.some((reason) => /protected|render|demo|showcase|pilot|sample|test|placeholder/i.test(reason))
+        ? "derived_or_protected"
+        : eligible
+          ? "candidate_pending_private_review"
+          : "unclassified_creator_media",
+    eligibility: eligible ? "pending_private_review" : "ineligible",
+    reasons,
+    createdAt: asset.createdAt,
+  };
+}
+
+export async function getBodyCinemaSavedSourceInventory(): Promise<BodyCinemaSavedSourceInventoryItem[]> {
+  return (await listAllSavedCreatorVideosForInventory()).map(inventoryItem);
 }
