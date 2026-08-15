@@ -207,10 +207,11 @@ export const cloneEmpireRouter = router({
     contentType: z.string().default("all"),
   })).query(async ({ ctx, input }) => {
     const db = await getDb();
+    const limit = Math.max(1, Math.min(50, Math.floor(input.limit)));
+    const offset = Math.max(0, Math.floor(input.offset));
     try {
-      const [vr] = await db.execute(
-        "SELECT id, title, script, style, video_url, audio_url, thumbnail_url, render_status, render_provider, duration_seconds, created_at FROM kingcam_clone_videos WHERE render_status = 'ready' AND video_url IS NOT NULL AND video_url <> '' AND video_url NOT LIKE 'https://replicate.delivery/%' ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        [input.limit, input.offset],
+      const [vr] = await db.query(
+        `SELECT id, title, script, style, video_url, audio_url, thumbnail_url, render_status, render_provider, duration_seconds, created_at FROM kingcam_clone_videos WHERE render_status = 'ready' AND video_url IS NOT NULL AND video_url <> '' AND video_url NOT LIKE 'https://replicate.delivery/%' ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`,
       );
       const [sr] = await db.execute("SELECT id, title, script_text as script, genre as style, status, created_at FROM script_projects WHERE user_id = ? ORDER BY created_at DESC LIMIT 20", [ctx.user.id]);
       const videos = extractRows([vr]);
