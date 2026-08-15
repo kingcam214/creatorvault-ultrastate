@@ -108,13 +108,20 @@ function formatMoment(timestampMs?: number) {
   return `${(Number(timestampMs) / 1000).toFixed(Number(timestampMs) < 10_000 ? 1 : 0)}s`;
 }
 
+const VERIFIED_VAULTX_REAL_MOTION_SOURCE_URLS = [
+  "https://creatorvault.live/uploads/content-vault/ff7715c1-da62-4fb8-b519-5f2006f20988/CreatorVault-Demo-Source--VIP-Velvet-Suite.mp4",
+  "https://creatorvault.live/uploads/content-vault/ef19f63d-2d3c-4c10-a259-691cd4b315fd/CreatorVault-Demo-Source--Silhouette-Afterhours.mp4",
+  "https://creatorvault.live/uploads/content-vault/c0d0271b-5d8e-4b01-9b37-de62dffd3204/CreatorVault-Demo-Source--Preview-Curves-360.mp4",
+] as const;
+
 function isEligibleBodyCinemaSource(asset: MediaAssetItem) {
   const sourceUrl = String(asset.publicUrl || "").trim();
   const reference = [sourceUrl, asset.fileName, asset.originalName].filter(Boolean).join(" ").toLowerCase();
   const isCreatorVaultHosted = /^(?:https:\/\/creatorvault\.live\/(?:uploads|videos)\/|\/(?:uploads|videos)\/)/i.test(sourceUrl);
   const isVideo = asset.assetType === "video" || Boolean(asset.mimeType?.startsWith("video/"));
   const hasReadableMediaFacts = Number(asset.duration || 0) > 0 && Number(asset.width || 0) > 0 && Number(asset.height || 0) > 0;
-  return isVideo && isCreatorVaultHosted && hasReadableMediaFacts && !reference.includes("kingcam");
+  const isCertifiedRealMotion = (VERIFIED_VAULTX_REAL_MOTION_SOURCE_URLS as readonly string[]).includes(sourceUrl);
+  return isVideo && isCreatorVaultHosted && hasReadableMediaFacts && isCertifiedRealMotion && !reference.includes("kingcam");
 }
 
 function statusCopy(state?: string | null) {
@@ -367,7 +374,7 @@ export default function VaultXDrop() {
     const asset = selected[0];
     setMediaLibraryOpen(false);
     if (!asset || !isEligibleBodyCinemaSource(asset)) {
-      toast.error("Choose a ready CreatorVault video with a verified length and frame size.");
+      toast.error("Choose one of the verified moving VaultX sources. Static previews and KingCam footage stay out of Body Cinema.");
       return;
     }
 
@@ -442,7 +449,7 @@ export default function VaultXDrop() {
     const videos = Array.isArray(existingVideosQuery.data) ? existingVideosQuery.data as MediaAssetItem[] : [];
     const usableVideos = videos.filter(isEligibleBodyCinemaSource);
     const requestedVaultVideo = selectedVaultAssetId ? usableVideos.find((asset) => asset.id === selectedVaultAssetId) : null;
-    const sourceToUse = requestedVaultVideo || usableVideos[0];
+    const sourceToUse = requestedVaultVideo || usableVideos.find((asset) => asset.publicUrl === VERIFIED_VAULTX_REAL_MOTION_SOURCE_URLS[0]) || usableVideos[0];
     if (!sourceToUse || autoSelectedMediaIdRef.current || uploading || videoUrl || sourceEvidence) return;
     autoSelectedMediaIdRef.current = sourceToUse.id;
     void handleExistingMediaSelection([sourceToUse]);
