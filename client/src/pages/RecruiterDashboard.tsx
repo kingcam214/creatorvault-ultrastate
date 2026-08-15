@@ -1,128 +1,18 @@
-/**
- * Emma Network Recruiter Dashboard
- * Track commissions, recruited creators, and payouts
- */
-
-import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { Link } from "wouter";
 
 export default function RecruiterDashboard() {
-  // @ts-ignore
-  const { data: stats } = trpc.recruiterCommissions.getStats.useQuery();
-  // @ts-ignore
-  const { data: unpaid } = trpc.recruiterCommissions.getUnpaid.useQuery();
-  
-  // @ts-ignore
-  const requestPayoutMutation = trpc.recruiterCommissions.requestPayout.useMutation({
-    onSuccess: () => {
-      toast.success("Payout requested");
-    },
-  // @ts-ignore
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
-
   return (
-    <div className="container py-8 space-y-8">
-      <div>
-        <h1 className="text-4xl font-bold">Emma Network Recruiter Dashboard</h1>
-        <p className="text-muted-foreground mt-2">
-          Track your commissions and recruited creators
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Total Earned</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">${((stats?.totalEarned || 0) / 100).toFixed(2)}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Unpaid Balance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">
-              ${((stats?.unpaidBalance || 0) / 100).toFixed(2)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Recruited Creators</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats?.recruitedCreators || 0}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Commission Rate</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">2%</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Unpaid Commissions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Unpaid Commissions</CardTitle>
-          <CardDescription>Request payout when ready</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!unpaid || unpaid.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              No unpaid commissions yet
-            </p>
-          ) : (
-            <>
-              <div className="space-y-2">
-                {unpaid.map((commission: any) => (
-                  <div
-                    key={commission.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div>
-                      <p className="font-medium">Creator ID: {commission.creatorId}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Transaction ID: {commission.transactionId}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-green-600">
-                        ${(commission.commissionAmount / 100).toFixed(2)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {commission.commissionRate}% commission
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <Button
-                onClick={() => requestPayoutMutation.mutate()}
-                disabled={requestPayoutMutation.isPending}
-                className="w-full"
-              >
-                {requestPayoutMutation.isPending ? "Requesting..." : "Request Payout"}
-              </Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <main className="flex min-h-screen items-center justify-center bg-[#070707] px-5 py-20 text-white">
+      <section className="w-full max-w-2xl overflow-hidden rounded-[2rem] border border-amber-200/20 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.16),transparent_42%),linear-gradient(145deg,#181208,#070707)] p-7 shadow-[0_28px_90px_-48px_rgba(245,158,11,.65)] sm:p-10">
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-200">CreatorVault network</p>
+        <h1 className="mt-4 text-4xl font-black leading-[0.9] tracking-[-0.065em] sm:text-5xl">Recruiter earnings are not open yet.</h1>
+        <p className="mt-6 max-w-xl text-base leading-relaxed text-zinc-300">CreatorVault will not show a commission, balance, rate, creator count, transaction, referral payout, or request-for-payment control before the real recruitment and creator-money chain can be proven from beginning to end.</p>
+        <div className="mt-7 rounded-2xl border border-white/10 bg-black/25 p-5">
+          <p className="text-sm font-black text-white">What stays protected</p>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-400">No recruiting work is being made up and no payment is being promised. The network room returns only after it can show real recorded outcomes and complete payouts safely.</p>
+        </div>
+        <Link href="/demos-home"><a className="mt-7 inline-flex min-h-12 items-center justify-center rounded-xl bg-amber-200 px-5 text-sm font-black text-black transition hover:bg-white">Watch accepted CreatorVault work</a></Link>
+      </section>
+    </main>
   );
 }
