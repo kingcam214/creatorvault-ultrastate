@@ -28,6 +28,11 @@ import {
   persistBodyCinemaSourceEvidence,
 } from "../services/bodyCinemaEvidenceService";
 import { getBodyCinemaOutputReview, reviewBodyCinemaOutput } from "../services/bodyCinemaOutputReviewService";
+import {
+  assertBodyCinemaSourceMapReady,
+  getBodyCinemaSourceMap,
+  persistBodyCinemaSourceMap,
+} from "../services/bodyCinemaSourceMapService";
 import { buildBodyCinemaAssemblyRecipe } from "../services/bodyCinemaAssemblyRecipe";
 import { buildAudioDirectedTimeline } from "../services/audioTimelinePlanner";
 import { getCanonicalAudioAsset } from "../services/audioIntelligenceService";
@@ -101,14 +106,17 @@ export const bodyCinemaRouter = router({
     analysisVersion: z.string().min(1).max(96),
     frameEvidence: z.array(frameEvidenceInput).min(1).max(24),
   })).mutation(async ({ ctx, input }) => {
-    const evidence = await persistBodyCinemaSourceEvidence(Number(ctx.user.id), input);
-    return evidence;
+    const creatorId = Number(ctx.user.id);
+    const evidence = await persistBodyCinemaSourceEvidence(creatorId, input);
+    const sourceMap = await persistBodyCinemaSourceMap({ creatorId, evidenceId: evidence.id });
+    return { ...evidence, sourceMap };
   }),
 
   getSourceEvidence: protectedProcedure.input(z.object({ evidenceId: z.string().uuid() })).query(async ({ ctx, input }) => {
-    const evidence = await getBodyCinemaSourceEvidence(Number(ctx.user.id), input.evidenceId);
+    const creatorId = Number(ctx.user.id);
+    const evidence = await getBodyCinemaSourceEvidence(creatorId, input.evidenceId);
     if (!evidence) throw new TRPCError({ code: "NOT_FOUND", message: "Body Cinema source evidence was not found." });
-    return evidence;
+    return { ...evidence, sourceMap: await getBodyCinemaSourceMap(creatorId, input.evidenceId) };
   }),
 
   invalidateSourceEvidence: protectedProcedure.input(z.object({
@@ -169,6 +177,12 @@ export const bodyCinemaRouter = router({
         evidenceId: input.evidenceId,
         sourceMediaUrl: input.sourceAssetUrl,
       });
+      const sourceMap = await assertBodyCinemaSourceMapReady({
+        creatorId,
+        evidenceId: input.evidenceId,
+        sourceMediaUrl: input.sourceAssetUrl,
+        route: "source_preserving_assembly",
+      });
       const project = await getCreationProject(creatorId, input.creationProjectId);
       if (!project) throw new Error("CreatorVault could not find the creation attached to this master.");
       if (project.sourceEvidenceId && project.sourceEvidenceId !== input.evidenceId) {
@@ -213,6 +227,8 @@ export const bodyCinemaRouter = router({
           state: "in_progress",
           metadata: {
             finishingLane: "source_preserving_assembly",
+            sourceMapId: sourceMap.id,
+            sourceMapVersion: sourceMap.analysisVersion,
             treatmentGrammar: evidenceContext.direction.grammar,
             creatorSummary: recipe.creatorSummary,
             assemblyRecipe: recipe.treatmentId,
@@ -282,6 +298,12 @@ export const bodyCinemaRouter = router({
         evidenceId: input.evidenceId,
         sourceMediaUrl: input.sourceAssetUrl,
       }) as typeof evidenceContext;
+      await assertBodyCinemaSourceMapReady({
+        creatorId: Number(ctx.user.id),
+        evidenceId: input.evidenceId,
+        sourceMediaUrl: input.sourceAssetUrl,
+        route: "restricted_generated_transform",
+      });
     } catch (error: any) {
       throw evidencePrecondition(error?.message || "Body Cinema needs your saved source understanding before it can prepare this premium drop.");
     }

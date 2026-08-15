@@ -18,6 +18,7 @@ import {
   persistBodyCinemaSourceEvidence,
 } from "./bodyCinemaEvidenceService";
 import { createGovernedPolloDraft, ensureGovernedPolloSchema, listGovernedPolloJobs } from "./governedPolloService";
+import { persistBodyCinemaSourceMap } from "./bodyCinemaSourceMapService";
 
 const execFileAsync = promisify(execFile);
 const OWNER_CREATOR_IDS = [6, 33];
@@ -634,6 +635,7 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
           continue;
         }
         const approvedEvidence = await approveBodyCinemaDirection(asset.creatorId, evidence.id, direction.id);
+        const sourceMap = await persistBodyCinemaSourceMap({ creatorId: asset.creatorId, evidenceId: approvedEvidence.id });
         const idempotencyKey = `body-cinema-existing-proof:${asset.creatorId}:${sourceChecksum}:${direction.id}`;
         const prompt = [
           buildEvidenceBackedDirectionPrompt(direction),
@@ -680,6 +682,8 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
               reason: "No provider quote or paid execution has been requested during no-spend proof preparation.",
             },
             bodyCinemaEvidenceId: approvedEvidence.id,
+            bodyCinemaSourceMapId: sourceMap.id,
+            bodyCinemaSourceMapVersion: sourceMap.analysisVersion,
             bodyCinemaDirectionId: direction.id,
             bodyCinemaTimeline: direction.timeline,
             editorFindings: approvedEvidence.editorFindings || null,

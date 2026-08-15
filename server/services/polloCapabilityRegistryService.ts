@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import path from "node:path";
 import { db } from "../db";
 import { assertBodyCinemaEvidenceReady } from "./bodyCinemaEvidenceService";
+import { assertBodyCinemaSourceMapReady } from "./bodyCinemaSourceMapService";
 import { buildFrameEvidence, probeVideo } from "./bodyCinemaExistingMediaProofService";
 import { reviewBodyCinemaOutput } from "./bodyCinemaOutputReviewService";
 
@@ -874,6 +875,12 @@ export async function preflightBodyCinemaSourceVideo(input: {
   sourceMediaUrl: string;
 }): Promise<BodyCinemaSourceVideoPreflight> {
   const evidenceContext = await assertBodyCinemaEvidenceReady(input);
+  await assertBodyCinemaSourceMapReady({
+    creatorId: input.creatorId,
+    evidenceId: input.evidenceId,
+    sourceMediaUrl: input.sourceMediaUrl,
+    route: "restricted_generated_transform",
+  });
   const snapshot = await getLatestPolloCapabilitySnapshot();
   const blockingReasons: string[] = [];
   if (!snapshot) blockingReasons.push("No read-only provider capability audit has been recorded.");
@@ -935,6 +942,7 @@ export async function preflightBodyCinemaSourceVideo(input: {
     requiredBeforeSubmission: [
       "verified_source_evidence",
       "approved_evidence_backed_treatment",
+      "protected_source_map_for_restricted_transform",
       "model_capability_match",
       "balance_before_access_attempt",
       "documented_model_contract_match",
