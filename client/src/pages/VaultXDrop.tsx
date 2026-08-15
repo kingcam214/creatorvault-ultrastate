@@ -108,6 +108,11 @@ function formatMoment(timestampMs?: number) {
   return `${(Number(timestampMs) / 1000).toFixed(Number(timestampMs) < 10_000 ? 1 : 0)}s`;
 }
 
+function isLockedKingCamHero(asset: MediaAssetItem) {
+  const reference = [asset.publicUrl, asset.fileName, asset.originalName].filter(Boolean).join(" ").toLowerCase();
+  return reference.includes("/videos/kingcam-hero-cam.mp4") || reference.includes("kingcam-continuous-hero-loop");
+}
+
 function statusCopy(state?: string | null) {
   switch (state) {
     case "cost_pending": return { label: "Cost evidence required", detail: "No provider request was sent. An owner must add a documented credit cap before approval.", tone: "locked" as const };
@@ -357,6 +362,10 @@ export default function VaultXDrop() {
   const handleExistingMediaSelection = useCallback(async (selected: MediaAssetItem[]) => {
     const asset = selected[0];
     setMediaLibraryOpen(false);
+    if (asset && isLockedKingCamHero(asset)) {
+      toast.error("KingCam’s protected hero stays in its own spotlight and cannot be used as a Body Cinema source.");
+      return;
+    }
     if (!asset?.publicUrl) {
       toast.error("That video is not ready to use yet. Choose another video from your Vault.");
       return;
@@ -428,7 +437,7 @@ export default function VaultXDrop() {
 
   useEffect(() => {
     const videos = Array.isArray(existingVideosQuery.data) ? existingVideosQuery.data as MediaAssetItem[] : [];
-    const usableVideos = videos.filter((asset) => asset.publicUrl && (asset.assetType === "video" || asset.mimeType?.startsWith("video/")));
+    const usableVideos = videos.filter((asset) => asset.publicUrl && (asset.assetType === "video" || asset.mimeType?.startsWith("video/")) && !isLockedKingCamHero(asset));
     const requestedVaultVideo = selectedVaultAssetId ? usableVideos.find((asset) => asset.id === selectedVaultAssetId) : null;
     const sourceToUse = requestedVaultVideo || usableVideos[0];
     if (!sourceToUse || autoSelectedMediaIdRef.current || uploading || videoUrl || sourceEvidence) return;
