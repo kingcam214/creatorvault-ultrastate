@@ -125,6 +125,7 @@ const MAX_PROVIDER_OUTPUT_BYTES = 150 * 1024 * 1024;
 // These routes are verified against Pollo's official OpenAPI reference. They use the
 // exact CreatorVault source video as a typed video reference and preserve the provider's documented output contract.
 const REJECTED_SOURCE_VIDEO_MODELS = new Map<string, string>([
+  ["minimax/minimax-h3", "Rejected after real governed Body Cinema review: unstable pose evidence, weak visual quality, and near-duplicate output failed acceptance."],
   ["bytedance/seedance-2-5", "Rejected after Body Cinema quality review: the result did not meet source-preservation and motion-quality standards."],
   ["kling-ai/kling-v3-omni", "Rejected after Body Cinema quality review: the result did not meet source-preservation and motion-quality standards."],
 ]);
