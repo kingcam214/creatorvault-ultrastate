@@ -59,6 +59,10 @@ import {
   getVaceWorkerConnectionState,
 } from "../services/vaceWorkerConnectionService";
 import { probeVaceWorkerHealth } from "../services/vaceWorkerHealthService";
+import {
+  activateDigitalOceanVaceAutomation,
+  getDigitalOceanVaceAutomationState,
+} from "../services/digitalOceanVaceAutomationService";
 
 const OWNER_IDS = new Set([6, 33]);
 
@@ -110,6 +114,22 @@ export const governedPolloRouter = router({
     ownerOnly(ctx.user.id);
     try {
       return await activateTopazProductionCredential({ apiKey: input.apiKey });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  digitalOceanVaceAutomationState: protectedProcedure.query(({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    return getDigitalOceanVaceAutomationState();
+  }),
+
+  activateDigitalOceanVaceAutomation: protectedProcedure.input(z.object({
+    token: z.string().trim().min(32).max(512),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await activateDigitalOceanVaceAutomation(input);
     } catch (error) {
       return asPrecondition(error);
     }
