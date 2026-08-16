@@ -63,6 +63,7 @@ import {
   activateDigitalOceanVaceAutomation,
   getDigitalOceanVaceAutomationState,
 } from "../services/digitalOceanVaceAutomationService";
+import { getDigitalOceanVaceProvisioningReadiness } from "../services/digitalOceanVaceProvisioningService";
 
 const OWNER_IDS = new Set([6, 33]);
 
@@ -130,6 +131,15 @@ export const governedPolloRouter = router({
     ownerOnly(ctx.user.id);
     try {
       return await activateDigitalOceanVaceAutomation(input);
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  digitalOceanVaceProvisioningReadiness: protectedProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await getDigitalOceanVaceProvisioningReadiness();
     } catch (error) {
       return asPrecondition(error);
     }
