@@ -25,7 +25,7 @@ describe("Body Cinema Topaz precision policy", () => {
       audioTransfer: "Copy",
     });
 
-    expect(request.filters).toEqual([{ model: TOPAZ_PROTEUS_MODEL, auto: "balanced" }]);
+    expect(request.filters).toEqual([{ model: TOPAZ_PROTEUS_MODEL, auto: "Auto" }]);
     expect(request.output.audioTransfer).toBe("Copy");
     expect(request.output.frameRate).toBe(source.frameRate);
     expect(request.source.duration).toBe(source.durationSeconds);

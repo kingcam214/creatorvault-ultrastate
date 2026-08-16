@@ -76,7 +76,8 @@ function extractUploadUrls(record: Record<string, unknown>): string[] {
 
 function extractOutputUrl(record: Record<string, unknown>): string | null {
   const nested = asRecord(record.output);
-  const candidates = [record.outputUrl, record.output_url, record.downloadUrl, record.download_url, nested.url];
+  const download = asRecord(record.download);
+  const candidates = [record.outputUrl, record.output_url, record.downloadUrl, record.download_url, nested.url, download.url];
   for (const candidate of candidates) {
     const value = String(candidate || "").trim();
     if (/^https:\/\//i.test(value)) return value;
@@ -164,7 +165,7 @@ export async function uploadAndCompleteTopazPrecisionVideo(input: {
   }
   const eTag = String(uploadResponse.headers.get("etag") || "").trim();
   if (!eTag) throw new TopazPrecisionProviderError("Topaz source upload returned no eTag. Processing was not started.", { code: "topaz_upload_missing_etag" });
-  await requestTopaz(`/${encodeURIComponent(input.accepted.providerRequestId)}/complete-upload`, {
+  await requestTopaz(`/${encodeURIComponent(input.accepted.providerRequestId)}/complete-upload/`, {
     method: "PATCH",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ uploadResults: [{ partNum: 1, eTag }] }),

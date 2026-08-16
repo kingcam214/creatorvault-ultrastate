@@ -30,7 +30,7 @@ export type TopazPrecisionRequest = {
   };
   filters: Array<{
     model: typeof TOPAZ_PROTEUS_MODEL;
-    auto: "balanced";
+    auto: "Auto";
   }>;
 };
 
@@ -112,7 +112,7 @@ export function buildTopazPrecisionRequest(source: TopazPrecisionSource, options
       frameRate,
       dynamicCompressionLevel: "High",
     },
-    filters: [{ model: TOPAZ_PROTEUS_MODEL, auto: "balanced" }],
+    filters: [{ model: TOPAZ_PROTEUS_MODEL, auto: "Auto" }],
   };
 }
 
