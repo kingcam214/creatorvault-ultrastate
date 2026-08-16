@@ -39,7 +39,11 @@ type DigitalOceanSizePayload = {
   available?: boolean;
   price_hourly?: number | null;
   price_monthly?: number | null;
-  gpus?: { count?: number; model?: string | null; memory?: number | null };
+  gpu_info?: {
+    count?: number;
+    model?: string | null;
+    vram?: { amount?: number; unit?: string | null };
+  };
 };
 
 type DigitalOceanSizesResponse = { sizes?: DigitalOceanSizePayload[] };
@@ -66,13 +70,15 @@ async function digitalOceanGet<T>(path: string): Promise<T> {
 export function selectVaceGpuCandidates(sizes: DigitalOceanSizePayload[]): DigitalOceanVaceGpuCandidate[] {
   return sizes
     .map((size) => {
-      const gpuCount = Number(size.gpus?.count || 0);
-      const memoryMiB = Number(size.gpus?.memory || 0);
+      const gpuCount = Number(size.gpu_info?.count || 0);
+      const vramAmount = Number(size.gpu_info?.vram?.amount || 0);
+      const vramUnit = String(size.gpu_info?.vram?.unit || "").toLowerCase();
+      const memoryMiB = vramUnit === "gib" ? vramAmount * 1024 : vramAmount;
       return {
         sizeSlug: String(size.slug || ""),
         regionSlugs: Array.isArray(size.regions) ? size.regions.filter(Boolean) : [],
         gpuCount,
-        gpuModel: size.gpus?.model ? String(size.gpus.model) : null,
+        gpuModel: size.gpu_info?.model ? String(size.gpu_info.model) : null,
         memoryMiB,
         vcpus: Number(size.vcpus || 0),
         diskGiB: Number(size.disk || 0),
