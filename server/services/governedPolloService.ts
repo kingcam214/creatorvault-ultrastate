@@ -813,7 +813,13 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
   const approvedPolloModel = provider === "pollo" && providerModelPath.startsWith("pollo/");
   const approvedReplicateModel = provider === "replicate" && providerModelPath === REPLICATE_WAN_VIDEO_EDIT_MODEL_PATH;
   const approvedRunwayModel = provider === "runway" && providerModelPath === RUNWAY_ALEPH_2_VIDEO_EDIT_MODEL_PATH;
-  if (!approvedPolloModel && !approvedReplicateModel && !approvedRunwayModel) {
+  const approvedTopazPrecisionPilot = provider === "topaz"
+    && providerModelPath === TOPAZ_PROTEUS_PRECISION_VIDEO_MODEL_PATH
+    && input.mode === TOPAZ_PROTEUS_PRECISION_VIDEO_MODE
+    && input.metadata?.ownerDirectedPilot === true
+    && input.metadata?.candidateLimit === 1
+    && input.metadata?.noAutomaticRetry === true;
+  if (!approvedPolloModel && !approvedReplicateModel && !approvedRunwayModel && !approvedTopazPrecisionPilot) {
     throw new Error("Only an approved governed provider model path may be requested through this workflow.");
   }
   const requestedEstimate = input.estimatedCostCredits === null || input.estimatedCostCredits === undefined
