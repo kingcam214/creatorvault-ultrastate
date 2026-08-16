@@ -48,6 +48,10 @@ import {
   recordBodyCinemaProviderHealthy,
 } from "../services/bodyCinemaProviderResilienceService";
 import { getRoutableCreationModels } from "../services/creationModelRegistry";
+import {
+  activateTopazProductionCredential,
+  getTopazProductionCredentialState,
+} from "../services/topazProductionActivationService";
 
 const OWNER_IDS = new Set([6, 33]);
 
@@ -88,6 +92,22 @@ const draftInput = z.object({
 });
 
 export const governedPolloRouter = router({
+  topazProductionCredentialState: protectedProcedure.query(({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    return getTopazProductionCredentialState();
+  }),
+
+  activateTopazProductionCredential: protectedProcedure.input(z.object({
+    apiKey: z.string().uuid(),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await activateTopazProductionCredential({ apiKey: input.apiKey });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
   bodyCinemaResilienceSnapshot: protectedProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     const [models, providerHealth] = await Promise.all([

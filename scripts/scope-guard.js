@@ -551,6 +551,8 @@ const ALLOWLISTS = {
     'server/services/bodyCinemaTopazPrecisionPolicy.ts',
     'server/services/bodyCinemaTopazPrecisionPolicy.test.ts',
     'server/services/topazPrecisionVideoService.ts',
+    'server/services/topazProductionActivationService.ts',
+    'server/services/topazProductionActivationService.test.ts',
     'server/services/creationModelRegistry.ts',
     'server/services/bodyCinemaProviderResiliencePolicy.ts',
     'server/services/bodyCinemaProviderResilienceService.ts',
