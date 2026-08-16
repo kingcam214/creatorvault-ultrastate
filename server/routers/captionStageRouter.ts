@@ -76,6 +76,8 @@ async function ensureCaptionStageTable(connection: mysql.Connection): Promise<vo
     safe_zone VARCHAR(32) NOT NULL,
     status VARCHAR(32) NOT NULL,
     transcription_provider VARCHAR(64) NULL,
+    caption_review_status VARCHAR(32) NOT NULL DEFAULT 'needs_review',
+    caption_reviewed_at TIMESTAMP NULL,
     artifact_url TEXT NULL,
     thumbnail_url TEXT NULL,
     render_error MEDIUMTEXT NULL,
@@ -85,6 +87,11 @@ async function ensureCaptionStageTable(connection: mysql.Connection): Promise<vo
     INDEX idx_caption_stage_source (creator_id, source_asset_id)
   )`);
   await connection.execute("ALTER TABLE caption_stage_projects ADD COLUMN transcription_provider VARCHAR(64) NULL").catch(() => undefined);
+  await connection.execute("ALTER TABLE caption_stage_projects ADD COLUMN caption_review_status VARCHAR(32) NOT NULL DEFAULT 'needs_review'").catch(() => undefined);
+  await connection.execute("ALTER TABLE caption_stage_projects ADD COLUMN caption_reviewed_at TIMESTAMP NULL").catch(() => undefined);
+  await connection.execute(`UPDATE caption_stage_projects
+    SET status = 'needs_caption_review', artifact_url = NULL, thumbnail_url = NULL
+    WHERE status = 'captioned_master_ready' AND COALESCE(caption_review_status, 'needs_review') <> 'creator_approved'`).catch(() => undefined);
 }
 
 async function sourceForCreator(connection: mysql.Connection, creatorId: number, assetId: string) {
@@ -250,6 +257,8 @@ function hydrate(row: any) {
     thumbnailUrl: row.thumbnail_url ? String(row.thumbnail_url) : null,
     renderError: row.render_error ? String(row.render_error) : null,
     transcriptionProvider: row.transcription_provider ? String(row.transcription_provider) : null,
+    captionReviewStatus: row.caption_review_status ? String(row.caption_review_status) : "needs_review",
+    captionReviewedAt: row.caption_reviewed_at ? new Date(row.caption_reviewed_at).toISOString() : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -329,11 +338,13 @@ export const captionStageRouter = router({
       if (!row) throw new Error("That Caption Stage project is not in your CreatorVault.");
       const project = hydrate(row);
       if (!project.segments.length) throw new Error("Caption Stage needs real timed words before it can prepare a captioned master.");
+      if (project.captionReviewStatus !== "creator_approved") throw new Error("Check the timed words against the source before you prepare the captioned master. CreatorVault will not sell an unchecked transcript as finished.");
       await connection.execute("UPDATE caption_stage_projects SET status = 'preparing_captioned_master', render_error = NULL WHERE id = ? AND creator_id = ?", [project.id, ctx.user.id]);
       const portrait = project.safeZone === "vertical";
       const square = project.safeZone === "square";
+      const renderRevision = `${project.id}-${Date.now().toString(36)}`;
       const render = await renderWithRemotion({
-        jobId: project.id,
+        jobId: renderRevision,
         mode: "caption_stage",
         baseImagePath: "",
         baseImageUrl: "",
@@ -371,6 +382,33 @@ export const captionStageRouter = router({
     } catch (error: any) {
       await connection.execute("UPDATE caption_stage_projects SET status = 'failed', render_error = ? WHERE id = ? AND creator_id = ?", [String(error?.message || "Caption Stage could not prepare the master."), input.projectId, ctx.user.id]).catch(() => undefined);
       throw error;
+    } finally {
+      await connection.end();
+    }
+  }),
+
+  reviewTimedWords: protectedProcedure.input(z.object({
+    projectId: z.string().min(1),
+    texts: z.array(z.string().trim().min(1).max(140)).min(1).max(500),
+  })).mutation(async ({ ctx, input }) => {
+    const connection = await getConnection();
+    try {
+      await ensureCaptionStageTable(connection);
+      const [rows] = await connection.execute<any[]>("SELECT * FROM caption_stage_projects WHERE id = ? AND creator_id = ? LIMIT 1", [input.projectId, ctx.user.id]);
+      if (!rows[0]) throw new Error("That Caption Stage project is not in your CreatorVault.");
+      const project = hydrate(rows[0]);
+      if (project.segments.length !== input.texts.length) throw new Error("Caption Stage kept the original timing because the review no longer matches this source.");
+      const segments = project.segments.map((segment, index) => ({ ...segment, text: input.texts[index].replace(/\s+/g, " ").trim() }));
+      const transcript = segments.map(segment => segment.text).join(" ").replace(/\s+([,.!?;:])/g, "$1");
+      await connection.execute(
+        `UPDATE caption_stage_projects
+            SET transcript = ?, segments_json = ?, caption_review_status = 'creator_approved', caption_reviewed_at = NOW(),
+                artifact_url = NULL, thumbnail_url = NULL, status = 'timed_captions_ready', render_error = NULL
+          WHERE id = ? AND creator_id = ?`,
+        [transcript, JSON.stringify(segments), input.projectId, ctx.user.id],
+      );
+      const [finalRows] = await connection.execute<any[]>("SELECT * FROM caption_stage_projects WHERE id = ? AND creator_id = ? LIMIT 1", [input.projectId, ctx.user.id]);
+      return hydrate(finalRows[0]);
     } finally {
       await connection.end();
     }
