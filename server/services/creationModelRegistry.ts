@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { sql } from "drizzle-orm";
 import { db } from "../db";
 
-export type CreationExecutionLane = "hosted" | "controlled" | "assembly";
+export type CreationExecutionLane = "hosted" | "controlled" | "assembly" | "finishing";
 export type CommercialEligibility = "verified" | "conditional" | "unverified" | "ineligible";
 export type ModelActivationState = "planned" | "configured" | "benchmarking" | "active" | "deprecated" | "blocked";
 export type ModelBenchmarkState = "unbenchmarked" | "conditional" | "accepted" | "rejected";
@@ -99,6 +99,8 @@ export type RoutableCreationModel = CreationModelRegistryEntry & {
 
 export type CreationCapabilityRequirements = {
   requiresGeneratedShot: boolean;
+  /** Requires a source-faithful provider finish, not an assembly or synthetic shot. */
+  requiresSourceFaithfulFinishing?: boolean;
   requiredInputModes: CreatorVaultInputMode[];
   requiredOutputMode: CreatorVaultOutputMode;
   durationSeconds: number;
@@ -272,7 +274,7 @@ const DEFAULT_MODELS: Array<Omit<CreationModelRegistryEntry, "createdAt" | "upda
     provider: "topaz",
     model: "Topaz Proteus Precision Video",
     modelVersion: "prob-4",
-    executionLane: "hosted",
+    executionLane: "finishing",
     commercialEligibility: "conditional",
     licenseName: "Topaz Video API account entitlement",
     licenseReference: "https://developer.topazlabs.com/video-models/proteus",
@@ -746,8 +748,9 @@ export function selectBestVerifiedCreationModel(models: RoutableCreationModel[],
     if (requirements.requiresCameraControl && !model.supportsCameraControl) reasons.push("camera_control_not_supported");
     if (requirements.requiresAudio && !model.supportsAudio) reasons.push("audio_not_supported");
 
-    if (requirements.requiresGeneratedShot && model.executionLane === "assembly") reasons.push("assembly_cannot_create_new_shot");
-    if (!requirements.requiresGeneratedShot && model.executionLane !== "assembly") reasons.push("generated_lane_not_needed_for_existing_media_assembly");
+    if (requirements.requiresGeneratedShot && (model.executionLane === "assembly" || model.executionLane === "finishing")) reasons.push("selected_lane_cannot_create_new_shot");
+    if (requirements.requiresSourceFaithfulFinishing && model.executionLane !== "finishing") reasons.push("source_faithful_finishing_lane_required");
+    if (!requirements.requiresGeneratedShot && !requirements.requiresSourceFaithfulFinishing && model.executionLane !== "assembly") reasons.push("generated_or_finishing_lane_not_needed_for_existing_media_assembly");
 
     const evidenceMetrics = requiredEvidenceMetrics(requirements);
     const evidenceScores = evidenceMetrics.map((metric) => model.evidence.criteria[metric]).filter((value): value is number => typeof value === "number");

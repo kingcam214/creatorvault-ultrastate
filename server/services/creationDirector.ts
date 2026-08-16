@@ -19,8 +19,10 @@ import {
 export type CreationTool = "body_cinema" | "trailer_maker" | "kingcam_content" | "creator_os";
 export type CreationDirectorState = "planning" | "ready_for_assembly" | "ready_for_governed_submission" | "blocked" | "submitted" | "quality_review" | "accepted" | "rejected" | "cancelled";
 import { assertBodyCinemaEvidenceReady } from "./bodyCinemaEvidenceService";
+import { getOrCreateBodyCinemaEditBlueprint } from "./bodyCinemaEditBlueprintService";
 import {
   createQuotedGovernedPolloSourceVideoDraft,
+  createGovernedTopazPrecisionVideoDraft,
   getGovernedPolloJobByRequestId,
   authorizeSingleUseGovernedPolloSubmission,
   submitGovernedPolloJob,
@@ -425,28 +427,58 @@ export async function prepareCreationPlan(requestInput: CreationDirectorRequest)
           throw new Error("The selected Body Cinema treatment does not match the approved source direction.");
         }
       }
-      const staged = await createQuotedGovernedPolloSourceVideoDraft({
-        creatorId: request.creatorId,
-        requestedBy: request.requestedBy,
-        requestId,
-        sourceUrl: request.source.assetUrl,
-        sourceChecksum: request.source.sourceFingerprint || null,
-        prompt: request.creativeDirection.prompt,
-        resolution: request.output.resolution as "480p" | "720p" | "1080p",
-        durationSeconds: request.output.durationSeconds,
-        aspectRatio: request.output.aspectRatio,
-        ownershipConfirmed: true,
-        consentConfirmed: true,
-        idempotencyKey: `creation-director:${idempotencyKey}`,
-        metadata: {
-          creationDirectorRequestId: requestId,
-          tool: request.tool,
-          intent: request.intent,
-          audioAssetId: request.creativeDirection.audioAssetId || undefined,
-          sourceEvidenceId: request.source.sourceEvidenceId || undefined,
-          selectedModelKey: resolution.selectedModel.modelKey,
-        },
-      });
+      const staged = resolution.selectedModel.modelKey === "topaz/proteus-precision-video"
+        ? await (async () => {
+          const blueprint = await getOrCreateBodyCinemaEditBlueprint({
+            creatorId: request.creatorId,
+            evidenceId: String(request.source.sourceEvidenceId),
+            sourceMediaUrl: request.source.assetUrl,
+          });
+          return createGovernedTopazPrecisionVideoDraft({
+            creatorId: request.creatorId,
+            requestedBy: request.requestedBy,
+            sourceUrl: request.source.assetUrl,
+            sourceChecksum: String(request.source.sourceFingerprint),
+            resolution: request.output.resolution as "720p" | "1080p",
+            durationSeconds: request.output.durationSeconds,
+            aspectRatio: request.output.aspectRatio,
+            ownershipConfirmed: true,
+            consentConfirmed: true,
+            evidenceId: String(request.source.sourceEvidenceId),
+            editBlueprintId: blueprint.id,
+            idempotencyKey: `creation-director:${idempotencyKey}`,
+            metadata: {
+              creationDirectorRequestId: requestId,
+              tool: request.tool,
+              intent: request.intent,
+              sourceEvidenceId: request.source.sourceEvidenceId || undefined,
+              selectedModelKey: resolution.selectedModel.modelKey,
+              bodyCinemaEditBlueprintId: blueprint.id,
+            },
+          });
+        })()
+        : await createQuotedGovernedPolloSourceVideoDraft({
+          creatorId: request.creatorId,
+          requestedBy: request.requestedBy,
+          requestId,
+          sourceUrl: request.source.assetUrl,
+          sourceChecksum: request.source.sourceFingerprint || null,
+          prompt: request.creativeDirection.prompt,
+          resolution: request.output.resolution as "480p" | "720p" | "1080p",
+          durationSeconds: request.output.durationSeconds,
+          aspectRatio: request.output.aspectRatio,
+          ownershipConfirmed: true,
+          consentConfirmed: true,
+          idempotencyKey: `creation-director:${idempotencyKey}`,
+          metadata: {
+            creationDirectorRequestId: requestId,
+            tool: request.tool,
+            intent: request.intent,
+            audioAssetId: request.creativeDirection.audioAssetId || undefined,
+            sourceEvidenceId: request.source.sourceEvidenceId || undefined,
+            selectedModelKey: resolution.selectedModel.modelKey,
+          },
+        });
       await appendEvent({
         directorRequestId: id,
         eventType: "governed_draft_staged",
