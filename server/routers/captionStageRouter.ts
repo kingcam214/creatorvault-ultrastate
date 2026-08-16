@@ -152,7 +152,8 @@ function groupScribeWords(words: unknown[]): CaptionSegment[] {
       text: String(entry?.text || "").trim(),
     };
     if (!word.text || word.end <= word.start) continue;
-    if (group.length && (group.length >= 5 || word.end - group[0].start > 2.3)) flush();
+    // Short bursts preserve the moving body and create a real reading rhythm on a phone.
+    if (group.length && (group.length >= 3 || word.end - group[0].start > 1.35)) flush();
     group.push(word);
   }
   flush();
