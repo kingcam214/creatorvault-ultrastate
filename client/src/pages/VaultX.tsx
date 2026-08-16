@@ -1999,7 +1999,7 @@ export default function VaultX() {
         {/* ── HOME VIEW ─────────────────────────────────────────────────── */}
         {activeTab === "discover" && (
           <div>
-            <section aria-label="VaultX moving creator opening" className="relative -mx-4 -mt-6 mb-8 min-h-[540px] overflow-hidden bg-black sm:rounded-[2rem]">
+            <section aria-label="VaultX private creator opening" className="relative -mx-4 -mt-6 mb-8 min-h-[580px] overflow-hidden bg-black sm:rounded-[2rem]">
               <video
                 src={HOMEPAGE_MEDIA.homepageMotionPilot.livePath}
                 autoPlay
@@ -2010,79 +2010,47 @@ export default function VaultX() {
                 className="absolute inset-0 h-full w-full object-cover object-center"
                 aria-hidden="true"
               />
-              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,5,.9)_0%,rgba(5,5,5,.48)_54%,rgba(5,5,5,.18)_100%),linear-gradient(0deg,rgba(5,5,5,.9)_0%,rgba(5,5,5,.05)_58%,rgba(5,5,5,.4)_100%)]" />
-              <div className="relative z-10 flex min-h-[540px] flex-col justify-end px-6 pb-7 pt-20 sm:px-10 sm:pb-10">
-                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.24em] text-amber-200">VaultX · your private money room</p>
-                <h1 className="max-w-md text-5xl font-black leading-[0.86] tracking-[-0.075em] text-white sm:text-6xl">{t("hub.tagline")}</h1>
-                <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/80">Start with a saved video. Choose the feeling. Shape the access. Your direction, offer, and review stay together before anything goes live.</p>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_74%_24%,rgba(137,24,72,.28),transparent_35%),linear-gradient(90deg,rgba(5,5,5,.93)_0%,rgba(5,5,5,.58)_56%,rgba(5,5,5,.12)_100%),linear-gradient(0deg,rgba(5,5,5,.94)_0%,rgba(5,5,5,.04)_60%,rgba(5,5,5,.36)_100%)]" />
+              <div className="pointer-events-none absolute inset-x-6 top-[25%] h-px bg-gradient-to-r from-transparent via-[#f3d68b]/70 to-transparent" />
+              <div className="relative z-10 flex min-h-[580px] flex-col justify-end px-6 pb-7 pt-20 sm:px-10 sm:pb-10">
+                <p className="mb-4 text-[10px] font-black uppercase tracking-[0.24em] text-amber-200">VaultX · private access</p>
+                <h1 className="max-w-md text-5xl font-black leading-[0.84] tracking-[-0.075em] text-white sm:text-6xl">Make them want<br />the <span className="text-[#f3d68b]">next drop.</span></h1>
+                <p className="mt-6 max-w-sm text-sm leading-relaxed text-white/80">Your owned footage. Your offer. Your rules. Build something worth putting behind the door.</p>
                 <a
-                  href="/vaultx/drop"
-                  className="mt-7 flex w-full max-w-md items-center justify-between rounded-2xl px-5 py-4 transition hover:brightness-110"
+                  href="/vault-x/studio"
+                  className="mt-8 flex w-full max-w-md items-center justify-between rounded-2xl px-5 py-4 transition hover:brightness-110"
                   style={{ background: "linear-gradient(135deg,#c9a84c,#f3d68b)", color: "#050505" }}
                 >
                   <div>
-                    <p className="text-lg font-black">{t("hub.cta_create")}</p>
-                    <p className="text-sm font-medium opacity-70">Choose your moment → Set the feeling → Shape the access</p>
+                    <p className="text-lg font-black">Start my private drop</p>
+                    <p className="text-sm font-medium opacity-70">Choose a saved moment. Keep the power.</p>
                   </div>
                   <div className="text-2xl">→</div>
                 </a>
+                <p className="mt-6 max-w-sm text-xs leading-relaxed text-white/55">CreatorVault campaign motion sets the mood here. It is not presented as a creator result.</p>
               </div>
             </section>
 
-            {/* What VaultX does — 3 things */}
-            <div className="grid gap-3 mb-8">
+            <section aria-label="VaultX creation paths" className="mb-8 border-t border-white/[0.12]">
               {[
-                { emoji: "🎬", title: "Body Cinema", desc: "Keep your real source, its treatment, and its premium direction in one place. A finished piece earns its next move.", href: "/vaultx/drop" },
-                { emoji: "💰", title: "Paid Drops", desc: "Set the access on a finished moment. A sale opens only after CreatorVault can prove the full payment, access, and payout path.", href: "/vaultx/drop" },
-                { emoji: "📱", title: "Your channel-ready drop", desc: "Prepare a version for the places you actually use. Nothing goes out until you decide.", href: "/vaultx/drop" },
-              ].map(item => (
-                <a key={item.title} href={item.href} className="flex items-start gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 hover:border-white/20 transition">
-                  <span className="text-2xl flex-shrink-0 mt-0.5">{item.emoji}</span>
-                  <div>
-                    <p className="font-black text-white mb-1">{item.title}</p>
-                    <p className="text-sm text-zinc-400 leading-relaxed">{item.desc}</p>
-                  </div>
+                { number: "01", title: "Body Cinema", desc: "Take the footage you already own and build the next release you want to sell.", href: "/vault-x/studio", tone: "#f3d68b" },
+                { number: "02", title: "Private drop", desc: "Shape the access around a finished moment only when it is ready to stand on its own.", href: "/vault-x/studio", tone: "#df6a9e" },
+                { number: "03", title: "Lead-up energy", desc: "Build the trailer, visual, and social lead-in around the moment you chose.", href: "/vaultx/trailers", tone: "#d7a9ff" },
+              ].map((item) => (
+                <a key={item.title} href={item.href} className="group grid gap-3 border-b border-white/[0.12] py-7 transition hover:border-white/45 sm:grid-cols-[48px_1fr_auto] sm:items-center sm:gap-5">
+                  <span className="text-[10px] font-black tracking-[.18em]" style={{ color: item.tone }}>{item.number}</span>
+                  <div><p className="text-2xl font-black tracking-[-0.045em] text-white">{item.title}</p><p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-400">{item.desc}</p></div>
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-lg text-white transition group-hover:border-[#f3d68b] group-hover:bg-[#f3d68b] group-hover:text-black">↗</span>
                 </a>
               ))}
-            </div>
+            </section>
 
-            {/* Quick links */}
-            <div className="grid grid-cols-2 gap-3 mb-8">
-              <a href="/vaultx/trailers" className="flex flex-col gap-2 rounded-2xl border border-[#F2B15B]/30 bg-[#F2B15B]/10 p-4 hover:border-[#F2B15B]/60 transition">
-                <Flame className="h-5 w-5" style={{ color: "#F2B15B" }} />
-                <p className="font-black text-sm">Trailer Direction</p>
-                <p className="text-xs text-zinc-500">Shape the opening, feeling, and story for your saved source</p>
-              </a>
-              <a href="/creator/video-studio" className="flex flex-col gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 hover:border-white/20 transition">
-                <Video className="h-5 w-5 text-red-400" />
-                <p className="font-black text-sm">Creator Video Studio</p>
-                <p className="text-xs text-zinc-500">Turn a real moment into a stronger next move</p>
-              </a>
-            </div>
-
-            {/* How it works */}
-            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-zinc-500 mb-4">How it works</p>
-              <div className="space-y-4">
-                {[
-                  ["1", "Choose your saved video", "Start with a real moment already inside your CreatorVault."],
-                  ["2", "Choose the treatment", "Pick the feeling that fits your footage and the people you want to pull in."],
-                  ["3", "Shape the access", "Decide what the finished moment is worth when it has earned its place."],
-                  ["4", "Get your drop ready", "Your source, direction, offer, and review stay together before anything goes public."],
-                ].map(([n, title, desc]) => (
-                  <div key={n} className="flex gap-4">
-                    <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black" style={{ background: "rgba(201,168,76,0.15)", color: "#c9a84c" }}>{n}</div>
-                    <div>
-                      <p className="font-black text-sm text-white">{title}</p>
-                      <p className="text-xs text-zinc-500 mt-0.5">{desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <a href="/vaultx/drop" className="mt-5 flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-black transition" style={{ background: "rgba(201,168,76,0.15)", color: "#c9a84c" }}>
-                Start your first drop →
-              </a>
-            </div>
+            <section className="relative mb-8 overflow-hidden rounded-[1.75rem] border border-white/[0.12] bg-[radial-gradient(circle_at_82%_12%,rgba(217,70,239,.16),transparent_32%),linear-gradient(135deg,#110d11,#070707)] px-6 py-8 sm:px-8">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-200">The way it should feel</p>
+              <h2 className="mt-4 max-w-lg text-3xl font-black leading-[.9] tracking-[-.055em] text-white sm:text-4xl">Make the clip hit before you ask anybody to unlock it.</h2>
+              <p className="mt-5 max-w-md text-sm leading-relaxed text-zinc-300">Pick the moment. Decide the feeling. See the piece before you use it. Nothing is sold as finished when it is not.</p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row"><a href="/vault-x/studio" className="inline-flex min-h-13 items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-black text-black transition hover:bg-[#f3d68b]">Open Body Cinema</a><a href="/creator/video-studio" className="inline-flex min-h-13 items-center justify-center rounded-full border border-white/25 bg-black/25 px-6 py-3 text-sm font-black text-white transition hover:border-white">Open Creator Video Studio</a></div>
+            </section>
           </div>
         )}
 
