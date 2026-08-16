@@ -178,6 +178,7 @@ import { scriptToVideoRouter } from "./routers/scriptToVideoRouter";
 import { simpleAuthRouter } from "./routers/simpleAuth";
 import { smartAlbumRouter } from "./routers/smartAlbumRouter";
 import { smartCaptionsRouter } from "./routers/smartCaptions";
+import { captionStageRouter } from "./routers/captionStageRouter";
 import { socialMediaAuditRouter } from "./routers/socialMediaAudit";
 import { verticalPackRouter } from './routers/verticalPackRouter';
 import { socialScraperRouter } from "./routers/socialScraperRouter";
@@ -941,6 +942,7 @@ export const appRouter = router({
   simpleAuth: simpleAuthRouter,
   smartAlbum: smartAlbumRouter,
   smartCaptions: smartCaptionsRouter,
+  captionStage: captionStageRouter,
   socialMediaAudit: socialMediaAuditRouter,
   verticalPack: verticalPackRouter,
   socialScraper: socialScraperRouter,

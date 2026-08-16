@@ -251,6 +251,18 @@ const ALLOWLISTS = {
     'client/src/pages/CreatorTools.tsx',
     'scripts/scope-guard.js'
   ],
+  'caption-stage': [
+    'client/src/App.tsx',
+    'client/src/pages/CreatorVideoStudio.tsx',
+    'client/src/pages/CaptionStage.tsx',
+    'server/routers.ts',
+    'server/routers/captionStageRouter.ts',
+    'server/remotion/remotionRenderService.ts',
+    'server/remotion/types.ts',
+    'scripts/verify-caption-stage-render.ts',
+    'server/routers/captionStageRouter.test.ts',
+    'scripts/scope-guard.js'
+  ],
   'campaign-visual-recovery': [
     'client/src/pages/CampaignVisualStudio.tsx',
     'client/src/pages/KingContent.tsx',

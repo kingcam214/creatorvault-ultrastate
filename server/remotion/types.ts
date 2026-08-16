@@ -17,7 +17,8 @@ export type RenderMode =
   | "visual_dna_landscape"
   | "visual_dna_thumbnail"
   | "visual_dna_broll"
-  | "visual_dna_title_card";
+  | "visual_dna_title_card"
+  | "caption_stage";
 
 export type MotionPreset =
   | "neon_pulse"
@@ -58,6 +59,10 @@ export interface RenderContract {
   callToAction?: string;
   brandColors?: string[];
   outputPath?: string;
+  captionSegments?: Array<{ start: number; end: number; text: string }>;
+  captionStyle?: "command" | "glow" | "silk" | "paper";
+  captionPlacement?: "top" | "center" | "lower";
+  captionSafeZone?: "vertical" | "square" | "landscape";
 }
 
 export interface RenderResult {

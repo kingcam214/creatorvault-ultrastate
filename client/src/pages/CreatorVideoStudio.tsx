@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ArrowRight, Film, Play, ShieldCheck, Sparkles, Video } from "lucide-react";
+import { ArrowRight, Film, Play, ShieldCheck, Sparkles, Type, Video } from "lucide-react";
 import MediaPicker, { type MediaAssetItem } from "@/components/MediaPicker";
 import { trpc } from "@/lib/trpc";
 
@@ -40,13 +40,13 @@ export default function CreatorVideoStudio() {
   }, [mediaQuery.data]);
   const activeSource = selectedAsset || verifiedVideoSources[0] || null;
 
-  const continueWith = (destination: "body-cinema" | "trailer-maker") => {
+  const continueWith = (destination: "body-cinema" | "trailer-maker" | "caption-stage") => {
     if (!activeSource?.publicUrl) {
       setSelectionMessage("Choose a saved video first. CreatorVault only opens footage it can actually use.");
       setPickerOpen(true);
       return;
     }
-    const path = destination === "body-cinema" ? "/vault-x/studio" : "/trailer-maker";
+    const path = destination === "body-cinema" ? "/vault-x/studio" : destination === "caption-stage" ? "/creator/caption-stage" : "/trailer-maker";
     setLocation(`${path}?sourceAssetId=${encodeURIComponent(activeSource.id)}`);
   };
 
@@ -74,6 +74,8 @@ export default function CreatorVideoStudio() {
           </div>
 
           <div className="flex flex-col gap-4">
+            <button type="button" onClick={() => continueWith("caption-stage")} className="group overflow-hidden rounded-3xl border border-violet-200/30 bg-[radial-gradient(circle_at_top_right,rgba(232,210,255,0.18),transparent_42%),#101015] p-6 text-left transition hover:-translate-y-0.5 hover:border-violet-100/70">
+              <div className="flex items-start justify-between gap-5"><span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-200/15 text-violet-100"><Type className="h-6 w-6" /></span><ArrowRight className="h-5 w-5 text-violet-100 transition group-hover:translate-x-1" /></div><p className="mt-8 text-[10px] font-black uppercase tracking-[0.16em] text-violet-100">Caption Stage</p><h2 className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">Put the words<br />inside the moment.</h2><p className="mt-4 text-sm leading-relaxed text-zinc-300">Use this exact saved video. Caption Stage reads the real spoken words, lets you style them on moving footage, and prepares a watchable captioned master.</p><span className="mt-6 inline-flex text-xs font-black text-violet-100">Open with this source <ArrowRight className="ml-2 h-4 w-4" /></span></button>
             <button type="button" onClick={() => continueWith("body-cinema")} className="group overflow-hidden rounded-3xl border border-fuchsia-300/25 bg-[radial-gradient(circle_at_top_right,rgba(232,121,249,0.16),transparent_42%),#101015] p-6 text-left transition hover:-translate-y-0.5 hover:border-fuchsia-200/60">
               <div className="flex items-start justify-between gap-5"><span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-fuchsia-300/15 text-fuchsia-200"><Film className="h-6 w-6" /></span><ArrowRight className="h-5 w-5 text-fuchsia-200 transition group-hover:translate-x-1" /></div><p className="mt-8 text-[10px] font-black uppercase tracking-[0.16em] text-fuchsia-200">Body Cinema</p><h2 className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">Read the moment.<br />Choose the treatment.</h2><p className="mt-4 text-sm leading-relaxed text-zinc-300">Your selected footage moves into source intelligence, measured moments, and the treatment decision made around what is actually in the clip.</p><span className="mt-6 inline-flex text-xs font-black text-fuchsia-100">Open with this source <ArrowRight className="ml-2 h-4 w-4" /></span></button>
             <button type="button" onClick={() => continueWith("trailer-maker")} className="group overflow-hidden rounded-3xl border border-amber-200/25 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.15),transparent_42%),#101015] p-6 text-left transition hover:-translate-y-0.5 hover:border-amber-100/60">

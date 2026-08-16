@@ -47,6 +47,8 @@ function getCompositionId(contract: RenderContract): string {
   if (mode === "visual_dna_broll") return "VisualDNABroll";
   if (mode === "visual_dna_title_card") return "VisualDNATitleCard";
 
+  if (mode === "caption_stage") return "CreatorVaultRuntimeCaptionStage";
+
   // 3D Empire compositions
   if (mode === "episode_trailer") return "EpisodeTrailer";
   if (mode === "empire_map_snapshot") return "EmpireMapSnapshot";
@@ -111,8 +113,10 @@ async function extractThumbnail(videoPath: string, outputPath: string): Promise<
 // Bundle cache to avoid re-bundling the same composition
 let bundleCache: { bundleDir: string; timestamp: number } | null = null;
 let flyerBundleCache: { bundleDir: string; timestamp: number } | null = null;
+let captionBundleCache: { bundleDir: string; timestamp: number } | null = null;
 const BUNDLE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const RUNTIME_FLYER_ENTRY = path.join(os.tmpdir(), "creatorvault-motion-flyer-runtime-entry.tsx");
+const RUNTIME_CAPTION_ENTRY = path.join(os.tmpdir(), "creatorvault-caption-stage-runtime-entry.tsx");
 
 const RUNTIME_FLYER_SOURCE = `import React from "react";
 import { AbsoluteFill, Composition, Video, interpolate, registerRoot, spring, useCurrentFrame, useVideoConfig } from "remotion";
@@ -134,22 +138,45 @@ const Flyer = ({ artistName = "CreatorVault", songTitle = "THE MOMENT", subtitle
 const Root = () => <Composition id="CreatorVaultRuntimeMotionFlyer" component={Flyer} durationInFrames={180} fps={30} width={1080} height={1920} defaultProps={{}} />;
 registerRoot(Root);`;
 
+const RUNTIME_CAPTION_SOURCE = `import React from "react";
+import { AbsoluteFill, Composition, Video, registerRoot, useCurrentFrame, useVideoConfig } from "remotion";
+const getTheme = (style) => ({
+  command: { fontFamily: "Arial Black, Arial, sans-serif", weight: 900, textTransform: "uppercase", background: "rgba(4,4,6,.78)", color: "#FFFFFF", border: "2px solid rgba(255,255,255,.92)", shadow: "0 12px 36px rgba(0,0,0,.6)", letterSpacing: "-.05em" },
+  glow: { fontFamily: "Arial Black, Arial, sans-serif", weight: 900, textTransform: "uppercase", background: "rgba(57,22,87,.62)", color: "#F7EEFF", border: "2px solid #E8D2FF", shadow: "0 0 28px rgba(214,152,255,.9), 0 12px 36px rgba(0,0,0,.6)", letterSpacing: "-.045em" },
+  silk: { fontFamily: "Georgia, serif", weight: 700, textTransform: "none", background: "rgba(20,9,14,.72)", color: "#FFF7F0", border: "1px solid rgba(255,236,220,.72)", shadow: "0 12px 36px rgba(0,0,0,.64)", letterSpacing: "-.025em" },
+  paper: { fontFamily: "Arial Black, Arial, sans-serif", weight: 900, textTransform: "uppercase", background: "#F7F1E7", color: "#080808", border: "0", shadow: "0 12px 36px rgba(0,0,0,.48)", letterSpacing: "-.045em" },
+}[style] || {});
+const CaptionMaster = ({ backgroundVideoUrl = "", captionSegments = [], captionStyle = "command", captionPlacement = "lower", captionSafeZone = "vertical" }) => {
+  const frame = useCurrentFrame(); const { fps, width, height } = useVideoConfig(); const seconds = frame / fps;
+  const active = captionSegments.find((segment) => seconds >= Number(segment.start) && seconds <= Number(segment.end));
+  const theme = getTheme(captionStyle); const safeInset = captionSafeZone === "vertical" ? height * .13 : captionSafeZone === "square" ? height * .1 : height * .08;
+  const position = captionPlacement === "top" ? { top: safeInset } : captionPlacement === "center" ? { top: height * .5, transform: "translateY(-50%)" } : { bottom: safeInset };
+  return <AbsoluteFill style={{ backgroundColor: "#050505", overflow: "hidden" }}>
+    {backgroundVideoUrl ? <Video src={backgroundVideoUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
+    {active ? <div style={{ position: "absolute", left: width * .075, right: width * .075, display: "flex", justifyContent: "center", ...position }}><div style={{ maxWidth: width * .85, padding: Math.max(14, width*.022) + "px " + Math.max(18, width*.032) + "px", borderRadius: Math.max(12, width*.018), textAlign: "center", fontFamily: theme.fontFamily, fontWeight: theme.weight, textTransform: theme.textTransform, background: theme.background, color: theme.color, border: theme.border, boxShadow: theme.shadow, letterSpacing: theme.letterSpacing, fontSize: Math.min(width * .075, height * .064), lineHeight: .9 }}>{String(active.text || "").trim()}</div></div> : null}
+  </AbsoluteFill>;
+};
+const Root = () => <Composition id="CreatorVaultRuntimeCaptionStage" component={CaptionMaster} durationInFrames={180} fps={30} width={1080} height={1920} defaultProps={{}} />;
+registerRoot(Root);`;
+
 async function getOrCreateBundle(contract: RenderContract): Promise<string> {
   const isRuntimeFlyer = contract.mode === "flyer";
+  const isRuntimeCaption = contract.mode === "caption_stage";
   const now = Date.now();
-  const cached = isRuntimeFlyer ? flyerBundleCache : bundleCache;
+  const cached = isRuntimeFlyer ? flyerBundleCache : isRuntimeCaption ? captionBundleCache : bundleCache;
   if (cached && now - cached.timestamp < BUNDLE_TTL_MS && fs.existsSync(cached.bundleDir)) return cached.bundleDir;
 
   if (isRuntimeFlyer) await fs.promises.writeFile(RUNTIME_FLYER_ENTRY, RUNTIME_FLYER_SOURCE, "utf8");
+  if (isRuntimeCaption) await fs.promises.writeFile(RUNTIME_CAPTION_ENTRY, RUNTIME_CAPTION_SOURCE, "utf8");
   console.log("[RemotionRender] Bundling compositions...");
   const { bundle } = await import("@remotion/bundler");
   const bundleDir = await bundle({
-    entryPoint: isRuntimeFlyer ? RUNTIME_FLYER_ENTRY : REMOTION_ROOT,
+    entryPoint: isRuntimeFlyer ? RUNTIME_FLYER_ENTRY : isRuntimeCaption ? RUNTIME_CAPTION_ENTRY : REMOTION_ROOT,
     onProgress: (p) => { if (p % 20 === 0) console.log(`[RemotionRender] Bundle progress: ${p}%`); },
   });
 
   const nextCache = { bundleDir, timestamp: now };
-  if (isRuntimeFlyer) flyerBundleCache = nextCache; else bundleCache = nextCache;
+  if (isRuntimeFlyer) flyerBundleCache = nextCache; else if (isRuntimeCaption) captionBundleCache = nextCache; else bundleCache = nextCache;
   console.log("[RemotionRender] Bundle ready:", bundleDir);
   return bundleDir;
 }
@@ -194,7 +221,7 @@ export async function renderWithRemotion(contract: RenderContract): Promise<Rend
     }
     const { renderMedia, selectComposition } = await import("@remotion/renderer");
 
-    const compositionId = contract.mode === "flyer" ? "CreatorVaultRuntimeMotionFlyer" : getCompositionId(contract);
+    const compositionId = contract.mode === "flyer" ? "CreatorVaultRuntimeMotionFlyer" : contract.mode === "caption_stage" ? "CreatorVaultRuntimeCaptionStage" : getCompositionId(contract);
     const durationInFrames = Math.round(durationSeconds * fps);
 
     const composition = await selectComposition({
