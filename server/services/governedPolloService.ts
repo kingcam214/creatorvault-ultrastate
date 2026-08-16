@@ -1782,6 +1782,38 @@ export async function recordGovernedRunwayAlephVideoEditFailure(params: { jobId:
   return failed;
 }
 
+export async function reclassifyGovernedRunwayAlephWorkspaceLimit(params: {
+  jobId: number;
+  ownerId: number;
+  reason: string;
+}): Promise<GovernedPolloJob> {
+  requireOwner(params.ownerId);
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isRunwayAlephVideoEditJob(job)) throw new Error("A governed Runway Aleph benchmark is required for workspace-limit correction.");
+  if (job.state !== "failed" || job.providerJobId || job.outputUrl) {
+    throw new Error("Only a failed pre-task Runway benchmark with no provider task or output can be reclassified.");
+  }
+  if (!/workspace limit|workspace.*capacity|generation.*limit|usage limit|quota exceeded/i.test(params.reason)) {
+    throw new Error("Workspace-limit correction requires the exact provider capacity failure reason.");
+  }
+  await rawExec(
+    `UPDATE governed_pollo_jobs
+     SET failure_code = 'runway_workspace_limit', failure_message = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [params.reason, job.id],
+  );
+  await recordBodyCinemaProviderFailure({
+    providerKey: "runway_aleph",
+    code: "workspace_limit",
+    detail: params.reason,
+    source: "governed_runway_workspace_limit_correction",
+    metadata: { governedJobId: job.id, requestId: job.requestId, reservationReleased: true },
+  }).catch(() => undefined);
+  const corrected = await getGovernedPolloJob(job.id);
+  if (!corrected) throw new Error("Runway workspace-limit correction could not be read after persistence.");
+  return corrected;
+}
+
 export async function reconcileGovernedRunwayAlephSubmissionTimeout(params: {
   jobId: number;
   ownerId: number;
