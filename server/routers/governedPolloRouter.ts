@@ -25,6 +25,8 @@ import {
   markGovernedPolloSubmitted,
   ingestCompletedGovernedRunwayAlephVideoEditOutput,
   reviewCompletedGovernedRunwayAlephVideoEditOutput,
+  ingestCompletedGovernedTopazPrecisionVideoOutput,
+  reviewCompletedGovernedTopazPrecisionVideoOutput,
   recordGovernedRunwayAlephVideoEditFailure,
   reclassifyGovernedRunwayAlephWorkspaceLimit,
   reconcileGovernedRunwayAlephSubmissionTimeout,
@@ -548,6 +550,24 @@ export const governedPolloRouter = router({
     ownerOnly(ctx.user.id);
     try {
       return await reviewCompletedGovernedRunwayAlephVideoEditOutput({ jobId: input.jobId, ownerId: ctx.user.id });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  ingestTopazPrecisionVideoOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await ingestCompletedGovernedTopazPrecisionVideoOutput({ jobId: input.jobId, ownerId: ctx.user.id });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  reviewTopazPrecisionVideoOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await reviewCompletedGovernedTopazPrecisionVideoOutput({ jobId: input.jobId, ownerId: ctx.user.id });
     } catch (error) {
       return asPrecondition(error);
     }
