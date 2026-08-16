@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 
 import requests
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 PROTOCOL_VERSION = "creatorvault-vace-worker/v1"
@@ -37,10 +38,6 @@ class ProtectedSource(BaseModel):
     editBlueprintId: str = Field(min_length=1)
     clipStartMs: int = Field(ge=0)
     clipEndMs: int = Field(gt=0)
-    referenceFrameUrls: list[HttpUrl] = Field(min_length=1, max_length=3)
-    temporalSubjectMaskUrl: HttpUrl
-    depthControlUrl: HttpUrl
-    opticalFlowUrl: HttpUrl
 
     @field_validator("clipEndMs")
     @classmethod
@@ -86,9 +83,6 @@ class VaceContract(BaseModel):
 
 class VaceExecutionRequest(BaseModel):
     contract: VaceContract
-    outputUploadUrl: HttpUrl
-    callbackUrl: HttpUrl
-    callbackToken: str = Field(min_length=32, max_length=512)
 
 
 def require_worker_token(x_creatorvault_worker_token: str = Header(default="")) -> None:
@@ -140,24 +134,6 @@ def model_ready() -> bool:
     return VACE_MODEL_DIR.exists() and any(VACE_MODEL_DIR.iterdir()) and (VACE_ROOT / "vace" / "vace_wan_inference.py").exists()
 
 
-def submit_callback(url: str, token: str, payload: dict[str, Any]) -> None:
-    safe_https(url)
-    response = requests.post(
-        url,
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-        json=payload,
-        timeout=CALLBACK_TIMEOUT_SECONDS,
-    )
-    response.raise_for_status()
-
-
-def upload_output(url: str, path: Path) -> None:
-    safe_https(url)
-    with path.open("rb") as handle:
-        response = requests.put(url, data=handle, headers={"Content-Type": "video/mp4"}, timeout=DOWNLOAD_TIMEOUT_SECONDS)
-    response.raise_for_status()
-
-
 def assert_preservation_flags(contract: VaceContract) -> None:
     required = {
         "identity", "face", "bodyAnatomy", "naturalSkin", "wardrobe", "originalPerformance",
@@ -172,26 +148,48 @@ def assert_preservation_flags(contract: VaceContract) -> None:
 async def execute_vace(job_id: str, request: VaceExecutionRequest) -> None:
     job_dir = VACE_WORK_DIR / "jobs" / job_id
     result_dir = VACE_WORK_DIR / "results" / job_id
-    source_path = job_dir / "source.mp4"
+    downloaded_source_path = job_dir / "source-original.mp4"
+    source_path = job_dir / "source-segment.mp4"
     mask_path = job_dir / "temporal-subject-mask.mp4"
-    depth_path = job_dir / "depth-control.mp4"
-    flow_path = job_dir / "optical-flow.mp4"
     refs_dir = job_dir / "references"
     output_path = result_dir / "vace-output.mp4"
     contract = request.contract
     try:
         job_state[job_id] = {"state": "downloading_guarded_inputs", "jobKey": contract.jobKey}
-        download_verified(str(contract.source.sourceUrl), source_path)
-        if sha256(source_path) != contract.source.sourceChecksum:
+        download_verified(str(contract.source.sourceUrl), downloaded_source_path)
+        if sha256(downloaded_source_path) != contract.source.sourceChecksum:
             raise RuntimeError("Source checksum mismatch: refusing VACE inference")
-        download_verified(str(contract.source.temporalSubjectMaskUrl), mask_path)
-        download_verified(str(contract.source.depthControlUrl), depth_path)
-        download_verified(str(contract.source.opticalFlowUrl), flow_path)
-        reference_paths: list[Path] = []
-        for index, url in enumerate(contract.source.referenceFrameUrls):
-            path = refs_dir / f"reference-{index}.png"
-            download_verified(str(url), path)
-            reference_paths.append(path)
+        clip_start = contract.source.clipStartMs / 1000
+        clip_duration = (contract.source.clipEndMs - contract.source.clipStartMs) / 1000
+        clipped = subprocess.run(
+            ["ffmpeg", "-y", "-ss", f"{clip_start:.3f}", "-i", str(downloaded_source_path), "-t", f"{clip_duration:.3f}", "-map", "0:v:0", "-map", "0:a?", "-c", "copy", str(source_path)],
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        if clipped.returncode != 0:
+            raise RuntimeError(f"Verified source segment preparation failed: {clipped.stderr[-1000:]}")
+        # The private worker derives a black preservation mask at the source segment's exact timing.
+        # This is a technical model-conditioning asset, not a visual edit. Black means no region is opened
+        # for geometric or identity alteration; the lighting-only prompt is the sole requested change.
+        mask_render = subprocess.run(
+            ["ffmpeg", "-y", "-i", str(source_path), "-vf", "format=gray,geq=lum='0'", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(mask_path)],
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        if mask_render.returncode != 0:
+            raise RuntimeError(f"VACE preservation-mask preparation failed: {mask_render.stderr[-1000:]}")
+        reference_path = refs_dir / "verified-source-reference.png"
+        reference_path.parent.mkdir(parents=True, exist_ok=True)
+        reference_extract = subprocess.run(
+            ["ffmpeg", "-y", "-ss", "0.100", "-i", str(source_path), "-frames:v", "1", "-q:v", "2", str(reference_path)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if reference_extract.returncode != 0 or not reference_path.is_file():
+            raise RuntimeError(f"VACE verified identity-reference extraction failed: {reference_extract.stderr[-1000:]}")
 
         if not model_ready():
             raise RuntimeError("VACE model package is not present on this GPU worker")
@@ -208,14 +206,18 @@ async def execute_vace(job_id: str, request: VaceExecutionRequest) -> None:
             "--ckpt_dir", str(VACE_MODEL_DIR),
             "--src_video", str(source_path),
             "--src_mask", str(mask_path),
-            "--src_ref_images", ",".join(str(path) for path in reference_paths),
+            "--src_ref_images", str(reference_path),
+            "--frame_num", "121",
+            "--sample_steps", "30",
+            "--save_dir", str(result_dir),
+            "--save_file", "vace-visual.mp4",
             "--prompt", instruction,
         ]
         completed = subprocess.run(command, cwd=str(VACE_ROOT), capture_output=True, text=True, timeout=7200)
         if completed.returncode != 0:
             raise RuntimeError(f"VACE inference failed: {completed.stderr[-1500:]}")
 
-        generated = sorted((VACE_ROOT / "results").glob("*.mp4"), key=lambda path: path.stat().st_mtime, reverse=True)
+        generated = sorted(result_dir.glob("*.mp4"), key=lambda path: path.stat().st_mtime, reverse=True)
         if not generated:
             raise RuntimeError("VACE completed without a video output")
         shutil.copy2(generated[0], output_path)
@@ -229,27 +231,16 @@ async def execute_vace(job_id: str, request: VaceExecutionRequest) -> None:
         )
         if mux.returncode != 0:
             raise RuntimeError(f"Original-audio packaging failed: {mux.stderr[-1000:]}")
-        upload_output(str(request.outputUploadUrl), muxed_path)
-        job_state[job_id] = {"state": "completed", "jobKey": contract.jobKey}
-        submit_callback(str(request.callbackUrl), request.callbackToken, {
-            "jobKey": contract.jobKey,
+        job_state[job_id] = {
             "state": "completed",
-            "workerJobId": job_id,
+            "jobKey": contract.jobKey,
             "sourceChecksum": contract.source.sourceChecksum,
             "outputSha256": sha256(muxed_path),
             "outputBytes": muxed_path.stat().st_size,
-        })
+            "outputPath": str(muxed_path),
+        }
     except Exception as error:
         job_state[job_id] = {"state": "failed", "jobKey": contract.jobKey, "reason": str(error)[:1500]}
-        try:
-            submit_callback(str(request.callbackUrl), request.callbackToken, {
-                "jobKey": contract.jobKey,
-                "state": "failed",
-                "workerJobId": job_id,
-                "reason": str(error)[:1500],
-            })
-        except Exception:
-            pass
 
 
 @app.get("/health", dependencies=[Depends(require_worker_token)])
@@ -267,8 +258,6 @@ def health() -> dict[str, Any]:
 @app.post("/v1/body-cinema/jobs", dependencies=[Depends(require_worker_token)])
 async def create_job(request: VaceExecutionRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:
     assert_preservation_flags(request.contract)
-    for candidate in [str(request.outputUploadUrl), str(request.callbackUrl)]:
-        safe_https(candidate)
     job_id = str(uuid.uuid4())
     job_state[job_id] = {"state": "queued", "jobKey": request.contract.jobKey}
     background_tasks.add_task(execute_vace, job_id, request)
@@ -280,4 +269,13 @@ def get_job(worker_job_id: str) -> dict[str, Any]:
     state = job_state.get(worker_job_id)
     if not state:
         raise HTTPException(status_code=404, detail="Unknown CreatorVault VACE worker job")
-    return state
+    return {key: value for key, value in state.items() if key != "outputPath"}
+
+
+@app.get("/v1/body-cinema/jobs/{worker_job_id}/output", dependencies=[Depends(require_worker_token)])
+def get_job_output(worker_job_id: str) -> FileResponse:
+    state = job_state.get(worker_job_id)
+    output_path = Path(str(state.get("outputPath", ""))) if state else None
+    if not state or state.get("state") != "completed" or not output_path or not output_path.is_file():
+        raise HTTPException(status_code=404, detail="Completed CreatorVault VACE output is not available")
+    return FileResponse(output_path, media_type="video/mp4", filename="Body-Cinema-VACE-Output.mp4")

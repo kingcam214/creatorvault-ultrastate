@@ -10,6 +10,7 @@ import { reviewBodyCinemaOutput, type BodyCinemaOutputReview } from "./bodyCinem
 import { assertBodyCinemaEditBlueprintReady } from "./bodyCinemaEditBlueprintService";
 import { assertBodyCinemaSourceMapReady } from "./bodyCinemaSourceMapService";
 import { recordBodyCinemaProviderFailure } from "./bodyCinemaProviderResilienceService";
+import { buildVaceMaskedEditContract, type VaceMaskedEditContract, vaceContractFingerprint } from "./bodyCinemaVaceWorkerContract";
 import {
   TopazPrecisionProviderError,
   createTopazPrecisionVideoRequest,
@@ -46,7 +47,7 @@ export type GovernedPolloConfig = {
 
 export type CreateGovernedPolloDraftInput = {
   creatorId: number;
-  provider?: "pollo" | "replicate" | "runway" | "topaz";
+  provider?: "pollo" | "replicate" | "runway" | "topaz" | "vace";
   requestedBy: number;
   sourceUrl: string;
   sourceChecksum?: string | null;
@@ -79,7 +80,7 @@ export type GovernedPolloJob = {
   sourceUrl: string;
   sourceChecksum: string | null;
   prompt: string;
-  provider: "pollo" | "replicate" | "runway" | "topaz";
+  provider: "pollo" | "replicate" | "runway" | "topaz" | "vace";
   providerModelPath: string;
   resolution: string;
   durationSeconds: number;
@@ -153,6 +154,10 @@ const RUNWAY_ALEPH_2_CREDITS_PER_SOURCE_SECOND = 28;
 const TOPAZ_PROTEUS_PRECISION_VIDEO_MODEL_PATH = "topaz/proteus-precision-video";
 const TOPAZ_PROTEUS_PRECISION_VIDEO_MODE = "topaz_proteus_precision_finish";
 const TOPAZ_PROTEUS_1080P_CREDITS_PER_10_SECONDS = 2;
+const CREATORVAULT_VACE_MODEL_PATH = "creatorvault/wan2.1-vace-14b-masked-video-edit";
+const CREATORVAULT_VACE_MODE = "creatorvault_vace_lighting_preservation";
+const CREATORVAULT_VACE_HARD_SESSION_CAP_USD = 20;
+const CREATORVAULT_VACE_OUTPUT_MAX_BYTES = 500 * 1024 * 1024;
 const KLING_SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/kling-v3-omni-ref2video";
 const SOURCE_VIDEO_REFERENCE_MODE = "ref2video";
 const SOURCE_VIDEO_REFERENCE_CONTRACTS = {
@@ -322,6 +327,20 @@ function isTopazPrecisionVideoJob(job: Pick<GovernedPolloJob, "provider" | "prov
     && typeof job.metadata.bodyCinemaSourceMapId === "string";
 }
 
+function isCreatorVaultVaceLightingJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
+  return job.provider === "vace"
+    && job.providerModelPath === CREATORVAULT_VACE_MODEL_PATH
+    && job.mode === CREATORVAULT_VACE_MODE
+    && job.metadata.ownerDirectedPilot === true
+    && job.metadata.candidateLimit === 1
+    && job.metadata.noAutomaticRetry === true
+    && job.metadata.sourcePreservationRequired === true
+    && typeof job.metadata.vaceContract === "object"
+    && typeof job.metadata.bodyCinemaEvidenceId === "string"
+    && typeof job.metadata.bodyCinemaEditBlueprintId === "string"
+    && typeof job.metadata.bodyCinemaSourceMapId === "string";
+}
+
 function resolveCreatorVaultUploadPath(sourceUrl: string): string {
   const parsed = new URL(sourceUrl);
   if (parsed.protocol !== "https:" || parsed.hostname !== "creatorvault.live") {
@@ -358,7 +377,7 @@ function isDesignImagePilot(job: Pick<GovernedPolloJob, "providerModelPath" | "m
 }
 
 function isSingleUseGovernedPilot(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
-  return isSourceVideoReferenceJob(job) || isReplicateWanVideoEditJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
+  return isSourceVideoReferenceJob(job) || isReplicateWanVideoEditJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isCreatorVaultVaceLightingJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
 }
 
 function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
@@ -535,7 +554,7 @@ function normaliseJob(row: any): GovernedPolloJob {
     sourceUrl: String(row.source_url),
     sourceChecksum: row.source_checksum ? String(row.source_checksum) : null,
     prompt: String(row.prompt),
-    provider: ["pollo", "replicate", "runway", "topaz"].includes(String(row.provider || "pollo"))
+    provider: ["pollo", "replicate", "runway", "topaz", "vace"].includes(String(row.provider || "pollo"))
       ? String(row.provider || "pollo") as GovernedPolloJob["provider"]
       : "pollo",
     providerModelPath: String(row.provider_model_path),
@@ -819,7 +838,15 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
     && input.metadata?.ownerDirectedPilot === true
     && input.metadata?.candidateLimit === 1
     && input.metadata?.noAutomaticRetry === true;
-  if (!approvedPolloModel && !approvedReplicateModel && !approvedRunwayModel && !approvedTopazPrecisionPilot) {
+  const approvedVaceLightingPilot = provider === "vace"
+    && providerModelPath === CREATORVAULT_VACE_MODEL_PATH
+    && input.mode === CREATORVAULT_VACE_MODE
+    && input.metadata?.ownerDirectedPilot === true
+    && input.metadata?.candidateLimit === 1
+    && input.metadata?.noAutomaticRetry === true
+    && input.metadata?.sourcePreservationRequired === true
+    && Boolean(input.metadata?.vaceContract);
+  if (!approvedPolloModel && !approvedReplicateModel && !approvedRunwayModel && !approvedTopazPrecisionPilot && !approvedVaceLightingPilot) {
     throw new Error("Only an approved governed provider model path may be requested through this workflow.");
   }
   const requestedEstimate = input.estimatedCostCredits === null || input.estimatedCostCredits === undefined
@@ -1227,6 +1254,96 @@ export async function createGovernedTopazPrecisionVideoDraft(input: {
       hardCreditCap: estimatedCostCredits,
       sourceDurationSeconds: durationSeconds,
       topazPrecisionModel: "prob-4",
+    },
+  });
+}
+
+export async function createGovernedVaceLightingDraft(input: {
+  creatorId: number;
+  requestedBy: number;
+  sourceUrl: string;
+  sourceChecksum: string;
+  aspectRatio: "9:16" | "16:9" | "1:1";
+  ownershipConfirmed: boolean;
+  consentConfirmed: boolean;
+  evidenceId: string;
+  editBlueprintId: string;
+  idempotencyKey?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  const blueprint = await assertBodyCinemaEditBlueprintReady({
+    creatorId: input.creatorId,
+    evidenceId: input.evidenceId,
+    sourceMediaUrl: input.sourceUrl,
+    editBlueprintId: input.editBlueprintId,
+  });
+  const sourceMap = await assertBodyCinemaSourceMapReady({
+    creatorId: input.creatorId,
+    evidenceId: input.evidenceId,
+    sourceMediaUrl: input.sourceUrl,
+    route: "source_preserving_assembly",
+  });
+  const sourceDurationMs = Number(sourceMap.analysis.sourceDurationMs || 0);
+  if (!Number.isFinite(sourceDurationMs) || sourceDurationMs < 2_000) {
+    throw new Error("The verified creator source is too short for the protected VACE benchmark.");
+  }
+  const hookMoment = blueprint.strongestMoments.find((moment) => moment.kind === "hook")?.timestampMs
+    ?? blueprint.scenes.find((scene) => scene.id === "hook")?.sourceTimestampMs
+    ?? 0;
+  const clipDurationMs = Math.min(5_000, Math.floor(sourceDurationMs));
+  const clipStartMs = Math.max(0, Math.min(Math.round(hookMoment - clipDurationMs * 0.25), Math.max(0, Math.floor(sourceDurationMs) - clipDurationMs)));
+  const clipEndMs = clipStartMs + clipDurationMs;
+  const contract = buildVaceMaskedEditContract({
+    jobKey: `creatorvault-vace:${input.creatorId}:${input.evidenceId}:${clipStartMs}:${clipEndMs}`,
+    source: {
+      sourceUrl: input.sourceUrl,
+      sourceChecksum: input.sourceChecksum,
+      evidenceId: input.evidenceId,
+      sourceMapId: sourceMap.id,
+      editBlueprintId: blueprint.id,
+      clipStartMs,
+      clipEndMs,
+    },
+    aspectRatio: input.aspectRatio,
+    changeSet: "lighting_only",
+  });
+  const contractFingerprint = vaceContractFingerprint(contract);
+  const estimatedCostCredits = CREATORVAULT_VACE_HARD_SESSION_CAP_USD;
+  return createGovernedPolloDraft({
+    creatorId: input.creatorId,
+    requestedBy: input.requestedBy,
+    provider: "vace",
+    sourceUrl: input.sourceUrl,
+    sourceChecksum: input.sourceChecksum,
+    prompt: contract.changeSet.instruction,
+    providerModelPath: CREATORVAULT_VACE_MODEL_PATH,
+    resolution: "720p",
+    durationSeconds: Number((clipDurationMs / 1000).toFixed(3)),
+    aspectRatio: input.aspectRatio,
+    mode: CREATORVAULT_VACE_MODE,
+    outputCount: 1,
+    estimatedCostCredits,
+    costEvidenceReference: `CreatorVault-approved H200 VACE benchmark cap: $${CREATORVAULT_VACE_HARD_SESSION_CAP_USD} total GPU-runtime ceiling for one protected source-to-watchable attempt; no automatic retry.`,
+    ownershipConfirmed: input.ownershipConfirmed,
+    consentConfirmed: input.consentConfirmed,
+    idempotencyKey: input.idempotencyKey,
+    metadata: {
+      ...(input.metadata || {}),
+      bodyCinemaEvidenceId: input.evidenceId,
+      bodyCinemaEditBlueprintId: blueprint.id,
+      bodyCinemaSourceMapId: sourceMap.id,
+      sourcePreservationRequired: true,
+      authorizedChangeSet: contract.changeSet.instruction,
+      preserve: ["identity", "face", "body_anatomy", "natural_skin", "wardrobe", "original_performance", "original_motion_timing", "camera_movement", "framing", "environment_geometry", "original_audio"],
+      ownerDirectedPilot: true,
+      candidateLimit: 1,
+      noAutomaticRetry: true,
+      hardCreditCap: estimatedCostCredits,
+      providerCostCurrency: "USD",
+      vaceContract: contract,
+      vaceContractFingerprint: contractFingerprint,
+      vaceClip: { startMs: clipStartMs, endMs: clipEndMs, durationMs: clipDurationMs, selectedFrom: "persisted_body_cinema_hook" },
+      sourceDerivedControls: { temporalMask: "private_worker_derived_from_verified_source", identityReference: "private_worker_derived_from_verified_source" },
     },
   });
 }
@@ -1661,8 +1778,156 @@ async function submitGovernedTopazPrecisionVideoJob(leased: GovernedPolloJob, wo
   }
 }
 
+function getVaceWorkerRuntime(): { baseUrl: string; token: string } {
+  const baseUrl = String(process.env.CREATORVAULT_VACE_WORKER_URL || "").trim().replace(/\/$/, "");
+  const token = String(process.env.CREATORVAULT_VACE_WORKER_TOKEN || "").trim();
+  if (!/^https:\/\/[^\s/?#]+(?:\/[^\s?#]*)?$/i.test(baseUrl) || token.length < 32 || /\s/.test(token)) {
+    throw new Error("The protected CreatorVault VACE worker connection is not ready.");
+  }
+  return { baseUrl, token };
+}
+
+function vaceContractFromJob(job: GovernedPolloJob): VaceMaskedEditContract {
+  if (!isCreatorVaultVaceLightingJob(job)) throw new Error("A governed CreatorVault VACE lighting benchmark is required.");
+  const raw = job.metadata.vaceContract as Record<string, any>;
+  const contract = buildVaceMaskedEditContract({
+    jobKey: String(raw?.jobKey || ""),
+    source: {
+      sourceUrl: String(raw?.source?.sourceUrl || ""),
+      sourceChecksum: String(raw?.source?.sourceChecksum || ""),
+      evidenceId: String(raw?.source?.evidenceId || ""),
+      sourceMapId: String(raw?.source?.sourceMapId || ""),
+      editBlueprintId: String(raw?.source?.editBlueprintId || ""),
+      clipStartMs: Number(raw?.source?.clipStartMs),
+      clipEndMs: Number(raw?.source?.clipEndMs),
+    },
+    aspectRatio: raw?.output?.aspectRatio,
+    changeSet: raw?.changeSet?.kind,
+  });
+  const expectedFingerprint = String(job.metadata.vaceContractFingerprint || "");
+  if (!expectedFingerprint || vaceContractFingerprint(contract) !== expectedFingerprint) {
+    throw new Error("The stored protected VACE contract no longer matches the owner-approved benchmark.");
+  }
+  if (contract.source.sourceUrl !== job.sourceUrl || contract.source.sourceChecksum !== job.sourceChecksum) {
+    throw new Error("The VACE contract does not match the governed source record.");
+  }
+  return contract;
+}
+
+async function vaceWorkerJson(pathname: string, options: RequestInit): Promise<Record<string, any>> {
+  const runtime = getVaceWorkerRuntime();
+  const response = await fetch(`${runtime.baseUrl}${pathname}`, {
+    ...options,
+    headers: { "X-CreatorVault-Worker-Token": runtime.token, Accept: "application/json", ...(options.headers || {}) },
+  });
+  const body = await parseProviderJson(response);
+  if (!response.ok) throw new Error(`VACE worker returned ${response.status}: ${safeErrorMessage(body.detail ?? body.message ?? body.responseText ?? "unknown error")}`);
+  return body;
+}
+
+async function submitGovernedVaceLightingJob(leased: GovernedPolloJob, workerId: string): Promise<GovernedPolloJob> {
+  try {
+    const contract = vaceContractFromJob(leased);
+    const workerResponse = await vaceWorkerJson("/v1/body-cinema/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contract }) });
+    const workerJobId = String(workerResponse.workerJobId || "").trim();
+    if (!workerJobId) return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId, error: new Error("The VACE worker accepted the benchmark without a worker job ID.") });
+    return markGovernedPolloSubmitted({ jobId: leased.id, workerId, providerJobId: workerJobId, providerResponse: workerResponse });
+  } catch (error) {
+    const message = safeErrorMessage(error);
+    const existing = await getGovernedPolloJob(leased.id);
+    const ambiguous = /network|fetch|timeout|timed out|ECONN|EAI_AGAIN/i.test(message);
+    const failed = ambiguous
+      ? await markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId, error })
+      : await failGovernedPolloJob({ jobId: leased.id, code: "vace_submission_failed", error, releaseBudget: existing?.state === "queued" });
+    await recordBodyCinemaProviderFailure({ providerKey: "creatorvault_vace", code: ambiguous ? "submission_timeout_no_task" : "asset_contract", detail: message, source: "governed_vace_submission", metadata: { governedJobId: leased.id, requestId: leased.requestId, reservationReleased: existing?.state === "queued" } }).catch(() => undefined);
+    return failed;
+  }
+}
+
+export async function pollGovernedVaceLightingJob(params: { jobId: number; ownerId: number }): Promise<GovernedPolloJob> {
+  requireOwner(params.ownerId);
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isCreatorVaultVaceLightingJob(job)) throw new Error("A submitted CreatorVault VACE benchmark is required for worker polling.");
+  if (job.state !== "submitted" || !job.providerJobId) throw new Error(`VACE benchmark in state ${job.state} cannot be polled.`);
+  try {
+    const status = await vaceWorkerJson(`/v1/body-cinema/jobs/${encodeURIComponent(job.providerJobId)}`, { method: "GET" });
+    const state = String(status.state || "running_vace").toLowerCase();
+    if (state === "completed") {
+      const runtime = getVaceWorkerRuntime();
+      return recordGovernedPolloProviderCompletion({ jobId: job.id, providerJobId: job.providerJobId, outputUrl: `${runtime.baseUrl}/v1/body-cinema/jobs/${encodeURIComponent(job.providerJobId)}/output`, providerResponse: status });
+    }
+    if (state === "failed") {
+      const failed = await failGovernedPolloJob({ jobId: job.id, actorId: params.ownerId, code: "vace_inference_failed", error: new Error(String(status.reason || "VACE worker reported a failed benchmark.")) });
+      await recordBodyCinemaProviderFailure({ providerKey: "creatorvault_vace", code: "provider_output_failure", detail: String(status.reason || "VACE inference failed."), source: "governed_vace_poll", metadata: { governedJobId: job.id, requestId: job.requestId } }).catch(() => undefined);
+      return failed;
+    }
+    await rawExec("UPDATE governed_media_jobs SET provider_response_json = ?, updated_at = NOW() WHERE id = ? AND state = 'submitted'", [safeJson(status), job.id]);
+    await appendEvent({ jobId: job.id, eventType: "provider_status_polled", fromState: "submitted", toState: "submitted", actorId: params.ownerId, correlationId: job.requestId, detail: { providerJobId: job.providerJobId, status: state } });
+    return (await getGovernedPolloJob(job.id))!;
+  } catch (error) {
+    await recordBodyCinemaProviderFailure({ providerKey: "creatorvault_vace", code: "service_unavailable", detail: safeErrorMessage(error), source: "governed_vace_poll", metadata: { governedJobId: job.id, requestId: job.requestId } }).catch(() => undefined);
+    throw error;
+  }
+}
+
+export async function ingestCompletedGovernedVaceLightingOutput(params: { jobId: number; ownerId: number }): Promise<{ outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number; outputFingerprint: string }> {
+  requireOwner(params.ownerId);
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isCreatorVaultVaceLightingJob(job)) throw new Error("A completed CreatorVault VACE benchmark is required for Media Vault ingestion.");
+  if (job.state !== "provider_complete" || !job.providerJobId || !job.outputUrl) throw new Error("CreatorVault will only ingest a completed VACE worker output.");
+  const folder = `body-cinema-vace-${job.id}`;
+  const fileName = "Body-Cinema-VACE-Lighting-Benchmark.mp4";
+  const directory = path.join("/root/uploads", "content-vault", folder);
+  const localPath = path.join(directory, fileName);
+  const outputAssetUrl = `https://creatorvault.live/uploads/content-vault/${folder}/${fileName}`;
+  if (!(await stat(localPath).then(() => true).catch(() => false))) {
+    await mkdir(directory, { recursive: true });
+    const runtime = getVaceWorkerRuntime();
+    const response = await fetch(`${runtime.baseUrl}/v1/body-cinema/jobs/${encodeURIComponent(job.providerJobId)}/output`, { headers: { "X-CreatorVault-Worker-Token": runtime.token, Accept: "video/mp4" } });
+    if (!response.ok) throw new Error(`VACE output download returned ${response.status}.`);
+    const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+    if (contentType && !contentType.includes("video/")) throw new Error(`VACE output did not return video data (${contentType}).`);
+    const declaredLength = Number(response.headers.get("content-length") || 0);
+    if (declaredLength > CREATORVAULT_VACE_OUTPUT_MAX_BYTES) throw new Error("VACE output exceeded the governed Media Vault size limit.");
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length < 1024 || bytes.length > CREATORVAULT_VACE_OUTPUT_MAX_BYTES) throw new Error("VACE output failed the governed Media Vault size limit.");
+    await writeFile(localPath, bytes);
+  }
+  const video = await probeVideo(localPath);
+  const sizeBytes = Number((await stat(localPath)).size);
+  const outputFingerprint = createHash("sha256").update(await readFile(localPath)).digest("hex");
+  if (sizeBytes < 1024 || video.durationSeconds <= 0 || video.width <= 0 || video.height <= 0) throw new Error("VACE output was not a readable governed video.");
+  const existing = await rawQuery("SELECT id FROM media_assets WHERE user_id = ? AND public_url = ? LIMIT 1", [job.creatorId, outputAssetUrl]);
+  if (!existing[0]) {
+    await rawExec(`INSERT INTO media_assets (id, user_id, source_type, asset_type, file_name, original_name, mime_type, file_size, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
+      VALUES (?, ?, 'generated', 'video', ?, ?, 'video/mp4', ?, ?, ?, ?, ?, ?, ?, 'ready', 'body_cinema_governed_vace')`, [randomUUID(), job.creatorId, fileName, fileName, sizeBytes, localPath, outputAssetUrl, outputAssetUrl, Number(video.durationSeconds.toFixed(3)), video.width, video.height]);
+  }
+  const metadata = { ...job.metadata, durableOutputUrl: outputAssetUrl, outputFingerprint, actualCostState: `One approved H200 session with a fixed $${CREATORVAULT_VACE_HARD_SESSION_CAP_USD} ceiling; infrastructure cost is bounded outside Pollo credits.`, verifiedProviderVideo: { durationSeconds: Number(video.durationSeconds.toFixed(3)), width: video.width, height: video.height, sizeBytes, provider: "creatorvault_vace" } };
+  await rawExec("UPDATE governed_media_jobs SET metadata_json = ?, updated_at = NOW() WHERE id = ? AND state = 'provider_complete'", [safeJson(metadata), job.id]);
+  await appendEvent({ jobId: job.id, eventType: "provider_output_durably_ingested", fromState: "provider_complete", toState: "provider_complete", actorId: params.ownerId, correlationId: job.requestId, detail: { outputAssetUrl, durationSeconds: Number(video.durationSeconds.toFixed(3)), width: video.width, height: video.height, sizeBytes, outputFingerprint } });
+  return { outputAssetUrl, durationSeconds: Number(video.durationSeconds.toFixed(3)), width: video.width, height: video.height, sizeBytes, outputFingerprint };
+}
+
+export async function reviewCompletedGovernedVaceLightingOutput(params: { jobId: number; ownerId: number }): Promise<{ reviewedJob: GovernedPolloJob; outputReview: BodyCinemaOutputReview; outputAssetUrl: string }> {
+  requireOwner(params.ownerId);
+  const ingested = await ingestCompletedGovernedVaceLightingOutput(params);
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isCreatorVaultVaceLightingJob(job)) throw new Error("A completed CreatorVault VACE benchmark is required for output review.");
+  const evidenceId = typeof job.metadata.bodyCinemaEvidenceId === "string" ? job.metadata.bodyCinemaEvidenceId : "";
+  if (!evidenceId) throw new Error("The governed VACE benchmark has no Body Cinema source evidence reference.");
+  const localPath = path.join("/root/uploads", "content-vault", `body-cinema-vace-${job.id}`, "Body-Cinema-VACE-Lighting-Benchmark.mp4");
+  const video = await probeVideo(localPath);
+  const frameEvidence = await buildFrameEvidence(localPath, video);
+  const outputReview = await reviewBodyCinemaOutput(job.creatorId, { evidenceId, outputAssetUrl: ingested.outputAssetUrl, outputFingerprint: ingested.outputFingerprint, frameEvidence, reviewClass: "technical_source_preservation" });
+  const passedRegressionFloor = outputReview.status === "accepted" && outputReview.overallScore >= 94;
+  const reason = passedRegressionFloor ? outputReview.reasons.join(" ") : `${outputReview.reasons.join(" ")} Rejected: VACE output did not clear the locked 94/100 Body Cinema preservation baseline.`;
+  const reviewedJob = await reviewGovernedPolloOutput({ jobId: job.id, reviewerId: params.ownerId, accepted: passedRegressionFloor, artifactUrl: passedRegressionFloor ? ingested.outputAssetUrl : null, qualityScore: outputReview.overallScore, reason });
+  return { reviewedJob, outputReview, outputAssetUrl: ingested.outputAssetUrl };
+}
+
 export async function submitGovernedPolloJob(params: { jobId: number; workerId: string }): Promise<GovernedPolloJob> {
   const leased = await claimGovernedPolloJob(params);
+  if (isCreatorVaultVaceLightingJob(leased)) return submitGovernedVaceLightingJob(leased, params.workerId);
   if (isReplicateWanVideoEditJob(leased)) return submitGovernedReplicateWanVideoEditJob(leased, params.workerId);
   if (isTopazPrecisionVideoJob(leased)) return submitGovernedTopazPrecisionVideoJob(leased, params.workerId);
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
@@ -1758,6 +2023,10 @@ export async function pollGovernedPolloProviderJob(params: { jobId: number; acto
   if (!job) throw new Error("Governed media job was not found.");
   if (job.state !== "submitted") throw new Error(`Job in state ${job.state} cannot be polled for provider completion.`);
   if (!job.providerJobId) throw new Error("The governed media job has no provider task ID to poll.");
+
+  if (isCreatorVaultVaceLightingJob(job)) {
+    return pollGovernedVaceLightingJob({ jobId: job.id, ownerId: params.actorId });
+  }
 
   if (isTopazPrecisionVideoJob(job)) {
     try {

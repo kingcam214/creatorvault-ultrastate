@@ -30,6 +30,9 @@ import {
   recordGovernedRunwayAlephVideoEditFailure,
   reclassifyGovernedRunwayAlephWorkspaceLimit,
   reconcileGovernedRunwayAlephSubmissionTimeout,
+  createGovernedVaceLightingDraft,
+  ingestCompletedGovernedVaceLightingOutput,
+  reviewCompletedGovernedVaceLightingOutput,
 } from "../services/governedPolloService";
 import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } from "../services/bodyCinemaEvidenceService";
 import { getOrCreateBodyCinemaEditBlueprint } from "../services/bodyCinemaEditBlueprintService";
@@ -497,6 +500,48 @@ export const governedPolloRouter = router({
     }
   }),
 
+  createVaceLightingBenchmarkDraft: protectedProcedure.input(z.object({
+    creatorId: z.number().int().positive().optional(),
+    evidenceId: z.string().uuid(),
+    sourceUrl: z.string().url().max(4000),
+    sourceChecksum: z.string().trim().regex(/^[a-f0-9]{64}$/i),
+    aspectRatio: z.enum(["9:16", "16:9", "1:1"]),
+    ownershipConfirmed: z.literal(true),
+    consentConfirmed: z.literal(true),
+    editBlueprintId: z.string().uuid().optional(),
+    idempotencyKey: z.string().trim().min(12).max(191).optional(),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    const creatorId = input.creatorId ?? ctx.user.id;
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    try {
+      const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
+      const editBlueprint = await getOrCreateBodyCinemaEditBlueprint({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
+      if (input.editBlueprintId && input.editBlueprintId !== editBlueprint.id) {
+        throw new Error("The supplied Body Cinema edit blueprint belongs to a different protected source plan.");
+      }
+      return await createGovernedVaceLightingDraft({
+        creatorId,
+        requestedBy: ctx.user.id,
+        sourceUrl: input.sourceUrl,
+        sourceChecksum: input.sourceChecksum,
+        aspectRatio: input.aspectRatio,
+        ownershipConfirmed: input.ownershipConfirmed,
+        consentConfirmed: input.consentConfirmed,
+        evidenceId: evidenceContext.evidence.id,
+        editBlueprintId: editBlueprint.id,
+        idempotencyKey: input.idempotencyKey,
+        metadata: {
+          bodyCinemaDirectionId: evidenceContext.direction.id,
+          bodyCinemaTimeline: evidenceContext.direction.timeline,
+          bodyCinemaEditBlueprintId: editBlueprint.id,
+        },
+      });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
   createTopazPrecisionVideoDraft: protectedProcedure.input(z.object({
     creatorId: z.number().int().positive().optional(),
     evidenceId: z.string().uuid(),
@@ -626,6 +671,24 @@ export const governedPolloRouter = router({
     ownerOnly(ctx.user.id);
     try {
       return await reviewCompletedGovernedRunwayAlephVideoEditOutput({ jobId: input.jobId, ownerId: ctx.user.id });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  ingestVaceLightingOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await ingestCompletedGovernedVaceLightingOutput({ jobId: input.jobId, ownerId: ctx.user.id });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  reviewVaceLightingOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await reviewCompletedGovernedVaceLightingOutput({ jobId: input.jobId, ownerId: ctx.user.id });
     } catch (error) {
       return asPrecondition(error);
     }

@@ -19,7 +19,9 @@ RUN python3.10 -m pip install --no-cache-dir --upgrade pip \
 
 RUN git clone --depth 1 https://github.com/ali-vilab/VACE.git ${VACE_ROOT} \
     && python3.10 -m pip install --no-cache-dir --no-build-isolation -r ${VACE_ROOT}/requirements.txt \
-    && python3.10 -m pip install --no-cache-dir wan@git+https://github.com/Wan-Video/Wan2.1
+    && python3.10 -m pip install --no-cache-dir wan@git+https://github.com/Wan-Video/Wan2.1 \
+    && python3.10 -m pip install --no-cache-dir --force-reinstall \
+      "numpy==1.26.4" "opencv-python-headless==4.10.0.84" "matplotlib==3.8.4"
 
 COPY requirements.txt /tmp/creatorvault-worker-requirements.txt
 RUN python3.10 -m pip install --no-cache-dir -r /tmp/creatorvault-worker-requirements.txt

@@ -13,10 +13,6 @@ const source = {
   editBlueprintId: "blueprint-1",
   clipStartMs: 8_000,
   clipEndMs: 13_000,
-  referenceFrameUrls: ["https://creatorvault.live/uploads/reference-1.jpg"],
-  temporalSubjectMaskUrl: "https://creatorvault.live/uploads/subject-mask.mp4",
-  depthControlUrl: "https://creatorvault.live/uploads/depth-control.mp4",
-  opticalFlowUrl: "https://creatorvault.live/uploads/flow-control.mp4",
 };
 
 describe("Body Cinema VACE worker contract", () => {
@@ -45,14 +41,7 @@ describe("Body Cinema VACE worker contract", () => {
     })).toThrow(/limited to 5-second source segments/);
   });
 
-  it("rejects missing temporal controls and any unapproved change set before worker dispatch", () => {
-    expect(() => buildVaceMaskedEditContract({
-      jobKey: "vace-job-3",
-      source: { ...source, temporalSubjectMaskUrl: "" },
-      aspectRatio: "9:16",
-      changeSet: "lighting_only",
-    })).toThrow(/temporal subject mask/);
-
+  it("rejects any unapproved change set before worker dispatch", () => {
     expect(() => buildVaceMaskedEditContract({
       jobKey: "vace-job-4",
       source,

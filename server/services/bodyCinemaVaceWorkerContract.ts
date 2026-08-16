@@ -25,10 +25,6 @@ export type VaceProtectedSource = {
   editBlueprintId: string;
   clipStartMs: number;
   clipEndMs: number;
-  referenceFrameUrls: string[];
-  temporalSubjectMaskUrl: string;
-  depthControlUrl: string;
-  opticalFlowUrl: string;
 };
 
 export type VaceMaskedEditContract = {
@@ -115,9 +111,6 @@ export function buildVaceMaskedEditContract(input: {
   }
 
   const segment = requireSafeSegment(input.source.clipStartMs, input.source.clipEndMs);
-  const references = Array.from(new Set(input.source.referenceFrameUrls.map((value) => requireHttps(value, "VACE identity reference frame"))));
-  if (!references.length) throw new Error("VACE requires verified reference frames before a source-preserving edit.");
-
   const source: VaceProtectedSource = {
     sourceUrl: requireHttps(input.source.sourceUrl, "VACE source video"),
     sourceChecksum: requireChecksum(input.source.sourceChecksum),
@@ -126,10 +119,6 @@ export function buildVaceMaskedEditContract(input: {
     editBlueprintId: requireIdentifier(input.source.editBlueprintId, "VACE Edit Blueprint"),
     clipStartMs: segment.clipStartMs,
     clipEndMs: segment.clipEndMs,
-    referenceFrameUrls: references,
-    temporalSubjectMaskUrl: requireHttps(input.source.temporalSubjectMaskUrl, "VACE temporal subject mask"),
-    depthControlUrl: requireHttps(input.source.depthControlUrl, "VACE depth control"),
-    opticalFlowUrl: requireHttps(input.source.opticalFlowUrl, "VACE optical-flow control"),
   };
 
   return {
@@ -166,9 +155,9 @@ export function vaceContractFingerprint(contract: VaceMaskedEditContract): strin
 }
 
 export const BODY_CINEMA_VACE_WORKER_POLICY = {
-  requiresTemporalSubjectMask: true,
-  requiresDepthControl: true,
-  requiresOpticalFlowControl: true,
+  /** The private worker derives the only model-supported temporal edit mask from the verified source itself. */
+  derivesTemporalEditMaskFromVerifiedSource: true,
+  usesOnlyOfficialWanVaceControls: true,
   sourceVideoSegmentMaximumSeconds: VACE_MAX_SEGMENT_SECONDS,
   onlyExplicitApprovedChangeSet: true,
   promptExtensionForbidden: true,
