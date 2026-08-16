@@ -20,6 +20,7 @@ import {
 } from "./bodyCinemaEvidenceService";
 import { createGovernedPolloDraft, ensureGovernedPolloSchema, listGovernedPolloJobs } from "./governedPolloService";
 import { persistBodyCinemaSourceMap } from "./bodyCinemaSourceMapService";
+import { listBodyCinemaVerifiedSourceAttestations } from "./bodyCinemaVerifiedSourceAttestationService";
 
 const execFileAsync = promisify(execFile);
 const OWNER_CREATOR_IDS = [6, 33];
@@ -41,7 +42,7 @@ type ExistingVideoAsset = {
   sourceUrl: string;
   storagePath: string | null;
   fileName: string;
-  ownershipBasis: "media_asset_record" | "content_record" | "vaultx_content_record" | "clone_training_record" | "verified_upload_receipt";
+  ownershipBasis: "media_asset_record" | "content_record" | "vaultx_content_record" | "clone_training_record" | "verified_upload_receipt" | "accepted_technical_source_preservation_baseline";
   declaredChecksum: string | null;
   durationSeconds: number | null;
   width: number | null;
@@ -312,20 +313,56 @@ function isSupportedReceiptVideo(fileName: string, mime: unknown): boolean {
   return [".mp4", ".mov", ".webm", ".mkv", ".avi", ".m4v"].includes(extension) && (!mimeType || mimeType.startsWith("video/"));
 }
 
+async function listAcceptedAttestedCreatorVideos(): Promise<ExistingVideoAsset[]> {
+  const attestations = (await Promise.all(OWNER_CREATOR_IDS.map((creatorId) => listBodyCinemaVerifiedSourceAttestations(creatorId)))).flat();
+  const assets: ExistingVideoAsset[] = [];
+  for (const attestation of attestations) {
+    const rows = await queryRows<any>(
+      `SELECT id, user_id, public_url, storage_path, file_name, original_name, source_type, duration, width, height, created_at
+       FROM media_assets
+       WHERE id = ? AND user_id = ? AND public_url = ? AND status = 'ready'
+       LIMIT 1`,
+      [attestation.sourceAssetId, attestation.creatorId, attestation.sourceMediaUrl],
+    );
+    const row = rows[0];
+    if (!row || String(row.source_type || "").toLowerCase() !== "upload") continue;
+    assets.push({
+      id: String(row.id),
+      creatorId: Number(row.user_id),
+      sourceUrl: String(row.public_url),
+      storagePath: row.storage_path ? String(row.storage_path) : null,
+      fileName: String(row.original_name || row.file_name || `creatorvault-${row.id}.mp4`),
+      ownershipBasis: "accepted_technical_source_preservation_baseline",
+      declaredChecksum: attestation.sourceFingerprint,
+      durationSeconds: row.duration === null || row.duration === undefined ? null : Number(row.duration),
+      width: row.width === null || row.width === undefined ? null : Number(row.width),
+      height: row.height === null || row.height === undefined ? null : Number(row.height),
+      createdAt: row.created_at ? String(row.created_at) : null,
+      sourceType: row.source_type ? String(row.source_type) : null,
+    });
+  }
+  return assets;
+}
+
 async function listAllExistingCreatorVideos(): Promise<ExistingVideoAsset[]> {
-  // Automatic VaultX Body Cinema selection is intentionally narrower than the
-  // full media library. It may use only a creator's verified direct-upload
-  // receipt with a matching checksum; seed, demo, hero, clone, render, and
-  // generic media-library records require a separate explicit classification.
-  const receiptAssets = await listVerifiedDirectUploadVideos();
+  // Automatic Body Cinema selection is intentionally narrower than the full
+  // media library. It may use a matching verified direct-upload receipt, or the
+  // single exact legacy upload restored by a 94+ accepted preservation baseline.
+  // Seed, demo, hero, clone, render, and generic media records stay excluded.
+  const [receiptAssets, attestedAssets] = await Promise.all([
+    listVerifiedDirectUploadVideos(),
+    listAcceptedAttestedCreatorVideos(),
+  ]);
   const seen = new Set<string>();
-  return receiptAssets
+  return [...attestedAssets, ...receiptAssets]
     .sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))
     .filter((asset) => {
       const key = `${asset.creatorId}:${asset.sourceUrl}`;
       if (seen.has(key)) return false;
       seen.add(key);
-      return asset.ownershipBasis === "verified_upload_receipt" && Boolean(asset.declaredChecksum) && !excludedSourceReason(asset);
+      const approvedOwnership = asset.ownershipBasis === "verified_upload_receipt"
+        || asset.ownershipBasis === "accepted_technical_source_preservation_baseline";
+      return approvedOwnership && Boolean(asset.declaredChecksum) && !excludedSourceReason(asset);
     })
     .slice(0, MAX_CANDIDATES);
 }
@@ -736,9 +773,11 @@ export async function runBodyCinemaExistingMediaPreProviderProof(): Promise<PreP
                 ? "content.user_id matches governed creator_id"
                 : asset.ownershipBasis === "vaultx_content_record"
                   ? "vaultx_content.creator_id matches governed creator_id"
-                  : asset.ownershipBasis === "clone_training_record"
-                    ? "clone_training_uploads.user_id matches governed creator_id"
-                    : "media_assets.user_id matches governed creator_id",
+                  : asset.ownershipBasis === "accepted_technical_source_preservation_baseline"
+                ? "accepted 94-point technical source-preservation baseline matches the exact source bytes, evidence, Source Map, and edit blueprint"
+                : asset.ownershipBasis === "clone_training_record"
+                  ? "clone_training_uploads.user_id matches governed creator_id"
+                  : "media_assets.user_id matches governed creator_id",
             consentBasis: "creator-owned existing CreatorVault upload selected for the owner-directed no-spend Body Cinema proof",
             identityRequirements: "Preserve the exact source subject; no identity, facial-feature, body-proportion, or choreography fabrication.",
             outputPurpose: "Body Cinema pre-provider proof; render remains disabled until governed paid execution is explicitly enabled.",
@@ -798,11 +837,11 @@ export type BodyCinemaSavedSourceInventoryItem = {
 };
 
 async function listAllSavedCreatorVideosForInventory(): Promise<ExistingVideoAsset[]> {
-  const [mediaAssets, contentAssets, cloneTrainingAssets, vaultxContentAssets, receiptAssets] = await Promise.all([
-    listExistingCreatorVideos(), listCreatorContentVideos(), listCloneTrainingVideos(), listVaultxCreatorVideos(), listVerifiedDirectUploadVideos(),
+  const [mediaAssets, contentAssets, cloneTrainingAssets, vaultxContentAssets, receiptAssets, attestedAssets] = await Promise.all([
+    listExistingCreatorVideos(), listCreatorContentVideos(), listCloneTrainingVideos(), listVaultxCreatorVideos(), listVerifiedDirectUploadVideos(), listAcceptedAttestedCreatorVideos(),
   ]);
   const seen = new Set<string>();
-  return [...mediaAssets, ...contentAssets, ...cloneTrainingAssets, ...vaultxContentAssets, ...receiptAssets]
+  return [...attestedAssets, ...mediaAssets, ...contentAssets, ...cloneTrainingAssets, ...vaultxContentAssets, ...receiptAssets]
     .sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))
     .filter((asset) => {
       const key = `${asset.creatorId}:${asset.sourceUrl}`;
@@ -815,9 +854,9 @@ async function listAllSavedCreatorVideosForInventory(): Promise<ExistingVideoAss
 function inventoryItem(asset: ExistingVideoAsset): BodyCinemaSavedSourceInventoryItem {
   const reasons = [excludedSourceReason(asset)].filter((reason): reason is string => Boolean(reason));
   if (String(asset.sourceType || "").toLowerCase() === "generated") reasons.push("This Media Vault record is classified as generated media, not original creator footage.");
-  const verifiedReceipt = asset.ownershipBasis === "verified_upload_receipt" && Boolean(asset.declaredChecksum);
-  if (!verifiedReceipt && !reasons.length) reasons.push("This saved video is creator-linked but lacks the verified direct-upload receipt required for automatic Body Cinema use.");
-  const eligible = verifiedReceipt && !reasons.length;
+  const verifiedSourceRecord = (asset.ownershipBasis === "verified_upload_receipt" || asset.ownershipBasis === "accepted_technical_source_preservation_baseline") && Boolean(asset.declaredChecksum);
+  if (!verifiedSourceRecord && !reasons.length) reasons.push("This saved video is creator-linked but lacks the verified original-source record required for automatic Body Cinema use.");
+  const eligible = verifiedSourceRecord && !reasons.length;
   return {
     sourceAssetId: asset.id,
     creatorId: asset.creatorId,
