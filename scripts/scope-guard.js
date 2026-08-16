@@ -129,6 +129,7 @@ const ALLOWLISTS = {
     'client/src/lib/homepageMediaRegistry.ts',
     'client/public/videos/owner-supplied/creator-spotlight-montage.mp4',
     'client/public/videos/owner-supplied/creator-spotlight-mirror.mp4',
+    'client/public/videos/owner-supplied/reshula-tropical-motion.mp4',
     'scripts/scope-guard.js'
   ],
   'vault-remix-safety': [

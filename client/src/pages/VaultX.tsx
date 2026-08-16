@@ -1778,6 +1778,19 @@ function VaultXPublicLanding() {
           </div>
         </section>
 
+        <section className="vx-shell pb-16 md:pb-24" aria-label="Reshula creator spotlight">
+          <figure className="relative min-h-[720px] overflow-hidden rounded-[2.25rem] border border-[#f3d68b]/20 bg-black shadow-[0_34px_110px_rgba(0,0,0,.56)] md:min-h-[760px]">
+            <video src={HOMEPAGE_MEDIA.reshulaCreatorSpotlight.livePath} autoPlay loop muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover object-center" aria-label="Reshula creator spotlight motion" />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,3,4,.78)_0%,rgba(3,3,4,.27)_48%,rgba(3,3,4,.06)_100%),linear-gradient(0deg,rgba(3,3,4,.94)_0%,rgba(3,3,4,.05)_65%)]" />
+            <figcaption className="absolute inset-x-0 bottom-0 p-6 sm:p-10 md:max-w-[58%] md:p-14">
+              <p className="text-[10px] font-black uppercase tracking-[.28em] text-[#f3d68b]">Creator spotlight / @RESHULA24</p>
+              <h2 className="mt-4 text-5xl font-black leading-[.84] tracking-[-.075em] text-white sm:text-7xl">THE MOMENT<br />WAS ALREADY<br /><span className="vx-gold">HERS.</span></h2>
+              <p className="mt-6 max-w-lg text-base leading-7 text-white/75">Real camera presence belongs in the VaultX world before any treatment, title, or release gets built around it. Her handle stays in the frame because the identity is part of the moment.</p>
+              <a href="#body-cinema" className="mt-8 inline-flex items-center gap-2 text-sm font-black text-white transition hover:text-[#f3d68b]">Build around your own moment <ArrowUpRight className="h-4 w-4" /></a>
+            </figcaption>
+          </figure>
+        </section>
+
         <section id="body-cinema" className="vx-shell pb-16 md:pb-24">
           <div className="grid gap-8 lg:grid-cols-[.92fr_1.08fr] lg:items-center">
             <div className="max-w-3xl">
