@@ -20,6 +20,7 @@ import {
   createGovernedReplicateWanVideoEditDraft,
   ingestCompletedGovernedReplicateWanVideoEditOutput,
   createGovernedRunwayAlephVideoEditDraft,
+  createGovernedTopazPrecisionVideoDraft,
   claimGovernedPolloJob,
   markGovernedPolloSubmitted,
   ingestCompletedGovernedRunwayAlephVideoEditOutput,
@@ -391,6 +392,52 @@ export const governedPolloRouter = router({
           runwaySignedSourceVideoUrl: input.runwayReferenceVideoUrl,
           runwayKeyframeUrl: input.keyframeUrl ?? null,
           runwayKeyframeTimestampSeconds: input.keyframeTimestampSeconds ?? null,
+        },
+      });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  createTopazPrecisionVideoDraft: protectedProcedure.input(z.object({
+    creatorId: z.number().int().positive().optional(),
+    evidenceId: z.string().uuid(),
+    sourceUrl: z.string().url().max(4000),
+    sourceChecksum: z.string().trim().regex(/^[a-f0-9]{64}$/i),
+    resolution: z.enum(["720p", "1080p"]),
+    durationSeconds: z.number().positive().max(3600),
+    aspectRatio: z.enum(["9:16", "16:9", "1:1"]),
+    ownershipConfirmed: z.literal(true),
+    consentConfirmed: z.literal(true),
+    editBlueprintId: z.string().uuid().optional(),
+    idempotencyKey: z.string().trim().min(12).max(191).optional(),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    const creatorId = input.creatorId ?? ctx.user.id;
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    try {
+      const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
+      const editBlueprint = await getOrCreateBodyCinemaEditBlueprint({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
+      if (input.editBlueprintId && input.editBlueprintId !== editBlueprint.id) {
+        throw new Error("The supplied Body Cinema edit blueprint belongs to a different protected source plan.");
+      }
+      return await createGovernedTopazPrecisionVideoDraft({
+        creatorId,
+        requestedBy: ctx.user.id,
+        sourceUrl: input.sourceUrl,
+        sourceChecksum: input.sourceChecksum,
+        resolution: input.resolution,
+        durationSeconds: input.durationSeconds,
+        aspectRatio: input.aspectRatio,
+        ownershipConfirmed: input.ownershipConfirmed,
+        consentConfirmed: input.consentConfirmed,
+        evidenceId: evidenceContext.evidence.id,
+        editBlueprintId: editBlueprint.id,
+        idempotencyKey: input.idempotencyKey,
+        metadata: {
+          bodyCinemaDirectionId: evidenceContext.direction.id,
+          bodyCinemaTimeline: evidenceContext.direction.timeline,
+          bodyCinemaEditBlueprintId: editBlueprint.id,
         },
       });
     } catch (error) {

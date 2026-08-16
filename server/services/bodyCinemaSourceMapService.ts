@@ -8,7 +8,7 @@ import {
 } from "./bodyCinemaEvidenceService";
 
 export type SourceMapEvidenceState = "verified" | "insufficient" | "not_available";
-export type SourceMapRoute = "source_preserving_assembly" | "restricted_generated_transform";
+export type SourceMapRoute = "source_preserving_assembly" | "source_preserving_precision_finish" | "restricted_generated_transform";
 
 export type BodyCinemaSourceMap = {
   id: string;
@@ -215,7 +215,7 @@ export function deriveBodyCinemaSourceMap(evidence: BodyCinemaEvidenceRecord): O
       },
     },
     routes: {
-      allowed: status === "ready" ? ["source_preserving_assembly"] : [],
+      allowed: status === "ready" ? ["source_preserving_assembly", "source_preserving_precision_finish"] : [],
       blocked: [{ route: "restricted_generated_transform", reasons: restrictedTransformReasons }],
     },
     blockers,

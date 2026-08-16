@@ -8,7 +8,16 @@ import { db } from "../db";
 import { buildFrameEvidence, probeVideo } from "./bodyCinemaExistingMediaProofService";
 import { reviewBodyCinemaOutput, type BodyCinemaOutputReview } from "./bodyCinemaOutputReviewService";
 import { assertBodyCinemaEditBlueprintReady } from "./bodyCinemaEditBlueprintService";
+import { assertBodyCinemaSourceMapReady } from "./bodyCinemaSourceMapService";
 import { recordBodyCinemaProviderFailure } from "./bodyCinemaProviderResilienceService";
+import {
+  TopazPrecisionProviderError,
+  createTopazPrecisionVideoRequest,
+  getTopazPrecisionVideoStatus,
+  prepareTopazPrecisionVideoRequest,
+  acceptTopazPrecisionVideoRequest,
+  uploadAndCompleteTopazPrecisionVideo,
+} from "./topazPrecisionVideoService";
 
 export type GovernedPolloJobState =
   | "draft"
@@ -37,7 +46,7 @@ export type GovernedPolloConfig = {
 
 export type CreateGovernedPolloDraftInput = {
   creatorId: number;
-  provider?: "pollo" | "replicate" | "runway";
+  provider?: "pollo" | "replicate" | "runway" | "topaz";
   requestedBy: number;
   sourceUrl: string;
   sourceChecksum?: string | null;
@@ -70,7 +79,7 @@ export type GovernedPolloJob = {
   sourceUrl: string;
   sourceChecksum: string | null;
   prompt: string;
-  provider: "pollo" | "replicate" | "runway";
+  provider: "pollo" | "replicate" | "runway" | "topaz";
   providerModelPath: string;
   resolution: string;
   durationSeconds: number;
@@ -141,6 +150,9 @@ const RUNWAY_ALEPH_2_VIDEO_EDIT_MODEL_PATH = "runway/aleph-2-video-edit";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MODE = "runway_aleph_2_source_video_edit";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MAX_BYTES = 200 * 1024 * 1024;
 const RUNWAY_ALEPH_2_CREDITS_PER_SOURCE_SECOND = 28;
+const TOPAZ_PROTEUS_PRECISION_VIDEO_MODEL_PATH = "topaz/proteus-precision-video";
+const TOPAZ_PROTEUS_PRECISION_VIDEO_MODE = "topaz_proteus_precision_finish";
+const TOPAZ_PROTEUS_1080P_CREDITS_PER_10_SECONDS = 2;
 const KLING_SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/kling-v3-omni-ref2video";
 const SOURCE_VIDEO_REFERENCE_MODE = "ref2video";
 const SOURCE_VIDEO_REFERENCE_CONTRACTS = {
@@ -294,6 +306,37 @@ function isRunwayAlephVideoEditJob(job: Pick<GovernedPolloJob, "provider" | "pro
     && job.metadata.sourcePreservationRequired === true
     && typeof job.metadata.bodyCinemaEditBlueprintId === "string"
     && job.metadata.bodyCinemaBlueprintState === "ready_no_spend";
+}
+
+function isTopazPrecisionVideoJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
+  return job.provider === "topaz"
+    && job.providerModelPath === TOPAZ_PROTEUS_PRECISION_VIDEO_MODEL_PATH
+    && job.mode === TOPAZ_PROTEUS_PRECISION_VIDEO_MODE
+    && job.metadata.ownerDirectedPilot === true
+    && job.metadata.candidateLimit === 1
+    && job.metadata.noAutomaticRetry === true
+    && job.metadata.sourcePreservationRequired === true
+    && job.metadata.reviewClass === "technical_source_preservation"
+    && job.metadata.topazPrecisionModel === "prob-4"
+    && typeof job.metadata.bodyCinemaEditBlueprintId === "string"
+    && typeof job.metadata.bodyCinemaSourceMapId === "string";
+}
+
+function resolveCreatorVaultUploadPath(sourceUrl: string): string {
+  const parsed = new URL(sourceUrl);
+  if (parsed.protocol !== "https:" || parsed.hostname !== "creatorvault.live") {
+    throw new Error("Topaz precision finishing requires the protected CreatorVault Media Vault source URL.");
+  }
+  const prefix = "/uploads/";
+  const pathname = decodeURIComponent(parsed.pathname);
+  if (!pathname.startsWith(prefix)) throw new Error("Topaz precision finishing requires a Media Vault upload path.");
+  const relative = pathname.slice(prefix.length);
+  if (!relative || relative.split("/").some((segment) => !segment || segment === "." || segment === "..")) {
+    throw new Error("The protected Media Vault source path is invalid.");
+  }
+  const localPath = path.resolve("/root/uploads", relative);
+  if (!localPath.startsWith("/root/uploads/")) throw new Error("The protected Media Vault source path escaped its storage boundary.");
+  return localPath;
 }
 
 function isHomepageTextToVideoPilot(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "metadata">): boolean {
@@ -492,8 +535,8 @@ function normaliseJob(row: any): GovernedPolloJob {
     sourceUrl: String(row.source_url),
     sourceChecksum: row.source_checksum ? String(row.source_checksum) : null,
     prompt: String(row.prompt),
-    provider: ["pollo", "replicate", "runway"].includes(String(row.provider || "pollo"))
-      ? String(row.provider || "pollo") as "pollo" | "replicate" | "runway"
+    provider: ["pollo", "replicate", "runway", "topaz"].includes(String(row.provider || "pollo"))
+      ? String(row.provider || "pollo") as GovernedPolloJob["provider"]
       : "pollo",
     providerModelPath: String(row.provider_model_path),
     resolution: String(row.resolution),
@@ -1112,6 +1155,76 @@ export async function createGovernedRunwayAlephVideoEditDraft(input: {
   });
 }
 
+export async function createGovernedTopazPrecisionVideoDraft(input: {
+  creatorId: number;
+  requestedBy: number;
+  sourceUrl: string;
+  sourceChecksum: string;
+  resolution: "720p" | "1080p";
+  durationSeconds: number;
+  aspectRatio: "9:16" | "16:9" | "1:1";
+  ownershipConfirmed: boolean;
+  consentConfirmed: boolean;
+  evidenceId: string;
+  editBlueprintId: string;
+  idempotencyKey?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  const blueprint = await assertBodyCinemaEditBlueprintReady({
+    creatorId: input.creatorId,
+    evidenceId: input.evidenceId,
+    sourceMediaUrl: input.sourceUrl,
+    editBlueprintId: input.editBlueprintId,
+  });
+  const sourceMap = await assertBodyCinemaSourceMapReady({
+    creatorId: input.creatorId,
+    evidenceId: input.evidenceId,
+    sourceMediaUrl: input.sourceUrl,
+    route: "source_preserving_precision_finish",
+  });
+  const durationSeconds = requirePositiveDuration(input.durationSeconds, "Topaz precision source duration");
+  if (durationSeconds > 3600) throw new Error("Topaz precision finishing must be split before a source exceeds one hour.");
+  if (!/^https:\/\//i.test(input.sourceUrl)) throw new Error("Topaz precision finishing requires a secure CreatorVault source URL.");
+  const estimatedCostCredits = Math.ceil(durationSeconds / 10) * TOPAZ_PROTEUS_1080P_CREDITS_PER_10_SECONDS;
+  return createGovernedPolloDraft({
+    creatorId: input.creatorId,
+    requestedBy: input.requestedBy,
+    provider: "topaz",
+    sourceUrl: input.sourceUrl,
+    sourceChecksum: input.sourceChecksum,
+    prompt: "Non-generative precision finish only: preserve the original creator, identity, anatomy, skin, wardrobe, performance, motion, timing, framing, geometry, and audio exactly; remove compression and noise only.",
+    providerModelPath: TOPAZ_PROTEUS_PRECISION_VIDEO_MODEL_PATH,
+    resolution: input.resolution,
+    durationSeconds,
+    aspectRatio: input.aspectRatio,
+    mode: TOPAZ_PROTEUS_PRECISION_VIDEO_MODE,
+    outputCount: 1,
+    estimatedCostCredits,
+    costEvidenceReference: `Topaz Proteus published estimate: ${TOPAZ_PROTEUS_1080P_CREDITS_PER_10_SECONDS} credits per 10 seconds at 1080p; conservative request cap for ${durationSeconds}s is ${estimatedCostCredits} credits. Exact provider request must remain inside this cap; no automatic retry.`,
+    ownershipConfirmed: input.ownershipConfirmed,
+    consentConfirmed: input.consentConfirmed,
+    idempotencyKey: input.idempotencyKey,
+    metadata: {
+      ...(input.metadata || {}),
+      bodyCinemaEvidenceId: input.evidenceId,
+      bodyCinemaEditBlueprintId: blueprint.id,
+      bodyCinemaSourceMapId: sourceMap.id,
+      bodyCinemaBlueprintSceneCount: blueprint.scenes.length,
+      providerContract: "topaz_proteus_precision_video",
+      sourcePreservationRequired: true,
+      reviewClass: "technical_source_preservation",
+      preserve: ["identity", "face", "body_anatomy", "natural_skin", "wardrobe", "original_performance", "original_motion_timing", "camera_movement", "framing", "environment_geometry", "original_audio"],
+      authorizedChangeSet: "Non-generative precision cleanup only: compression recovery, measured noise reduction, and resolution enhancement. No style transfer, subject change, geometry change, timing change, or audio change.",
+      ownerDirectedPilot: true,
+      candidateLimit: 1,
+      noAutomaticRetry: true,
+      hardCreditCap: estimatedCostCredits,
+      sourceDurationSeconds: durationSeconds,
+      topazPrecisionModel: "prob-4",
+    },
+  });
+}
+
 export async function setGovernedPolloCostEstimate(params: { jobId: number; ownerId: number; estimatedCostCredits: number; costEvidenceReference: string; reason?: string | null }): Promise<GovernedPolloJob> {
   requireOwner(params.ownerId);
   await ensureGovernedPolloSchema();
@@ -1489,9 +1602,63 @@ async function submitGovernedReplicateWanVideoEditJob(leased: GovernedPolloJob, 
   return markGovernedPolloSubmitted({ jobId: leased.id, workerId, providerJobId: String(providerJobId), providerResponse });
 }
 
+async function inspectTopazPrecisionSource(localPath: string): Promise<{ width: number; height: number; durationSeconds: number; frameRate: number; frameCount: number; container: "mp4" }> {
+  const { stdout } = await execFileAsync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=width,height,avg_frame_rate,nb_frames,codec_type", "-of", "json", localPath]);
+  const inspected = parseJson(stdout) as Record<string, any>;
+  const video = Array.isArray(inspected.streams) ? inspected.streams.find((stream: any) => String(stream?.codec_type) === "video") : null;
+  const durationSeconds = Number(inspected.format?.duration);
+  const [numerator, denominator] = String(video?.avg_frame_rate || "0/1").split("/").map(Number);
+  const frameRate = numerator > 0 && denominator > 0 ? numerator / denominator : 30;
+  const width = Number(video?.width);
+  const height = Number(video?.height);
+  const frameCount = Math.max(1, Number(video?.nb_frames) || Math.round(durationSeconds * frameRate));
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || !Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+    throw new Error("The protected CreatorVault source could not be inspected for Topaz precision finishing.");
+  }
+  return { width, height, durationSeconds, frameRate, frameCount, container: "mp4" };
+}
+
+function topazFailureToCircuitCode(error: unknown): "service_unavailable" | "plan_gate" | "asset_contract" | "manual_hold" {
+  if (error instanceof TopazPrecisionProviderError) {
+    if (/rate_limited|service_unavailable|upload_unavailable/i.test(error.code)) return "service_unavailable";
+    if (/access_denied/i.test(error.code)) return "plan_gate";
+    if (/not_configured/i.test(error.code)) return "manual_hold";
+  }
+  return "asset_contract";
+}
+
+async function submitGovernedTopazPrecisionVideoJob(leased: GovernedPolloJob, workerId: string): Promise<GovernedPolloJob> {
+  let prepared: Awaited<ReturnType<typeof prepareTopazPrecisionVideoRequest>>;
+  try {
+    const localPath = resolveCreatorVaultUploadPath(leased.sourceUrl);
+    const source = await inspectTopazPrecisionSource(localPath);
+    const targetWidth = leased.resolution === "1080p" ? (source.height >= source.width ? 1080 : 1920) : (source.height >= source.width ? 720 : 1280);
+    const targetHeight = leased.resolution === "1080p" ? (source.height >= source.width ? 1920 : 1080) : (source.height >= source.width ? 1280 : 720);
+    prepared = await prepareTopazPrecisionVideoRequest({ sourceFilePath: localPath, source, options: { outputWidth: Math.max(source.width, targetWidth), outputHeight: Math.max(source.height, targetHeight), requestedModel: "prob-4", audioTransfer: "Copy" } });
+    const created = await createTopazPrecisionVideoRequest(prepared);
+    const submitted = await markGovernedPolloSubmitted({ jobId: leased.id, workerId, providerJobId: created.providerRequestId, providerResponse: created.raw });
+    const accepted = await acceptTopazPrecisionVideoRequest(created.providerRequestId);
+    await uploadAndCompleteTopazPrecisionVideo({ accepted, sourceFilePath: localPath });
+    return submitted;
+  } catch (error) {
+    const existing = await getGovernedPolloJob(leased.id);
+    const releaseBudget = existing?.state === "queued";
+    const failed = await failGovernedPolloJob({ jobId: leased.id, code: error instanceof TopazPrecisionProviderError ? error.code : "topaz_precision_submission_failed", error, releaseBudget });
+    await recordBodyCinemaProviderFailure({
+      providerKey: "topaz_video",
+      code: topazFailureToCircuitCode(error),
+      detail: safeErrorMessage(error),
+      source: "governed_topaz_precision_submission",
+      metadata: { governedJobId: leased.id, requestId: leased.requestId, reservationReleased: releaseBudget },
+    }).catch(() => undefined);
+    return failed;
+  }
+}
+
 export async function submitGovernedPolloJob(params: { jobId: number; workerId: string }): Promise<GovernedPolloJob> {
   const leased = await claimGovernedPolloJob(params);
   if (isReplicateWanVideoEditJob(leased)) return submitGovernedReplicateWanVideoEditJob(leased, params.workerId);
+  if (isTopazPrecisionVideoJob(leased)) return submitGovernedTopazPrecisionVideoJob(leased, params.workerId);
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
   if (!apiKey) {
     return failGovernedPolloJob({ jobId: leased.id, code: "provider_key_missing", error: new Error("POLLO_API_KEY is not configured"), releaseBudget: true });
@@ -1585,6 +1752,28 @@ export async function pollGovernedPolloProviderJob(params: { jobId: number; acto
   if (!job) throw new Error("Governed media job was not found.");
   if (job.state !== "submitted") throw new Error(`Job in state ${job.state} cannot be polled for provider completion.`);
   if (!job.providerJobId) throw new Error("The governed media job has no provider task ID to poll.");
+
+  if (isTopazPrecisionVideoJob(job)) {
+    try {
+      const providerStatus = await getTopazPrecisionVideoStatus(job.providerJobId);
+      const rawStatus = providerStatus.state.toLowerCase();
+      if (["succeeded", "success", "completed", "complete"].includes(rawStatus)) {
+        if (!providerStatus.outputUrl) throw new Error("Topaz reported completion without a readable HTTPS video URL.");
+        return recordGovernedPolloProviderCompletion({ jobId: job.id, providerJobId: job.providerJobId, outputUrl: providerStatus.outputUrl, providerResponse: providerStatus.raw });
+      }
+      if (["failed", "fail", "error", "cancelled", "canceled"].includes(rawStatus)) {
+        const failed = await failGovernedPolloJob({ jobId: job.id, actorId: params.actorId, code: "topaz_precision_failed", error: new Error(`Topaz precision request ${rawStatus}`) });
+        await recordBodyCinemaProviderFailure({ providerKey: "topaz_video", code: "provider_output_failure", detail: `Topaz precision request ${rawStatus}.`, source: "governed_topaz_precision_poll", metadata: { governedJobId: job.id, requestId: job.requestId } }).catch(() => undefined);
+        return failed;
+      }
+      await rawExec("UPDATE governed_media_jobs SET provider_response_json = ?, updated_at = NOW() WHERE id = ? AND state = 'submitted'", [safeJson(providerStatus.raw), job.id]);
+      await appendEvent({ jobId: job.id, eventType: "provider_status_polled", fromState: "submitted", toState: "submitted", actorId: params.actorId, correlationId: job.requestId, detail: { providerJobId: job.providerJobId, status: rawStatus } });
+      return (await getGovernedPolloJob(job.id))!;
+    } catch (error) {
+      await recordBodyCinemaProviderFailure({ providerKey: "topaz_video", code: topazFailureToCircuitCode(error), detail: safeErrorMessage(error), source: "governed_topaz_precision_poll", metadata: { governedJobId: job.id, requestId: job.requestId } }).catch(() => undefined);
+      throw error;
+    }
+  }
 
   if (isReplicateWanVideoEditJob(job)) {
     const token = String(process.env.REPLICATE_API_TOKEN || "").trim();
@@ -1931,6 +2120,84 @@ export async function reviewCompletedGovernedRunwayAlephVideoEditOutput(params: 
     artifactUrl: outputReview.status === "accepted" ? ingested.outputAssetUrl : null,
     qualityScore: outputReview.overallScore,
     reason: outputReview.reasons.join(" "),
+  });
+  return { reviewedJob, outputReview, outputAssetUrl: ingested.outputAssetUrl };
+}
+
+export async function ingestCompletedGovernedTopazPrecisionVideoOutput(params: { jobId: number; ownerId: number }): Promise<{ outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number; outputFingerprint: string }> {
+  requireOwner(params.ownerId);
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isTopazPrecisionVideoJob(job)) throw new Error("A completed governed Topaz precision request is required for Media Vault ingestion.");
+  if (job.state !== "provider_complete" || !job.providerJobId || !job.outputUrl) throw new Error("CreatorVault will only ingest a completed Topaz provider output.");
+  const folder = `body-cinema-topaz-precision-${job.id}`;
+  const fileName = "Body-Cinema-Topaz-Precision-Finish.mp4";
+  const directory = path.join("/root/uploads", "content-vault", folder);
+  const localPath = path.join(directory, fileName);
+  const outputAssetUrl = `https://creatorvault.live/uploads/content-vault/${folder}/${fileName}`;
+  if (!(await stat(localPath).then(() => true).catch(() => false))) {
+    await mkdir(directory, { recursive: true });
+    const response = await fetch(job.outputUrl, { redirect: "follow" });
+    if (!response.ok) throw new Error(`Topaz output download returned ${response.status}.`);
+    const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+    if (contentType && !contentType.includes("video/")) throw new Error(`Topaz output did not return video data (${contentType}).`);
+    const declaredLength = Number(response.headers.get("content-length") || 0);
+    if (declaredLength > 500 * 1024 * 1024) throw new Error("Topaz output exceeded the governed Media Vault size limit.");
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length < 1024 || bytes.length > 500 * 1024 * 1024) throw new Error("Topaz output failed the governed Media Vault size limit.");
+    await writeFile(localPath, bytes);
+  }
+  const video = await probeVideo(localPath);
+  const sizeBytes = Number((await stat(localPath)).size);
+  const outputFingerprint = createHash("sha256").update(await readFile(localPath)).digest("hex");
+  if (sizeBytes < 1024) throw new Error("Topaz output was not a readable governed video.");
+  const existing = await rawQuery("SELECT id FROM media_assets WHERE user_id = ? AND public_url = ? LIMIT 1", [job.creatorId, outputAssetUrl]);
+  if (!existing[0]) {
+    await rawExec(
+      `INSERT INTO media_assets (id, user_id, source_type, asset_type, file_name, original_name, mime_type, file_size, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
+       VALUES (?, ?, 'generated', 'video', ?, ?, 'video/mp4', ?, ?, ?, ?, ?, ?, ?, 'ready', 'body_cinema_governed_topaz_precision')`,
+      [randomUUID(), job.creatorId, fileName, fileName, sizeBytes, localPath, outputAssetUrl, outputAssetUrl, Number(video.durationSeconds.toFixed(3)), video.width, video.height],
+    );
+  }
+  const metadata = {
+    ...job.metadata,
+    durableOutputUrl: outputAssetUrl,
+    outputFingerprint,
+    actualCostState: "Topaz charges are provider-account controlled; CreatorVault keeps the recorded hard cap until a documented actual-cost reconciliation is available.",
+    verifiedProviderVideo: { durationSeconds: Number(video.durationSeconds.toFixed(3)), width: video.width, height: video.height, sizeBytes, provider: "topaz" },
+  };
+  await rawExec("UPDATE governed_media_jobs SET metadata_json = ?, updated_at = NOW() WHERE id = ? AND state = 'provider_complete'", [safeJson(metadata), job.id]);
+  await appendEvent({ jobId: job.id, eventType: "provider_output_durably_ingested", fromState: "provider_complete", toState: "provider_complete", actorId: params.ownerId, correlationId: job.requestId, detail: { outputAssetUrl, durationSeconds: Number(video.durationSeconds.toFixed(3)), width: video.width, height: video.height, sizeBytes, outputFingerprint } });
+  return { outputAssetUrl, durationSeconds: Number(video.durationSeconds.toFixed(3)), width: video.width, height: video.height, sizeBytes, outputFingerprint };
+}
+
+export async function reviewCompletedGovernedTopazPrecisionVideoOutput(params: { jobId: number; ownerId: number }): Promise<{ reviewedJob: GovernedPolloJob; outputReview: BodyCinemaOutputReview; outputAssetUrl: string }> {
+  requireOwner(params.ownerId);
+  const ingested = await ingestCompletedGovernedTopazPrecisionVideoOutput(params);
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isTopazPrecisionVideoJob(job)) throw new Error("A completed governed Topaz precision request is required for output review.");
+  const evidenceId = typeof job.metadata.bodyCinemaEvidenceId === "string" ? job.metadata.bodyCinemaEvidenceId : "";
+  if (!evidenceId) throw new Error("The governed Topaz precision request has no Body Cinema source evidence reference.");
+  const localPath = path.join("/root/uploads", "content-vault", `body-cinema-topaz-precision-${job.id}`, "Body-Cinema-Topaz-Precision-Finish.mp4");
+  const video = await probeVideo(localPath);
+  const frameEvidence = await buildFrameEvidence(localPath, video);
+  const outputReview = await reviewBodyCinemaOutput(job.creatorId, {
+    evidenceId,
+    outputAssetUrl: ingested.outputAssetUrl,
+    outputFingerprint: ingested.outputFingerprint,
+    frameEvidence,
+    reviewClass: "technical_source_preservation",
+  });
+  const passedRegressionFloor = outputReview.status === "accepted" && outputReview.overallScore >= 94;
+  const reviewReason = passedRegressionFloor
+    ? outputReview.reasons.join(" ")
+    : `${outputReview.reasons.join(" ")} Rejected: Topaz precision output did not clear the locked 94/100 Body Cinema preservation baseline.`;
+  const reviewedJob = await reviewGovernedPolloOutput({
+    jobId: job.id,
+    reviewerId: params.ownerId,
+    accepted: passedRegressionFloor,
+    artifactUrl: passedRegressionFloor ? ingested.outputAssetUrl : null,
+    qualityScore: outputReview.overallScore,
+    reason: reviewReason,
   });
   return { reviewedJob, outputReview, outputAssetUrl: ingested.outputAssetUrl };
 }

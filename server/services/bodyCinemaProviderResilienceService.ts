@@ -68,7 +68,7 @@ export type BodyCinemaRouteReadiness = {
 
 const PROVIDER_MODEL_KEYS: Record<BodyCinemaProviderKey, string[]> = {
   runway_aleph: ["runway/aleph-2-video-edit"],
-  topaz_video: [],
+  topaz_video: ["topaz/proteus-precision-video"],
   creatorvault_technical_continuity: ["creatorvault/real-render-engine"],
 };
 

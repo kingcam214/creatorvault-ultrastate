@@ -185,10 +185,21 @@ function supportedPoseFrameCount(frames: BodyCinemaFrameEvidence[]): number {
   return frames.filter((frame) => frame.landmarks.filter((landmark) => (landmark.visibility ?? 1) >= 0.55).length >= 8).length;
 }
 
-function measureSourceMapPreservation(source: BodyCinemaEvidenceRecord, sourceMap: BodyCinemaSourceMap | null, output: ReturnType<typeof deriveBodyCinemaDirections>, outputFrames: BodyCinemaFrameEvidence[]) {
+function measureSourceMapPreservation(
+  source: BodyCinemaEvidenceRecord,
+  sourceMap: BodyCinemaSourceMap | null,
+  output: ReturnType<typeof deriveBodyCinemaDirections>,
+  outputFrames: BodyCinemaFrameEvidence[],
+  reviewClass: "creative_treatment" | "technical_source_preservation",
+) {
   const unavailable = { sourceMapId: sourceMap?.id || null, faceVisibility: 0, bodyContinuity: 0, motionContinuity: 0, identityVerification: "not_available" as const };
   if (!sourceMap || sourceMap.status !== "ready") return { score: 0, evidence: unavailable, reasons: ["Rejected: no ready Source Map protects this source during output review."] };
-  if (!sourceMap.routes.allowed.includes("source_preserving_assembly")) return { score: 0, evidence: unavailable, reasons: ["Rejected: this source is not eligible for the source-preserving assembly lane."] };
+  const requiredRoute = reviewClass === "technical_source_preservation"
+    ? "source_preserving_precision_finish"
+    : "source_preserving_assembly";
+  if (!sourceMap.routes.allowed.includes(requiredRoute)) {
+    return { score: 0, evidence: unavailable, reasons: ["Rejected: this source is not eligible for the requested protected finishing lane."] };
+  }
   const sourceFace = sourceMap.analysis.protectedSubject.face;
   const outputFaceFrames = outputFrames.filter((frame) => frame.face?.present).length;
   const faceVisibility = sourceFace.state === "verified" ? clamp(outputFaceFrames / Math.max(3, Math.min(sourceFace.supportedFrameCount, 6))) : 1;
@@ -220,7 +231,7 @@ export function assessBodyCinemaOutput(
   const technicalScore = average(outputAnalysis.shotRankings.map((shot) => shot.score));
   const bodyIntegrityScore = Math.round(clamp(outputAnalysis.bodyMap.frameCoverage * 0.6 + Math.min(1, outputAnalysis.shotRankings.length / 3) * 0.4) * 100);
   const treatmentScore = Math.round(selectedDirectionSupport(source, outputAnalysis.bodyMap) * 100);
-  const preservation = measureSourceMapPreservation(source, sourceMap, outputAnalysis, input.frameEvidence);
+  const preservation = measureSourceMapPreservation(source, sourceMap, outputAnalysis, input.frameEvidence, reviewClass);
   const preservationScore = preservation.score;
   let duplicateSimilarity = visualDuplicateSimilarity(source, input.frameEvidence);
 
