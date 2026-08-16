@@ -11,6 +11,10 @@ import {
   type RoutableCreationModel,
 } from "./creationModelRegistry";
 import { selectBestVerifiedCreationModel } from "./creationModelSelection";
+import {
+  buildBodyCinemaRouteReadiness,
+  listBodyCinemaProviderHealth,
+} from "./bodyCinemaProviderResilienceService";
 
 export type CreationTool = "body_cinema" | "trailer_maker" | "kingcam_content" | "creator_os";
 export type CreationDirectorState = "planning" | "ready_for_assembly" | "ready_for_governed_submission" | "blocked" | "submitted" | "quality_review" | "accepted" | "rejected" | "cancelled";
@@ -337,7 +341,13 @@ export async function prepareCreationPlan(requestInput: CreationDirectorRequest)
     return plan;
   }
 
-  const models = await getRoutableCreationModels();
+  const allModels = await getRoutableCreationModels();
+  const providerHealth = await listBodyCinemaProviderHealth();
+  const routeReadiness = buildBodyCinemaRouteReadiness(allModels, providerHealth);
+  const heldModelKeys = new Set(routeReadiness.heldCreativeRoutes.map((entry) => entry.modelKey));
+  // A provider that is down, plan-gated, or deliberately held cannot win a
+  // creative request simply because it still has an old registry record.
+  const models = allModels.filter((model) => !heldModelKeys.has(model.modelKey));
   const decision = selectBestVerifiedCreationModel(models, request.capabilities);
   const sourceReasons = sourceBlockReasons(request);
   const resolution = buildPlanState(request, decision, sourceReasons);
@@ -348,7 +358,13 @@ export async function prepareCreationPlan(requestInput: CreationDirectorRequest)
     reasons: resolution.selectedModel
       ? ["selected_from_creatorvault_accepted_evidence_only", "not_selected_by_catalog_order_or_cost"]
       : ["no_eligible_creatorvault_verified_route"],
-    rejectedModels: decision.rejected,
+    rejectedModels: [
+      ...decision.rejected,
+      ...routeReadiness.heldCreativeRoutes.map((entry) => ({
+        modelKey: entry.modelKey,
+        reasons: ["provider_circuit_open", entry.reason],
+      })),
+    ],
   };
 
   await rawExec(
@@ -388,6 +404,9 @@ export async function prepareCreationPlan(requestInput: CreationDirectorRequest)
     detail: {
       selectedModelKey: resolution.selectedModel?.modelKey || null,
       selectedLane: resolution.selectedModel?.executionLane || null,
+      providerCircuitChecked: true,
+      creativeRoutesReady: routeReadiness.creativeRoutesReady,
+      continuityRouteReady: routeReadiness.continuityRouteReady,
       sourceEvidenceId: request.source.sourceEvidenceId || null,
       sourceFingerprint: request.source.sourceFingerprint || null,
       blockedReasons: resolution.blockedReasons,

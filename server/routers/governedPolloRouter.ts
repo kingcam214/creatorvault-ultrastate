@@ -40,6 +40,12 @@ import {
   reviewIngestedControlledSourceVideoTask,
   settleControlledSourceVideoTask,
 } from "../services/polloCapabilityRegistryService";
+import {
+  buildBodyCinemaRouteReadiness,
+  listBodyCinemaProviderHealth,
+  recordBodyCinemaProviderHealthy,
+} from "../services/bodyCinemaProviderResilienceService";
+import { getRoutableCreationModels } from "../services/creationModelRegistry";
 
 const OWNER_IDS = new Set([6, 33]);
 
@@ -80,6 +86,40 @@ const draftInput = z.object({
 });
 
 export const governedPolloRouter = router({
+  bodyCinemaResilienceSnapshot: protectedProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    const [models, providerHealth] = await Promise.all([
+      getRoutableCreationModels(),
+      listBodyCinemaProviderHealth(),
+    ]);
+    return {
+      providerHealth,
+      routeReadiness: buildBodyCinemaRouteReadiness(models, providerHealth),
+      policy: {
+        noBlindProviderRetry: true,
+        continuityIsNotCreativeTreatmentProof: true,
+        unconfiguredProviderCandidatesRemainDisabled: true,
+      },
+    };
+  }),
+
+  recordBodyCinemaProviderAvailability: protectedProcedure.input(z.object({
+    providerKey: z.enum(["runway_aleph", "topaz_video", "creatorvault_technical_continuity"]),
+    evidence: z.string().trim().min(12).max(2_000),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await recordBodyCinemaProviderHealthy({
+        providerKey: input.providerKey,
+        source: "owner_verified_read_only_availability_probe",
+        detail: input.evidence,
+        metadata: { actorId: ctx.user.id, chargeableProviderRequestCreated: false },
+      });
+    } catch (error) {
+      asPrecondition(error);
+    }
+  }),
+
   createQuotedSourceVideoDraft: protectedProcedure.input(z.object({
     creatorId: z.number().int().positive().optional(),
     sourceUrl: z.string().url().max(4000),

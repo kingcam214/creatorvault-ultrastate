@@ -547,6 +547,10 @@ const ALLOWLISTS = {
     'server/services/bodyCinemaEvidence.test.ts',
     'server/services/bodyCinemaMotionProof.test.ts',
     'server/services/bodyCinemaOutputReviewService.ts',
+    'server/services/bodyCinemaProviderResiliencePolicy.ts',
+    'server/services/bodyCinemaProviderResilienceService.ts',
+    'server/services/bodyCinemaProviderResilienceService.test.ts',
+    'server/services/creationDirector.ts',
     'package.json',
     'pnpm-lock.yaml',
     'scripts/scope-guard.js'

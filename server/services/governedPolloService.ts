@@ -8,6 +8,7 @@ import { db } from "../db";
 import { buildFrameEvidence, probeVideo } from "./bodyCinemaExistingMediaProofService";
 import { reviewBodyCinemaOutput, type BodyCinemaOutputReview } from "./bodyCinemaOutputReviewService";
 import { assertBodyCinemaEditBlueprintReady } from "./bodyCinemaEditBlueprintService";
+import { recordBodyCinemaProviderFailure } from "./bodyCinemaProviderResilienceService";
 
 export type GovernedPolloJobState =
   | "draft"
@@ -1764,13 +1765,21 @@ export async function recordGovernedRunwayAlephVideoEditFailure(params: { jobId:
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isRunwayAlephVideoEditJob(job)) throw new Error("A submitted governed Runway Aleph benchmark is required to record this provider failure.");
   if (job.state !== "submitted") throw new Error(`Runway Aleph benchmark in state ${job.state} cannot record a provider failure.`);
-  return failGovernedPolloJob({
+  const failed = await failGovernedPolloJob({
     jobId: job.id,
     actorId: params.ownerId,
     code: "runway_plan_gated",
     error: new Error(params.reason),
     releaseBudget: true,
   });
+  await recordBodyCinemaProviderFailure({
+    providerKey: "runway_aleph",
+    code: "runway_plan_gated",
+    detail: params.reason,
+    source: "governed_runway_plan_gate_reconciliation",
+    metadata: { governedJobId: job.id, requestId: job.requestId, reservationReleased: true },
+  }).catch(() => undefined);
+  return failed;
 }
 
 export async function reconcileGovernedRunwayAlephSubmissionTimeout(params: {
@@ -1789,13 +1798,21 @@ export async function reconcileGovernedRunwayAlephSubmissionTimeout(params: {
   if (job.providerJobId || job.outputUrl) {
     throw new Error("A Runway provider task or output is already recorded; use the completed-provider path instead.");
   }
-  return failGovernedPolloJob({
+  const failed = await failGovernedPolloJob({
     jobId: job.id,
     actorId: params.ownerId,
     code: "runway_submission_timeout_no_task",
     error: new Error(params.reason),
     releaseBudget: true,
   });
+  await recordBodyCinemaProviderFailure({
+    providerKey: "runway_aleph",
+    code: "runway_submission_timeout_no_task",
+    detail: params.reason,
+    source: "governed_runway_pre_task_timeout_reconciliation",
+    metadata: { governedJobId: job.id, requestId: job.requestId, reservationReleased: true },
+  }).catch(() => undefined);
+  return failed;
 }
 
 export async function ingestCompletedGovernedRunwayAlephVideoEditOutput(params: { jobId: number; ownerId: number }): Promise<{ outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number; outputFingerprint: string }> {
