@@ -1844,6 +1844,33 @@ async function submitGovernedVaceLightingJob(leased: GovernedPolloJob, workerId:
   }
 }
 
+export async function reconcileGovernedVaceSubmission(params: { jobId: number; ownerId: number; workerId: string; workerJobId: string }): Promise<GovernedPolloJob> {
+  requireOwner(params.ownerId);
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isCreatorVaultVaceLightingJob(job)) throw new Error("A queued CreatorVault VACE benchmark is required for submission reconciliation.");
+  if (job.providerJobId || !["queued", "submission_unknown"].includes(job.state)) {
+    throw new Error("This VACE benchmark cannot be reconciled because it is no longer awaiting a worker submission record.");
+  }
+  const workerJobId = requireNonEmpty(params.workerJobId, "VACE worker job ID");
+  const workerStatus = await vaceWorkerJson(`/v1/body-cinema/jobs/${encodeURIComponent(workerJobId)}`, { method: "GET" });
+  if (String(workerStatus.jobKey || "") !== String((job.metadata.vaceContract as Record<string, any>)?.jobKey || "")) {
+    throw new Error("The supplied H200 worker job does not belong to this immutable governed VACE request.");
+  }
+  if (job.state === "queued") {
+    return markGovernedPolloSubmitted({ jobId: job.id, workerId: params.workerId, providerJobId: workerJobId, providerResponse: { ...workerStatus, reconciledAfterTransportTimeout: true } });
+  }
+  const update = await rawExec(
+    `UPDATE governed_media_jobs
+       SET state = 'submitted', provider_job_id = ?, provider_response_json = ?, submitted_at = NOW(), updated_at = NOW(), lease_expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR)
+     WHERE id = ? AND state = 'submission_unknown' AND provider_job_id IS NULL`,
+    [workerJobId, safeJson({ ...workerStatus, reconciledAfterTransportTimeout: true }), job.id],
+  );
+  if (!affectedRows(update)) throw new Error("CreatorVault could not safely reconcile the ambiguous VACE submission.");
+  const reconciled = (await getGovernedPolloJob(job.id))!;
+  await appendEvent({ jobId: reconciled.id, eventType: "provider_submission_reconciled", fromState: "submission_unknown", toState: "submitted", actorId: params.ownerId, correlationId: reconciled.requestId, detail: { workerId: params.workerId, providerJobId: workerJobId } });
+  return reconciled;
+}
+
 export async function pollGovernedVaceLightingJob(params: { jobId: number; ownerId: number }): Promise<GovernedPolloJob> {
   requireOwner(params.ownerId);
   const job = await getGovernedPolloJob(params.jobId);

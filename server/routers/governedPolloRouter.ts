@@ -33,6 +33,7 @@ import {
   createGovernedVaceLightingDraft,
   ingestCompletedGovernedVaceLightingOutput,
   reviewCompletedGovernedVaceLightingOutput,
+  reconcileGovernedVaceSubmission,
 } from "../services/governedPolloService";
 import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } from "../services/bodyCinemaEvidenceService";
 import { getOrCreateBodyCinemaEditBlueprint } from "../services/bodyCinemaEditBlueprintService";
@@ -671,6 +672,19 @@ export const governedPolloRouter = router({
     ownerOnly(ctx.user.id);
     try {
       return await reviewCompletedGovernedRunwayAlephVideoEditOutput({ jobId: input.jobId, ownerId: ctx.user.id });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  reconcileVaceSubmission: protectedProcedure.input(z.object({
+    jobId: z.number().int().positive(),
+    workerId: z.string().trim().min(3).max(191),
+    workerJobId: z.string().uuid(),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await reconcileGovernedVaceSubmission({ jobId: input.jobId, ownerId: ctx.user.id, workerId: input.workerId, workerJobId: input.workerJobId });
     } catch (error) {
       return asPrecondition(error);
     }
