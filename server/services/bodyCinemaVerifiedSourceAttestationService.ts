@@ -195,8 +195,13 @@ export async function recoverVerifiedLegacyBodyCinemaSource(input: {
   if (!evidence || evidence.analysisStatus !== "verified" || evidence.sourceMediaUrl !== input.sourceMediaUrl || evidence.sourceFingerprint !== baseline.sourceFingerprint) {
     throw new Error("The saved source-analysis record no longer matches the accepted baseline.");
   }
-  if (!sourceMap || sourceMap.status !== "ready" || sourceMap.id !== baseline.sourceMapId) {
-    throw new Error("The saved source-protection map no longer matches the accepted baseline.");
+  // Source Maps are intentionally regenerated in place whenever the canonical
+  // evidence is re-asserted, so their row id is not stable. The protected facts
+  // are stable only when the evidence id, source URL, and byte fingerprint all
+  // still match the accepted baseline.
+  if (!sourceMap || sourceMap.status !== "ready" || sourceMap.evidenceId !== baseline.sourceEvidenceId
+    || sourceMap.sourceMediaUrl !== input.sourceMediaUrl || sourceMap.sourceFingerprint !== baseline.sourceFingerprint) {
+    throw new Error("The saved source-protection map no longer protects the same accepted source evidence.");
   }
   if (blueprint.id !== baseline.editBlueprintId) {
     throw new Error("The saved source edit blueprint no longer matches the accepted baseline.");
