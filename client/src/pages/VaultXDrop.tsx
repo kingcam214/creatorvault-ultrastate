@@ -685,11 +685,12 @@ export default function VaultXDrop() {
             
             <p style={{ fontSize: 16, color: "#fff", lineHeight: 1.65, margin: "0 0 20px", textAlign: "center", fontWeight: 500 }}>Start with a video you already have in CreatorVault. We read its movement and framing, then help you choose a cinematic plan for your next drop.</p>
             {existingVideosQuery.isLoading && <p style={{ color: GOLD, fontSize: 12, textAlign: "center", margin: "-8px 0 20px" }}>Finding your saved videos…</p>}
-            {!existingVideosQuery.isLoading && Array.isArray(existingVideosQuery.data) && existingVideosQuery.data.length > 0 && <p style={{ color: GREEN, fontSize: 12, textAlign: "center", margin: "-8px 0 20px" }}>Your verified original footage is ready. You can choose it below.</p>}
+            {!existingVideosQuery.isLoading && Array.isArray(existingVideosQuery.data) && existingVideosQuery.data.some(isEligibleBodyCinemaSource) && <p style={{ color: GREEN, fontSize: 12, textAlign: "center", margin: "-8px 0 20px" }}>Your verified original footage is ready. You can choose it below.</p>}
+            {!existingVideosQuery.isLoading && Array.isArray(existingVideosQuery.data) && existingVideosQuery.data.length > 0 && !existingVideosQuery.data.some(isEligibleBodyCinemaSource) && <p style={{ color: GOLD, fontSize: 12, textAlign: "center", margin: "-8px 0 20px" }}>Your saved footage is protected. CreatorVault is confirming the original source record before Body Cinema touches it.</p>}
 
             <button type="button" className="body-cinema-button" onClick={() => setMediaLibraryOpen(true)} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, minHeight: 150, padding: 24, borderRadius: 24, border: `1px solid ${GOLD_BORDER}`, background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, cursor: "pointer", textAlign: "center", boxShadow: "0 8px 30px rgba(213,183,96,0.1)", color: "#fff" }}>
               <div style={{ width: 58, height: 58, borderRadius: 18, background: `linear-gradient(135deg, ${GOLD}, #b09140)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(213,183,96,0.25)" }}><Film size={26} color="#080808" /></div>
-              <div><p style={{ fontSize: 20, fontWeight: 900, margin: 0 }}>Choose from your Vault</p><p style={{ fontSize: 13, color: MUTED, margin: "6px 0 0" }}>Your saved videos appear here automatically</p></div>
+              <div><p style={{ fontSize: 20, fontWeight: 900, margin: 0 }}>Choose from your Vault</p><p style={{ fontSize: 13, color: MUTED, margin: "6px 0 0" }}>Your verified original footage appears here automatically</p></div>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 7, color: GREEN, fontSize: 11, fontWeight: 800 }}><ShieldCheck size={14} /> Your videos stay attached to your account</div>
             </button>
 

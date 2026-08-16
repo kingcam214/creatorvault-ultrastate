@@ -7,6 +7,7 @@ import { buildAdaptiveTrailerPlan, buildCloneAwareTrailerMode } from "../service
 import { buildCinematicPacingPlan, buildSoundDesignPlan, buildTimelineInspectorModel, buildVoiceoverSyncPlan } from "../services/cinematicPacingEngine";
 import { analyzeTrailerRetention } from "../services/trailerRetentionAnalyzer";
 import { buildTrailerMediaOSManifest } from "../media-os/orchestration/trailerMediaOSOrchestrator";
+import { listBodyCinemaVerifiedSourceAttestations } from "../services/bodyCinemaVerifiedSourceAttestationService";
 
 const mediaFilterSchema = z.enum(["all", "videos", "images"]).default("all");
 
@@ -216,6 +217,9 @@ export const mediaAssetsRouter = router({
         LIMIT ${limit}
       ` as any).then(extractRows).catch(() => [] as any[]);
       const rows = [...extractRows(result), ...flyerRows];
+      const verifiedSourceUrls = new Set(
+        (await listBodyCinemaVerifiedSourceAttestations(Number(ctx.user.id))).map((attestation) => attestation.sourceMediaUrl),
+      );
 
       return rows.map((row: any) => ({
         id: String(row.id),
@@ -227,7 +231,9 @@ export const mediaAssetsRouter = router({
           : row.created_by_feature === "creatorvault_approved_demo"
             ? "approved_demo"
             : "creator_owned_or_generated",
-        bodyCinemaEligible: row.created_by_feature === "body_cinema_verified_source",
+        // A media row alone never authorizes Body Cinema. The source must have a
+        // durable 94+ preservation baseline that still matches its exact bytes.
+        bodyCinemaEligible: verifiedSourceUrls.has(String(row.public_url || "")),
         fileName: row.file_name ?? row.original_name ?? "Untitled",
         originalName: row.original_name ?? null,
         mimeType: row.mime_type ?? null,

@@ -550,6 +550,7 @@ const ALLOWLISTS = {
     'server/services/bodyCinemaProviderResiliencePolicy.ts',
     'server/services/bodyCinemaProviderResilienceService.ts',
     'server/services/bodyCinemaProviderResilienceService.test.ts',
+    'server/services/bodyCinemaVerifiedSourceAttestationService.ts',
     'server/services/creationDirector.ts',
     'package.json',
     'pnpm-lock.yaml',

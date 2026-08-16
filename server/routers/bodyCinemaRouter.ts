@@ -40,6 +40,7 @@ import { getBodyCinemaSavedSourceInventory } from "../services/bodyCinemaExistin
 import { buildBodyCinemaAssemblyRecipe } from "../services/bodyCinemaAssemblyRecipe";
 import { getOrCreateBodyCinemaEditBlueprint } from "../services/bodyCinemaEditBlueprintService";
 import { listBodyCinemaGoldStandardBaselines, registerAcceptedTechnicalSourceBaseline } from "../services/bodyCinemaGoldStandardService";
+import { recoverVerifiedLegacyBodyCinemaSource } from "../services/bodyCinemaVerifiedSourceAttestationService";
 import { buildAudioDirectedTimeline } from "../services/audioTimelinePlanner";
 import { getCanonicalAudioAsset } from "../services/audioIntelligenceService";
 import { startRender } from "../services/realRenderEngine";
@@ -168,6 +169,23 @@ export const bodyCinemaRouter = router({
       });
     } catch (error: any) {
       throw evidencePrecondition(error?.message || "Body Cinema could not prepare this source-backed edit blueprint.");
+    }
+  }),
+
+  recoverVerifiedLegacySourceEligibility: protectedProcedure.input(z.object({
+    sourceMediaUrl: z.string().url(),
+  })).mutation(async ({ ctx, input }) => {
+    const creatorId = Number(ctx.user.id);
+    if (![6, 33].includes(creatorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "This protected source recovery is reserved for the owner workspace." });
+    }
+    try {
+      return await recoverVerifiedLegacyBodyCinemaSource({
+        creatorId,
+        sourceMediaUrl: input.sourceMediaUrl,
+      });
+    } catch (error: any) {
+      throw evidencePrecondition(error?.message || "CreatorVault could not restore this verified original footage.");
     }
   }),
 
