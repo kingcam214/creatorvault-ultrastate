@@ -46,9 +46,11 @@ const safeZoneChoices: Array<{ id: CaptionSafeZone; label: string; detail: strin
 
 function isEligibleCreatorVideo(asset: MediaAssetItem) {
   const sourceUrl = String(asset.publicUrl || "").trim();
+  const reference = [sourceUrl, asset.fileName, asset.originalName, asset.sourceType].filter(Boolean).join(" ").toLowerCase();
   const isCreatorVaultHosted = /^(?:https:\/\/creatorvault\.live\/(?:uploads|videos)\/|\/(?:uploads|videos)\/)/i.test(sourceUrl);
   const isVideo = asset.assetType === "video" || Boolean(asset.mimeType?.startsWith("video/"));
-  return isVideo && isCreatorVaultHosted && Number(asset.duration || 0) > 0 && Number(asset.width || 0) > 0 && Number(asset.height || 0) > 0;
+  const isRejectedOrBenchmarkOutput = /(?:rejected|benchmark|vace)/.test(reference);
+  return isVideo && isCreatorVaultHosted && !isRejectedOrBenchmarkOutput && Number(asset.duration || 0) > 0 && Number(asset.width || 0) > 0 && Number(asset.height || 0) > 0;
 }
 
 function overlayTheme(style: CaptionStyle) {
