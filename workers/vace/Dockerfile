@@ -14,7 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN python3.10 -m pip install --no-cache-dir --upgrade pip \
     && python3.10 -m pip install --no-cache-dir \
-      torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu124
+      torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu124 \
+    && python3.10 -m pip install --no-cache-dir huggingface_hub
 
 RUN git clone --depth 1 https://github.com/ali-vilab/VACE.git ${VACE_ROOT} \
     && python3.10 -m pip install --no-cache-dir -r ${VACE_ROOT}/requirements.txt \

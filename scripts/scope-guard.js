@@ -558,6 +558,8 @@ const ALLOWLISTS = {
     'server/services/digitalOceanVaceAutomationService.test.ts',
     'server/services/digitalOceanVaceProvisioningService.ts',
     'server/services/digitalOceanVaceProvisioningService.test.ts',
+    'server/services/digitalOceanVaceWorkerProvisioner.ts',
+    'server/services/digitalOceanVaceWorkerProvisioner.test.ts',
     'workers/vace/Dockerfile',
     'workers/vace/requirements.txt',
     'workers/vace/app/main.py',
