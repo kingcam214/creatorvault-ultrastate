@@ -1651,7 +1651,7 @@ function VaultXPublicLanding() {
         >
           {/* BACKGROUND VIDEO — fullscreen behind everything */}
           <video
-            src={HOMEPAGE_MEDIA.vaultxRevenueVisual.livePath}
+            src={HOMEPAGE_MEDIA.homepageMotionPilot.livePath}
             autoPlay
             muted
             loop
@@ -1701,9 +1701,9 @@ function VaultXPublicLanding() {
                 margin: "0 0 16px 0",
               }}
             >
-              YOUR BODY.<br />
-              YOUR CONTENT.<br />
-              YOUR MONEY.
+              MAKE THEM<br />
+              WAIT FOR<br />
+              THE DROP.
             </h1>
 
             <p
@@ -1716,7 +1716,7 @@ function VaultXPublicLanding() {
                 margin: "0 0 32px 0",
               }}
             >
-              CreatorVault’s private-sales vertical for adult creators who want ownership, access, and stronger money paths in one private creation space.
+              A private room for creators who want their own footage, their own offer, and their own rules.
             </p>
 
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
@@ -1733,7 +1733,7 @@ function VaultXPublicLanding() {
                   cursor: "pointer",
                 }}
               >
-                Explore VaultX
+                Start my VaultX
               </button>
               <a
                 href="#body-cinema"
@@ -1748,9 +1748,10 @@ function VaultXPublicLanding() {
                   textDecoration: "none",
                 }}
               >
-                See How It Works
+                See Body Cinema
               </a>
             </div>
+            <p style={{ position: "relative", zIndex: 2, padding: "18px 24px 0", margin: 0, maxWidth: "420px", color: "rgba(255,255,255,.56)", fontSize: "12px", lineHeight: 1.5 }}>CreatorVault campaign film. It sets the mood here; it is not presented as a creator result.</p>
           </div>
         </section>
 
