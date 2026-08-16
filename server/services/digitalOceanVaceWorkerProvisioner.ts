@@ -150,6 +150,25 @@ export async function provisionApprovedH100VaceWorker(): Promise<VaceWorkerProvi
   };
 }
 
+export async function destroyCompletedH200VaceWorker(): Promise<{ destroyed: boolean; dropletId: number | null; name: string | null }> {
+  if (!getDigitalOceanVaceAutomationState().configured) {
+    throw new DigitalOceanVaceWorkerProvisionerError("CreatorVault cannot stop the H200 because its secured DigitalOcean automation credential is not configured.");
+  }
+  const result = await digitalOceanRequest<{ droplets?: DigitalOceanDroplet[] }>("/droplets?per_page=200");
+  const candidate = (result.droplets || []).find((droplet) => droplet.name === "ml-ai-ubuntu-gpu-h200x1-141gb-nyc2");
+  const dropletId = Number(candidate?.id || 0);
+  if (!dropletId) return { destroyed: false, dropletId: null, name: null };
+  const response = await fetch(`${DIGITALOCEAN_API_BASE}/droplets/${dropletId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token()}`, Accept: "application/json" },
+  });
+  if (!response.ok && response.status !== 404) {
+    const body = await response.text().catch(() => "");
+    throw new DigitalOceanVaceWorkerProvisionerError(`DigitalOcean refused H200 shutdown (${response.status}${body ? `: ${body.slice(0, 240)}` : ""}).`);
+  }
+  return { destroyed: true, dropletId, name: String(candidate?.name || "") };
+}
+
 export const __digitalOceanVaceWorkerProvisionerTesting = {
   workerCloudInit,
   workerUrlForPublicIp,

@@ -68,7 +68,7 @@ import {
   getDigitalOceanVaceAutomationState,
 } from "../services/digitalOceanVaceAutomationService";
 import { getDigitalOceanVaceProvisioningReadiness } from "../services/digitalOceanVaceProvisioningService";
-import { provisionApprovedH100VaceWorker } from "../services/digitalOceanVaceWorkerProvisioner";
+import { destroyCompletedH200VaceWorker, provisionApprovedH100VaceWorker } from "../services/digitalOceanVaceWorkerProvisioner";
 
 const OWNER_IDS = new Set([6, 33]);
 
@@ -154,6 +154,15 @@ export const governedPolloRouter = router({
     ownerOnly(ctx.user.id);
     try {
       return await provisionApprovedH100VaceWorker();
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  destroyCompletedH200VaceWorker: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await destroyCompletedH200VaceWorker();
     } catch (error) {
       return asPrecondition(error);
     }
