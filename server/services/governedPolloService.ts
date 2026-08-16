@@ -1797,7 +1797,7 @@ export async function reclassifyGovernedRunwayAlephWorkspaceLimit(params: {
     throw new Error("Workspace-limit correction requires the exact provider capacity failure reason.");
   }
   await rawExec(
-    `UPDATE governed_pollo_jobs
+    `UPDATE governed_media_jobs
      SET failure_code = 'runway_workspace_limit', failure_message = ?, updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`,
     [params.reason, job.id],
