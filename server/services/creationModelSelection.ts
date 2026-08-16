@@ -71,8 +71,15 @@ export function selectBestVerifiedCreationModel(models: RoutableCreationModel[],
     if (requirements.requiresCameraControl && !model.supportsCameraControl) reasons.push("camera_control_not_supported");
     if (requirements.requiresAudio && !model.supportsAudio) reasons.push("audio_not_supported");
 
-    if (requirements.requiresGeneratedShot && model.executionLane === "assembly") reasons.push("assembly_cannot_create_new_shot");
-    if (!requirements.requiresGeneratedShot && model.executionLane !== "assembly") reasons.push("generated_lane_not_needed_for_existing_media_assembly");
+    if (requirements.requiresGeneratedShot && (model.executionLane === "assembly" || model.executionLane === "finishing")) {
+      reasons.push("selected_lane_cannot_create_new_shot");
+    }
+    if (requirements.requiresSourceFaithfulFinishing && model.executionLane !== "finishing") {
+      reasons.push("source_faithful_finishing_lane_required");
+    }
+    if (!requirements.requiresGeneratedShot && !requirements.requiresSourceFaithfulFinishing && model.executionLane !== "assembly") {
+      reasons.push("generated_or_finishing_lane_not_needed_for_existing_media_assembly");
+    }
 
     const evidenceMetrics = requiredEvidenceMetrics(requirements);
     const evidenceScores = evidenceMetrics.map((metric) => model.evidence.criteria[metric]).filter((value): value is number => typeof value === "number");
@@ -107,4 +114,5 @@ export const CREATION_SELECTION_POLICY = {
   costIgnored: true,
   unbenchmarkedModelsRejected: true,
   assemblyCannotCreateSyntheticShot: true,
+  sourceFaithfulFinishingRequiresDedicatedFinishingLane: true,
 } as const;

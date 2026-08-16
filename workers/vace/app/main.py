@@ -25,6 +25,10 @@ VACE_WORK_DIR = Path(os.getenv("VACE_WORK_DIR", "/workspace"))
 WORKER_TOKEN = os.getenv("CREATORVAULT_VACE_WORKER_TOKEN", "").strip()
 CALLBACK_TIMEOUT_SECONDS = 30
 DOWNLOAD_TIMEOUT_SECONDS = 120
+# The sole all-black-mask benchmark was rejected. No environment switch may
+# silently reopen this lane: a future worker revision must embed a separately
+# benchmarked, source-derived local-mask profile before VACE can accept work.
+VACE_EXECUTION_HELD = True
 
 app = FastAPI(title="CreatorVault VACE Worker", version=PROTOCOL_VERSION)
 job_state: dict[str, dict[str, Any]] = {}
@@ -134,6 +138,15 @@ def model_ready() -> bool:
     return VACE_MODEL_DIR.exists() and any(VACE_MODEL_DIR.iterdir()) and (VACE_ROOT / "vace" / "vace_wan_inference.py").exists()
 
 
+def execution_hold_reason() -> str | None:
+    if VACE_EXECUTION_HELD:
+        return (
+            "The prior VACE lighting-only benchmark returned black frames. "
+            "This lane requires an official, source-derived local-mask recipe and a non-creator validation before it can accept another job."
+        )
+    return None
+
+
 def assert_preservation_flags(contract: VaceContract) -> None:
     required = {
         "identity", "face", "bodyAnatomy", "naturalSkin", "wardrobe", "originalPerformance",
@@ -145,7 +158,49 @@ def assert_preservation_flags(contract: VaceContract) -> None:
         raise ValueError("The worker only accepts the reviewed 720p source-audio-preserving VACE output contract")
 
 
-async def execute_vace(job_id: str, request: VaceExecutionRequest) -> None:
+def inspect_nonempty_video(path: Path) -> dict[str, Any]:
+    """Reject a technically valid container whose sampled visual frames are empty.
+
+    This is a technical acceptance check only. It does not alter source media or
+    grade a video. It prevents a black model result from being presented as a
+    CreatorVault completion before the canonical preservation review runs.
+    """
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "format=duration:stream=width,height", "-of", "json", str(path)],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if probe.returncode != 0:
+        raise RuntimeError("VACE output cannot be technically inspected")
+    try:
+        metadata = json.loads(probe.stdout or "{}")
+        stream = (metadata.get("streams") or [])[0]
+        duration = float((metadata.get("format") or {}).get("duration") or 0)
+        width = int(stream.get("width") or 0)
+        height = int(stream.get("height") or 0)
+    except (ValueError, TypeError, IndexError, KeyError) as error:
+        raise RuntimeError("VACE output has unreadable video metadata") from error
+    if duration <= 0 or width <= 0 or height <= 0:
+        raise RuntimeError("VACE output has no readable visual stream")
+
+    sample_points = sorted({min(max(duration * fraction, 0.05), max(duration - 0.05, 0.05)) for fraction in (0.2, 0.5, 0.8)})
+    luminance: list[float] = []
+    for point in sample_points:
+        decoded = subprocess.run(
+            ["ffmpeg", "-v", "error", "-ss", f"{point:.3f}", "-i", str(path), "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "gray", "pipe:1"],
+            capture_output=True,
+            timeout=120,
+        )
+        if decoded.returncode != 0 or not decoded.stdout:
+            raise RuntimeError("VACE output has an unreadable sampled visual frame")
+        luminance.append(round(sum(decoded.stdout) / len(decoded.stdout), 3))
+    if max(luminance, default=0) < 4:
+        raise RuntimeError("VACE output is visually empty: sampled frames are black and are rejected before review")
+    return {"durationSeconds": round(duration, 3), "width": width, "height": height, "sampleLuminance": luminance}
+
+
+def execute_vace(job_id: str, request: VaceExecutionRequest) -> None:
     job_dir = VACE_WORK_DIR / "jobs" / job_id
     result_dir = VACE_WORK_DIR / "results" / job_id
     downloaded_source_path = job_dir / "source-original.mp4"
@@ -169,17 +224,16 @@ async def execute_vace(job_id: str, request: VaceExecutionRequest) -> None:
         )
         if clipped.returncode != 0:
             raise RuntimeError(f"Verified source segment preparation failed: {clipped.stderr[-1000:]}")
-        # The private worker derives a black preservation mask at the source segment's exact timing.
-        # This is a technical model-conditioning asset, not a visual edit. Black means no region is opened
-        # for geometric or identity alteration; the lighting-only prompt is the sole requested change.
-        mask_render = subprocess.run(
-            ["ffmpeg", "-y", "-i", str(source_path), "-vf", "format=gray,geq=lum='0'", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(mask_path)],
-            capture_output=True,
-            text=True,
-            timeout=300,
+        # The prior all-black full-frame mask caused a black output in the real H200
+        # benchmark. VACE officially requires a task-specific prepared source and
+        # mask: black retains pixels while white opens only the intended edit region.
+        # A full-frame relight does not identify such a region, so it is not a valid
+        # source-preserving VACE job. This lane stays closed until a separately
+        # validated, source-derived local-mask recipe is attached to the contract.
+        raise RuntimeError(
+            "VACE lighting-only execution is held after the rejected black-output benchmark. "
+            "A task-specific official preprocessing package with a non-empty, source-derived local edit mask is required before another run."
         )
-        if mask_render.returncode != 0:
-            raise RuntimeError(f"VACE preservation-mask preparation failed: {mask_render.stderr[-1000:]}")
         reference_path = refs_dir / "verified-source-reference.png"
         reference_path.parent.mkdir(parents=True, exist_ok=True)
         reference_extract = subprocess.run(
@@ -231,12 +285,14 @@ async def execute_vace(job_id: str, request: VaceExecutionRequest) -> None:
         )
         if mux.returncode != 0:
             raise RuntimeError(f"Original-audio packaging failed: {mux.stderr[-1000:]}")
+        visualProof = inspect_nonempty_video(muxed_path)
         job_state[job_id] = {
             "state": "completed",
             "jobKey": contract.jobKey,
             "sourceChecksum": contract.source.sourceChecksum,
             "outputSha256": sha256(muxed_path),
             "outputBytes": muxed_path.stat().st_size,
+            "visualProof": visualProof,
             "outputPath": str(muxed_path),
         }
     except Exception as error:
@@ -246,18 +302,23 @@ async def execute_vace(job_id: str, request: VaceExecutionRequest) -> None:
 @app.get("/health", dependencies=[Depends(require_worker_token)])
 def health() -> dict[str, Any]:
     gpu = gpu_snapshot()
+    hold_reason = execution_hold_reason()
     return {
         "protocolVersion": PROTOCOL_VERSION,
         "modelKey": MODEL_KEY,
         "gpu": gpu,
         "modelReady": model_ready(),
-        "state": "ready" if gpu["available"] and model_ready() else "not_ready",
+        "state": "held_requires_validated_preprocess" if hold_reason and gpu["available"] and model_ready() else "ready" if gpu["available"] and model_ready() else "not_ready",
+        "holdReason": hold_reason,
     }
 
 
 @app.post("/v1/body-cinema/jobs", dependencies=[Depends(require_worker_token)])
 async def create_job(request: VaceExecutionRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:
     assert_preservation_flags(request.contract)
+    hold_reason = execution_hold_reason()
+    if hold_reason:
+        raise HTTPException(status_code=409, detail=hold_reason)
     job_id = str(uuid.uuid4())
     job_state[job_id] = {"state": "queued", "jobKey": request.contract.jobKey}
     background_tasks.add_task(execute_vace, job_id, request)

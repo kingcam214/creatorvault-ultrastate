@@ -31,6 +31,7 @@ export type BodyCinemaProviderFailureCode =
   | "asset_contract"
   | "safety_block"
   | "provider_output_failure"
+  | "visual_output_empty"
   | "quality_rejection"
   | "manual_hold";
 
@@ -101,7 +102,7 @@ const PROVIDER_DEFAULTS: Record<BodyCinemaProviderKey, Omit<BodyCinemaProviderHe
     healthStatus: "disabled",
     circuitState: "open",
     lastFailureCode: "manual_hold",
-    lastFailureDetail: "CreatorVault VACE worker is not connected to an approved GPU environment and has no accepted source-preservation benchmark.",
+    lastFailureDetail: "The real H200 VACE benchmark returned black frames and was rejected. This lane is held until an official source-derived local-mask recipe passes non-creator validation and then an accepted CreatorVault benchmark.",
     failureCount: 0,
     retryNotBefore: null,
     lastProbeAt: null,
@@ -395,6 +396,9 @@ export function buildBodyCinemaRouteReadiness(models: RoutableCreationModel[], h
 export const BODY_CINEMA_PROVIDER_RESILIENCE_POLICY = {
   providerFailureDoesNotAuthorizeAutomaticRetry: true,
   providerCircuitMustBeClosedBeforeChargeableSubmission: true,
+  visuallyEmptyProviderOutputOpensCircuitBeforeIngestion: true,
+  localWorkerMayNotBlockItsStatusControlPlane: true,
+  providerFallbackRequiresItsOwnAcceptedCreatorVaultEvidence: true,
   malformedOrUnsignedAssetFailureDoesNotMarkProviderDown: true,
   planGateRequiresEntitlementRepairBeforeRetry: true,
   outageOpensCircuitAndReleasesTheGovernedReservation: true,

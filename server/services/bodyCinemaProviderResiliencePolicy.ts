@@ -9,6 +9,7 @@ export type BodyCinemaProviderFailureCode =
   | "asset_contract"
   | "safety_block"
   | "provider_output_failure"
+  | "visual_output_empty"
   | "quality_rejection"
   | "manual_hold";
 
@@ -35,6 +36,7 @@ export function classifyBodyCinemaProviderFailure(input: {
   if (/(timeout|timed out|no task|submission_unknown|temporarily unavailable|third.party.unavailable|service unavailable|outage|load shedding)/.test(message)) return "submission_timeout_no_task";
   if (/(asset.invalid|invalid asset|signed url|signature|malformed|dimensions|duration)/.test(message)) return "asset_contract";
   if (/(safety|moderation|nsfw|policy)/.test(message)) return "safety_block";
+  if (/(black frame|black output|visually empty|empty video|no readable visual stream)/.test(message)) return "visual_output_empty";
   if (/(quality|anatomy|identity drift|plastic|stiff movement|rejected output)/.test(message)) return "quality_rejection";
   return "provider_output_failure";
 }
@@ -46,7 +48,7 @@ export function resolveBodyCinemaFailureState(code: BodyCinemaProviderFailureCod
   if (code === "submission_timeout_no_task" || code === "provider_output_failure") {
     return { healthStatus: "unavailable", circuitState: "open", retryNotBefore: new Date(Date.now() + 30 * 60_000).toISOString() };
   }
-  if (code === "quality_rejection") {
+  if (code === "visual_output_empty" || code === "quality_rejection") {
     return { healthStatus: "degraded", circuitState: "open", retryNotBefore: null };
   }
   // Request-specific source-link and moderation failures must not cause the

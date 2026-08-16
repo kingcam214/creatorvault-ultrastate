@@ -70,6 +70,17 @@ describe("Body Cinema provider resilience", () => {
     expect(state.circuitState).toBe("open");
   });
 
+  it("opens the circuit when a provider returns a technically readable but black video", () => {
+    const code = classifyBodyCinemaProviderFailure({ detail: "VACE output is visually empty: sampled frames are black" });
+    const state = resolveBodyCinemaFailureState(code);
+
+    expect(code).toBe("visual_output_empty");
+    expect(state.healthStatus).toBe("degraded");
+    expect(state.circuitState).toBe("open");
+    expect(state.retryNotBefore).toBeNull();
+    expect(isBodyCinemaProviderSubmissionAllowed({ ...baseHealth, ...state })).toBe(false);
+  });
+
   it("keeps an unprovisioned CreatorVault VACE worker out of routing until a real GPU health check exists", () => {
     expect(isBodyCinemaProviderSubmissionAllowed({
       ...baseHealth,

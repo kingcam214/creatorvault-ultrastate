@@ -568,6 +568,8 @@ const ALLOWLISTS = {
     'server/services/topazProductionActivationService.ts',
     'server/services/topazProductionActivationService.test.ts',
     'server/services/creationModelRegistry.ts',
+    'server/services/creationModelSelection.ts',
+    'server/services/creationModelSelection.test.ts',
     'server/services/bodyCinemaProviderResiliencePolicy.ts',
     'server/services/bodyCinemaProviderResilienceService.ts',
     'server/services/bodyCinemaProviderResilienceService.test.ts',
