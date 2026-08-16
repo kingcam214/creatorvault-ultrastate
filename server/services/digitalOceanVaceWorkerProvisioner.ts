@@ -35,6 +35,8 @@ type DigitalOceanDroplet = {
   networks?: { v4?: Array<{ ip_address?: string; type?: string }> };
 };
 
+type DigitalOceanSshKey = { id?: number };
+
 function token(): string {
   const value = String(process.env[DIGITALOCEAN_TOKEN_ENVIRONMENT_KEY] || "").trim();
   if (!value) throw new DigitalOceanVaceWorkerProvisionerError("CreatorVault has no secured DigitalOcean VACE automation credential.");
@@ -60,6 +62,17 @@ async function digitalOceanRequest<T>(path: string, init?: RequestInit): Promise
 
 function workerToken(): string {
   return randomBytes(36).toString("base64url");
+}
+
+export function selectExistingSshKeyId(keys: DigitalOceanSshKey[]): number {
+  const id = Number(keys.find((key) => Number.isInteger(Number(key.id)) && Number(key.id) > 0)?.id || 0);
+  if (!id) throw new DigitalOceanVaceWorkerProvisionerError("DigitalOcean has no existing SSH key available for the NVIDIA-ready VACE worker image.");
+  return id;
+}
+
+async function existingSshKeyId(): Promise<number> {
+  const result = await digitalOceanRequest<{ ssh_keys?: DigitalOceanSshKey[] }>("/account/keys?per_page=200");
+  return selectExistingSshKeyId(result.ssh_keys || []);
 }
 
 function workerCloudInit(input: { workerToken: string }): string {
@@ -96,6 +109,7 @@ export async function provisionApprovedH100VaceWorker(): Promise<VaceWorkerProvi
   }
 
   const tokenValue = workerToken();
+  const sshKeyId = await existingSshKeyId();
   const name = `creatorvault-vace-h100-${Date.now()}`;
   const result = await digitalOceanRequest<{ droplet?: DigitalOceanDroplet }>("/droplets", {
     method: "POST",
@@ -107,6 +121,7 @@ export async function provisionApprovedH100VaceWorker(): Promise<VaceWorkerProvi
       ipv6: false,
       monitoring: true,
       backups: false,
+      ssh_keys: [sshKeyId],
       user_data: workerCloudInit({ workerToken: tokenValue }),
     }),
   });
@@ -138,4 +153,5 @@ export async function provisionApprovedH100VaceWorker(): Promise<VaceWorkerProvi
 export const __digitalOceanVaceWorkerProvisionerTesting = {
   workerCloudInit,
   workerUrlForPublicIp,
+  selectExistingSshKeyId,
 };

@@ -16,4 +16,9 @@ describe("DigitalOcean VACE H100 provisioner", () => {
     expect(__digitalOceanVaceWorkerProvisionerTesting.workerUrlForPublicIp("203.0.113.41")).toBe("https://203.0.113.41.sslip.io");
     expect(() => __digitalOceanVaceWorkerProvisionerTesting.workerUrlForPublicIp("not-an-ip")).toThrow("usable public address");
   });
+
+  it("requires a real existing account SSH key for the NVIDIA-ready image", () => {
+    expect(__digitalOceanVaceWorkerProvisionerTesting.selectExistingSshKeyId([{ id: 481516 }])).toBe(481516);
+    expect(() => __digitalOceanVaceWorkerProvisionerTesting.selectExistingSshKeyId([])).toThrow("no existing SSH key");
+  });
 });
