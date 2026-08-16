@@ -252,7 +252,7 @@ async def execute_vace(job_id: str, request: VaceExecutionRequest) -> None:
             pass
 
 
-@app.get("/health")
+@app.get("/health", dependencies=[Depends(require_worker_token)])
 def health() -> dict[str, Any]:
     gpu = gpu_snapshot()
     return {

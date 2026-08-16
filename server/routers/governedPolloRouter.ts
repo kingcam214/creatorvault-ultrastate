@@ -54,6 +54,11 @@ import {
   activateTopazProductionCredential,
   getTopazProductionCredentialState,
 } from "../services/topazProductionActivationService";
+import {
+  activateVaceWorkerConnection,
+  getVaceWorkerConnectionState,
+} from "../services/vaceWorkerConnectionService";
+import { probeVaceWorkerHealth } from "../services/vaceWorkerHealthService";
 
 const OWNER_IDS = new Set([6, 33]);
 
@@ -110,6 +115,37 @@ export const governedPolloRouter = router({
     }
   }),
 
+  vaceWorkerConnectionState: protectedProcedure.query(({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    return getVaceWorkerConnectionState();
+  }),
+
+  activateVaceWorkerConnection: protectedProcedure.input(z.object({
+    workerUrl: z.string().url().max(512),
+    workerToken: z.string().trim().min(32).max(512),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await activateVaceWorkerConnection(input);
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  probeVaceWorkerAvailability: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    const health = await probeVaceWorkerHealth();
+    if (health.workerReady) {
+      await recordBodyCinemaProviderHealthy({
+        providerKey: "creatorvault_vace",
+        source: "owner_verified_read_only_availability_probe",
+        detail: health.detail,
+        metadata: { actorId: ctx.user.id, chargeableProviderRequestCreated: false, gpuAvailable: true, modelReady: true },
+      });
+    }
+    return health;
+  }),
+
   bodyCinemaResilienceSnapshot: protectedProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     const [models, providerHealth] = await Promise.all([
@@ -128,7 +164,7 @@ export const governedPolloRouter = router({
   }),
 
   recordBodyCinemaProviderAvailability: protectedProcedure.input(z.object({
-    providerKey: z.enum(["runway_aleph", "topaz_video", "creatorvault_technical_continuity"]),
+    providerKey: z.enum(["runway_aleph", "topaz_video", "creatorvault_vace", "creatorvault_technical_continuity"]),
     evidence: z.string().trim().min(12).max(2_000),
   })).mutation(async ({ ctx, input }) => {
     ownerOnly(ctx.user.id);
