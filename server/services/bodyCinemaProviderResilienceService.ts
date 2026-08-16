@@ -20,7 +20,7 @@ import {
  * It never auto-retries a provider, reserves spend, or starts a provider task.
  */
 
-export type BodyCinemaProviderKey = "runway_aleph" | "topaz_video" | "creatorvault_technical_continuity";
+export type BodyCinemaProviderKey = "runway_aleph" | "topaz_video" | "creatorvault_vace" | "creatorvault_technical_continuity";
 export type BodyCinemaProviderHealthStatus = "unknown" | "healthy" | "degraded" | "unavailable" | "disabled";
 export type BodyCinemaCircuitState = "closed" | "open" | "half_open";
 export type BodyCinemaProviderFailureCode =
@@ -69,6 +69,7 @@ export type BodyCinemaRouteReadiness = {
 const PROVIDER_MODEL_KEYS: Record<BodyCinemaProviderKey, string[]> = {
   runway_aleph: ["runway/aleph-2-video-edit"],
   topaz_video: ["topaz/proteus-precision-video"],
+  creatorvault_vace: ["wan/wan2.1-vace-14b-masked-video-edit"],
   creatorvault_technical_continuity: ["creatorvault/real-render-engine"],
 };
 
@@ -90,6 +91,17 @@ const PROVIDER_DEFAULTS: Record<BodyCinemaProviderKey, Omit<BodyCinemaProviderHe
     circuitState: "open",
     lastFailureCode: "manual_hold",
     lastFailureDetail: "Topaz is a researched backup candidate only. It is not configured, benchmarked, or authorized for CreatorVault production use.",
+    failureCount: 0,
+    retryNotBefore: null,
+    lastProbeAt: null,
+    lastRecoveredAt: null,
+  },
+  creatorvault_vace: {
+    providerKey: "creatorvault_vace",
+    healthStatus: "disabled",
+    circuitState: "open",
+    lastFailureCode: "manual_hold",
+    lastFailureDetail: "CreatorVault VACE worker is not connected to an approved GPU environment and has no accepted source-preservation benchmark.",
     failureCount: 0,
     retryNotBefore: null,
     lastProbeAt: null,

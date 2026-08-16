@@ -69,4 +69,14 @@ describe("Body Cinema provider resilience", () => {
     expect(state.healthStatus).toBe("degraded");
     expect(state.circuitState).toBe("open");
   });
+
+  it("keeps an unprovisioned CreatorVault VACE worker out of routing until a real GPU health check exists", () => {
+    expect(isBodyCinemaProviderSubmissionAllowed({
+      ...baseHealth,
+      providerKey: "creatorvault_vace",
+      healthStatus: "disabled",
+      circuitState: "open",
+      lastFailureCode: "manual_hold",
+    })).toBe(false);
+  });
 });

@@ -1,4 +1,4 @@
-export type BodyCinemaProviderKey = "runway_aleph" | "topaz_video" | "creatorvault_technical_continuity";
+export type BodyCinemaProviderKey = "runway_aleph" | "topaz_video" | "creatorvault_vace" | "creatorvault_technical_continuity";
 export type BodyCinemaProviderHealthStatus = "unknown" | "healthy" | "degraded" | "unavailable" | "disabled";
 export type BodyCinemaCircuitState = "closed" | "open" | "half_open";
 export type BodyCinemaProviderFailureCode =
