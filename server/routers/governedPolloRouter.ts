@@ -436,6 +436,7 @@ export const governedPolloRouter = router({
   reconcileRunwayAlephSubmissionTimeout: protectedProcedure.input(z.object({
     jobId: z.number().int().positive(),
     reason: z.string().trim().min(3).max(1200),
+    failureCode: z.enum(["runway_submission_timeout_no_task", "runway_workspace_limit"]).optional(),
   })).mutation(async ({ ctx, input }) => {
     ownerOnly(ctx.user.id);
     try {
@@ -443,6 +444,7 @@ export const governedPolloRouter = router({
         jobId: input.jobId,
         ownerId: ctx.user.id,
         reason: input.reason,
+        failureCode: input.failureCode,
       });
     } catch (error) {
       return asPrecondition(error);

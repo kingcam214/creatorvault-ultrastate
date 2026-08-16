@@ -5,6 +5,7 @@ export type BodyCinemaProviderFailureCode =
   | "service_unavailable"
   | "submission_timeout_no_task"
   | "plan_gate"
+  | "workspace_limit"
   | "asset_contract"
   | "safety_block"
   | "provider_output_failure"
@@ -29,6 +30,7 @@ export function classifyBodyCinemaProviderFailure(input: {
   detail?: string | null;
 }): BodyCinemaProviderFailureCode {
   const message = `${input.code || ""} ${input.detail || ""}`.toLowerCase();
+  if (/(workspace limit|workspace.*capacity|generation.*limit|usage limit|quota exceeded)/.test(message)) return "workspace_limit";
   if (/(plan.?gate|entitlement|subscription|not available in.*workspace)/.test(message)) return "plan_gate";
   if (/(timeout|timed out|no task|submission_unknown|temporarily unavailable|third.party.unavailable|service unavailable|outage|load shedding)/.test(message)) return "submission_timeout_no_task";
   if (/(asset.invalid|invalid asset|signed url|signature|malformed|dimensions|duration)/.test(message)) return "asset_contract";
@@ -38,7 +40,7 @@ export function classifyBodyCinemaProviderFailure(input: {
 }
 
 export function resolveBodyCinemaFailureState(code: BodyCinemaProviderFailureCode): Pick<BodyCinemaProviderHealthShape, "healthStatus" | "circuitState" | "retryNotBefore"> {
-  if (code === "plan_gate" || code === "manual_hold") {
+  if (code === "plan_gate" || code === "workspace_limit" || code === "manual_hold") {
     return { healthStatus: "unavailable", circuitState: "open", retryNotBefore: null };
   }
   if (code === "submission_timeout_no_task" || code === "provider_output_failure") {

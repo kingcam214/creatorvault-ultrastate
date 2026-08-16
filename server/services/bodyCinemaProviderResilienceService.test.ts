@@ -31,6 +31,17 @@ describe("Body Cinema provider resilience", () => {
     expect(isBodyCinemaProviderSubmissionAllowed({ ...baseHealth, ...state })).toBe(false);
   });
 
+  it("holds a workspace-limited route until a real capacity recovery is recorded", () => {
+    const code = classifyBodyCinemaProviderFailure({ detail: "Runway workspace limit reached" });
+    const state = resolveBodyCinemaFailureState(code);
+
+    expect(code).toBe("workspace_limit");
+    expect(state.healthStatus).toBe("unavailable");
+    expect(state.circuitState).toBe("open");
+    expect(state.retryNotBefore).toBeNull();
+    expect(isBodyCinemaProviderSubmissionAllowed({ ...baseHealth, ...state })).toBe(false);
+  });
+
   it("keeps a plan gate closed until the account entitlement is repaired", () => {
     const code = classifyBodyCinemaProviderFailure({ detail: "Aleph is not available in this workspace plan" });
     const state = resolveBodyCinemaFailureState(code);

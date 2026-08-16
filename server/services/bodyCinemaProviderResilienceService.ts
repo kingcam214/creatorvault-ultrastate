@@ -27,6 +27,7 @@ export type BodyCinemaProviderFailureCode =
   | "service_unavailable"
   | "submission_timeout_no_task"
   | "plan_gate"
+  | "workspace_limit"
   | "asset_contract"
   | "safety_block"
   | "provider_output_failure"

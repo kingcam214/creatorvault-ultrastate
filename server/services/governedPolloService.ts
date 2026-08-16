@@ -1786,6 +1786,7 @@ export async function reconcileGovernedRunwayAlephSubmissionTimeout(params: {
   jobId: number;
   ownerId: number;
   reason: string;
+  failureCode?: "runway_submission_timeout_no_task" | "runway_workspace_limit";
 }): Promise<GovernedPolloJob> {
   requireOwner(params.ownerId);
   const job = await getGovernedPolloJob(params.jobId);
@@ -1798,18 +1799,22 @@ export async function reconcileGovernedRunwayAlephSubmissionTimeout(params: {
   if (job.providerJobId || job.outputUrl) {
     throw new Error("A Runway provider task or output is already recorded; use the completed-provider path instead.");
   }
+  const failureCode = params.failureCode || "runway_submission_timeout_no_task";
+  const resilienceCode = failureCode === "runway_workspace_limit" ? "workspace_limit" : "submission_timeout_no_task";
   const failed = await failGovernedPolloJob({
     jobId: job.id,
     actorId: params.ownerId,
-    code: "runway_submission_timeout_no_task",
+    code: failureCode,
     error: new Error(params.reason),
     releaseBudget: true,
   });
   await recordBodyCinemaProviderFailure({
     providerKey: "runway_aleph",
-    code: "runway_submission_timeout_no_task",
+    code: resilienceCode,
     detail: params.reason,
-    source: "governed_runway_pre_task_timeout_reconciliation",
+    source: failureCode === "runway_workspace_limit"
+      ? "governed_runway_workspace_limit_reconciliation"
+      : "governed_runway_pre_task_timeout_reconciliation",
     metadata: { governedJobId: job.id, requestId: job.requestId, reservationReleased: true },
   }).catch(() => undefined);
   return failed;
