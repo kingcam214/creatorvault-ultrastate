@@ -1755,6 +1755,29 @@ function VaultXPublicLanding() {
           </div>
         </section>
 
+        <section className="vx-shell py-16 md:py-24" aria-label="VaultX real creator motion">
+          <div className="grid gap-8 lg:grid-cols-[.84fr_1.16fr] lg:items-end">
+            <div className="max-w-xl pb-2">
+              <p className="text-xs font-black uppercase tracking-[.24em] text-[#c9a84c]">The feeling starts on camera</p>
+              <h2 className="mt-5 text-5xl font-black leading-[.88] tracking-[-.065em] text-white md:text-7xl">YOUR CAMERA<br /><span className="vx-gold">ALREADY HAS</span><br />THE ENERGY.</h2>
+              <p className="mt-6 max-w-lg text-base leading-7 text-white/65">CreatorVault is built around the moment you already know is worth showing. Bring the real footage in. Shape the release around it. Keep your face, your body, and your world in the frame.</p>
+              <a href="#body-cinema" className="mt-8 inline-flex items-center gap-2 text-sm font-black text-white transition hover:text-[#f3d68b]">Take a real moment into Body Cinema <ArrowUpRight className="h-4 w-4" /></a>
+            </div>
+            <div className="grid grid-cols-[1.1fr_.9fr] gap-3 sm:gap-5">
+              <figure className="group relative min-h-[510px] overflow-hidden rounded-[2rem] border border-[#c9a84c]/25 bg-black shadow-[0_28px_90px_rgba(0,0,0,.45)] sm:min-h-[650px]">
+                <video src={HOMEPAGE_MEDIA.ownerSuppliedMontageSeed.livePath} autoPlay loop muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]" aria-label="Women-centered creator montage visual" />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.04),rgba(0,0,0,.1)_44%,rgba(0,0,0,.88))]" />
+                <figcaption className="absolute inset-x-0 bottom-0 p-5 sm:p-7"><p className="text-[10px] font-black uppercase tracking-[.24em] text-[#f3d68b]">Release energy</p><p className="mt-2 max-w-xs text-2xl font-black leading-[.95] tracking-[-.045em] text-white sm:text-3xl">Make the first second feel like a reason to stay.</p></figcaption>
+              </figure>
+              <figure className="group relative mt-14 min-h-[430px] overflow-hidden rounded-[2rem] border border-white/15 bg-black shadow-[0_28px_90px_rgba(0,0,0,.45)] sm:mt-24 sm:min-h-[540px]">
+                <video src={HOMEPAGE_MEDIA.ownerSuppliedMirrorSeed.livePath} autoPlay loop muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]" aria-label="Full-body mirror creator visual" />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,.08)_42%,rgba(0,0,0,.9))]" />
+                <figcaption className="absolute inset-x-0 bottom-0 p-5 sm:p-6"><p className="text-[10px] font-black uppercase tracking-[.24em] text-white/65">Own the frame</p><p className="mt-2 text-xl font-black leading-[.94] tracking-[-.045em] text-white sm:text-2xl">Your moment. Your move.</p></figcaption>
+              </figure>
+            </div>
+          </div>
+        </section>
+
         <section id="body-cinema" className="vx-shell pb-16 md:pb-24">
           <div className="grid gap-8 lg:grid-cols-[.92fr_1.08fr] lg:items-center">
             <div className="max-w-3xl">

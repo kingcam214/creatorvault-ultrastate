@@ -124,6 +124,13 @@ const ALLOWLISTS = {
     'client/src/pages/VaultX.tsx',
     'scripts/scope-guard.js'
   ],
+  'vaultx-owner-supplied-visual-seed': [
+    'client/src/pages/VaultX.tsx',
+    'client/src/lib/homepageMediaRegistry.ts',
+    'client/public/videos/owner-supplied/creator-spotlight-montage.mp4',
+    'client/public/videos/owner-supplied/creator-spotlight-mirror.mp4',
+    'scripts/scope-guard.js'
+  ],
   'vault-remix-safety': [
     'client/src/pages/VaultRemix.tsx',
     'server/routers/vaultxRouter.ts',
