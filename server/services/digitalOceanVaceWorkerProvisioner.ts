@@ -7,7 +7,6 @@ const DIGITALOCEAN_TOKEN_ENVIRONMENT_KEY = "DIGITALOCEAN_VACE_AUTOMATION_TOKEN";
 const H100_SIZE = "gpu-h100x1-80gb";
 const H100_IMAGE = "gpu-h100x1-base";
 const H100_REGION = "nyc2";
-const WORKER_TAG = "creatorvault:vace-worker";
 const MAX_RUNTIME_MINUTES = 240;
 
 export type VaceWorkerProvisioningRecord = {
@@ -108,7 +107,6 @@ export async function provisionApprovedH100VaceWorker(): Promise<VaceWorkerProvi
       ipv6: false,
       monitoring: true,
       backups: false,
-      tags: [WORKER_TAG, "creatorvault:temporary", "body-cinema:vace"],
       user_data: workerCloudInit({ workerToken: tokenValue }),
     }),
   });
