@@ -159,7 +159,7 @@ export async function recoverVerifiedLegacyBodyCinemaSource(input: {
   const assetRows = await rawQuery<any>(
     `SELECT id, source_type, asset_type, mime_type, status, public_url, file_name
      FROM media_assets
-     WHERE id IN (SELECT id FROM media_assets WHERE user_id = ? AND public_url = ? LIMIT 1)
+     WHERE user_id = ? AND public_url = ?
      LIMIT 1`,
     [input.creatorId, input.sourceMediaUrl],
   );
