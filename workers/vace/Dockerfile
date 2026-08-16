@@ -9,7 +9,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PORT=8080
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.10 python3.10-venv python3-pip git ffmpeg curl ca-certificates \
+    python3.10 python3.10-venv python3-pip git ffmpeg curl ca-certificates ninja-build \
     && rm -rf /var/lib/apt/lists/*
 
 RUN python3.10 -m pip install --no-cache-dir --upgrade pip \
@@ -18,7 +18,7 @@ RUN python3.10 -m pip install --no-cache-dir --upgrade pip \
     && python3.10 -m pip install --no-cache-dir huggingface_hub
 
 RUN git clone --depth 1 https://github.com/ali-vilab/VACE.git ${VACE_ROOT} \
-    && python3.10 -m pip install --no-cache-dir -r ${VACE_ROOT}/requirements.txt \
+    && python3.10 -m pip install --no-cache-dir --no-build-isolation -r ${VACE_ROOT}/requirements.txt \
     && python3.10 -m pip install --no-cache-dir wan@git+https://github.com/Wan-Video/Wan2.1
 
 COPY requirements.txt /tmp/creatorvault-worker-requirements.txt
