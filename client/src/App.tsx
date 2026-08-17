@@ -344,10 +344,11 @@ function Router() {
   const [location] = useLocation();
   const authPages = ["/login", "/register", "/signup"];
   const isAuthPage = authPages.some(p => location === p || location.startsWith(p + "?"));
+  const isImmersiveCreatorWorld = ["/creators/the-biggest-b", "/creators/luv-roxie", "/creators/reshula"].includes(location);
   return (
     <>
-      <AppHeader />
-      <div className={isAuthPage ? "" : "pt-16"}>
+      {!isImmersiveCreatorWorld && <AppHeader />}
+      <div className={isAuthPage || isImmersiveCreatorWorld ? "" : "pt-16"}>
         <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/__release"} component={ReleaseInfo} />
