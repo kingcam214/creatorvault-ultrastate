@@ -147,9 +147,33 @@ function buildOutreachMessage(input: CreatorInput, score: WeightedScore, onboard
 }
 
 function toRecord(row: typeof recruiterCreatorProfiles.$inferSelect) {
+  const platform = String(row.platform || "").toLowerCase();
+  const source = String(row.source || "").toLowerCase();
+  const legacyRosterRecord = ["greatest_show", "vaultspace"].includes(platform) || source.includes("greatest_show") || source.includes("vaultspace");
+  const paymentReady = ["connected", "verified"].includes(String(row.stripeLinkStatus || "").toLowerCase());
+  const creatorIsLive = String(row.status || "").toLowerCase() === "onboarded" && paymentReady;
+  const projected = (row.metadata as Record<string, unknown> | null)?.projectedRevenueLabel === "projected_not_actual";
+
   return {
     ...row,
     engagementRate: Number(row.engagementRate),
+    activationTruth: {
+      rosterSource: legacyRosterRecord ? "legacy_creator_roster" : "current_creator_recruiting",
+      identityState: legacyRosterRecord ? "needs_creator_identity_match" : "candidate_record_present",
+      creatorAccountState: creatorIsLive ? "linked_and_live" : "not_linked_to_live_vaultx_creator",
+      fanOfferState: creatorIsLive ? "eligible_for_live_offer_review" : "no_live_fan_offer",
+      paymentState: paymentReady ? "payment_ready" : "payment_not_ready",
+      earningsState: projected ? "forecast_only_not_earned" : "no_ledger_earnings_attached",
+      readyForPublicCreatorClaim: creatorIsLive,
+      blockers: creatorIsLive
+        ? []
+        : [
+            "creator_identity_and_consent_not_linked",
+            "live_creator_account_not_present",
+            "payment_readiness_not_proven",
+            "live_fan_offer_not_present",
+          ],
+    },
   };
 }
 

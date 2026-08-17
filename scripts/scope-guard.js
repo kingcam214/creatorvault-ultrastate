@@ -192,6 +192,11 @@ const ALLOWLISTS = {
     'client/src/App.tsx',
     'scripts/scope-guard.js'
   ],
+  'greatest-show-truth': [
+    'client/src/pages/RecruiterOSCommandCenter.tsx',
+    'server/routers/recruiterOSRouter.ts',
+    'scripts/scope-guard.js'
+  ],
   distribution: [
     'client/src/pages/WhatsAppContentGenerator.tsx',
     'client/src/pages/TelegramMoneyHub.tsx',

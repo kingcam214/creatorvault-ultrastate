@@ -41,6 +41,16 @@ type CreatorRecord = {
   stripeLinkStatus?: string | null;
   status: RecruiterStatus | string;
   priority: string;
+  activationTruth?: {
+    rosterSource: "legacy_creator_roster" | "current_creator_recruiting";
+    identityState: string;
+    creatorAccountState: string;
+    fanOfferState: string;
+    paymentState: string;
+    earningsState: string;
+    readyForPublicCreatorClaim: boolean;
+    blockers: string[];
+  };
   updatedAt?: string | Date | null;
 };
 
@@ -87,6 +97,8 @@ function priorityTone(priority: string) {
 function CreatorCard({ creator, onStatusChange, isUpdating }: { creator: CreatorRecord; onStatusChange: (creator: CreatorRecord, status: RecruiterStatus) => void; isUpdating: boolean }) {
   const audit = creator.auditPreview || {};
   const proofSignals = audit.proofSignals || {};
+  const truth = creator.activationTruth;
+  const heldLegacyCandidate = truth?.rosterSource === "legacy_creator_roster" && !truth.readyForPublicCreatorClaim;
 
   return (
     <Card className="overflow-hidden border-slate-200 bg-white/95 shadow-sm">
@@ -103,7 +115,7 @@ function CreatorCard({ creator, onStatusChange, isUpdating }: { creator: Creator
               @{creator.handle} · {creator.niche || "general creator"} · {Number(creator.followers || 0).toLocaleString()} followers · {Number(creator.engagementRate || 0).toFixed(2)}% engagement
             </CardDescription>
           </div>
-          <Select value={creator.status as RecruiterStatus} onValueChange={(value) => onStatusChange(creator, value as RecruiterStatus)} disabled={isUpdating}>
+          <Select value={creator.status as RecruiterStatus} onValueChange={(value) => onStatusChange(creator, value as RecruiterStatus)} disabled={isUpdating || heldLegacyCandidate}>
             <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="Update status" />
             </SelectTrigger>
@@ -116,6 +128,31 @@ function CreatorCard({ creator, onStatusChange, isUpdating }: { creator: Creator
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
+        {truth && (
+          <div className={`rounded-2xl border p-4 ${truth.readyForPublicCreatorClaim ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-black tracking-wide text-slate-950">{truth.readyForPublicCreatorClaim ? "Creator path is live" : "Creator path is held"}</p>
+              <Badge variant={truth.readyForPublicCreatorClaim ? "default" : "outline"}>{truth.readyForPublicCreatorClaim ? "Live" : "Not live"}</Badge>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-700">
+              {truth.readyForPublicCreatorClaim
+                ? "This creator has a linked account and payment readiness. Review the public offer before calling the path live."
+                : "This record is a prospect, not a working creator business. Her identity, creator account, payment path, and first fan offer still need to be connected before she is presented as live."}
+            </p>
+            {!truth.readyForPublicCreatorClaim && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {truth.blockers.map((blocker) => (
+                  <Badge key={blocker} variant="outline" className="border-amber-300 bg-white text-amber-900">
+                    {blocker.replaceAll("_", " ")}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+              {truth.earningsState === "forecast_only_not_earned" ? "Any money number in this old record is a forecast, not earned creator money." : "No ledger-backed creator earnings are attached to this record."}
+            </p>
+          </div>
+        )}
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-xl bg-slate-50 p-3">
             <p className="text-xs font-medium uppercase text-muted-foreground">Monetization</p>
@@ -151,7 +188,7 @@ function CreatorCard({ creator, onStatusChange, isUpdating }: { creator: Creator
         </div>
 
         <div className="flex flex-wrap gap-2 text-xs">
-          <Badge variant={proofSignals.onboardingUrlReady ? "default" : "outline"}><Link2 className="mr-1 h-3 w-3" /> Onboarding link {proofSignals.onboardingUrlReady ? "ready" : "pending"}</Badge>
+          <Badge variant={truth?.readyForPublicCreatorClaim && proofSignals.onboardingUrlReady ? "default" : "outline"}><Link2 className="mr-1 h-3 w-3" /> {truth?.readyForPublicCreatorClaim ? "Creator path ready" : "Creator path held"}</Badge>
           <Badge variant={creator.telegramReady ? "default" : "outline"}><MessageSquare className="mr-1 h-3 w-3" /> Telegram {creator.telegramReady ? "ready" : "missing"}</Badge>
           <Badge variant={["connected", "verified"].includes(String(creator.stripeLinkStatus)) ? "default" : "outline"}><ShieldCheck className="mr-1 h-3 w-3" /> Stripe {creator.stripeLinkStatus || "not_started"}</Badge>
           {creator.profileUrl && (
