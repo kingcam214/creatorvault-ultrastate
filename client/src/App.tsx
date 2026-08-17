@@ -347,7 +347,7 @@ function Router() {
   const [location] = useLocation();
   const authPages = ["/login", "/register", "/signup"];
   const isAuthPage = authPages.some(p => location === p || location.startsWith(p + "?"));
-  const isImmersiveCreatorWorld = ["/creators/the-biggest-b", "/creators/luv-roxie", "/creators/reshula", "/creators/maily"].includes(location);
+  const isImmersiveCreatorWorld = ["/creators/the-biggest-b", "/creators/luv-roxie", "/creators/reshula", "/creators/maily", "/creators/aderly"].includes(location);
   return (
     <>
       {!isImmersiveCreatorWorld && <AppHeader />}
