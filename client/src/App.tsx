@@ -15,6 +15,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { CreatorModeProvider } from "./contexts/CreatorModeContext";
 import Home from "./pages/Home";
 import { FoundingCreatorPage, FoundingCreatorsRoster } from "./pages/FoundingCreatorPages";
+import BiggestBWorld from "./pages/BiggestBWorld";
 // import BusinessCardDesigner from "./pages/BusinessCardDesigner";
 // import CardEditor from "./pages/CardEditor";
 // import AICardDesigner from "./pages/AICardDesigner";
@@ -509,6 +510,8 @@ function Router() {
       <Route path={"/owner-status"} component={OwnerStatus} />
       {/* Consent is confirmed for the Founding Creator roster. These aliases preserve legacy links while routing into their real CreatorVault worlds. */}
       <Route path={"/creators"} component={FoundingCreatorsRoster} />
+      <Route path={"/creators/the-biggest-b"} component={BiggestBWorld} />
+      <Route path={"/creators/luv-roxie"} component={BiggestBWorld} />
       <Route path={"/creators/:creatorSlug"} component={FoundingCreatorPage} />
       <Route path={"/greatest-show"}>{() => { window.location.replace("/creators"); return null; }}</Route>
       <Route path={"/greatest-show-studio"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>

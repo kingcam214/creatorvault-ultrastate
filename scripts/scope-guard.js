@@ -197,6 +197,13 @@ const ALLOWLISTS = {
     'server/routers/recruiterOSRouter.ts',
     'scripts/scope-guard.js'
   ],
+  'biggest-b-body-cinema-world': [
+    'client/src/App.tsx',
+    'client/src/pages/BiggestBWorld.tsx',
+    'client/public/videos/creator-pages/biggest-b-abs-mirror-source.mp4',
+    'client/public/videos/creator-pages/biggest-b-dumbbell-core-source.mp4',
+    'scripts/scope-guard.js'
+  ],
   'consented-creator-pages': [
     'client/src/App.tsx',
     'client/src/pages/FoundingCreatorPages.tsx',
