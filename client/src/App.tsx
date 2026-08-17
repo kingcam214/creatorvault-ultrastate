@@ -19,6 +19,7 @@ import BiggestBWorld from "./pages/BiggestBWorld";
 import ReshulaWorld from "./pages/ReshulaWorld";
 import MailyWorld from "./pages/MailyWorld";
 import AdyWorld from "./pages/AdyWorld";
+import DianaWorld from "./pages/DianaWorld";
 import LeslieWorld from "./pages/LeslieWorld";
 // import BusinessCardDesigner from "./pages/BusinessCardDesigner";
 // import CardEditor from "./pages/CardEditor";
@@ -348,7 +349,7 @@ function Router() {
   const [location] = useLocation();
   const authPages = ["/login", "/register", "/signup"];
   const isAuthPage = authPages.some(p => location === p || location.startsWith(p + "?"));
-  const isImmersiveCreatorWorld = ["/creators/the-biggest-b", "/creators/luv-roxie", "/creators/reshula", "/creators/maily", "/creators/aderly", "/creators/leslie"].includes(location);
+  const isImmersiveCreatorWorld = ["/creators/the-biggest-b", "/creators/luv-roxie", "/creators/reshula", "/creators/maily", "/creators/aderly", "/creators/diana", "/creators/leslie"].includes(location);
   return (
     <>
       {!isImmersiveCreatorWorld && <AppHeader />}
@@ -518,6 +519,7 @@ function Router() {
       <Route path={"/creators/reshula"} component={ReshulaWorld} />
       <Route path={"/creators/maily"} component={MailyWorld} />
       <Route path={"/creators/aderly"} component={AdyWorld} />
+      <Route path={"/creators/diana"} component={DianaWorld} />
       <Route path={"/creators/leslie"} component={LeslieWorld} />
       <Route path={"/creators/the-biggest-b"} component={BiggestBWorld} />
       <Route path={"/creators/luv-roxie"} component={BiggestBWorld} />

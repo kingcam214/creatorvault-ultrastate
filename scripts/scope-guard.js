@@ -210,6 +210,13 @@ const ALLOWLISTS = {
     'client/public/images/creator-pages/maily-outdoor-routine-hero-poster.jpg',
     'scripts/scope-guard.js'
   ],
+  'diana-creator-world': [
+    'client/src/App.tsx',
+    'client/src/pages/DianaWorld.tsx',
+    'client/public/videos/creator-pages/diana-butterfly-balcony-source-h264.mp4',
+    'client/public/images/creator-pages/diana-butterfly-balcony-poster.jpg',
+    'scripts/scope-guard.js'
+  ],
   'ady-creator-world': [
     'client/src/App.tsx',
     'client/src/pages/AdyWorld.tsx',
