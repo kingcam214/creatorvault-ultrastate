@@ -15,6 +15,7 @@ type Creator = {
   image?: string;
   video?: string;
   imagePosition?: string;
+  motionChapters?: Array<{ src: string; title: string; eyebrow: string; feeling: string }>;
   colors: { ink: string; glow: string; wash: string; edge: string };
   status: "feature" | "roster";
 };
@@ -32,6 +33,12 @@ const creators: Creator[] = [
     video: "/videos/owner-supplied/reshula-tropical-motion.mp4",
     image: "/images/creator-pages/reshula-public-source.jpg",
     imagePosition: "center",
+    motionChapters: [
+      { src: "/videos/creator-pages/reshula-market-comedy.mp4", eyebrow: "01 · In public", title: "SHE MAKES THE AISLE HER STAGE.", feeling: "Everyday comedy, full-body movement, and the confidence to make strangers stop and watch." },
+      { src: "/videos/creator-pages/reshula-mall-dance.mp4", eyebrow: "02 · Main character", title: "SHE DOES NOT WAIT FOR THE ROOM.", feeling: "Mall-floor energy, sharp movement, and a real social moment built around her presence." },
+      { src: "/videos/creator-pages/reshula-gym-joy.mp4", eyebrow: "03 · Gym joy", title: "STRENGTH DOESN'T HAVE TO BE SERIOUS.", feeling: "Fitness culture, spontaneous dance, and the kind of joy that moves through the whole room." },
+      { src: "/videos/creator-pages/reshula-mirror-lifestyle.mp4", eyebrow: "04 · After hours", title: "THE CAMERA KNOWS HER ANGLE.", feeling: "A personal behind-the-scenes moment that keeps the world intimate without making it small." },
+    ],
     colors: { ink: "#130608", glow: "#ff5d92", wash: "#ffbdd1", edge: "#ffd0df" },
     status: "feature",
   },
@@ -300,6 +307,16 @@ export function FoundingCreatorPage() {
           <div className="max-w-3xl"><div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.22em] text-white/75"><span className="h-1.5 w-1.5 rounded-full creator-page-dot" style={{ backgroundColor: creator.colors.glow }} /> {creator.note}</div><HandleRow creator={creator} /><h1 className="mt-5 text-6xl font-black leading-[.88] tracking-[-0.09em] sm:text-8xl lg:text-9xl">{creator.name}</h1><p className="mt-6 max-w-xl text-xl font-semibold leading-8 text-white/85 sm:text-2xl">{creator.line}</p><div className="mt-8 flex flex-wrap gap-3">{creator.profileUrl && <a href={creator.profileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-black text-black transition hover:scale-[1.02]" style={{ backgroundColor: creator.colors.wash }}>{creator.platformLabel || "Find her on Instagram"} <ArrowUpRight className="h-4 w-4" /></a>}<Link href="/vault-x"><a className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/25 px-6 py-3 text-sm font-black backdrop-blur-md transition hover:bg-black/45"><Video className="h-4 w-4" /> Enter VaultX</a></Link></div></div>
         </div>
       </section>
+      {creator.motionChapters && creator.motionChapters.length > 0 && (
+        <section className="relative overflow-hidden border-t border-white/10 bg-[#060608] px-5 py-20 sm:px-8 lg:px-12">
+          <div className="absolute left-[6%] top-0 h-px w-[42%]" style={{ backgroundColor: creator.colors.glow }} />
+          <div className="relative mx-auto max-w-7xl">
+            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: creator.colors.glow }}>Her world is already moving</p><h2 className="mt-3 max-w-3xl text-4xl font-black leading-[.9] tracking-[-0.07em] sm:text-6xl">NOT ONE HERO. FOUR REAL MOMENTS.</h2></div><p className="max-w-sm text-sm leading-7 text-white/60">Every chapter is real public motion from her own world. The videos stay muted here so the focus stays on her movement, not borrowed sound.</p></div>
+            <div className="mt-10 grid gap-5 md:grid-cols-2">{creator.motionChapters.map((chapter, index) => <article key={chapter.src} className={`group relative min-h-[560px] overflow-hidden rounded-[2rem] border border-white/10 bg-[#101015] ${index === 1 ? "md:mt-16" : ""}`}><video autoPlay muted loop playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover"><source src={chapter.src} type="video/mp4" /></video><div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-black/5" /><div className="absolute inset-x-0 top-0 flex items-center justify-between p-6 text-[10px] font-black uppercase tracking-[0.22em] text-white/70"><span>{chapter.eyebrow}</span><span className="h-2 w-2 rounded-full creator-page-dot" style={{ backgroundColor: creator.colors.glow }} /></div><div className="absolute inset-x-0 bottom-0 p-6 sm:p-8"><h3 className="max-w-md text-3xl font-black leading-[.92] tracking-[-0.06em] sm:text-4xl">{chapter.title}</h3><p className="mt-4 max-w-md text-sm leading-6 text-white/72">{chapter.feeling}</p></div></article>)}</div>
+            <div className="mt-6 overflow-hidden rounded-[2rem] border border-white/10 px-6 py-8 sm:px-10" style={{ background: `linear-gradient(110deg, ${creator.colors.glow}36, transparent 48%, ${creator.colors.wash}24)` }}><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><p className="max-w-2xl text-2xl font-black leading-tight tracking-[-0.05em] sm:text-4xl">THE FUTURE OF SOCIAL SHOULD FEEL LIKE YOU JUST STEPPED INTO HER DAY.</p><span className="shrink-0 text-xs font-black uppercase tracking-[0.2em] text-white/70">{creator.handle} · CreatorVault</span></div></div>
+          </div>
+        </section>
+      )}
       <section className="relative overflow-hidden border-t border-white/15 px-5 py-16 sm:px-8 lg:px-12" style={{ background: `linear-gradient(135deg, ${creator.colors.ink}, #070709)` }}>
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full blur-3xl opacity-40 creator-page-orb" style={{ backgroundColor: creator.colors.glow }} />
         <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[.85fr_1.15fr] lg:items-end"><div><p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: creator.colors.wash }}>Her world, in her words</p><h2 className="mt-4 text-4xl font-black leading-[.95] tracking-[-0.07em] sm:text-6xl">{creator.world}</h2></div><p className="max-w-2xl text-lg leading-8 text-white/70">{creator.pulse}</p></div>

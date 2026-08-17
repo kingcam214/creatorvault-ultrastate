@@ -208,6 +208,10 @@ const ALLOWLISTS = {
     'client/public/images/creator-pages/luv-roxie-public-source.jpg',
     'client/public/images/creator-pages/leslie-public-source.jpg',
     'client/public/videos/owner-supplied/reshula-tropical-motion.mp4',
+    'client/public/videos/creator-pages/reshula-market-comedy.mp4',
+    'client/public/videos/creator-pages/reshula-mall-dance.mp4',
+    'client/public/videos/creator-pages/reshula-gym-joy.mp4',
+    'client/public/videos/creator-pages/reshula-mirror-lifestyle.mp4',
     'scripts/scope-guard.js'
   ],
   distribution: [
