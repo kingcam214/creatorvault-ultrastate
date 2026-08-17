@@ -18,15 +18,18 @@ export default function MailyWorld() {
         @keyframes mailyUp { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes mailySlide { from { transform: translateX(0); } to { transform: translateX(-48%); } }
         @keyframes mailyWobble { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+        @keyframes mailyPosterAway { to { opacity: 0; visibility: hidden; } }
         .maily-up { animation: mailyUp .8s cubic-bezier(.18,.78,.22,1) both; }
         .maily-up-delayed { animation: mailyUp .8s .16s cubic-bezier(.18,.78,.22,1) both; }
         .maily-scroll { animation: mailySlide 20s linear infinite; }
         .maily-wobble { animation: mailyWobble 4s ease-in-out infinite; }
+        .maily-poster { animation: mailyPosterAway .55s 1.45s ease-out forwards; }
       `}</style>
 
       <section className="relative min-h-[100svh] overflow-hidden bg-[#2720ce] text-[#fff9ed]">
         <MailyMotion src={maily.outdoor} />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.12),transparent_42%,rgba(0,0,0,.78))]" />
+        <img src="/images/creator-pages/maily-outdoor-routine-poster.jpg" alt="Maily in her verified outdoor routine" className="maily-poster absolute inset-0 z-[1] h-full w-full object-cover" />
+        <div className="absolute inset-0 z-[2] bg-[linear-gradient(180deg,rgba(0,0,0,.12),transparent_42%,rgba(0,0,0,.78))]" />
         <nav className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-5 sm:p-8"><Link href="/creators"><a className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[.22em]"><ArrowLeft className="h-4 w-4" /> The circle</a></Link><p className="text-sm font-black tracking-[-.06em]">CREATOR<span className="text-[#ffdf45]">VAULT</span></p></nav>
         <div className="absolute inset-x-0 bottom-0 z-10 px-5 pb-10 sm:px-8 lg:px-12 lg:pb-14"><div className="mx-auto max-w-7xl"><div className="maily-up flex items-center gap-2 text-[10px] font-black uppercase tracking-[.23em] text-[#ffdf45]"><span className="h-2 w-2 rounded-full bg-[#ffdf45]" /> DIARIO EN MOVIMIENTO / @MAILIN_GONZALES</div><h1 className="maily-up-delayed mt-5 max-w-5xl text-[21vw] font-black leading-[.67] tracking-[-.14em] sm:text-[10rem] lg:text-[14rem]">MAILY<br /><span className="text-[#ffdf45]">MOVES</span><br />FIRST.</h1><div className="maily-up-delayed mt-8 flex flex-wrap items-center gap-4"><a href="https://www.tiktok.com/@mailin_gonzales" target="_blank" rel="noreferrer" className="rounded-full bg-[#ffdf45] px-6 py-3 text-sm font-black text-[#16164a]">Follow her rhythm <ArrowUpRight className="ml-1 inline h-4 w-4" /></a><a href="#daybook" className="inline-flex items-center gap-2 text-sm font-black"><ArrowDownRight className="h-4 w-4" /> Open the daybook</a></div></div></div>
       </section>
