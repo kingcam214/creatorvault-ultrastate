@@ -17,6 +17,7 @@ import Home from "./pages/Home";
 import { FoundingCreatorPage, FoundingCreatorsRoster } from "./pages/FoundingCreatorPages";
 import BiggestBWorld from "./pages/BiggestBWorld";
 import ReshulaWorld from "./pages/ReshulaWorld";
+import MailyWorld from "./pages/MailyWorld";
 // import BusinessCardDesigner from "./pages/BusinessCardDesigner";
 // import CardEditor from "./pages/CardEditor";
 // import AICardDesigner from "./pages/AICardDesigner";
@@ -345,7 +346,7 @@ function Router() {
   const [location] = useLocation();
   const authPages = ["/login", "/register", "/signup"];
   const isAuthPage = authPages.some(p => location === p || location.startsWith(p + "?"));
-  const isImmersiveCreatorWorld = ["/creators/the-biggest-b", "/creators/luv-roxie", "/creators/reshula"].includes(location);
+  const isImmersiveCreatorWorld = ["/creators/the-biggest-b", "/creators/luv-roxie", "/creators/reshula", "/creators/maily"].includes(location);
   return (
     <>
       {!isImmersiveCreatorWorld && <AppHeader />}
@@ -513,6 +514,7 @@ function Router() {
       {/* Consent is confirmed for the Founding Creator roster. These aliases preserve legacy links while routing into their real CreatorVault worlds. */}
       <Route path={"/creators"} component={FoundingCreatorsRoster} />
       <Route path={"/creators/reshula"} component={ReshulaWorld} />
+      <Route path={"/creators/maily"} component={MailyWorld} />
       <Route path={"/creators/the-biggest-b"} component={BiggestBWorld} />
       <Route path={"/creators/luv-roxie"} component={BiggestBWorld} />
       <Route path={"/creators/:creatorSlug"} component={FoundingCreatorPage} />

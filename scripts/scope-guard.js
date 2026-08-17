@@ -197,6 +197,15 @@ const ALLOWLISTS = {
     'server/routers/recruiterOSRouter.ts',
     'scripts/scope-guard.js'
   ],
+  'maily-creator-world': [
+    'client/src/App.tsx',
+    'client/src/pages/MailyWorld.tsx',
+    'client/public/videos/creator-pages/maily-outdoor-routine-source.mp4',
+    'client/public/videos/creator-pages/maily-outdoor-routine-source-h264.mp4',
+    'client/public/videos/creator-pages/maily-close-social-source.mp4',
+    'client/public/videos/creator-pages/maily-event-unboxing-source.mp4',
+    'scripts/scope-guard.js'
+  ],
   'reshula-creator-world': [
     'client/src/App.tsx',
     'client/src/pages/ReshulaWorld.tsx',
