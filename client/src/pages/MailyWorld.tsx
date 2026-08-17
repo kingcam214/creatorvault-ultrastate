@@ -49,7 +49,7 @@ export default function MailyWorld() {
         .diamond-poster { animation: diamondPosterAway .55s 1.45s ease-out forwards; }
       `}</style>
 
-      <section className="relative min-h-[100svh] overflow-hidden bg-[#130f1d] text-[#fffdf8]">
+      <section className="relative h-[100svh] min-h-[100svh] overflow-hidden bg-[#130f1d] text-[#fffdf8]">
         <DiamondMotion src={maily.abs} startAt={39.5} loopEnd={59.5} className="object-bottom" />
         <img src="/images/creator-pages/maily-outdoor-routine-hero-poster.jpg" alt="Maily in her verified abs-focused outdoor source" className="diamond-poster absolute inset-0 z-[1] h-full w-full object-cover object-bottom" />
         <div className="absolute inset-0 z-[2] bg-[linear-gradient(180deg,rgba(8,6,13,.14),rgba(8,6,13,.08)_36%,rgba(8,6,13,.94))]" />
