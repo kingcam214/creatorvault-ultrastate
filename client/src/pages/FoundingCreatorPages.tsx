@@ -77,11 +77,6 @@ const creators: Creator[] = [
     platformLabel: "Follow her on Snapchat",
     image: "/images/creator-pages/biggest-b-public-source.jpg",
     imagePosition: "center",
-    motionChapters: [
-      { src: "/videos/creator-pages/biggest-b-park-energy.mp4", eyebrow: "01 · Outside energy", title: "THE LAUGH IS PART OF THE WORK.", feeling: "A real social moment that shows personality before anybody asks for a performance." },
-      { src: "/videos/creator-pages/biggest-b-morning-life.mp4", eyebrow: "02 · Morning life", title: "SHE STARTS WHERE SHE IS.", feeling: "The small daily moments that make a fitness-and-lifestyle world feel real." },
-      { src: "/videos/creator-pages/biggest-b-dance-expression.mp4", eyebrow: "03 · Expression", title: "MOVEMENT IS HER RESET BUTTON.", feeling: "Dance, body confidence, and a visual language built on being fully present." },
-    ],
     publicPresence: [
       { label: "Current Snapchat", handle: "@iamthe_bcb", href: "https://www.snapchat.com/@iamthe_bcb", proof: "44K public followers · active Spotlight creator" },
       { label: "Current X", handle: "@Roxiee102", href: "https://x.com/Roxiee102", proof: "33.3K public followers · 3,811 public posts" },
@@ -327,12 +322,6 @@ export function FoundingCreatorPage() {
   const canonicalCreatorSlug = creatorSlug === "luv-roxie" ? "the-biggest-b" : creatorSlug;
   const creator = creators.find((item) => item.slug === canonicalCreatorSlug);
   if (!creator) return <FoundingCreatorsRoster />;
-  const motionCount = creator.motionChapters?.length || 0;
-  const motionHeadline = motionCount > 1 ? `NOT ONE HERO. ${motionCount} REAL MOMENTS.` : "HER WORLD IS OPENING IN MOTION.";
-  const motionDescription = motionCount > 1
-    ? "Every chapter is real public motion from her own world. The videos stay muted here so the focus stays on her movement, not borrowed sound."
-    : "This is a real moving chapter from her own public world. More creator-owned motion is added only when it is truly hers and ready to carry her name.";
-
   return (
     <main className="min-h-screen overflow-hidden text-white" style={{ backgroundColor: creator.colors.ink }}>
       <style>{`@keyframes creatorFloat{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(0,-16px,0) scale(1.035)}}@keyframes creatorFloatReverse{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(0,20px,0) scale(1.06)}}@keyframes creatorSweep{0%{transform:translateX(-120%) rotate(18deg)}100%{transform:translateX(160%) rotate(18deg)}}@keyframes creatorPulse{0%,100%{opacity:.45;transform:scale(.9)}50%{opacity:1;transform:scale(1.2)}}.creator-page-image{animation:creatorFloat 12s ease-in-out infinite}.creator-page-glow{animation:creatorSweep 9s ease-in-out infinite}.creator-page-orb{animation:creatorFloat 7s ease-in-out infinite}.creator-page-orb-reverse{animation:creatorFloatReverse 9s ease-in-out infinite}.creator-page-dot{animation:creatorPulse 1.8s ease-in-out infinite}`}</style>
@@ -348,16 +337,6 @@ export function FoundingCreatorPage() {
       )}
       {creator.creatorVaultHorizon && (
         <section className="relative overflow-hidden border-t border-white/10 bg-[#11160b] px-5 py-16 sm:px-8 lg:px-12"><div className="absolute inset-0 opacity-40" style={{ background: `radial-gradient(circle at 15% 15%, ${creator.colors.glow}55, transparent 26%), linear-gradient(120deg, transparent, ${creator.colors.wash}16)` }} /><div className="relative mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end"><div><p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: creator.colors.glow }}>Modeled CreatorVault upside · not current earnings</p><h2 className="mt-3 max-w-3xl text-4xl font-black leading-[.9] tracking-[-0.07em] sm:text-6xl">{creator.creatorVaultHorizon.title}</h2><p className="mt-6 max-w-2xl text-sm leading-7 text-white/70">{creator.creatorVaultHorizon.context}</p><div className="mt-6 flex flex-wrap gap-2">{creator.creatorVaultHorizon.pillars.map((pillar) => <span key={pillar} className="rounded-full border border-white/15 bg-black/25 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/75">{pillar}</span>)}</div></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1"><div className="rounded-[1.75rem] border border-white/15 bg-black/35 p-6"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/50">Original Year 1 gross model</p><p className="mt-3 text-4xl font-black tracking-[-0.07em]" style={{ color: creator.colors.glow }}>{creator.creatorVaultHorizon.gross}</p><p className="mt-3 text-sm leading-6 text-white/62">Model scenario only. It begins after the creator’s content, offers, routes, and fan machine are actually live together.</p></div><div className="rounded-[1.75rem] border border-white/15 bg-white/[0.06] p-6"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/50">Original modeled creator share</p><p className="mt-3 text-4xl font-black tracking-[-0.07em] text-white">{creator.creatorVaultHorizon.share}</p><p className="mt-3 text-sm leading-6 text-white/62">Original 70% model share. This is separate from verified present-day account or membership earnings.</p></div></div></div></div></section>
-      )}
-      {creator.motionChapters && creator.motionChapters.length > 0 && (
-        <section className="relative overflow-hidden border-t border-white/10 bg-[#060608] px-5 py-20 sm:px-8 lg:px-12">
-          <div className="absolute left-[6%] top-0 h-px w-[42%]" style={{ backgroundColor: creator.colors.glow }} />
-          <div className="relative mx-auto max-w-7xl">
-            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: creator.colors.glow }}>Her world is already moving</p><h2 className="mt-3 max-w-3xl text-4xl font-black leading-[.9] tracking-[-0.07em] sm:text-6xl">{motionHeadline}</h2></div><p className="max-w-sm text-sm leading-7 text-white/60">{motionDescription}</p></div>
-            <div className="mt-10 grid gap-5 md:grid-cols-2">{creator.motionChapters.map((chapter, index) => <article key={chapter.src} className={`group relative min-h-[560px] overflow-hidden rounded-[2rem] border border-white/10 bg-[#101015] ${index === 1 ? "md:mt-16" : ""}`}><video autoPlay muted loop playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover"><source src={chapter.src} type="video/mp4" /></video><div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-black/5" /><div className="absolute inset-x-0 top-0 flex items-center justify-between p-6 text-[10px] font-black uppercase tracking-[0.22em] text-white/70"><span>{chapter.eyebrow}</span><span className="h-2 w-2 rounded-full creator-page-dot" style={{ backgroundColor: creator.colors.glow }} /></div><div className="absolute inset-x-0 bottom-0 p-6 sm:p-8"><h3 className="max-w-md text-3xl font-black leading-[.92] tracking-[-0.06em] sm:text-4xl">{chapter.title}</h3><p className="mt-4 max-w-md text-sm leading-6 text-white/72">{chapter.feeling}</p></div></article>)}</div>
-            <div className="mt-6 overflow-hidden rounded-[2rem] border border-white/10 px-6 py-8 sm:px-10" style={{ background: `linear-gradient(110deg, ${creator.colors.glow}36, transparent 48%, ${creator.colors.wash}24)` }}><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><p className="max-w-2xl text-2xl font-black leading-tight tracking-[-0.05em] sm:text-4xl">THE FUTURE OF SOCIAL SHOULD FEEL LIKE YOU JUST STEPPED INTO HER DAY.</p><span className="shrink-0 text-xs font-black uppercase tracking-[0.2em] text-white/70">{creator.handle} · CreatorVault</span></div></div>
-          </div>
-        </section>
       )}
       <section className="relative overflow-hidden border-t border-white/15 px-5 py-16 sm:px-8 lg:px-12" style={{ background: `linear-gradient(135deg, ${creator.colors.ink}, #070709)` }}>
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full blur-3xl opacity-40 creator-page-orb" style={{ backgroundColor: creator.colors.glow }} />
