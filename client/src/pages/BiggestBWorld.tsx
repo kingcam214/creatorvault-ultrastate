@@ -6,8 +6,8 @@ const motion = {
   core: "/videos/creator-pages/biggest-b-dumbbell-core-source.mp4",
 };
 
-function Motion({ src, start = 0, className = "" }: { src: string; start?: number; className?: string }) {
-  return <video autoPlay muted loop playsInline preload="metadata" onLoadedMetadata={(event) => { event.currentTarget.currentTime = start; }} className={`h-full w-full object-cover ${className}`}><source src={src} type="video/mp4" /></video>;
+function Motion({ src, start = 0, end, className = "" }: { src: string; start?: number; end?: number; className?: string }) {
+  return <video autoPlay muted loop playsInline preload="metadata" onLoadedMetadata={(event) => { event.currentTarget.currentTime = start; }} onTimeUpdate={(event) => { if (end && event.currentTarget.currentTime >= end) event.currentTarget.currentTime = start; }} className={`h-full w-full object-cover ${className}`}><source src={src} type="video/mp4" /></video>;
 }
 
 export default function BiggestBWorld() {
@@ -24,7 +24,7 @@ export default function BiggestBWorld() {
       `}</style>
 
       <section className="relative isolate min-h-[100svh] overflow-hidden bg-[#090909] text-[#f2eee6]">
-        <Motion src={motion.mirror} start={20} />
+        <Motion src={motion.mirror} start={23} end={28} />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.53),transparent_34%,rgba(0,0,0,.94))]" />
         <div className="absolute -right-24 top-[18%] h-[25rem] w-[25rem] rounded-full border border-[#daff42]/40" />
         <div className="b-spin absolute -right-24 top-[18%] flex h-[25rem] w-[25rem] items-center justify-center text-[9px] font-black uppercase tracking-[.32em] text-[#daff42]/80">CORE · CONSISTENCY · CONDITIONING · CORE · CONSISTENCY · CONDITIONING ·</div>
