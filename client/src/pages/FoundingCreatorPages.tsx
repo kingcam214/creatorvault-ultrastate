@@ -54,6 +54,11 @@ const creators: Creator[] = [
     profileUrl: "https://www.instagram.com/maily_gonzalez08/",
     image: "/images/creator-pages/maily-public-source.jpg",
     imagePosition: "center 32%",
+    motionChapters: [
+      { src: "/videos/creator-pages/maily-beauty-vlog.mp4", eyebrow: "01 · Beauty diary", title: "SHE MAKES THE WHOLE DAY PART OF THE LOOK.", feeling: "A real beauty-vlog rhythm from the ride there through the final nail reveal." },
+      { src: "/videos/creator-pages/maily-street-energy.mp4", eyebrow: "02 · Outside", title: "THE CITY MOVES WHEN SHE DOES.", feeling: "Street energy, confident presence, and a real Dominican lifestyle pulse." },
+      { src: "/videos/creator-pages/maily-coastal-motion.mp4", eyebrow: "03 · Coastline", title: "SUMMER IS A PERSONALITY.", feeling: "Light, water, and the natural coastal energy already inside her public world." },
+    ],
     colors: { ink: "#061422", glow: "#48c7ff", wash: "#9ee9ff", edge: "#d4f6ff" },
     status: "feature",
   },
@@ -69,6 +74,11 @@ const creators: Creator[] = [
     profileUrl: "https://www.instagram.com/thatssthebcb_/",
     image: "/images/creator-pages/biggest-b-public-source.jpg",
     imagePosition: "center",
+    motionChapters: [
+      { src: "/videos/creator-pages/biggest-b-park-energy.mp4", eyebrow: "01 · Outside energy", title: "THE LAUGH IS PART OF THE WORK.", feeling: "A real social moment that shows personality before anybody asks for a performance." },
+      { src: "/videos/creator-pages/biggest-b-morning-life.mp4", eyebrow: "02 · Morning life", title: "SHE STARTS WHERE SHE IS.", feeling: "The small daily moments that make a fitness-and-lifestyle world feel real." },
+      { src: "/videos/creator-pages/biggest-b-dance-expression.mp4", eyebrow: "03 · Expression", title: "MOVEMENT IS HER RESET BUTTON.", feeling: "Dance, body confidence, and a visual language built on being fully present." },
+    ],
     colors: { ink: "#0d1209", glow: "#b6ff4d", wash: "#e4ffaf", edge: "#f1ffd1" },
     status: "feature",
   },
@@ -84,6 +94,10 @@ const creators: Creator[] = [
     profileUrl: "https://www.instagram.com/diana_queen1112/",
     image: "/images/creator-pages/diana-public-source.jpg",
     imagePosition: "center 58%",
+    motionChapters: [
+      { src: "/videos/creator-pages/diana-porch-dance.mp4", eyebrow: "01 · Her rhythm", title: "SHE LETS THE BEAT FIND HER.", feeling: "A relaxed real-world dance moment with personality, style, and Haitian-Creole energy." },
+      { src: "/videos/creator-pages/diana-city-style.mp4", eyebrow: "02 · City glow", title: "THE LOOK CARRIES THE STORY.", feeling: "A vivid beauty-and-style chapter that keeps her personal world in motion." },
+    ],
     colors: { ink: "#110a20", glow: "#ad7cff", wash: "#dac6ff", edge: "#f0e9ff" },
     status: "feature",
   },
@@ -99,6 +113,9 @@ const creators: Creator[] = [
     profileUrl: "https://www.instagram.com/adyyyyyyyyu/",
     image: "/images/creator-pages/aderly-public-source.jpg",
     imagePosition: "center",
+    motionChapters: [
+      { src: "/videos/creator-pages/aderly-follow-me.mp4", eyebrow: "01 · Follow her", title: "SHE WALKS LIKE THE STORY IS ALREADY HERS.", feeling: "A real full-body entrance that turns her page into a place you follow, not just scroll past." },
+    ],
     colors: { ink: "#150a04", glow: "#ff9955", wash: "#ffd2ab", edge: "#ffe7d2" },
     status: "feature",
   },
@@ -131,6 +148,11 @@ const creators: Creator[] = [
     platformLabel: "Find her on TikTok",
     image: "/images/creator-pages/leslie-public-source.jpg",
     imagePosition: "center",
+    motionChapters: [
+      { src: "/videos/creator-pages/leslie-travel-escape.mp4", eyebrow: "01 · Escape", title: "HER LIFE OPENS UP OUTSIDE.", feeling: "Travel footage that makes her world feel wider than a profile card." },
+      { src: "/videos/creator-pages/leslie-nature-flow.mp4", eyebrow: "02 · Green space", title: "SHE FINDS THE QUIET THAT MOVES HER.", feeling: "A visual diary chapter shaped by the places she chooses to disappear into." },
+      { src: "/videos/creator-pages/leslie-island-motion.mp4", eyebrow: "03 · Island motion", title: "THE VIEW IS PART OF THE FEELING.", feeling: "Real Caribbean landscape motion that gives her social world a sense of place." },
+    ],
     colors: { ink: "#091117", glow: "#4bd8dd", wash: "#baf6f5", edge: "#dcffff" },
     status: "feature",
   },
@@ -144,6 +166,9 @@ const creators: Creator[] = [
     note: "CreatorVault founding circle · verified public identity",
     profileUrl: "https://www.tiktok.com/@delbanianailsbar05",
     platformLabel: "Find her on TikTok",
+    motionChapters: [
+      { src: "/videos/creator-pages/delbania-salon-life.mp4", eyebrow: "01 · Salon life", title: "THE DETAIL STARTS BEFORE THE FINAL SET.", feeling: "A real behind-the-scenes personal moment from the beauty world she is building." },
+    ],
     colors: { ink: "#1a070d", glow: "#ff7daa", wash: "#ffc4d8", edge: "#ffe0eb" },
     status: "roster",
   },
@@ -164,8 +189,14 @@ const creators: Creator[] = [
     handle: "Canisha",
     line: "Her name. Her room. Her rules.",
     world: "SHE GETS TO SET THE TEMPERATURE.",
-    pulse: "A founding-circle identity reserved for real material, real voice, and a world that is unmistakably hers.",
-    note: "CreatorVault founding circle",
+    pulse: "Live music, intimate performance, and a real voice that already gives her world its own temperature.",
+    note: "CreatorVault founding circle · public creator source",
+    profileUrl: "https://www.instagram.com/canisha.ck/",
+    motionChapters: [
+      { src: "/videos/creator-pages/canisha-live-stage.mp4", eyebrow: "01 · Live room", title: "HER VOICE CHANGES THE ROOM.", feeling: "An intimate real performance with stage light, breath, and presence you cannot fake." },
+      { src: "/videos/creator-pages/canisha-studio-teaser.mp4", eyebrow: "02 · Studio pulse", title: "THE NEXT SONG STARTS HERE.", feeling: "A creator-world chapter built around process, sound, and what is coming next." },
+      { src: "/videos/creator-pages/canisha-celebration-motion.mp4", eyebrow: "03 · Her day", title: "THE MOMENT DESERVES A SOUNDTRACK.", feeling: "A personal celebration chapter that makes the performance world feel human." },
+    ],
     colors: { ink: "#081615", glow: "#62d5b4", wash: "#b8f2df", edge: "#ddfff3" },
     status: "roster",
   },
@@ -296,6 +327,11 @@ export function FoundingCreatorPage() {
   const creatorSlug = location.split("/").filter(Boolean).at(-1) || "";
   const creator = creators.find((item) => item.slug === creatorSlug);
   if (!creator) return <FoundingCreatorsRoster />;
+  const motionCount = creator.motionChapters?.length || 0;
+  const motionHeadline = motionCount > 1 ? `NOT ONE HERO. ${motionCount} REAL MOMENTS.` : "HER WORLD IS OPENING IN MOTION.";
+  const motionDescription = motionCount > 1
+    ? "Every chapter is real public motion from her own world. The videos stay muted here so the focus stays on her movement, not borrowed sound."
+    : "This is a real moving chapter from her own public world. More creator-owned motion is added only when it is truly hers and ready to carry her name.";
 
   return (
     <main className="min-h-screen overflow-hidden text-white" style={{ backgroundColor: creator.colors.ink }}>
@@ -311,7 +347,7 @@ export function FoundingCreatorPage() {
         <section className="relative overflow-hidden border-t border-white/10 bg-[#060608] px-5 py-20 sm:px-8 lg:px-12">
           <div className="absolute left-[6%] top-0 h-px w-[42%]" style={{ backgroundColor: creator.colors.glow }} />
           <div className="relative mx-auto max-w-7xl">
-            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: creator.colors.glow }}>Her world is already moving</p><h2 className="mt-3 max-w-3xl text-4xl font-black leading-[.9] tracking-[-0.07em] sm:text-6xl">NOT ONE HERO. FOUR REAL MOMENTS.</h2></div><p className="max-w-sm text-sm leading-7 text-white/60">Every chapter is real public motion from her own world. The videos stay muted here so the focus stays on her movement, not borrowed sound.</p></div>
+            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: creator.colors.glow }}>Her world is already moving</p><h2 className="mt-3 max-w-3xl text-4xl font-black leading-[.9] tracking-[-0.07em] sm:text-6xl">{motionHeadline}</h2></div><p className="max-w-sm text-sm leading-7 text-white/60">{motionDescription}</p></div>
             <div className="mt-10 grid gap-5 md:grid-cols-2">{creator.motionChapters.map((chapter, index) => <article key={chapter.src} className={`group relative min-h-[560px] overflow-hidden rounded-[2rem] border border-white/10 bg-[#101015] ${index === 1 ? "md:mt-16" : ""}`}><video autoPlay muted loop playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover"><source src={chapter.src} type="video/mp4" /></video><div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-black/5" /><div className="absolute inset-x-0 top-0 flex items-center justify-between p-6 text-[10px] font-black uppercase tracking-[0.22em] text-white/70"><span>{chapter.eyebrow}</span><span className="h-2 w-2 rounded-full creator-page-dot" style={{ backgroundColor: creator.colors.glow }} /></div><div className="absolute inset-x-0 bottom-0 p-6 sm:p-8"><h3 className="max-w-md text-3xl font-black leading-[.92] tracking-[-0.06em] sm:text-4xl">{chapter.title}</h3><p className="mt-4 max-w-md text-sm leading-6 text-white/72">{chapter.feeling}</p></div></article>)}</div>
             <div className="mt-6 overflow-hidden rounded-[2rem] border border-white/10 px-6 py-8 sm:px-10" style={{ background: `linear-gradient(110deg, ${creator.colors.glow}36, transparent 48%, ${creator.colors.wash}24)` }}><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><p className="max-w-2xl text-2xl font-black leading-tight tracking-[-0.05em] sm:text-4xl">THE FUTURE OF SOCIAL SHOULD FEEL LIKE YOU JUST STEPPED INTO HER DAY.</p><span className="shrink-0 text-xs font-black uppercase tracking-[0.2em] text-white/70">{creator.handle} · CreatorVault</span></div></div>
           </div>
