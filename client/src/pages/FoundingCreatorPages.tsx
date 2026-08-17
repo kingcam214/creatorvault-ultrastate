@@ -16,6 +16,7 @@ type Creator = {
   video?: string;
   imagePosition?: string;
   motionChapters?: Array<{ src: string; title: string; eyebrow: string; feeling: string }>;
+  publicPresence?: Array<{ label: string; handle: string; href: string; proof: string }>;
   colors: { ink: string; glow: string; wash: string; edge: string };
   status: "feature" | "roster";
 };
@@ -65,19 +66,25 @@ const creators: Creator[] = [
   {
     slug: "the-biggest-b",
     name: "The Biggest B",
-    handle: "@thatssthebcb_",
-    handles: ["@iamthe_bcb"],
-    line: "Lift. Reset. Show up again.",
-    world: "SHE DOES NOT WAIT TO FEEL READY.",
-    pulse: "A real fitness and college-lifestyle presence built on showing up when it would be easier not to.",
-    note: "CreatorVault founding circle · public creator source",
-    profileUrl: "https://www.instagram.com/thatssthebcb_/",
+    handle: "@iamthe_bcb",
+    handles: ["@thatssthebcb_", "@Roxiee102", "luvRoxie"],
+    line: "One woman. Multiple worlds. Every channel moving.",
+    world: "SHE IS THE VIRAL PULL, THE LIFESTYLE, AND THE PRIVATE WORLD.",
+    pulse: "Fitness, daily life, viral personality, and an already-active paid fan space—all connected to the same creator instead of scattered across fake separate profiles.",
+    note: "CreatorVault founding circle · verified multi-platform creator",
+    profileUrl: "https://www.snapchat.com/@iamthe_bcb",
+    platformLabel: "Follow her on Snapchat",
     image: "/images/creator-pages/biggest-b-public-source.jpg",
     imagePosition: "center",
     motionChapters: [
       { src: "/videos/creator-pages/biggest-b-park-energy.mp4", eyebrow: "01 · Outside energy", title: "THE LAUGH IS PART OF THE WORK.", feeling: "A real social moment that shows personality before anybody asks for a performance." },
       { src: "/videos/creator-pages/biggest-b-morning-life.mp4", eyebrow: "02 · Morning life", title: "SHE STARTS WHERE SHE IS.", feeling: "The small daily moments that make a fitness-and-lifestyle world feel real." },
       { src: "/videos/creator-pages/biggest-b-dance-expression.mp4", eyebrow: "03 · Expression", title: "MOVEMENT IS HER RESET BUTTON.", feeling: "Dance, body confidence, and a visual language built on being fully present." },
+    ],
+    publicPresence: [
+      { label: "Snapchat", handle: "@iamthe_bcb", href: "https://www.snapchat.com/@iamthe_bcb", proof: "44K public followers · active Spotlight creator" },
+      { label: "X", handle: "@Roxiee102", href: "https://x.com/Roxiee102", proof: "33.3K public followers · 3,811 public posts" },
+      { label: "Private membership", handle: "@luvroxieann", href: "https://onlyfans.com/luvroxie", proof: "Public page: $10/month · 549 posts · 652 media" },
     ],
     colors: { ink: "#0d1209", glow: "#b6ff4d", wash: "#e4ffaf", edge: "#f1ffd1" },
     status: "feature",
@@ -117,22 +124,6 @@ const creators: Creator[] = [
       { src: "/videos/creator-pages/aderly-follow-me.mp4", eyebrow: "01 · Follow her", title: "SHE WALKS LIKE THE STORY IS ALREADY HERS.", feeling: "A real full-body entrance that turns her page into a place you follow, not just scroll past." },
     ],
     colors: { ink: "#150a04", glow: "#ff9955", wash: "#ffd2ab", edge: "#ffe7d2" },
-    status: "feature",
-  },
-  {
-    slug: "luv-roxie",
-    name: "luvRoxie",
-    handle: "@luvroxie",
-    handles: ["@Roxiee102"],
-    line: "Soft life. Sharp edge.",
-    world: "SHE MAKES THE EVERYDAY FEEL EXPENSIVE.",
-    pulse: "A personal world with intimacy, confidence, and no need to make herself smaller for anybody.",
-    note: "CreatorVault founding circle · public creator source",
-    profileUrl: "https://x.com/Roxiee102",
-    platformLabel: "Find her on X",
-    image: "/images/creator-pages/luv-roxie-public-source.jpg",
-    imagePosition: "center",
-    colors: { ink: "#10090d", glow: "#ff80b9", wash: "#ffcce4", edge: "#ffe2f0" },
     status: "feature",
   },
   {
@@ -325,7 +316,8 @@ export function FoundingCreatorsRoster() {
 export function FoundingCreatorPage() {
   const [location] = useLocation();
   const creatorSlug = location.split("/").filter(Boolean).at(-1) || "";
-  const creator = creators.find((item) => item.slug === creatorSlug);
+  const canonicalCreatorSlug = creatorSlug === "luv-roxie" ? "the-biggest-b" : creatorSlug;
+  const creator = creators.find((item) => item.slug === canonicalCreatorSlug);
   if (!creator) return <FoundingCreatorsRoster />;
   const motionCount = creator.motionChapters?.length || 0;
   const motionHeadline = motionCount > 1 ? `NOT ONE HERO. ${motionCount} REAL MOMENTS.` : "HER WORLD IS OPENING IN MOTION.";
@@ -343,6 +335,9 @@ export function FoundingCreatorPage() {
           <div className="max-w-3xl"><div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.22em] text-white/75"><span className="h-1.5 w-1.5 rounded-full creator-page-dot" style={{ backgroundColor: creator.colors.glow }} /> {creator.note}</div><HandleRow creator={creator} /><h1 className="mt-5 text-6xl font-black leading-[.88] tracking-[-0.09em] sm:text-8xl lg:text-9xl">{creator.name}</h1><p className="mt-6 max-w-xl text-xl font-semibold leading-8 text-white/85 sm:text-2xl">{creator.line}</p><div className="mt-8 flex flex-wrap gap-3">{creator.profileUrl && <a href={creator.profileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-black text-black transition hover:scale-[1.02]" style={{ backgroundColor: creator.colors.wash }}>{creator.platformLabel || "Find her on Instagram"} <ArrowUpRight className="h-4 w-4" /></a>}<Link href="/vault-x"><a className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/25 px-6 py-3 text-sm font-black backdrop-blur-md transition hover:bg-black/45"><Video className="h-4 w-4" /> Enter VaultX</a></Link></div></div>
         </div>
       </section>
+      {creator.publicPresence && creator.publicPresence.length > 0 && (
+        <section className="border-t border-white/10 bg-black px-5 py-8 sm:px-8 lg:px-12"><div className="mx-auto grid max-w-7xl gap-3 md:grid-cols-3">{creator.publicPresence.map((presence) => <a key={presence.href} href={presence.href} target="_blank" rel="noreferrer" className="group rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 transition hover:-translate-y-1 hover:bg-white/[0.08]"><p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: creator.colors.glow }}>{presence.label}</p><div className="mt-3 flex items-center justify-between gap-3"><p className="text-lg font-black tracking-[-0.04em]">{presence.handle}</p><ArrowUpRight className="h-4 w-4 text-white/60 transition group-hover:rotate-45" /></div><p className="mt-2 text-xs leading-5 text-white/60">{presence.proof}</p></a>)}</div></section>
+      )}
       {creator.motionChapters && creator.motionChapters.length > 0 && (
         <section className="relative overflow-hidden border-t border-white/10 bg-[#060608] px-5 py-20 sm:px-8 lg:px-12">
           <div className="absolute left-[6%] top-0 h-px w-[42%]" style={{ backgroundColor: creator.colors.glow }} />
