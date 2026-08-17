@@ -236,6 +236,11 @@ const ALLOWLISTS = {
     'client/public/videos/creator-pages/ady-microlocs-source-h264.mp4',
     'scripts/scope-guard.js'
   ],
+  'reshula-in-platform-profile': [
+    'client/src/App.tsx',
+    'client/src/pages/ReshulaProfile.tsx',
+    'scripts/scope-guard.js'
+  ],
   'reshula-no-male-correction': [
     'client/src/pages/ReshulaWorld.tsx',
     'client/src/pages/FoundingCreatorPages.tsx',
