@@ -235,6 +235,18 @@ const ALLOWLISTS = {
     'client/public/videos/creator-pages/reshula-solo-lifestyle-source-h264.mp4',
     'scripts/scope-guard.js'
   ],
+  'leslie-ignition-world': [
+    'client/src/App.tsx',
+    'client/src/pages/LeslieWorld.tsx',
+    'client/public/videos/creator-pages/leslie-social-presence-source.mp4',
+    'client/public/videos/creator-pages/leslie-social-presence-source-h264.mp4',
+    'client/public/videos/creator-pages/leslie-roses-lifestyle-source.mp4',
+    'client/public/videos/creator-pages/leslie-roses-lifestyle-source-h264.mp4',
+    'client/public/videos/creator-pages/leslie-studio-presence-source.mp4',
+    'client/public/videos/creator-pages/leslie-studio-presence-source-h264.mp4',
+    'client/public/images/creator-pages/leslie-social-presence-poster.jpg',
+    'scripts/scope-guard.js'
+  ],
   'reshula-creator-world': [
     'client/src/App.tsx',
     'client/src/pages/ReshulaWorld.tsx',
