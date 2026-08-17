@@ -36,10 +36,7 @@ const creators: Creator[] = [
     image: "/images/creator-pages/reshula-public-source.jpg",
     imagePosition: "center",
     motionChapters: [
-      { src: "/videos/creator-pages/reshula-market-comedy.mp4", eyebrow: "01 · In public", title: "SHE MAKES THE AISLE HER STAGE.", feeling: "Everyday comedy, full-body movement, and the confidence to make strangers stop and watch." },
-      { src: "/videos/creator-pages/reshula-mall-dance.mp4", eyebrow: "02 · Main character", title: "SHE DOES NOT WAIT FOR THE ROOM.", feeling: "Mall-floor energy, sharp movement, and a real social moment built around her presence." },
-      { src: "/videos/creator-pages/reshula-gym-joy.mp4", eyebrow: "03 · Gym joy", title: "STRENGTH DOESN'T HAVE TO BE SERIOUS.", feeling: "Fitness culture, spontaneous dance, and the kind of joy that moves through the whole room." },
-      { src: "/videos/creator-pages/reshula-mirror-lifestyle.mp4", eyebrow: "04 · After hours", title: "THE CAMERA KNOWS HER ANGLE.", feeling: "A personal behind-the-scenes moment that keeps the world intimate without making it small." },
+      { src: "/videos/creator-pages/reshula-mirror-lifestyle.mp4", eyebrow: "01 · After hours", title: "THE CAMERA KNOWS HER ANGLE.", feeling: "A personal behind-the-scenes moment that keeps the world intimate without making it small." },
     ],
     colors: { ink: "#130608", glow: "#ff5d92", wash: "#ffbdd1", edge: "#ffd0df" },
     status: "feature",

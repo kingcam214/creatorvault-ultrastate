@@ -221,6 +221,14 @@ const ALLOWLISTS = {
     'client/public/videos/creator-pages/ady-braid-craft-source-h264.mp4',
     'scripts/scope-guard.js'
   ],
+  'reshula-no-male-correction': [
+    'client/src/pages/ReshulaWorld.tsx',
+    'client/src/pages/FoundingCreatorPages.tsx',
+    'client/public/videos/creator-pages/reshula-market-comedy.mp4',
+    'client/public/videos/creator-pages/reshula-mall-dance.mp4',
+    'client/public/videos/creator-pages/reshula-gym-joy.mp4',
+    'scripts/scope-guard.js'
+  ],
   'reshula-creator-world': [
     'client/src/App.tsx',
     'client/src/pages/ReshulaWorld.tsx',
