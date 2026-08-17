@@ -204,7 +204,10 @@ const ALLOWLISTS = {
     'client/public/videos/creator-pages/maily-outdoor-routine-source-h264.mp4',
     'client/public/videos/creator-pages/maily-close-social-source.mp4',
     'client/public/videos/creator-pages/maily-event-unboxing-source.mp4',
+    'client/public/videos/creator-pages/maily-studio-beauty-source.mp4',
+    'client/public/videos/creator-pages/maily-studio-beauty-source-h264.mp4',
     'client/public/images/creator-pages/maily-outdoor-routine-poster.jpg',
+    'client/public/images/creator-pages/maily-outdoor-routine-hero-poster.jpg',
     'scripts/scope-guard.js'
   ],
   'reshula-creator-world': [
