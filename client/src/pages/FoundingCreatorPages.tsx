@@ -17,6 +17,7 @@ type Creator = {
   imagePosition?: string;
   motionChapters?: Array<{ src: string; title: string; eyebrow: string; feeling: string }>;
   publicPresence?: Array<{ label: string; handle: string; href: string; proof: string }>;
+  creatorVaultHorizon?: { title: string; gross: string; share: string; context: string; pillars: string[] };
   colors: { ink: string; glow: string; wash: string; edge: string };
   status: "feature" | "roster";
 };
@@ -82,10 +83,17 @@ const creators: Creator[] = [
       { src: "/videos/creator-pages/biggest-b-dance-expression.mp4", eyebrow: "03 · Expression", title: "MOVEMENT IS HER RESET BUTTON.", feeling: "Dance, body confidence, and a visual language built on being fully present." },
     ],
     publicPresence: [
-      { label: "Snapchat", handle: "@iamthe_bcb", href: "https://www.snapchat.com/@iamthe_bcb", proof: "44K public followers · active Spotlight creator" },
-      { label: "X", handle: "@Roxiee102", href: "https://x.com/Roxiee102", proof: "33.3K public followers · 3,811 public posts" },
-      { label: "Private membership", handle: "@luvroxieann", href: "https://onlyfans.com/luvroxie", proof: "Public page: $10/month · 549 posts · 652 media" },
+      { label: "Current Snapchat", handle: "@iamthe_bcb", href: "https://www.snapchat.com/@iamthe_bcb", proof: "44K public followers · active Spotlight creator" },
+      { label: "Current X", handle: "@Roxiee102", href: "https://x.com/Roxiee102", proof: "33.3K public followers · 3,811 public posts" },
+      { label: "Existing membership", handle: "@luvroxieann", href: "https://onlyfans.com/luvroxie", proof: "Directly linked from X · public page: $10/month · 549 posts · 652 media" },
     ],
+    creatorVaultHorizon: {
+      title: "THE CREATORVAULT HORIZON THAT SHE WAS CHOSEN FOR.",
+      gross: "$2.84M–$7.95M",
+      share: "$1.99M–$5.57M",
+      context: "Original Year 1 CreatorVault planning model for The Biggest B. It is a model of what a fully connected creator machine can target—not her current income, not a fan promise, and not a guaranteed result.",
+      pillars: ["fitness subscriptions", "premium membership", "wellness drops", "brand work", "custom moments", "CreatorVault distribution"],
+    },
     colors: { ink: "#0d1209", glow: "#b6ff4d", wash: "#e4ffaf", edge: "#f1ffd1" },
     status: "feature",
   },
@@ -337,6 +345,9 @@ export function FoundingCreatorPage() {
       </section>
       {creator.publicPresence && creator.publicPresence.length > 0 && (
         <section className="border-t border-white/10 bg-black px-5 py-8 sm:px-8 lg:px-12"><div className="mx-auto grid max-w-7xl gap-3 md:grid-cols-3">{creator.publicPresence.map((presence) => <a key={presence.href} href={presence.href} target="_blank" rel="noreferrer" className="group rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 transition hover:-translate-y-1 hover:bg-white/[0.08]"><p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: creator.colors.glow }}>{presence.label}</p><div className="mt-3 flex items-center justify-between gap-3"><p className="text-lg font-black tracking-[-0.04em]">{presence.handle}</p><ArrowUpRight className="h-4 w-4 text-white/60 transition group-hover:rotate-45" /></div><p className="mt-2 text-xs leading-5 text-white/60">{presence.proof}</p></a>)}</div></section>
+      )}
+      {creator.creatorVaultHorizon && (
+        <section className="relative overflow-hidden border-t border-white/10 bg-[#11160b] px-5 py-16 sm:px-8 lg:px-12"><div className="absolute inset-0 opacity-40" style={{ background: `radial-gradient(circle at 15% 15%, ${creator.colors.glow}55, transparent 26%), linear-gradient(120deg, transparent, ${creator.colors.wash}16)` }} /><div className="relative mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end"><div><p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: creator.colors.glow }}>Modeled CreatorVault upside · not current earnings</p><h2 className="mt-3 max-w-3xl text-4xl font-black leading-[.9] tracking-[-0.07em] sm:text-6xl">{creator.creatorVaultHorizon.title}</h2><p className="mt-6 max-w-2xl text-sm leading-7 text-white/70">{creator.creatorVaultHorizon.context}</p><div className="mt-6 flex flex-wrap gap-2">{creator.creatorVaultHorizon.pillars.map((pillar) => <span key={pillar} className="rounded-full border border-white/15 bg-black/25 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/75">{pillar}</span>)}</div></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1"><div className="rounded-[1.75rem] border border-white/15 bg-black/35 p-6"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/50">Original Year 1 gross model</p><p className="mt-3 text-4xl font-black tracking-[-0.07em]" style={{ color: creator.colors.glow }}>{creator.creatorVaultHorizon.gross}</p><p className="mt-3 text-sm leading-6 text-white/62">Model scenario only. It begins after the creator’s content, offers, routes, and fan machine are actually live together.</p></div><div className="rounded-[1.75rem] border border-white/15 bg-white/[0.06] p-6"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/50">Original modeled creator share</p><p className="mt-3 text-4xl font-black tracking-[-0.07em] text-white">{creator.creatorVaultHorizon.share}</p><p className="mt-3 text-sm leading-6 text-white/62">Original 70% model share. This is separate from verified present-day account or membership earnings.</p></div></div></div></div></section>
       )}
       {creator.motionChapters && creator.motionChapters.length > 0 && (
         <section className="relative overflow-hidden border-t border-white/10 bg-[#060608] px-5 py-20 sm:px-8 lg:px-12">
