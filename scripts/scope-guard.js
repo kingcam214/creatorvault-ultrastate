@@ -197,6 +197,11 @@ const ALLOWLISTS = {
     'server/routers/recruiterOSRouter.ts',
     'scripts/scope-guard.js'
   ],
+  'reshula-creator-world': [
+    'client/src/App.tsx',
+    'client/src/pages/ReshulaWorld.tsx',
+    'scripts/scope-guard.js'
+  ],
   'biggest-b-body-cinema-world': [
     'client/src/App.tsx',
     'client/src/pages/BiggestBWorld.tsx',
