@@ -200,6 +200,7 @@ const ALLOWLISTS = {
   'reshula-creator-world': [
     'client/src/App.tsx',
     'client/src/pages/ReshulaWorld.tsx',
+    'client/public/videos/owner-supplied/reshula-tropical-motion-h264.mp4',
     'scripts/scope-guard.js'
   ],
   'biggest-b-body-cinema-world': [

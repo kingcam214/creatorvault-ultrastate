@@ -2,7 +2,7 @@ import { ArrowDown, ArrowLeft, ArrowUpRight, Instagram, Play } from "lucide-reac
 import { Link } from "wouter";
 
 const reels = {
-  tropical: "/videos/owner-supplied/reshula-tropical-motion.mp4",
+  tropical: "/videos/owner-supplied/reshula-tropical-motion-h264.mp4",
   market: "/videos/creator-pages/reshula-market-comedy.mp4",
   mall: "/videos/creator-pages/reshula-mall-dance.mp4",
   gym: "/videos/creator-pages/reshula-gym-joy.mp4",
