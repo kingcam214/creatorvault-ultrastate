@@ -2,9 +2,13 @@ import { useRef } from "react";
 import { ArrowDown, ArrowLeft, ArrowUpRight, Instagram, LockKeyhole } from "lucide-react";
 import { Link } from "wouter";
 
-const arrival = "/videos/creator-pages/ady-personal-style-source.mp4";
+const films = {
+  arrival: "/videos/creator-pages/ady-personal-style-source.mp4",
+  makeup: "/videos/creator-pages/ady-makeup-style-source-h264.mp4",
+  locs: "/videos/creator-pages/ady-microlocs-source-h264.mp4",
+};
 
-function ArrivalFilm({ className = "" }: { className?: string }) {
+function SourceFilm({ src, poster, className = "", end = 6 }: { src: string; poster?: string; className?: string; end?: number }) {
   const scenePinned = useRef(false);
   const pinToAdy = (video: HTMLVideoElement) => {
     if (scenePinned.current) return;
@@ -18,15 +22,15 @@ function ArrivalFilm({ className = "" }: { className?: string }) {
       muted
       playsInline
       preload="metadata"
-      poster="/images/creator-pages/ady-personal-style-hero-poster.jpg"
+      poster={poster}
       onLoadedMetadata={(event) => pinToAdy(event.currentTarget)}
       onCanPlay={(event) => pinToAdy(event.currentTarget)}
       onTimeUpdate={(event) => {
-        if (event.currentTarget.currentTime >= 3) event.currentTarget.currentTime = 0;
+        if (event.currentTarget.currentTime >= end) event.currentTarget.currentTime = 0;
       }}
       className={`h-full w-full object-cover ${className}`}
     >
-      <source src={arrival} type="video/mp4" />
+      <source src={src} type="video/mp4" />
     </video>
   );
 }
@@ -45,7 +49,7 @@ export default function AdyWorld() {
       `}</style>
 
       <section className="relative isolate h-[100svh] min-h-[100svh] overflow-hidden bg-[#120d12]">
-        <ArrivalFilm className="object-center" />
+        <SourceFilm src={films.arrival} poster="/images/creator-pages/ady-personal-style-hero-poster.jpg" end={3} className="object-center" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,7,12,.5),rgba(12,7,12,.04)_30%,rgba(12,7,12,.94))]" />
         <div className="absolute inset-y-0 right-0 w-[48%] bg-[linear-gradient(90deg,transparent,rgba(38,12,26,.34))]" />
 
@@ -82,6 +86,10 @@ export default function AdyWorld() {
           </div>
         </div>
       </section>
+
+      <section className="relative overflow-hidden bg-[#160b13] px-5 py-16 sm:px-8 lg:px-12 lg:py-24"><div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[.9fr_1.1fr] lg:items-center"><div className="lg:pb-8"><p className="text-xs font-black uppercase tracking-[.24em] text-[#ffadc9]">Chapter two / the detail</p><h2 className="mt-5 text-[16vw] font-black leading-[.7] tracking-[-.12em] sm:text-[8rem]">SHE MAKES<br />THE LOOK<br /><span className="text-[#ff75ad]">HER OWN.</span></h2><p className="mt-8 max-w-md text-lg leading-8 text-white/70">Real Ady beauty motion. Her face, her hair, her camera time. No client reel and no other person taking the center.</p></div><div className="relative aspect-[9/12] overflow-hidden rounded-[4rem_0_4rem_4rem] border border-white/15 bg-black shadow-[22px_24px_0_#ff75ad]"><SourceFilm src={films.makeup} /><div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" /><p className="absolute bottom-7 left-7 right-7 text-4xl font-black leading-[.84] tracking-[-.08em]">THE FACE<br />IS THE SIGNATURE.</p></div></div></section>
+
+      <section className="relative overflow-hidden bg-[#ff75ad] px-5 py-16 text-[#190a11] sm:px-8 lg:px-12 lg:py-24"><div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.1fr_.9fr] lg:items-center"><div className="relative order-2 aspect-[9/12] overflow-hidden rounded-[0_4rem_4rem_4rem] bg-black shadow-[22px_24px_0_#190a11] lg:order-1"><SourceFilm src={films.locs} /><div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" /><p className="absolute bottom-7 left-7 right-7 text-4xl font-black leading-[.84] tracking-[-.08em] text-white">HER HAIR.<br />HER TIMING.<br />HER FRAME.</p></div><div className="order-1 lg:order-2 lg:pl-10"><p className="text-xs font-black uppercase tracking-[.24em] text-[#7c123c]">Chapter three / the crown</p><h2 className="mt-5 text-[16vw] font-black leading-[.7] tracking-[-.12em] sm:text-[8rem]">THE WORLD<br />LEARNS<br /><span className="text-[#fff7f7]">HER NAME.</span></h2><p className="mt-8 max-w-md text-lg font-semibold leading-8 text-[#190a11]/75">A real Ady-only hair chapter. The motion stays personal and the woman stays at the center of every frame.</p></div></div></section>
 
       <section className="relative bg-[#f7eded] px-5 py-20 text-[#1c0d16] sm:px-8 lg:px-28">
         <div className="mx-auto max-w-7xl border-y-2 border-[#1c0d16] py-12 sm:py-16">
