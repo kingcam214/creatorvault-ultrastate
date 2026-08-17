@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { ArrowDownRight, ArrowLeft, ArrowUpRight, Instagram, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 
@@ -10,6 +11,12 @@ const maily = {
 
 function DiamondMotion({ src, className = "", startAt = 0, loopEnd }: { src: string; className?: string; startAt?: number; loopEnd?: number }) {
   const focusedLoop = Boolean(loopEnd && startAt > 0);
+  const scenePinned = useRef(false);
+  const pinToScene = (video: HTMLVideoElement) => {
+    if (scenePinned.current || startAt <= 0 || !Number.isFinite(video.duration) || video.duration <= startAt) return;
+    video.currentTime = startAt;
+    scenePinned.current = true;
+  };
   return (
     <video
       autoPlay
@@ -17,7 +24,8 @@ function DiamondMotion({ src, className = "", startAt = 0, loopEnd }: { src: str
       loop={!focusedLoop}
       playsInline
       preload="metadata"
-      onLoadedMetadata={(event) => { if (startAt > 0) event.currentTarget.currentTime = startAt; }}
+      onLoadedMetadata={(event) => pinToScene(event.currentTarget)}
+      onCanPlay={(event) => pinToScene(event.currentTarget)}
       onTimeUpdate={(event) => { if (loopEnd && event.currentTarget.currentTime >= loopEnd) event.currentTarget.currentTime = startAt; }}
       className={`h-full w-full object-cover ${className}`}
     >
