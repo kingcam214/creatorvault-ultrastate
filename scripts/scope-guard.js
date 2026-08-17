@@ -197,6 +197,19 @@ const ALLOWLISTS = {
     'server/routers/recruiterOSRouter.ts',
     'scripts/scope-guard.js'
   ],
+  'consented-creator-pages': [
+    'client/src/App.tsx',
+    'client/src/pages/FoundingCreatorPages.tsx',
+    'client/public/images/creator-pages/reshula-public-source.jpg',
+    'client/public/images/creator-pages/maily-public-source.jpg',
+    'client/public/images/creator-pages/biggest-b-public-source.jpg',
+    'client/public/images/creator-pages/diana-public-source.jpg',
+    'client/public/images/creator-pages/aderly-public-source.jpg',
+    'client/public/images/creator-pages/luv-roxie-public-source.jpg',
+    'client/public/images/creator-pages/leslie-public-source.jpg',
+    'client/public/videos/owner-supplied/reshula-tropical-motion.mp4',
+    'scripts/scope-guard.js'
+  ],
   distribution: [
     'client/src/pages/WhatsAppContentGenerator.tsx',
     'client/src/pages/TelegramMoneyHub.tsx',

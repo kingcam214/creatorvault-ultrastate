@@ -14,6 +14,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CreatorModeProvider } from "./contexts/CreatorModeContext";
 import Home from "./pages/Home";
+import { FoundingCreatorPage, FoundingCreatorsRoster } from "./pages/FoundingCreatorPages";
 // import BusinessCardDesigner from "./pages/BusinessCardDesigner";
 // import CardEditor from "./pages/CardEditor";
 // import AICardDesigner from "./pages/AICardDesigner";
@@ -506,19 +507,21 @@ function Router() {
       <Route path={"/empire-command"} component={AgentCommand} />
       <Route path={"/owner-control"} component={OwnerControl} />
       <Route path={"/owner-status"} component={OwnerStatus} />
-      {/* Greatest Show contained static, non-consented creator personas and unsupported public money claims. Hold it behind real creator consent. */}
-      <Route path={"/greatest-show"}>{() => { window.location.replace("/"); return null; }}</Route>
+      {/* Consent is confirmed for the Founding Creator roster. These aliases preserve legacy links while routing into their real CreatorVault worlds. */}
+      <Route path={"/creators"} component={FoundingCreatorsRoster} />
+      <Route path={"/creators/:creatorSlug"} component={FoundingCreatorPage} />
+      <Route path={"/greatest-show"}>{() => { window.location.replace("/creators"); return null; }}</Route>
       <Route path={"/greatest-show-studio"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
-      <Route path={"/greatest-show/maily"}>{() => { window.location.replace("/"); return null; }}</Route>
-      <Route path={"/greatest-show/diana"}>{() => { window.location.replace("/"); return null; }}</Route>
-      <Route path={"/greatest-show/emma"}>{() => { window.location.replace("/"); return null; }}</Route>
-      <Route path={"/greatest-show/thebiggestb"}>{() => { window.location.replace("/"); return null; }}</Route>
-      <Route path={"/greatest-show/delbania"}>{() => { window.location.replace("/"); return null; }}</Route>
-      <Route path={"/greatest-show/aderly"}>{() => { window.location.replace("/"); return null; }}</Route>
-      <Route path={"/greatest-show/canisha"}>{() => { window.location.replace("/"); return null; }}</Route>
-      <Route path={"/greatest-show/luvroxie"}>{() => { window.location.replace("/"); return null; }}</Route>
-      <Route path={"/greatest-show/lirys"}>{() => { window.location.replace("/"); return null; }}</Route>
-      <Route path={"/greatest-show/leslie"}>{() => { window.location.replace("/"); return null; }}</Route>
+      <Route path={"/greatest-show/maily"}>{() => { window.location.replace("/creators/maily"); return null; }}</Route>
+      <Route path={"/greatest-show/diana"}>{() => { window.location.replace("/creators/diana"); return null; }}</Route>
+      <Route path={"/greatest-show/emma"}>{() => { window.location.replace("/creators/reshula"); return null; }}</Route>
+      <Route path={"/greatest-show/thebiggestb"}>{() => { window.location.replace("/creators/the-biggest-b"); return null; }}</Route>
+      <Route path={"/greatest-show/delbania"}>{() => { window.location.replace("/creators/delbania"); return null; }}</Route>
+      <Route path={"/greatest-show/aderly"}>{() => { window.location.replace("/creators/aderly"); return null; }}</Route>
+      <Route path={"/greatest-show/canisha"}>{() => { window.location.replace("/creators/canisha"); return null; }}</Route>
+      <Route path={"/greatest-show/luvroxie"}>{() => { window.location.replace("/creators/luv-roxie"); return null; }}</Route>
+      <Route path={"/greatest-show/lirys"}>{() => { window.location.replace("/creators/lirys"); return null; }}</Route>
+      <Route path={"/greatest-show/leslie"}>{() => { window.location.replace("/creators/leslie"); return null; }}</Route>
       <Route path={"/greatest-show/fitness"}>{() => { window.location.replace("/"); return null; }}</Route>
       <Route path={"/greatest-show/pole"}>{() => { window.location.replace("/"); return null; }}</Route>
       <Route path={"/greatest-show/lifestyle"}>{() => { window.location.replace("/"); return null; }}</Route>
