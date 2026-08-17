@@ -229,6 +229,12 @@ const ALLOWLISTS = {
     'client/public/videos/creator-pages/reshula-gym-joy.mp4',
     'scripts/scope-guard.js'
   ],
+  'reshula-ignition-source-expansion': [
+    'client/src/pages/ReshulaWorld.tsx',
+    'client/public/videos/creator-pages/reshula-solo-lifestyle-source.mp4',
+    'client/public/videos/creator-pages/reshula-solo-lifestyle-source-h264.mp4',
+    'scripts/scope-guard.js'
+  ],
   'reshula-creator-world': [
     'client/src/App.tsx',
     'client/src/pages/ReshulaWorld.tsx',
