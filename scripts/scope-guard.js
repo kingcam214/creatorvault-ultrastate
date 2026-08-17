@@ -210,6 +210,17 @@ const ALLOWLISTS = {
     'client/public/images/creator-pages/maily-outdoor-routine-hero-poster.jpg',
     'scripts/scope-guard.js'
   ],
+  'ady-creator-world': [
+    'client/src/App.tsx',
+    'client/src/pages/AdyWorld.tsx',
+    'client/public/videos/creator-pages/ady-personal-style-source.mp4',
+    'client/public/images/creator-pages/ady-personal-style-hero-poster.jpg',
+    'client/public/videos/creator-pages/ady-braid-studio-source.mp4',
+    'client/public/videos/creator-pages/ady-braid-studio-source-h264.mp4',
+    'client/public/videos/creator-pages/ady-braid-craft-source.mp4',
+    'client/public/videos/creator-pages/ady-braid-craft-source-h264.mp4',
+    'scripts/scope-guard.js'
+  ],
   'reshula-creator-world': [
     'client/src/App.tsx',
     'client/src/pages/ReshulaWorld.tsx',

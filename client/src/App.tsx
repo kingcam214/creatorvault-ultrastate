@@ -18,6 +18,7 @@ import { FoundingCreatorPage, FoundingCreatorsRoster } from "./pages/FoundingCre
 import BiggestBWorld from "./pages/BiggestBWorld";
 import ReshulaWorld from "./pages/ReshulaWorld";
 import MailyWorld from "./pages/MailyWorld";
+import AdyWorld from "./pages/AdyWorld";
 // import BusinessCardDesigner from "./pages/BusinessCardDesigner";
 // import CardEditor from "./pages/CardEditor";
 // import AICardDesigner from "./pages/AICardDesigner";
@@ -515,6 +516,7 @@ function Router() {
       <Route path={"/creators"} component={FoundingCreatorsRoster} />
       <Route path={"/creators/reshula"} component={ReshulaWorld} />
       <Route path={"/creators/maily"} component={MailyWorld} />
+      <Route path={"/creators/aderly"} component={AdyWorld} />
       <Route path={"/creators/the-biggest-b"} component={BiggestBWorld} />
       <Route path={"/creators/luv-roxie"} component={BiggestBWorld} />
       <Route path={"/creators/:creatorSlug"} component={FoundingCreatorPage} />
