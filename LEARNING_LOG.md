@@ -319,3 +319,8 @@ Sources: https://docs.pollo.ai/openapi-filtered.json ; https://docs.pollo.ai/m/v
 ## 2026-08-18 — NO-CHARGE CANDIDATE SCANNER
 
 CreatorVault now has an owner-only **audit-only** KingCam candidate check for the catalog-confirmed Pollo GoEnhance video-to-video entry. The check reads Pollo’s authenticated video-to-video model configuration only. It cannot create a draft, reserve credits, approve a job, obtain a single-use permit, submit media, or retry anything. A returned catalog row or price is not proof that the model is approved; it only decides whether an explicit future governed contract can be designed.
+
+
+### Scanner repair — 2026-08-18
+
+The first audit-only GoEnhance configuration check returned `404` because the scanner used `config/video/video2video/models`. Pollo’s own OpenAPI specifies `config/{generationType}/models`; the corrected no-charge path is `config/video2video/models`. This was a contract-path repair only. No draft, credit reservation, provider task, or media output was created.

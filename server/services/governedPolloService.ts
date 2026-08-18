@@ -1003,7 +1003,7 @@ export async function auditPolloKingcamVideoToVideoCandidate(params: {
 
   let response: Response;
   try {
-    response = await fetch("https://pollo.ai/api/platform/config/video/video2video/models?language=en", {
+    response = await fetch("https://pollo.ai/api/platform/config/video2video/models?language=en", {
       method: "GET",
       headers: { "x-api-key": apiKey, Accept: "application/json" },
     });
