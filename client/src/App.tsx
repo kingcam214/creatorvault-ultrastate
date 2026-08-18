@@ -85,7 +85,7 @@ import EmmaNetwork from "./pages/EmmaNetwork";
 // import InfluencerDashboard from "./pages/InfluencerDashboard";
 // import JoinVaultLive from "./pages/JoinVaultLive";
 // import ControlRoom from "./pages/ControlRoom";
-// import KingCamClone from "./pages/KingCamClone";
+import KingCamClone from "./pages/KingCamClone";
 // import KingCamShowcase from "./pages/KingCamShowcase";
 // import KingCamImport from "./pages/king/KingCamImport";
 // import KingCamGallery from "./pages/king/KingCamGallery";
@@ -352,7 +352,7 @@ function Router() {
   const [location] = useLocation();
   const authPages = ["/login", "/register", "/signup"];
   const isAuthPage = authPages.some(p => location === p || location.startsWith(p + "?"));
-  const isImmersiveCreatorWorld = ["/kingcam", "/kingcam/guide", "/reshula24", "/creators/the-biggest-b", "/creators/luv-roxie", "/creators/reshula", "/creators/maily", "/creators/aderly", "/creators/diana", "/creators/leslie"].includes(location);
+  const isImmersiveCreatorWorld = ["/kingcam", "/kingcam/guide", "/king/clone-command", "/reshula24", "/creators/the-biggest-b", "/creators/luv-roxie", "/creators/reshula", "/creators/maily", "/creators/aderly", "/creators/diana", "/creators/leslie"].includes(location);
   return (
     <>
       {!isImmersiveCreatorWorld && <AppHeader />}
@@ -552,6 +552,7 @@ function Router() {
       <Route path={"/king/video-lab"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/king/analytics"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/king/content"} component={KingContent} />
+      <Route path={"/king/clone-command"} component={KingCamClone} />
       <Route path={"/kingcam"} component={KingCamProfile} />
       <Route path={"/kingcam/guide"} component={KingCamGuide} />
       <Route path={"/king/waitlist"} component={KingWaitlist} />
