@@ -582,3 +582,17 @@ Exact repair: CreatorVault now uses only the versioned GoEnhance v1 request body
 The corrected live no-charge GoEnhance v1 estimate route returned an exact source-specific record for the locked seven-second real KingCam gait video and `mx-v2v` style: `cost: 105`, `singleCost: 105`, and `costUsd: 6.30`. Discount fields were zero; they are not a zero-cost quote. The configuration’s generic `creditRules.base: 10` was not the actual estimate for this request and must never be used as its cap.
 
 A fresh GoEnhance proof may be considered only after CreatorVault fixes its estimator to prefer the positive provider `cost` over zero discount fields and locks the new request to the exact **105-credit** provider estimate. Job `108` remains failed before provider task creation and is not retried. Any new request is a separately governed, one-output owner-directed decision with exactly 105 credits, no automatic retry, and finished-video inspection.
+
+## 2026-08-18 — GoEnhance watched-output result
+
+A fresh estimate-verified GoEnhance real-performance proof ran through the corrected versioned contract as governed job `109`, provider task `cmsz3fpz31h0u14g26r0om7rt`. The pre-submission estimate and actual provider cost both recorded **105 Pollo credits / $6.30**. The output completed and was watched at `https://videocdn.pollo.ai/web-cdn/pollo/production/cmnhv3xrn0882uer223udkmzx/ori/1787083968284-7ef987aa-7f38-4571-b767-f7432e9fbcd4.mp4`.
+
+**Result: REJECTED, 0/100.** Although the frame remained full body, the output replaced the burgundy suit/gold embroidery, crown, black shoes, cigar, and dark lounge with a white outfit, hat, phone, car-park setting, and a heavy stylized/pixel-art effect. The movement was jerky and unnatural. It violates identity, wardrobe, prop, environment, source-preservation, and real-motion requirements. Job `109` is governed-rejected; its artifact is not ingested or used publicly, as a clone, as a Body Cinema creation, or as a CreatorVault demonstration.
+
+**Permanent provider learning:** GoEnhance `mx-v2v` is a style transformation lane, not a KingCam source-preservation or clone-motion lane. Do not retry GoEnhance for KingCam full-body, real-performance preservation, or clone proof. No automatic replacement is authorized from this rejected output.
+
+## 2026-08-18 — KingCam clone-only source-library intake receipts
+
+The guarded source-library intake completed four durable clone-only receipts without duplicate upload: `RPReplay_Final1633698547.mov` → `9ab02afd-acc4-4f32-a077-158f98e7b922`; `dff14e32-fc76-494e-a5fe-2d0e2b93b593.mp4` → `eefde35b-4cc0-47bf-b767-d2bf0470aac3`; `a61a35de-243b-4b6a-8128-08ea7087d2fd.mp4` → `b29cce99-0bc6-4990-b5b0-e67f39dd8d3d`; `IMG_9898.MOV` → `d0f96106-9a75-4761-ad57-25b3e75b52ec`. `IMG_9808.MOV` timed out with HTTP 408 and remains unregistered; it must not be re-uploaded blindly or counted as library evidence.
+
+Screened classifications: `RPReplay_Final1633698547.mov` is a static collage and is permanently rejected for every training role. `dff14e32...` is limited real-camera KingCam identity context only; it lacks a continuous full-body interval and direct speech, so it is never a motion or speaking driver. `a61a...` remains a rear-view lower-body gait reference only. `IMG_9898.MOV` remains a direct-speech/face-timing reference only. These materials increase the verified clone-only library but do not create an accepted full-body clone proof by themselves.

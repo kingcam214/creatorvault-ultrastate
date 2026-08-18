@@ -122,6 +122,26 @@ const SUPPLIED_REAL_KINGCAM_TRAINING_AUDITS: Array<{
   evidence: string;
 }> = [
   {
+    fileName: "RPReplay_Final1633698547.mov",
+    trainingRole: "rejected",
+    fullBodySeconds: 0,
+    naturalMotionScore: 0,
+    speechSyncScore: 0,
+    driverReady: false,
+    defects: "Static screen-recorded image collage with no usable human motion, gait, gesture, or direct delivery.",
+    evidence: "Cameron-supplied material was screened before intake. It is retained as a documented excluded source, never as identity, voice, body, or motion training.",
+  },
+  {
+    fileName: "dff14e32-fc76-494e-a5fe-2d0e2b93b593.mp4",
+    trainingRole: "identity_reference",
+    fullBodySeconds: 0,
+    naturalMotionScore: 45,
+    speechSyncScore: 0,
+    driverReady: false,
+    defects: "No continuous crown-to-shoes full-body performance interval and no clean direct speech.",
+    evidence: "Cameron-supplied real-camera footage with verified KingCam presence. It can contribute limited identity context only and is forbidden as a clone motion or speaking-performance driver.",
+  },
+  {
     fileName: "a61a35de-243b-4b6a-8128-08ea7087d2fd.mp4",
     trainingRole: "performance_candidate",
     fullBodySeconds: 16.7,
