@@ -152,6 +152,11 @@ const REPLICATE_OMNI_HUMAN_MODE = "replicate_kingcam_omnihuman_full_body";
 const REPLICATE_OMNI_HUMAN_HARD_SPEND_CAP_USD = 2;
 const REPLICATE_OMNI_HUMAN_IDENTITY_IMAGE_URL = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge-reference.png";
 const REPLICATE_OMNI_HUMAN_AUDIO_URL = "https://creatorvault.live/uploads/content-vault/kingcam-voice-tour-v1/entry.mp3";
+const REPLICATE_WAN_ANIMATE_MODEL_PATH = "replicate/wan-video/wan-2.2-animate-animation";
+const REPLICATE_WAN_ANIMATE_MODE = "replicate_kingcam_wan_animate_real_driver_motion";
+const REPLICATE_WAN_ANIMATE_HARD_SPEND_CAP_USD = 2;
+const REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge-reference.png";
+const REPLICATE_WAN_ANIMATE_DRIVER_URL = "https://creatorvault.live/uploads/content-vault/9c47c6e0-a7ce-4e85-89a8-25c2f98d2980/kingcam-real-gait-driver-0129-0136.mp4";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MODEL_PATH = "runway/aleph-2-video-edit";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MODE = "runway_aleph_2_source_video_edit";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MAX_BYTES = 200 * 1024 * 1024;
@@ -358,6 +363,22 @@ function isReplicateWanVideoEditJob(job: Pick<GovernedPolloJob, "provider" | "pr
     && job.metadata.noAutomaticRetry === true;
 }
 
+function isReplicateWanAnimateJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
+  return job.provider === "replicate"
+    && job.providerModelPath === REPLICATE_WAN_ANIMATE_MODEL_PATH
+    && job.mode === REPLICATE_WAN_ANIMATE_MODE
+    && job.metadata.kingcamWanAnimateRealDriverProof === true
+    && job.metadata.cloneOnly === true
+    && job.metadata.ownerDirectedPilot === true
+    && job.metadata.candidateLimit === 1
+    && job.metadata.noAutomaticRetry === true
+    && job.metadata.sourcePreservationRequired === true
+    && job.metadata.hardCreditCap === REPLICATE_WAN_ANIMATE_HARD_SPEND_CAP_USD
+    && job.metadata.identityImageUrl === REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL
+    && job.metadata.motionDriverUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL
+    && job.metadata.bodyCinemaExcluded === true;
+}
+
 function isReplicateOmniHumanJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
   return job.provider === "replicate"
     && job.providerModelPath === REPLICATE_OMNI_HUMAN_MODEL_PATH
@@ -450,7 +471,7 @@ function isDesignImagePilot(job: Pick<GovernedPolloJob, "providerModelPath" | "m
 }
 
 function isSingleUseGovernedPilot(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
-  return isSourceVideoReferenceJob(job) || isKingcamWanSpokenMotionJob(job) || isKingcamKlingOmniSpokenMotionJob(job) || isReplicateWanVideoEditJob(job) || isReplicateOmniHumanJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isCreatorVaultVaceLightingJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
+  return isSourceVideoReferenceJob(job) || isKingcamWanSpokenMotionJob(job) || isKingcamKlingOmniSpokenMotionJob(job) || isReplicateWanVideoEditJob(job) || isReplicateWanAnimateJob(job) || isReplicateOmniHumanJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isCreatorVaultVaceLightingJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
 }
 
 function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
@@ -905,6 +926,19 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
   const approvedPolloModel = provider === "pollo" && providerModelPath.startsWith("pollo/");
   const approvedReplicateModel = provider === "replicate" && (
     providerModelPath === REPLICATE_WAN_VIDEO_EDIT_MODEL_PATH ||
+    (providerModelPath === REPLICATE_WAN_ANIMATE_MODEL_PATH
+      && input.mode === REPLICATE_WAN_ANIMATE_MODE
+      && sourceUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL
+      && input.metadata?.kingcamWanAnimateRealDriverProof === true
+      && input.metadata?.cloneOnly === true
+      && input.metadata?.ownerDirectedPilot === true
+      && input.metadata?.candidateLimit === 1
+      && input.metadata?.noAutomaticRetry === true
+      && input.metadata?.sourcePreservationRequired === true
+      && input.metadata?.hardCreditCap === REPLICATE_WAN_ANIMATE_HARD_SPEND_CAP_USD
+      && input.metadata?.identityImageUrl === REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL
+      && input.metadata?.motionDriverUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL
+      && input.metadata?.bodyCinemaExcluded === true) ||
     (providerModelPath === REPLICATE_OMNI_HUMAN_MODEL_PATH
       && input.mode === REPLICATE_OMNI_HUMAN_MODE
       && input.metadata?.kingcamOmniHumanFullBodyProof === true
@@ -1841,6 +1875,54 @@ export async function createGovernedKingcamReplicateWanVideoEditDraft(input: {
   });
 }
 
+export async function createGovernedKingcamReplicateWanAnimateDraft(input: {
+  creatorId: number;
+  requestedBy: number;
+  prompt: string;
+  ownershipConfirmed: boolean;
+  consentConfirmed: boolean;
+  idempotencyKey?: string | null;
+  requestId?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  return createGovernedPolloDraft({
+    creatorId: input.creatorId,
+    requestedBy: input.requestedBy,
+    provider: "replicate",
+    sourceUrl: REPLICATE_WAN_ANIMATE_DRIVER_URL,
+    sourceChecksum: null,
+    prompt: input.prompt,
+    providerModelPath: REPLICATE_WAN_ANIMATE_MODEL_PATH,
+    resolution: "720p",
+    durationSeconds: 7,
+    aspectRatio: "16:9",
+    mode: REPLICATE_WAN_ANIMATE_MODE,
+    outputCount: 1,
+    estimatedCostCredits: REPLICATE_WAN_ANIMATE_HARD_SPEND_CAP_USD,
+    costEvidenceReference: "Owner-authorized KingCam clone-only Wan Animate real-driver proof; authenticated Replicate model metadata verifies the exact character-image and driver-video contract; one seven-second output, manual $2 USD ceiling, and no automatic retry.",
+    ownershipConfirmed: input.ownershipConfirmed,
+    consentConfirmed: input.consentConfirmed,
+    idempotencyKey: input.idempotencyKey,
+    requestId: input.requestId,
+    metadata: {
+      ...(input.metadata || {}),
+      kingcamWanAnimateRealDriverProof: true,
+      cloneOnly: true,
+      providerCostCurrency: "USD",
+      hardSpendCapUsd: REPLICATE_WAN_ANIMATE_HARD_SPEND_CAP_USD,
+      hardCreditCap: REPLICATE_WAN_ANIMATE_HARD_SPEND_CAP_USD,
+      ownerDirectedPilot: true,
+      candidateLimit: 1,
+      noAutomaticRetry: true,
+      sourcePreservationRequired: true,
+      identityImageUrl: REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL,
+      motionDriverUrl: REPLICATE_WAN_ANIMATE_DRIVER_URL,
+      providerContract: "replicate_wan_2_2_animate_animation_real_driver_motion_transfer",
+      bodyCinemaExcluded: true,
+    },
+  });
+}
+
 export async function createGovernedKingcamReplicateOmniHumanDraft(input: {
   creatorId: number;
   requestedBy: number;
@@ -2496,6 +2578,46 @@ async function submitGovernedReplicateWanVideoEditJob(leased: GovernedPolloJob, 
   return markGovernedPolloSubmitted({ jobId: leased.id, workerId, providerJobId: String(providerJobId), providerResponse });
 }
 
+async function submitGovernedReplicateWanAnimateJob(leased: GovernedPolloJob, workerId: string): Promise<GovernedPolloJob> {
+  const token = String(process.env.REPLICATE_API_TOKEN || "").trim();
+  if (!token) return failGovernedPolloJob({ jobId: leased.id, code: "replicate_key_missing", error: new Error("REPLICATE_API_TOKEN is not configured"), releaseBudget: true });
+  const identityImageUrl = typeof leased.metadata.identityImageUrl === "string" ? leased.metadata.identityImageUrl : "";
+  const motionDriverUrl = typeof leased.metadata.motionDriverUrl === "string" ? leased.metadata.motionDriverUrl : "";
+  if (leased.sourceUrl !== REPLICATE_WAN_ANIMATE_DRIVER_URL || motionDriverUrl !== REPLICATE_WAN_ANIMATE_DRIVER_URL || identityImageUrl !== REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL) {
+    return failGovernedPolloJob({ jobId: leased.id, code: "wan_animate_input_contract_mismatch", error: new Error("Wan Animate requires the locked real KingCam driver and approved KingCam identity image."), releaseBudget: true });
+  }
+  const payload = {
+    input: {
+      video: motionDriverUrl,
+      character_image: identityImageUrl,
+      resolution: "720",
+      frames_per_second: 24,
+      go_fast: true,
+      merge_audio: false,
+    },
+  };
+  let response: Response;
+  try {
+    response = await fetch("https://api.replicate.com/v1/models/wan-video/wan-2.2-animate-animation/predictions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json", "Cancel-After": "2m" },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId, error });
+  }
+  const providerResponse = await parseProviderJson(response);
+  if (!response.ok) {
+    if (response.status >= 500 || response.status === 408 || response.status === 429) {
+      return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId, error: new Error(`Replicate Wan Animate submission returned ${response.status}: ${safeErrorMessage(providerResponse.detail ?? providerResponse.error ?? providerResponse.responseText ?? "unknown error")}`) });
+    }
+    return failGovernedPolloJob({ jobId: leased.id, code: `replicate_wan_animate_http_${response.status}`, error: new Error(`Replicate Wan Animate submission returned ${response.status}: ${safeErrorMessage(providerResponse.detail ?? providerResponse.error ?? providerResponse.responseText ?? "unknown error")}`), releaseBudget: true });
+  }
+  const providerJobId = providerResponse.id;
+  if (!providerJobId) return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId, error: new Error("Replicate accepted Wan Animate without a prediction ID") });
+  return markGovernedPolloSubmitted({ jobId: leased.id, workerId, providerJobId: String(providerJobId), providerResponse });
+}
+
 async function submitGovernedReplicateOmniHumanJob(leased: GovernedPolloJob, workerId: string): Promise<GovernedPolloJob> {
   const token = String(process.env.REPLICATE_API_TOKEN || "").trim();
   if (!token) return failGovernedPolloJob({ jobId: leased.id, code: "replicate_key_missing", error: new Error("REPLICATE_API_TOKEN is not configured"), releaseBudget: true });
@@ -2756,6 +2878,7 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
   const leased = await claimGovernedPolloJob(params);
   if (isCreatorVaultVaceLightingJob(leased)) return submitGovernedVaceLightingJob(leased, params.workerId);
   if (isReplicateWanVideoEditJob(leased)) return submitGovernedReplicateWanVideoEditJob(leased, params.workerId);
+  if (isReplicateWanAnimateJob(leased)) return submitGovernedReplicateWanAnimateJob(leased, params.workerId);
   if (isReplicateOmniHumanJob(leased)) return submitGovernedReplicateOmniHumanJob(leased, params.workerId);
   if (isTopazPrecisionVideoJob(leased)) return submitGovernedTopazPrecisionVideoJob(leased, params.workerId);
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
@@ -2886,7 +3009,7 @@ export async function pollGovernedPolloProviderJob(params: { jobId: number; acto
     }
   }
 
-  if (isReplicateWanVideoEditJob(job) || isReplicateOmniHumanJob(job)) {
+  if (isReplicateWanVideoEditJob(job) || isReplicateWanAnimateJob(job) || isReplicateOmniHumanJob(job)) {
     const token = String(process.env.REPLICATE_API_TOKEN || "").trim();
     if (!token) throw new Error("REPLICATE_API_TOKEN is not configured; provider status cannot be read.");
     const response = await fetch(`https://api.replicate.com/v1/predictions/${encodeURIComponent(job.providerJobId)}`, {
@@ -3353,7 +3476,7 @@ export async function cancelGovernedPolloJob(params: { jobId: number; actorId: n
   const job = await getGovernedPolloJob(params.jobId);
   if (!job) throw new Error("Governed media job was not found.");
   if (job.creatorId !== params.actorId && !OWNER_IDS.has(Number(params.actorId))) throw new Error("Only the creator or an owner may cancel this governed media job.");
-  if (job.state === "submitted" && (isReplicateWanVideoEditJob(job) || isReplicateOmniHumanJob(job))) {
+  if (job.state === "submitted" && (isReplicateWanVideoEditJob(job) || isReplicateWanAnimateJob(job) || isReplicateOmniHumanJob(job))) {
     const token = String(process.env.REPLICATE_API_TOKEN || "").trim();
     if (!token) throw new Error("Replicate cancellation cannot run because REPLICATE_API_TOKEN is not configured.");
     if (!job.providerJobId) throw new Error("Replicate cancellation cannot run because the provider prediction ID is missing.");

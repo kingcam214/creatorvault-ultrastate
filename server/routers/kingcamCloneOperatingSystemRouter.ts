@@ -8,6 +8,7 @@ import {
   getKingcamGuideVoiceTour,
   getKingcamCloneTrainingLibrary,
   launchKingcamFullBodyMotionProof,
+  launchKingcamWanAnimateFullBodyProof,
   planKingcamFullBodyMotionProof,
   preflightKingcamElevenLabsVoice,
   preflightKingcamReplicateOmniHuman,
@@ -203,6 +204,17 @@ export const kingcamCloneOperatingSystemRouter = router({
         return await launchKingcamFullBodyMotionProof({ ownerId: ctx.user.id, sceneBrief: input.sceneBrief });
       } catch (error) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam full-body proof could not launch." });
+      }
+    }),
+
+  launchWanAnimateProof: protectedProcedure
+    .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))
+    .mutation(async ({ ctx, input }) => {
+      ownerOnly(ctx.user.id);
+      try {
+        return await launchKingcamWanAnimateFullBodyProof({ ownerId: ctx.user.id, sceneBrief: input.sceneBrief });
+      } catch (error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam real-driver motion proof could not launch." });
       }
     }),
 

@@ -556,3 +556,7 @@ CreatorVault is auditing `wan-video/wan-2.2-animate-animation` only through the 
 ## 2026-08-18 — Public blue impostor removal
 
 The public KingCam Guide used `vaultx-homepage-kingcam-trailer.mp4`, which visibly contains a blue/navy open-chest crowned man that Cameron confirmed is not him. The Guide route is removed from public composition and returns to the approved KingCam profile; it is not replaced by another generated identity. No future Guide or clone surface may use this asset as KingCam identity evidence.
+
+## 2026-08-18 — Wan Animate governed real-driver release intent
+
+Before release, CreatorVault completed a narrow clone-only governance path for `wan-video/wan-2.2-animate-animation`. It is locked to the approved KingCam identity image and the verified seven-second real KingCam gait driver already stored in the clone-only Media Vault. The path permits exactly one owner-directed output, a manual **$2 USD** ceiling, no automatic retry, a ten-minute single-use permit, authenticated Replicate submission, provider polling, cancellation, and permanent rejection gates for frozen motion, crop, identity/wardrobe/crown/jewelry/shoe/cigar drift, and anatomy defects. Replicate remains excluded from Body Cinema. This record is a release and run intent only: no Wan Animate prediction, charge, or output has occurred yet.

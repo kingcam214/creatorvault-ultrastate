@@ -10,6 +10,7 @@ import {
   approveGovernedPolloJob,
   authorizeSingleUseGovernedPolloSubmission,
   createGovernedKingcamReplicateOmniHumanDraft,
+  createGovernedKingcamReplicateWanAnimateDraft,
   getGovernedPolloJob,
   getGovernedPolloConfig,
   isGovernedPolloExecutionEnabled,
@@ -31,6 +32,10 @@ const KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP = 2;
 const KINGCAM_FULL_BODY_CORRECTIVE_MODEL = "replicate/bytedance/omni-human";
 const KINGCAM_WAN_FULL_BODY_IMAGE = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge-reference.png";
 const KINGCAM_WAN_SPOKEN_AUDIO = "https://creatorvault.live/uploads/content-vault/kingcam-voice-tour-v1/entry.mp3";
+const KINGCAM_WAN_ANIMATE_REAL_DRIVER_IMAGE = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge-reference.png";
+const KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL = "https://creatorvault.live/uploads/content-vault/9c47c6e0-a7ce-4e85-89a8-25c2f98d2980/kingcam-real-gait-driver-0129-0136.mp4";
+const KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS = 7;
+const KINGCAM_WAN_ANIMATE_REAL_DRIVER_HARD_SPEND_CAP_USD = 2;
 const execFileAsync = promisify(execFile);
 const KINGCAM_GUIDE_VOICE_ID = "rwc11bXCBw5KydM4avHE";
 const KINGCAM_GUIDE_VOICE_MODEL = "eleven_multilingual_v2";
@@ -226,6 +231,15 @@ const QUALITY_GATES = [
   "KingCam visibly delivers the supplied real KingCam speech with synchronized mouth timing; voiceover on unrelated or recycled footage is rejected.",
   "The scene never invents a CreatorVault capability, creator result, sale, subscriber count, buyer, or earnings claim.",
   "A result is stored as public KingCam media only after human review accepts it; every rejection remains a permanent provider-learning record.",
+] as const;
+
+const WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES = [
+  "KingCam remains visibly full body from crown to shoes for the working gait, without a talking-head crop or a frozen still image.",
+  "The output visibly transfers the real driver’s grounded walk, weight shifts, hand movement, framing, and pacing rather than inventing a spin, pose, or unrelated camera movement.",
+  "Face, beard, skin tone, body build, crown, burgundy wardrobe, jewelry, shoes, and cigar-hand continuity remain recognizable from the approved KingCam identity source.",
+  "Hands, feet, gait, posture, clothing edges, environment geometry, and camera movement remain natural; any body, shoe, jewelry, cigar, or anatomy morphing is an automatic rejection.",
+  "This silent gait proof remains clone-only and is never presented as a talking clone, creator result, or Body Cinema output.",
+  "No output becomes public KingCam media until human review accepts a watchable result; every rejection remains a permanent provider-learning record.",
 ] as const;
 
 function assertOwner(ownerId: number): void {
@@ -1014,6 +1028,125 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
     payload: { motionRequestId: motionRequest.id, governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP, providerModelPath: KINGCAM_FULL_BODY_CORRECTIVE_MODEL, identityImage: KINGCAM_WAN_FULL_BODY_IMAGE, audioUrl: directVoice.audioUrl, audioDurationSeconds: directVoice.durationSeconds },
   });
   return { motionRequestId: motionRequest.id, governedJob: submitted, hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP, qualityGate: QUALITY_GATES };
+}
+
+export async function launchKingcamWanAnimateFullBodyProof(input: { ownerId: number; sceneBrief: string }) {
+  assertOwner(input.ownerId);
+  const sceneBrief = String(input.sceneBrief || "").trim();
+  if (sceneBrief.length < 40 || sceneBrief.length > 1800) {
+    throw new Error("KingCam real-driver motion brief must be between 40 and 1800 characters.");
+  }
+
+  await ensureProfile(input.ownerId);
+  const motionRequestId = randomUUID();
+  const fingerprint = createHash("sha256")
+    .update(`${KINGCAM_CLONE_ID}:${KINGCAM_WAN_ANIMATE_REAL_DRIVER_IMAGE}:${KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL}:${sceneBrief}:${KINGCAM_WAN_ANIMATE_REAL_DRIVER_HARD_SPEND_CAP_USD}`)
+    .digest("hex");
+  await rawExec(`INSERT INTO kingcam_clone_motion_requests
+    (id, clone_id, owner_id, source_url, source_kind, motion_reference_url, intended_lane, candidate_models_json, scene_brief, hard_credit_cap,
+     consent_confirmed, ownership_confirmed, quality_gate_json, state, created_at, updated_at)
+    VALUES (?, ?, ?, ?, 'approved_kingcam_full_body_identity_image', ?, 'governed_replicate_wan_animate_real_driver_motion', ?, ?, ?, 1, 1, ?, 'planned', NOW(), NOW())`,
+    [
+      motionRequestId,
+      KINGCAM_CLONE_ID,
+      input.ownerId,
+      KINGCAM_WAN_ANIMATE_REAL_DRIVER_IMAGE,
+      KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL,
+      json(["replicate/wan-video/wan-2.2-animate-animation"]),
+      sceneBrief,
+      KINGCAM_WAN_ANIMATE_REAL_DRIVER_HARD_SPEND_CAP_USD,
+      json(WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES),
+    ],
+  );
+
+  const prompt = [
+    "Transfer only the verified real KingCam seven-second gait driver’s full-body locomotion, pacing, weight transfer, restrained hand movement, camera framing, and timing onto the approved KingCam identity image.",
+    "Keep KingCam visibly full body from crown to shoes in the exact burgundy velvet suit with gold embroidery, crown, jewelry, black shoes, dark lounge, and cigar naturally held in the right hand.",
+    "A genuine moving gait is mandatory: no static pose, frozen frame, talking-head crop, camera spin, extra person, text, identity replacement, wardrobe drift, shoe change, jewelry drift, hand failure, foot failure, cigar morph, or anatomy failure.",
+    "This is a silent clone-only real-driver motion proof, never a Body Cinema output and never a talking-clone claim.",
+    sceneBrief,
+  ].join(" ");
+
+  const drafted = await createGovernedKingcamReplicateWanAnimateDraft({
+    creatorId: input.ownerId,
+    requestedBy: input.ownerId,
+    prompt,
+    ownershipConfirmed: true,
+    consentConfirmed: true,
+    idempotencyKey: `kingcam-wan-animate-real-driver-full-body-proof:${motionRequestId}`,
+    requestId: motionRequestId,
+    metadata: {
+      kingcamCloneId: KINGCAM_CLONE_ID,
+      kingcamMotionRequestId: motionRequestId,
+      proofClass: "kingcam_real_driver_full_body_gait_transfer_proof",
+      providerPreflight: "Authenticated Replicate model metadata verifies Wan Animate accepts the locked character_image and video fields at the verified model version. The provider did not advertise a fixed price in this account response, so the owner-directed test remains one output with a manual $2 internal ceiling and no automatic retry.",
+      realDriverDurationSeconds: KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS,
+      qualityGate: WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES,
+    },
+  });
+  const approved = await approveGovernedPolloJob({
+    jobId: drafted.job.id,
+    approverId: input.ownerId,
+    expectedFingerprint: drafted.job.fingerprint,
+    reason: "Owner-directed KingCam Wan Animate real-driver full-body gait-transfer proof. One seven-second output only, locked approved KingCam identity and real gait driver, manual $2 internal maximum, and no automatic retry; reject any frozen movement, crop, identity drift, wardrobe drift, cigar/hand defect, footwear defect, or anatomy failure.",
+  });
+  await authorizeSingleUseGovernedPolloSubmission({
+    jobId: approved.id,
+    ownerId: input.ownerId,
+    expectedFingerprint: approved.fingerprint,
+    hardCreditCap: KINGCAM_WAN_ANIMATE_REAL_DRIVER_HARD_SPEND_CAP_USD,
+    expiresInMinutes: 10,
+    reason: "One-time KingCam Wan Animate real-driver full-body gait-transfer proof; a manually locked $2 internal ceiling applies because authenticated provider metadata did not expose a fixed price.",
+  });
+  const submitted = await submitGovernedPolloJob({
+    jobId: approved.id,
+    workerId: `kingcam-wan-animate-owner-${input.ownerId}`,
+  });
+  const localState: MotionRequestState = submitted.state === "submitted" ? "submitted" : submitted.state === "failed" ? "failed" : "approved";
+  await rawExec(
+    "UPDATE kingcam_clone_motion_requests SET state = ?, review_json = ?, updated_at = NOW() WHERE id = ? AND clone_id = ? AND owner_id = ?",
+    [
+      localState,
+      json({
+        governedJobId: submitted.id,
+        providerJobId: submitted.providerJobId,
+        state: submitted.state,
+        hardCreditCap: KINGCAM_WAN_ANIMATE_REAL_DRIVER_HARD_SPEND_CAP_USD,
+        providerModelPath: "replicate/wan-video/wan-2.2-animate-animation",
+        identityImage: KINGCAM_WAN_ANIMATE_REAL_DRIVER_IMAGE,
+        motionDriverUrl: KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL,
+        motionDriverDurationSeconds: KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS,
+        qualityGate: WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES,
+      }),
+      motionRequestId,
+      KINGCAM_CLONE_ID,
+      input.ownerId,
+    ],
+  );
+  await recordKingcamCloneMemory({
+    ownerId: input.ownerId,
+    kind: "motion_proof_planned",
+    room: "KingCam real-driver full-body motion",
+    payload: {
+      motionRequestId,
+      fingerprint,
+      governedJobId: submitted.id,
+      providerJobId: submitted.providerJobId,
+      state: submitted.state,
+      hardCreditCap: KINGCAM_WAN_ANIMATE_REAL_DRIVER_HARD_SPEND_CAP_USD,
+      providerModelPath: "replicate/wan-video/wan-2.2-animate-animation",
+      identityImage: KINGCAM_WAN_ANIMATE_REAL_DRIVER_IMAGE,
+      motionDriverUrl: KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL,
+      motionDriverDurationSeconds: KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS,
+      qualityGate: WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES,
+    },
+  });
+  return {
+    motionRequestId,
+    governedJob: submitted,
+    hardCreditCap: KINGCAM_WAN_ANIMATE_REAL_DRIVER_HARD_SPEND_CAP_USD,
+    qualityGate: WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES,
+  };
 }
 
 export async function reviewKingcamFullBodyMotionProof(input: { ownerId: number; requestId: string; accepted: boolean; overallScore: number; notes: string }) {
