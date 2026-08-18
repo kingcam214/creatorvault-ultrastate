@@ -3,7 +3,9 @@ import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { archiveKingcamMiniMaxH3PresenceLoop, auditPolloAvailableCredits, auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, auditPolloMiniMaxH3ReferenceCost, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
 import {
+  createKingcamGuideVoiceTour,
   getKingcamCloneOperatingSystem,
+  getKingcamGuideVoiceTour,
   launchKingcamFullBodyMotionProof,
   planKingcamFullBodyMotionProof,
   preflightKingcamElevenLabsVoice,
@@ -58,6 +60,20 @@ export const kingcamCloneOperatingSystemRouter = router({
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam motion proof could not be planned." });
       }
     }),
+
+  getGuideVoiceTour: protectedProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    return getKingcamGuideVoiceTour(ctx.user.id);
+  }),
+
+  createGuideVoiceTour: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await createKingcamGuideVoiceTour(ctx.user.id);
+    } catch (error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam real-voice tour could not be created." });
+    }
+  }),
 
   preflightRealKingcamVoice: protectedProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);

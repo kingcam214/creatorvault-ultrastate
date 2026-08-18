@@ -257,6 +257,7 @@ const ALLOWLISTS = {
     'server/routers/kingcamCloneOperatingSystemRouter.ts',
     'server/routers/mediaAssets.ts',
     'server/services/kingcamCloneOperatingSystemService.ts',
+    'server/services/audioIntelligenceService.ts',
     'server/services/governedPolloService.ts',
     'LEARNING_LOG.md',
     'scripts/scope-guard.js'

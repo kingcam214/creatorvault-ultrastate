@@ -390,3 +390,10 @@ At Cameron’s direction, the rejected MiniMax H3 output is preserved for a narr
 **Durable asset evidence:** `https://creatorvault.live/uploads/content-vault/kingcam-private-presence-loop-102/KingCam-Private-Presence-Loop.mp4`; readable video response; 5.167 seconds; `1440×2560`; `2,544,011` bytes; fingerprint `25a9dcfff0e915a1cb6db6f16e622a256532bb120468b21dc6732a25c8a68f74`.
 
 **Classification law:** This asset appears only in KingCam’s owner-only Media Vault as `private_presence_loop`. It is locked out of Body Cinema, Trailer Maker, public KingCam profile placement, Clone Guide placement, tool demonstrations, and any claim of proven full-body clone motion. It may be watched privately as a short KingCam mood/presence loop while the longer, genuinely demonstrable Clone Guide proof is built separately.
+
+
+## 2026-08-18 — KINGCAM REAL-VOICE TOUR RUN INTENT
+
+The real KingCam ElevenLabs voice preflight succeeded from the production runtime: voice ID `rwc11bXCBw5KydM4avHE`, name `KingCam`. A generic fallback voice is forbidden for this tour.
+
+The first narration run is narrowly bounded to five short CreatorVault room segments: The Entry, Body Cinema, Caption Stage, Trailer Maker, and Clone Command. Each segment is direct ElevenLabs-only, stored under CreatorVault control, registered in the canonical audio system with `generated_voice` rights, and analyzed for timing/waveform data. No spoken segment may claim an unaccepted Body Cinema result, a finished trailer, earnings, or a clone capability that has not been proven.

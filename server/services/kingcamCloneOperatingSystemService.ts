@@ -1,6 +1,11 @@
 import { createHash, randomUUID } from "crypto";
+import { execFile } from "child_process";
+import { mkdir, stat, writeFile } from "fs/promises";
+import path from "path";
+import { promisify } from "util";
 import { sql } from "drizzle-orm";
 import { db } from "../db";
+import { analyzeCanonicalAudioAsset, registerCanonicalAudioAsset } from "./audioIntelligenceService";
 import {
   approveGovernedPolloJob,
   authorizeSingleUseGovernedPolloSubmission,
@@ -23,6 +28,19 @@ type MotionRequestState = "planned" | "approved" | "submitted" | "provider_compl
 const KINGCAM_FULL_BODY_PROOF_DURATION_SECONDS = 5;
 const KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP = 75;
 const KINGCAM_FULL_BODY_CORRECTIVE_MODEL = "pollo/minimax/minimax-h3";
+const execFileAsync = promisify(execFile);
+const KINGCAM_GUIDE_VOICE_ID = "rwc11bXCBw5KydM4avHE";
+const KINGCAM_GUIDE_VOICE_MODEL = "eleven_multilingual_v2";
+const KINGCAM_GUIDE_AUDIO_ROOT = "/root/uploads/content-vault/kingcam-voice-tour-v1";
+const KINGCAM_GUIDE_AUDIO_URL_ROOT = "https://creatorvault.live/uploads/content-vault/kingcam-voice-tour-v1";
+
+const KINGCAM_GUIDE_TOUR_SEGMENTS = [
+  { key: "entry", chapter: "THE ENTRY", script: "Welcome to CreatorVault. This is where you keep your content, your presence, and your power in your own hands." },
+  { key: "body-cinema", chapter: "BODY CINEMA", script: "Body Cinema starts with your real footage. It is built to bring your best presence forward, not replace you with something fake." },
+  { key: "caption-stage", chapter: "CAPTION STAGE", script: "Caption Stage puts your message straight on your moving content, so your words hit while the moment is still alive." },
+  { key: "trailer-maker", chapter: "TRAILER MAKER", script: "Trailer Maker turns your strongest moments into a real release with a beginning, a build, and a payoff." },
+  { key: "clone-command", chapter: "CLONE COMMAND", script: "Clone Command keeps my voice, my face, my rules, and my memory right here inside CreatorVault. This is the machine." },
+] as const;
 
 export type KingcamTruthCard = {
   id: string;
@@ -106,6 +124,101 @@ export async function preflightKingcamElevenLabsVoice(ownerId: number): Promise<
   return { available: true, provider: "elevenlabs", voiceId, voiceName, reason: null, genericFallbackForbidden: true };
 }
 
+function probeAudioDuration(localPath: string): Promise<number> {
+  return execFileAsync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", localPath])
+    .then(({ stdout }) => Number(String(stdout).trim()));
+}
+
+export type KingcamGuideVoiceSegment = {
+  key: string;
+  chapter: string;
+  script: string;
+  audioUrl: string;
+  durationSeconds: number;
+  canonicalAudioAssetId: string;
+  provider: "elevenlabs";
+  voiceId: string;
+};
+
+export async function getKingcamGuideVoiceTour(ownerId: number): Promise<{ ready: boolean; segments: KingcamGuideVoiceSegment[]; missingKeys: string[]; genericFallbackForbidden: true }> {
+  assertOwner(ownerId);
+  await ensureKingcamCloneOperatingSystem();
+  const rows = await rawQuery<any>("SELECT * FROM kingcam_clone_voice_tour_segments WHERE owner_id = ? AND status = 'ready' ORDER BY created_at ASC", [ownerId]);
+  const byKey = new Map(rows.map((row) => [String(row.segment_key), row]));
+  const segments = KINGCAM_GUIDE_TOUR_SEGMENTS.flatMap((definition) => {
+    const row = byKey.get(definition.key);
+    if (!row) return [];
+    return [{ key: definition.key, chapter: definition.chapter, script: definition.script, audioUrl: String(row.audio_url), durationSeconds: Number(row.duration_seconds), canonicalAudioAssetId: String(row.canonical_audio_asset_id), provider: "elevenlabs" as const, voiceId: String(row.voice_id) }];
+  });
+  const missingKeys = KINGCAM_GUIDE_TOUR_SEGMENTS.filter((definition) => !byKey.has(definition.key)).map((definition) => definition.key);
+  return { ready: missingKeys.length === 0, segments, missingKeys, genericFallbackForbidden: true };
+}
+
+export async function createKingcamGuideVoiceTour(ownerId: number): Promise<{ segments: KingcamGuideVoiceSegment[]; genericFallbackForbidden: true }> {
+  assertOwner(ownerId);
+  const preflight = await preflightKingcamElevenLabsVoice(ownerId);
+  if (!preflight.available || preflight.voiceId !== KINGCAM_GUIDE_VOICE_ID) {
+    throw new Error(preflight.reason || "The real KingCam ElevenLabs voice is not available. Generic fallback is forbidden.");
+  }
+  await ensureKingcamCloneOperatingSystem();
+  const existing = await getKingcamGuideVoiceTour(ownerId);
+  if (existing.ready) return { segments: existing.segments, genericFallbackForbidden: true };
+  const apiKey = String(process.env.ELEVENLABS_API_KEY || "").trim();
+  await mkdir(KINGCAM_GUIDE_AUDIO_ROOT, { recursive: true });
+
+  for (const definition of KINGCAM_GUIDE_TOUR_SEGMENTS) {
+    if (existing.segments.some((segment) => segment.key === definition.key)) continue;
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(KINGCAM_GUIDE_VOICE_ID)}`, {
+      method: "POST",
+      headers: { "xi-api-key": apiKey, "Content-Type": "application/json", Accept: "audio/mpeg" },
+      body: JSON.stringify({
+        text: definition.script,
+        model_id: KINGCAM_GUIDE_VOICE_MODEL,
+        voice_settings: { stability: 0.5, similarity_boost: 0.85, style: 0.35, use_speaker_boost: true },
+      }),
+    });
+    if (!response.ok) throw new Error(`Real KingCam ElevenLabs narration failed for ${definition.key} (${response.status}). No fallback voice was used.`);
+    const audioBytes = Buffer.from(await response.arrayBuffer());
+    if (audioBytes.length < 1024) throw new Error(`Real KingCam ElevenLabs narration for ${definition.key} was empty.`);
+    const fileName = `${definition.key}.mp3`;
+    const localPath = path.join(KINGCAM_GUIDE_AUDIO_ROOT, fileName);
+    const audioUrl = `${KINGCAM_GUIDE_AUDIO_URL_ROOT}/${fileName}`;
+    await writeFile(localPath, audioBytes);
+    const durationSeconds = await probeAudioDuration(localPath);
+    const sizeBytes = Number((await stat(localPath)).size);
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || sizeBytes < 1024) throw new Error(`Real KingCam narration for ${definition.key} could not be technically verified.`);
+    const fingerprint = createHash("sha256").update(audioBytes).digest("hex");
+    const audioAsset = await registerCanonicalAudioAsset({
+      creatorId: ownerId,
+      title: `KingCam CreatorVault Tour — ${definition.chapter}`,
+      assetUrl: audioUrl,
+      mimeType: "audio/mpeg",
+      kind: "voiceover",
+      fingerprint,
+      durationSeconds: Number(durationSeconds.toFixed(3)),
+      rights: {
+        state: "creator_owned",
+        source: "generated_voice",
+        providerName: "ElevenLabs",
+        allowedPlatforms: ["creatorvault"],
+        permittedUses: ["preview", "render", "distribution"],
+        attributionRequired: false,
+        evidenceNote: "Generated only with the authenticated KingCam ElevenLabs voice clone after a direct voice availability preflight; generic fallback is forbidden.",
+      },
+    });
+    await analyzeCanonicalAudioAsset(ownerId, audioAsset.id);
+    await rawExec(
+      `INSERT INTO kingcam_clone_voice_tour_segments (id, owner_id, segment_key, chapter, script_text, audio_url, duration_seconds, fingerprint, canonical_audio_asset_id, provider, voice_id, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'elevenlabs', ?, 'ready', NOW(), NOW())
+       ON DUPLICATE KEY UPDATE script_text = VALUES(script_text), audio_url = VALUES(audio_url), duration_seconds = VALUES(duration_seconds), fingerprint = VALUES(fingerprint), canonical_audio_asset_id = VALUES(canonical_audio_asset_id), provider = VALUES(provider), voice_id = VALUES(voice_id), status = 'ready', updated_at = NOW()`,
+      [randomUUID(), ownerId, definition.key, definition.chapter, definition.script, audioUrl, Number(durationSeconds.toFixed(3)), fingerprint, audioAsset.id, KINGCAM_GUIDE_VOICE_ID],
+    );
+  }
+  const tour = await getKingcamGuideVoiceTour(ownerId);
+  if (!tour.ready) throw new Error("KingCam real-voice tour is incomplete after narration generation.");
+  return { segments: tour.segments, genericFallbackForbidden: true };
+}
+
 async function rawQuery<T = any>(query: string, params: any[] = []): Promise<T[]> {
   const pool = (db as any).$client || (db as any).client;
   if (pool?.promise) {
@@ -163,6 +276,24 @@ export async function ensureKingcamCloneOperatingSystem(): Promise<void> {
     payload_json LONGTEXT NOT NULL,
     created_at DATETIME NOT NULL,
     KEY kingcam_clone_memory_lookup (clone_id, owner_id, created_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await rawExec(`CREATE TABLE IF NOT EXISTS kingcam_clone_voice_tour_segments (
+    id CHAR(36) PRIMARY KEY,
+    owner_id BIGINT NOT NULL,
+    segment_key VARCHAR(64) NOT NULL,
+    chapter VARCHAR(128) NOT NULL,
+    script_text TEXT NOT NULL,
+    audio_url TEXT NOT NULL,
+    duration_seconds DECIMAL(10,3) NOT NULL,
+    fingerprint CHAR(64) NOT NULL,
+    canonical_audio_asset_id CHAR(36) NOT NULL,
+    provider VARCHAR(32) NOT NULL,
+    voice_id VARCHAR(128) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    UNIQUE KEY kingcam_clone_voice_segment_unique (owner_id, segment_key),
+    KEY kingcam_clone_voice_owner_lookup (owner_id, created_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
   await rawExec(`CREATE TABLE IF NOT EXISTS kingcam_clone_motion_requests (
     id CHAR(36) PRIMARY KEY,
