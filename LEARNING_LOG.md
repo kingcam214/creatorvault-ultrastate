@@ -652,3 +652,9 @@ This method is distinct from job `105`, which confirmed this account can run Kli
 The live owner-only official Kling 3 Omni mixed-reference estimate succeeded for the approved KingCam identity image plus the locked real seven-second gait video, with no audio reference. The provider returned an exact cost of **11.13 Pollo credits / $0.667**. This uses the same API-account-enabled Omni provider family evidenced by job `105`, but it is a distinct method: image plus real motion video rather than image plus speech audio.
 
 One fresh proof may proceed only through a dedicated clone-only governed contract that locks both references, one silent 7-second 16:9 720p output, an 11.13-credit provider quote with a 12-credit absolute ceiling for rounding protection, no automatic retry, ten-minute permit, pre/post balance evidence, and the existing full-body watchable quality gate. It must be rejected for a crop, frozen or invented motion, camera spin, face/body replacement, wardrobe/crown/jewelry/shoe/cigar drift, hand/foot/anatomy failure, extra person, text, or environment drift.
+
+### Kling 3 Omni real-gait permit correction — 2026-08-18
+
+The first real-gait launch created a draft only, then stopped at the shared single-use budget gate before approval, permit, reservation, provider task, or charge. The live exact estimate was 11.13 credits, while the draft carried a 12-credit rounding ceiling. The common owner-pilot rule deliberately requires the recorded estimate and hard cap to be identical, so it rejected the looser ceiling.
+
+Exact repair: the governed draft and permit now enforce **11.13 credits as both the quoted cost and absolute cap**. The unapproved draft from the stopped attempt is not a provider task and will be cancelled before one corrected fresh launch. No paid request has yet been sent on this real-gait lane.
