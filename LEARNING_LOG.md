@@ -301,3 +301,21 @@ The corrected five-second clone-only request, governed job `100`, was accepted b
 Governed job `100` was stopped through Replicate’s provider-side cancellation endpoint after exceeding the provider deadline without returning a video. CreatorVault recorded `replicate_provider_cancelled`, confirmed the `provider_cancellation_confirmed` event, and released the reserved budget. The job has **no output URL, no artifact, no quality state, and no accepted media**. No automatic retry or replacement request was created.
 
 **Permanent rule:** a provider task that remains active beyond its declared deadline is not a completed proof and must never be left as an open creation lane. Stop it at the provider, record the raw provider response, release the reservation, then require a fresh, separately governed decision before any future run.
+
+
+## 2026-08-18 — SOURCE-VIDEO CANDIDATE CONTRACT AUDIT
+
+A no-charge, owner-authorized Pollo capability refresh exposed **29 catalog entries** that advertise a reference-video or video-to-video type. That catalog signal is not enough to authorize a KingCam run. The actual provider contract must contain a usable video-input field, a recorded price, a hard ceiling, a timeout, and a governed review path.
+
+**Official contract findings:** Pollo’s published schemas for **Vidu Q2 Pro**, **Kling Video O1**, and **Wan 2.7** expose image/reference-image input in their documented request bodies, not a usable source-video field for the KingCam reference. They are not eligible for a source-preserving KingCam proof on that evidence. Pollo’s catalog still confirms the existing Kling Omni video-reference route, but its API account will not return a usable exact quote; it remains blocked by the no-guess-cost gate.
+
+**GoEnhance v1:** Its official API does accept `reference_video_url` and has a video-to-video endpoint, but it requires a separate account, API key, and prepaid token balance. It is a **candidate only**, not existing CreatorVault authority. Do not integrate or spend against it without Cameron’s architecture authority.
+
+**Current truth:** Seedance is barred after two inspected quality failures; Runway is held after source rejection; Replicate Wan 2.7 is held after a real invalid-duration failure and a separately provider-cancelled stall; VACE remains circuit-open for black-output evidence; Topaz remains technical finishing only. No currently configured lane has earned an accepted KingCam full-body output.
+
+Sources: https://docs.pollo.ai/openapi-filtered.json ; https://docs.pollo.ai/m/vidu/viduq2-pro.md ; https://docs.pollo.ai/m/kling-ai/kling-video-o1.md ; https://docs.pollo.ai/m/wanx/wan-v2-7.md ; https://docs.goenhance.ai/api-reference/video-to-video/generate
+
+
+## 2026-08-18 — NO-CHARGE CANDIDATE SCANNER
+
+CreatorVault now has an owner-only **audit-only** KingCam candidate check for the catalog-confirmed Pollo GoEnhance video-to-video entry. The check reads Pollo’s authenticated video-to-video model configuration only. It cannot create a draft, reserve credits, approve a job, obtain a single-use permit, submit media, or retry anything. A returned catalog row or price is not proof that the model is approved; it only decides whether an explicit future governed contract can be designed.

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
+import { auditPolloKingcamVideoToVideoCandidate } from "../services/governedPolloService";
 import {
   getKingcamCloneOperatingSystem,
   launchKingcamFullBodyMotionProof,
@@ -56,6 +57,15 @@ export const kingcamCloneOperatingSystemRouter = router({
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam motion proof could not be planned." });
       }
     }),
+
+  auditNextSourceVideoCandidate: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await auditPolloKingcamVideoToVideoCandidate();
+    } catch (error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam provider candidate audit could not run." });
+    }
+  }),
 
   launchFullBodyProof: protectedProcedure
     .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))

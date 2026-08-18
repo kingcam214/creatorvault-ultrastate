@@ -984,6 +984,88 @@ async function quoteSourceVideoModelFromPolloConfig(input: { apiKey: string; pro
   };
 }
 
+export async function auditPolloKingcamVideoToVideoCandidate(params: {
+  providerModelKey?: "go-enhance/go-enhance-v1";
+} = {}): Promise<{
+  providerModelKey: "go-enhance/go-enhance-v1";
+  generationType: "video2video";
+  configAvailable: boolean;
+  quoteAvailable: boolean;
+  quotedCredits: number | null;
+  quotedCostUsd: number | null;
+  eligibleForDraft: false;
+  reason: string;
+  providerRecord: Record<string, unknown> | null;
+}> {
+  const providerModelKey = params.providerModelKey ?? "go-enhance/go-enhance-v1";
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!apiKey) throw new Error("POLLO_API_KEY is not configured for the no-charge KingCam candidate audit.");
+
+  let response: Response;
+  try {
+    response = await fetch("https://pollo.ai/api/platform/config/video/video2video/models?language=en", {
+      method: "GET",
+      headers: { "x-api-key": apiKey, Accept: "application/json" },
+    });
+  } catch (error) {
+    throw new Error(`Pollo video-to-video candidate audit could not reach the provider: ${safeErrorMessage(error)}`);
+  }
+  if (!response.ok) {
+    return {
+      providerModelKey,
+      generationType: "video2video",
+      configAvailable: false,
+      quoteAvailable: false,
+      quotedCredits: null,
+      quotedCostUsd: null,
+      eligibleForDraft: false,
+      reason: `Pollo returned ${response.status} while reading its video-to-video model configuration. No generation request was made.`,
+      providerRecord: null,
+    };
+  }
+
+  const payload = await parseProviderJson(response);
+  const modelToken = providerModelKey.replace(/^go-enhance\//, "").toLowerCase();
+  const record = collectProviderRecords(payload).find((candidate) => {
+    const identity = [candidate.model, candidate.modelName, candidate.modelPath, candidate.path, candidate.code, candidate.value, candidate.id, candidate.name]
+      .filter((value): value is string => typeof value === "string")
+      .join(" ")
+      .toLowerCase();
+    return identity.includes(modelToken) || identity.includes("go-enhance");
+  }) ?? null;
+
+  if (!record) {
+    return {
+      providerModelKey,
+      generationType: "video2video",
+      configAvailable: true,
+      quoteAvailable: false,
+      quotedCredits: null,
+      quotedCostUsd: null,
+      eligibleForDraft: false,
+      reason: "Pollo exposed video-to-video configuration but no matching GoEnhance model record or exact price. No draft or generation request was created.",
+      providerRecord: null,
+    };
+  }
+
+  const quotedCredits = providerNumber(record, ["discountCost", "cost", "totalCost", "credit", "credits", "amount", "price"]);
+  const quotedCostUsd = providerNumber(record, ["discountCostUsd", "costUsd", "totalCostUsd", "usd", "amountUsd", "priceUsd", "priceUSD"]);
+  const quoteAvailable = quotedCredits !== null && quotedCredits > 0 && quotedCostUsd !== null;
+  return {
+    providerModelKey,
+    generationType: "video2video",
+    configAvailable: true,
+    quoteAvailable,
+    quotedCredits,
+    quotedCostUsd,
+    eligibleForDraft: false,
+    reason: quoteAvailable
+      ? "Pollo returned a read-only model price. The candidate remains audit-only until a documented CreatorVault request contract, timeout, and explicit owner-directed proof decision exist."
+      : "Pollo returned a matching video-to-video model record but no exact usable price. The no-guess-cost gate remains closed and no draft or generation request was created.",
+    providerRecord: record,
+  };
+}
+
 export async function quoteGovernedPolloSourceVideoReference(input: {
   providerModelPath?: string;
   sourceUrl: string;
