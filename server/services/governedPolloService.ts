@@ -1389,6 +1389,69 @@ export async function createQuotedGovernedPolloSourceVideoDraft(input: {
   return { ...draft, quote };
 }
 
+export async function createManualCappedKingcamMiniMaxH3Draft(input: {
+  creatorId: number;
+  requestedBy: number;
+  sourceUrl: string;
+  sourceChecksum?: string | null;
+  prompt: string;
+  durationSeconds: 5;
+  aspectRatio: "9:16";
+  manualCreditCap: number;
+  ownershipConfirmed: boolean;
+  consentConfirmed: boolean;
+  idempotencyKey?: string | null;
+  requestId?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  requireOwner(input.requestedBy);
+  if (input.creatorId !== input.requestedBy) throw new Error("The MiniMax H3 manual-cap proof must use the requesting owner as the source owner.");
+  if (!Number.isInteger(input.manualCreditCap) || input.manualCreditCap < 1 || input.manualCreditCap > 75) {
+    throw new Error("The MiniMax H3 manual credit ceiling must be a whole number between 1 and 75.");
+  }
+  const contract = getSourceVideoReferenceContract(MINIMAX_H3_SOURCE_VIDEO_REFERENCE_MODEL_PATH);
+  if (!contract) throw new Error("MiniMax H3 does not have a documented governed source-video contract.");
+  buildSourceVideoReferenceInput({
+    providerModelPath: MINIMAX_H3_SOURCE_VIDEO_REFERENCE_MODEL_PATH,
+    sourceUrl: input.sourceUrl,
+    prompt: input.prompt,
+    durationSeconds: input.durationSeconds,
+    resolution: "2K",
+    aspectRatio: input.aspectRatio,
+  });
+  return createGovernedPolloDraft({
+    creatorId: input.creatorId,
+    requestedBy: input.requestedBy,
+    sourceUrl: input.sourceUrl,
+    sourceChecksum: input.sourceChecksum,
+    prompt: input.prompt,
+    provider: "pollo",
+    providerModelPath: MINIMAX_H3_SOURCE_VIDEO_REFERENCE_MODEL_PATH,
+    resolution: "2K",
+    durationSeconds: input.durationSeconds,
+    aspectRatio: input.aspectRatio,
+    mode: SOURCE_VIDEO_REFERENCE_MODE,
+    outputCount: 1,
+    estimatedCostCredits: input.manualCreditCap,
+    costEvidenceReference: "Owner-directed MiniMax H3 manual ceiling after Pollo estimate returned 404, configuration omitted price, and documented credit endpoint returned 403. Pre/post balance evidence is required.",
+    ownershipConfirmed: input.ownershipConfirmed,
+    consentConfirmed: input.consentConfirmed,
+    idempotencyKey: input.idempotencyKey,
+    requestId: input.requestId,
+    metadata: {
+      ...(input.metadata || {}),
+      ownerDirectedPilot: true,
+      candidateLimit: 1,
+      noAutomaticRetry: true,
+      sourcePreservationRequired: true,
+      manualCreditCap: input.manualCreditCap,
+      providerQuoteUnavailable: true,
+      providerQuoteFailure: "estimate_404_config_unpriced_credit_endpoint_403",
+      providerPriceResolution: "manual_owner_cap_with_pre_post_balance_evidence",
+    },
+  });
+}
+
 export async function createGovernedReplicateWanVideoEditDraft(input: {
   creatorId: number;
   requestedBy: number;

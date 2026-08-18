@@ -4,7 +4,8 @@ import { db } from "../db";
 import {
   approveGovernedPolloJob,
   authorizeSingleUseGovernedPolloSubmission,
-  createGovernedKingcamReplicateWanVideoEditDraft,
+  auditPolloAvailableCredits,
+  createManualCappedKingcamMiniMaxH3Draft,
   getGovernedPolloJob,
   getGovernedPolloConfig,
   isGovernedPolloExecutionEnabled,
@@ -18,10 +19,10 @@ const KINGCAM_FULL_BODY_IMAGE = "https://creatorvault.live/images/kingcam-profil
 
 type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review";
 type MotionRequestState = "planned" | "approved" | "submitted" | "provider_complete" | "accepted" | "rejected" | "failed";
-const KINGCAM_FULL_BODY_PROOF_MAX_SPEND_USD = 2;
 // The verified KingCam motion source is 5.04 seconds; this proof must never request a longer output.
 const KINGCAM_FULL_BODY_PROOF_DURATION_SECONDS = 5;
-const KINGCAM_FULL_BODY_CORRECTIVE_MODEL = "replicate/wan-video/wan-2.7-videoedit";
+const KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP = 75;
+const KINGCAM_FULL_BODY_CORRECTIVE_MODEL = "pollo/minimax/minimax-h3";
 
 export type KingcamTruthCard = {
   id: string;
@@ -312,7 +313,7 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
 
   const motionRequest = await planKingcamFullBodyMotionProof({
     ownerId: input.ownerId,
-    hardCreditCap: KINGCAM_FULL_BODY_PROOF_MAX_SPEND_USD,
+    hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP,
     sceneBrief,
   });
   const prompt = [
@@ -323,14 +324,15 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
     sceneBrief,
   ].join(" ");
 
-  const drafted = await createGovernedKingcamReplicateWanVideoEditDraft({
+  const preProofBalance = await auditPolloAvailableCredits();
+  const drafted = await createManualCappedKingcamMiniMaxH3Draft({
     creatorId: input.ownerId,
     requestedBy: input.ownerId,
     sourceUrl: KINGCAM_HERO_REFERENCE,
     prompt,
-    resolution: "1080p",
     durationSeconds: KINGCAM_FULL_BODY_PROOF_DURATION_SECONDS,
     aspectRatio: "9:16",
+    manualCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP,
     ownershipConfirmed: true,
     consentConfirmed: true,
     idempotencyKey: `kingcam-full-body-proof:${motionRequest.id}`,
@@ -344,7 +346,8 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
       kingcamMotionRequestId: motionRequest.id,
       proofClass: "kingcam_full_body_clone_only_wardrobe_preservation_correction",
       correctiveProviderModel: KINGCAM_FULL_BODY_CORRECTIVE_MODEL,
-      rejectedProviderLearning: "Seedance 2.5 ref-to-video rejected twice for KingCam full-body source preservation; no Seedance retry is authorized. Kling price endpoint returned no usable quote.",
+      rejectedProviderLearning: "Seedance 2.5 ref-to-video rejected twice for KingCam full-body source preservation; no Seedance retry is authorized. Replicate Wan VideoEdit exceeded the timeout and was provider-cancelled. MiniMax H3 is the next owner-authorized controlled lane after Pollo price discovery failed.",
+      preProofBalance,
       motionReferenceUrl: KINGCAM_HERO_REFERENCE,
       approvedFullBodyImage: KINGCAM_FULL_BODY_IMAGE,
       qualityGate: QUALITY_GATES,
@@ -354,15 +357,15 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
     jobId: drafted.job.id,
     approverId: input.ownerId,
     expectedFingerprint: drafted.job.fingerprint,
-    reason: "Owner-directed KingCam full-body clone-only source-video corrective proof. One output only; a documented $2 maximum; no automatic retry; reject unless full-body identity, wardrobe continuity, anatomy, and motion quality clear the KingCam gate.",
+    reason: "Owner-directed KingCam full-body MiniMax H3 source-video corrective proof. One five-second 2K output only; manually locked 75-credit maximum because Pollo exposed no usable account quote; no automatic retry; reject unless full-body identity, wardrobe continuity, anatomy, and motion quality clear the KingCam gate.",
   });
   await authorizeSingleUseGovernedPolloSubmission({
     jobId: approved.id,
     ownerId: input.ownerId,
     expectedFingerprint: approved.fingerprint,
-    hardCreditCap: KINGCAM_FULL_BODY_PROOF_MAX_SPEND_USD,
+    hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP,
     expiresInMinutes: 10,
-    reason: "One-time KingCam full-body clone-only corrective proof; documented $2 maximum.",
+    reason: "One-time KingCam full-body MiniMax H3 corrective proof; manual 75-credit maximum after price-discovery failure.",
   });
   const submitted = await submitGovernedPolloJob({
     jobId: approved.id,
@@ -371,15 +374,15 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
   const localState: MotionRequestState = submitted.state === "submitted" ? "submitted" : submitted.state === "failed" ? "failed" : "approved";
   await rawExec(
     "UPDATE kingcam_clone_motion_requests SET state = ?, review_json = ?, updated_at = NOW() WHERE id = ? AND clone_id = ? AND owner_id = ?",
-    [localState, json({ governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardSpendCapUsd: KINGCAM_FULL_BODY_PROOF_MAX_SPEND_USD, providerModelPath: KINGCAM_FULL_BODY_CORRECTIVE_MODEL }), motionRequest.id, KINGCAM_CLONE_ID, input.ownerId],
+    [localState, json({ governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP, providerModelPath: KINGCAM_FULL_BODY_CORRECTIVE_MODEL, preProofBalance }), motionRequest.id, KINGCAM_CLONE_ID, input.ownerId],
   );
   await recordKingcamCloneMemory({
     ownerId: input.ownerId,
     kind: "motion_proof_planned",
     room: "KingCam full-body cinematic motion",
-    payload: { motionRequestId: motionRequest.id, governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardSpendCapUsd: KINGCAM_FULL_BODY_PROOF_MAX_SPEND_USD, providerModelPath: KINGCAM_FULL_BODY_CORRECTIVE_MODEL },
+    payload: { motionRequestId: motionRequest.id, governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP, providerModelPath: KINGCAM_FULL_BODY_CORRECTIVE_MODEL, preProofBalance },
   });
-  return { motionRequestId: motionRequest.id, governedJob: submitted, hardSpendCapUsd: KINGCAM_FULL_BODY_PROOF_MAX_SPEND_USD, qualityGate: QUALITY_GATES };
+  return { motionRequestId: motionRequest.id, governedJob: submitted, hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP, preProofBalance, qualityGate: QUALITY_GATES };
 }
 
 export async function reviewKingcamFullBodyMotionProof(input: { ownerId: number; requestId: string; accepted: boolean; overallScore: number; notes: string }) {
