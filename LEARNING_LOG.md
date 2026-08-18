@@ -257,3 +257,12 @@ Read this log. Confirm the real source and provider contract. Run the type check
 **Finished-video result:** the render completed and was inspected. It held the full-body crown-to-shoes frame, face/beard/skin/body identity, stable environment, controlled camera, no extra people, no text, and no severe anatomy break. It was still **REJECTED at 75/100**. During the turn, the gold trim on the pants changed into a white/silver floral pattern, and shoe-side detail shifted. This is visible wardrobe drift and fails the source-preservation law.
 
 **Permanent provider learning:** do not use the exact Seedance 2.5 full-body orbit treatment/prompt/source configuration for public KingCam output again. The rejected output is excluded from public KingCam media. Do not auto-retry it. A new full-body proof must change the provider lane or creative treatment only after the exact defect is addressed and a new owner-directed bounded request is created.
+
+
+## 2026-08-18 — SECOND KINGCAM SEEDANCE CORRECTIVE PROOF RESULT
+
+**Real provider run:** governed job `98`; motion request `4162634d-acee-4878-8755-4b57b1c87f24`; Seedance 2.5 ref-to-video; one 10-second vertical output; quoted ceiling 33 credits / $0.33; no automatic retry. The correction removed the orbit and ordered a locked, front-facing full-body frame with an unchanged pant trim and shoes.
+
+**Finished-video result:** the render completed and was inspected. It was **REJECTED at 15/100**. The provider ignored the no-turn correction and generated a full 360-degree spin, showed visible shoe morphing, chain melting, asymmetric trim, and an opening malformed hand.
+
+**Permanent provider learning:** Seedance 2.5 ref-to-video has now failed twice on the same KingCam source: once during an orbit and again after the orbit/turn was explicitly forbidden. Stop spending on Seedance for KingCam full-body proof. Do not retry this source with Seedance. The next corrective proof must use a different verified provider lane and must retain one output, a documented quote, an explicit hard ceiling, and an accept-or-reject inspection.

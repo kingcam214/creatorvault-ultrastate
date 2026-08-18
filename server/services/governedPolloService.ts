@@ -928,52 +928,56 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
 }
 
 export async function quoteGovernedPolloSourceVideoReference(input: {
+  providerModelPath?: string;
   sourceUrl: string;
   prompt: string;
   durationSeconds: number;
   resolution: "480p" | "720p" | "1080p";
   aspectRatio: string;
 }): Promise<GovernedPolloProviderQuote> {
+  const providerModelPath = input.providerModelPath ?? SOURCE_VIDEO_REFERENCE_MODEL_PATH;
+  const contract = getSourceVideoReferenceContract(providerModelPath);
+  if (!contract) throw new Error("The requested source-video model does not have a documented governed provider contract.");
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
   if (!apiKey) throw new Error("POLLO_API_KEY is not configured for a provider cost quote.");
-  const requestBody = buildSourceVideoReferenceInput({
-    providerModelPath: SOURCE_VIDEO_REFERENCE_MODEL_PATH,
-    ...input,
-  });
-  // Use the manual quote since Pollo endpoints often lack the /estimate route for new models
-  let response = {
-    status: 404,
-    ok: false,
-    text: async () => "Not Found",
-    json: async () => ({ error: "Estimate endpoint unavailable" })
-  } as any;
-  
-  if (response.status === 404 || response.status === 400) {
-    // If the estimate endpoint doesn't exist for this model or fails validation, return a manual quote
-    return {
-      providerModelPath: SOURCE_VIDEO_REFERENCE_MODEL_PATH,
-      providerApiPath: SOURCE_VIDEO_REFERENCE_CONTRACTS[SOURCE_VIDEO_REFERENCE_MODEL_PATH].apiPath,
-      quotedCredits: 33,
-      quotedCostUsd: 0.33,
-      quotedAt: new Date().toISOString(),
-      providerResponse: { message: "Manual estimate for model without /estimate endpoint or validation failure" },
-    };
+  const requestBody = buildSourceVideoReferenceInput({ ...input, providerModelPath });
+  let response: Response;
+  try {
+    response = await fetch(`https://pollo.ai/api/platform/generation/${contract.apiPath}/estimate`, {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ input: requestBody }),
+    });
+  } catch (error) {
+    throw new Error(`Pollo source-video quote could not reach the provider: ${safeErrorMessage(error)}`);
   }
   const providerResponse = await parseProviderJson(response);
-  if (!response.ok) throw new Error(`Pollo source-video quote returned ${response.status}: ${safeErrorMessage(providerResponse.responseText ?? providerResponse.message ?? "unknown error")}`);
+  if (!response.ok) {
+    if (providerModelPath === SOURCE_VIDEO_REFERENCE_MODEL_PATH && (response.status === 404 || response.status === 400)) {
+      return {
+        providerModelPath,
+        providerApiPath: contract.apiPath,
+        quotedCredits: 33,
+        quotedCostUsd: 0.33,
+        quotedAt: new Date().toISOString(),
+        providerResponse: { message: "Documented Seedance 2.5 manual estimate; provider estimate endpoint unavailable", estimateResponse: providerResponse },
+      };
+    }
+    throw new Error(`Pollo source-video quote returned ${response.status}: ${safeErrorMessage(providerResponse.responseText ?? providerResponse.message ?? "unknown error")}. No draft or chargeable request was created.`);
+  }
   const quote = providerResponse.data && typeof providerResponse.data === "object" ? providerResponse.data as Record<string, any> : providerResponse;
   const quotedCreditsRaw = quote.discountCost ?? quote.cost ?? quote.totalCost ?? quote.credit ?? quote.credits ?? quote.amount ?? quote.price;
   const quotedCostUsdRaw = quote.discountCostUsd ?? quote.costUsd ?? quote.totalCostUsd ?? quote.usd ?? quote.amountUsd ?? quote.priceUsd;
   const quotedCredits = Number(quotedCreditsRaw);
   const quotedCostUsd = Number(quotedCostUsdRaw);
-  if (!Number.isFinite(quotedCredits) || quotedCredits < 0 || !Number.isFinite(quotedCostUsd) || quotedCostUsd < 0) {
-    throw new Error(`Pollo provider estimate omitted usable quote fields: ${safeErrorMessage(JSON.stringify({ providerResponse, quote }))}`);
+  if (!Number.isFinite(quotedCredits) || quotedCredits <= 0 || !Number.isFinite(quotedCostUsd) || quotedCostUsd < 0) {
+    throw new Error(`Pollo provider estimate omitted usable quote fields: ${safeErrorMessage(JSON.stringify({ providerResponse, quote }))}. No draft or chargeable request was created.`);
   }
   return {
-    providerModelPath: SOURCE_VIDEO_REFERENCE_MODEL_PATH,
-    providerApiPath: SOURCE_VIDEO_REFERENCE_CONTRACTS[SOURCE_VIDEO_REFERENCE_MODEL_PATH].apiPath,
-    quotedCredits: 33, // Force 33 credits for Seedance 2.5
-    quotedCostUsd: 0.33,
+    providerModelPath,
+    providerApiPath: contract.apiPath,
+    quotedCredits,
+    quotedCostUsd,
     quotedAt: new Date().toISOString(),
     providerResponse,
   };
@@ -1033,6 +1037,7 @@ export async function createQuotedGovernedPolloSourceVideoDraft(input: {
   resolution: "480p" | "720p" | "1080p";
   durationSeconds: number;
   aspectRatio: "9:16" | "16:9" | "1:1";
+  providerModelPath?: string;
   ownershipConfirmed: boolean;
   consentConfirmed: boolean;
   idempotencyKey?: string | null;
@@ -1041,6 +1046,7 @@ export async function createQuotedGovernedPolloSourceVideoDraft(input: {
   metadata?: Record<string, unknown>;
 }): Promise<{ job: GovernedPolloJob; reused: boolean; quote: GovernedPolloProviderQuote }> {
   const quote = await quoteGovernedPolloSourceVideoReference({
+    providerModelPath: input.providerModelPath,
     sourceUrl: input.sourceUrl,
     prompt: input.prompt,
     durationSeconds: input.durationSeconds,
