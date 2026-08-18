@@ -536,3 +536,7 @@ After the first 15-second capture failed the driver gate, an inspection-only 24-
 ## 2026-08-18 — KINGCAM CLONE TRAINING LIBRARY
 
 The KingCam Clone system now records observed source truth in a durable clone-only training library. Existing synthetic KingCam motion clips are explicitly recorded as rejected for movement training; the approved four-second KingCam identity visual may support appearance only and cannot control body movement. Every training record carries its source kind, body visibility, observed motion and speech scores, defects, evidence, and a hard `driverReady` state. No clip can become a movement driver unless it is a verified real-camera KingCam performance, is reviewed for natural gait, hands, feet, voice, and full-body framing, and remains excluded from Body Cinema.
+
+## 2026-08-18 — KingCam real-driver ingestion repair
+
+The first secure ingestion of Cameron’s supplied real performance references reached the canonical direct-upload route but stopped before vault registration because `media_assets.source_type` accepts `upload`, not the stale `creator_upload` label. The route now records real originals as `upload` while the immutable `kingcam_performance_capture` feature classification continues to keep those clips clone-only and out of Body Cinema. This repair is storage-contract-only; it does not alter media, spend credits, or create a clone output.

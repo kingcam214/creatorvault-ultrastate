@@ -526,7 +526,9 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
     // media_assets.source_type is a constrained legacy field. Creator-recorded
     // KingCam performance is still creator-owned footage, but the immutable
     // feature tag keeps it out of Body Cinema and reserves it for clone motion.
-    const sourceType = approvedDemo ? "generated" : "creator_upload";
+    // media_assets permits `upload` for real creator-owned originals. The feature tag below
+    // still keeps KingCam Performance Capture out of Body Cinema and all generic source lanes.
+    const sourceType = approvedDemo ? "generated" : "upload";
     const createdByFeature = approvedDemo
       ? "creatorvault_approved_demo"
       : kingcamPerformanceCapture
