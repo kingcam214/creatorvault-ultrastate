@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { archiveKingcamMiniMaxH3PresenceLoop, auditPolloAvailableCredits, auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, auditPolloMiniMaxH3ReferenceCost, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
+import { archiveKingcamMiniMaxH3PresenceLoop, auditPolloAvailableCredits, auditPolloKingcamActionImitationV2Candidate, auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, auditPolloMiniMaxH3ReferenceCost, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
 import {
   createKingcamGuideVoiceTour,
   getKingcamCloneOperatingSystem,
@@ -33,6 +33,15 @@ export const kingcamCloneOperatingSystemRouter = router({
   getCommandCenter: protectedProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     return getKingcamCloneOperatingSystem(ctx.user.id);
+  }),
+
+  auditActionImitationMotionCandidate: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await auditPolloKingcamActionImitationV2Candidate();
+    } catch (error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "Action Imitation V2 configuration could not be audited." });
+    }
   }),
 
   getTrainingLibrary: protectedProcedure.query(async ({ ctx }) => {

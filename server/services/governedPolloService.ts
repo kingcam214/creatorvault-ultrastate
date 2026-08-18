@@ -162,6 +162,8 @@ const KINGCAM_GOENHANCE_MODE = "kingcam_goenhance_real_performance_video2video";
 const KINGCAM_GOENHANCE_STYLE_CODE = "mx-v2v";
 const KINGCAM_GOENHANCE_HARD_CREDIT_CAP = 105;
 const KINGCAM_GOENHANCE_REAL_DRIVER_URL = REPLICATE_WAN_ANIMATE_DRIVER_URL;
+const KINGCAM_ACTION_IMITATION_V2_MODEL_PATH = "pollo/pollo-ai/action-imitation-v2";
+const KINGCAM_ACTION_IMITATION_V2_API_PATH = "/v1/generation/pollo-ai/action-imitation-v2/motion";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MODEL_PATH = "runway/aleph-2-video-edit";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MODE = "runway_aleph_2_source_video_edit";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MAX_BYTES = 200 * 1024 * 1024;
@@ -1409,6 +1411,60 @@ export async function auditPolloKingcamVideoToVideoCandidate(params: {
       : `Pollo returned a matching GoEnhance video-to-video model record but no usable exact estimate. ${estimateFailure ?? "No provider task was created."}`,
     providerRecord: enrichedProviderRecord,
     candidateModels,
+  };
+}
+
+export async function auditPolloKingcamActionImitationV2Candidate(): Promise<{
+  providerModelKey: string;
+  apiPath: string;
+  configAvailable: boolean;
+  quotedCredits: number | null;
+  quotedCostUsd: number | null;
+  eligibleForDraft: false;
+  reason: string;
+  providerRecord: Record<string, unknown> | null;
+}> {
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!apiKey) {
+    return { providerModelKey: "pollo-ai/action-imitation-v2", apiPath: KINGCAM_ACTION_IMITATION_V2_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: "Pollo credential is unavailable; no account configuration or provider task was read.", providerRecord: null };
+  }
+  let response: Response;
+  try {
+    response = await fetch("https://pollo.ai/api/platform/config/other/models?language=en", { method: "GET", headers: { "x-api-key": apiKey, Accept: "application/json" } });
+  } catch (error) {
+    return { providerModelKey: "pollo-ai/action-imitation-v2", apiPath: KINGCAM_ACTION_IMITATION_V2_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: `Pollo motion configuration could not be read: ${safeErrorMessage(error)}`, providerRecord: null };
+  }
+  const payload = await parseProviderJson(response);
+  if (!response.ok) {
+    return { providerModelKey: "pollo-ai/action-imitation-v2", apiPath: KINGCAM_ACTION_IMITATION_V2_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: `Pollo returned ${response.status} while reading the no-charge motion configuration: ${safeErrorMessage(payload.responseText ?? payload.message ?? "unknown error")}`, providerRecord: null };
+  }
+  const record = collectProviderRecords(payload).find((candidate) => {
+    const identity = [candidate.model, candidate.modelName, candidate.modelPath, candidate.path, candidate.code, candidate.value, candidate.id, candidate.name]
+      .filter((value): value is string => typeof value === "string")
+      .join(" ")
+      .toLowerCase();
+    return identity.includes("action-imitation-v2") || identity.includes("action imitation v2");
+  }) ?? null;
+  if (!record) {
+    return { providerModelKey: "pollo-ai/action-imitation-v2", apiPath: KINGCAM_ACTION_IMITATION_V2_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: "Pollo returned a motion configuration response but no Action Imitation V2 record. No draft or provider task was created.", providerRecord: null };
+  }
+  const rules = isProviderRecord(record.creditRules) ? record.creditRules : {};
+  const matches = Array.isArray(record.creditMatches) ? record.creditMatches.filter(isProviderRecord) : [];
+  const quotedCredits = providerNumber(rules, ["base", "credit", "credits", "cost", "price"]);
+  const quotedCostUsd = matches
+    .map((candidate) => providerNumber(candidate, ["apiPlatformPrice", "apiPlatform1Price", "apiPlatform2Price", "costUsd", "priceUsd", "priceUSD"]))
+    .find((value): value is number => value !== null) ?? null;
+  return {
+    providerModelKey: "pollo-ai/action-imitation-v2",
+    apiPath: KINGCAM_ACTION_IMITATION_V2_API_PATH,
+    configAvailable: true,
+    quotedCredits,
+    quotedCostUsd,
+    eligibleForDraft: false,
+    reason: quotedCredits !== null && quotedCredits > 0
+      ? "Pollo returned a read-only Action Imitation V2 cost record. This is evidence only; a separate governed contract and owner-directed decision are required before any draft can exist."
+      : "Pollo returned Action Imitation V2 configuration without a usable positive credit amount. No draft or provider task was created.",
+    providerRecord: record,
   };
 }
 
