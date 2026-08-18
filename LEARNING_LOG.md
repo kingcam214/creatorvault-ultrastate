@@ -324,3 +324,8 @@ CreatorVault now has an owner-only **audit-only** KingCam candidate check for th
 ### Scanner repair — 2026-08-18
 
 The first audit-only GoEnhance configuration check returned `404` because the scanner used `config/video/video2video/models`. Pollo’s own OpenAPI specifies `config/{generationType}/models`; the corrected no-charge path is `config/video2video/models`. This was a contract-path repair only. No draft, credit reservation, provider task, or media output was created.
+
+
+### Scanner expansion — 2026-08-18
+
+The authenticated Pollo video-to-video configuration endpoint answered successfully but did not contain the catalog’s GoEnhance label or price. The audit response is now expanded to return only a sanitized list of model names, model paths, and published credit/dollar fields from that read-only configuration. It still returns `eligibleForDraft: false` in every case and cannot create a provider task.

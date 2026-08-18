@@ -996,6 +996,7 @@ export async function auditPolloKingcamVideoToVideoCandidate(params: {
   eligibleForDraft: false;
   reason: string;
   providerRecord: Record<string, unknown> | null;
+  candidateModels: Array<{ model: string; modelPath: string | null; quotedCredits: number | null; quotedCostUsd: number | null }>;
 }> {
   const providerModelKey = params.providerModelKey ?? "go-enhance/go-enhance-v1";
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
@@ -1021,12 +1022,29 @@ export async function auditPolloKingcamVideoToVideoCandidate(params: {
       eligibleForDraft: false,
       reason: `Pollo returned ${response.status} while reading its video-to-video model configuration. No generation request was made.`,
       providerRecord: null,
+      candidateModels: [],
     };
   }
 
   const payload = await parseProviderJson(response);
   const modelToken = providerModelKey.replace(/^go-enhance\//, "").toLowerCase();
-  const record = collectProviderRecords(payload).find((candidate) => {
+  const configuredRecords = collectProviderRecords(payload);
+  const seenCandidateModels = new Set<string>();
+  const candidateModels = configuredRecords.flatMap((candidate) => {
+    const model = [candidate.modelName, candidate.model, candidate.name, candidate.code, candidate.value]
+      .find((value): value is string => typeof value === "string" && value.trim().length > 0);
+    if (!model || seenCandidateModels.has(model.toLowerCase())) return [];
+    seenCandidateModels.add(model.toLowerCase());
+    const modelPath = [candidate.modelPath, candidate.path]
+      .find((value): value is string => typeof value === "string" && value.trim().length > 0) ?? null;
+    return [{
+      model,
+      modelPath,
+      quotedCredits: providerNumber(candidate, ["discountCost", "cost", "totalCost", "credit", "credits", "amount", "price"]),
+      quotedCostUsd: providerNumber(candidate, ["discountCostUsd", "costUsd", "totalCostUsd", "usd", "amountUsd", "priceUsd", "priceUSD"]),
+    }];
+  }).slice(0, 60);
+  const record = configuredRecords.find((candidate) => {
     const identity = [candidate.model, candidate.modelName, candidate.modelPath, candidate.path, candidate.code, candidate.value, candidate.id, candidate.name]
       .filter((value): value is string => typeof value === "string")
       .join(" ")
@@ -1045,6 +1063,7 @@ export async function auditPolloKingcamVideoToVideoCandidate(params: {
       eligibleForDraft: false,
       reason: "Pollo exposed video-to-video configuration but no matching GoEnhance model record or exact price. No draft or generation request was created.",
       providerRecord: null,
+      candidateModels,
     };
   }
 
@@ -1063,6 +1082,7 @@ export async function auditPolloKingcamVideoToVideoCandidate(params: {
       ? "Pollo returned a read-only model price. The candidate remains audit-only until a documented CreatorVault request contract, timeout, and explicit owner-directed proof decision exist."
       : "Pollo returned a matching video-to-video model record but no exact usable price. The no-guess-cost gate remains closed and no draft or generation request was created.",
     providerRecord: record,
+    candidateModels,
   };
 }
 
