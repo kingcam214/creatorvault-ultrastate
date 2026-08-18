@@ -540,3 +540,7 @@ The KingCam Clone system now records observed source truth in a durable clone-on
 ## 2026-08-18 — KingCam real-driver ingestion repair
 
 The first secure ingestion of Cameron’s supplied real performance references reached the canonical direct-upload route but stopped before vault registration because `media_assets.source_type` accepts `upload`, not the stale `creator_upload` label. The route now records real originals as `upload` while the immutable `kingcam_performance_capture` feature classification continues to keep those clips clone-only and out of Body Cinema. This repair is storage-contract-only; it does not alter media, spend credits, or create a clone output.
+
+## 2026-08-18 — Supplied KingCam real-footage library
+
+Cameron supplied real KingCam footage directly. Three files were securely ingested into CreatorVault’s clone-only vault after canonical upload repair: `a61a35de-243b-4b6a-8128-08ea7087d2fd.mp4` holds 16.7 seconds of real lower-body walking and weight transfer but is rear-facing and silent; `IMG_9898.MOV` holds real direct speech and face-to-voice timing but is not crown-to-shoes; `IMG_9741.MOV` holds real hand, foot, posture, and body-mechanics detail but has camera tilts and no direct speech. Each is preserved as a specialized real-camera reference. None is a complete full-body speaking movement driver and none may be used alone to claim a finished clone.

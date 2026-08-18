@@ -97,6 +97,48 @@ const CURATED_KINGCAM_TRAINING_AUDITS: Array<{
   },
 ];
 
+const SUPPLIED_REAL_KINGCAM_TRAINING_AUDITS: Array<{
+  fileName: string;
+  trainingRole: KingcamTrainingRole;
+  fullBodySeconds: number;
+  naturalMotionScore: number;
+  speechSyncScore: number;
+  driverReady: boolean;
+  defects: string;
+  evidence: string;
+}> = [
+  {
+    fileName: "a61a35de-243b-4b6a-8128-08ea7087d2fd.mp4",
+    trainingRole: "performance_candidate",
+    fullBodySeconds: 16.7,
+    naturalMotionScore: 80,
+    speechSyncScore: 0,
+    driverReady: false,
+    defects: "Rear-facing body view; face is obscured and there is no direct speech.",
+    evidence: "Cameron-supplied real-camera clip with sustained natural full-body walking. It teaches lower-body gait and weight transfer only; it cannot yet drive a speaking KingCam clone.",
+  },
+  {
+    fileName: "IMG_9898.MOV",
+    trainingRole: "voice_reference",
+    fullBodySeconds: 0,
+    naturalMotionScore: 50,
+    speechSyncScore: 90,
+    driverReady: false,
+    defects: "Medium/close framing excludes feet and complete body movement.",
+    evidence: "Cameron-supplied real-camera direct-speech clip. It teaches face-to-voice timing and direct delivery only; it cannot become a full-body movement driver.",
+  },
+  {
+    fileName: "IMG_9741.MOV",
+    trainingRole: "performance_candidate",
+    fullBodySeconds: 0,
+    naturalMotionScore: 95,
+    speechSyncScore: 0,
+    driverReady: false,
+    defects: "Continuous camera tilts split feet from upper body and there is no direct speech.",
+    evidence: "Cameron-supplied real-camera clip with clear natural feet, hands, posture, and body detail. It teaches body mechanics only; it cannot become a full speaking clone driver.",
+  },
+];
+
 const KINGCAM_GUIDE_TOUR_SEGMENTS = [
   { key: "entry", chapter: "THE ENTRY", script: "Welcome to CreatorVault. This is where you keep your content, your presence, and your power in your own hands." },
   { key: "body-cinema", chapter: "BODY CINEMA", script: "Body Cinema starts with your real footage. It is built to bring your best presence forward, not replace you with something fake." },
@@ -712,9 +754,31 @@ export async function syncKingcamCloneTrainingLibrary(ownerId: number) {
     });
     registered += 1;
   }
+  for (const audit of SUPPLIED_REAL_KINGCAM_TRAINING_AUDITS) {
+    const rows = await rawQuery<any>(
+      `SELECT id, public_url, file_name, original_name
+       FROM media_assets
+       WHERE user_id = ? AND asset_type = 'video' AND status = 'ready'
+         AND created_by_feature = 'kingcam_performance_capture'
+         AND (file_name = ? OR original_name = ?)
+       LIMIT 1`,
+      [ownerId, audit.fileName, audit.fileName],
+    );
+    const asset = rows[0];
+    if (!asset) continue;
+    await upsertKingcamTrainingAsset({
+      ownerId, mediaAssetId: String(asset.id), mediaUrl: String(asset.public_url),
+      mediaName: String(asset.file_name || asset.original_name || audit.fileName),
+      sourceKind: "real_camera", trainingRole: audit.trainingRole, fullBodySeconds: audit.fullBodySeconds,
+      naturalMotionScore: audit.naturalMotionScore, speechSyncScore: audit.speechSyncScore, driverReady: audit.driverReady,
+      evidence: audit.evidence, defects: audit.defects, assessmentSource: "kingcam_supplied_real_media_audit_2026_08_18",
+      analysis: { ...audit, cloneOnly: true, bodyCinemaEligible: false, suppliedByOwner: true },
+    });
+    registered += 1;
+  }
   await recordKingcamCloneMemory({
     ownerId, kind: "training_library_synced", room: "KingCam Clone Training Library",
-    payload: { registered, source: "creatorvault_observed_media_audit_2026_08_18", noMotionDriverClaimed: true },
+    payload: { registered, source: "creatorvault_observed_media_audit_2026_08_18_and_supplied_real_media", noMotionDriverClaimed: true },
   });
   return { registered, library: await getKingcamCloneTrainingLibrary(ownerId) };
 }
