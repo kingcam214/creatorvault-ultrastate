@@ -1445,6 +1445,7 @@ export async function createManualCappedKingcamMiniMaxH3Draft(input: {
       noAutomaticRetry: true,
       sourcePreservationRequired: true,
       manualCreditCap: input.manualCreditCap,
+      hardCreditCap: input.manualCreditCap,
       providerQuoteUnavailable: true,
       providerQuoteFailure: "estimate_404_config_unpriced_credit_endpoint_403",
       providerPriceResolution: "manual_owner_cap_with_pre_post_balance_evidence",

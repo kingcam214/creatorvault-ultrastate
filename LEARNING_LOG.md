@@ -361,3 +361,10 @@ The authenticated Pollo `ref2video` configuration confirms that the account expo
 Three no-charge account-price paths were tried and all stopped before media creation: the model estimate returned `404`; authenticated reference-video configuration exposes the lane but no price fields; Pollo’s documented `POST /credit` cost endpoint returned `403` to the API-key runtime. No draft, permit, reservation, provider task, or cost was created by any audit.
 
 **Bounded next decision:** price discovery is technically exhausted for this account’s current Pollo API surface. A future MiniMax H3 proof may proceed only as an explicitly owner-directed manual-cap governed request, with one 5-second `9:16` `2K` output, a recorded fixed ceiling, before/after provider balance evidence, no automatic retry, provider-side timeout handling, and mandatory finished-video rejection for any identity, wardrobe, jewelry, shoe, anatomy, motion, or framing drift. It must not be labeled provider-quoted.
+
+
+## 2026-08-18 — MINIMAX H3 MANUAL-CAP FREEZE REPAIR
+
+The first owner-directed MiniMax H3 proof launch stopped **before provider submission** at CreatorVault’s frozen-budget gate. No MiniMax task was created and no credits were spent. Root cause: the documented manual 75-credit ceiling was stored as `manualCreditCap` but the existing explicit-owner-pilot budget reservation predicate requires the same value under `hardCreditCap`.
+
+Exact correction: the MiniMax-only manual-cap draft now records both fields with the identical fixed 75-credit value. This does not open general Pollo spending; the predicate still requires one output, owner-directed pilot, no retry, source-video contract, and exact agreement between recorded estimate and permit ceiling.
