@@ -5,6 +5,7 @@ import { archiveKingcamMiniMaxH3PresenceLoop, auditPolloAvailableCredits, auditP
 import {
   createKingcamGuideVoiceTour,
   getKingcamCloneOperatingSystem,
+  getKingcamDigitalPerformerReadiness,
   getKingcamGuideVoiceTour,
   getKingcamCloneTrainingLibrary,
   launchKingcamFullBodyMotionProof,
@@ -36,6 +37,11 @@ export const kingcamCloneOperatingSystemRouter = router({
   getCommandCenter: protectedProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     return getKingcamCloneOperatingSystem(ctx.user.id);
+  }),
+
+  getDigitalPerformerReadiness: protectedProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    return getKingcamDigitalPerformerReadiness(ctx.user.id);
   }),
 
   auditActionImitationMotionCandidate: protectedProcedure.mutation(async ({ ctx }) => {

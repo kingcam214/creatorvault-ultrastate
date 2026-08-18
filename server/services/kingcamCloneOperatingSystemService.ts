@@ -26,7 +26,7 @@ const KINGCAM_CLONE_ID = "kingcam-founder-clone";
 const KINGCAM_HERO_REFERENCE = "https://creatorvault.live/videos/kingcam-hero-cam.mp4";
 const KINGCAM_FULL_BODY_IMAGE = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge.webp";
 
-type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review" | "performance_capture_registered" | "training_library_synced";
+type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review" | "performance_capture_registered" | "training_library_synced" | "digital_performer_readiness";
 type MotionRequestState = "planned" | "approved" | "submitted" | "provider_complete" | "accepted" | "rejected" | "failed";
 type KingcamTrainingRole = "identity_reference" | "wardrobe_reference" | "voice_reference" | "performance_candidate" | "movement_driver" | "rejected";
 type KingcamSourceKind = "real_camera" | "synthetic_or_generated" | "unknown";
@@ -687,14 +687,16 @@ function identityVault() {
   return {
     cloneId: KINGCAM_CLONE_ID,
     approvedFullBodyImage: KINGCAM_FULL_BODY_IMAGE,
-    approvedFullBodyMotionReference: KINGCAM_HERO_REFERENCE,
-    publicAssets: [
-      "/videos/kingcam-hero-cam.mp4",
-      "/videos/platform/clone-command-hero.mp4",
+    approvedFullBodyMotionReference: null,
+    approvedIdentityAssets: [
       "/images/kingcam-profile/kingcam-crown-lounge.webp",
       "/images/kingcam-profile/kingcam-crown-hall.webp",
     ],
-    identityLaw: "Preserve approved KingCam face, body build, beard, skin tone, wardrobe anchors, jewelry, crown styling when supplied, and full-body presence. Never substitute an unrelated man or generic avatar.",
+    excludedFromMotionDriving: [
+      "/videos/kingcam-hero-cam.mp4",
+      "/videos/platform/clone-command-hero.mp4",
+    ],
+    identityLaw: "Preserve approved KingCam face, body build, beard, skin tone, wardrobe anchors, jewelry, crown styling when supplied, and full-body presence. Never substitute an unrelated man or generic avatar. A synthetic or visually corrupted identity visual may support neither performance driving nor full-body clone proof.",
   };
 }
 
@@ -732,14 +734,23 @@ function motionPolicy() {
 async function ensureProfile(ownerId: number) {
   await ensureKingcamCloneOperatingSystem();
   const rows = await rawQuery<any>("SELECT * FROM kingcam_clone_operating_profiles WHERE clone_id = ? LIMIT 1", [KINGCAM_CLONE_ID]);
-  if (rows[0]) return rows[0];
   const vault = identityVault();
   const voice = voicePolicy();
   const motion = motionPolicy();
   const quality = { gates: QUALITY_GATES, reviewRequired: true, noAutomaticPublicPlacement: true };
+  if (rows[0]) {
+    if (String(rows[0].truth_revision || "") !== "kingcam-digital-performer-v2") {
+      await rawExec(`UPDATE kingcam_clone_operating_profiles
+        SET identity_vault_json = ?, voice_policy_json = ?, motion_policy_json = ?, quality_policy_json = ?, truth_revision = 'kingcam-digital-performer-v2', updated_at = NOW()
+        WHERE clone_id = ? AND owner_id = ?`,
+        [json(vault), json(voice), json(motion), json(quality), KINGCAM_CLONE_ID, ownerId]);
+      return (await rawQuery<any>("SELECT * FROM kingcam_clone_operating_profiles WHERE clone_id = ? LIMIT 1", [KINGCAM_CLONE_ID]))[0];
+    }
+    return rows[0];
+  }
   await rawExec(`INSERT INTO kingcam_clone_operating_profiles
     (clone_id, owner_id, status, identity_vault_json, voice_policy_json, motion_policy_json, quality_policy_json, truth_revision, created_at, updated_at)
-    VALUES (?, ?, 'operational-spine', ?, ?, ?, ?, 'kingcam-truth-v1', NOW(), NOW())`,
+    VALUES (?, ?, 'operational-spine', ?, ?, ?, ?, 'kingcam-digital-performer-v2', NOW(), NOW())`,
     [KINGCAM_CLONE_ID, ownerId, json(vault), json(voice), json(motion), json(quality)]);
   return (await rawQuery<any>("SELECT * FROM kingcam_clone_operating_profiles WHERE clone_id = ? LIMIT 1", [KINGCAM_CLONE_ID]))[0];
 }
@@ -846,6 +857,72 @@ export async function getKingcamCloneTrainingLibrary(ownerId: number) {
       realPerformanceCandidates: assets.filter((asset) => asset.trainingRole === "performance_candidate").length,
       motionDriverReady: assets.some((asset) => asset.driverReady && asset.trainingRole === "movement_driver"),
     },
+  };
+}
+
+export async function getKingcamDigitalPerformerReadiness(ownerId: number) {
+  assertOwner(ownerId);
+  const commandCenter = await getKingcamCloneOperatingSystem(ownerId);
+  const trainingLibrary = await getKingcamCloneTrainingLibrary(ownerId);
+  const motionDriver = trainingLibrary.approvedMovementDriver;
+  const acceptedMotionProofs = commandCenter.motionRequests.filter((request) => request.state === "accepted");
+  const realPerformanceAssets = trainingLibrary.assets.filter((asset) => asset.sourceKind === "real_camera" && asset.trainingRole !== "rejected");
+  const identityAssets = trainingLibrary.assets.filter((asset) => asset.trainingRole === "identity_reference");
+  const directSpeechAssets = trainingLibrary.assets.filter((asset) => asset.trainingRole === "voice_reference");
+  const status = motionDriver
+    ? "ready_for_one_governed_motion_benchmark"
+    : "blocked_until_a_real_full_body_natural_motion_driver_is_verified";
+  const layers = [
+    {
+      id: "identity_library",
+      status: identityAssets.length > 0 ? "evidence_ready" : "incomplete",
+      truth: "Approved identity references are held separately from motion-driving eligibility. The legacy hero visual is not an approved motion driver.",
+      evidenceCount: identityAssets.length,
+    },
+    {
+      id: "performance_capture",
+      status: realPerformanceAssets.length > 0 ? "partially_ready" : "incomplete",
+      truth: "Real-camera KingCam performance references are preserved clone-only and may contribute specialized evidence; no source is silently promoted into a full-body driver.",
+      evidenceCount: realPerformanceAssets.length,
+    },
+    {
+      id: "motion_transfer",
+      status: motionDriver ? "ready_for_one_governed_motion_benchmark" : "blocked",
+      truth: motionDriver
+        ? "One separately governed motion benchmark may be considered with the verified driver only."
+        : "No paid motion-transfer request may be created until a real continuous crown-to-shoes natural-motion KingCam driver passes review.",
+      motionDriver: motionDriver ? { mediaAssetId: motionDriver.mediaAssetId, mediaUrl: motionDriver.mediaUrl } : null,
+    },
+    {
+      id: "voice_and_delivery",
+      status: directSpeechAssets.length > 0 ? "evidence_ready" : "incomplete",
+      truth: "Direct speech and voice timing are separate evidence. They do not create a full-body clone by themselves.",
+      evidenceCount: directSpeechAssets.length,
+    },
+    {
+      id: "quality_review",
+      status: "active",
+      truth: "Every output remains rejected until a human review passes identity, wardrobe, anatomy, hands, feet, locomotion, framing, timing, and no-drift gates.",
+      acceptedProofs: acceptedMotionProofs.length,
+    },
+    {
+      id: "finishing_and_accepted_media",
+      status: acceptedMotionProofs.length > 0 ? "ready_for_owner_reviewed_finishing" : "waits_for_accepted_motion_proof",
+      truth: "CreatorVault source-preserving finishing can package an accepted result, but it cannot turn an unaccepted source or failed motion test into a clone claim.",
+    },
+  ] as const;
+  await recordKingcamCloneMemory({
+    ownerId,
+    kind: "digital_performer_readiness",
+    room: "KingCam Digital Performer",
+    payload: { status, motionDriverReady: Boolean(motionDriver), acceptedMotionProofs: acceptedMotionProofs.length },
+  });
+  return {
+    status,
+    rule: "Creation is not proof. A Digital-Performer claim becomes live only after a real source, one governed eligible motion run, a watchable output, and an accepted quality review.",
+    layers,
+    providerBoundary: "Provider documentation, estimate responses, and account configuration are not execution proof or accepted media. Only eligible governed runs with watchable accepted outputs may advance.",
+    bodyCinemaBoundary: "KingCam clone-only identity, performance, and motion assets remain excluded from Body Cinema.",
   };
 }
 
