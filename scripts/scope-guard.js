@@ -236,6 +236,11 @@ const ALLOWLISTS = {
     'client/public/videos/creator-pages/ady-microlocs-source-h264.mp4',
     'scripts/scope-guard.js'
   ],
+  'kingcam-clone-guide': [
+    'client/src/App.tsx',
+    'client/src/pages/KingCamGuide.tsx',
+    'scripts/scope-guard.js'
+  ],
   'kingcam-in-platform-profile': [
     'client/src/App.tsx',
     'client/src/pages/KingCamProfile.tsx',

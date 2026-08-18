@@ -195,6 +195,7 @@ import JoinVaultLive from "./pages/JoinVaultLive";
 import KingCamScriptWriter from "./pages/KingCamScriptWriter";
 import KingContent from "./pages/KingContent";
 import KingCamProfile from "./pages/KingCamProfile";
+import KingCamGuide from "./pages/KingCamGuide";
 import KingMoneyMission from "./pages/KingMoneyMission";
 import KingUsers from "./pages/KingUsers";
 import KingWaitlist from "./pages/KingWaitlist";
@@ -351,7 +352,7 @@ function Router() {
   const [location] = useLocation();
   const authPages = ["/login", "/register", "/signup"];
   const isAuthPage = authPages.some(p => location === p || location.startsWith(p + "?"));
-  const isImmersiveCreatorWorld = ["/kingcam", "/reshula24", "/creators/the-biggest-b", "/creators/luv-roxie", "/creators/reshula", "/creators/maily", "/creators/aderly", "/creators/diana", "/creators/leslie"].includes(location);
+  const isImmersiveCreatorWorld = ["/kingcam", "/kingcam/guide", "/reshula24", "/creators/the-biggest-b", "/creators/luv-roxie", "/creators/reshula", "/creators/maily", "/creators/aderly", "/creators/diana", "/creators/leslie"].includes(location);
   return (
     <>
       {!isImmersiveCreatorWorld && <AppHeader />}
@@ -552,6 +553,7 @@ function Router() {
       <Route path={"/king/analytics"}>{() => { window.location.replace("/dashboard"); return null; }}</Route>
       <Route path={"/king/content"} component={KingContent} />
       <Route path={"/kingcam"} component={KingCamProfile} />
+      <Route path={"/kingcam/guide"} component={KingCamGuide} />
       <Route path={"/king/waitlist"} component={KingWaitlist} />
       {/* <Route path={"/king/launch-command"} component={LaunchCommand} /> */}
       <Route path="/king/empire-doc">{() => { window.location.replace("/dashboard"); return null; }}</Route>
