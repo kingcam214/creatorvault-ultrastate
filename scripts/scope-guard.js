@@ -241,6 +241,22 @@ const ALLOWLISTS = {
     'client/src/pages/KingCamGuide.tsx',
     'scripts/scope-guard.js'
   ],
+  'kingcam-governed-pollo-motion': [
+    'client/src/pages/KingCamGuide.tsx',
+    'server/routers/governedPolloRouter.ts',
+    'server/routers.ts',
+    'scripts/scope-guard.js'
+  ],
+  'kingcam-clone-operating-system': [
+    'client/src/App.tsx',
+    'client/src/pages/KingCamClone.tsx',
+    'client/src/pages/KingCamGuide.tsx',
+    'client/src/pages/KingCamProfile.tsx',
+    'server/routers.ts',
+    'server/routers/kingcamCloneOperatingSystemRouter.ts',
+    'server/services/kingcamCloneOperatingSystemService.ts',
+    'scripts/scope-guard.js'
+  ],
   'kingcam-in-platform-profile': [
     'client/src/App.tsx',
     'client/src/pages/KingCamProfile.tsx',

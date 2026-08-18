@@ -1,167 +1,78 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Link, useLocation } from "wouter";
+import { Activity, ArrowLeft, ArrowRight, Brain, CheckCircle2, Clapperboard, Crown, Film, LockKeyhole, Mic2, Play, ShieldCheck, Sparkles, Vault, Video, Wand2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { useLocation } from "wouter";
-import { Copy, Plus, Zap, Globe, TrendingUp, Play, Settings, CheckCircle, ArrowRight } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
-const PLATFORMS = ["OnlyFans","Fansly","Telegram","Instagram","TikTok","YouTube","Twitter/X","Kick"];
-const STYLES = ["Luxury","Urban","Fitness","Comedy","Educational","Lifestyle","Music","Gaming"];
+const fullBodyBrief = [
+  "A full-body KingCam cinematic proof using the approved CreatorVault KingCam motion reference.",
+  "KingCam remains fully visible from crown to shoes in a burgundy velvet royal look, takes one natural measured step, then holds a confident stance while the camera makes a slow controlled orbit.",
+  "Preserve face, beard, skin tone, full body build, wardrobe, crown styling, jewelry, hands, gait, environment geometry, and camera stability.",
+  "No close-up crop, no talking-head substitution, no extra people, no body drift, no warped hands, no new outfit, no text, no watermark, no plastic skin, and no artificial-looking movement.",
+].join(" ");
+
+const roomIcons = {
+  "creator-ownership": Crown,
+  "body-cinema": Film,
+  "caption-stage": Mic2,
+  "trailer-maker": Clapperboard,
+  "clone-command": Wand2,
+} as const;
+
+function StatusPill({ value }: { value: string }) {
+  const state = value.toLowerCase();
+  const tone = state.includes("live") || state.includes("ready") || state.includes("accepted") ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-200" : state.includes("progress") || state.includes("planned") ? "border-amber-200/30 bg-amber-200/10 text-amber-100" : "border-white/20 bg-white/5 text-white/65";
+  return <span className={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[.15em] ${tone}`}>{value.replace(/_/g, " ")}</span>;
+}
 
 export default function KingCamClone() {
-  const [, navigate] = useLocation();
-  const [showCreate, setShowCreate] = useState(false);
-  const [name, setName] = useState("");
-  const [style, setStyle] = useState("Luxury");
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["Telegram","OnlyFans"]);
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const isOwner = user?.id === 6 || user?.id === 33 || user?.role === "king" || user?.role === "admin";
+  const [notice, setNotice] = useState<string | null>(null);
+  const command = trpc.kingcamCloneOperatingSystem.getCommandCenter.useQuery(undefined, { enabled: isOwner, retry: false });
+  const beginTour = trpc.kingcamCloneOperatingSystem.beginTour.useMutation({
+    onSuccess: (result) => { setNotice(`KingCam has entered ${result.room.room}.`); command.refetch(); setLocation(result.nextAction); },
+    onError: (error) => setNotice(error.message),
+  });
+  const planProof = trpc.kingcamCloneOperatingSystem.planFullBodyProof.useMutation({
+    onSuccess: () => { setNotice("The first full-body KingCam proof is now recorded inside Clone Command. It cannot spend or create until the governed motion lane is opened and the request is explicitly submitted."); command.refetch(); },
+    onError: (error) => setNotice(error.message),
+  });
 
-  const { data: clones, refetch } = trpc.kingcamClone?.getKingcamClones?.useQuery?.(undefined, { retry: false }) || { data: [], refetch: () => {} };
-  const createClone = trpc.kingcamClone?.createKingcamClone?.useMutation?.({ onSuccess: () => { refetch(); setShowCreate(false); setName(""); } }) || { mutate: () => {}, isPending: false };
-  const trainClone = trpc.kingcamClone?.trainKingcamClone?.useMutation?.() || { mutate: () => {}, isPending: false };
+  const system = command.data;
+  const motionReady = system?.motionPolicy?.executionState?.toLowerCase().includes("ready") ?? false;
+  const sourceCount = useMemo(() => system?.identityVault?.publicAssets?.length || 0, [system]);
 
-  const togglePlatform = (p: string) => setSelectedPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  if (!isOwner) {
+    return <main className="min-h-screen bg-[#080506] px-6 py-12 text-[#fff8eb]"><div className="mx-auto max-w-xl rounded-[2rem] border border-[#d9a44e]/25 bg-[#160b0b] p-8 text-center"><Crown className="mx-auto h-9 w-9 text-[#e7bc70]" /><h1 className="mt-5 text-4xl font-black tracking-[-.07em]">KINGCAM CLONE</h1><p className="mt-4 leading-7 text-white/65">KingCam Clone Command is his protected CreatorVault control room. The public KingCam guide is open for the platform tour.</p><Link href="/kingcam/guide"><a className="mt-7 inline-flex min-h-12 items-center gap-2 rounded-full bg-[#d9a44e] px-6 text-sm font-black text-black"><Play className="h-4 w-4 fill-current" /> Enter the guide</a></Link></div></main>;
+  }
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
-              <Copy className="w-6 h-6 text-black" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-yellow-400">KingCam Clone</h1>
-              <p className="text-gray-400">Deploy AI-powered creator clones across every platform</p>
-            </div>
+    <main className="min-h-screen overflow-hidden bg-[#080506] text-[#fff8eb]">
+      <style>{`
+        @keyframes kc-rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes kc-orbit { 0%,100% { transform: rotate(0deg) scale(1); opacity:.32; } 50% { transform: rotate(10deg) scale(1.08); opacity:.56; } }
+        .kc-rise { animation: kc-rise .7s cubic-bezier(.16,.82,.2,1) both; }
+        .kc-orbit { animation: kc-orbit 9s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { .kc-rise,.kc-orbit { animation:none; } }
+      `}</style>
+      <section className="relative isolate overflow-hidden border-b border-[#d9a44e]/20 bg-[radial-gradient(circle_at_76%_18%,rgba(150,25,38,.42),transparent_29%),linear-gradient(135deg,#120606,#080506_58%,#16100b)] px-5 pb-14 pt-6 sm:px-8 sm:pb-20 lg:px-12">
+        <div className="kc-orbit pointer-events-none absolute -right-32 top-[-10rem] h-[34rem] w-[34rem] rounded-full border border-[#e8bd74]/25 bg-[#a20e23]/20 blur-3xl" />
+        <div className="relative mx-auto max-w-7xl">
+          <header className="flex items-center justify-between gap-4"><Link href="/kingcam"><a className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[.2em] text-white/75"><ArrowLeft className="h-4 w-4" /> KingCam</a></Link><StatusPill value={system?.status || "loading"} /></header>
+          <div className="mt-16 grid gap-10 lg:grid-cols-[1.15fr_.85fr] lg:items-end">
+            <div className="kc-rise"><p className="text-[10px] font-black uppercase tracking-[.3em] text-[#e8bd74]">CreatorVault / KingCam Clone Operating System</p><h1 className="mt-6 text-[16vw] font-black leading-[.66] tracking-[-.12em] sm:text-8xl lg:text-[7.8rem]">NOT A<br /><span className="text-[#e1ac58]">TOY.</span></h1><p className="mt-7 max-w-2xl text-lg leading-8 text-white/70">This is the command center for the full KingCam system: your identity, body, real voice, cinematic motion, platform knowledge, memory, truth rules, and quality decisions—all owned by CreatorVault.</p><div className="mt-8 flex flex-wrap gap-3"><Link href="/kingcam/guide"><a className="inline-flex min-h-12 items-center gap-2 rounded-full bg-[#d9a44e] px-6 text-sm font-black text-black"><Play className="h-4 w-4 fill-current" /> Watch the live guide</a></Link><button type="button" disabled={planProof.isPending} onClick={() => planProof.mutate({ hardCreditCap: 150, sceneBrief: fullBodyBrief })} className="inline-flex min-h-12 items-center gap-2 rounded-full border border-[#e8bd74]/55 bg-black/30 px-6 text-sm font-black text-[#f8dfad] disabled:opacity-50"><Video className="h-4 w-4" /> {planProof.isPending ? "Locking the proof…" : "Lock full-body proof"}</button></div>{notice && <p className="mt-5 max-w-xl rounded-2xl border border-[#e8bd74]/25 bg-black/35 px-4 py-3 text-sm leading-6 text-[#f6dfaf]">{notice}</p>}</div>
+            <aside className="kc-rise rounded-[2rem] border border-[#e8bd74]/25 bg-black/35 p-6 backdrop-blur-xl"><p className="text-[9px] font-black uppercase tracking-[.23em] text-[#e8bd74]">The real KingCam spine</p><div className="mt-6 space-y-4"><div className="flex items-start gap-3"><Crown className="mt-0.5 h-5 w-5 text-[#e8bd74]" /><div><p className="font-black">Identity Vault</p><p className="mt-1 text-sm leading-5 text-white/55">{sourceCount} approved public KingCam source assets, including a full-body campaign motion reference.</p></div></div><div className="flex items-start gap-3"><Mic2 className="mt-0.5 h-5 w-5 text-[#e8bd74]" /><div><p className="font-black">Real voice only</p><p className="mt-1 text-sm leading-5 text-white/55">Your ElevenLabs clone is the voice lane. A generic fallback is not allowed for public KingCam.</p></div></div><div className="flex items-start gap-3"><Film className="mt-0.5 h-5 w-5 text-[#e8bd74]" /><div><p className="font-black">Full-body motion</p><p className="mt-1 text-sm leading-5 text-white/55">{motionReady ? "The governed motion lane is open for one bounded proof." : "The full-body proof is protected behind the governed Pollo lane until its runtime spend controls are open."}</p></div></div><div className="flex items-start gap-3"><Brain className="mt-0.5 h-5 w-5 text-[#e8bd74]" /><div><p className="font-black">Truth and memory</p><p className="mt-1 text-sm leading-5 text-white/55">KingCam leads people only through real CreatorVault rooms and stores owner-directed launch decisions inside his own command history.</p></div></div></div></aside>
           </div>
-          <button onClick={() => setShowCreate(!showCreate)} className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-5 py-2.5 rounded-xl transition-colors">
-            <Plus className="w-4 h-4" /> Create Clone
-          </button>
         </div>
+      </section>
 
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          {[
-            { label: "Active Clones", value: (clones as any)?.clones?.length || 0, icon: Copy, color: "text-yellow-400" },
-            { label: "Platforms Covered", value: "8", icon: Globe, color: "text-blue-400" },
-            { label: "Content Generated", value: "∞", icon: Zap, color: "text-purple-400" },
-            { label: "Revenue Multiplier", value: `${((clones as any)?.clones?.length || 0) + 1}x`, icon: TrendingUp, color: "text-green-400" },
-          ].map(s => (
-            <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <s.icon className={`w-5 h-5 ${s.color} mb-2`} />
-              <p className="text-2xl font-bold">{s.value}</p>
-              <p className="text-gray-400 text-sm">{s.label}</p>
-            </div>
-          ))}
-        </div>
+      <section className="bg-[#110908] px-5 py-14 sm:px-8 lg:px-12"><div className="mx-auto max-w-7xl"><div className="flex flex-wrap items-end justify-between gap-6"><div><p className="text-[10px] font-black uppercase tracking-[.25em] text-[#e8bd74]">The truth library</p><h2 className="mt-4 text-5xl font-black tracking-[-.09em] sm:text-7xl">KINGCAM KNOWS<br />WHAT IS <span className="text-[#e1ac58]">REAL.</span></h2></div><p className="max-w-md text-base leading-7 text-white/60">The clone does not make up a feature, a buyer, a subscriber count, a provider result, or a creator outcome. Every room below carries its real condition with it.</p></div><div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{(system?.truthLibrary || []).map((room) => { const Icon = roomIcons[room.id as keyof typeof roomIcons] || Sparkles; return <article key={room.id} className="group flex min-h-[17rem] flex-col rounded-[2rem] border border-white/10 bg-white/[.035] p-6 transition hover:-translate-y-1 hover:border-[#e8bd74]/45"><div className="flex items-start justify-between gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#d9a44e]/12 text-[#e8bd74]"><Icon className="h-5 w-5" /></span><StatusPill value={room.proofState} /></div><h3 className="mt-8 text-2xl font-black tracking-[-.06em]">{room.room}</h3><p className="mt-3 flex-1 text-sm leading-6 text-white/60">{room.fact}</p><button type="button" disabled={beginTour.isPending} onClick={() => beginTour.mutate({ roomId: room.id as "creator-ownership" | "body-cinema" | "caption-stage" | "trailer-maker" | "clone-command" })} className="mt-5 inline-flex items-center gap-2 text-left text-[10px] font-black uppercase tracking-[.16em] text-[#f0cc87]"><ArrowRight className="h-4 w-4" /> Let KingCam enter this room</button></article>; })}</div></div></section>
 
-        {/* Create Clone Form */}
-        {showCreate && (
-          <div className="bg-white/5 border border-yellow-500/30 rounded-2xl p-6 mb-8">
-            <h2 className="text-xl font-bold text-yellow-400 mb-5">Configure New Clone</h2>
-            <div className="space-y-5">
-              <div>
-                <label className="text-sm text-gray-400 mb-1 block">Clone Name</label>
-                <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g., KingCam DR, KingCam Fitness" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500" />
-              </div>
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Content Style</label>
-                <div className="flex flex-wrap gap-2">
-                  {STYLES.map(s => (
-                    <button key={s} onClick={() => setStyle(s)} className={`px-3 py-1.5 rounded-full text-sm transition-all ${style === s ? "bg-yellow-500 text-black font-bold" : "bg-white/10 text-gray-400 hover:bg-white/20"}`}>{s}</button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Target Platforms</label>
-                <div className="flex flex-wrap gap-2">
-                  {PLATFORMS.map(p => (
-                    <button key={p} onClick={() => togglePlatform(p)} className={`px-3 py-1.5 rounded-full text-sm transition-all ${selectedPlatforms.includes(p) ? "bg-blue-500 text-white font-bold" : "bg-white/10 text-gray-400 hover:bg-white/20"}`}>{p}</button>
-                  ))}
-                </div>
-              </div>
-              <button onClick={() => createClone.mutate?.({ name, style, platforms: selectedPlatforms })} disabled={!name || createClone.isPending} className="w-full bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-black font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
-                {createClone.isPending ? "Creating..." : <><Zap className="w-4 h-4" /> Deploy Clone</>}
-              </button>
-            </div>
-          </div>
-        )}
+      <section className="relative overflow-hidden bg-[#e8c37f] px-5 py-14 text-[#180b08] sm:px-8 lg:px-12"><div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-start"><div><p className="text-[10px] font-black uppercase tracking-[.25em] text-[#8a271c]">The quality oath</p><h2 className="mt-4 text-5xl font-black leading-[.75] tracking-[-.1em] sm:text-7xl">IF IT DOESN'T<br />LOOK LIKE<br /><span className="text-[#8a271c]">KINGCAM,</span><br />IT'S OUT.</h2></div><div className="grid gap-3">{(system?.qualityPolicy?.gates || []).map((gate: string, index: number) => <div key={gate} className="flex gap-4 rounded-2xl border border-[#4b170f]/15 bg-white/35 p-5"><span className="font-black text-[#8a271c]">0{index + 1}</span><p className="text-sm font-semibold leading-6 text-[#31130d]/80">{gate}</p></div>)}</div></div></section>
 
-        {/* Clone List */}
-        {clones && (clones as any)?.clones?.length > 0 ? (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-300">Your Active Clones</h2>
-            {((clones as any)?.clones ?? []).map((clone: any) => (
-              <div key={clone.id} className="bg-white/5 border border-white/10 hover:border-yellow-500/20 rounded-2xl p-5 transition-all">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-black font-bold text-lg">
-                      {clone.name?.[0] || "K"}
-                    </div>
-                    <div>
-                      <p className="font-bold text-lg">{clone.name}</p>
-                      <p className="text-gray-400 text-sm">Style: {clone.style} · {clone.platforms?.join(", ")}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${clone.status === "active" ? "bg-green-500/20 text-green-400" : clone.status === "training" ? "bg-yellow-500/20 text-yellow-400" : "bg-gray-500/20 text-gray-400"}`}>
-                      {clone.status || "active"}
-                    </span>
-                    <button onClick={() => trainClone.mutate?.({ cloneId: clone.id, content: "latest" })} className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-1">
-                      <Zap className="w-3 h-3" /> Train
-                    </button>
-                    <button onClick={() => navigate(`/clone-empire-home`)} className="bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-1">
-                      <Play className="w-3 h-3" /> Manage
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
-              <Copy className="w-10 h-10 text-yellow-400" />
-            </div>
-            <h2 className="text-xl font-bold text-yellow-400 mb-2">No Clones Yet</h2>
-            <p className="text-gray-400 mb-6">Create your first AI clone to multiply your presence across every platform simultaneously.</p>
-            <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto mb-6">
-              {[
-                { step: "1", title: "Configure", desc: "Set name, style & platforms" },
-                { step: "2", title: "Train", desc: "Feed it your content" },
-                { step: "3", title: "Deploy", desc: "It posts 24/7 for you" },
-              ].map(s => (
-                <div key={s.step} className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
-                  <div className="w-8 h-8 rounded-full bg-yellow-500 text-black font-bold flex items-center justify-center mx-auto mb-2 text-sm">{s.step}</div>
-                  <p className="font-semibold text-sm">{s.title}</p>
-                  <p className="text-gray-500 text-xs">{s.desc}</p>
-                </div>
-              ))}
-            </div>
-            <button onClick={() => setShowCreate(true)} className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-8 py-3 rounded-xl transition-colors flex items-center gap-2 mx-auto">
-              <Plus className="w-4 h-4" /> Create Your First Clone
-            </button>
-          </div>
-        )}
-
-        {/* Quick Links */}
-        <div className="mt-8 grid grid-cols-2 gap-4">
-          <button onClick={() => navigate("/clone-empire-home")} className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-yellow-500/30 rounded-xl p-4 flex items-center gap-3 transition-all">
-            <Globe className="w-5 h-5 text-yellow-400" />
-            <div className="text-left">
-              <p className="font-semibold">Clone Empire Home</p>
-              <p className="text-gray-500 text-xs">Full empire overview</p>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-500 ml-auto" />
-          </button>
-          <button onClick={() => navigate("/king/clone-studio")} className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-yellow-500/30 rounded-xl p-4 flex items-center gap-3 transition-all">
-            <Settings className="w-5 h-5 text-yellow-400" />
-            <div className="text-left">
-              <p className="font-semibold">Clone Studio</p>
-              <p className="text-gray-500 text-xs">Advanced clone settings</p>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-500 ml-auto" />
-          </button>
-        </div>
-      </div>
-    </div>
+      <section className="bg-[#090506] px-5 py-14 sm:px-8 lg:px-12"><div className="mx-auto max-w-7xl"><div className="flex flex-wrap items-end justify-between gap-6"><div><p className="text-[10px] font-black uppercase tracking-[.25em] text-[#e8bd74]">Motion proof ledger</p><h2 className="mt-4 text-5xl font-black tracking-[-.09em] sm:text-7xl">NO HIDDEN<br /><span className="text-[#e1ac58]">GENERATION.</span></h2></div><div className="max-w-md rounded-2xl border border-white/10 bg-white/[.035] p-5 text-sm leading-6 text-white/60"><ShieldCheck className="mb-3 h-5 w-5 text-[#e8bd74]" />Every full-body request records source, model lane, one-output cap, credit ceiling, consent, ownership, and final accept-or-reject decision before it ever becomes public KingCam media.</div></div><div className="mt-8 grid gap-4 lg:grid-cols-2">{(system?.motionRequests || []).length ? (system?.motionRequests || []).map((request) => <article key={request.id} className="rounded-[2rem] border border-white/10 bg-white/[.035] p-6"><div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs font-black uppercase tracking-[.18em] text-[#e8bd74]">{request.intendedLane.replace(/_/g, " ")}</p><StatusPill value={request.state} /></div><p className="mt-4 text-lg font-black">Full-body KingCam proof</p><p className="mt-3 text-sm leading-6 text-white/60">{request.sceneBrief}</p><div className="mt-5 flex flex-wrap gap-2">{request.candidateModels.map((model: string) => <span key={model} className="rounded-full border border-white/15 px-3 py-1 text-[9px] font-black uppercase tracking-[.12em] text-white/60">{model.replace("pollo/", "")}</span>)}<span className="rounded-full border border-[#e8bd74]/35 bg-[#e8bd74]/10 px-3 py-1 text-[9px] font-black uppercase tracking-[.12em] text-[#f0cf91]">{request.hardCreditCap} credit ceiling</span></div></article>) : <div className="rounded-[2rem] border border-dashed border-white/20 bg-white/[.025] p-8 text-center"><Vault className="mx-auto h-7 w-7 text-[#e8bd74]" /><p className="mt-4 text-xl font-black">THE FIRST FULL-BODY PROOF IS NOT FAKE.</p><p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-white/55">Lock it here first. The governed motion lane will refuse to create until source, consent, spend ceiling, model, and quality law are all recorded.</p></div>}</div></div></section>
+    </main>
   );
 }

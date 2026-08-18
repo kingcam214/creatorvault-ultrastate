@@ -286,6 +286,7 @@ import { creationDirectorRouter } from "./routers/creationDirectorRouter";
 import { creationProjectsRouter } from "./routers/creationProjectsRouter";
 import { creationProofRouter } from "./routers/creationProofRouter";
 import { governedKingcamIdentityRouter } from "./routers/governedKingcamIdentityRouter";
+import { kingcamCloneOperatingSystemRouter } from "./routers/kingcamCloneOperatingSystemRouter";
 import { distributionRouter } from "./routers/distributionRouter";
 import { socialSpineRouter } from "./routers/socialSpineRouter";
 // import { contentProtectionRouter } from "./routers/contentProtection"; // service stubs not implemented
@@ -990,6 +991,7 @@ export const appRouter = router({
   creationProjects: creationProjectsRouter,
   creationProof: creationProofRouter,
   governedKingcamIdentity: governedKingcamIdentityRouter,
+  kingcamCloneOperatingSystem: kingcamCloneOperatingSystemRouter,
   compliance: complianceRouter,
   renderGraph: renderGraphRouter,
   editor: realEditorRouter,
