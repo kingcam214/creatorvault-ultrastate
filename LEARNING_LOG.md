@@ -280,3 +280,10 @@ The governed Kling v3 Omni reference-to-video corrective lane was deployed with 
 After two inspected Seedance rejections and a Kling quote gate that correctly refused to guess a price, the next KingCam corrective proof is the existing CreatorVault **clone-only** Replicate Wan 2.7 VideoEdit source-video lane. It is not available to Body Cinema. It preserves the actual KingCam source video as input, has one output only, uses a documented **$2 USD maximum**, has no automatic retry, and reuses the existing governed draft, approval, single-use permit, submit, poll, and quality-review chain.
 
 This is a corrective source-preservation test only. It must be rejected for any changed identity, wardrobe, jewelry, shoes, anatomy, camera rule, source performance, or environment geometry. No result becomes public KingCam media without a finished-video review.
+
+
+## 2026-08-18 — KINGCAM CLONE-ONLY SOURCE-DURATION FAILURE
+
+**Real provider run:** governed job `99`; clone-only Replicate Wan 2.7 VideoEdit; one submitted request; documented $2 maximum; no retry. The provider rejected it before rendering because the KingCam source is **5.04 seconds** while the request incorrectly asked for **10 seconds**: `InvalidParameter - Setting duration 10 exceeds video duration 5.04.`
+
+**Corrective rule:** this was a source-duration contract failure, not a visual-quality failure. Do not change KingCam’s source, direction, identity, wardrobe law, or provider lane. The exact repair is to constrain the clone-only proof to a 5-second output that does not exceed the actual source duration, then rerun the same governed one-output path.

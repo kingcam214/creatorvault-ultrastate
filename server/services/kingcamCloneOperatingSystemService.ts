@@ -19,7 +19,8 @@ const KINGCAM_FULL_BODY_IMAGE = "https://creatorvault.live/images/kingcam-profil
 type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review";
 type MotionRequestState = "planned" | "approved" | "submitted" | "provider_complete" | "accepted" | "rejected" | "failed";
 const KINGCAM_FULL_BODY_PROOF_MAX_SPEND_USD = 2;
-const KINGCAM_FULL_BODY_PROOF_DURATION_SECONDS = 10;
+// The verified KingCam motion source is 5.04 seconds; this proof must never request a longer output.
+const KINGCAM_FULL_BODY_PROOF_DURATION_SECONDS = 5;
 const KINGCAM_FULL_BODY_CORRECTIVE_MODEL = "replicate/wan-video/wan-2.7-videoedit";
 
 export type KingcamTruthCard = {
