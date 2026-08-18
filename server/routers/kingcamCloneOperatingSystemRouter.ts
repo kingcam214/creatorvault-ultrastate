@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { auditPolloAvailableCredits, auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, auditPolloMiniMaxH3ReferenceCost, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
+import { archiveKingcamMiniMaxH3PresenceLoop, auditPolloAvailableCredits, auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, auditPolloMiniMaxH3ReferenceCost, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
 import {
   getKingcamCloneOperatingSystem,
   launchKingcamFullBodyMotionProof,
@@ -66,6 +66,17 @@ export const kingcamCloneOperatingSystemRouter = router({
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam provider candidate audit could not run." });
     }
   }),
+
+  archiveMiniMaxPresenceLoop: protectedProcedure
+    .input(z.object({ jobId: z.literal(102) }))
+    .mutation(async ({ ctx, input }) => {
+      ownerOnly(ctx.user.id);
+      try {
+        return await archiveKingcamMiniMaxH3PresenceLoop({ ownerId: ctx.user.id, jobId: input.jobId });
+      } catch (error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam presence loop could not be archived." });
+      }
+    }),
 
   auditPolloBalance: protectedProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);

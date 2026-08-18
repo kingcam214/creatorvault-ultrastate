@@ -1453,6 +1453,75 @@ export async function createManualCappedKingcamMiniMaxH3Draft(input: {
   });
 }
 
+export async function archiveKingcamMiniMaxH3PresenceLoop(params: { ownerId: number; jobId: 102 }): Promise<{ assetId: string; outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number; outputFingerprint: string }> {
+  requireOwner(params.ownerId);
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || job.id !== 102 || job.providerModelPath !== MINIMAX_H3_SOURCE_VIDEO_REFERENCE_MODEL_PATH) {
+    throw new Error("Only the exact KingCam MiniMax H3 proof can be archived as this private presence loop.");
+  }
+  if (job.creatorId !== params.ownerId || job.state !== "provider_complete" || !job.outputUrl) {
+    throw new Error("The completed KingCam MiniMax output is not available for private archival.");
+  }
+  if (job.metadata.ownerDirectedPilot !== true || job.metadata.candidateLimit !== 1 || job.metadata.noAutomaticRetry !== true || job.metadata.sourcePreservationRequired !== true) {
+    throw new Error("The MiniMax result lacks the governed one-output proof controls required for private archival.");
+  }
+  const motionRequestId = typeof job.metadata.kingcamMotionRequestId === "string" ? job.metadata.kingcamMotionRequestId : "";
+  if (!motionRequestId) throw new Error("The MiniMax result has no KingCam motion request record.");
+  const reviewRows = await rawQuery("SELECT state, review_json FROM kingcam_clone_motion_requests WHERE id = ? AND owner_id = ? LIMIT 1", [motionRequestId, params.ownerId]);
+  if (String(reviewRows[0]?.state || "") !== "rejected") {
+    throw new Error("Only the reviewed rejected MiniMax motion result can become a private presence loop; it cannot become public Clone Guide media.");
+  }
+
+  const folder = "kingcam-private-presence-loop-102";
+  const fileName = "KingCam-Private-Presence-Loop.mp4";
+  const directory = path.join("/root/uploads", "content-vault", folder);
+  const localPath = path.join(directory, fileName);
+  const outputAssetUrl = `https://creatorvault.live/uploads/content-vault/${folder}/${fileName}`;
+  if (!(await stat(localPath).then(() => true).catch(() => false))) {
+    await mkdir(directory, { recursive: true });
+    const response = await fetch(job.outputUrl, { redirect: "follow" });
+    if (!response.ok) throw new Error(`MiniMax presence-loop download returned ${response.status}.`);
+    const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+    if (contentType && !contentType.includes("video/")) throw new Error(`MiniMax presence-loop output did not return video data (${contentType}).`);
+    const declaredLength = Number(response.headers.get("content-length") || 0);
+    if (declaredLength > 350 * 1024 * 1024) throw new Error("MiniMax presence-loop output exceeded the private Media Vault size limit.");
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length < 1024 || bytes.length > 350 * 1024 * 1024) throw new Error("MiniMax presence-loop output failed private Media Vault validation.");
+    await writeFile(localPath, bytes);
+  }
+
+  const video = await probeVideo(localPath);
+  const sizeBytes = Number((await stat(localPath)).size);
+  const outputFingerprint = createHash("sha256").update(await readFile(localPath)).digest("hex");
+  if (!Number.isFinite(video.durationSeconds) || video.durationSeconds <= 0 || !Number.isFinite(video.width) || video.width <= 0 || !Number.isFinite(video.height) || video.height <= 0 || sizeBytes < 1024) {
+    throw new Error("MiniMax presence-loop archive is not a readable video with duration and dimensions.");
+  }
+  const existing = await rawQuery("SELECT id FROM media_assets WHERE user_id = ? AND public_url = ? LIMIT 1", [params.ownerId, outputAssetUrl]);
+  const assetId = existing[0]?.id ? String(existing[0].id) : randomUUID();
+  if (!existing[0]) {
+    await rawExec(
+      `INSERT INTO media_assets (id, user_id, source_type, asset_type, file_name, original_name, mime_type, file_size, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
+       VALUES (?, ?, 'generated', 'video', ?, ?, 'video/mp4', ?, ?, ?, ?, ?, ?, ?, 'ready', 'kingcam_private_presence_loop')`,
+      [assetId, params.ownerId, "KingCam — Private Presence Loop", "KingCam — Private Presence Loop (Not a Clone Guide)", sizeBytes, localPath, outputAssetUrl, outputAssetUrl, Number(video.durationSeconds.toFixed(3)), video.width, video.height],
+    );
+  }
+  const metadata = {
+    ...job.metadata,
+    privatePresenceLoop: {
+      assetId,
+      outputAssetUrl,
+      outputFingerprint,
+      classification: "private_presence_loop_not_clone_demo",
+      allowedUse: "owner-only visual presence reference; not public Clone Guide, tool demonstration, or Body Cinema source",
+      qualityDecision: "rejected_for_full_motion_demo_but_preserved_for_private_owner_presence_use",
+      archivedAt: new Date().toISOString(),
+    },
+  };
+  await rawExec("UPDATE governed_media_jobs SET metadata_json = ?, updated_at = NOW() WHERE id = ? AND state = 'provider_complete'", [safeJson(metadata), job.id]);
+  await appendEvent({ jobId: job.id, eventType: "kingcam_private_presence_loop_archived", fromState: "provider_complete", toState: "provider_complete", actorId: params.ownerId, correlationId: job.requestId, detail: { assetId, outputAssetUrl, durationSeconds: Number(video.durationSeconds.toFixed(3)), width: video.width, height: video.height, sizeBytes, outputFingerprint, classification: "private_presence_loop_not_clone_demo" } });
+  return { assetId, outputAssetUrl, durationSeconds: Number(video.durationSeconds.toFixed(3)), width: video.width, height: video.height, sizeBytes, outputFingerprint };
+}
+
 export async function createGovernedReplicateWanVideoEditDraft(input: {
   creatorId: number;
   requestedBy: number;

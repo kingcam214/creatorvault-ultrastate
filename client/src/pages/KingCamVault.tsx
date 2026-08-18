@@ -32,9 +32,14 @@ function isLegacyDelivery(asset: MediaAssetItem) {
   return /^https?:\/\/replicate\.delivery\//i.test(String(asset.publicUrl || asset.storagePath || ""));
 }
 
+function isPrivatePresenceLoop(asset: MediaAssetItem) {
+  return String(asset.classification || "").toLowerCase() === "private_presence_loop";
+}
+
 function isCleanBodyCinemaSource(asset: MediaAssetItem) {
   return isVideo(asset)
     && isReadySource(asset)
+    && !isPrivatePresenceLoop(asset)
     && String(asset.classification || "").toLowerCase() !== "finished_showcase"
     && String(asset.sourceType || "").toLowerCase() !== "finished_motion_flyer";
 }
@@ -116,9 +121,11 @@ export function KingCamVault() {
           const video = isVideo(asset);
           const audio = isAudio(asset);
           const active = activeAsset?.id === asset.id;
-          const kind = asset.classification === "finished_showcase"
-            ? "Finished motion piece"
-            : isVerifiedOriginalFootage(asset) ? "Your original footage"
+          const kind = isPrivatePresenceLoop(asset)
+            ? "Private KingCam presence loop · demo locked"
+            : asset.classification === "finished_showcase"
+              ? "Finished motion piece"
+              : isVerifiedOriginalFootage(asset) ? "Your original footage"
             : video ? "Saved video"
             : audio ? "Your soundtrack"
             : "Saved image";
@@ -129,7 +136,7 @@ export function KingCamVault() {
       {activeAsset && (() => {
         const video = isVideo(activeAsset);
         const audio = isAudio(activeAsset);
-        return <section className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#08080c]/95 px-4 py-4 backdrop-blur-2xl sm:px-6"><div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-center"><div className="flex min-w-0 flex-1 items-center gap-4"><div className="h-16 w-24 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black">{video && activeAsset.publicUrl ? <video src={activeAsset.publicUrl} poster={videoPoster(activeAsset)} muted playsInline preload="metadata" className="h-full w-full object-cover" /> : audio ? <AudioCover compact /> : activeAsset.thumbnailUrl || activeAsset.publicUrl ? <img src={activeAsset.thumbnailUrl || activeAsset.publicUrl || ""} alt="" className="h-full w-full object-cover" /> : null}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-black text-white">{activeAsset.originalName || activeAsset.fileName}</p><p className="mt-1 text-xs text-zinc-400">{video ? `${formatDuration(activeAsset.duration)} ${isVerifiedOriginalFootage(activeAsset) ? "verified original footage" : activeAsset.classification === "finished_showcase" ? "finished motion piece" : "saved video"}` : audio ? `${formatDuration(activeAsset.duration)} your soundtrack` : "Saved image"} · Saved {formatDate(activeAsset.createdAt)}</p>{audio && activeAsset.publicUrl && <audio className="mt-3 h-9 w-full max-w-xl" controls preload="metadata" src={activeAsset.publicUrl} />}</div></div>{video ? <div className="grid grid-cols-2 gap-2 sm:flex">{isCleanBodyCinemaSource(activeAsset) ? <Link href={`/vault-x/studio?sourceAssetId=${activeAsset.id}`}><a className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-fuchsia-200 px-4 text-xs font-black text-black transition hover:bg-white"><Film className="h-4 w-4" /> Open Body Cinema</a></Link> : <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-200/35 bg-amber-200/10 px-4 text-xs font-black text-amber-100">Finished piece · source locked</span>}<Link href={`/trailer-maker?sourceAssetId=${activeAsset.id}`}><a className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-xs font-black text-white transition hover:bg-white/10"><Video className="h-4 w-4" /> Trailer Maker</a></Link></div> : audio ? <Link href={`/vault-x/studio?audioAssetId=${activeAsset.id}`}><a className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-cyan-200 px-4 text-xs font-black text-black transition hover:bg-white"><AudioLines className="h-4 w-4" /> Use in Body Cinema</a></Link> : null}</div></section>;
+        return <section className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#08080c]/95 px-4 py-4 backdrop-blur-2xl sm:px-6"><div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-center"><div className="flex min-w-0 flex-1 items-center gap-4"><div className="h-16 w-24 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black">{video && activeAsset.publicUrl ? <video src={activeAsset.publicUrl} poster={videoPoster(activeAsset)} muted playsInline preload="metadata" className="h-full w-full object-cover" /> : audio ? <AudioCover compact /> : activeAsset.thumbnailUrl || activeAsset.publicUrl ? <img src={activeAsset.thumbnailUrl || activeAsset.publicUrl || ""} alt="" className="h-full w-full object-cover" /> : null}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-black text-white">{activeAsset.originalName || activeAsset.fileName}</p><p className="mt-1 text-xs text-zinc-400">{video ? `${formatDuration(activeAsset.duration)} ${isPrivatePresenceLoop(activeAsset) ? "private presence loop · not a Clone Guide or tool demo" : isVerifiedOriginalFootage(activeAsset) ? "verified original footage" : activeAsset.classification === "finished_showcase" ? "finished motion piece" : "saved video"}` : audio ? `${formatDuration(activeAsset.duration)} your soundtrack` : "Saved image"} · Saved {formatDate(activeAsset.createdAt)}</p>{audio && activeAsset.publicUrl && <audio className="mt-3 h-9 w-full max-w-xl" controls preload="metadata" src={activeAsset.publicUrl} />}</div></div>{video ? <div className="grid grid-cols-2 gap-2 sm:flex">{isPrivatePresenceLoop(activeAsset) ? <span className="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-200/35 bg-amber-200/10 px-4 text-xs font-black text-amber-100">Private presence loop · Clone Guide and tool use locked</span> : <>{isCleanBodyCinemaSource(activeAsset) ? <Link href={`/vault-x/studio?sourceAssetId=${activeAsset.id}`}><a className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-fuchsia-200 px-4 text-xs font-black text-black transition hover:bg-white"><Film className="h-4 w-4" /> Open Body Cinema</a></Link> : <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-200/35 bg-amber-200/10 px-4 text-xs font-black text-amber-100">Finished piece · source locked</span>}<Link href={`/trailer-maker?sourceAssetId=${activeAsset.id}`}><a className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-xs font-black text-white transition hover:bg-white/10"><Video className="h-4 w-4" /> Trailer Maker</a></Link></>}</div> : audio ? <Link href={`/vault-x/studio?audioAssetId=${activeAsset.id}`}><a className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-cyan-200 px-4 text-xs font-black text-black transition hover:bg-white"><AudioLines className="h-4 w-4" /> Use in Body Cinema</a></Link> : null}</div></section>;
       })()}
     </main>
   );

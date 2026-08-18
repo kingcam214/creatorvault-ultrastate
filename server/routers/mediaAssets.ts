@@ -226,11 +226,13 @@ export const mediaAssetsRouter = router({
         userId: Number(row.user_id),
         assetType: row.asset_type ?? null,
         sourceType: row.source_type ?? null,
-        classification: row.created_by_feature === "recovered_finished_motion_flyer"
-          ? "finished_showcase"
-          : row.created_by_feature === "creatorvault_approved_demo"
-            ? "approved_demo"
-            : "creator_owned_or_generated",
+        classification: row.created_by_feature === "kingcam_private_presence_loop"
+          ? "private_presence_loop"
+          : row.created_by_feature === "recovered_finished_motion_flyer"
+            ? "finished_showcase"
+            : row.created_by_feature === "creatorvault_approved_demo"
+              ? "approved_demo"
+              : "creator_owned_or_generated",
         // A media row alone never authorizes Body Cinema. The source must have a
         // durable 94+ preservation baseline that still matches its exact bytes.
         bodyCinemaEligible: verifiedSourceUrls.has(String(row.public_url || "")),
