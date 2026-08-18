@@ -12,6 +12,7 @@ import {
   createGovernedKingcamReplicateOmniHumanDraft,
   createGovernedKingcamReplicateWanAnimateDraft,
   createGovernedKingcamGoEnhanceRealPerformanceDraft,
+  createGovernedKingcamActionImitationV2Draft,
   getGovernedPolloJob,
   getGovernedPolloConfig,
   isGovernedPolloExecutionEnabled,
@@ -39,6 +40,8 @@ const KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS = 7;
 const KINGCAM_WAN_ANIMATE_REAL_DRIVER_HARD_SPEND_CAP_USD = 2;
 const KINGCAM_GOENHANCE_REAL_PERFORMANCE_HARD_CREDIT_CAP = 105;
 const KINGCAM_GOENHANCE_REAL_PERFORMANCE_STYLE_CODE = "mx-v2v";
+const KINGCAM_ACTION_IMITATION_V2_HARD_CREDIT_CAP = 35;
+const KINGCAM_ACTION_IMITATION_V2_QUOTED_COST_USD = 2.1;
 const KINGCAM_GOENHANCE_REAL_PERFORMANCE_GATES = [
   "The result visibly shows real KingCam in continuous full-body movement from crown to shoes, retaining the original seven-second gait timing and wide framing.",
   "KingCam’s recognizable face, beard, build, burgundy suit with gold embroidery, crown, jewelry, black shoes, right-hand cigar, and lounge geometry remain intact without substitution.",
@@ -1176,6 +1179,69 @@ export async function launchKingcamWanAnimateFullBodyProof(input: { ownerId: num
     hardCreditCap: KINGCAM_WAN_ANIMATE_REAL_DRIVER_HARD_SPEND_CAP_USD,
     qualityGate: WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES,
   };
+}
+
+export async function launchKingcamActionImitationV2FullBodyProof(input: { ownerId: number; sceneBrief: string }) {
+  assertOwner(input.ownerId);
+  const sceneBrief = String(input.sceneBrief || "").trim();
+  if (sceneBrief.length < 40 || sceneBrief.length > 1800) {
+    throw new Error("KingCam Action Imitation motion brief must be between 40 and 1800 characters.");
+  }
+  await ensureProfile(input.ownerId);
+  const motionRequestId = randomUUID();
+  const fingerprint = createHash("sha256")
+    .update(`${KINGCAM_CLONE_ID}:${KINGCAM_WAN_ANIMATE_REAL_DRIVER_IMAGE}:${KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL}:action-imitation-v2:${sceneBrief}:${KINGCAM_ACTION_IMITATION_V2_HARD_CREDIT_CAP}`)
+    .digest("hex");
+  await rawExec(`INSERT INTO kingcam_clone_motion_requests
+    (id, clone_id, owner_id, source_url, source_kind, motion_reference_url, intended_lane, candidate_models_json, scene_brief, hard_credit_cap,
+     consent_confirmed, ownership_confirmed, quality_gate_json, state, created_at, updated_at)
+    VALUES (?, ?, ?, ?, 'approved_kingcam_full_body_identity_image', ?, 'governed_pollo_action_imitation_v2_real_driver_motion', ?, ?, ?, 1, 1, ?, 'planned', NOW(), NOW())`,
+    [motionRequestId, KINGCAM_CLONE_ID, input.ownerId, KINGCAM_WAN_ANIMATE_REAL_DRIVER_IMAGE, KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL, json(["pollo/pollo-ai/action-imitation-v2"]), sceneBrief, KINGCAM_ACTION_IMITATION_V2_HARD_CREDIT_CAP, json(WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES)],
+  );
+  const drafted = await createGovernedKingcamActionImitationV2Draft({
+    creatorId: input.ownerId,
+    requestedBy: input.ownerId,
+    ownershipConfirmed: true,
+    consentConfirmed: true,
+    idempotencyKey: `kingcam-action-imitation-v2-full-body-proof:${motionRequestId}`,
+    requestId: motionRequestId,
+    metadata: {
+      kingcamCloneId: KINGCAM_CLONE_ID,
+      kingcamMotionRequestId: motionRequestId,
+      proofClass: "kingcam_action_imitation_v2_real_driver_full_body_motion_transfer_proof",
+      providerPreflight: "Official Pollo Action Imitation V2 accepts the approved KingCam identity image and locked real gait video as distinct inputs. The live provider estimate verified 35 Pollo credits / $2.10; one output only and no automatic retry.",
+      sceneBrief,
+      realDriverDurationSeconds: KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS,
+      qualityGate: WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES,
+    },
+  });
+  const approved = await approveGovernedPolloJob({
+    jobId: drafted.job.id,
+    approverId: input.ownerId,
+    expectedFingerprint: drafted.job.fingerprint,
+    reason: "Owner-directed KingCam Action Imitation V2 real-driver full-body motion-transfer proof. One seven-second output only; provider-estimated 35-credit ceiling, no automatic retry; reject any frozen movement, crop, camera spin, identity/wardrobe/crown/jewelry/shoe/cigar drift, hand/foot/anatomy defect, extra person, text, or invented environment.",
+  });
+  await authorizeSingleUseGovernedPolloSubmission({
+    jobId: approved.id,
+    ownerId: input.ownerId,
+    expectedFingerprint: approved.fingerprint,
+    hardCreditCap: KINGCAM_ACTION_IMITATION_V2_HARD_CREDIT_CAP,
+    expiresInMinutes: 10,
+    reason: "One-time KingCam Action Imitation V2 real-driver full-body proof; the live provider estimate returned 35 credits / $2.10 for the locked inputs, so that exact ceiling and the no-retry rule are enforced before submission.",
+  });
+  const submitted = await submitGovernedPolloJob({ jobId: approved.id, workerId: `kingcam-action-imitation-v2-owner-${input.ownerId}` });
+  const localState: MotionRequestState = submitted.state === "submitted" ? "submitted" : submitted.state === "failed" ? "failed" : "approved";
+  await rawExec(
+    "UPDATE kingcam_clone_motion_requests SET state = ?, review_json = ?, updated_at = NOW() WHERE id = ? AND clone_id = ? AND owner_id = ?",
+    [localState, json({ governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_ACTION_IMITATION_V2_HARD_CREDIT_CAP, providerQuotedCostUsd: KINGCAM_ACTION_IMITATION_V2_QUOTED_COST_USD, providerModelPath: "pollo/pollo-ai/action-imitation-v2", identityImage: KINGCAM_WAN_ANIMATE_REAL_DRIVER_IMAGE, motionDriverUrl: KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL, motionDriverDurationSeconds: KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS, qualityGate: WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES }), motionRequestId, KINGCAM_CLONE_ID, input.ownerId],
+  );
+  await recordKingcamCloneMemory({
+    ownerId: input.ownerId,
+    kind: "motion_proof_planned",
+    room: "KingCam Action Imitation V2 real-driver full-body motion",
+    payload: { motionRequestId, fingerprint, governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_ACTION_IMITATION_V2_HARD_CREDIT_CAP, providerQuotedCostUsd: KINGCAM_ACTION_IMITATION_V2_QUOTED_COST_USD, providerModelPath: "pollo/pollo-ai/action-imitation-v2", identityImage: KINGCAM_WAN_ANIMATE_REAL_DRIVER_IMAGE, motionDriverUrl: KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL, motionDriverDurationSeconds: KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS, qualityGate: WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES },
+  });
+  return { motionRequestId, governedJob: submitted, hardCreditCap: KINGCAM_ACTION_IMITATION_V2_HARD_CREDIT_CAP, qualityGate: WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES };
 }
 
 export async function launchKingcamGoEnhanceRealPerformanceProof(input: { ownerId: number; sceneBrief: string }) {

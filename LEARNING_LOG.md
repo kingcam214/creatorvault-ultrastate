@@ -608,3 +608,9 @@ The first audit-only implementation incorrectly called the generic `config/other
 The release for the validated Action Imitation V2 no-charge estimate audit (`1a42eeb`) did not reach CreatorVault production because the self-hosted GitHub Actions runner failed before checkout after three GitHub archive-download HTTP 429 responses for `actions/checkout@v4`. The local type check, scope guard, and production build had already passed. This was not an application code, database, or provider failure, and no provider task or credit spend occurred.
 
 Corrective action: trigger a fresh main-branch deployment after the temporary GitHub checkout throttle, then verify the live release SHA before calling the audit. Do not change the application contract merely to work around a transient GitHub download failure.
+
+## 2026-08-18 — Action Imitation V2 full-body real-driver proof intent
+
+The live owner-only official estimate audit succeeded for Pollo Action Imitation V2 with the approved KingCam identity image and locked real seven-second gait driver. The provider returned an exact estimate of **35 Pollo credits / $2.10**. Its documented contract accepts exactly `image` and `video` motion inputs, which is materially different from the rejected GoEnhance style lane and the stalled Replicate run.
+
+One fresh KingCam-only proof may proceed only through a new governed contract that locks this exact input pair, provider path, 35-credit / $2.10 quote, one output, ten-minute permit, no automatic retry, pre/post balance evidence, and finished-video quality review. The output must show the approved KingCam identity in continuous crown-to-shoes motion with the real gait transferred; it is automatically rejected for a crop, frozen movement, camera spin, face/body replacement, wardrobe/crown/jewelry/shoe/cigar drift, hand/foot/anatomy failure, extra person, text, or invented environment. No previously rejected output is reused.
