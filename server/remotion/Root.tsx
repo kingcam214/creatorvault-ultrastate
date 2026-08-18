@@ -17,6 +17,7 @@ import {
 import { EpisodeTrailerComposition, type EpisodeTrailerProps } from "./compositions/EpisodeTrailerComposition";
 import { EmpireMapSnapshotComposition, type EmpireMapSnapshotProps } from "./compositions/EmpireMapSnapshotComposition";
 import { AutomatedDirectorComposition, type AutomatedDirectorProps } from "./compositions/AutomatedDirectorComposition";
+import { SourcePreservingMasterComposition, type SourcePreservingMasterProps } from "./compositions/SourcePreservingMasterComposition";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = React.ComponentType<any>;
@@ -105,6 +106,9 @@ export const RemotionRoot: React.FC = () => {
       {/* ── AUTOMATED DIRECTOR COMPOSITIONS ── */}
       <Composition id="AutomatedDirectorPortrait" component={AutomatedDirectorComposition as AnyComponent} durationInFrames={150} fps={30} width={1080} height={1920} defaultProps={{ sourceVideoUrl: "", hookOverlayUrl: "", ctaOverlayUrl: "", hookText: "EXCLUSIVE CONTENT", ctaText: "SUBSCRIBE NOW", creatorName: "Creator", platform: "onlyfans", aiPacingApplied: true, scenesDetected: 3 } as AutomatedDirectorProps} />
       <Composition id="AutomatedDirectorLandscape" component={AutomatedDirectorComposition as AnyComponent} durationInFrames={150} fps={30} width={1920} height={1080} defaultProps={{ sourceVideoUrl: "", hookOverlayUrl: "", ctaOverlayUrl: "", hookText: "EXCLUSIVE CONTENT", ctaText: "SUBSCRIBE NOW", creatorName: "Creator", platform: "onlyfans", aiPacingApplied: true, scenesDetected: 3 } as AutomatedDirectorProps} />
+
+      {/* ── SOURCE-PRESERVING MASTER ── */}
+      <Composition id="CreatorVaultSourcePreservingMaster" component={SourcePreservingMasterComposition as AnyComponent} durationInFrames={300} fps={30} width={1920} height={1080} defaultProps={{ sourceVideoUrl: "", preserveSourceAudio: true, backgroundColor: "#000000" } as SourcePreservingMasterProps} />
 
       {/* ── 3D EMPIRE COMPOSITIONS ── */}
       <Composition id="EpisodeTrailer" component={EpisodeTrailerComposition as AnyComponent} durationInFrames={450} fps={30} width={1080} height={1920} defaultProps={defaultEpisodeTrailer} />

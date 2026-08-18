@@ -674,6 +674,20 @@ const ALLOWLISTS = {
     'server/remotion/types.ts',
     'scripts/scope-guard.js'
   ],
+  'remotion-source-preserving-master': [
+    'server/remotion/compositions/SourcePreservingMasterComposition.tsx',
+    'server/remotion/remotionRenderService.ts',
+    'server/remotion/Root.tsx',
+    'server/remotion/types.ts',
+    'server/services/creationDirector.ts',
+    'server/services/creationModelRegistry.ts',
+    'server/services/creationModelSelection.ts',
+    'server/routers/creationDirectorRouter.ts',
+    'server/routers.ts',
+    'server/remotion/remotionRenderService.test.ts',
+    'LEARNING_LOG.md',
+    'scripts/scope-guard.js'
+  ],
   'media-vault-recovery': [
     'client/src/components/MediaPicker.tsx',
     'client/src/pages/KingCamVault.tsx',

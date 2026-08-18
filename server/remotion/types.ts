@@ -18,7 +18,8 @@ export type RenderMode =
   | "visual_dna_thumbnail"
   | "visual_dna_broll"
   | "visual_dna_title_card"
-  | "caption_stage";
+  | "caption_stage"
+  | "source_preserving_master";
 
 export type MotionPreset =
   | "neon_pulse"

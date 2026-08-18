@@ -8,6 +8,7 @@ import {
   prepareCreationPlan,
   toCreatorFacingCreationPlan,
   authorizeAndSubmitCreationPlan,
+  renderSourcePreservingCreationPlan,
   acceptCreationPlanArtifact,
   voidCreationPlan,
   type CreationTool,
@@ -128,6 +129,27 @@ export const creationDirectorRouter = router({
       throw new TRPCError({ code: "NOT_FOUND", message: "CreatorVault could not find this creation path." });
     }
     return toCreatorFacingCreationPlan(plan);
+  }),
+
+  renderSourcePreservingMaster: protectedProcedure.input(z.object({
+    requestId: z.string().uuid(),
+  })).mutation(async ({ ctx, input }) => {
+    assertOwner(ctx);
+    try {
+      const result = await renderSourcePreservingCreationPlan({
+        requestId: input.requestId,
+        ownerId: Number(ctx.user.id),
+      });
+      return {
+        plan: toCreatorFacingCreationPlan(result.plan),
+        artifactUrl: result.artifactUrl,
+        thumbnailUrl: result.thumbnailUrl,
+        source: result.source,
+        reviewRequired: true,
+      };
+    } catch (error: any) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error?.message || "CreatorVault could not prepare this source-preserving master." });
+    }
   }),
 
   submitGoverned: protectedProcedure.input(z.object({

@@ -688,3 +688,31 @@ The only remaining screened source candidate is the separately identified **01:0
 The technical 1280×720 silent derivative preserved the existing source without creative changes, but it fails full-body continuity and natural-motion duration. KingCam enters partly cropped, walks briefly, then stops to pose. It is **not safe** as a five-second motion-transfer driver and is barred from any provider submission.
 
 Current real-source finding: all screened library candidates for a natural full-body gait are now excluded for the active clone motion-transfer proof—01:29–01:36 was misdescribed/unsafe, 01:30–01:37 is stylized rather than natural gait, 01:01–01:06 is short and partially cropped, and the rear-view walk has severe camera/identity-transfer risk. No new provider submission may occur until a separately verified real KingCam driver is available.
+
+### Exhaustive remaining local KingCam motion-source screen — 2026-08-18
+
+All 20 previously unreviewed local video files were screened under the strict full-body motion-driver standard. **None is eligible.** Most do not contain KingCam, are creator clips of other people, screen recordings, generated/template videos, montages, seated/close-up footage, or contain less than five seconds of continuous full-body natural locomotion. The only additional KingCam-marked clips remain below the source threshold: short out-of-focus body views, close-ups, mid-thigh shots, seated frames, or no continuous locomotion.
+
+This completes the screen of the supplied local library. There is no verified local source left that meets the active real-driver requirement: continuous natural full-body crown-to-shoes motion, stable framing, usable identity/profile information, natural hands and feet, and no unsafe camera behavior. The Kling 3 Omni real-gait lane remains code-complete and exact-cost-governed but has **no eligible driver source**. No paid retry, visual substitution, or synthetic stand-in is authorized.
+
+### Public TikTok candidate check — 2026-08-18
+
+The public TikTok result surfaced by search under `@king.cam573` was opened in the agent browser and visibly shows a different person in a blurry close-up, not a usable KingCam full-body source. It is excluded. No login, download, upload, generation, or provider request occurred.
+
+
+## 2026-08-18 — REMOTION SOURCE-PRESERVING MASTER TRUTH TEST
+
+CreatorVault’s retained Remotion runtime was audited against the installed `@remotion/bundler`, `@remotion/renderer`, and `remotion` packages (version 4.0.448), its existing composition root, its server renderer, and the only existing live caller (Caption Stage). Remotion is a React/Node editorial compositor, not an AI image-to-video or motion-transfer model. It can package and assemble real approved source media; it cannot create a missing KingCam body performance, repair a poor driver, or turn a video into a true clone.
+
+A new narrow `source_preserving_master` composition was rendered locally with the pre-existing public `kingcam-hero-cam.mp4` source, at its verified 1080×1920, 24 fps, 5.041667-second shape. The render completed successfully as a real MP4, contained 121 compared frames, had no added caption, text, generated imagery, or visible black-output failure, and showed an all-frame SSIM of 0.989466 against the input. The only post-render media handling was technical H.264 packaging and thumbnail extraction.
+
+**Critical boundary:** subsequent comparison confirmed the selected hero input itself contains the previously documented synthetic-looking/corrupted movement characteristics. This Remotion result proves source-preserving assembly only; it does **not** prove KingCam clone motion, it does **not** make the hero input eligible as a motion driver, and it is barred from public clone proof, Clone Guide use, or acceptance as a generated KingCam artifact. No provider generation, credit spend, or public placement occurred.
+
+Sources: https://www.remotion.dev/docs/ssr ; https://www.remotion.dev/docs/renderer/render-media ; https://www.remotion.dev/docs/offthreadvideo ; https://www.remotion.dev/docs/video-tags
+
+
+## 2026-08-18 — REMOTION RECOVERY RELEASE INTENT
+
+The source-preserving Remotion master is being connected to the existing CreatorVault `real-render-engine` assembly lane through the canonical Creation Director only. It requires a pre-existing secure CreatorVault source and reads that source’s actual duration, dimensions, and frame rate before rendering. It preserves the whole frame (`object-fit: contain`) and source audio, creates no provider task, reserves no credits, and does not accept its artifact automatically.
+
+The release exposes only one owner-protected action for a previously prepared `ready_for_assembly` plan. It moves the plan to human `quality_review` with the real artifact URL and source inspection record. It accepts no text, caption, grade, filter, speed, crop, reframing, synthetic image, AI generation, motion-transfer, or paid-model option. Any source that fails its own ownership, consent, quality, or motion eligibility remains rejected for that intended use even if the renderer packages it successfully.

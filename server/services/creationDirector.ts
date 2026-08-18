@@ -15,6 +15,7 @@ import {
   buildBodyCinemaRouteReadiness,
   listBodyCinemaProviderHealth,
 } from "./bodyCinemaProviderResilienceService";
+import { renderVerifiedSourcePreservingMaster } from "../remotion/remotionRenderService";
 
 export type CreationTool = "body_cinema" | "trailer_maker" | "kingcam_content" | "creator_os";
 export type CreationDirectorState = "planning" | "ready_for_assembly" | "ready_for_governed_submission" | "blocked" | "submitted" | "quality_review" | "accepted" | "rejected" | "cancelled";
@@ -506,6 +507,82 @@ export async function prepareCreationPlan(requestInput: CreationDirectorRequest)
   }
 
   return (await getCreationPlan(requestId))!;
+}
+
+/**
+ * Executes only the CreatorVault-owned source-preserving Remotion assembly lane.
+ * It does not call a provider, invent pixels, alter timing, add captions, or accept
+ * the artifact automatically. An owner still has to watch and approve the result.
+ */
+export async function renderSourcePreservingCreationPlan(params: {
+  requestId: string;
+  ownerId: number;
+}): Promise<{ plan: CreationDirectorPlan; artifactUrl: string; thumbnailUrl: string | null; source: { durationSeconds: number; width: number; height: number; fps: number } }> {
+  const plan = await getCreationPlan(params.requestId);
+  if (!plan) throw new Error("Creation plan not found.");
+  if (plan.executionLane !== "assembly" || plan.selectedModelKey !== "creatorvault/real-render-engine") {
+    throw new Error("This creation plan is not approved for CreatorVault’s source-preserving assembly lane.");
+  }
+  if (plan.state !== "ready_for_assembly") {
+    throw new Error(`Plan in state ${plan.state} cannot prepare a source-preserving master.`);
+  }
+  if (plan.creatorId !== params.ownerId) {
+    throw new Error("Only the owner of this approved source can prepare its master.");
+  }
+  const output = await renderVerifiedSourcePreservingMaster({
+    jobId: `creation-director-source-master-${plan.requestId}-${randomUUID().slice(0, 8)}`,
+    sourceVideoUrl: plan.source.assetUrl,
+    preserveSourceAudio: true,
+  });
+  if (!output.render.success || !output.render.videoUrl) {
+    throw new Error(output.render.error || "CreatorVault could not prepare the source-preserving master.");
+  }
+  const artifactUrl = output.render.videoUrl.startsWith("http")
+    ? output.render.videoUrl
+    : `https://creatorvault.live${output.render.videoUrl}`;
+  const thumbnailUrl = output.render.thumbnailUrl
+    ? (output.render.thumbnailUrl.startsWith("http") ? output.render.thumbnailUrl : `https://creatorvault.live${output.render.thumbnailUrl}`)
+    : null;
+  const metadataRows = await rawQuery<{ metadata_json: string | null }>("SELECT metadata_json FROM creation_director_requests WHERE request_id = ? LIMIT 1", [plan.requestId]);
+  const metadata = parseJson<Record<string, unknown>>(metadataRows[0]?.metadata_json, {});
+  await rawExec(
+    `UPDATE creation_director_requests
+     SET state = 'quality_review', metadata_json = ?, updated_at = NOW()
+     WHERE request_id = ?`,
+    [safeJson({
+      ...metadata,
+      sourcePreservingMaster: {
+        engine: "remotion",
+        artifactUrl,
+        thumbnailUrl,
+        source: output.source,
+        renderedAt: new Date().toISOString(),
+        reviewRequired: true,
+        noSyntheticGeneration: true,
+        noCreativeTransformation: true,
+      },
+    }), plan.requestId],
+  );
+  await appendEvent({
+    directorRequestId: plan.id,
+    eventType: "source_preserving_master_rendered",
+    state: "quality_review",
+    actorId: params.ownerId,
+    detail: {
+      engine: "remotion",
+      artifactUrl,
+      source: output.source,
+      reviewRequired: true,
+      noSyntheticGeneration: true,
+      noCreativeTransformation: true,
+    },
+  });
+  return {
+    plan: (await getCreationPlan(plan.requestId))!,
+    artifactUrl,
+    thumbnailUrl,
+    source: output.source,
+  };
 }
 
 export async function getCreationPlan(requestId: string): Promise<CreationDirectorPlan | null> {

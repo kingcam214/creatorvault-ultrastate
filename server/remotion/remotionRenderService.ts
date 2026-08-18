@@ -13,7 +13,7 @@ import { PRESET_REGISTRY } from "./types.js";
 
 const execFileAsync = promisify(execFile);
 
-const REMOTION_ROOT = "/root/creatorvault/server/remotion/Root.tsx";
+const REMOTION_ROOT = process.env.REMOTION_ROOT || path.resolve(process.cwd(), "server/remotion/Root.tsx");
 const UPLOADS_DIR = process.env.STORAGE_DIR || "/root/creatorvault/storage/uploads";
 const FONTS_DIR = "/root/creatorvault/assets/fonts";
 const CHROMIUM_PATH = "/usr/bin/chromium-browser";
@@ -48,6 +48,7 @@ function getCompositionId(contract: RenderContract): string {
   if (mode === "visual_dna_title_card") return "VisualDNATitleCard";
 
   if (mode === "caption_stage") return "CreatorVaultRuntimeCaptionStage";
+  if (mode === "source_preserving_master") return "CreatorVaultSourcePreservingMaster";
 
   // 3D Empire compositions
   if (mode === "episode_trailer") return "EpisodeTrailer";
@@ -184,7 +185,114 @@ async function getOrCreateBundle(contract: RenderContract): Promise<string> {
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN RENDER FUNCTION
 // ─────────────────────────────────────────────────────────────────────────────
-export async function renderWithRemotion(contract: RenderContract): Promise<RenderResult> {
+export type SourceVideoInspection = {
+  durationSeconds: number;
+  width: number;
+  height: number;
+  fps: number;
+};
+
+function parseFrameRate(value: unknown): number {
+  const [numerator, denominator] = String(value || "").split("/").map(Number);
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return 0;
+  return numerator / denominator;
+}
+
+/** Technical source read only. No frames are edited, generated, or persisted. */
+export async function inspectSourceVideoForRemotion(sourceVideoUrl: string): Promise<SourceVideoInspection> {
+  if (!/^https:\/\//i.test(String(sourceVideoUrl || ""))) {
+    throw new Error("CreatorVault requires a secure approved source URL before it can inspect a video.");
+  }
+  const { stdout } = await execFileAsync("ffprobe", [
+    "-v", "error",
+    "-select_streams", "v:0",
+    "-show_entries", "stream=width,height,r_frame_rate:format=duration",
+    "-of", "json",
+    sourceVideoUrl,
+  ], { maxBuffer: 1024 * 1024 });
+  const parsed = JSON.parse(stdout) as { streams?: Array<{ width?: number; height?: number; r_frame_rate?: string }>; format?: { duration?: string } };
+  const stream = parsed.streams?.[0];
+  const durationSeconds = Number(parsed.format?.duration || 0);
+  const fps = parseFrameRate(stream?.r_frame_rate);
+  const width = Number(stream?.width || 0);
+  const height = Number(stream?.height || 0);
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || !Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0 || !Number.isFinite(fps) || fps <= 0) {
+    throw new Error("CreatorVault could not verify the source video’s duration, frame size, and frame rate.");
+  }
+  return { durationSeconds, width, height, fps };
+}
+
+export type SourcePreservingMasterRequest = {
+  jobId: string;
+  sourceVideoUrl: string;
+  durationSeconds: number;
+  width: number;
+  height: number;
+  fps?: number;
+  preserveSourceAudio?: boolean;
+};
+
+function assertSourcePreservingMasterRequest(input: SourcePreservingMasterRequest): void {
+  if (!/^https:\/\//i.test(String(input.sourceVideoUrl || ""))) {
+    throw new Error("CreatorVault Source-Preserving Master requires a secure approved source URL.");
+  }
+  if (!Number.isFinite(input.durationSeconds) || input.durationSeconds <= 0) {
+    throw new Error("CreatorVault Source-Preserving Master requires the verified source duration.");
+  }
+  if (!Number.isInteger(input.width) || !Number.isInteger(input.height) || input.width <= 0 || input.height <= 0) {
+    throw new Error("CreatorVault Source-Preserving Master requires valid output dimensions.");
+  }
+}
+
+/**
+ * Packages an existing CreatorVault video as a durable source-preserving MP4.
+ * It is intentionally not a synthetic creation route and accepts no creative props.
+ */
+export async function renderSourcePreservingMaster(input: SourcePreservingMasterRequest): Promise<RenderResult> {
+  assertSourcePreservingMasterRequest(input);
+  return renderWithRemotion({
+    jobId: input.jobId,
+    mode: "source_preserving_master",
+    baseImagePath: "",
+    baseImageUrl: "",
+    sourceVideoUrl: input.sourceVideoUrl,
+    width: input.width,
+    height: input.height,
+    fps: input.fps || 30,
+    durationSeconds: input.durationSeconds,
+    motionPreset: "neon_pulse",
+    premiumMode: false,
+    cinematicMode: false,
+    artistName: "",
+    songTitle: "",
+    subtitle: "",
+    textPreset: "none",
+    accentColor: "",
+    textColor: "",
+    fontFamily: "",
+    preserveSourceAudio: input.preserveSourceAudio !== false,
+  });
+}
+
+export async function renderVerifiedSourcePreservingMaster(input: {
+  jobId: string;
+  sourceVideoUrl: string;
+  preserveSourceAudio?: boolean;
+}): Promise<{ source: SourceVideoInspection; render: RenderResult }> {
+  const source = await inspectSourceVideoForRemotion(input.sourceVideoUrl);
+  const render = await renderSourcePreservingMaster({
+    jobId: input.jobId,
+    sourceVideoUrl: input.sourceVideoUrl,
+    durationSeconds: source.durationSeconds,
+    width: source.width,
+    height: source.height,
+    fps: source.fps,
+    preserveSourceAudio: input.preserveSourceAudio !== false,
+  });
+  return { source, render };
+}
+
+export async function renderWithRemotion(contract: RenderContract & { sourceVideoUrl?: string; preserveSourceAudio?: boolean }): Promise<RenderResult> {
   const startMs = Date.now();
   const { jobId, width, height, fps, durationSeconds, motionPreset } = contract;
 
