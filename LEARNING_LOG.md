@@ -640,3 +640,9 @@ The owner-directed governed Kling V3 motion attempt created job `111` after the 
 Governed job `105` proves the existing Pollo Kling 3 Omni reference-video lane can create a provider task for this account. That earlier job used an identity image plus direct-speech audio; it did not include the real gait driver and cannot qualify as a real-motion transfer proof. Official Pollo contract inspection now confirms the available Omni reference payload can carry separate image and video references, and its `video` estimate endpoint is documented.
 
 A no-audio method using the approved KingCam identity image plus the locked real seven-second gait video is therefore distinct from the rejected audio-only Omni proof, GoEnhance, and the two API-disabled motion endpoints. It must still receive a mixed-reference exact estimate, a dedicated governed no-retry one-output contract, and full watchable quality review before any output can be accepted or publicly used.
+
+## 2026-08-18 — Kling 3 Omni real-gait mixed-reference estimate audit
+
+A no-charge owner-only audit now uses the official `/v1/generation/kling-ai/kling-v3-omni/video/estimate` route with one approved KingCam identity-image reference and one locked real seven-second gait-video reference. It sends no audio reference, requests one 7-second 16:9 720p silent output estimate, and cannot create a draft, permit, reservation, task, or media output.
+
+This method is distinct from job `105`, which confirmed this account can run Kling 3 Omni but used an image plus speech audio and did not transfer the real gait. A positive exact quote is only provider-cost evidence. Before any new paid proof, CreatorVault must build a separate governed mixed-reference contract, lock the returned quote as its hard cap, and use the full watchable quality gate.

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { archiveKingcamMiniMaxH3PresenceLoop, auditPolloAvailableCredits, auditPolloKingcamActionImitationV2Candidate, auditPolloKingcamKlingV3MotionCandidate, auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, auditPolloMiniMaxH3ReferenceCost, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
+import { archiveKingcamMiniMaxH3PresenceLoop, auditPolloAvailableCredits, auditPolloKingcamActionImitationV2Candidate, auditPolloKingcamKlingOmniRealGaitCandidate, auditPolloKingcamKlingV3MotionCandidate, auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, auditPolloMiniMaxH3ReferenceCost, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
 import {
   createKingcamGuideVoiceTour,
   getKingcamCloneOperatingSystem,
@@ -52,6 +52,15 @@ export const kingcamCloneOperatingSystemRouter = router({
       return await auditPolloKingcamKlingV3MotionCandidate();
     } catch (error) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "Kling V3 motion configuration could not be audited." });
+    }
+  }),
+
+  auditKlingOmniRealGaitCandidate: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await auditPolloKingcamKlingOmniRealGaitCandidate();
+    } catch (error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "Kling 3 Omni real-gait configuration could not be audited." });
     }
   }),
 
