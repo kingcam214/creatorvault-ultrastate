@@ -1,7 +1,15 @@
 import { createHash, randomUUID } from "crypto";
 import { sql } from "drizzle-orm";
 import { db } from "../db";
-import { getGovernedPolloConfig, isGovernedPolloExecutionEnabled } from "./governedPolloService";
+import {
+  approveGovernedPolloJob,
+  authorizeSingleUseGovernedPolloSubmission,
+  createQuotedGovernedPolloSourceVideoDraft,
+  getGovernedPolloJob,
+  getGovernedPolloConfig,
+  isGovernedPolloExecutionEnabled,
+  submitGovernedPolloJob,
+} from "./governedPolloService";
 
 const OWNER_IDS = new Set([6, 33]);
 const KINGCAM_CLONE_ID = "kingcam-founder-clone";
@@ -10,6 +18,8 @@ const KINGCAM_FULL_BODY_IMAGE = "https://creatorvault.live/images/kingcam-profil
 
 type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review";
 type MotionRequestState = "planned" | "approved" | "submitted" | "provider_complete" | "accepted" | "rejected" | "failed";
+const KINGCAM_FULL_BODY_PROOF_CREDIT_CAP = 33;
+const KINGCAM_FULL_BODY_PROOF_DURATION_SECONDS = 10;
 
 export type KingcamTruthCard = {
   id: string;
@@ -292,6 +302,87 @@ export async function planKingcamFullBodyMotionProof(input: { ownerId: number; h
       json(["pollo/bytedance-seedance-2-5-ref2video", "pollo/kling-v3-omni-ref2video"]), sceneBrief, input.hardCreditCap, json(QUALITY_GATES)]);
   await recordKingcamCloneMemory({ ownerId: input.ownerId, kind: "motion_proof_planned", room: "KingCam full-body cinematic motion", payload: { motionRequestId: id, fingerprint, hardCreditCap: input.hardCreditCap } });
   return { id, fingerprint, state: "planned" as const, sourceUrl: KINGCAM_HERO_REFERENCE, candidateModels: ["pollo/bytedance-seedance-2-5-ref2video", "pollo/kling-v3-omni-ref2video"], qualityGate: QUALITY_GATES };
+}
+
+export async function launchKingcamFullBodyMotionProof(input: { ownerId: number; sceneBrief: string }) {
+  assertOwner(input.ownerId);
+  const sceneBrief = String(input.sceneBrief || "").trim();
+  if (sceneBrief.length < 40 || sceneBrief.length > 1800) {
+    throw new Error("KingCam motion scene brief must be between 40 and 1800 characters.");
+  }
+
+  const motionRequest = await planKingcamFullBodyMotionProof({
+    ownerId: input.ownerId,
+    hardCreditCap: KINGCAM_FULL_BODY_PROOF_CREDIT_CAP,
+    sceneBrief,
+  });
+  const prompt = [
+    "Full-body KingCam cinematic motion proof from the provided CreatorVault reference video.",
+    "Keep KingCam recognizable from head to toe: face, beard, skin tone, body build, wardrobe anchors, jewelry, crown styling, and natural full-body proportions.",
+    "Preserve natural gait, hands, feet, posture, wardrobe edges, environment geometry, and a vertical full-body camera frame.",
+    "One controlled cinematic moment only. No text, no extra people, no talking-head crop, no identity replacement, no artificial anatomy, and no invented CreatorVault claims.",
+    sceneBrief,
+  ].join(" ");
+
+  const drafted = await createQuotedGovernedPolloSourceVideoDraft({
+    creatorId: input.ownerId,
+    requestedBy: input.ownerId,
+    sourceUrl: KINGCAM_HERO_REFERENCE,
+    prompt,
+    resolution: "720p",
+    durationSeconds: KINGCAM_FULL_BODY_PROOF_DURATION_SECONDS,
+    aspectRatio: "9:16",
+    ownershipConfirmed: true,
+    consentConfirmed: true,
+    idempotencyKey: `kingcam-full-body-proof:${motionRequest.id}`,
+    requestId: motionRequest.id,
+    metadata: {
+      ownerDirectedPilot: true,
+      candidateLimit: 1,
+      noAutomaticRetry: true,
+      sourcePreservationRequired: true,
+      kingcamCloneId: KINGCAM_CLONE_ID,
+      kingcamMotionRequestId: motionRequest.id,
+      proofClass: "kingcam_full_body_cinematic_motion",
+      motionReferenceUrl: KINGCAM_HERO_REFERENCE,
+      approvedFullBodyImage: KINGCAM_FULL_BODY_IMAGE,
+      qualityGate: QUALITY_GATES,
+    },
+  });
+  if (drafted.quote.quotedCredits !== KINGCAM_FULL_BODY_PROOF_CREDIT_CAP) {
+    throw new Error(`KingCam full-body proof quote changed to ${drafted.quote.quotedCredits} credits; the fixed 33-credit proof was not submitted.`);
+  }
+
+  const approved = await approveGovernedPolloJob({
+    jobId: drafted.job.id,
+    approverId: input.ownerId,
+    expectedFingerprint: drafted.job.fingerprint,
+    reason: "Owner-directed KingCam full-body cinematic proof. One output only; no automatic retry; reject unless full-body identity and motion quality clear the KingCam gate.",
+  });
+  await authorizeSingleUseGovernedPolloSubmission({
+    jobId: approved.id,
+    ownerId: input.ownerId,
+    expectedFingerprint: approved.fingerprint,
+    hardCreditCap: KINGCAM_FULL_BODY_PROOF_CREDIT_CAP,
+    expiresInMinutes: 10,
+    reason: "One-time KingCam full-body CreatorVault proof; fixed 33-credit ceiling.",
+  });
+  const submitted = await submitGovernedPolloJob({
+    jobId: approved.id,
+    workerId: `kingcam-clone-owner-${input.ownerId}`,
+  });
+  const localState: MotionRequestState = submitted.state === "submitted" ? "submitted" : submitted.state === "failed" ? "failed" : "approved";
+  await rawExec(
+    "UPDATE kingcam_clone_motion_requests SET state = ?, review_json = ?, updated_at = NOW() WHERE id = ? AND clone_id = ? AND owner_id = ?",
+    [localState, json({ governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, quote: drafted.quote, hardCreditCap: KINGCAM_FULL_BODY_PROOF_CREDIT_CAP }), motionRequest.id, KINGCAM_CLONE_ID, input.ownerId],
+  );
+  await recordKingcamCloneMemory({
+    ownerId: input.ownerId,
+    kind: "motion_proof_planned",
+    room: "KingCam full-body cinematic motion",
+    payload: { motionRequestId: motionRequest.id, governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_FULL_BODY_PROOF_CREDIT_CAP },
+  });
+  return { motionRequestId: motionRequest.id, governedJob: submitted, quote: drafted.quote, qualityGate: QUALITY_GATES };
 }
 
 export async function reviewKingcamFullBodyMotionProof(input: { ownerId: number; requestId: string; accepted: boolean; overallScore: number; notes: string }) {

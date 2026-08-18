@@ -213,3 +213,38 @@ Morning brief scheduler fires at **7:00 AM Dominican Republic time (UTC-4)**.
 ## RULE 14: TikTok monetization bridge — TikTok = free ads, NOT direct income
 **Date:** 2026-03-26
 **Solution:** TikTok → link-in-bio → creatorvault.live/chica/{id} → paid platform (boutique/VaultX/fitness/Airbnb)
+
+---
+
+## RULE 15: GOVERNED CREATION PROOF — MANDATORY
+**Date:** 2026-08-17
+
+Before any governed creation, provider submission, production build, deployment, migration, or repair run, read this learning log first. Add the result of that run before starting another one. A database record, request ID, code path, or deployment is not proof. A capability is proven only by a real source, real provider execution, and a finished watchable output.
+
+**Corrective mode:** repair only the exact visible defect. No substitutions, adjacent changes, new creative direction, or unverified claims. If a correction fails, return to the last known-good release.
+
+**Construction mode:** execute the whole approved creation package. Do not downgrade a locked requirement because an easier, smaller path works.
+
+Manus has execution authority, not creative-vision authority. A rejected output is removed, not silently replaced. FFmpeg is for technical handling only; never use it for creative effects, filters, simulated camera motion, captions, color treatment, transitions, speed changes, freezes, or animation.
+
+## RULE 16: KINGCAM FULL-BODY MOTION — GOVERNED SOURCE AND QUALITY LAW
+**Date:** 2026-08-17
+
+The active KingCam full-body proof source is:
+`https://creatorvault.live/videos/kingcam-hero-cam.mp4`
+
+The output must be vertical, 10 seconds, full body from crown to shoes, natural gait, controlled camera movement, preserved face/body/wardrobe/hands/feet, and no extra people or text. The proof rejects plastic anatomy, warped hands, missing body, stiff movement, broken identity, unexpected people, or a weak ending.
+
+Runway rejected the KingCam full-body source twice with a moderation/no-output failure. It is not the active full-body KingCam generation lane. HeyGen is for close-up live responses only, not full-body, full-motion generation. Pollo is the active motion arsenal. Seedance 2.5 ref-to-video has a verified 33-credit quote for the selected proof shape. Kling v3 Omni ref-to-video is an alternative governed lane, not an automatic retry.
+
+General Pollo generation remains default-deny. The single permitted exception is one owner-directed proof with one output, a real provider quote, stored draft, approval, 10-minute single-use permit, fixed 33-credit maximum, and no automatic retry.
+
+## 2026-08-17 — CURRENT KINGCAM PROOF ENTRY
+
+The Clone Command path now prepares exactly one full-body KingCam proof through the existing governed Pollo lifecycle: real source reference, provider quote, stored draft, owner approval, one-time permit, provider submit, and a recorded job link. The screen exposes that fixed 33-credit limit and does not open general Pollo generation.
+
+**Current status: UNVERIFIED CREATION.** The code passes the TypeScript check and the release scope guard. The production build, deploy, live-route verification, provider execution, finished-video inspection, and accept-or-reject decision have not yet been completed. No watchable KingCam proof exists from this entry yet.
+
+## Required next-run order
+
+Read this log. Confirm the real source and provider contract. Run the type check and scope guard outside the deployment lane. Build before commit. Verify the deployed release identifier. Run only the single approved request if the authenticated owner action is available. Retrieve and inspect the resulting video. Record the exact acceptance or rejection reason. Never call the feature live until the finished video can be watched.

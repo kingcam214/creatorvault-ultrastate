@@ -255,6 +255,7 @@ const ALLOWLISTS = {
     'server/routers.ts',
     'server/routers/kingcamCloneOperatingSystemRouter.ts',
     'server/services/kingcamCloneOperatingSystemService.ts',
+    'LEARNING_LOG.md',
     'scripts/scope-guard.js'
   ],
   'kingcam-in-platform-profile': [

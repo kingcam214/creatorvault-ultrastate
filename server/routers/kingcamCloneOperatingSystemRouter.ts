@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import {
   getKingcamCloneOperatingSystem,
+  launchKingcamFullBodyMotionProof,
   planKingcamFullBodyMotionProof,
   recordKingcamCloneMemory,
   reviewKingcamFullBodyMotionProof,
@@ -53,6 +54,17 @@ export const kingcamCloneOperatingSystemRouter = router({
         return await planKingcamFullBodyMotionProof({ ownerId: ctx.user.id, ...input });
       } catch (error) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam motion proof could not be planned." });
+      }
+    }),
+
+  launchFullBodyProof: protectedProcedure
+    .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))
+    .mutation(async ({ ctx, input }) => {
+      ownerOnly(ctx.user.id);
+      try {
+        return await launchKingcamFullBodyMotionProof({ ownerId: ctx.user.id, sceneBrief: input.sceneBrief });
+      } catch (error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam full-body proof could not launch." });
       }
     }),
 
