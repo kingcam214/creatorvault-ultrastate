@@ -88,6 +88,24 @@ function assertOwner(ownerId: number): void {
   if (!OWNER_IDS.has(Number(ownerId))) throw new Error("Only the CreatorVault owner can direct KingCam Clone.");
 }
 
+export async function preflightKingcamElevenLabsVoice(ownerId: number): Promise<{ available: boolean; provider: "elevenlabs"; voiceId: string; voiceName: string | null; reason: string | null; genericFallbackForbidden: true }> {
+  assertOwner(ownerId);
+  const apiKey = String(process.env.ELEVENLABS_API_KEY || "").trim();
+  const voiceId = String(process.env.KINGCAM_ELEVEN_VOICE_ID || "rwc11bXCBw5KydM4avHE").trim();
+  if (!apiKey) {
+    return { available: false, provider: "elevenlabs", voiceId, voiceName: null, reason: "The real KingCam ElevenLabs voice key is not available in this runtime.", genericFallbackForbidden: true };
+  }
+  const response = await fetch(`https://api.elevenlabs.io/v1/voices/${encodeURIComponent(voiceId)}`, {
+    headers: { "xi-api-key": apiKey, Accept: "application/json" },
+  });
+  if (!response.ok) {
+    return { available: false, provider: "elevenlabs", voiceId, voiceName: null, reason: `The real KingCam ElevenLabs voice check returned ${response.status}.`, genericFallbackForbidden: true };
+  }
+  const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+  const voiceName = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : null;
+  return { available: true, provider: "elevenlabs", voiceId, voiceName, reason: null, genericFallbackForbidden: true };
+}
+
 async function rawQuery<T = any>(query: string, params: any[] = []): Promise<T[]> {
   const pool = (db as any).$client || (db as any).client;
   if (pool?.promise) {

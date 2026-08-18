@@ -6,6 +6,7 @@ import {
   getKingcamCloneOperatingSystem,
   launchKingcamFullBodyMotionProof,
   planKingcamFullBodyMotionProof,
+  preflightKingcamElevenLabsVoice,
   recordKingcamCloneMemory,
   reviewKingcamFullBodyMotionProof,
   startKingcamCloneTour,
@@ -57,6 +58,15 @@ export const kingcamCloneOperatingSystemRouter = router({
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam motion proof could not be planned." });
       }
     }),
+
+  preflightRealKingcamVoice: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await preflightKingcamElevenLabsVoice(ctx.user.id);
+    } catch (error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "The real KingCam voice could not be checked." });
+    }
+  }),
 
   auditNextSourceVideoCandidate: protectedProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
