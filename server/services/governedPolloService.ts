@@ -170,6 +170,10 @@ const KINGCAM_ACTION_IMITATION_V2_QUOTED_COST_USD = 2.1;
 const KINGCAM_ACTION_IMITATION_V2_IDENTITY_IMAGE_URL = REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL;
 const KINGCAM_ACTION_IMITATION_V2_DRIVER_URL = REPLICATE_WAN_ANIMATE_DRIVER_URL;
 const KINGCAM_KLING_V3_MOTION_API_PATH = "/v1/generation/kling-ai/kling-v3/motion";
+const KINGCAM_KLING_V3_MOTION_MODEL_PATH = "pollo/kling-ai/kling-v3-motion";
+const KINGCAM_KLING_V3_MOTION_MODE = "kingcam_kling_v3_real_driver_motion";
+const KINGCAM_KLING_V3_MOTION_HARD_CREDIT_CAP = 98;
+const KINGCAM_KLING_V3_MOTION_QUOTED_COST_USD = 5.88;
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MODEL_PATH = "runway/aleph-2-video-edit";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MODE = "runway_aleph_2_source_video_edit";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MAX_BYTES = 200 * 1024 * 1024;
@@ -425,6 +429,23 @@ function isKingcamActionImitationV2Job(job: Pick<GovernedPolloJob, "provider" | 
     && job.metadata.bodyCinemaExcluded === true;
 }
 
+function isKingcamKlingV3MotionJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "sourceUrl" | "metadata">): boolean {
+  return job.provider === "pollo"
+    && job.providerModelPath === KINGCAM_KLING_V3_MOTION_MODEL_PATH
+    && job.mode === KINGCAM_KLING_V3_MOTION_MODE
+    && job.sourceUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL
+    && job.metadata.kingcamKlingV3MotionRealDriverProof === true
+    && job.metadata.cloneOnly === true
+    && job.metadata.ownerDirectedPilot === true
+    && job.metadata.candidateLimit === 1
+    && job.metadata.noAutomaticRetry === true
+    && job.metadata.sourcePreservationRequired === true
+    && job.metadata.hardCreditCap === KINGCAM_KLING_V3_MOTION_HARD_CREDIT_CAP
+    && job.metadata.identityImageUrl === REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL
+    && job.metadata.motionDriverUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL
+    && job.metadata.bodyCinemaExcluded === true;
+}
+
 function isReplicateOmniHumanJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
   return job.provider === "replicate"
     && job.providerModelPath === REPLICATE_OMNI_HUMAN_MODEL_PATH
@@ -517,7 +538,7 @@ function isDesignImagePilot(job: Pick<GovernedPolloJob, "providerModelPath" | "m
 }
 
 function isSingleUseGovernedPilot(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "sourceUrl" | "metadata">): boolean {
-  return isSourceVideoReferenceJob(job) || isKingcamWanSpokenMotionJob(job) || isKingcamKlingOmniSpokenMotionJob(job) || isReplicateWanVideoEditJob(job) || isReplicateWanAnimateJob(job) || isKingcamGoEnhanceRealPerformanceJob(job) || isKingcamActionImitationV2Job(job) || isReplicateOmniHumanJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isCreatorVaultVaceLightingJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
+  return isSourceVideoReferenceJob(job) || isKingcamWanSpokenMotionJob(job) || isKingcamKlingOmniSpokenMotionJob(job) || isReplicateWanVideoEditJob(job) || isReplicateWanAnimateJob(job) || isKingcamGoEnhanceRealPerformanceJob(job) || isKingcamActionImitationV2Job(job) || isKingcamKlingV3MotionJob(job) || isReplicateOmniHumanJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isCreatorVaultVaceLightingJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
 }
 
 function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
@@ -2092,6 +2113,19 @@ export async function createGovernedKingcamReplicateWanAnimateDraft(input: {
   });
 }
 
+export async function createGovernedKingcamKlingV3MotionDraft(input: { creatorId: number; requestedBy: number; ownershipConfirmed: boolean; consentConfirmed: boolean; idempotencyKey?: string | null; requestId?: string | null; metadata?: Record<string, unknown> }): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  const quote = await auditPolloKingcamKlingV3MotionCandidate();
+  if (!quote.configAvailable || quote.quotedCredits !== KINGCAM_KLING_V3_MOTION_HARD_CREDIT_CAP || quote.quotedCostUsd !== KINGCAM_KLING_V3_MOTION_QUOTED_COST_USD) throw new Error("Kling V3 motion must return the locked live 98-credit / $5.88 estimate before a governed draft can exist.");
+  return createGovernedPolloDraft({
+    creatorId: input.creatorId, requestedBy: input.requestedBy, provider: "pollo", sourceUrl: REPLICATE_WAN_ANIMATE_DRIVER_URL, sourceChecksum: null,
+    prompt: "KingCam clone-only Kling V3 real-driver full-body motion transfer. Locked approved identity image plus real seven-second gait driver; one output only; never Body Cinema.",
+    providerModelPath: KINGCAM_KLING_V3_MOTION_MODEL_PATH, resolution: "720p", durationSeconds: 7, aspectRatio: "16:9", mode: KINGCAM_KLING_V3_MOTION_MODE, outputCount: 1, estimatedCostCredits: quote.quotedCredits,
+    costEvidenceReference: "Provider-verified Kling V3 motion estimate for the locked KingCam identity image and real gait source: 98 Pollo credits / $5.88. One output only; the provider estimate is the hard ceiling and no automatic retry is allowed.",
+    ownershipConfirmed: input.ownershipConfirmed, consentConfirmed: input.consentConfirmed, idempotencyKey: input.idempotencyKey, requestId: input.requestId,
+    metadata: { ...(input.metadata || {}), kingcamKlingV3MotionRealDriverProof: true, cloneOnly: true, providerCostCurrency: "Pollo credits", providerQuote: { credits: quote.quotedCredits, costUsd: quote.quotedCostUsd, source: "official_kling_v3_motion_estimate" }, providerQuotedCredits: quote.quotedCredits, providerQuotedCostUsd: quote.quotedCostUsd, hardCreditCap: KINGCAM_KLING_V3_MOTION_HARD_CREDIT_CAP, ownerDirectedPilot: true, candidateLimit: 1, noAutomaticRetry: true, sourcePreservationRequired: true, identityImageUrl: REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL, motionDriverUrl: REPLICATE_WAN_ANIMATE_DRIVER_URL, providerContract: "pollo_kling_v3_motion_image_plus_real_video_motion_transfer", bodyCinemaExcluded: true },
+  });
+}
+
 export async function createGovernedKingcamActionImitationV2Draft(input: {
   creatorId: number;
   requestedBy: number;
@@ -2894,6 +2928,21 @@ async function submitGovernedReplicateWanAnimateJob(leased: GovernedPolloJob, wo
   return markGovernedPolloSubmitted({ jobId: leased.id, workerId, providerJobId: String(providerJobId), providerResponse });
 }
 
+async function submitGovernedKingcamKlingV3MotionJob(leased: GovernedPolloJob, workerId: string): Promise<GovernedPolloJob> {
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!apiKey) return failGovernedPolloJob({ jobId: leased.id, code: "provider_key_missing", error: new Error("POLLO_API_KEY is not configured"), releaseBudget: true });
+  if (leased.sourceUrl !== REPLICATE_WAN_ANIMATE_DRIVER_URL || leased.metadata.identityImageUrl !== REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL || leased.metadata.motionDriverUrl !== REPLICATE_WAN_ANIMATE_DRIVER_URL) return failGovernedPolloJob({ jobId: leased.id, code: "kling_v3_motion_input_contract_mismatch", error: new Error("Kling V3 motion requires the locked approved identity image and real gait driver."), releaseBudget: true });
+  const balanceBeforeCredits = await readPolloAvailableCredits(apiKey);
+  if (balanceBeforeCredits !== null) await rawExec("UPDATE governed_media_jobs SET metadata_json = ?, updated_at = NOW() WHERE id = ? AND state = 'queued'", [safeJson({ ...leased.metadata, providerBalanceBeforeCredits: balanceBeforeCredits, providerBalanceReadAt: new Date().toISOString() }), leased.id]);
+  let response: Response;
+  try { response = await fetch(`https://pollo.ai/api/platform${KINGCAM_KLING_V3_MOTION_API_PATH}`, { method: "POST", headers: { "x-api-key": apiKey, "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ input: { image: REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL, video: REPLICATE_WAN_ANIMATE_DRIVER_URL } }) }); } catch (error) { return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId, error }); }
+  const providerResponse = await parseProviderJson(response);
+  if (!response.ok) { if (response.status >= 500 || response.status === 408 || response.status === 429) return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId, error: new Error(`Pollo Kling V3 motion submission returned ${response.status}: ${safeErrorMessage(providerResponse.responseText ?? providerResponse.message ?? "unknown error")}`) }); return failGovernedPolloJob({ jobId: leased.id, code: `kling_v3_motion_http_${response.status}`, error: new Error(`Pollo Kling V3 motion submission returned ${response.status}: ${safeErrorMessage(providerResponse.responseText ?? providerResponse.message ?? "unknown error")}`), releaseBudget: true }); }
+  const providerJobId = providerResponse?.data?.taskId || providerResponse?.taskId || providerResponse?.id || providerResponse?.data?.id;
+  if (!providerJobId) return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId, error: new Error("Pollo Kling V3 motion accepted the request without a task ID") });
+  return markGovernedPolloSubmitted({ jobId: leased.id, workerId, providerJobId: String(providerJobId), providerResponse });
+}
+
 async function submitGovernedKingcamActionImitationV2Job(leased: GovernedPolloJob, workerId: string): Promise<GovernedPolloJob> {
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
   if (!apiKey) return failGovernedPolloJob({ jobId: leased.id, code: "provider_key_missing", error: new Error("POLLO_API_KEY is not configured"), releaseBudget: true });
@@ -3235,6 +3284,7 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
   if (isReplicateWanAnimateJob(leased)) return submitGovernedReplicateWanAnimateJob(leased, params.workerId);
   if (isKingcamGoEnhanceRealPerformanceJob(leased)) return submitGovernedKingcamGoEnhanceRealPerformanceJob(leased, params.workerId);
   if (isKingcamActionImitationV2Job(leased)) return submitGovernedKingcamActionImitationV2Job(leased, params.workerId);
+  if (isKingcamKlingV3MotionJob(leased)) return submitGovernedKingcamKlingV3MotionJob(leased, params.workerId);
   if (isReplicateOmniHumanJob(leased)) return submitGovernedReplicateOmniHumanJob(leased, params.workerId);
   if (isTopazPrecisionVideoJob(leased)) return submitGovernedTopazPrecisionVideoJob(leased, params.workerId);
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();

@@ -624,3 +624,7 @@ The owner-directed governed Action Imitation V2 attempt created job `110` after 
 ## 2026-08-18 — Kling V3 motion estimate audit intent
 
 The next read-only provider check is the distinct official Pollo `Kling V3 motion` endpoint, which accepts an identity image plus a real motion video and has a documented no-charge estimate route. It is not the earlier Kling 3 Omni audio/image proof, which failed its full-body quality requirement and is not being retried. This audit can create no job, credit reservation, permit, provider task, or output. Any future model use requires positive estimate evidence, account-access proof, a separate one-output governed contract, and finished-video review.
+
+## 2026-08-18 — Kling V3 motion full-body proof intent
+
+The live official Kling V3 motion estimate succeeded for the approved KingCam identity image and locked real seven-second gait driver: **98 Pollo credits / $5.88**. This is a distinct image-plus-video motion endpoint, not the previously rejected Kling Omni audio/image proof. One fresh proof may proceed only after a dedicated governed contract locks this exact quote, one output, no retry, source preservation, and the finished-video acceptance gate.

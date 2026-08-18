@@ -11,6 +11,7 @@ import {
   launchKingcamWanAnimateFullBodyProof,
   launchKingcamGoEnhanceRealPerformanceProof,
   launchKingcamActionImitationV2FullBodyProof,
+  launchKingcamKlingV3MotionFullBodyProof,
   planKingcamFullBodyMotionProof,
   preflightKingcamElevenLabsVoice,
   preflightKingcamReplicateOmniHuman,
@@ -257,6 +258,17 @@ export const kingcamCloneOperatingSystemRouter = router({
         return await launchKingcamActionImitationV2FullBodyProof({ ownerId: ctx.user.id, sceneBrief: input.sceneBrief });
       } catch (error) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam Action Imitation V2 full-body proof could not launch." });
+      }
+    }),
+
+  launchKlingV3MotionProof: protectedProcedure
+    .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))
+    .mutation(async ({ ctx, input }) => {
+      ownerOnly(ctx.user.id);
+      try {
+        return await launchKingcamKlingV3MotionFullBodyProof({ ownerId: ctx.user.id, sceneBrief: input.sceneBrief });
+      } catch (error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam Kling V3 full-body proof could not launch." });
       }
     }),
 
