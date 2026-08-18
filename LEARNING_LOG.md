@@ -450,3 +450,44 @@ The preceding HappyHorse 1.0 request created no provider task and consumed no Po
 ## 2026-08-18 — KLING OMNI DIRECT FULL-BODY PROOF INTENT
 
 The next and only active KingCam full-body proof is Pollo Kling 3 Omni `ref2video`, not HappyHorse. It uses the same already-created CreatorVault-owned direct KingCam ElevenLabs speech asset and approved full-body KingCam PNG. The contract is fixed to one 15-second vertical 1080P output, one result, 75-credit hard ceiling, no retry, direct audio/image references together, and full human-review rejection if sustained movement, direct mouth sync, hands/cigar, wardrobe/crown, full-body framing, or anatomy fail. HappyHorse 1.0 must not be attempted again with audio because Pollo returned a concrete non-chargeable HTTP 400 capability rejection.
+
+
+## 2026-08-18 — VERIFIED PUBLIC KINGCAM PERFORMANCE SOURCE DISCOVERED
+
+Public source: https://www.facebook.com/CWhite214/videos/kingcam-creatorvault-thedopestappintheworld-happybirthday%EF%B8%8F-dallas/1020891963980827/
+
+The source page identifies the owner as Cameron White / `CWhite214`, the confirmed public profile links to `creatorvault.live`, and the post itself uses `#KingCam #CreatorVault #TheDopestAppInTheWorld #Dallas`. The public page exposes the clip as approximately 30 seconds. It is a candidate only—not yet accepted—until direct video inspection confirms KingCam is visible full-body with usable natural movement, hands, gait, and a clean enough performance segment. No asset has been copied, uploaded, or used for generation yet.
+
+
+### Public KingCam video playback acquisition
+
+The verified public `CWhite214` Facebook post opens in the agent browser and reports one real 30.0667-second video element with readyState 4. Facebook serves it through buffered playback (`/video/unified_cvc/`) rather than a plain `src` or directly extractable MP4 URL. The post remains a valid public-source candidate; direct media acquisition must use the page’s playback/download mechanism or an equivalent lawful public-source capture path, not a guessed static URL.
+
+
+### Public KingCam performance capture
+
+The verified public Cameron White / CWhite214 Facebook post was captured directly from its active public browser playback stream into a local 25.97-second WebM reference (`kingcam-public-performance-reference.webm`, 6,151,841 bytes). This is not a user re-upload, not generated media, and not a provider output. It remains a candidate until direct inspection confirms a usable full-body natural performance segment. Any CreatorVault ingestion must preserve this source provenance and remain owner-only until quality verification passes.
+
+
+### Second public KingCam reel capture attempt
+
+A second verified public Cameron White Facebook reel (`1532457721107475`) was captured from active public playback to `kingcam-public-performance-reference-2.webm`. The browser reported 4,867,498 bytes but a playback time of only 0.311 seconds at stop, so the capture must be inspected before it is treated as a valid 22-second source. It remains only a candidate with public-source provenance.
+
+
+### Second public-reel audit status
+
+Verified public Cameron White reel `1532457721107475` is a 22-second `persuasive214`-tagged public source. The first browser capture created a 4.87 MB WebM with invalid/undetermined duration and cannot be assessed or used. A later browser view showed playback advancing to 0:05 / 0:22 behind Facebook’s logged-out overlay. The reel must be captured cleanly from actual playback before it can be accepted or rejected as a KingCam performance driver.
+
+
+### Third public KingCam candidate
+
+Confirmed public Cameron White video `1414725663220560` is 2 minutes 54 seconds and is publicly playable in the agent browser. Its opening frame shows multiple people and an indoor setting; this has not yet been accepted as a KingCam driver source. Any future use must isolate a segment where KingCam is the only visible subject with clear full body, natural movement, and no conflicting speech.
+
+
+## 2026-08-18 — REPLICATE OMNIHUMAN FULL-BODY CAPABILITY AUDIT
+
+Official Replicate model page: https://replicate.com/bytedance/omni-human
+
+The official model description states that ByteDance OmniHuman generates human video from a single human image plus motion signals, including audio-only, video-only, or combined audio-and-video conditioning. It explicitly supports portrait, half-body, and full-body image inputs, and its documentation calls out audio-driven speech, video driving, and combined audio/video controls. This is materially different from the failed Pollo image-to-video paths and remains within CreatorVault’s pre-existing **Replicate clone-only** boundary. It is only a candidate until CreatorVault verifies the authenticated model input schema, cost, duration, and outcome through the existing governed Replicate clone lane. It must never be exposed to Body Cinema.
+
+The full-body performance-driver audit confirms the exact missing resource: a clean real 10–15 second KingCam full-body human performance clip. Existing owner-held assets and two inspected confirmed public Facebook clips did not meet this standard. The latest public candidate remains a 2:54 source that requires segment-level inspection; no unverified public clip has been imported to CreatorVault.

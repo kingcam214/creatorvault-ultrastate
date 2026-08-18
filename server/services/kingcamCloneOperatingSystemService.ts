@@ -130,6 +130,68 @@ export async function preflightKingcamElevenLabsVoice(ownerId: number): Promise<
   return { available: true, provider: "elevenlabs", voiceId, voiceName, reason: null, genericFallbackForbidden: true };
 }
 
+export async function preflightKingcamReplicateOmniHuman(ownerId: number): Promise<{
+  available: boolean;
+  provider: "replicate";
+  model: "bytedance/omni-human";
+  versionId: string | null;
+  inputFields: string[];
+  advertisedPricing: Record<string, unknown> | null;
+  exactCostAvailable: boolean;
+  reason: string | null;
+  cloneOnly: true;
+}> {
+  assertOwner(ownerId);
+  const token = String(process.env.REPLICATE_API_TOKEN || "").trim();
+  if (!token) {
+    return {
+      available: false,
+      provider: "replicate",
+      model: "bytedance/omni-human",
+      versionId: null,
+      inputFields: [],
+      advertisedPricing: null,
+      exactCostAvailable: false,
+      reason: "The existing Replicate clone-only account token is not available in this runtime.",
+      cloneOnly: true,
+    };
+  }
+
+  const response = await fetch("https://api.replicate.com/v1/models/bytedance/omni-human", {
+    headers: { Authorization: `Token ${token}`, Accept: "application/json" },
+  });
+  if (!response.ok) {
+    return {
+      available: false,
+      provider: "replicate",
+      model: "bytedance/omni-human",
+      versionId: null,
+      inputFields: [],
+      advertisedPricing: null,
+      exactCostAvailable: false,
+      reason: `The existing Replicate clone-only account returned ${response.status} while reading OmniHuman.`,
+      cloneOnly: true,
+    };
+  }
+
+  const payload = (await response.json().catch(() => ({}))) as Record<string, any>;
+  const latestVersion = payload.latest_version && typeof payload.latest_version === "object" ? payload.latest_version as Record<string, any> : {};
+  const inputProperties = latestVersion.openapi_schema?.components?.schemas?.Input?.properties;
+  const inputFields = inputProperties && typeof inputProperties === "object" ? Object.keys(inputProperties).sort() : [];
+  const advertisedPricing = payload.pricing && typeof payload.pricing === "object" ? payload.pricing as Record<string, unknown> : null;
+  return {
+    available: true,
+    provider: "replicate",
+    model: "bytedance/omni-human",
+    versionId: typeof latestVersion.id === "string" ? latestVersion.id : null,
+    inputFields,
+    advertisedPricing,
+    exactCostAvailable: Boolean(advertisedPricing && Object.keys(advertisedPricing).length),
+    reason: null,
+    cloneOnly: true,
+  };
+}
+
 function probeAudioDuration(localPath: string): Promise<number> {
   return execFileAsync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", localPath])
     .then(({ stdout }) => Number(String(stdout).trim()));
