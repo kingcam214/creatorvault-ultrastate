@@ -10,9 +10,7 @@ import {
   approveGovernedPolloJob,
   authorizeSingleUseGovernedPolloSubmission,
   auditPolloAvailableCredits,
-  createManualCappedKingcamMiniMaxH3Draft,
-  createManualCappedKingcamWanSpokenMotionDraft,
-  createManualCappedKingcamHappyHorseSpokenMotionDraft,
+  createManualCappedKingcamKlingOmniSpokenMotionDraft,
   getGovernedPolloJob,
   getGovernedPolloConfig,
   isGovernedPolloExecutionEnabled,
@@ -29,7 +27,7 @@ type MotionRequestState = "planned" | "approved" | "submitted" | "provider_compl
 // The verified KingCam motion source is 5.04 seconds; this proof must never request a longer output.
 const KINGCAM_FULL_BODY_PROOF_DURATION_SECONDS = 15;
 const KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP = 75;
-const KINGCAM_FULL_BODY_CORRECTIVE_MODEL = "pollo/alibaba/happyhorse-1-0-ref2video";
+const KINGCAM_FULL_BODY_CORRECTIVE_MODEL = "pollo/kling-ai/kling-v3-omni-ref2video";
 const KINGCAM_WAN_FULL_BODY_IMAGE = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge-reference.png";
 const KINGCAM_WAN_SPOKEN_AUDIO = "https://creatorvault.live/uploads/content-vault/kingcam-voice-tour-v1/entry.mp3";
 const execFileAsync = promisify(execFile);
@@ -37,9 +35,9 @@ const KINGCAM_GUIDE_VOICE_ID = "rwc11bXCBw5KydM4avHE";
 const KINGCAM_GUIDE_VOICE_MODEL = "eleven_multilingual_v2";
 const KINGCAM_GUIDE_AUDIO_ROOT = "/root/uploads/content-vault/kingcam-voice-tour-v1";
 const KINGCAM_GUIDE_AUDIO_URL_ROOT = "https://creatorvault.live/uploads/content-vault/kingcam-voice-tour-v1";
-const KINGCAM_HAPPYHORSE_FULL_BODY_AUDIO_KEY = "happyhorse-fullbody-proof";
-const KINGCAM_HAPPYHORSE_FULL_BODY_AUDIO_URL = `${KINGCAM_GUIDE_AUDIO_URL_ROOT}/${KINGCAM_HAPPYHORSE_FULL_BODY_AUDIO_KEY}.mp3`;
-const KINGCAM_HAPPYHORSE_FULL_BODY_SCRIPT = "Welcome to CreatorVault. I am KingCam. This is where creators own the media, move with power, and turn attention into a real machine. Your voice, your visuals, your story, your money. Watch what happens when all of it moves together.";
+const KINGCAM_FULL_BODY_DIRECT_AUDIO_KEY = "happyhorse-fullbody-proof";
+const KINGCAM_FULL_BODY_DIRECT_AUDIO_URL = `${KINGCAM_GUIDE_AUDIO_URL_ROOT}/${KINGCAM_FULL_BODY_DIRECT_AUDIO_KEY}.mp3`;
+const KINGCAM_FULL_BODY_DIRECT_SCRIPT = "Welcome to CreatorVault. I am KingCam. This is where creators own the media, move with power, and turn attention into a real machine. Your voice, your visuals, your story, your money. Watch what happens when all of it moves together.";
 
 const KINGCAM_GUIDE_TOUR_SEGMENTS = [
   { key: "entry", chapter: "THE ENTRY", script: "Welcome to CreatorVault. This is where you keep your content, your presence, and your power in your own hands." },
@@ -227,14 +225,14 @@ export async function createKingcamGuideVoiceTour(ownerId: number): Promise<{ se
   return { segments: tour.segments, genericFallbackForbidden: true };
 }
 
-async function ensureKingcamHappyHorseFullBodyVoice(ownerId: number): Promise<{ audioUrl: string; durationSeconds: number; canonicalAudioAssetId: string }> {
+async function ensureKingcamFullBodyDirectVoice(ownerId: number): Promise<{ audioUrl: string; durationSeconds: number; canonicalAudioAssetId: string }> {
   assertOwner(ownerId);
   const preflight = await preflightKingcamElevenLabsVoice(ownerId);
   if (!preflight.available || preflight.voiceId !== KINGCAM_GUIDE_VOICE_ID) {
     throw new Error(preflight.reason || "The real KingCam ElevenLabs voice is not available. Generic fallback is forbidden.");
   }
   await mkdir(KINGCAM_GUIDE_AUDIO_ROOT, { recursive: true });
-  const localPath = path.join(KINGCAM_GUIDE_AUDIO_ROOT, `${KINGCAM_HAPPYHORSE_FULL_BODY_AUDIO_KEY}.mp3`);
+  const localPath = path.join(KINGCAM_GUIDE_AUDIO_ROOT, `${KINGCAM_FULL_BODY_DIRECT_AUDIO_KEY}.mp3`);
   const apiKey = String(process.env.ELEVENLABS_API_KEY || "").trim();
   let audioBytes: Buffer;
   try {
@@ -246,7 +244,7 @@ async function ensureKingcamHappyHorseFullBodyVoice(ownerId: number): Promise<{ 
       method: "POST",
       headers: { "xi-api-key": apiKey, "Content-Type": "application/json", Accept: "audio/mpeg" },
       body: JSON.stringify({
-        text: KINGCAM_HAPPYHORSE_FULL_BODY_SCRIPT,
+        text: KINGCAM_FULL_BODY_DIRECT_SCRIPT,
         model_id: KINGCAM_GUIDE_VOICE_MODEL,
         voice_settings: { stability: 0.5, similarity_boost: 0.85, style: 0.35, use_speaker_boost: true },
       }),
@@ -264,7 +262,7 @@ async function ensureKingcamHappyHorseFullBodyVoice(ownerId: number): Promise<{ 
   const audioAsset = await registerCanonicalAudioAsset({
     creatorId: ownerId,
     title: "KingCam Full-Body Clone Proof — Direct Speech",
-    assetUrl: KINGCAM_HAPPYHORSE_FULL_BODY_AUDIO_URL,
+    assetUrl: KINGCAM_FULL_BODY_DIRECT_AUDIO_URL,
     mimeType: "audio/mpeg",
     kind: "voiceover",
     fingerprint,
@@ -276,11 +274,11 @@ async function ensureKingcamHappyHorseFullBodyVoice(ownerId: number): Promise<{ 
       allowedPlatforms: ["creatorvault"],
       permittedUses: ["preview", "render"],
       attributionRequired: false,
-      evidenceNote: "Generated only with the authenticated KingCam ElevenLabs voice clone for a governed HappyHorse full-body proof; generic fallback is forbidden.",
+      evidenceNote: "Generated only with the authenticated KingCam ElevenLabs voice clone for a governed Kling 3 Omni full-body proof; generic fallback is forbidden.",
     },
   });
   await analyzeCanonicalAudioAsset(ownerId, audioAsset.id);
-  return { audioUrl: KINGCAM_HAPPYHORSE_FULL_BODY_AUDIO_URL, durationSeconds: Number(durationSeconds.toFixed(3)), canonicalAudioAssetId: audioAsset.id };
+  return { audioUrl: KINGCAM_FULL_BODY_DIRECT_AUDIO_URL, durationSeconds: Number(durationSeconds.toFixed(3)), canonicalAudioAssetId: audioAsset.id };
 }
 
 async function rawQuery<T = any>(query: string, params: any[] = []): Promise<T[]> {
@@ -510,8 +508,8 @@ export async function planKingcamFullBodyMotionProof(input: { ownerId: number; h
   await rawExec(`INSERT INTO kingcam_clone_motion_requests
     (id, clone_id, owner_id, source_url, source_kind, motion_reference_url, intended_lane, candidate_models_json, scene_brief, hard_credit_cap,
      consent_confirmed, ownership_confirmed, quality_gate_json, state, created_at, updated_at)
-    VALUES (?, ?, ?, ?, 'approved_kingcam_full_body_identity_image', ?, 'governed_pollo_happyhorse_multimodal_full_body_clone', ?, ?, ?, 1, 1, ?, 'planned', NOW(), NOW())`,
-    [id, KINGCAM_CLONE_ID, input.ownerId, KINGCAM_WAN_FULL_BODY_IMAGE, KINGCAM_HAPPYHORSE_FULL_BODY_AUDIO_URL,
+    VALUES (?, ?, ?, ?, 'approved_kingcam_full_body_identity_image', ?, 'governed_pollo_kling-omni_multimodal_full_body_clone', ?, ?, ?, 1, 1, ?, 'planned', NOW(), NOW())`,
+    [id, KINGCAM_CLONE_ID, input.ownerId, KINGCAM_WAN_FULL_BODY_IMAGE, KINGCAM_FULL_BODY_DIRECT_AUDIO_URL,
       json([KINGCAM_FULL_BODY_CORRECTIVE_MODEL]), sceneBrief, input.hardCreditCap, json(QUALITY_GATES)]);
   await recordKingcamCloneMemory({ ownerId: input.ownerId, kind: "motion_proof_planned", room: "KingCam full-body cinematic motion", payload: { motionRequestId: id, fingerprint, hardCreditCap: input.hardCreditCap } });
   return { id, fingerprint, state: "planned" as const, sourceUrl: KINGCAM_WAN_FULL_BODY_IMAGE, candidateModels: [KINGCAM_FULL_BODY_CORRECTIVE_MODEL], qualityGate: QUALITY_GATES };
@@ -529,7 +527,7 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
     hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP,
     sceneBrief,
   });
-  const directVoice = await ensureKingcamHappyHorseFullBodyVoice(input.ownerId);
+  const directVoice = await ensureKingcamFullBodyDirectVoice(input.ownerId);
   const prompt = [
     "One uninterrupted fifteen-second vertical full-body KingCam clone proof from the supplied approved CreatorVault identity image and direct KingCam speech asset.",
     "KingCam stays visible from crown to shoes throughout in the exact burgundy velvet suit with gold embroidery, crown, jewelry, black shoes, dark lounge, and cigar in the right hand.",
@@ -539,14 +537,14 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
   ].join(" ");
 
   const preProofBalance = await auditPolloAvailableCredits();
-  const drafted = await createManualCappedKingcamHappyHorseSpokenMotionDraft({
+  const drafted = await createManualCappedKingcamKlingOmniSpokenMotionDraft({
     creatorId: input.ownerId,
     requestedBy: input.ownerId,
     prompt,
     manualCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP,
     ownershipConfirmed: true,
     consentConfirmed: true,
-    idempotencyKey: `kingcam-happyhorse-spoken-motion-proof:${motionRequest.id}`,
+    idempotencyKey: `kingcam-kling-omni-spoken-motion-proof:${motionRequest.id}`,
     requestId: motionRequest.id,
     metadata: {
       ownerDirectedPilot: true,
@@ -557,7 +555,7 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
       kingcamMotionRequestId: motionRequest.id,
       proofClass: "kingcam_full_body_visible_speech_and_motion_proof",
       correctiveProviderModel: KINGCAM_FULL_BODY_CORRECTIVE_MODEL,
-      rejectedProviderLearning: "Seedance 2.5, MiniMax H3 source-video, and Wan 2.7 image-plus-audio proofs are not accepted for full-body clone demonstration. This distinct Pollo HappyHorse reference lane uses the approved KingCam identity image plus a direct longer KingCam speech asset; it remains one output only and no automatic retry.",
+      rejectedProviderLearning: "Seedance 2.5, MiniMax H3 source-video, and Wan 2.7 image-plus-audio proofs are not accepted for full-body clone demonstration. This distinct Pollo Kling 3 Omni reference lane uses the approved KingCam identity image plus a direct longer KingCam speech asset; it remains one output only and no automatic retry.",
       preProofBalance,
       motionReferenceUrl: directVoice.audioUrl,
       approvedFullBodyImage: KINGCAM_WAN_FULL_BODY_IMAGE,
@@ -570,7 +568,7 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
     jobId: drafted.job.id,
     approverId: input.ownerId,
     expectedFingerprint: drafted.job.fingerprint,
-    reason: "Owner-directed KingCam HappyHorse full-body spoken-motion proof. One fifteen-second 1080p output only with direct KingCam speech and the approved identity image; manually locked 75-credit maximum; no automatic retry; reject unless full-body natural movement, speech sync, identity, wardrobe, hands, and anatomy clear the KingCam gate.",
+    reason: "Owner-directed KingCam Kling 3 Omni full-body spoken-motion proof. One fifteen-second 1080p output only with direct KingCam speech and the approved identity image; manually locked 75-credit maximum; no automatic retry; reject unless full-body natural movement, speech sync, identity, wardrobe, hands, and anatomy clear the KingCam gate.",
   });
   await authorizeSingleUseGovernedPolloSubmission({
     jobId: approved.id,
@@ -578,7 +576,7 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
     expectedFingerprint: approved.fingerprint,
     hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP,
     expiresInMinutes: 10,
-    reason: "One-time KingCam HappyHorse full-body spoken-motion proof; manual 75-credit maximum after Pollo price discovery was unavailable.",
+    reason: "One-time KingCam Kling 3 Omni full-body spoken-motion proof; manual 75-credit maximum after Pollo price discovery was unavailable.",
   });
   const submitted = await submitGovernedPolloJob({
     jobId: approved.id,

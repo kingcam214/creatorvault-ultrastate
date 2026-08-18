@@ -438,3 +438,15 @@ No new image, video, voice, or external account was created in this audit. A fut
 The next KingCam motion lane is narrowly limited to `happyhorse-1-0/ref2video` through the existing Pollo API. Official Pollo documentation records that this route accepts image and audio references together, supports vertical 9:16 at 1080P, allows one output, and can run up to fifteen seconds. It is not a new provider account and it is not a public presentation layer.
 
 The governed contract is fixed: one 15-second output; 75-credit hard ceiling; no automatic retry; direct authenticated KingCam ElevenLabs voice only; approved KingCam full-body PNG only; no source-video reuse because the previous hero motion clip was itself AI-corrupted and failed movement-reference inspection. The proof must reject itself unless KingCam remains visible crown-to-shoes, visibly speaks his direct voice with convincing lip timing, performs sustained natural steps and weight transfer, retains hands/cigar/wardrobe/crown/identity, and can honestly lead a CreatorVault demonstration. No public guide, background loop, voice overlay, or substitute page is authorized.
+
+
+## 2026-08-18 — KLING OMNI MULTIMODAL CONTRACT CONFIRMED
+
+Official Pollo Kling 3 Omni documentation (`https://docs.pollo.ai/m/kling-ai/kling-v3-omni.md`) explicitly documents `POST /generation/kling-ai/kling-v3-omni/ref2video` with 3–15 second duration, 9:16 at 720P/1080P/4K, one output, and `refs` that accept both image and audio reference objects in the same request. This is the correct existing-Pollo contract for direct full-body identity plus direct KingCam speech in one generation.
+
+The preceding HappyHorse 1.0 request created no provider task and consumed no Pollo video credit. Its exact provider response was HTTP 400: `Happyhorse 1.0 does not support audio references`. It was not surfaced publicly and must not be retried with audio. The direct KingCam speech asset that was created for the attempt remains CreatorVault-owned, governed audio and can be reused as a Kling Omni audio reference without another ElevenLabs run.
+
+
+## 2026-08-18 — KLING OMNI DIRECT FULL-BODY PROOF INTENT
+
+The next and only active KingCam full-body proof is Pollo Kling 3 Omni `ref2video`, not HappyHorse. It uses the same already-created CreatorVault-owned direct KingCam ElevenLabs speech asset and approved full-body KingCam PNG. The contract is fixed to one 15-second vertical 1080P output, one result, 75-credit hard ceiling, no retry, direct audio/image references together, and full human-review rejection if sustained movement, direct mouth sync, hands/cigar, wardrobe/crown, full-body framing, or anatomy fail. HappyHorse 1.0 must not be attempted again with audio because Pollo returned a concrete non-chargeable HTTP 400 capability rejection.
