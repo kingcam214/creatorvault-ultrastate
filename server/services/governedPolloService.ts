@@ -53,7 +53,7 @@ export type CreateGovernedPolloDraftInput = {
   sourceChecksum?: string | null;
   prompt: string;
   providerModelPath?: string;
-  resolution: "480p" | "720p" | "1080p";
+  resolution: "480p" | "720p" | "1080p" | "2K";
   durationSeconds: number;
   aspectRatio?: "9:16" | "16:9" | "1:1";
   mode?: string;
@@ -159,6 +159,7 @@ const CREATORVAULT_VACE_MODE = "creatorvault_vace_lighting_preservation";
 const CREATORVAULT_VACE_HARD_SESSION_CAP_USD = 20;
 const CREATORVAULT_VACE_OUTPUT_MAX_BYTES = 500 * 1024 * 1024;
 const KLING_SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/kling-v3-omni-ref2video";
+const MINIMAX_H3_SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/minimax/minimax-h3";
 const SOURCE_VIDEO_REFERENCE_MODE = "ref2video";
 const SOURCE_VIDEO_REFERENCE_CONTRACTS = {
   [SOURCE_VIDEO_REFERENCE_MODEL_PATH]: {
@@ -170,6 +171,11 @@ const SOURCE_VIDEO_REFERENCE_CONTRACTS = {
     apiPath: "kling-ai/kling-v3-omni/ref2video",
     acceptedResolutions: ["720p", "1080p"] as const,
     providerResolution: (resolution: string) => resolution === "720p" ? "720P" : "1080P",
+  },
+  [MINIMAX_H3_SOURCE_VIDEO_REFERENCE_MODEL_PATH]: {
+    apiPath: "minimax/minimax-h3/ref2video",
+    acceptedResolutions: ["2K"] as const,
+    providerResolution: () => "2K",
   },
 } as const;
 const OWNER_IDS = new Set([6, 33]);
@@ -968,7 +974,7 @@ async function quoteSourceVideoModelFromPolloConfig(input: { apiKey: string; pro
       .filter((value): value is string => typeof value === "string")
       .join(" ")
       .toLowerCase();
-    return identity.includes(modelToken) || identity.includes("kling-v3-omni");
+    return identity.includes(modelToken);
   });
   if (!matching) return null;
   const quotedCredits = providerNumber(matching, ["discountCost", "cost", "totalCost", "credit", "credits", "amount", "price"]);
@@ -1091,7 +1097,7 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
   sourceUrl: string;
   prompt: string;
   durationSeconds: number;
-  resolution: "480p" | "720p" | "1080p";
+  resolution: "480p" | "720p" | "1080p" | "2K";
   aspectRatio: string;
 }): Promise<GovernedPolloProviderQuote> {
   const providerModelPath = input.providerModelPath ?? SOURCE_VIDEO_REFERENCE_MODEL_PATH;
@@ -1195,7 +1201,7 @@ export async function createQuotedGovernedPolloSourceVideoDraft(input: {
   sourceUrl: string;
   sourceChecksum?: string | null;
   prompt: string;
-  resolution: "480p" | "720p" | "1080p";
+  resolution: "480p" | "720p" | "1080p" | "2K";
   durationSeconds: number;
   aspectRatio: "9:16" | "16:9" | "1:1";
   providerModelPath?: string;

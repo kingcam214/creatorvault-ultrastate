@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { auditPolloKingcamVideoToVideoCandidate } from "../services/governedPolloService";
+import { auditPolloKingcamVideoToVideoCandidate, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
 import {
   getKingcamCloneOperatingSystem,
   launchKingcamFullBodyMotionProof,
@@ -64,6 +64,22 @@ export const kingcamCloneOperatingSystemRouter = router({
       return await auditPolloKingcamVideoToVideoCandidate();
     } catch (error) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam provider candidate audit could not run." });
+    }
+  }),
+
+  auditMiniMaxH3ReferenceQuote: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await quoteGovernedPolloSourceVideoReference({
+        providerModelPath: "pollo/minimax/minimax-h3",
+        sourceUrl: "https://creatorvault.live/videos/kingcam-hero-cam.mp4",
+        prompt: "KingCam full-body source-preservation proof using the supplied CreatorVault reference video. Preserve face, beard, skin tone, body build, wardrobe, jewelry, hands, feet, natural gait, environment geometry, and the original full-body framing. No text, no extra people, no identity replacement, no wardrobe changes, no shoe changes, no jewelry drift, and no camera invention.",
+        durationSeconds: 5,
+        resolution: "2K",
+        aspectRatio: "9:16",
+      });
+    } catch (error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "MiniMax H3 quote could not be verified." });
     }
   }),
 

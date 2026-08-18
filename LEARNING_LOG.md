@@ -336,3 +336,12 @@ The authenticated Pollo video-to-video configuration endpoint answered successfu
 A read-only Runway workspace audit confirmed that the connected CreatorVault workspace currently exposes only **Gen-4 Turbo** for video. That model is image-to-video only in this workspace. Runway’s documented source-video editing paths require Aleph 2.0 or a video-to-video model; neither is available here. The workspace therefore has **no distinct executable source-video KingCam correction lane**. No Runway task, upload, credit charge, or retry occurred.
 
 **Permanent rule:** model names in a provider tool description are not account access. Check the connected workspace’s available-model list before planning a provider proof.
+
+
+## 2026-08-18 — POLLO MINIMAX H3 REFERENCE-VIDEO CONTRACT
+
+Correction: MiniMax H3 is already inside the existing **Pollo API arsenal**. Do not create, configure, or spend through a separate GoEnhance account for this KingCam lane.
+
+Pollo’s published OpenAPI exposes `POST /generation/minimax/minimax-h3/ref2video` with an explicit `refs` item of `type: "video"` and a required HTTPS `video` URL. The contract allows one output (`videoNum: 1`), a 5–15 second generation, `9:16`, and `768P` or `2K`. The actual KingCam source is 5.04 seconds, so the first proof must be 5 seconds only. This contract has no usable price recorded yet; the next required no-charge step is an authenticated Pollo estimate/configuration check. No MiniMax request, draft, credit reservation, or provider task has been created.
+
+Sources: https://docs.pollo.ai/openapi-filtered.json ; local OpenAPI extraction path `/generation/minimax/minimax-h3/ref2video`.
