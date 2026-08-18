@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Clapperboard, Crown, Eye, Film, Mic2, Pause, Play, Sparkles, Volume2, Wand2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, Check, Clapperboard, Crown, Eye, Film, Mic2, Play, Sparkles, Wand2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 const guideChapters = [
@@ -13,7 +13,6 @@ const guideChapters = [
     accent: "#f4c56b",
     video: "/videos/kingcam-hero-cam.mp4",
     visual: "CROWN",
-    audio: "/uploads/content-vault/kingcam-voice-tour-v1/entry.mp3",
   },
   {
     eyebrow: "02 / THE CAMERA",
@@ -25,7 +24,6 @@ const guideChapters = [
     accent: "#ff7eaa",
     video: "/videos/vaultx-homepage-kingcam-trailer.mp4",
     visual: "SOURCE",
-    audio: "/uploads/content-vault/kingcam-voice-tour-v1/body-cinema.mp3",
   },
   {
     eyebrow: "03 / THE MESSAGE",
@@ -37,7 +35,6 @@ const guideChapters = [
     accent: "#9e86ff",
     video: "/videos/kingcam-hero-cam.mp4",
     visual: "WORDS",
-    audio: "/uploads/content-vault/kingcam-voice-tour-v1/caption-stage.mp3",
   },
   {
     eyebrow: "04 / THE DROP",
@@ -49,7 +46,6 @@ const guideChapters = [
     accent: "#61d4c2",
     video: "/videos/vaultx-homepage-kingcam-trailer.mp4",
     visual: "DROP",
-    audio: "/uploads/content-vault/kingcam-voice-tour-v1/trailer-maker.mp3",
   },
   {
     eyebrow: "05 / THE GUIDE",
@@ -61,7 +57,6 @@ const guideChapters = [
     accent: "#e3a145",
     video: "/videos/kingcam-hero-cam.mp4",
     visual: "KINGCAM",
-    audio: "/uploads/content-vault/kingcam-voice-tour-v1/clone-command.mp3",
   },
 ] as const;
 
@@ -73,8 +68,6 @@ export default function KingCamGuide() {
   const [, setLocation] = useLocation();
   const [chapterIndex, setChapterIndex] = useState(0);
   const [autoGuide, setAutoGuide] = useState(true);
-  const [voiceOn, setVoiceOn] = useState(false);
-  const narrationRef = useRef<HTMLAudioElement>(null);
   const chapter = guideChapters[chapterIndex];
   const ChapterIcon = chapter.icon;
 
@@ -83,14 +76,6 @@ export default function KingCamGuide() {
     const next = window.setTimeout(() => setChapterIndex((current) => (current + 1) % guideChapters.length), 10500);
     return () => window.clearTimeout(next);
   }, [chapterIndex, autoGuide]);
-
-  useEffect(() => {
-    const narration = narrationRef.current;
-    if (!narration) return;
-    narration.pause();
-    narration.currentTime = 0;
-    if (voiceOn) narration.play().catch(() => setVoiceOn(false));
-  }, [chapterIndex, voiceOn]);
 
   const progress = useMemo(() => `${((chapterIndex + 1) / guideChapters.length) * 100}%`, [chapterIndex]);
   const previous = () => { setAutoGuide(false); setChapterIndex((chapterIndex + guideChapters.length - 1) % guideChapters.length); };
@@ -110,7 +95,6 @@ export default function KingCamGuide() {
 
       <section className="relative isolate min-h-[100svh] overflow-hidden bg-black">
         <div key={chapter.video} className="absolute inset-0"><Motion src={chapter.video} /></div>
-        <audio ref={narrationRef} src={chapter.audio} preload="metadata" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,.91)_0%,rgba(0,0,0,.63)_40%,rgba(0,0,0,.12)_70%,rgba(0,0,0,.48)_100%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.28)_0%,transparent_36%,rgba(0,0,0,.78)_100%)]" />
         <div className="kingguide-pulse pointer-events-none absolute -left-28 top-[25%] h-96 w-96 rounded-full blur-3xl" style={{ background: `${chapter.accent}40` }} />
@@ -126,7 +110,7 @@ export default function KingCamGuide() {
         <div className="absolute inset-x-0 bottom-0 z-20 px-5 pb-9 sm:px-8 sm:pb-12 lg:px-12"><div className="mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[1fr_.55fr] lg:items-end"><div key={chapter.eyebrow} className="kingguide-rise"><div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[.26em]" style={{ color: chapter.accent }}><ChapterIcon className="h-4 w-4" /> {chapter.eyebrow}</div><h1 className="mt-5 whitespace-pre-line text-[15vw] font-black leading-[.68] tracking-[-.13em] sm:text-7xl lg:text-8xl">{chapter.title}</h1><p className="mt-6 max-w-xl text-base leading-7 text-white/76 sm:text-lg">{chapter.message}</p><div className="mt-7 flex flex-wrap gap-3"><button type="button" onClick={() => setLocation(chapter.route)} className="inline-flex min-h-12 items-center gap-2 rounded-full px-6 text-sm font-black text-black" style={{ background: chapter.accent }}><Sparkles className="h-4 w-4" /> {chapter.action}</button><button type="button" onClick={next} className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/30 bg-black/25 px-6 text-sm font-black backdrop-blur"><ArrowRight className="h-4 w-4" /> Show me the next room</button></div></div>
             <aside className="rounded-[2rem] border border-white/15 bg-black/45 p-5 backdrop-blur-xl"><p className="text-[9px] font-black uppercase tracking-[.2em] text-white/45">KingCam’s platform map</p><div className="mt-5 space-y-3">{guideChapters.map((item, index) => { const Icon = item.icon; const active = chapterIndex === index; return <button type="button" key={item.eyebrow} onClick={() => { setAutoGuide(false); setChapterIndex(index); }} className={`flex w-full items-center gap-3 rounded-2xl p-3 text-left transition ${active ? "bg-white/10" : "hover:bg-white/[.06]"}`}><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: active ? `${item.accent}33` : "rgba(255,255,255,.07)", color: active ? item.accent : "rgba(255,255,255,.52)" }}><Icon className="h-4 w-4" /></span><span><span className="block text-[9px] font-black uppercase tracking-[.14em] text-white/45">{item.eyebrow.split(" / ")[0]}</span><span className="mt-1 block text-sm font-black leading-4">{item.visual}</span></span>{active && <Check className="ml-auto h-4 w-4" style={{ color: item.accent }} />}</button>; })}</div></aside>
           </div>
-          <div className="mt-8 flex items-center gap-3"><button type="button" onClick={previous} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-black/30"><ArrowLeft className="h-4 w-4" /></button><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full transition-all duration-500" style={{ width: progress, background: chapter.accent }} /></div><button type="button" onClick={() => setVoiceOn((active) => !active)} className={`inline-flex h-10 items-center gap-2 rounded-full border px-4 text-[10px] font-black uppercase tracking-[.15em] ${voiceOn ? "border-[#f4c56b]/70 bg-[#f4c56b] text-black" : "border-white/25 bg-black/30"}`}>{voiceOn ? <><Pause className="h-3.5 w-3.5 fill-current" /> KingCam speaking</> : <><Volume2 className="h-3.5 w-3.5" /> Hear KingCam</>}</button><button type="button" onClick={() => setAutoGuide(!autoGuide)} className="inline-flex h-10 items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 text-[10px] font-black uppercase tracking-[.15em]">{autoGuide ? <><Play className="h-3.5 w-3.5 fill-current" /> Auto guide</> : <><Eye className="h-3.5 w-3.5" /> Manual guide</>}</button></div>
+          <div className="mt-8 flex items-center gap-3"><button type="button" onClick={previous} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-black/30"><ArrowLeft className="h-4 w-4" /></button><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full transition-all duration-500" style={{ width: progress, background: chapter.accent }} /></div><button type="button" onClick={() => setAutoGuide(!autoGuide)} className="inline-flex h-10 items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 text-[10px] font-black uppercase tracking-[.15em]">{autoGuide ? <><Play className="h-3.5 w-3.5 fill-current" /> Auto guide</> : <><Eye className="h-3.5 w-3.5" /> Manual guide</>}</button></div>
         </div></div>
       </section>
     </main>

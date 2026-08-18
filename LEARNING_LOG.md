@@ -406,3 +406,10 @@ CreatorVault created five short tour narrations directly with the verified **Kin
 The five governed audio assets cover The Entry (6.870 seconds), Body Cinema (8.072 seconds), Caption Stage (6.870 seconds), Trailer Maker (7.602 seconds), and Clone Command (7.340 seconds). Every file was stored under CreatorVault control, registered as a canonical `voiceover` asset with `generated_voice` rights, and analyzed for waveform/timing data. A speech-to-text inspection of the opening narration confirmed the spoken words match the approved opening script.
 
 The real-voice tour may describe only the live rooms and their verified limits. It may not present the private MiniMax presence loop as a Clone Guide, tool demo, or accepted full-motion proof.
+
+
+## 2026-08-18 — KINGCAM VOICEOVER GUIDE REJECTED
+
+Cameron’s live screenshot proved that the public KingCam Guide was wrong: it reused the same background clone video while playing KingCam’s real voice as a voiceover. That is **not** a full-body, full-motion KingCam clone leading a tool demonstration. The public voice overlay, its “KingCam speaking” control, and its narration URLs were removed from the Guide immediately.
+
+The real ElevenLabs KingCam audio remains a private governed asset for a future scene where a visibly full-body moving KingCam clone actually delivers it. It must not be used as a disembodied public guide voice over recycled background footage. A valid future proof needs visible full-body natural motion, matched speech delivery, and real CreatorVault tool demonstration in the same finished watchable result.
