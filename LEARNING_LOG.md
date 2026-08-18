@@ -634,3 +634,9 @@ The live official Kling V3 motion estimate succeeded for the approved KingCam id
 The owner-directed governed Kling V3 motion attempt created job `111` after the provider returned an exact 98-credit / $5.88 estimate. Its actual versioned submission returned HTTP 403: `This model is not enabled for API access.` CreatorVault recorded `kling_v3_motion_http_403`, released the 98-credit reservation, and no provider task, output, actual charge, or accepted clone exists.
 
 **Permanent access learning:** the Pollo estimate route does not establish entitlement. Kling V3 motion is unavailable to this CreatorVault API account. Do not retry or claim readiness unless the API account is explicitly enabled by the provider. This is an access failure, not a visual result.
+
+## 2026-08-18 — Available Kling 3 Omni image-plus-real-gait method identified
+
+Governed job `105` proves the existing Pollo Kling 3 Omni reference-video lane can create a provider task for this account. That earlier job used an identity image plus direct-speech audio; it did not include the real gait driver and cannot qualify as a real-motion transfer proof. Official Pollo contract inspection now confirms the available Omni reference payload can carry separate image and video references, and its `video` estimate endpoint is documented.
+
+A no-audio method using the approved KingCam identity image plus the locked real seven-second gait video is therefore distinct from the rejected audio-only Omni proof, GoEnhance, and the two API-disabled motion endpoints. It must still receive a mixed-reference exact estimate, a dedicated governed no-retry one-output contract, and full watchable quality review before any output can be accepted or publicly used.
