@@ -318,6 +318,7 @@ export async function preflightKingcamReplicateWanAnimate(ownerId: number): Prom
   model: "wan-video/wan-2.2-animate-animation";
   versionId: string | null;
   inputFields: string[];
+  inputSchema: Record<string, unknown> | null;
   acceptsRealDriverVideo: boolean;
   advertisedPricing: Record<string, unknown> | null;
   exactCostAvailable: boolean;
@@ -328,18 +329,19 @@ export async function preflightKingcamReplicateWanAnimate(ownerId: number): Prom
   const token = String(process.env.REPLICATE_API_TOKEN || "").trim();
   const model = "wan-video/wan-2.2-animate-animation" as const;
   if (!token) {
-    return { available: false, provider: "replicate", model, versionId: null, inputFields: [], acceptsRealDriverVideo: false, advertisedPricing: null, exactCostAvailable: false, reason: "The existing Replicate clone-only account token is not available in this runtime.", cloneOnly: true };
+    return { available: false, provider: "replicate", model, versionId: null, inputFields: [], inputSchema: null, acceptsRealDriverVideo: false, advertisedPricing: null, exactCostAvailable: false, reason: "The existing Replicate clone-only account token is not available in this runtime.", cloneOnly: true };
   }
   const response = await fetch(`https://api.replicate.com/v1/models/${model}`, {
     headers: { Authorization: `Token ${token}`, Accept: "application/json" },
   });
   if (!response.ok) {
-    return { available: false, provider: "replicate", model, versionId: null, inputFields: [], acceptsRealDriverVideo: false, advertisedPricing: null, exactCostAvailable: false, reason: `The existing Replicate clone-only account returned ${response.status} while reading Wan Animate.`, cloneOnly: true };
+    return { available: false, provider: "replicate", model, versionId: null, inputFields: [], inputSchema: null, acceptsRealDriverVideo: false, advertisedPricing: null, exactCostAvailable: false, reason: `The existing Replicate clone-only account returned ${response.status} while reading Wan Animate.`, cloneOnly: true };
   }
   const payload = (await response.json().catch(() => ({}))) as Record<string, any>;
   const latestVersion = payload.latest_version && typeof payload.latest_version === "object" ? payload.latest_version as Record<string, any> : {};
   const inputProperties = latestVersion.openapi_schema?.components?.schemas?.Input?.properties;
   const inputFields = inputProperties && typeof inputProperties === "object" ? Object.keys(inputProperties).sort() : [];
+  const inputSchema = inputProperties && typeof inputProperties === "object" ? inputProperties as Record<string, unknown> : null;
   const driverField = inputFields.some((field) => /video|driv|motion/i.test(field));
   const advertisedPricing = payload.pricing && typeof payload.pricing === "object" ? payload.pricing as Record<string, unknown> : null;
   return {
@@ -348,6 +350,7 @@ export async function preflightKingcamReplicateWanAnimate(ownerId: number): Prom
     model,
     versionId: typeof latestVersion.id === "string" ? latestVersion.id : null,
     inputFields,
+    inputSchema,
     acceptsRealDriverVideo: driverField,
     advertisedPricing,
     exactCostAvailable: Boolean(advertisedPricing && Object.keys(advertisedPricing).length),
