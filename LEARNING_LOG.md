@@ -287,3 +287,10 @@ This is a corrective source-preservation test only. It must be rejected for any 
 **Real provider run:** governed job `99`; clone-only Replicate Wan 2.7 VideoEdit; one submitted request; documented $2 maximum; no retry. The provider rejected it before rendering because the KingCam source is **5.04 seconds** while the request incorrectly asked for **10 seconds**: `InvalidParameter - Setting duration 10 exceeds video duration 5.04.`
 
 **Corrective rule:** this was a source-duration contract failure, not a visual-quality failure. Do not change KingCam’s source, direction, identity, wardrobe law, or provider lane. The exact repair is to constrain the clone-only proof to a 5-second output that does not exceed the actual source duration, then rerun the same governed one-output path.
+
+
+## 2026-08-18 — KINGCAM CLONE-ONLY STALL SAFEGUARD
+
+The corrected five-second clone-only request, governed job `100`, was accepted by Replicate and remained submitted well beyond the two-minute provider deadline despite repeated status checks. It has not produced a finished video and no duplicate request has been created.
+
+**Corrective rule:** CreatorVault must never merely mark an already-submitted Replicate job cancelled in its own database. For a stalled clone-only source-video prediction, it must call Replicate’s provider-side cancellation endpoint, record the provider response, release the reserved budget, and then allow a new controlled decision. This safeguard is now being deployed before resolving job `100`.

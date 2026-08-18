@@ -2663,6 +2663,38 @@ export async function cancelGovernedPolloJob(params: { jobId: number; actorId: n
   const job = await getGovernedPolloJob(params.jobId);
   if (!job) throw new Error("Governed media job was not found.");
   if (job.creatorId !== params.actorId && !OWNER_IDS.has(Number(params.actorId))) throw new Error("Only the creator or an owner may cancel this governed media job.");
+  if (job.state === "submitted" && isReplicateWanVideoEditJob(job)) {
+    const token = String(process.env.REPLICATE_API_TOKEN || "").trim();
+    if (!token) throw new Error("Replicate cancellation cannot run because REPLICATE_API_TOKEN is not configured.");
+    if (!job.providerJobId) throw new Error("Replicate cancellation cannot run because the provider prediction ID is missing.");
+    const response = await fetch(`https://api.replicate.com/v1/predictions/${encodeURIComponent(job.providerJobId)}/cancel`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
+    const providerResponse = await parseProviderJson(response);
+    if (!response.ok) {
+      throw new Error(`Replicate cancellation returned ${response.status}: ${safeErrorMessage(providerResponse.detail ?? providerResponse.error ?? providerResponse.responseText ?? "unknown error")}`);
+    }
+    const cancelledMessage = `Provider-side Replicate cancellation confirmed: ${params.reason.slice(0, 1000)}`;
+    await rawExec(
+      `UPDATE governed_media_jobs
+       SET state = 'cancelled', failure_code = 'replicate_provider_cancelled', failure_message = ?, provider_response_json = ?, lease_owner = NULL, lease_expires_at = NULL, updated_at = NOW(), completed_at = NOW()
+       WHERE id = ? AND state = 'submitted'`,
+      [cancelledMessage, safeJson(providerResponse), job.id],
+    );
+    const cancelled = (await getGovernedPolloJob(job.id))!;
+    await appendEvent({
+      jobId: cancelled.id,
+      eventType: "provider_cancellation_confirmed",
+      fromState: "submitted",
+      toState: "cancelled",
+      actorId: params.actorId,
+      correlationId: cancelled.requestId,
+      detail: { reason: params.reason, providerJobId: job.providerJobId, providerResponse },
+    });
+    await releaseGovernedPolloBudget({ jobId: cancelled.id, actorId: params.actorId, reason: "replicate_provider_cancelled" });
+    return cancelled;
+  }
   if (["submitted", "submission_unknown", "provider_complete", "quality_review", "accepted"].includes(job.state)) {
     throw new Error("This job cannot be cancelled because a provider request may already exist or an output is accepted.");
   }
