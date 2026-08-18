@@ -11,6 +11,7 @@ import {
   authorizeSingleUseGovernedPolloSubmission,
   createGovernedKingcamReplicateOmniHumanDraft,
   createGovernedKingcamReplicateWanAnimateDraft,
+  createGovernedKingcamGoEnhanceRealPerformanceDraft,
   getGovernedPolloJob,
   getGovernedPolloConfig,
   isGovernedPolloExecutionEnabled,
@@ -36,6 +37,14 @@ const KINGCAM_WAN_ANIMATE_REAL_DRIVER_IMAGE = "https://creatorvault.live/images/
 const KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL = "https://creatorvault.live/uploads/content-vault/9c47c6e0-a7ce-4e85-89a8-25c2f98d2980/kingcam-real-gait-driver-0129-0136.mp4";
 const KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS = 7;
 const KINGCAM_WAN_ANIMATE_REAL_DRIVER_HARD_SPEND_CAP_USD = 2;
+const KINGCAM_GOENHANCE_REAL_PERFORMANCE_HARD_CREDIT_CAP = 35;
+const KINGCAM_GOENHANCE_REAL_PERFORMANCE_STYLE_CODE = "mx-v2v";
+const KINGCAM_GOENHANCE_REAL_PERFORMANCE_GATES = [
+  "The result visibly shows real KingCam in continuous full-body movement from crown to shoes, retaining the original seven-second gait timing and wide framing.",
+  "KingCam’s recognizable face, beard, build, burgundy suit with gold embroidery, crown, jewelry, black shoes, right-hand cigar, and lounge geometry remain intact without substitution.",
+  "Hands, feet, posture, gait, wardrobe edges, cigar, jewelry, and shoe details remain natural across the moving clip; any morphing, frozen motion, crop, spin, or anatomy failure is an automatic rejection.",
+  "This is a real-performance video-to-video preservation proof, not a synthetic identity-transfer or talking-clone claim. It can only become a private Clone Command demonstration after a watchable review accepts it.",
+] as const;
 const execFileAsync = promisify(execFile);
 const KINGCAM_GUIDE_VOICE_ID = "rwc11bXCBw5KydM4avHE";
 const KINGCAM_GUIDE_VOICE_MODEL = "eleven_multilingual_v2";
@@ -1147,6 +1156,85 @@ export async function launchKingcamWanAnimateFullBodyProof(input: { ownerId: num
     hardCreditCap: KINGCAM_WAN_ANIMATE_REAL_DRIVER_HARD_SPEND_CAP_USD,
     qualityGate: WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES,
   };
+}
+
+export async function launchKingcamGoEnhanceRealPerformanceProof(input: { ownerId: number; sceneBrief: string }) {
+  assertOwner(input.ownerId);
+  const sceneBrief = String(input.sceneBrief || "").trim();
+  if (sceneBrief.length < 40 || sceneBrief.length > 1800) {
+    throw new Error("KingCam real-performance motion brief must be between 40 and 1800 characters.");
+  }
+  await ensureProfile(input.ownerId);
+  const motionRequestId = randomUUID();
+  const fingerprint = createHash("sha256")
+    .update(`${KINGCAM_CLONE_ID}:${KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL}:${KINGCAM_GOENHANCE_REAL_PERFORMANCE_STYLE_CODE}:${sceneBrief}:${KINGCAM_GOENHANCE_REAL_PERFORMANCE_HARD_CREDIT_CAP}`)
+    .digest("hex");
+  await rawExec(`INSERT INTO kingcam_clone_motion_requests
+    (id, clone_id, owner_id, source_url, source_kind, motion_reference_url, intended_lane, candidate_models_json, scene_brief, hard_credit_cap,
+     consent_confirmed, ownership_confirmed, quality_gate_json, state, created_at, updated_at)
+    VALUES (?, ?, ?, ?, 'real_kingcam_performance_driver', ?, 'governed_pollo_goenhance_real_performance_video2video', ?, ?, ?, 1, 1, ?, 'planned', NOW(), NOW())`,
+    [
+      motionRequestId,
+      KINGCAM_CLONE_ID,
+      input.ownerId,
+      KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL,
+      KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL,
+      json(["pollo/go-enhance/go-enhance-v1"]),
+      sceneBrief,
+      KINGCAM_GOENHANCE_REAL_PERFORMANCE_HARD_CREDIT_CAP,
+      json(KINGCAM_GOENHANCE_REAL_PERFORMANCE_GATES),
+    ],
+  );
+  const prompt = [
+    "Preserve the supplied verified real KingCam full-body performance exactly: continuous crown-to-shoes framing, seven-second gait timing, grounded weight transfer, restrained hand movement, burgundy suit with gold embroidery, crown, jewelry, black shoes, right-hand cigar, dark lounge geometry, natural skin, face, beard, and body build.",
+    "Do not crop, spin, freeze, replace the identity, add a person, alter wardrobe, change shoes or jewelry, morph the cigar or hands, distort feet, modify anatomy, add text, or invent a different camera move.",
+    "This is a silent real-performance motion-preservation proof for the private KingCam Clone Command. It is never a Body Cinema output and never a synthetic identity-transfer or talking-clone claim.",
+    sceneBrief,
+  ].join(" ");
+  const drafted = await createGovernedKingcamGoEnhanceRealPerformanceDraft({
+    creatorId: input.ownerId,
+    requestedBy: input.ownerId,
+    prompt,
+    ownershipConfirmed: true,
+    consentConfirmed: true,
+    idempotencyKey: `kingcam-goenhance-real-performance-proof:${motionRequestId}`,
+    requestId: motionRequestId,
+    metadata: {
+      kingcamCloneId: KINGCAM_CLONE_ID,
+      kingcamMotionRequestId: motionRequestId,
+      proofClass: "kingcam_real_performance_video2video_preservation_proof",
+      providerPreflight: "Authenticated CreatorVault Pollo catalog exposes go-enhance-v1 as video-to-video. Official Pollo OpenAPI verifies /generation/video2video requires styleCode, prompt, and video assets. No exact pre-submission price was exposed, so this is one output with a manual 35-credit ceiling and no automatic retry.",
+      realDriverDurationSeconds: KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS,
+      qualityGate: KINGCAM_GOENHANCE_REAL_PERFORMANCE_GATES,
+    },
+  });
+  const approved = await approveGovernedPolloJob({
+    jobId: drafted.job.id,
+    approverId: input.ownerId,
+    expectedFingerprint: drafted.job.fingerprint,
+    reason: "Owner-directed KingCam GoEnhance real-performance video-to-video proof. One real full-body output only with the locked gait source, official mx-v2v contract, manually locked 35-credit ceiling, and no automatic retry; reject any crop, freeze, identity/wardrobe/prop drift, gait break, or anatomy defect.",
+  });
+  await authorizeSingleUseGovernedPolloSubmission({
+    jobId: approved.id,
+    ownerId: input.ownerId,
+    expectedFingerprint: approved.fingerprint,
+    hardCreditCap: KINGCAM_GOENHANCE_REAL_PERFORMANCE_HARD_CREDIT_CAP,
+    expiresInMinutes: 10,
+    reason: "One-time KingCam GoEnhance real-performance proof; the provider did not expose an exact pre-submission quote, so the manual 35-credit ceiling and no-retry rule are locked before submission.",
+  });
+  const submitted = await submitGovernedPolloJob({ jobId: approved.id, workerId: `kingcam-goenhance-owner-${input.ownerId}` });
+  const localState: MotionRequestState = submitted.state === "submitted" ? "submitted" : submitted.state === "failed" ? "failed" : "approved";
+  await rawExec(
+    "UPDATE kingcam_clone_motion_requests SET state = ?, review_json = ?, updated_at = NOW() WHERE id = ? AND clone_id = ? AND owner_id = ?",
+    [localState, json({ governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_GOENHANCE_REAL_PERFORMANCE_HARD_CREDIT_CAP, providerModelPath: "pollo/go-enhance/go-enhance-v1", styleCode: KINGCAM_GOENHANCE_REAL_PERFORMANCE_STYLE_CODE, motionDriverUrl: KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL, motionDriverDurationSeconds: KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS, qualityGate: KINGCAM_GOENHANCE_REAL_PERFORMANCE_GATES }), motionRequestId, KINGCAM_CLONE_ID, input.ownerId],
+  );
+  await recordKingcamCloneMemory({
+    ownerId: input.ownerId,
+    kind: "motion_proof_planned",
+    room: "KingCam real-performance full-body motion",
+    payload: { motionRequestId, fingerprint, governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_GOENHANCE_REAL_PERFORMANCE_HARD_CREDIT_CAP, providerModelPath: "pollo/go-enhance/go-enhance-v1", styleCode: KINGCAM_GOENHANCE_REAL_PERFORMANCE_STYLE_CODE, motionDriverUrl: KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL, motionDriverDurationSeconds: KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS, qualityGate: KINGCAM_GOENHANCE_REAL_PERFORMANCE_GATES },
+  });
+  return { motionRequestId, governedJob: submitted, hardCreditCap: KINGCAM_GOENHANCE_REAL_PERFORMANCE_HARD_CREDIT_CAP, qualityGate: KINGCAM_GOENHANCE_REAL_PERFORMANCE_GATES };
 }
 
 export async function reviewKingcamFullBodyMotionProof(input: { ownerId: number; requestId: string; accepted: boolean; overallScore: number; notes: string }) {
