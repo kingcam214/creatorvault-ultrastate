@@ -602,3 +602,9 @@ Screened classifications: `RPReplay_Final1633698547.mov` is a static collage and
 Official Pollo OpenAPI verifies the distinct `POST /v1/generation/pollo-ai/action-imitation-v2/motion` contract: it requires an approved identity image URL plus a real motion-source video URL. The same official specification exposes `POST /v1/generation/pollo-ai/action-imitation-v2/motion/estimate` with the identical two-input body, enabling an exact no-charge cost read before any draft.
 
 The first audit-only implementation incorrectly called the generic `config/other/models` path and received HTTP 400 `Input validation failed`; no draft, budget reservation, permit, provider task, credit spend, or output was created. The correction uses only the documented Action Imitation V2 estimate endpoint with the locked approved KingCam identity image and real seven-second gait driver. It remains audit-only until the returned provider price and account access are verified, then requires a separately governed owner-directed decision.
+
+## 2026-08-18 — Deployment runner checkout throttle
+
+The release for the validated Action Imitation V2 no-charge estimate audit (`1a42eeb`) did not reach CreatorVault production because the self-hosted GitHub Actions runner failed before checkout after three GitHub archive-download HTTP 429 responses for `actions/checkout@v4`. The local type check, scope guard, and production build had already passed. This was not an application code, database, or provider failure, and no provider task or credit spend occurred.
+
+Corrective action: trigger a fresh main-branch deployment after the temporary GitHub checkout throttle, then verify the live release SHA before calling the audit. Do not change the application contract merely to work around a transient GitHub download failure.
