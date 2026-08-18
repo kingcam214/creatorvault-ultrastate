@@ -160,7 +160,7 @@ const REPLICATE_WAN_ANIMATE_DRIVER_URL = "https://creatorvault.live/uploads/cont
 const KINGCAM_GOENHANCE_MODEL_PATH = "pollo/go-enhance/go-enhance-v1";
 const KINGCAM_GOENHANCE_MODE = "kingcam_goenhance_real_performance_video2video";
 const KINGCAM_GOENHANCE_STYLE_CODE = "mx-v2v";
-const KINGCAM_GOENHANCE_HARD_CREDIT_CAP = 35;
+const KINGCAM_GOENHANCE_HARD_CREDIT_CAP = 105;
 const KINGCAM_GOENHANCE_REAL_DRIVER_URL = REPLICATE_WAN_ANIMATE_DRIVER_URL;
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MODEL_PATH = "runway/aleph-2-video-edit";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MODE = "runway_aleph_2_source_video_edit";
@@ -1389,10 +1389,10 @@ export async function auditPolloKingcamVideoToVideoCandidate(params: {
     estimateFailure = `The official GoEnhance estimate endpoint could not be reached: ${safeErrorMessage(error)}`;
   }
   const quotedCredits = estimateRecord
-    ? providerNumber(estimateRecord, ["discountCost", "totalCost", "credit", "credits", "amount", "price", "cost"])
+    ? providerNumber(estimateRecord, ["cost", "singleCost", "totalCost", "credit", "credits", "amount", "price", "discountCost"])
     : configuredCredits;
   const quotedCostUsd = estimateRecord
-    ? providerNumber(estimateRecord, ["discountCostUsd", "costUsd", "totalCostUsd", "usd", "amountUsd", "priceUsd", "priceUSD"])
+    ? providerNumber(estimateRecord, ["costUsd", "singleCostUsd", "totalCostUsd", "usd", "amountUsd", "priceUsd", "priceUSD", "discountCostUsd"])
     : configuredUsd;
   const quoteAvailable = quotedCredits !== null && quotedCredits > 0;
   const enrichedProviderRecord = { ...record, governedEstimate: estimateRecord, governedEstimateFailure: estimateFailure };
@@ -1994,6 +1994,10 @@ export async function createGovernedKingcamGoEnhanceRealPerformanceDraft(input: 
   requestId?: string | null;
   metadata?: Record<string, unknown>;
 }): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  const quote = await auditPolloKingcamVideoToVideoCandidate();
+  if (!quote.quoteAvailable || quote.quotedCredits !== KINGCAM_GOENHANCE_HARD_CREDIT_CAP || quote.quotedCostUsd !== 6.3) {
+    throw new Error("GoEnhance must return the locked live 105-credit / $6.30 estimate for the exact KingCam gait proof before a governed draft can exist.");
+  }
   return createGovernedPolloDraft({
     creatorId: input.creatorId,
     requestedBy: input.requestedBy,
@@ -2007,8 +2011,8 @@ export async function createGovernedKingcamGoEnhanceRealPerformanceDraft(input: 
     aspectRatio: "16:9",
     mode: KINGCAM_GOENHANCE_MODE,
     outputCount: 1,
-    estimatedCostCredits: KINGCAM_GOENHANCE_HARD_CREDIT_CAP,
-    costEvidenceReference: "Owner-authorized KingCam-only GoEnhance video-to-video real-performance proof; the authenticated Pollo catalog exposes go-enhance-v1 with the official video-to-video endpoint and mx-v2v style code, but no exact pre-submission quote. One output only; the manually locked 35-credit ceiling is recorded before submission and no automatic retry is allowed.",
+    estimatedCostCredits: quote.quotedCredits,
+    costEvidenceReference: "Provider-verified GoEnhance v1 estimate for the locked real KingCam gait source and mx-v2v style: 105 Pollo credits / $6.30. One output only; the provider estimate is the hard ceiling and no automatic retry is allowed.",
     ownershipConfirmed: input.ownershipConfirmed,
     consentConfirmed: input.consentConfirmed,
     idempotencyKey: input.idempotencyKey,
@@ -2018,6 +2022,9 @@ export async function createGovernedKingcamGoEnhanceRealPerformanceDraft(input: 
       kingcamGoEnhanceRealPerformanceProof: true,
       cloneOnly: true,
       providerCostCurrency: "Pollo credits",
+      providerQuote: { credits: quote.quotedCredits, costUsd: quote.quotedCostUsd, source: "official_goenhance_v1_estimate" },
+      providerQuotedCredits: quote.quotedCredits,
+      providerQuotedCostUsd: quote.quotedCostUsd,
       hardCreditCap: KINGCAM_GOENHANCE_HARD_CREDIT_CAP,
       ownerDirectedPilot: true,
       candidateLimit: 1,

@@ -37,7 +37,7 @@ const KINGCAM_WAN_ANIMATE_REAL_DRIVER_IMAGE = "https://creatorvault.live/images/
 const KINGCAM_WAN_ANIMATE_REAL_DRIVER_URL = "https://creatorvault.live/uploads/content-vault/9c47c6e0-a7ce-4e85-89a8-25c2f98d2980/kingcam-real-gait-driver-0129-0136.mp4";
 const KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS = 7;
 const KINGCAM_WAN_ANIMATE_REAL_DRIVER_HARD_SPEND_CAP_USD = 2;
-const KINGCAM_GOENHANCE_REAL_PERFORMANCE_HARD_CREDIT_CAP = 35;
+const KINGCAM_GOENHANCE_REAL_PERFORMANCE_HARD_CREDIT_CAP = 105;
 const KINGCAM_GOENHANCE_REAL_PERFORMANCE_STYLE_CODE = "mx-v2v";
 const KINGCAM_GOENHANCE_REAL_PERFORMANCE_GATES = [
   "The result visibly shows real KingCam in continuous full-body movement from crown to shoes, retaining the original seven-second gait timing and wide framing.",
@@ -1203,7 +1203,7 @@ export async function launchKingcamGoEnhanceRealPerformanceProof(input: { ownerI
       kingcamCloneId: KINGCAM_CLONE_ID,
       kingcamMotionRequestId: motionRequestId,
       proofClass: "kingcam_real_performance_video2video_preservation_proof",
-      providerPreflight: "Authenticated CreatorVault Pollo catalog exposes go-enhance-v1 as video-to-video. Official Pollo OpenAPI verifies /generation/video2video requires styleCode, prompt, and video assets. No exact pre-submission price was exposed, so this is one output with a manual 35-credit ceiling and no automatic retry.",
+      providerPreflight: "Authenticated CreatorVault Pollo catalog exposes go-enhance-v1 as video-to-video. Official Pollo OpenAPI verifies GoEnhance v1 requires the versioned video, style, prompt, and strength contract. The live provider estimate verified 105 Pollo credits / $6.30 for the locked source and style; this is one output with that fixed ceiling and no automatic retry.",
       realDriverDurationSeconds: KINGCAM_WAN_ANIMATE_REAL_DRIVER_DURATION_SECONDS,
       qualityGate: KINGCAM_GOENHANCE_REAL_PERFORMANCE_GATES,
     },
@@ -1212,7 +1212,7 @@ export async function launchKingcamGoEnhanceRealPerformanceProof(input: { ownerI
     jobId: drafted.job.id,
     approverId: input.ownerId,
     expectedFingerprint: drafted.job.fingerprint,
-    reason: "Owner-directed KingCam GoEnhance real-performance video-to-video proof. One real full-body output only with the locked gait source, official mx-v2v contract, manually locked 35-credit ceiling, and no automatic retry; reject any crop, freeze, identity/wardrobe/prop drift, gait break, or anatomy defect.",
+    reason: "Owner-directed KingCam GoEnhance real-performance video-to-video proof. One real full-body output only with the locked gait source, official mx-v2v contract, provider-estimated 105-credit ceiling, and no automatic retry; reject any crop, freeze, identity/wardrobe/prop drift, gait break, or anatomy defect.",
   });
   await authorizeSingleUseGovernedPolloSubmission({
     jobId: approved.id,
@@ -1220,7 +1220,7 @@ export async function launchKingcamGoEnhanceRealPerformanceProof(input: { ownerI
     expectedFingerprint: approved.fingerprint,
     hardCreditCap: KINGCAM_GOENHANCE_REAL_PERFORMANCE_HARD_CREDIT_CAP,
     expiresInMinutes: 10,
-    reason: "One-time KingCam GoEnhance real-performance proof; the provider did not expose an exact pre-submission quote, so the manual 35-credit ceiling and no-retry rule are locked before submission.",
+    reason: "One-time KingCam GoEnhance real-performance proof; the live provider estimate returned 105 credits / $6.30 for the locked source and style, so that exact ceiling and the no-retry rule are locked before submission.",
   });
   const submitted = await submitGovernedPolloJob({ jobId: approved.id, workerId: `kingcam-goenhance-owner-${input.ownerId}` });
   const localState: MotionRequestState = submitted.state === "submitted" ? "submitted" : submitted.state === "failed" ? "failed" : "approved";
