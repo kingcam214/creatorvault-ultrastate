@@ -248,3 +248,12 @@ The Clone Command path now prepares exactly one full-body KingCam proof through 
 ## Required next-run order
 
 Read this log. Confirm the real source and provider contract. Run the type check and scope guard outside the deployment lane. Build before commit. Verify the deployed release identifier. Run only the single approved request if the authenticated owner action is available. Retrieve and inspect the resulting video. Record the exact acceptance or rejection reason. Never call the feature live until the finished video can be watched.
+
+
+## 2026-08-18 — KINGCAM SEEDANCE 2.5 FULL-BODY PROOF RESULT
+
+**Real provider run:** governed job `97`; motion request `c009bd31-ee7a-430c-9c06-577ee677239b`; Seedance 2.5 ref-to-video; one 10-second vertical output; quoted ceiling 33 credits / $0.33; no automatic retry. The real CreatorVault source was `https://creatorvault.live/videos/kingcam-hero-cam.mp4`.
+
+**Finished-video result:** the render completed and was inspected. It held the full-body crown-to-shoes frame, face/beard/skin/body identity, stable environment, controlled camera, no extra people, no text, and no severe anatomy break. It was still **REJECTED at 75/100**. During the turn, the gold trim on the pants changed into a white/silver floral pattern, and shoe-side detail shifted. This is visible wardrobe drift and fails the source-preservation law.
+
+**Permanent provider learning:** do not use the exact Seedance 2.5 full-body orbit treatment/prompt/source configuration for public KingCam output again. The rejected output is excluded from public KingCam media. Do not auto-retry it. A new full-body proof must change the provider lane or creative treatment only after the exact defect is addressed and a new owner-directed bounded request is created.
