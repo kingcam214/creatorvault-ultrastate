@@ -6,9 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const fullBodyBrief = [
   "A full-body KingCam cinematic proof using the approved CreatorVault KingCam motion reference.",
-  "KingCam remains fully visible from crown to shoes in a burgundy velvet royal look, takes one natural measured step, then holds a confident stance while the camera makes a slow controlled orbit.",
-  "Preserve face, beard, skin tone, full body build, wardrobe, crown styling, jewelry, hands, gait, environment geometry, and camera stability.",
-  "No close-up crop, no talking-head substitution, no extra people, no body drift, no warped hands, no new outfit, no text, no watermark, no plastic skin, and no artificial-looking movement.",
+  "KingCam remains fully visible from crown to shoes in the approved royal look, takes one natural measured step straight toward the camera, then holds a confident front-facing stance with both feet fully visible.",
+  "Keep the camera locked in one straight-on full-body frame: no orbit, no side pan, no turn, no rotation, and no crop. Preserve face, beard, skin tone, full body build, wardrobe, crown styling, jewelry, hands, gait, environment geometry, and camera stability.",
+  "The gold trim on both pant legs and the black-and-gold shoe details must remain identical from the first frame through the last. No close-up crop, no talking-head substitution, no extra people, no body drift, no warped hands, no new outfit, no text, no watermark, no plastic skin, and no artificial-looking movement.",
 ].join(" ");
 
 const roomIcons = {
