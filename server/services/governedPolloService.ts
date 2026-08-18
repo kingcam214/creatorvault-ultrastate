@@ -903,7 +903,19 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
   const provider = input.provider ?? "pollo";
   const providerModelPath = requireNonEmpty(input.providerModelPath ?? DEFAULT_MODEL_PATH, "Provider model path");
   const approvedPolloModel = provider === "pollo" && providerModelPath.startsWith("pollo/");
-  const approvedReplicateModel = provider === "replicate" && providerModelPath === REPLICATE_WAN_VIDEO_EDIT_MODEL_PATH;
+  const approvedReplicateModel = provider === "replicate" && (
+    providerModelPath === REPLICATE_WAN_VIDEO_EDIT_MODEL_PATH ||
+    (providerModelPath === REPLICATE_OMNI_HUMAN_MODEL_PATH
+      && input.mode === REPLICATE_OMNI_HUMAN_MODE
+      && input.metadata?.kingcamOmniHumanFullBodyProof === true
+      && input.metadata?.cloneOnly === true
+      && input.metadata?.ownerDirectedPilot === true
+      && input.metadata?.candidateLimit === 1
+      && input.metadata?.noAutomaticRetry === true
+      && input.metadata?.sourcePreservationRequired === true
+      && input.metadata?.genericVoiceFallbackForbidden === true
+      && input.metadata?.bodyCinemaExcluded === true)
+  );
   const approvedRunwayModel = provider === "runway" && providerModelPath === RUNWAY_ALEPH_2_VIDEO_EDIT_MODEL_PATH;
   const approvedTopazPrecisionPilot = provider === "topaz"
     && providerModelPath === TOPAZ_PROTEUS_PRECISION_VIDEO_MODEL_PATH

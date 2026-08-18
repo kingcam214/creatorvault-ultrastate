@@ -500,3 +500,8 @@ The existing CreatorVault **clone-only** Replicate account exposes `bytedance/om
 The governed KingCam proof is limited to the approved full-body CreatorVault identity image `kingcam-crown-lounge-reference.png` and the direct KingCam ElevenLabs `entry.mp3` asset. It has one output, a manual **$2 USD** internal ceiling, a two-minute provider cancellation deadline, no automatic retry, and permanent reject gates for full-body visibility, natural locomotion and weight transfer, mouth-to-audio synchronization, identity, wardrobe/crown/jewelry continuity, cigar-hand integrity, anatomy, and real demonstration readiness.
 
 Replicate returned no advertised fixed price in authenticated model metadata. This is therefore an explicitly owner-directed, manually capped clone-only test, not a provider-quoted request. Do not expand Replicate into Body Cinema or send another OmniHuman request if this exact proof fails.
+
+
+### OmniHuman admission-gate correction — 2026-08-18
+
+The first governed OmniHuman launch stopped before any Replicate prediction was created because the master governed provider allowlist admitted only the older Replicate Wan source-video model. The repair admits **only** `replicate/bytedance/omni-human` when all fixed KingCam clone-only conditions are simultaneously present: the exact mode, clone-only marker, owner-directed one-output pilot, no retry, source preservation, direct-voice-only rule, and Body Cinema exclusion. No provider request, charge, or output occurred before this correction.
