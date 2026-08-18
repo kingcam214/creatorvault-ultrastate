@@ -381,3 +381,12 @@ Exact correction: the MiniMax-only manual-cap draft now records both fields with
 **Finished-video result:** **REJECTED at 60/100**. It failed the full-motion quality gate. There was no natural measured step, no meaningful weight shift, and movement became nearly frozen after the first second. The right hand/cigar also showed stiffness with slight shape/position morphing. This is a static-looking pose, not launch-grade KingCam full-body motion. It is excluded from public KingCam media.
 
 **Permanent provider learning:** do not repeat the exact MiniMax H3 five-second, locked-front-frame KingCam source/prompt configuration as a public-proof route. It preserves identity better than the rejected Seedance runs but does not yet deliver the required natural full-body motion. Any future MiniMax decision must change the motion treatment deliberately, stay one-output and governed, and be judged against the same motion and hand-quality gate.
+
+
+## 2026-08-18 — KINGCAM PRIVATE PRESENCE LOOP ARCHIVED
+
+At Cameron’s direction, the rejected MiniMax H3 output is preserved for a narrow **private presence** use instead of being presented as clone proof. The exact reviewed output from governed job `102` was copied into CreatorVault-controlled storage as `KingCam — Private Presence Loop`.
+
+**Durable asset evidence:** `https://creatorvault.live/uploads/content-vault/kingcam-private-presence-loop-102/KingCam-Private-Presence-Loop.mp4`; readable video response; 5.167 seconds; `1440×2560`; `2,544,011` bytes; fingerprint `25a9dcfff0e915a1cb6db6f16e622a256532bb120468b21dc6732a25c8a68f74`.
+
+**Classification law:** This asset appears only in KingCam’s owner-only Media Vault as `private_presence_loop`. It is locked out of Body Cinema, Trailer Maker, public KingCam profile placement, Clone Guide placement, tool demonstrations, and any claim of proven full-body clone motion. It may be watched privately as a short KingCam mood/presence loop while the longer, genuinely demonstrable Clone Guide proof is built separately.
