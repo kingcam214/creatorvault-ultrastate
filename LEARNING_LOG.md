@@ -614,3 +614,13 @@ Corrective action: trigger a fresh main-branch deployment after the temporary Gi
 The live owner-only official estimate audit succeeded for Pollo Action Imitation V2 with the approved KingCam identity image and locked real seven-second gait driver. The provider returned an exact estimate of **35 Pollo credits / $2.10**. Its documented contract accepts exactly `image` and `video` motion inputs, which is materially different from the rejected GoEnhance style lane and the stalled Replicate run.
 
 One fresh KingCam-only proof may proceed only through a new governed contract that locks this exact input pair, provider path, 35-credit / $2.10 quote, one output, ten-minute permit, no automatic retry, pre/post balance evidence, and finished-video quality review. The output must show the approved KingCam identity in continuous crown-to-shoes motion with the real gait transferred; it is automatically rejected for a crop, frozen movement, camera spin, face/body replacement, wardrobe/crown/jewelry/shoe/cigar drift, hand/foot/anatomy failure, extra person, text, or invented environment. No previously rejected output is reused.
+
+## 2026-08-18 — Action Imitation V2 account-access result
+
+The owner-directed governed Action Imitation V2 attempt created job `110` after the provider returned an exact 35-credit / $2.10 estimate. The actual versioned submission returned HTTP 403: `This model is not enabled for API access.` CreatorVault recorded `action_imitation_http_403`, released the 35-credit reservation, and no provider task, provider output, actual charge, or accepted clone exists.
+
+**Permanent access learning:** a Pollo estimate response is not entitlement proof. Action Imitation V2 is unavailable to this CreatorVault API account. Do not retry or present it as a ready Clone Command lane unless the provider account itself later exposes API access. No creative correction applies because this is an account-access failure, not a visual failure.
+
+## 2026-08-18 — Kling V3 motion estimate audit intent
+
+The next read-only provider check is the distinct official Pollo `Kling V3 motion` endpoint, which accepts an identity image plus a real motion video and has a documented no-charge estimate route. It is not the earlier Kling 3 Omni audio/image proof, which failed its full-body quality requirement and is not being retried. This audit can create no job, credit reservation, permit, provider task, or output. Any future model use requires positive estimate evidence, account-access proof, a separate one-output governed contract, and finished-video review.

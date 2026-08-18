@@ -169,6 +169,7 @@ const KINGCAM_ACTION_IMITATION_V2_HARD_CREDIT_CAP = 35;
 const KINGCAM_ACTION_IMITATION_V2_QUOTED_COST_USD = 2.1;
 const KINGCAM_ACTION_IMITATION_V2_IDENTITY_IMAGE_URL = REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL;
 const KINGCAM_ACTION_IMITATION_V2_DRIVER_URL = REPLICATE_WAN_ANIMATE_DRIVER_URL;
+const KINGCAM_KLING_V3_MOTION_API_PATH = "/v1/generation/kling-ai/kling-v3/motion";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MODEL_PATH = "runway/aleph-2-video-edit";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MODE = "runway_aleph_2_source_video_edit";
 const RUNWAY_ALEPH_2_VIDEO_EDIT_MAX_BYTES = 200 * 1024 * 1024;
@@ -1486,6 +1487,37 @@ export async function auditPolloKingcamActionImitationV2Candidate(): Promise<{
       : "Pollo returned an Action Imitation V2 estimate without a usable positive credit amount. No draft or provider task was created.",
     providerRecord: record,
   };
+}
+
+export async function auditPolloKingcamKlingV3MotionCandidate(): Promise<{
+  providerModelKey: string;
+  apiPath: string;
+  configAvailable: boolean;
+  quotedCredits: number | null;
+  quotedCostUsd: number | null;
+  eligibleForDraft: false;
+  reason: string;
+  providerRecord: Record<string, unknown> | null;
+}> {
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!apiKey) return { providerModelKey: "kling-ai/kling-v3-motion", apiPath: KINGCAM_KLING_V3_MOTION_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: "Pollo credential is unavailable; no estimate or provider task was requested.", providerRecord: null };
+  let response: Response;
+  try {
+    response = await fetch(`https://pollo.ai/api/platform${KINGCAM_KLING_V3_MOTION_API_PATH}/estimate`, {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ input: { image: REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL, video: REPLICATE_WAN_ANIMATE_DRIVER_URL } }),
+    });
+  } catch (error) {
+    return { providerModelKey: "kling-ai/kling-v3-motion", apiPath: KINGCAM_KLING_V3_MOTION_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: `The official Kling V3 motion estimate could not be read: ${safeErrorMessage(error)}`, providerRecord: null };
+  }
+  const payload = await parseProviderJson(response);
+  if (!response.ok) return { providerModelKey: "kling-ai/kling-v3-motion", apiPath: KINGCAM_KLING_V3_MOTION_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: `Pollo returned ${response.status} from the official Kling V3 motion estimate: ${safeErrorMessage(payload.responseText ?? payload.message ?? "unknown error")}`, providerRecord: null };
+  const record = isProviderRecord(payload.data) ? payload.data : isProviderRecord(payload) ? payload : null;
+  if (!record) return { providerModelKey: "kling-ai/kling-v3-motion", apiPath: KINGCAM_KLING_V3_MOTION_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: "Pollo accepted the no-charge Kling V3 motion estimate without a readable cost record. No draft or task was created.", providerRecord: null };
+  const quotedCredits = providerNumber(record, ["cost", "singleCost", "totalCost", "credit", "credits", "amount", "price", "discountCost"]);
+  const quotedCostUsd = providerNumber(record, ["costUsd", "singleCostUsd", "totalCostUsd", "usd", "amountUsd", "priceUsd", "priceUSD", "discountCostUsd"]);
+  return { providerModelKey: "kling-ai/kling-v3-motion", apiPath: KINGCAM_KLING_V3_MOTION_API_PATH, configAvailable: true, quotedCredits, quotedCostUsd, eligibleForDraft: false, reason: quotedCredits !== null && quotedCredits > 0 ? "Pollo returned an official Kling V3 motion estimate for the locked KingCam image and gait driver. This is no-charge evidence only; a separately governed decision is still required." : "Pollo returned a Kling V3 motion estimate without a usable positive credit amount. No draft or provider task was created.", providerRecord: record };
 }
 
 export async function quoteGovernedPolloSourceVideoReference(input: {
