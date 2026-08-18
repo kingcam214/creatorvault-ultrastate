@@ -646,3 +646,9 @@ A no-audio method using the approved KingCam identity image plus the locked real
 A no-charge owner-only audit now uses the official `/v1/generation/kling-ai/kling-v3-omni/video/estimate` route with one approved KingCam identity-image reference and one locked real seven-second gait-video reference. It sends no audio reference, requests one 7-second 16:9 720p silent output estimate, and cannot create a draft, permit, reservation, task, or media output.
 
 This method is distinct from job `105`, which confirmed this account can run Kling 3 Omni but used an image plus speech audio and did not transfer the real gait. A positive exact quote is only provider-cost evidence. Before any new paid proof, CreatorVault must build a separate governed mixed-reference contract, lock the returned quote as its hard cap, and use the full watchable quality gate.
+
+## 2026-08-18 — Kling 3 Omni real-gait mixed-reference proof intent
+
+The live owner-only official Kling 3 Omni mixed-reference estimate succeeded for the approved KingCam identity image plus the locked real seven-second gait video, with no audio reference. The provider returned an exact cost of **11.13 Pollo credits / $0.667**. This uses the same API-account-enabled Omni provider family evidenced by job `105`, but it is a distinct method: image plus real motion video rather than image plus speech audio.
+
+One fresh proof may proceed only through a dedicated clone-only governed contract that locks both references, one silent 7-second 16:9 720p output, an 11.13-credit provider quote with a 12-credit absolute ceiling for rounding protection, no automatic retry, ten-minute permit, pre/post balance evidence, and the existing full-body watchable quality gate. It must be rejected for a crop, frozen or invented motion, camera spin, face/body replacement, wardrobe/crown/jewelry/shoe/cigar drift, hand/foot/anatomy failure, extra person, text, or environment drift.
