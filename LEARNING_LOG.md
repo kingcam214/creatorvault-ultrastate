@@ -422,3 +422,19 @@ Pollo’s current official OpenAPI documents `POST /generation/wanx/wan-v2-7` wi
 This is not source-video editing and must never be described as such. It is a new KingCam-only image-plus-real-voice full-body clone proof. The exact non-negotiable gate is visible crown-to-shoes body movement, real mouth-to-voice synchronization, a measured step and weight shift, stable cigar hand, and no recycled-video voiceover. The provider gives no usable account quote, so the one output remains under the existing owner-authorized fixed 75-credit cap with pre/post balance evidence, a 10-minute permit, no automatic retry, and permanent review.
 
 Source: https://docs.pollo.ai/openapi-filtered.json, `/generation/wanx/wan-v2-7`.
+
+
+## 2026-08-18 — DIRECT MULTIMODAL KINGCAM CLONE SOURCE FINDINGS
+
+Official Pollo Happy Horse 1.0 Ref documentation (`https://docs.pollo.ai/m/happyhorse/happyhorse-1-0-ref.md`) documents a reference-guided route that accepts image, video, and audio reference objects together, 3–15 second duration, vertical 9:16, 720P/1080P, and one output. This is materially different from the failed Wan 2.7 image-plus-audio proof because it can condition both visible KingCam identity and an actual movement source alongside the direct KingCam voice.
+
+The current CreatorVault KingCam hero source is not eligible as a motion reference: finished-video analysis found it AI-generated, only about four seconds, with abrupt turning, corrupted weight transfer, stiff hands/cigar, and artificial camera behavior. The existing KingCam/clone library review also found no verified continuous natural full-body movement source; the only real-looking Red Hat reel is chest-up with no lower-body motion. A public Instagram result for `_kingcamcam` was discovered but Instagram requires login in the agent browser, so it is not treated as a verified or retrieved source.
+
+No new image, video, voice, or external account was created in this audit. A future Happy Horse proof may proceed only after a real natural full-body KingCam movement reference is found from existing CreatorVault media or directly retrieved consented public KingCam media.
+
+
+## 2026-08-18 — HAPPYHORSE DIRECT FULL-BODY CLONE PROOF INTENT
+
+The next KingCam motion lane is narrowly limited to `happyhorse-1-0/ref2video` through the existing Pollo API. Official Pollo documentation records that this route accepts image and audio references together, supports vertical 9:16 at 1080P, allows one output, and can run up to fifteen seconds. It is not a new provider account and it is not a public presentation layer.
+
+The governed contract is fixed: one 15-second output; 75-credit hard ceiling; no automatic retry; direct authenticated KingCam ElevenLabs voice only; approved KingCam full-body PNG only; no source-video reuse because the previous hero motion clip was itself AI-corrupted and failed movement-reference inspection. The proof must reject itself unless KingCam remains visible crown-to-shoes, visibly speaks his direct voice with convincing lip timing, performs sustained natural steps and weight transfer, retains hands/cigar/wardrobe/crown/identity, and can honestly lead a CreatorVault demonstration. No public guide, background loop, voice overlay, or substitute page is authorized.
