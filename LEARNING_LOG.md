@@ -266,3 +266,10 @@ Read this log. Confirm the real source and provider contract. Run the type check
 **Finished-video result:** the render completed and was inspected. It was **REJECTED at 15/100**. The provider ignored the no-turn correction and generated a full 360-degree spin, showed visible shoe morphing, chain melting, asymmetric trim, and an opening malformed hand.
 
 **Permanent provider learning:** Seedance 2.5 ref-to-video has now failed twice on the same KingCam source: once during an orbit and again after the orbit/turn was explicitly forbidden. Stop spending on Seedance for KingCam full-body proof. Do not retry this source with Seedance. The next corrective proof must use a different verified provider lane and must retain one output, a documented quote, an explicit hard ceiling, and an accept-or-reject inspection.
+
+
+## 2026-08-18 — KINGCAM KLING QUOTE-GATE RESULT
+
+The governed Kling v3 Omni reference-to-video corrective lane was deployed with a 20-credit maximum and a rule that it cannot create a draft or send a provider request without a real provider estimate. The live quote request returned **404 Not Found** from Pollo’s estimate endpoint. The gate stopped correctly: **no draft was created, no permit was created, and no chargeable provider request was sent.**
+
+**Permanent provider learning:** Pollo’s documented Kling v3 Omni ref-to-video contract is visible, but this API account does not expose a usable estimate endpoint for that model path. Do not substitute a guessed price or manually force a credit cap. Before any Kling submission, CreatorVault needs an exact source of the current model cost that the governed service can record, or a provider-native budget-enforcing path. Seedance remains barred for KingCam full-body proofs.

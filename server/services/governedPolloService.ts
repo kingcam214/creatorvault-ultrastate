@@ -927,6 +927,63 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
   return { job, reused: false };
 }
 
+function collectProviderRecords(value: unknown, records: Record<string, unknown>[] = [], depth = 0): Record<string, unknown>[] {
+  if (depth > 8 || value === null || value === undefined) return records;
+  if (Array.isArray(value)) {
+    for (const item of value) collectProviderRecords(item, records, depth + 1);
+    return records;
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    records.push(record);
+    for (const nested of Object.values(record)) collectProviderRecords(nested, records, depth + 1);
+  }
+  return records;
+}
+
+function providerNumber(record: Record<string, unknown>, keys: string[]): number | null {
+  for (const key of keys) {
+    const value = Number(record[key]);
+    if (Number.isFinite(value) && value >= 0) return value;
+  }
+  return null;
+}
+
+async function quoteSourceVideoModelFromPolloConfig(input: { apiKey: string; providerModelPath: string; providerApiPath: string }): Promise<GovernedPolloProviderQuote | null> {
+  let response: Response;
+  try {
+    response = await fetch("https://pollo.ai/api/platform/config/ref2video/models?language=en", {
+      method: "GET",
+      headers: { "x-api-key": input.apiKey, Accept: "application/json" },
+    });
+  } catch {
+    return null;
+  }
+  if (!response.ok) return null;
+  const payload = await parseProviderJson(response);
+  const modelToken = input.providerModelPath.replace(/^pollo\//, "").toLowerCase();
+  const records = collectProviderRecords(payload);
+  const matching = records.find((record) => {
+    const identity = [record.model, record.modelName, record.modelPath, record.path, record.code, record.value, record.id, record.name]
+      .filter((value): value is string => typeof value === "string")
+      .join(" ")
+      .toLowerCase();
+    return identity.includes(modelToken) || identity.includes("kling-v3-omni");
+  });
+  if (!matching) return null;
+  const quotedCredits = providerNumber(matching, ["discountCost", "cost", "totalCost", "credit", "credits", "amount", "price"]);
+  const quotedCostUsd = providerNumber(matching, ["discountCostUsd", "costUsd", "totalCostUsd", "usd", "amountUsd", "priceUsd", "priceUSD"]);
+  if (quotedCredits === null || quotedCredits <= 0 || quotedCostUsd === null) return null;
+  return {
+    providerModelPath: input.providerModelPath,
+    providerApiPath: input.providerApiPath,
+    quotedCredits,
+    quotedCostUsd,
+    quotedAt: new Date().toISOString(),
+    providerResponse: { quoteSource: "authenticated_model_config", matchingModelRecord: matching },
+  };
+}
+
 export async function quoteGovernedPolloSourceVideoReference(input: {
   providerModelPath?: string;
   sourceUrl: string;
@@ -963,7 +1020,9 @@ export async function quoteGovernedPolloSourceVideoReference(input: {
         providerResponse: { message: "Documented Seedance 2.5 manual estimate; provider estimate endpoint unavailable", estimateResponse: providerResponse },
       };
     }
-    throw new Error(`Pollo source-video quote returned ${response.status}: ${safeErrorMessage(providerResponse.responseText ?? providerResponse.message ?? "unknown error")}. No draft or chargeable request was created.`);
+    const configQuote = await quoteSourceVideoModelFromPolloConfig({ apiKey, providerModelPath, providerApiPath: contract.apiPath });
+    if (configQuote) return configQuote;
+    throw new Error(`Pollo source-video quote returned ${response.status}: ${safeErrorMessage(providerResponse.responseText ?? providerResponse.message ?? "unknown error")}. The authenticated model configuration did not expose a usable exact price. No draft or chargeable request was created.`);
   }
   const quote = providerResponse.data && typeof providerResponse.data === "object" ? providerResponse.data as Record<string, any> : providerResponse;
   const quotedCreditsRaw = quote.discountCost ?? quote.cost ?? quote.totalCost ?? quote.credit ?? quote.credits ?? quote.amount ?? quote.price;
