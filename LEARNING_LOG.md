@@ -658,3 +658,33 @@ One fresh proof may proceed only through a dedicated clone-only governed contrac
 The first real-gait launch created a draft only, then stopped at the shared single-use budget gate before approval, permit, reservation, provider task, or charge. The live exact estimate was 11.13 credits, while the draft carried a 12-credit rounding ceiling. The common owner-pilot rule deliberately requires the recorded estimate and hard cap to be identical, so it rejected the looser ceiling.
 
 Exact repair: the governed draft and permit now enforce **11.13 credits as both the quoted cost and absolute cap**. The unapproved draft from the stopped attempt is not a provider task and will be cancelled before one corrected fresh launch. No paid request has yet been sent on this real-gait lane.
+
+### Kling 3 Omni real-gait source-resolution gate — 2026-08-18
+
+The corrected exact-cap real-gait request created governed job `113`, was approved and submitted once, and Pollo returned HTTP 400 before producing a provider task or output: `Video resolution must be between 720px and 2160px.` The locked real gait driver is 848×480, so this is a source-input technical constraint, not a visual-quality failure and not a credit spend. The governed record preserved the 11.13-credit exact estimate and pre-submit balance evidence; actual cost remains null.
+
+Exact corrective action: make a CreatorVault-owned **technical-only 1280×720 derivative** of the same real gait driver with no trimming, speed change, frame interpolation, color work, filters, overlays, motion invention, or performance alteration. Verify it is readable, register it clone-only, replace only the motion-reference URL in the real-gait contract, re-run the no-charge estimate, and allow one fresh governed request only if the exact quote remains available. The rejected HTTP 400 request must not be retried with the 848×480 source.
+
+### KingCam gait-driver identity and motion inspection — 2026-08-18
+
+The technical 1280×720 derivative was measured at 7.0 seconds and preserved the original 30fps timing and audio without trims, overlays, color work, synthetic motion, or other creative treatment. Visual inspection shows the supplied clip contains a full-body person in an all-white outfit with a red-and-black fedora and a stylized strut/dance, not the burgundy-and-gold KingCam wardrobe/crown reference and not a verified natural gait. The prior prompt description of this driver was therefore inaccurate.
+
+**Hard source rule:** do not use this clip as the real KingCam gait driver in another paid motion-transfer request. The now-failed job `113` had no provider task, output, or actual charge and is not a watchable proof. A future full-body proof needs a separately verified real KingCam source clip with natural continuous locomotion; no visual substitution or provider retry is allowed.
+
+### Clean KingCam motion window selected from existing source — 2026-08-18
+
+A fresh inspection of the already supplied original `bff8f30c-4116-4cfa-98b4-40c5cb7cd053.mp4` identified **01:30–01:37** as the best seven-second driver window: KingCam paces naturally beside the car, stays full body from hat to shoes, has stable camera framing, and turns through profile and frontal views. **01:01–01:08** is a backup only; it has a clean direct walk but not seven continuous seconds of walking.
+
+The prior 01:29–01:36 driver was rejected from this lane after inspection because its derived source was not reliably described or safe for the required identity/body transfer. The only authorized technical corrective source is now the clean 01:30–01:37 window from the existing original. Any derivative must use technical trim and resolution compliance only—no effects, color, camera, audio, frame-rate, speed, or motion changes—and must be inspected before it replaces a governed motion reference.
+
+### KingCam 01:30–01:37 driver inspection outcome — 2026-08-18
+
+The technical 1280×720 silent derivative passed full-body visibility, stable camera, profile/frontal identity visibility, natural hands and feet, and no-added-treatment checks. It failed the required locomotion criterion: the performance is a stylized slide/moonwalk-like move followed by a turn, not a natural continuous walk. It is therefore **excluded** as a full-body natural-gait clone driver and must not be submitted to a provider.
+
+The only remaining screened source candidate is the separately identified **01:01–01:08** direct-walk backup window from the same existing CreatorVault source. It must be inspected in a shorter technically compliant derivative before it may replace the driver. No additional paid request is authorized until that source passes every driver gate.
+
+### KingCam 01:01–01:06 backup driver inspection outcome — 2026-08-18
+
+The technical 1280×720 silent derivative preserved the existing source without creative changes, but it fails full-body continuity and natural-motion duration. KingCam enters partly cropped, walks briefly, then stops to pose. It is **not safe** as a five-second motion-transfer driver and is barred from any provider submission.
+
+Current real-source finding: all screened library candidates for a natural full-body gait are now excluded for the active clone motion-transfer proof—01:29–01:36 was misdescribed/unsafe, 01:30–01:37 is stylized rather than natural gait, 01:01–01:06 is short and partially cropped, and the rear-view walk has severe camera/identity-transfer risk. No new provider submission may occur until a separately verified real KingCam driver is available.
