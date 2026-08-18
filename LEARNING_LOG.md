@@ -273,3 +273,10 @@ Read this log. Confirm the real source and provider contract. Run the type check
 The governed Kling v3 Omni reference-to-video corrective lane was deployed with a 20-credit maximum and a rule that it cannot create a draft or send a provider request without a real provider estimate. The live quote request returned **404 Not Found** from Pollo’s estimate endpoint. The gate stopped correctly: **no draft was created, no permit was created, and no chargeable provider request was sent.**
 
 **Permanent provider learning:** Pollo’s documented Kling v3 Omni ref-to-video contract is visible, but this API account does not expose a usable estimate endpoint for that model path. Do not substitute a guessed price or manually force a credit cap. Before any Kling submission, CreatorVault needs an exact source of the current model cost that the governed service can record, or a provider-native budget-enforcing path. Seedance remains barred for KingCam full-body proofs.
+
+
+## 2026-08-18 — KINGCAM CLONE-ONLY SOURCE-VIDEO CORRECTION
+
+After two inspected Seedance rejections and a Kling quote gate that correctly refused to guess a price, the next KingCam corrective proof is the existing CreatorVault **clone-only** Replicate Wan 2.7 VideoEdit source-video lane. It is not available to Body Cinema. It preserves the actual KingCam source video as input, has one output only, uses a documented **$2 USD maximum**, has no automatic retry, and reuses the existing governed draft, approval, single-use permit, submit, poll, and quality-review chain.
+
+This is a corrective source-preservation test only. It must be rejected for any changed identity, wardrobe, jewelry, shoes, anatomy, camera rule, source performance, or environment geometry. No result becomes public KingCam media without a finished-video review.

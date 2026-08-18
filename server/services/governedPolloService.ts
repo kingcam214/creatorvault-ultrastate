@@ -1183,6 +1183,60 @@ export async function createGovernedReplicateWanVideoEditDraft(input: {
   });
 }
 
+export async function createGovernedKingcamReplicateWanVideoEditDraft(input: {
+  creatorId: number;
+  requestedBy: number;
+  sourceUrl: string;
+  sourceChecksum?: string | null;
+  prompt: string;
+  resolution: "720p" | "1080p";
+  durationSeconds: number;
+  aspectRatio: "9:16" | "16:9" | "1:1";
+  ownershipConfirmed: boolean;
+  consentConfirmed: boolean;
+  idempotencyKey?: string | null;
+  requestId?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  if (!Number.isInteger(input.durationSeconds) || input.durationSeconds < 2 || input.durationSeconds > 10) {
+    throw new Error("KingCam Replicate source-video proof requires a real source clip between 2 and 10 seconds.");
+  }
+  if (!/^https:\/\//i.test(input.sourceUrl)) throw new Error("KingCam Replicate source-video proof requires a secure CreatorVault source URL.");
+  return createGovernedPolloDraft({
+    creatorId: input.creatorId,
+    requestedBy: input.requestedBy,
+    provider: "replicate",
+    sourceUrl: input.sourceUrl,
+    sourceChecksum: input.sourceChecksum,
+    prompt: input.prompt,
+    providerModelPath: REPLICATE_WAN_VIDEO_EDIT_MODEL_PATH,
+    resolution: input.resolution,
+    durationSeconds: input.durationSeconds,
+    aspectRatio: input.aspectRatio,
+    mode: REPLICATE_WAN_VIDEO_EDIT_MODE,
+    outputCount: 1,
+    estimatedCostCredits: REPLICATE_WAN_VIDEO_EDIT_HARD_SPEND_CAP,
+    costEvidenceReference: "KingCam clone-only Replicate Wan 2.7 VideoEdit correction; documented $2 USD hard maximum; one output; no automatic retry; Body Cinema remains excluded.",
+    ownershipConfirmed: input.ownershipConfirmed,
+    consentConfirmed: input.consentConfirmed,
+    idempotencyKey: input.idempotencyKey,
+    requestId: input.requestId,
+    metadata: {
+      ...(input.metadata || {}),
+      cloneOnly: true,
+      providerCostCurrency: "USD",
+      hardSpendCapUsd: REPLICATE_WAN_VIDEO_EDIT_HARD_SPEND_CAP,
+      hardCreditCap: REPLICATE_WAN_VIDEO_EDIT_HARD_SPEND_CAP,
+      ownerDirectedPilot: true,
+      candidateLimit: 1,
+      noAutomaticRetry: true,
+      providerContract: "replicate_wan_2_7_videoedit_kingcam_clone_source_video",
+      sourcePreservationRequired: true,
+      bodyCinemaExcluded: true,
+    },
+  });
+}
+
 export async function createGovernedRunwayAlephVideoEditDraft(input: {
   creatorId: number;
   requestedBy: number;
