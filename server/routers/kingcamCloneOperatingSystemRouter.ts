@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { auditPolloKingcamVideoToVideoCandidate, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
+import { auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
 import {
   getKingcamCloneOperatingSystem,
   launchKingcamFullBodyMotionProof,
@@ -64,6 +64,15 @@ export const kingcamCloneOperatingSystemRouter = router({
       return await auditPolloKingcamVideoToVideoCandidate();
     } catch (error) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam provider candidate audit could not run." });
+    }
+  }),
+
+  auditMiniMaxH3LiveConfig: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await auditPolloMiniMaxH3ReferenceConfig();
+    } catch (error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "MiniMax H3 configuration could not be read." });
     }
   }),
 

@@ -991,6 +991,71 @@ async function quoteSourceVideoModelFromPolloConfig(input: { apiKey: string; pro
   };
 }
 
+function sanitizePolloMiniMaxConfig(value: unknown, depth = 0): unknown {
+  if (depth > 8 || value === null || value === undefined) return null;
+  if (Array.isArray(value)) return value.slice(0, 24).map((item) => sanitizePolloMiniMaxConfig(item, depth + 1));
+  if (typeof value !== "object") return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : null;
+  const safeKeys = new Set([
+    "model", "modelName", "modelPath", "path", "code", "value", "id", "name", "label", "description",
+    "duration", "durations", "resolution", "resolutions", "aspectRatio", "aspectRatios", "videoNum", "outputCount",
+    "discountCost", "cost", "totalCost", "credit", "credits", "amount", "price", "discountCostUsd", "costUsd", "totalCostUsd", "usd", "amountUsd", "priceUsd", "priceUSD",
+    "options", "configs", "configurations", "variants", "prices", "pricing", "items", "children", "data",
+  ]);
+  const record = value as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+  for (const [key, nested] of Object.entries(record)) {
+    if (safeKeys.has(key)) result[key] = sanitizePolloMiniMaxConfig(nested, depth + 1);
+  }
+  return result;
+}
+
+export async function auditPolloMiniMaxH3ReferenceConfig(): Promise<{
+  providerModelPath: "pollo/minimax/minimax-h3";
+  generationType: "ref2video";
+  configAvailable: boolean;
+  matchingConfiguration: Record<string, unknown> | null;
+  reason: string;
+}> {
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!apiKey) throw new Error("POLLO_API_KEY is not configured for the no-charge MiniMax H3 configuration audit.");
+  let response: Response;
+  try {
+    response = await fetch("https://pollo.ai/api/platform/config/ref2video/models?language=en", {
+      method: "GET",
+      headers: { "x-api-key": apiKey, Accept: "application/json" },
+    });
+  } catch (error) {
+    throw new Error(`Pollo MiniMax H3 configuration audit could not reach the provider: ${safeErrorMessage(error)}`);
+  }
+  if (!response.ok) {
+    return {
+      providerModelPath: "pollo/minimax/minimax-h3",
+      generationType: "ref2video",
+      configAvailable: false,
+      matchingConfiguration: null,
+      reason: `Pollo returned ${response.status} while reading its reference-video configuration. No media request was made.`,
+    };
+  }
+  const payload = await parseProviderJson(response);
+  const records = collectProviderRecords(payload);
+  const match = records.find((candidate) => {
+    const identity = [candidate.model, candidate.modelName, candidate.modelPath, candidate.path, candidate.code, candidate.value, candidate.id, candidate.name]
+      .filter((item): item is string => typeof item === "string")
+      .join(" ")
+      .toLowerCase();
+    return identity.includes("minimax-h3") || identity.includes("minimax h3");
+  }) ?? null;
+  return {
+    providerModelPath: "pollo/minimax/minimax-h3",
+    generationType: "ref2video",
+    configAvailable: true,
+    matchingConfiguration: match ? sanitizePolloMiniMaxConfig(match) as Record<string, unknown> : null,
+    reason: match
+      ? "Pollo returned the authenticated MiniMax H3 reference-video configuration. This audit is read-only and cannot create media."
+      : "Pollo returned reference-video configuration but no MiniMax H3 record. No media request was made.",
+  };
+}
+
 export async function auditPolloKingcamVideoToVideoCandidate(params: {
   providerModelKey?: "go-enhance/go-enhance-v1";
 } = {}): Promise<{
