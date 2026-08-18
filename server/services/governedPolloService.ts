@@ -1081,6 +1081,10 @@ function collectProviderRecords(value: unknown, records: Record<string, unknown>
   return records;
 }
 
+function isProviderRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 function providerNumber(record: Record<string, unknown>, keys: string[]): number | null {
   for (const key of keys) {
     const value = Number(record[key]);
@@ -1279,7 +1283,7 @@ export async function auditPolloKingcamVideoToVideoCandidate(params: {
   quoteAvailable: boolean;
   quotedCredits: number | null;
   quotedCostUsd: number | null;
-  eligibleForDraft: false;
+  eligibleForDraft: boolean;
   reason: string;
   providerRecord: Record<string, unknown> | null;
   candidateModels: Array<{ model: string; modelPath: string | null; quotedCredits: number | null; quotedCostUsd: number | null }>;
@@ -1353,9 +1357,45 @@ export async function auditPolloKingcamVideoToVideoCandidate(params: {
     };
   }
 
-  const quotedCredits = providerNumber(record, ["discountCost", "cost", "totalCost", "credit", "credits", "amount", "price"]);
-  const quotedCostUsd = providerNumber(record, ["discountCostUsd", "costUsd", "totalCostUsd", "usd", "amountUsd", "priceUsd", "priceUSD"]);
-  const quoteAvailable = quotedCredits !== null && quotedCredits > 0 && quotedCostUsd !== null;
+  const configuredCreditRules = isProviderRecord(record.creditRules) ? record.creditRules : {};
+  const configuredCreditMatches = Array.isArray(record.creditMatches) ? record.creditMatches.filter(isProviderRecord) : [];
+  const configuredCredits = providerNumber(configuredCreditRules, ["base", "credit", "credits", "cost", "price"]);
+  const configuredUsd = configuredCreditMatches
+    .map((candidate) => providerNumber(candidate, ["apiPlatformPrice", "apiPlatform1Price", "apiPlatform2Price", "costUsd", "priceUsd", "priceUSD"]))
+    .find((value): value is number => value !== null) ?? null;
+  const estimateInput = {
+    video: KINGCAM_GOENHANCE_REAL_DRIVER_URL,
+    style: KINGCAM_GOENHANCE_STYLE_CODE,
+    prompt: "Preserve the supplied real KingCam full-body gait exactly with no crop, freeze, identity, wardrobe, prop, hand, foot, or anatomy drift.",
+    strength: 0.1,
+    subjectOnly: false,
+    seed: -1,
+  };
+  let estimateRecord: Record<string, unknown> | null = null;
+  let estimateFailure: string | null = null;
+  try {
+    const estimateResponse = await fetch("https://pollo.ai/api/platform/v1/generation/video2video/estimate", {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ input: estimateInput }),
+    });
+    const estimatePayload = await parseProviderJson(estimateResponse);
+    if (estimateResponse.ok) {
+      estimateRecord = isProviderRecord(estimatePayload.data) ? estimatePayload.data : isProviderRecord(estimatePayload) ? estimatePayload : null;
+    } else {
+      estimateFailure = `Pollo returned ${estimateResponse.status} from the official GoEnhance estimate endpoint: ${safeErrorMessage(estimatePayload.responseText ?? estimatePayload.message ?? "unknown error")}`;
+    }
+  } catch (error) {
+    estimateFailure = `The official GoEnhance estimate endpoint could not be reached: ${safeErrorMessage(error)}`;
+  }
+  const quotedCredits = estimateRecord
+    ? providerNumber(estimateRecord, ["discountCost", "totalCost", "credit", "credits", "amount", "price", "cost"])
+    : configuredCredits;
+  const quotedCostUsd = estimateRecord
+    ? providerNumber(estimateRecord, ["discountCostUsd", "costUsd", "totalCostUsd", "usd", "amountUsd", "priceUsd", "priceUSD"])
+    : configuredUsd;
+  const quoteAvailable = quotedCredits !== null && quotedCredits > 0;
+  const enrichedProviderRecord = { ...record, governedEstimate: estimateRecord, governedEstimateFailure: estimateFailure };
   return {
     providerModelKey,
     generationType: "video2video",
@@ -1363,11 +1403,11 @@ export async function auditPolloKingcamVideoToVideoCandidate(params: {
     quoteAvailable,
     quotedCredits,
     quotedCostUsd,
-    eligibleForDraft: false,
+    eligibleForDraft: quoteAvailable,
     reason: quoteAvailable
-      ? "Pollo returned a read-only model price. The candidate remains audit-only until a documented CreatorVault request contract, timeout, and explicit owner-directed proof decision exist."
-      : "Pollo returned a matching video-to-video model record but no exact usable price. The no-guess-cost gate remains closed and no draft or generation request was created.",
-    providerRecord: record,
+      ? "Pollo returned a read-only GoEnhance video-to-video cost record through its configured model data or official estimate endpoint. No draft or provider generation request was created."
+      : `Pollo returned a matching GoEnhance video-to-video model record but no usable exact estimate. ${estimateFailure ?? "No provider task was created."}`,
+    providerRecord: enrichedProviderRecord,
     candidateModels,
   };
 }
@@ -2699,21 +2739,18 @@ async function submitGovernedKingcamGoEnhanceRealPerformanceJob(leased: Governed
     await rawExec("UPDATE governed_media_jobs SET metadata_json = ?, updated_at = NOW() WHERE id = ? AND state = 'queued'", [safeJson({ ...leased.metadata, providerBalanceBeforeCredits: balanceBeforeCredits, providerBalanceReadAt: new Date().toISOString() }), leased.id]);
   }
   const payload = {
-    generationInput: {
-      styleCode: KINGCAM_GOENHANCE_STYLE_CODE,
-      promptStrength: 10,
-      prompt: leased.prompt,
-      assets: [{ type: "video", url: KINGCAM_GOENHANCE_REAL_DRIVER_URL }],
+    input: {
+      video: KINGCAM_GOENHANCE_REAL_DRIVER_URL,
+      style: KINGCAM_GOENHANCE_STYLE_CODE,
+      prompt: leased.prompt.slice(0, 500),
+      strength: 0.1,
       subjectOnly: false,
-      videoNum: 1,
-      numOutputs: 1,
       seed: -1,
-      addAudioAuto: false,
     },
   };
   let response: Response;
   try {
-    response = await fetch("https://pollo.ai/api/platform/generation/video2video", {
+    response = await fetch("https://pollo.ai/api/platform/v1/generation/video2video", {
       method: "POST",
       headers: { "x-api-key": apiKey, "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(payload),
