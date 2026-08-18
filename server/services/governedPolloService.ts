@@ -1009,6 +1009,66 @@ function sanitizePolloMiniMaxConfig(value: unknown, depth = 0): unknown {
   return result;
 }
 
+export async function auditPolloMiniMaxH3ReferenceCost(): Promise<{
+  providerModelPath: "pollo/minimax/minimax-h3";
+  providerModelAlias: "minimax-hailuo-03";
+  readOnly: true;
+  quoteAvailable: boolean;
+  cost: number | null;
+  singleCost: number | null;
+  discountCost: number | null;
+  discountSingleCost: number | null;
+  reason: string;
+}> {
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!apiKey) throw new Error("POLLO_API_KEY is not configured for the no-charge MiniMax H3 cost audit.");
+  const creditRequest = {
+    taskType: "ref2video",
+    generationConfig: {
+      model: "minimax-hailuo-03",
+      prompt: "KingCam full-body source-preservation proof from the supplied CreatorVault reference video. Preserve identity, wardrobe, jewelry, shoes, hands, feet, natural gait, environment, and camera framing.",
+      refs: [{ type: "video", name: "creatorvault_verified_source", video: "https://creatorvault.live/videos/kingcam-hero-cam.mp4", order: 1 }],
+      duration: 5,
+      resolution: "2K",
+      aspectRatio: "9:16",
+      videoNum: 1,
+      generateAudio: false,
+    },
+    actualDuration: 5,
+    numOutputs: 1,
+    videoUrl: "https://creatorvault.live/videos/kingcam-hero-cam.mp4",
+    hasVideoRefs: true,
+  };
+  let response: Response;
+  try {
+    response = await fetch("https://pollo.ai/api/platform/credit", {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(creditRequest),
+    });
+  } catch (error) {
+    throw new Error(`Pollo MiniMax H3 credit audit could not reach the provider: ${safeErrorMessage(error)}`);
+  }
+  const payload = await parseProviderJson(response);
+  const values = {
+    cost: providerNumber(payload, ["cost"]),
+    singleCost: providerNumber(payload, ["singleCost"]),
+    discountCost: providerNumber(payload, ["discountCost"]),
+    discountSingleCost: providerNumber(payload, ["discountSingleCost"]),
+  };
+  const quoteAvailable = response.ok && values.discountCost !== null && values.discountCost > 0;
+  return {
+    providerModelPath: "pollo/minimax/minimax-h3",
+    providerModelAlias: "minimax-hailuo-03",
+    readOnly: true,
+    quoteAvailable,
+    ...values,
+    reason: quoteAvailable
+      ? "Pollo returned a read-only MiniMax H3 credit cost for the exact five-second, one-output KingCam source-video shape. No media request was made."
+      : `Pollo returned ${response.status} without a usable MiniMax H3 cost. No media request was made.`,
+  };
+}
+
 export async function auditPolloMiniMaxH3ReferenceConfig(): Promise<{
   providerModelPath: "pollo/minimax/minimax-h3";
   generationType: "ref2video";
