@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, auditPolloMiniMaxH3ReferenceCost, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
+import { auditPolloAvailableCredits, auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, auditPolloMiniMaxH3ReferenceCost, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
 import {
   getKingcamCloneOperatingSystem,
   launchKingcamFullBodyMotionProof,
@@ -64,6 +64,15 @@ export const kingcamCloneOperatingSystemRouter = router({
       return await auditPolloKingcamVideoToVideoCandidate();
     } catch (error) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam provider candidate audit could not run." });
+    }
+  }),
+
+  auditPolloBalance: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await auditPolloAvailableCredits();
+    } catch (error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "Pollo balance could not be read." });
     }
   }),
 

@@ -352,3 +352,12 @@ Sources: https://docs.pollo.ai/openapi-filtered.json ; local OpenAPI extraction 
 The owner-only live quote check used the real KingCam source, the published `minimax/minimax-h3/ref2video` request shape, one 5-second `9:16` `2K` output, and no provider submission. Pollo returned `404 Not found` for the model estimate endpoint. The authenticated `ref2video` model configuration did not expose an exact usable MiniMax H3 price through the current narrow record reader. The gate stopped correctly: **no governed draft, no approval, no single-use permit, no budget reservation, and no chargeable request were created.**
 
 Corrective next step: inspect the authenticated `ref2video` configuration tree for MiniMax H3’s nested duration/resolution price records. Do not guess or substitute an outside-provider price. MiniMax remains audit-only until CreatorVault can record an exact Pollo account quote.
+
+
+## 2026-08-18 — POLLO MINIMAX H3 LIVE ACCOUNT EVIDENCE
+
+The authenticated Pollo `ref2video` configuration confirms that the account exposes the MiniMax H3 lane under the provider alias **`minimax-hailuo-03`**, model id `3048`, with the account description `Native audio & multi-shot sequences`. Pollo’s public OpenAPI confirms the canonical API route is `minimax/minimax-h3/ref2video` and supports one 5–15 second output, `9:16`, source-video refs, and `2K`.
+
+Three no-charge account-price paths were tried and all stopped before media creation: the model estimate returned `404`; authenticated reference-video configuration exposes the lane but no price fields; Pollo’s documented `POST /credit` cost endpoint returned `403` to the API-key runtime. No draft, permit, reservation, provider task, or cost was created by any audit.
+
+**Bounded next decision:** price discovery is technically exhausted for this account’s current Pollo API surface. A future MiniMax H3 proof may proceed only as an explicitly owner-directed manual-cap governed request, with one 5-second `9:16` `2K` output, a recorded fixed ceiling, before/after provider balance evidence, no automatic retry, provider-side timeout handling, and mandatory finished-video rejection for any identity, wardrobe, jewelry, shoe, anatomy, motion, or framing drift. It must not be labeled provider-quoted.

@@ -189,6 +189,12 @@ function readNonNegativeInteger(name: string, fallback = 0): number {
   return Number.isInteger(value) && value >= 0 ? value : fallback;
 }
 
+export async function auditPolloAvailableCredits(): Promise<{ availableCredits: number | null; observedAt: string }> {
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!apiKey) throw new Error("POLLO_API_KEY is not configured for the read-only credit-balance audit.");
+  return { availableCredits: await readPolloAvailableCredits(apiKey), observedAt: new Date().toISOString() };
+}
+
 export function getGovernedPolloConfig(): GovernedPolloConfig {
   const executionEnabled = process.env.CREATORVAULT_POLLO_EXECUTION_MODE === "governed"
     && process.env.CREATORVAULT_POLLO_EMERGENCY_FREEZE === "off"
@@ -269,7 +275,7 @@ function parseJson(value: unknown): Record<string, unknown> {
   }
 }
 
-async function readPolloAvailableCredits(apiKey: string): Promise<number | null> {
+export async function readPolloAvailableCredits(apiKey: string): Promise<number | null> {
   try {
     const response = await fetch("https://pollo.ai/api/platform/credit/balance", {
       method: "GET",
