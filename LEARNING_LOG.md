@@ -544,3 +544,7 @@ The first secure ingestion of Cameron’s supplied real performance references r
 ## 2026-08-18 — Supplied KingCam real-footage library
 
 Cameron supplied real KingCam footage directly. Three files were securely ingested into CreatorVault’s clone-only vault after canonical upload repair: `a61a35de-243b-4b6a-8128-08ea7087d2fd.mp4` holds 16.7 seconds of real lower-body walking and weight transfer but is rear-facing and silent; `IMG_9898.MOV` holds real direct speech and face-to-voice timing but is not crown-to-shoes; `IMG_9741.MOV` holds real hand, foot, posture, and body-mechanics detail but has camera tilts and no direct speech. Each is preserved as a specialized real-camera reference. None is a complete full-body speaking movement driver and none may be used alone to claim a finished clone.
+
+## 2026-08-18 — Strongest supplied KingCam gait and speech references
+
+Two more real Cameron-supplied clips were securely ingested into the clone-only vault. `bff8f30c-4116-4cfa-98b4-40c5cb7cd053.mp4` contains the strongest current body source: 62 continuous seconds of real full-body natural movement with visible hands and feet, but no direct KingCam speech. `43df2204-c955-4b9e-968a-3bde65e30fbe.mp4` contains the strongest current direct-speech source: real face, mouth, and delivery timing, but no crown-to-shoes body performance. The library must use both as specialized evidence and must not label either as a complete clone movement driver.
