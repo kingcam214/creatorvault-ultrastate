@@ -329,3 +329,10 @@ The first audit-only GoEnhance configuration check returned `404` because the sc
 ### Scanner expansion — 2026-08-18
 
 The authenticated Pollo video-to-video configuration endpoint answered successfully but did not contain the catalog’s GoEnhance label or price. The audit response is now expanded to return only a sanitized list of model names, model paths, and published credit/dollar fields from that read-only configuration. It still returns `eligibleForDraft: false` in every case and cannot create a provider task.
+
+
+## 2026-08-18 — RUNWAY WORKSPACE REALITY CHECK
+
+A read-only Runway workspace audit confirmed that the connected CreatorVault workspace currently exposes only **Gen-4 Turbo** for video. That model is image-to-video only in this workspace. Runway’s documented source-video editing paths require Aleph 2.0 or a video-to-video model; neither is available here. The workspace therefore has **no distinct executable source-video KingCam correction lane**. No Runway task, upload, credit charge, or retry occurred.
+
+**Permanent rule:** model names in a provider tool description are not account access. Check the connected workspace’s available-model list before planning a provider proof.
