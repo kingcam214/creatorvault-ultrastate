@@ -724,3 +724,7 @@ CreatorVault now separates KingCam’s **identity evidence**, **real performance
 The legacy KingCam hero and Clone Command visual files are explicitly excluded from motion driving. Clone-only real-camera materials remain specialized evidence until a source passes the existing continuous crown-to-shoes natural-motion driver gate. Motion transfer stays blocked when no such driver exists. Provider documentation, a quote, an API configuration row, a successful job ID, or a rendered artifact cannot advance any layer to accepted media; the required chain remains real source → one governed eligible run → watchable output → quality acceptance.
 
 The Readiness ledger does not submit media, reserve credits, create a provider request, alter Body Cinema, move public media, or accept any previously rejected result. It gives the owner one honest view of which layers are actually ready and which ones wait for a verified driver or an accepted watchable motion result.
+
+### Timed-out IMG_9808 original inspection — 2026-08-18
+
+The remaining supplied original `IMG_9808.MOV` was inspected locally after its clone-only upload timed out. It is not an eligible full-body motion driver: it contains close upper-body/face framing with only brief unstable feet glimpses and no continuous five-second crown-to-shoes shot with visible face, hands, and feet. It remains unregistered, must not be re-uploaded blindly, and is excluded from motion-transfer submission. No provider request, credit spend, transform, or edit occurred.
