@@ -413,3 +413,12 @@ The real-voice tour may describe only the live rooms and their verified limits. 
 Cameron’s live screenshot proved that the public KingCam Guide was wrong: it reused the same background clone video while playing KingCam’s real voice as a voiceover. That is **not** a full-body, full-motion KingCam clone leading a tool demonstration. The public voice overlay, its “KingCam speaking” control, and its narration URLs were removed from the Guide immediately.
 
 The real ElevenLabs KingCam audio remains a private governed asset for a future scene where a visibly full-body moving KingCam clone actually delivers it. It must not be used as a disembodied public guide voice over recycled background footage. A valid future proof needs visible full-body natural motion, matched speech delivery, and real CreatorVault tool demonstration in the same finished watchable result.
+
+
+## 2026-08-18 — KINGCAM WAN 2.7 SPOKEN-MOTION PROOF INTENT
+
+Pollo’s current official OpenAPI documents `POST /generation/wanx/wan-v2-7` with a creator-owned image URL, `audioUrl` for audio-driven generation, 2–15 second length, and `1080P`. The selected KingCam proof is one 7-second output only, using the approved full-body KingCam image converted technically from the existing CreatorVault WebP without changing content, plus the durable verified KingCam ElevenLabs opening voice asset.
+
+This is not source-video editing and must never be described as such. It is a new KingCam-only image-plus-real-voice full-body clone proof. The exact non-negotiable gate is visible crown-to-shoes body movement, real mouth-to-voice synchronization, a measured step and weight shift, stable cigar hand, and no recycled-video voiceover. The provider gives no usable account quote, so the one output remains under the existing owner-authorized fixed 75-credit cap with pre/post balance evidence, a 10-minute permit, no automatic retry, and permanent review.
+
+Source: https://docs.pollo.ai/openapi-filtered.json, `/generation/wanx/wan-v2-7`.

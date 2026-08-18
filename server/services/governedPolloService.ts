@@ -160,6 +160,12 @@ const CREATORVAULT_VACE_HARD_SESSION_CAP_USD = 20;
 const CREATORVAULT_VACE_OUTPUT_MAX_BYTES = 500 * 1024 * 1024;
 const KLING_SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/kling-v3-omni-ref2video";
 const MINIMAX_H3_SOURCE_VIDEO_REFERENCE_MODEL_PATH = "pollo/minimax/minimax-h3";
+const KINGCAM_WAN_SPOKEN_MOTION_MODEL_PATH = "pollo/wanx/wan-v2-7";
+const KINGCAM_WAN_SPOKEN_MOTION_MODE = "kingcam_wan27_audio_driven_full_body";
+const KINGCAM_WAN_SPOKEN_MOTION_HARD_CREDIT_CAP = 75;
+const KINGCAM_WAN_SPOKEN_MOTION_DURATION_SECONDS = 7;
+const KINGCAM_WAN_SPOKEN_MOTION_IMAGE_URL = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge-reference.png";
+const KINGCAM_WAN_SPOKEN_MOTION_AUDIO_URL = "https://creatorvault.live/uploads/content-vault/kingcam-voice-tour-v1/entry.mp3";
 const SOURCE_VIDEO_REFERENCE_MODE = "ref2video";
 const SOURCE_VIDEO_REFERENCE_CONTRACTS = {
   [SOURCE_VIDEO_REFERENCE_MODEL_PATH]: {
@@ -304,6 +310,20 @@ function isSourceVideoReferenceJob(job: Pick<GovernedPolloJob, "providerModelPat
   return Boolean(getSourceVideoReferenceContract(job.providerModelPath)) && job.mode === SOURCE_VIDEO_REFERENCE_MODE;
 }
 
+function isKingcamWanSpokenMotionJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
+  return job.provider === "pollo"
+    && job.providerModelPath === KINGCAM_WAN_SPOKEN_MOTION_MODEL_PATH
+    && job.mode === KINGCAM_WAN_SPOKEN_MOTION_MODE
+    && job.metadata.kingcamFullBodySpokenMotionProof === true
+    && job.metadata.ownerDirectedPilot === true
+    && job.metadata.candidateLimit === 1
+    && job.metadata.noAutomaticRetry === true
+    && job.metadata.sourcePreservationRequired === true
+    && job.metadata.genericVoiceFallbackForbidden === true
+    && job.metadata.audioUrl === KINGCAM_WAN_SPOKEN_MOTION_AUDIO_URL
+    && job.metadata.hardCreditCap === KINGCAM_WAN_SPOKEN_MOTION_HARD_CREDIT_CAP;
+}
+
 function isReplicateWanVideoEditJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
   return job.provider === "replicate"
     && job.providerModelPath === REPLICATE_WAN_VIDEO_EDIT_MODEL_PATH
@@ -389,7 +409,7 @@ function isDesignImagePilot(job: Pick<GovernedPolloJob, "providerModelPath" | "m
 }
 
 function isSingleUseGovernedPilot(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
-  return isSourceVideoReferenceJob(job) || isReplicateWanVideoEditJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isCreatorVaultVaceLightingJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
+  return isSourceVideoReferenceJob(job) || isKingcamWanSpokenMotionJob(job) || isReplicateWanVideoEditJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isCreatorVaultVaceLightingJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
 }
 
 function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
@@ -1453,6 +1473,74 @@ export async function createManualCappedKingcamMiniMaxH3Draft(input: {
   });
 }
 
+function buildKingcamWanSpokenMotionInput(job: Pick<GovernedPolloJob, "sourceUrl" | "prompt" | "resolution" | "durationSeconds" | "aspectRatio" | "metadata">): Record<string, unknown> {
+  if (job.sourceUrl !== KINGCAM_WAN_SPOKEN_MOTION_IMAGE_URL) throw new Error("KingCam Wan spoken-motion proof requires the approved full-body CreatorVault PNG reference.");
+  if (job.resolution !== "1080p" || job.durationSeconds !== KINGCAM_WAN_SPOKEN_MOTION_DURATION_SECONDS || job.aspectRatio !== "9:16") {
+    throw new Error("KingCam Wan spoken-motion proof must remain one 7-second vertical 1080p output.");
+  }
+  if (job.metadata.audioUrl !== KINGCAM_WAN_SPOKEN_MOTION_AUDIO_URL) throw new Error("KingCam Wan spoken-motion proof requires the verified direct KingCam voice asset.");
+  return {
+    image: KINGCAM_WAN_SPOKEN_MOTION_IMAGE_URL,
+    prompt: job.prompt,
+    negativePrompt: "no close-up, no talking head crop, no seated pose, no frozen body, no body replacement, no face change, no crown change, no wardrobe change, no jewelry change, no shoe change, no cigar deformation, no extra people, no text, no camera cut, no camera spin",
+    length: KINGCAM_WAN_SPOKEN_MOTION_DURATION_SECONDS,
+    resolution: "1080P",
+    audioUrl: KINGCAM_WAN_SPOKEN_MOTION_AUDIO_URL,
+  };
+}
+
+export async function createManualCappedKingcamWanSpokenMotionDraft(input: {
+  creatorId: number;
+  requestedBy: number;
+  prompt: string;
+  manualCreditCap: 75;
+  ownershipConfirmed: boolean;
+  consentConfirmed: boolean;
+  idempotencyKey?: string | null;
+  requestId?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  requireOwner(input.requestedBy);
+  if (input.creatorId !== input.requestedBy) throw new Error("The KingCam Wan spoken-motion proof must use the requesting owner as the identity owner.");
+  buildKingcamWanSpokenMotionInput({ sourceUrl: KINGCAM_WAN_SPOKEN_MOTION_IMAGE_URL, prompt: input.prompt, resolution: "1080p", durationSeconds: KINGCAM_WAN_SPOKEN_MOTION_DURATION_SECONDS, aspectRatio: "9:16", metadata: { audioUrl: KINGCAM_WAN_SPOKEN_MOTION_AUDIO_URL } });
+  return createGovernedPolloDraft({
+    creatorId: input.creatorId,
+    requestedBy: input.requestedBy,
+    sourceUrl: KINGCAM_WAN_SPOKEN_MOTION_IMAGE_URL,
+    sourceChecksum: null,
+    prompt: input.prompt,
+    provider: "pollo",
+    providerModelPath: KINGCAM_WAN_SPOKEN_MOTION_MODEL_PATH,
+    resolution: "1080p",
+    durationSeconds: KINGCAM_WAN_SPOKEN_MOTION_DURATION_SECONDS,
+    aspectRatio: "9:16",
+    mode: KINGCAM_WAN_SPOKEN_MOTION_MODE,
+    outputCount: 1,
+    estimatedCostCredits: KINGCAM_WAN_SPOKEN_MOTION_HARD_CREDIT_CAP,
+    costEvidenceReference: "Owner-directed 75-credit ceiling after Pollo does not expose a usable Wan 2.7 account estimate. Before/after provider-balance evidence is mandatory.",
+    ownershipConfirmed: input.ownershipConfirmed,
+    consentConfirmed: input.consentConfirmed,
+    idempotencyKey: input.idempotencyKey,
+    requestId: input.requestId,
+    metadata: {
+      ...(input.metadata || {}),
+      kingcamFullBodySpokenMotionProof: true,
+      ownerDirectedPilot: true,
+      candidateLimit: 1,
+      noAutomaticRetry: true,
+      sourcePreservationRequired: true,
+      genericVoiceFallbackForbidden: true,
+      manualCreditCap: KINGCAM_WAN_SPOKEN_MOTION_HARD_CREDIT_CAP,
+      hardCreditCap: KINGCAM_WAN_SPOKEN_MOTION_HARD_CREDIT_CAP,
+      providerQuoteUnavailable: true,
+      providerPriceResolution: "manual_owner_cap_with_pre_post_balance_evidence",
+      audioUrl: KINGCAM_WAN_SPOKEN_MOTION_AUDIO_URL,
+      identityReferenceUrl: KINGCAM_WAN_SPOKEN_MOTION_IMAGE_URL,
+      audioDurationSeconds: 6.87,
+    },
+  });
+}
+
 export async function archiveKingcamMiniMaxH3PresenceLoop(params: { ownerId: number; jobId: 102 }): Promise<{ assetId: string; outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number; outputFingerprint: string }> {
   requireOwner(params.ownerId);
   const job = await getGovernedPolloJob(params.jobId);
@@ -2490,8 +2578,10 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
       resolution: leased.resolution,
       aspectRatio: leased.aspectRatio,
     })
-    : isHomepageTextToVideoPilot(leased)
-      ? buildHomepageTextToVideoInput(leased)
+    : isKingcamWanSpokenMotionJob(leased)
+      ? buildKingcamWanSpokenMotionInput(leased)
+      : isHomepageTextToVideoPilot(leased)
+        ? buildHomepageTextToVideoInput(leased)
       : designImage
         ? designImage.input
         : {
@@ -2502,7 +2592,9 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
         };
   const providerUrl = isSourceVideoReferenceJob(leased)
     ? `https://pollo.ai/api/platform/generation/${getSourceVideoReferenceContract(leased.providerModelPath)!.apiPath}`
-    : isHomepageTextToVideoPilot(leased)
+    : isKingcamWanSpokenMotionJob(leased)
+      ? "https://pollo.ai/api/platform/generation/wanx/wan-v2-7"
+      : isHomepageTextToVideoPilot(leased)
       ? `https://pollo.ai/api/platform/generation/${HOMEPAGE_TEXT_TO_VIDEO_API_PATH}`
       : isDesignImagePilot(leased)
         ? `https://pollo.ai/api/platform/generation/${DESIGN_IMAGE_API_PATH}`
