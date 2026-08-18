@@ -491,3 +491,12 @@ Official Replicate model page: https://replicate.com/bytedance/omni-human
 The official model description states that ByteDance OmniHuman generates human video from a single human image plus motion signals, including audio-only, video-only, or combined audio-and-video conditioning. It explicitly supports portrait, half-body, and full-body image inputs, and its documentation calls out audio-driven speech, video driving, and combined audio/video controls. This is materially different from the failed Pollo image-to-video paths and remains within CreatorVault’s pre-existing **Replicate clone-only** boundary. It is only a candidate until CreatorVault verifies the authenticated model input schema, cost, duration, and outcome through the existing governed Replicate clone lane. It must never be exposed to Body Cinema.
 
 The full-body performance-driver audit confirms the exact missing resource: a clean real 10–15 second KingCam full-body human performance clip. Existing owner-held assets and two inspected confirmed public Facebook clips did not meet this standard. The latest public candidate remains a 2:54 source that requires segment-level inspection; no unverified public clip has been imported to CreatorVault.
+
+
+## 2026-08-18 — KINGCAM REPlicate OMNIHUMAN FULL-BODY PROOF INTENT
+
+The existing CreatorVault **clone-only** Replicate account exposes `bytedance/omni-human`, version `566f1b03016969ac39e242c1ae4a39034686ca8850fc3dba83dceaceb96f74b2`. The authenticated model contract exposes exactly two inputs: `image` and `audio`. It is not available to Body Cinema.
+
+The governed KingCam proof is limited to the approved full-body CreatorVault identity image `kingcam-crown-lounge-reference.png` and the direct KingCam ElevenLabs `entry.mp3` asset. It has one output, a manual **$2 USD** internal ceiling, a two-minute provider cancellation deadline, no automatic retry, and permanent reject gates for full-body visibility, natural locomotion and weight transfer, mouth-to-audio synchronization, identity, wardrobe/crown/jewelry continuity, cigar-hand integrity, anatomy, and real demonstration readiness.
+
+Replicate returned no advertised fixed price in authenticated model metadata. This is therefore an explicitly owner-directed, manually capped clone-only test, not a provider-quoted request. Do not expand Replicate into Body Cinema or send another OmniHuman request if this exact proof fails.

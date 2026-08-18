@@ -9,8 +9,7 @@ import { analyzeCanonicalAudioAsset, registerCanonicalAudioAsset } from "./audio
 import {
   approveGovernedPolloJob,
   authorizeSingleUseGovernedPolloSubmission,
-  auditPolloAvailableCredits,
-  createManualCappedKingcamKlingOmniSpokenMotionDraft,
+  createGovernedKingcamReplicateOmniHumanDraft,
   getGovernedPolloJob,
   getGovernedPolloConfig,
   isGovernedPolloExecutionEnabled,
@@ -26,8 +25,8 @@ type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" |
 type MotionRequestState = "planned" | "approved" | "submitted" | "provider_complete" | "accepted" | "rejected" | "failed";
 // The verified KingCam motion source is 5.04 seconds; this proof must never request a longer output.
 const KINGCAM_FULL_BODY_PROOF_DURATION_SECONDS = 15;
-const KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP = 75;
-const KINGCAM_FULL_BODY_CORRECTIVE_MODEL = "pollo/kling-ai/kling-v3-omni-ref2video";
+const KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP = 2;
+const KINGCAM_FULL_BODY_CORRECTIVE_MODEL = "replicate/bytedance/omni-human";
 const KINGCAM_WAN_FULL_BODY_IMAGE = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge-reference.png";
 const KINGCAM_WAN_SPOKEN_AUDIO = "https://creatorvault.live/uploads/content-vault/kingcam-voice-tour-v1/entry.mp3";
 const execFileAsync = promisify(execFile);
@@ -336,7 +335,7 @@ async function ensureKingcamFullBodyDirectVoice(ownerId: number): Promise<{ audi
       allowedPlatforms: ["creatorvault"],
       permittedUses: ["preview", "render"],
       attributionRequired: false,
-      evidenceNote: "Generated only with the authenticated KingCam ElevenLabs voice clone for a governed Kling 3 Omni full-body proof; generic fallback is forbidden.",
+      evidenceNote: "Generated only with the authenticated KingCam ElevenLabs voice clone for a governed KingCam full-body proof; generic fallback is forbidden.",
     },
   });
   await analyzeCanonicalAudioAsset(ownerId, audioAsset.id);
@@ -468,7 +467,7 @@ function motionPolicy() {
   const config = getGovernedPolloConfig();
   return {
     home: "CreatorVault governed motion ledger",
-    primaryLane: "Pollo reference-to-video through a clone-specific governed request",
+    primaryLane: "Clone-only governed human-performance request through CreatorVault's existing provider control plane",
     candidateModels: [KINGCAM_FULL_BODY_CORRECTIVE_MODEL],
     excluded: [
       "legacy ungoverned Pollo clone calls",
@@ -570,7 +569,7 @@ export async function planKingcamFullBodyMotionProof(input: { ownerId: number; h
   await rawExec(`INSERT INTO kingcam_clone_motion_requests
     (id, clone_id, owner_id, source_url, source_kind, motion_reference_url, intended_lane, candidate_models_json, scene_brief, hard_credit_cap,
      consent_confirmed, ownership_confirmed, quality_gate_json, state, created_at, updated_at)
-    VALUES (?, ?, ?, ?, 'approved_kingcam_full_body_identity_image', ?, 'governed_pollo_kling-omni_multimodal_full_body_clone', ?, ?, ?, 1, 1, ?, 'planned', NOW(), NOW())`,
+    VALUES (?, ?, ?, ?, 'approved_kingcam_full_body_identity_image', ?, 'governed_replicate_omnihuman_full_body_clone', ?, ?, ?, 1, 1, ?, 'planned', NOW(), NOW())`,
     [id, KINGCAM_CLONE_ID, input.ownerId, KINGCAM_WAN_FULL_BODY_IMAGE, KINGCAM_FULL_BODY_DIRECT_AUDIO_URL,
       json([KINGCAM_FULL_BODY_CORRECTIVE_MODEL]), sceneBrief, input.hardCreditCap, json(QUALITY_GATES)]);
   await recordKingcamCloneMemory({ ownerId: input.ownerId, kind: "motion_proof_planned", room: "KingCam full-body cinematic motion", payload: { motionRequestId: id, fingerprint, hardCreditCap: input.hardCreditCap } });
@@ -591,22 +590,20 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
   });
   const directVoice = await ensureKingcamFullBodyDirectVoice(input.ownerId);
   const prompt = [
-    "One uninterrupted fifteen-second vertical full-body KingCam clone proof from the supplied approved CreatorVault identity image and direct KingCam speech asset.",
-    "KingCam stays visible from crown to shoes throughout in the exact burgundy velvet suit with gold embroidery, crown, jewelry, black shoes, dark lounge, and cigar in the right hand.",
-    "He directly performs the supplied KingCam speech with precise mouth timing while taking two relaxed natural steps forward, shifting weight through both legs, breathing, keeping relaxed shoulders, and using one grounded left-hand emphasis gesture. His right hand keeps the cigar stable and anatomically natural.",
-    "This is a full-body speaking performance, not a voiceover, not a static pose, not a recycled clip, and not a talking head. No cutaways, no close-up crop, no seated pose, no frozen body, no camera spin, no extra people, no text, no identity or wardrobe replacement, no altered crown, jewelry, shoes, face, beard, hands, or environment.",
+    "One uninterrupted fifteen-second full-body KingCam performance from the approved CreatorVault identity image and the direct KingCam speech asset.",
+    "KingCam stays visible from crown to shoes in the exact burgundy velvet suit with gold embroidery, crown, jewelry, black shoes, dark lounge, and cigar in the right hand.",
+    "He visibly speaks the direct KingCam audio with natural mouth timing, breathes, shifts weight through both legs, takes two relaxed grounded steps, and uses a restrained left-hand emphasis gesture while the right hand holds the cigar naturally.",
+    "No voiceover on unrelated footage, no static pose, no talking-head crop, no close-up cutaway, no camera spin, no extra person, no text, no identity or wardrobe replacement, and no hand, foot, or anatomy failure.",
     sceneBrief,
   ].join(" ");
 
-  const preProofBalance = await auditPolloAvailableCredits();
-  const drafted = await createManualCappedKingcamKlingOmniSpokenMotionDraft({
+  const drafted = await createGovernedKingcamReplicateOmniHumanDraft({
     creatorId: input.ownerId,
     requestedBy: input.ownerId,
     prompt,
-    manualCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP,
     ownershipConfirmed: true,
     consentConfirmed: true,
-    idempotencyKey: `kingcam-kling-omni-spoken-motion-proof:${motionRequest.id}`,
+    idempotencyKey: `kingcam-omnihuman-full-body-spoken-motion-proof:${motionRequest.id}`,
     requestId: motionRequest.id,
     metadata: {
       ownerDirectedPilot: true,
@@ -617,8 +614,7 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
       kingcamMotionRequestId: motionRequest.id,
       proofClass: "kingcam_full_body_visible_speech_and_motion_proof",
       correctiveProviderModel: KINGCAM_FULL_BODY_CORRECTIVE_MODEL,
-      rejectedProviderLearning: "Seedance 2.5, MiniMax H3 source-video, and Wan 2.7 image-plus-audio proofs are not accepted for full-body clone demonstration. This distinct Pollo Kling 3 Omni reference lane uses the approved KingCam identity image plus a direct longer KingCam speech asset; it remains one output only and no automatic retry.",
-      preProofBalance,
+      providerPreflight: "Replicate authenticated model metadata confirms OmniHuman accepts image and audio inputs; provider does not advertise a fixed price in this account response, so this owner-directed test is locked to CreatorVault's $2 internal cap and one output.",
       motionReferenceUrl: directVoice.audioUrl,
       approvedFullBodyImage: KINGCAM_WAN_FULL_BODY_IMAGE,
       directVoiceDurationSeconds: directVoice.durationSeconds,
@@ -630,7 +626,7 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
     jobId: drafted.job.id,
     approverId: input.ownerId,
     expectedFingerprint: drafted.job.fingerprint,
-    reason: "Owner-directed KingCam Kling 3 Omni full-body spoken-motion proof. One fifteen-second 1080p output only with direct KingCam speech and the approved identity image; manually locked 75-credit maximum; no automatic retry; reject unless full-body natural movement, speech sync, identity, wardrobe, hands, and anatomy clear the KingCam gate.",
+    reason: "Owner-directed KingCam OmniHuman full-body spoken-motion proof. One direct voice-plus-image output only with a manually locked $2 internal maximum and no automatic retry; reject unless full-body natural movement, speech sync, identity, wardrobe, hands, and anatomy clear the KingCam gate.",
   });
   await authorizeSingleUseGovernedPolloSubmission({
     jobId: approved.id,
@@ -638,7 +634,7 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
     expectedFingerprint: approved.fingerprint,
     hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP,
     expiresInMinutes: 10,
-    reason: "One-time KingCam Kling 3 Omni full-body spoken-motion proof; manual 75-credit maximum after Pollo price discovery was unavailable.",
+    reason: "One-time KingCam OmniHuman full-body spoken-motion proof; manual $2 internal ceiling after the authenticated model metadata exposed no fixed price.",
   });
   const submitted = await submitGovernedPolloJob({
     jobId: approved.id,
@@ -647,15 +643,15 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
   const localState: MotionRequestState = submitted.state === "submitted" ? "submitted" : submitted.state === "failed" ? "failed" : "approved";
   await rawExec(
     "UPDATE kingcam_clone_motion_requests SET state = ?, review_json = ?, updated_at = NOW() WHERE id = ? AND clone_id = ? AND owner_id = ?",
-    [localState, json({ governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP, providerModelPath: KINGCAM_FULL_BODY_CORRECTIVE_MODEL, preProofBalance, identityImage: KINGCAM_WAN_FULL_BODY_IMAGE, audioUrl: directVoice.audioUrl, audioDurationSeconds: directVoice.durationSeconds }), motionRequest.id, KINGCAM_CLONE_ID, input.ownerId],
+    [localState, json({ governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP, providerModelPath: KINGCAM_FULL_BODY_CORRECTIVE_MODEL, identityImage: KINGCAM_WAN_FULL_BODY_IMAGE, audioUrl: directVoice.audioUrl, audioDurationSeconds: directVoice.durationSeconds }), motionRequest.id, KINGCAM_CLONE_ID, input.ownerId],
   );
   await recordKingcamCloneMemory({
     ownerId: input.ownerId,
     kind: "motion_proof_planned",
     room: "KingCam full-body cinematic motion",
-    payload: { motionRequestId: motionRequest.id, governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP, providerModelPath: KINGCAM_FULL_BODY_CORRECTIVE_MODEL, preProofBalance, identityImage: KINGCAM_WAN_FULL_BODY_IMAGE, audioUrl: directVoice.audioUrl, audioDurationSeconds: directVoice.durationSeconds },
+    payload: { motionRequestId: motionRequest.id, governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP, providerModelPath: KINGCAM_FULL_BODY_CORRECTIVE_MODEL, identityImage: KINGCAM_WAN_FULL_BODY_IMAGE, audioUrl: directVoice.audioUrl, audioDurationSeconds: directVoice.durationSeconds },
   });
-  return { motionRequestId: motionRequest.id, governedJob: submitted, hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP, preProofBalance, qualityGate: QUALITY_GATES };
+  return { motionRequestId: motionRequest.id, governedJob: submitted, hardCreditCap: KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP, qualityGate: QUALITY_GATES };
 }
 
 export async function reviewKingcamFullBodyMotionProof(input: { ownerId: number; requestId: string; accepted: boolean; overallScore: number; notes: string }) {
