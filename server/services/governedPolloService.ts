@@ -1062,7 +1062,7 @@ export async function auditPolloMiniMaxH3ReferenceConfig(): Promise<{
       .filter((item): item is string => typeof item === "string")
       .join(" ")
       .toLowerCase();
-    return identity.includes("minimax-h3") || identity.includes("minimax h3");
+    return identity.includes("minimax-h3") || identity.includes("minimax h3") || identity.includes("minimax-hailuo-03");
   }) ?? null;
   return {
     providerModelPath: "pollo/minimax/minimax-h3",
