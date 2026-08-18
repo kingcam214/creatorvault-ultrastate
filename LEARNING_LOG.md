@@ -294,3 +294,10 @@ This is a corrective source-preservation test only. It must be rejected for any 
 The corrected five-second clone-only request, governed job `100`, was accepted by Replicate and remained submitted well beyond the two-minute provider deadline despite repeated status checks. It has not produced a finished video and no duplicate request has been created.
 
 **Corrective rule:** CreatorVault must never merely mark an already-submitted Replicate job cancelled in its own database. For a stalled clone-only source-video prediction, it must call Replicate’s provider-side cancellation endpoint, record the provider response, release the reserved budget, and then allow a new controlled decision. This safeguard is now being deployed before resolving job `100`.
+
+
+## 2026-08-18 — KINGCAM STALLED PROOF RESOLVED
+
+Governed job `100` was stopped through Replicate’s provider-side cancellation endpoint after exceeding the provider deadline without returning a video. CreatorVault recorded `replicate_provider_cancelled`, confirmed the `provider_cancellation_confirmed` event, and released the reserved budget. The job has **no output URL, no artifact, no quality state, and no accepted media**. No automatic retry or replacement request was created.
+
+**Permanent rule:** a provider task that remains active beyond its declared deadline is not a completed proof and must never be left as an open creation lane. Stop it at the provider, record the raw provider response, release the reservation, then require a fresh, separately governed decision before any future run.
