@@ -345,3 +345,10 @@ Correction: MiniMax H3 is already inside the existing **Pollo API arsenal**. Do 
 Pollo’s published OpenAPI exposes `POST /generation/minimax/minimax-h3/ref2video` with an explicit `refs` item of `type: "video"` and a required HTTPS `video` URL. The contract allows one output (`videoNum: 1`), a 5–15 second generation, `9:16`, and `768P` or `2K`. The actual KingCam source is 5.04 seconds, so the first proof must be 5 seconds only. This contract has no usable price recorded yet; the next required no-charge step is an authenticated Pollo estimate/configuration check. No MiniMax request, draft, credit reservation, or provider task has been created.
 
 Sources: https://docs.pollo.ai/openapi-filtered.json ; local OpenAPI extraction path `/generation/minimax/minimax-h3/ref2video`.
+
+
+## 2026-08-18 — POLLO MINIMAX H3 LIVE QUOTE-GATE RESULT
+
+The owner-only live quote check used the real KingCam source, the published `minimax/minimax-h3/ref2video` request shape, one 5-second `9:16` `2K` output, and no provider submission. Pollo returned `404 Not found` for the model estimate endpoint. The authenticated `ref2video` model configuration did not expose an exact usable MiniMax H3 price through the current narrow record reader. The gate stopped correctly: **no governed draft, no approval, no single-use permit, no budget reservation, and no chargeable request were created.**
+
+Corrective next step: inspect the authenticated `ref2video` configuration tree for MiniMax H3’s nested duration/resolution price records. Do not guess or substitute an outside-provider price. MiniMax remains audit-only until CreatorVault can record an exact Pollo account quote.

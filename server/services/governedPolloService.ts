@@ -968,13 +968,14 @@ async function quoteSourceVideoModelFromPolloConfig(input: { apiKey: string; pro
   if (!response.ok) return null;
   const payload = await parseProviderJson(response);
   const modelToken = input.providerModelPath.replace(/^pollo\//, "").toLowerCase();
+  const providerModelName = modelToken.split("/").filter(Boolean).at(-1) || modelToken;
   const records = collectProviderRecords(payload);
   const matching = records.find((record) => {
     const identity = [record.model, record.modelName, record.modelPath, record.path, record.code, record.value, record.id, record.name]
       .filter((value): value is string => typeof value === "string")
       .join(" ")
       .toLowerCase();
-    return identity.includes(modelToken);
+    return identity.includes(modelToken) || identity.includes(providerModelName);
   });
   if (!matching) return null;
   const quotedCredits = providerNumber(matching, ["discountCost", "cost", "totalCost", "credit", "credits", "amount", "price"]);
