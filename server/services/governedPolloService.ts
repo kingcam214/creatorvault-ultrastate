@@ -1335,7 +1335,7 @@ export async function auditPolloKingcamVideoToVideoCandidate(params: {
       .filter((value): value is string => typeof value === "string")
       .join(" ")
       .toLowerCase();
-    return identity.includes(modelToken) || identity.includes("go-enhance");
+    return identity.includes(modelToken) || identity.includes("go-enhance") || identity.includes("mx-v2v");
   }) ?? null;
 
   if (!record) {
