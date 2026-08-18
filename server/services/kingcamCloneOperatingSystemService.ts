@@ -21,7 +21,7 @@ const KINGCAM_CLONE_ID = "kingcam-founder-clone";
 const KINGCAM_HERO_REFERENCE = "https://creatorvault.live/videos/kingcam-hero-cam.mp4";
 const KINGCAM_FULL_BODY_IMAGE = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge.webp";
 
-type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review";
+type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review" | "performance_capture_registered";
 type MotionRequestState = "planned" | "approved" | "submitted" | "provider_complete" | "accepted" | "rejected" | "failed";
 // The verified KingCam motion source is 5.04 seconds; this proof must never request a longer output.
 const KINGCAM_FULL_BODY_PROOF_DURATION_SECONDS = 15;
@@ -540,6 +540,52 @@ export async function recordKingcamCloneMemory(input: { ownerId: number; kind: C
   await rawExec(`INSERT INTO kingcam_clone_memory_events (id, clone_id, owner_id, kind, room, payload_json, created_at)
     VALUES (?, ?, ?, ?, ?, ?, NOW())`, [id, KINGCAM_CLONE_ID, input.ownerId, input.kind, input.room || null, json(input.payload)]);
   return { id, kind: input.kind };
+}
+
+export async function registerKingcamPerformanceCapture(input: { ownerId: number; mediaAssetId: string }) {
+  assertOwner(input.ownerId);
+  await ensureProfile(input.ownerId);
+  const mediaAssetId = String(input.mediaAssetId || "").trim();
+  if (!mediaAssetId) throw new Error("KingCam Performance Capture needs the verified media receipt from CreatorVault.");
+  const rows = await rawQuery<any>(
+    `SELECT id, public_url, duration, width, height, mime_type, status, created_by_feature
+     FROM media_assets
+     WHERE id = ? AND user_id = ? AND asset_type = 'video' AND status = 'ready'
+     LIMIT 1`,
+    [mediaAssetId, input.ownerId],
+  );
+  const asset = rows[0];
+  if (!asset) throw new Error("The captured KingCam performance was not found in your CreatorVault vault.");
+  if (String(asset.created_by_feature || "") !== "kingcam_performance_capture") {
+    throw new Error("Only a direct KingCam Performance Capture can become a clone motion driver.");
+  }
+  const durationSeconds = Number(asset.duration || 0);
+  const width = Number(asset.width || 0);
+  const height = Number(asset.height || 0);
+  if (!Number.isFinite(durationSeconds) || durationSeconds < 7 || durationSeconds > 60) {
+    throw new Error("KingCam needs a seven- to sixty-second full-body performance take.");
+  }
+  if (width < 720 || height < 720) {
+    throw new Error("KingCam Performance Capture needs a clear full-body recording at 720p or better.");
+  }
+  const capture = {
+    mediaAssetId,
+    mediaUrl: String(asset.public_url),
+    durationSeconds: Number(durationSeconds.toFixed(3)),
+    width,
+    height,
+    mimeType: String(asset.mime_type || "video/mp4"),
+    classification: "kingcam_performance_driver",
+    bodyCinemaEligible: false,
+    cloneOnly: true,
+  };
+  await recordKingcamCloneMemory({
+    ownerId: input.ownerId,
+    kind: "performance_capture_registered",
+    room: "KingCam Performance Capture",
+    payload: capture,
+  });
+  return { ready: true, capture };
 }
 
 export async function startKingcamCloneTour(input: { ownerId: number; roomId: string }) {

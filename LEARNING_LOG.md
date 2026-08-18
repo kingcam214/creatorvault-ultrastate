@@ -505,3 +505,30 @@ Replicate returned no advertised fixed price in authenticated model metadata. Th
 ### OmniHuman admission-gate correction — 2026-08-18
 
 The first governed OmniHuman launch stopped before any Replicate prediction was created because the master governed provider allowlist admitted only the older Replicate Wan source-video model. The repair admits **only** `replicate/bytedance/omni-human` when all fixed KingCam clone-only conditions are simultaneously present: the exact mode, clone-only marker, owner-directed one-output pilot, no retry, source preservation, direct-voice-only rule, and Body Cinema exclusion. No provider request, charge, or output occurred before this correction.
+
+
+### Public KingCam performance-source capture — 2026-08-18
+
+Verified public source: `https://www.facebook.com/567398988/videos/1414725663220560/` — Cameron White / CWhite214, publicly shared April 4, 2025, duration 173.7 seconds. The agent browser played the public video without login and lawfully captured a local inspection-only playback segment from **66.52s to 78.49s** as `kingcam-public-performance-67s.webm` in the sandbox Downloads folder. This is a source audit artifact only. It is not ingested, generated, edited, or used as a clone driver until visual inspection verifies continuous real KingCam full-body gait, hands, direct speech, and usable framing.
+
+
+### Verified public KingCam full-body driver candidate — 2026-08-18
+
+Public consented source: `https://www.facebook.com/reel/1003038191646809/`, Cameron White / CWhite214, public reel. Screening found Cameron visibly full body from head to shoes with natural movement, visible hands, and direct speech across the 9-second clip. The agent browser played the public source without login and made an inspection-only local capture named `kingcam-public-fullbody-driver-candidate.webm`. The source must pass local visual analysis for real gait, stable anatomy, face clarity, direct speech, and enough quality before it can be ingested as a governed clone performance driver. It must never be used by Body Cinema.
+
+
+### Public KingCam mirror-walk driver candidate — 2026-08-18
+
+Verified public source: `https://www.facebook.com/CWhite214/videos/kingcam-the-kingofeverything-creatorvault/1441704243826008/`, Cameron White / CWhite214, public April 2025 post, duration 69.1 seconds. The public video visibly shows KingCam full body in a well-lit mirror setting at least around 00:11. The agent browser captured an inspection-only local first 15-second segment as `kingcam-public-mirror-walk-driver-candidate.webm`; it is not ingested, generated, or used until strict analysis confirms natural gait, face clarity, hand/foot integrity, stable full-body framing, and usable performance control. This source must remain excluded from Body Cinema.
+
+
+### Public KingCam mirror-walk later-segment capture — 2026-08-18
+
+After the first 15-second capture failed the driver gate, an inspection-only 24-second segment beginning at public-source timestamp 00:18 was captured from the same verified Cameron White video as `kingcam-public-mirror-walk-driver-later-segment.webm`. This capture exists solely to check whether a later continuous full-body natural-performance scene exists. It is not a generated asset, is not ingested into CreatorVault, and must be rejected if it lacks stable head-to-shoes framing, natural gait, clear identity, and usable hands/feet.
+
+## 2026-08-18 — KINGCAM REAL PERFORMANCE DRIVER DECISION
+
+- **What failed:** Image-plus-audio providers, including the clone-only OmniHuman lane, can return a static KingCam identity image with audio rather than a true body performance. A voice track over a frozen visual is never a KingCam clone, tour, or tool demonstration.
+- **What changed:** CreatorVault now has a direct, owner-only **KingCam Performance Capture** path inside Clone Command. It records a real crown-to-shoes speaking-and-moving take in the platform, sends it through the canonical authenticated direct-upload route, receives a durable CreatorVault receipt, and registers it only as a clone performance driver.
+- **Hard boundary:** Performance captures are classified `kingcam_performance_capture` / `kingcam_performance_driver`, cannot become Body Cinema sources, and cannot be represented as accepted clone output until a later proof visibly passes motion, speech, anatomy, and identity review.
+- **Next-run rule:** Do not submit another full-body clone generation from only an image and audio. Use the verified real KingCam Performance Capture as the motion driver after it is actually recorded and durably stored.

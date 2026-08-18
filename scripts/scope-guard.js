@@ -250,6 +250,7 @@ const ALLOWLISTS = {
   'kingcam-clone-operating-system': [
     'client/src/App.tsx',
     'client/src/pages/KingCamClone.tsx',
+    'client/src/components/KingCamPerformanceCapture.tsx',
     'client/src/pages/KingCamGuide.tsx',
     'client/src/pages/KingCamProfile.tsx',
     'client/src/pages/KingCamVault.tsx',
@@ -257,6 +258,7 @@ const ALLOWLISTS = {
     'server/routers.ts',
     'server/routers/kingcamCloneOperatingSystemRouter.ts',
     'server/routers/mediaAssets.ts',
+    'server/routers/videoUploadRouter.ts',
     'server/services/kingcamCloneOperatingSystemService.ts',
     'server/services/audioIntelligenceService.ts',
     'server/services/governedPolloService.ts',

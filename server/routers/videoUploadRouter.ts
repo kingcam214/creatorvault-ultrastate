@@ -522,12 +522,16 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
     const creatorProfileId = Number((req as any).authenticatedCreatorId);
     const requestedClassification = String(req.get("x-creatorvault-source-classification") || "").trim().toLowerCase();
     const approvedDemo = requestedClassification === "approved_demo" && OWNER_IDS.includes(creatorId);
-    // media_assets.source_type is a constrained legacy field. The live schema
-    // confirms `generated` for platform-created media; the separate immutable
-    // classification below makes clear that this is approved demonstration media,
-    // never a creator upload or a synthetic provider claim.
+    const kingcamPerformanceCapture = requestedClassification === "kingcam_performance_capture" && OWNER_IDS.includes(creatorId) && isVideoUpload;
+    // media_assets.source_type is a constrained legacy field. Creator-recorded
+    // KingCam performance is still creator-owned footage, but the immutable
+    // feature tag keeps it out of Body Cinema and reserves it for clone motion.
     const sourceType = approvedDemo ? "generated" : "creator_upload";
-    const createdByFeature = approvedDemo ? "creatorvault_approved_demo" : "body_cinema_direct_upload";
+    const createdByFeature = approvedDemo
+      ? "creatorvault_approved_demo"
+      : kingcamPerformanceCapture
+        ? "kingcam_performance_capture"
+        : "body_cinema_direct_upload";
 
     await mkdir(PRIVATE_UPLOAD_RECEIPTS_DIR, { recursive: true });
     receiptPath = path.join(PRIVATE_UPLOAD_RECEIPTS_DIR, `${fileUuid}.json`);
@@ -543,7 +547,7 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
       media,
       verified: true,
       createdAt,
-      classification: approvedDemo ? "approved_demo" : "creator_owned",
+      classification: approvedDemo ? "approved_demo" : kingcamPerformanceCapture ? "kingcam_performance_driver" : "creator_owned",
     }, null, 2));
 
     const mediaAssetId = randomUUID();

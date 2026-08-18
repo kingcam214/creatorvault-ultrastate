@@ -228,14 +228,18 @@ export const mediaAssetsRouter = router({
         sourceType: row.source_type ?? null,
         classification: row.created_by_feature === "kingcam_private_presence_loop"
           ? "private_presence_loop"
-          : row.created_by_feature === "recovered_finished_motion_flyer"
-            ? "finished_showcase"
-            : row.created_by_feature === "creatorvault_approved_demo"
-              ? "approved_demo"
-              : "creator_owned_or_generated",
-        // A media row alone never authorizes Body Cinema. The source must have a
-        // durable 94+ preservation baseline that still matches its exact bytes.
-        bodyCinemaEligible: verifiedSourceUrls.has(String(row.public_url || "")),
+          : row.created_by_feature === "kingcam_performance_capture"
+            ? "kingcam_performance_driver"
+            : row.created_by_feature === "recovered_finished_motion_flyer"
+              ? "finished_showcase"
+              : row.created_by_feature === "creatorvault_approved_demo"
+                ? "approved_demo"
+                : "creator_owned_or_generated",
+        // A media row alone never authorizes Body Cinema. KingCam performance
+        // drivers are clone-only and may never leak into a treatment source lane.
+        bodyCinemaEligible: row.created_by_feature === "kingcam_performance_capture"
+          ? false
+          : verifiedSourceUrls.has(String(row.public_url || "")),
         fileName: row.file_name ?? row.original_name ?? "Untitled",
         originalName: row.original_name ?? null,
         mimeType: row.mime_type ?? null,

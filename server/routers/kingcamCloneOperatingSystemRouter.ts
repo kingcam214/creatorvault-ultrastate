@@ -10,6 +10,7 @@ import {
   planKingcamFullBodyMotionProof,
   preflightKingcamElevenLabsVoice,
   preflightKingcamReplicateOmniHuman,
+  registerKingcamPerformanceCapture,
   recordKingcamCloneMemory,
   reviewKingcamFullBodyMotionProof,
   startKingcamCloneTour,
@@ -46,6 +47,17 @@ export const kingcamCloneOperatingSystemRouter = router({
         room: input.focus || "KingCam Clone Command",
         payload: { directive: input.directive, recordedBy: "owner" },
       });
+    }),
+
+  registerPerformanceCapture: protectedProcedure
+    .input(z.object({ mediaAssetId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      ownerOnly(ctx.user.id);
+      try {
+        return await registerKingcamPerformanceCapture({ ownerId: ctx.user.id, mediaAssetId: input.mediaAssetId });
+      } catch (error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam Performance Capture could not be registered." });
+      }
     }),
 
   planFullBodyProof: protectedProcedure
