@@ -1014,6 +1014,7 @@ export async function auditPolloMiniMaxH3ReferenceConfig(): Promise<{
   generationType: "ref2video";
   configAvailable: boolean;
   matchingConfiguration: Record<string, unknown> | null;
+  candidateModels: Array<{ model: string; modelPath: string | null; quotedCredits: number | null; quotedCostUsd: number | null }>;
   reason: string;
 }> {
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
@@ -1033,11 +1034,29 @@ export async function auditPolloMiniMaxH3ReferenceConfig(): Promise<{
       generationType: "ref2video",
       configAvailable: false,
       matchingConfiguration: null,
+      candidateModels: [],
       reason: `Pollo returned ${response.status} while reading its reference-video configuration. No media request was made.`,
     };
   }
   const payload = await parseProviderJson(response);
   const records = collectProviderRecords(payload);
+  const seenCandidates = new Set<string>();
+  const candidateModels = records.flatMap((candidate) => {
+    const model = [candidate.modelName, candidate.model, candidate.name, candidate.code, candidate.value]
+      .find((item): item is string => typeof item === "string" && item.trim().length > 0);
+    if (!model) return [];
+    const modelPath = [candidate.modelPath, candidate.path]
+      .find((item): item is string => typeof item === "string" && item.trim().length > 0) ?? null;
+    const key = `${model.toLowerCase()}|${String(modelPath || "").toLowerCase()}`;
+    if (seenCandidates.has(key)) return [];
+    seenCandidates.add(key);
+    return [{
+      model,
+      modelPath,
+      quotedCredits: providerNumber(candidate, ["discountCost", "cost", "totalCost", "credit", "credits", "amount", "price"]),
+      quotedCostUsd: providerNumber(candidate, ["discountCostUsd", "costUsd", "totalCostUsd", "usd", "amountUsd", "priceUsd", "priceUSD"]),
+    }];
+  }).slice(0, 100);
   const match = records.find((candidate) => {
     const identity = [candidate.model, candidate.modelName, candidate.modelPath, candidate.path, candidate.code, candidate.value, candidate.id, candidate.name]
       .filter((item): item is string => typeof item === "string")
@@ -1050,6 +1069,7 @@ export async function auditPolloMiniMaxH3ReferenceConfig(): Promise<{
     generationType: "ref2video",
     configAvailable: true,
     matchingConfiguration: match ? sanitizePolloMiniMaxConfig(match) as Record<string, unknown> : null,
+    candidateModels,
     reason: match
       ? "Pollo returned the authenticated MiniMax H3 reference-video configuration. This audit is read-only and cannot create media."
       : "Pollo returned reference-video configuration but no MiniMax H3 record. No media request was made.",
