@@ -11,6 +11,7 @@ import {
   planKingcamFullBodyMotionProof,
   preflightKingcamElevenLabsVoice,
   preflightKingcamReplicateOmniHuman,
+  preflightKingcamReplicateWanAnimate,
   registerKingcamPerformanceCapture,
   recordKingcamCloneMemory,
   reviewKingcamFullBodyMotionProof,
@@ -119,6 +120,15 @@ export const kingcamCloneOperatingSystemRouter = router({
       return await preflightKingcamReplicateOmniHuman(ctx.user.id);
     } catch (error) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "The KingCam-only OmniHuman clone lane could not be checked." });
+    }
+  }),
+
+  preflightWanAnimateCloneLane: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await preflightKingcamReplicateWanAnimate(ctx.user.id);
+    } catch (error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "The KingCam-only Wan Animate clone lane could not be checked." });
     }
   }),
 
