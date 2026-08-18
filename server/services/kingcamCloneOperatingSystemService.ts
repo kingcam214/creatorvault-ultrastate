@@ -21,8 +21,10 @@ const KINGCAM_CLONE_ID = "kingcam-founder-clone";
 const KINGCAM_HERO_REFERENCE = "https://creatorvault.live/videos/kingcam-hero-cam.mp4";
 const KINGCAM_FULL_BODY_IMAGE = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge.webp";
 
-type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review" | "performance_capture_registered";
+type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review" | "performance_capture_registered" | "training_library_synced";
 type MotionRequestState = "planned" | "approved" | "submitted" | "provider_complete" | "accepted" | "rejected" | "failed";
+type KingcamTrainingRole = "identity_reference" | "wardrobe_reference" | "voice_reference" | "performance_candidate" | "movement_driver" | "rejected";
+type KingcamSourceKind = "real_camera" | "synthetic_or_generated" | "unknown";
 // The verified KingCam motion source is 5.04 seconds; this proof must never request a longer output.
 const KINGCAM_FULL_BODY_PROOF_DURATION_SECONDS = 15;
 const KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP = 2;
@@ -37,6 +39,63 @@ const KINGCAM_GUIDE_AUDIO_URL_ROOT = "https://creatorvault.live/uploads/content-
 const KINGCAM_FULL_BODY_DIRECT_AUDIO_KEY = "happyhorse-fullbody-proof";
 const KINGCAM_FULL_BODY_DIRECT_AUDIO_URL = `${KINGCAM_GUIDE_AUDIO_URL_ROOT}/${KINGCAM_FULL_BODY_DIRECT_AUDIO_KEY}.mp3`;
 const KINGCAM_FULL_BODY_DIRECT_SCRIPT = "Welcome to CreatorVault. I am KingCam. This is where creators own the media, move with power, and turn attention into a real machine. Your voice, your visuals, your story, your money. Watch what happens when all of it moves together.";
+
+const CURATED_KINGCAM_TRAINING_AUDITS: Array<{
+  mediaUrl: string;
+  sourceKind: KingcamSourceKind;
+  trainingRole: KingcamTrainingRole;
+  fullBodySeconds: number;
+  naturalMotionScore: number;
+  speechSyncScore: number;
+  driverReady: boolean;
+  defects: string;
+  evidence: string;
+}> = [
+  {
+    mediaUrl: "https://creatorvault.live/uploads/renders/2a16695b-fd71-40b8-95ed-92f3de6755eb/vaultx-edit-2a16695b-fd71-40b8-95ed-92f3de6755eb.mp4",
+    sourceKind: "synthetic_or_generated",
+    trainingRole: "rejected",
+    fullBodySeconds: 6,
+    naturalMotionScore: 15,
+    speechSyncScore: 15,
+    driverReady: false,
+    defects: "Hand and microphone morphing, shifting clothing details, floaty motion, and weak mouth timing.",
+    evidence: "Observed six-second synthetic KingCam asset. It is not a real human performance source and cannot drive body motion.",
+  },
+  {
+    mediaUrl: "https://creatorvault.live/uploads/renders/f729fe42-3373-44f3-80a8-a26e8337b0ac/vaultx-edit-f729fe42-3373-44f3-80a8-a26e8337b0ac.mp4",
+    sourceKind: "synthetic_or_generated",
+    trainingRole: "rejected",
+    fullBodySeconds: 2,
+    naturalMotionScore: 25,
+    speechSyncScore: 0,
+    driverReady: false,
+    defects: "Synthetic turn morphing, background inconsistency, and unstable smoke physics.",
+    evidence: "Observed synthetic trailer asset. It cannot become a natural KingCam movement driver.",
+  },
+  {
+    mediaUrl: "https://creatorvault.live/uploads/renders/47db10e1-be6a-4fcc-9d16-b751c54c1488/vaultx-edit-47db10e1-be6a-4fcc-9d16-b751c54c1488.mp4",
+    sourceKind: "synthetic_or_generated",
+    trainingRole: "rejected",
+    fullBodySeconds: 4.4,
+    naturalMotionScore: 45,
+    speechSyncScore: 0,
+    driverReady: false,
+    defects: "Synthetic glitch effects, text overlays, rapid spin transitions, and non-natural motion.",
+    evidence: "Observed branded synthetic visual. It is excluded from clone motion training.",
+  },
+  {
+    mediaUrl: "https://creatorvault.live/uploads/content-vault/2d88b768-13b1-4ab0-a183-dd19ea3b4718/CreatorVault-Demo-Source--KingCam-Identity-Reference.mp4",
+    sourceKind: "synthetic_or_generated",
+    trainingRole: "identity_reference",
+    fullBodySeconds: 4,
+    naturalMotionScore: 70,
+    speechSyncScore: 0,
+    driverReady: false,
+    defects: "Minor morphing and hand instability during rapid camera movement; no live performance audio.",
+    evidence: "Observed four-second synthetic identity asset. It can anchor approved look and framing, never body movement.",
+  },
+];
 
 const KINGCAM_GUIDE_TOUR_SEGMENTS = [
   { key: "entry", chapter: "THE ENTRY", script: "Welcome to CreatorVault. This is where you keep your content, your presence, and your power in your own hands." },
@@ -438,6 +497,29 @@ export async function ensureKingcamCloneOperatingSystem(): Promise<void> {
     updated_at DATETIME NOT NULL,
     KEY kingcam_clone_motion_owner (clone_id, owner_id, state, created_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await rawExec(`CREATE TABLE IF NOT EXISTS kingcam_clone_training_assets (
+    id CHAR(36) PRIMARY KEY,
+    clone_id VARCHAR(96) NOT NULL,
+    owner_id BIGINT NOT NULL,
+    media_asset_id CHAR(36) NOT NULL,
+    media_url TEXT NOT NULL,
+    media_name VARCHAR(255) NOT NULL,
+    source_kind VARCHAR(48) NOT NULL,
+    training_role VARCHAR(48) NOT NULL,
+    full_body_seconds DECIMAL(10,3) NOT NULL DEFAULT 0,
+    natural_motion_score INT NOT NULL DEFAULT 0,
+    speech_sync_score INT NOT NULL DEFAULT 0,
+    driver_ready TINYINT NOT NULL DEFAULT 0,
+    body_cinema_eligible TINYINT NOT NULL DEFAULT 0,
+    evidence TEXT NOT NULL,
+    defects TEXT NULL,
+    analysis_json LONGTEXT NOT NULL,
+    assessment_source VARCHAR(96) NOT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    UNIQUE KEY kingcam_clone_training_asset_unique (clone_id, owner_id, media_asset_id),
+    KEY kingcam_clone_training_owner_lookup (clone_id, owner_id, training_role, driver_ready, updated_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
 }
 
 function identityVault() {
@@ -542,6 +624,101 @@ export async function recordKingcamCloneMemory(input: { ownerId: number; kind: C
   return { id, kind: input.kind };
 }
 
+async function upsertKingcamTrainingAsset(input: {
+  ownerId: number;
+  mediaAssetId: string;
+  mediaUrl: string;
+  mediaName: string;
+  sourceKind: KingcamSourceKind;
+  trainingRole: KingcamTrainingRole;
+  fullBodySeconds: number;
+  naturalMotionScore: number;
+  speechSyncScore: number;
+  driverReady: boolean;
+  evidence: string;
+  defects: string | null;
+  assessmentSource: string;
+  analysis: Record<string, unknown>;
+}) {
+  await ensureKingcamCloneOperatingSystem();
+  const id = randomUUID();
+  await rawExec(
+    `INSERT INTO kingcam_clone_training_assets
+      (id, clone_id, owner_id, media_asset_id, media_url, media_name, source_kind, training_role, full_body_seconds, natural_motion_score, speech_sync_score, driver_ready, body_cinema_eligible, evidence, defects, analysis_json, assessment_source, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, NOW(), NOW())
+     ON DUPLICATE KEY UPDATE
+       media_url = VALUES(media_url), media_name = VALUES(media_name), source_kind = VALUES(source_kind), training_role = VALUES(training_role), full_body_seconds = VALUES(full_body_seconds), natural_motion_score = VALUES(natural_motion_score), speech_sync_score = VALUES(speech_sync_score), driver_ready = VALUES(driver_ready), body_cinema_eligible = 0, evidence = VALUES(evidence), defects = VALUES(defects), analysis_json = VALUES(analysis_json), assessment_source = VALUES(assessment_source), updated_at = NOW()`,
+    [
+      id, KINGCAM_CLONE_ID, input.ownerId, input.mediaAssetId, input.mediaUrl, input.mediaName,
+      input.sourceKind, input.trainingRole, Number(input.fullBodySeconds.toFixed(3)), input.naturalMotionScore,
+      input.speechSyncScore, input.driverReady ? 1 : 0, input.evidence, input.defects, json(input.analysis), input.assessmentSource,
+    ],
+  );
+}
+
+export async function getKingcamCloneTrainingLibrary(ownerId: number) {
+  assertOwner(ownerId);
+  await ensureKingcamCloneOperatingSystem();
+  const rows = await rawQuery<any>(
+    `SELECT media_asset_id, media_url, media_name, source_kind, training_role, full_body_seconds, natural_motion_score, speech_sync_score, driver_ready, body_cinema_eligible, evidence, defects, analysis_json, assessment_source, updated_at
+     FROM kingcam_clone_training_assets
+     WHERE clone_id = ? AND owner_id = ?
+     ORDER BY driver_ready DESC, natural_motion_score DESC, updated_at DESC`,
+    [KINGCAM_CLONE_ID, ownerId],
+  );
+  const assets = rows.map((row) => ({
+    mediaAssetId: String(row.media_asset_id), mediaUrl: String(row.media_url), mediaName: String(row.media_name),
+    sourceKind: String(row.source_kind) as KingcamSourceKind, trainingRole: String(row.training_role) as KingcamTrainingRole,
+    fullBodySeconds: Number(row.full_body_seconds || 0), naturalMotionScore: Number(row.natural_motion_score || 0),
+    speechSyncScore: Number(row.speech_sync_score || 0), driverReady: Boolean(row.driver_ready),
+    bodyCinemaEligible: false, evidence: String(row.evidence || ""), defects: row.defects ? String(row.defects) : null,
+    assessmentSource: String(row.assessment_source || ""), analysis: parseJson<Record<string, unknown>>(row.analysis_json, {}),
+    updatedAt: row.updated_at,
+  }));
+  return {
+    assets,
+    approvedMovementDriver: assets.find((asset) => asset.driverReady && asset.trainingRole === "movement_driver") || null,
+    summary: {
+      total: assets.length,
+      identityReferences: assets.filter((asset) => asset.trainingRole === "identity_reference").length,
+      rejectedSynthetic: assets.filter((asset) => asset.trainingRole === "rejected").length,
+      realPerformanceCandidates: assets.filter((asset) => asset.trainingRole === "performance_candidate").length,
+      motionDriverReady: assets.some((asset) => asset.driverReady && asset.trainingRole === "movement_driver"),
+    },
+  };
+}
+
+export async function syncKingcamCloneTrainingLibrary(ownerId: number) {
+  assertOwner(ownerId);
+  await ensureProfile(ownerId);
+  let registered = 0;
+  for (const audit of CURATED_KINGCAM_TRAINING_AUDITS) {
+    const rows = await rawQuery<any>(
+      `SELECT id, public_url, file_name, original_name
+       FROM media_assets
+       WHERE user_id = ? AND asset_type = 'video' AND status = 'ready' AND public_url = ?
+       LIMIT 1`,
+      [ownerId, audit.mediaUrl],
+    );
+    const asset = rows[0];
+    if (!asset) continue;
+    await upsertKingcamTrainingAsset({
+      ownerId, mediaAssetId: String(asset.id), mediaUrl: String(asset.public_url),
+      mediaName: String(asset.file_name || asset.original_name || "KingCam asset"),
+      sourceKind: audit.sourceKind, trainingRole: audit.trainingRole, fullBodySeconds: audit.fullBodySeconds,
+      naturalMotionScore: audit.naturalMotionScore, speechSyncScore: audit.speechSyncScore, driverReady: audit.driverReady,
+      evidence: audit.evidence, defects: audit.defects, assessmentSource: "creatorvault_observed_media_audit_2026_08_18",
+      analysis: { ...audit, cloneOnly: true, bodyCinemaEligible: false },
+    });
+    registered += 1;
+  }
+  await recordKingcamCloneMemory({
+    ownerId, kind: "training_library_synced", room: "KingCam Clone Training Library",
+    payload: { registered, source: "creatorvault_observed_media_audit_2026_08_18", noMotionDriverClaimed: true },
+  });
+  return { registered, library: await getKingcamCloneTrainingLibrary(ownerId) };
+}
+
 export async function registerKingcamPerformanceCapture(input: { ownerId: number; mediaAssetId: string }) {
   assertOwner(input.ownerId);
   await ensureProfile(input.ownerId);
@@ -579,13 +756,21 @@ export async function registerKingcamPerformanceCapture(input: { ownerId: number
     bodyCinemaEligible: false,
     cloneOnly: true,
   };
+  await upsertKingcamTrainingAsset({
+    ownerId: input.ownerId, mediaAssetId, mediaUrl: capture.mediaUrl, mediaName: "KingCam direct performance capture",
+    sourceKind: "real_camera", trainingRole: "performance_candidate", fullBodySeconds: capture.durationSeconds,
+    naturalMotionScore: 0, speechSyncScore: 0, driverReady: false,
+    evidence: "Direct owner-recorded KingCam Performance Capture. It awaits motion, framing, speech, hand, and identity inspection before any clone driver claim.",
+    defects: null, assessmentSource: "creatorvault_direct_performance_capture_pending_review",
+    analysis: { ...capture, pendingHumanPerformanceReview: true },
+  });
   await recordKingcamCloneMemory({
     ownerId: input.ownerId,
     kind: "performance_capture_registered",
     room: "KingCam Performance Capture",
     payload: capture,
   });
-  return { ready: true, capture };
+  return { ready: true, capture, trainingLibrary: await getKingcamCloneTrainingLibrary(input.ownerId) };
 }
 
 export async function startKingcamCloneTour(input: { ownerId: number; roomId: string }) {

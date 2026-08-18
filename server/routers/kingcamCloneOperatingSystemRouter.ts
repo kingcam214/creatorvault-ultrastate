@@ -6,6 +6,7 @@ import {
   createKingcamGuideVoiceTour,
   getKingcamCloneOperatingSystem,
   getKingcamGuideVoiceTour,
+  getKingcamCloneTrainingLibrary,
   launchKingcamFullBodyMotionProof,
   planKingcamFullBodyMotionProof,
   preflightKingcamElevenLabsVoice,
@@ -14,6 +15,7 @@ import {
   recordKingcamCloneMemory,
   reviewKingcamFullBodyMotionProof,
   startKingcamCloneTour,
+  syncKingcamCloneTrainingLibrary,
 } from "../services/kingcamCloneOperatingSystemService";
 
 const OWNER_IDS = new Set([6, 33]);
@@ -28,6 +30,20 @@ export const kingcamCloneOperatingSystemRouter = router({
   getCommandCenter: protectedProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     return getKingcamCloneOperatingSystem(ctx.user.id);
+  }),
+
+  getTrainingLibrary: protectedProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    return getKingcamCloneTrainingLibrary(ctx.user.id);
+  }),
+
+  syncTrainingLibrary: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await syncKingcamCloneTrainingLibrary(ctx.user.id);
+    } catch (error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam training library could not be synchronized." });
+    }
   }),
 
   beginTour: protectedProcedure
