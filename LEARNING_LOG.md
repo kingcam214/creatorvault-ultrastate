@@ -368,3 +368,16 @@ Three no-charge account-price paths were tried and all stopped before media crea
 The first owner-directed MiniMax H3 proof launch stopped **before provider submission** at CreatorVault’s frozen-budget gate. No MiniMax task was created and no credits were spent. Root cause: the documented manual 75-credit ceiling was stored as `manualCreditCap` but the existing explicit-owner-pilot budget reservation predicate requires the same value under `hardCreditCap`.
 
 Exact correction: the MiniMax-only manual-cap draft now records both fields with the identical fixed 75-credit value. This does not open general Pollo spending; the predicate still requires one output, owner-directed pilot, no retry, source-video contract, and exact agreement between recorded estimate and permit ceiling.
+
+
+## 2026-08-18 — KINGCAM MINIMAX H3 FULL-BODY PROOF RESULT
+
+**Real provider run:** governed job `102`; motion request `397df349-f41f-4336-89b1-c92403b47a56`; Pollo MiniMax H3 (`minimax-hailuo-03` account alias); one five-second vertical `2K` output; one submission; no automatic retry. This used the verified CreatorVault source `https://creatorvault.live/videos/kingcam-hero-cam.mp4`.
+
+**Spend evidence:** available Pollo credits were `898.75` before submission and `878.87` after. Actual provider cost recorded on the governed job: **19.88 credits**. The account change confirms the same 19.88-credit impact. The manual 75-credit ceiling held the request inside its stated bound; it was not provider-quoted.
+
+**Source comparison:** the real source is a burgundy velvet suit with gold embroidery/trim, gold crown and jewelry, black shoes with gold detail, dark sofa interior, and a cigar in the right hand. The generated video preserved the source wardrobe color, crown, jewelry, shoes, full-body framing, and environment. The earlier black-wardrobe phrasing was incorrect and must never be used again as a rejection reason.
+
+**Finished-video result:** **REJECTED at 60/100**. It failed the full-motion quality gate. There was no natural measured step, no meaningful weight shift, and movement became nearly frozen after the first second. The right hand/cigar also showed stiffness with slight shape/position morphing. This is a static-looking pose, not launch-grade KingCam full-body motion. It is excluded from public KingCam media.
+
+**Permanent provider learning:** do not repeat the exact MiniMax H3 five-second, locked-front-frame KingCam source/prompt configuration as a public-proof route. It preserves identity better than the rejected Seedance runs but does not yet deliver the required natural full-body motion. Any future MiniMax decision must change the motion treatment deliberately, stay one-output and governed, and be judged against the same motion and hand-quality gate.
