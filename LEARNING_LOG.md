@@ -397,3 +397,12 @@ At Cameron’s direction, the rejected MiniMax H3 output is preserved for a narr
 The real KingCam ElevenLabs voice preflight succeeded from the production runtime: voice ID `rwc11bXCBw5KydM4avHE`, name `KingCam`. A generic fallback voice is forbidden for this tour.
 
 The first narration run is narrowly bounded to five short CreatorVault room segments: The Entry, Body Cinema, Caption Stage, Trailer Maker, and Clone Command. Each segment is direct ElevenLabs-only, stored under CreatorVault control, registered in the canonical audio system with `generated_voice` rights, and analyzed for timing/waveform data. No spoken segment may claim an unaccepted Body Cinema result, a finished trailer, earnings, or a clone capability that has not been proven.
+
+
+## 2026-08-18 — KINGCAM REAL-VOICE TOUR ASSETS CREATED
+
+CreatorVault created five short tour narrations directly with the verified **KingCam** ElevenLabs voice clone (`rwc11bXCBw5KydM4avHE`) and `eleven_multilingual_v2`. No Replicate, Kokoro, Forge, or generic fallback voice was used.
+
+The five governed audio assets cover The Entry (6.870 seconds), Body Cinema (8.072 seconds), Caption Stage (6.870 seconds), Trailer Maker (7.602 seconds), and Clone Command (7.340 seconds). Every file was stored under CreatorVault control, registered as a canonical `voiceover` asset with `generated_voice` rights, and analyzed for waveform/timing data. A speech-to-text inspection of the opening narration confirmed the spoken words match the approved opening script.
+
+The real-voice tour may describe only the live rooms and their verified limits. It may not present the private MiniMax presence loop as a Clone Guide, tool demo, or accepted full-motion proof.
