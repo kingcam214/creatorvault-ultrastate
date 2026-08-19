@@ -1493,6 +1493,7 @@ export async function launchKingcamWanAnimateFullBodyProof(input: { ownerId: num
 
 export async function launchKingcamWanAnimateControlledPerformanceBenchmark(input: { ownerId: number; sceneBrief: string }) {
   assertOwner(input.ownerId);
+  throw new Error("This KingCam motion lane is removed because two governed provider runs stalled without returning a video. It cannot be used until a different provider completes a watchable full-body result.");
   const sceneBrief = String(input.sceneBrief || "").trim();
   if (sceneBrief.length < 40 || sceneBrief.length > 1800) throw new Error("KingCam controlled-performance benchmark brief must be between 40 and 1800 characters.");
   await ensureProfile(input.ownerId);
