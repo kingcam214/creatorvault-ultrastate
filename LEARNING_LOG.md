@@ -764,3 +764,9 @@ The screened owner-supplied file `bff8f30c-4116-4cfa-98b4-40c5cb7cd053.mp4` cont
 
 The source is now classified as a clone-only `movement_driver` for one governed silent full-body motion benchmark. It must not be used for Body Cinema, a public demonstration, a talking clone, or any identity/voice claim until a watchable output passes full quality review. The source stays subject to the same automatic rejection gates for identity drift, anatomy, hands, feet, wardrobe, camera, props, and temporal instability.
 
+## 2026-08-19 — SILENT DRIVER STATUS CORRECTION
+
+The 62-second owner-supplied `bff8f30c-4116-4cfa-98b4-40c5cb7cd053.mp4` remains important real KingCam **performance evidence**, but it is not an eligible silent motion driver. A later review of the permanent source-inspection record confirmed that its technically compliant 01:30–01:37 window is stylized movement rather than natural gait and its 01:01–01:06 backup is partly cropped and too short. The temporary motion-driver classification was therefore removed immediately.
+
+This source remains clone-only `performance_candidate` evidence. It is barred from provider motion-transfer, speaking-clone, lip-sync, public-demo, and Body Cinema use until a separate clean full-body natural-motion driver is verified. No provider request was created from the temporary classification.
+
