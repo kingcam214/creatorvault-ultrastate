@@ -826,3 +826,8 @@ Added an owner-only no-charge Kling 3 Omni estimate audit for the verified 1080p
 ## 2026-08-19 — SELECTED CONTROLLED-PERFORMANCE GOVERNED BENCHMARK
 
 The verified 1920×1080 KingCam asset `d9ec0e36-528b-4f96-8004-77b0af3e4f68` has a source-specific official Kling 3 Omni no-charge estimate of 11.13 Pollo credits / $0.667 for the approved identity image plus exact CreatorVault performance video. The governed benchmark contract is one silent seven-second 720p output, exact 11.13-credit ceiling, clone-only, no automatic retry, and no Body Cinema use. It requires rejection for face/identity/body/anatomy/hand/foot failure, frozen or plastic movement, crop, spin, cut, text, wardrobe or environment drift, and cannot claim speech.
+
+
+## 2026-08-19 — CONTROLLED-PERFORMANCE PRE-SUBMISSION GATE REPAIR
+
+The first controlled-performance launch stopped before any governed draft, provider task, or credit charge. The selected 1080p source and 11.13-credit estimate were valid. The fragile comparison of the provider’s display-dollar field to a fixed literal was removed. The real protection remains exact provider credits: the source-specific estimate must equal 11.13 Pollo credits, and the single-use permit hard cap must equal that exact recorded number. Ownership, clone-only source binding, one output, no retry, silent-output, and mandatory watchable quality review remain unchanged.
