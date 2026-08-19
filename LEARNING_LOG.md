@@ -747,3 +747,9 @@ The live owner-only Kling 3 Omni mixed-reference estimate audit returned a sourc
 
 Any next request must be a separate clone-only one-output arms-and-hands benchmark with the exact 11.13-credit cap, no audio, no automatic retry, and a finished-video review. It may test hand, prop, face, anatomy, wardrobe, source-continuity, and camera stability only. It must not claim full-body natural locomotion, full clone completion, speech delivery, or accepted public KingCam media.
 
+## 2026-08-19 — KINGCAM ARMS-AND-HANDS KLING OMNI SUBMISSION RESULT
+
+One and only one governed arms-and-hands benchmark was submitted as job `114` after the verified IMG_9741 source binding, live exact estimate (**11.13 Pollo credits / $0.667**), owner approval, and single-use permit. Pollo returned HTTP 400 before creating a provider task: `Duration must be 3–15 seconds.` The stored request carried a numeric seven-second duration, which is inside the provider’s published 3–15-second range and was accepted by the source-specific estimate endpoint. The job recorded `provider_http_400`, no provider job ID, no output URL, no actual cost, and its 11.13-credit reservation was released.
+
+This is a provider submission-contract inconsistency, not a visual-quality result. Do not automatically retry job 114, repeat this exact source/model/payload, or claim a watchable arms-and-hands benchmark. A later corrective decision must first obtain an authoritative submission-contract explanation or use a different eligible lane. The verified IMG_9741 source remains `source_verified` for the arms-and-hands Gold Standard case but has no generated outcome.
+
