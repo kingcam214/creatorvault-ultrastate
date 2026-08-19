@@ -157,6 +157,7 @@ const REPLICATE_WAN_ANIMATE_MODE = "replicate_kingcam_wan_animate_real_driver_mo
 const REPLICATE_WAN_ANIMATE_HARD_SPEND_CAP_USD = 2;
 const REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge-reference.png";
 const REPLICATE_WAN_ANIMATE_DRIVER_URL = "https://creatorvault.live/uploads/content-vault/9c47c6e0-a7ce-4e85-89a8-25c2f98d2980/kingcam-real-gait-driver-0129-0136.mp4";
+const REPLICATE_WAN_ANIMATE_CONTROLLED_PERFORMANCE_DRIVER_URL = "https://creatorvault.live/uploads/content-vault/36bd1982-8de5-4581-9896-70dcb21be904/IMG_4392.MOV";
 const KINGCAM_GOENHANCE_MODEL_PATH = "pollo/go-enhance/go-enhance-v1";
 const KINGCAM_GOENHANCE_MODE = "kingcam_goenhance_real_performance_video2video";
 const KINGCAM_GOENHANCE_STYLE_CODE = "mx-v2v";
@@ -396,10 +397,14 @@ function isReplicateWanVideoEditJob(job: Pick<GovernedPolloJob, "provider" | "pr
 }
 
 function isReplicateWanAnimateJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
+  const lockedRealGait = job.metadata.kingcamWanAnimateRealDriverProof === true
+    && job.metadata.motionDriverUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL;
+  const lockedControlledPerformance = job.metadata.kingcamWanAnimateControlledPerformanceProof === true
+    && job.metadata.motionDriverUrl === REPLICATE_WAN_ANIMATE_CONTROLLED_PERFORMANCE_DRIVER_URL;
   return job.provider === "replicate"
     && job.providerModelPath === REPLICATE_WAN_ANIMATE_MODEL_PATH
     && job.mode === REPLICATE_WAN_ANIMATE_MODE
-    && job.metadata.kingcamWanAnimateRealDriverProof === true
+    && (lockedRealGait || lockedControlledPerformance)
     && job.metadata.cloneOnly === true
     && job.metadata.ownerDirectedPilot === true
     && job.metadata.candidateLimit === 1
@@ -407,7 +412,6 @@ function isReplicateWanAnimateJob(job: Pick<GovernedPolloJob, "provider" | "prov
     && job.metadata.sourcePreservationRequired === true
     && job.metadata.hardCreditCap === REPLICATE_WAN_ANIMATE_HARD_SPEND_CAP_USD
     && job.metadata.identityImageUrl === REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL
-    && job.metadata.motionDriverUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL
     && job.metadata.bodyCinemaExcluded === true;
 }
 
@@ -1022,8 +1026,6 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
     providerModelPath === REPLICATE_WAN_VIDEO_EDIT_MODEL_PATH ||
     (providerModelPath === REPLICATE_WAN_ANIMATE_MODEL_PATH
       && input.mode === REPLICATE_WAN_ANIMATE_MODE
-      && sourceUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL
-      && input.metadata?.kingcamWanAnimateRealDriverProof === true
       && input.metadata?.cloneOnly === true
       && input.metadata?.ownerDirectedPilot === true
       && input.metadata?.candidateLimit === 1
@@ -1031,8 +1033,13 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
       && input.metadata?.sourcePreservationRequired === true
       && input.metadata?.hardCreditCap === REPLICATE_WAN_ANIMATE_HARD_SPEND_CAP_USD
       && input.metadata?.identityImageUrl === REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL
-      && input.metadata?.motionDriverUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL
-      && input.metadata?.bodyCinemaExcluded === true) ||
+      && input.metadata?.bodyCinemaExcluded === true
+      && ((sourceUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL
+        && input.metadata?.kingcamWanAnimateRealDriverProof === true
+        && input.metadata?.motionDriverUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL)
+        || (sourceUrl === REPLICATE_WAN_ANIMATE_CONTROLLED_PERFORMANCE_DRIVER_URL
+          && input.metadata?.kingcamWanAnimateControlledPerformanceProof === true
+          && input.metadata?.motionDriverUrl === REPLICATE_WAN_ANIMATE_CONTROLLED_PERFORMANCE_DRIVER_URL))) ||
     (providerModelPath === REPLICATE_OMNI_HUMAN_MODEL_PATH
       && input.mode === REPLICATE_OMNI_HUMAN_MODE
       && input.metadata?.kingcamOmniHumanFullBodyProof === true
@@ -2284,12 +2291,15 @@ export async function createGovernedKingcamReplicateWanAnimateDraft(input: {
   idempotencyKey?: string | null;
   requestId?: string | null;
   metadata?: Record<string, unknown>;
+  motionDriverUrl?: typeof REPLICATE_WAN_ANIMATE_DRIVER_URL | typeof REPLICATE_WAN_ANIMATE_CONTROLLED_PERFORMANCE_DRIVER_URL;
 }): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  const motionDriverUrl = input.motionDriverUrl ?? REPLICATE_WAN_ANIMATE_DRIVER_URL;
+  const controlledPerformance = motionDriverUrl === REPLICATE_WAN_ANIMATE_CONTROLLED_PERFORMANCE_DRIVER_URL;
   return createGovernedPolloDraft({
     creatorId: input.creatorId,
     requestedBy: input.requestedBy,
     provider: "replicate",
-    sourceUrl: REPLICATE_WAN_ANIMATE_DRIVER_URL,
+    sourceUrl: motionDriverUrl,
     sourceChecksum: null,
     prompt: input.prompt,
     providerModelPath: REPLICATE_WAN_ANIMATE_MODEL_PATH,
@@ -2306,7 +2316,8 @@ export async function createGovernedKingcamReplicateWanAnimateDraft(input: {
     requestId: input.requestId,
     metadata: {
       ...(input.metadata || {}),
-      kingcamWanAnimateRealDriverProof: true,
+      kingcamWanAnimateRealDriverProof: !controlledPerformance,
+      kingcamWanAnimateControlledPerformanceProof: controlledPerformance,
       cloneOnly: true,
       providerCostCurrency: "USD",
       hardSpendCapUsd: REPLICATE_WAN_ANIMATE_HARD_SPEND_CAP_USD,
@@ -2316,7 +2327,7 @@ export async function createGovernedKingcamReplicateWanAnimateDraft(input: {
       noAutomaticRetry: true,
       sourcePreservationRequired: true,
       identityImageUrl: REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL,
-      motionDriverUrl: REPLICATE_WAN_ANIMATE_DRIVER_URL,
+      motionDriverUrl,
       providerContract: "replicate_wan_2_2_animate_animation_real_driver_motion_transfer",
       bodyCinemaExcluded: true,
     },
@@ -3121,8 +3132,14 @@ async function submitGovernedReplicateWanAnimateJob(leased: GovernedPolloJob, wo
   if (!token) return failGovernedPolloJob({ jobId: leased.id, code: "replicate_key_missing", error: new Error("REPLICATE_API_TOKEN is not configured"), releaseBudget: true });
   const identityImageUrl = typeof leased.metadata.identityImageUrl === "string" ? leased.metadata.identityImageUrl : "";
   const motionDriverUrl = typeof leased.metadata.motionDriverUrl === "string" ? leased.metadata.motionDriverUrl : "";
-  if (leased.sourceUrl !== REPLICATE_WAN_ANIMATE_DRIVER_URL || motionDriverUrl !== REPLICATE_WAN_ANIMATE_DRIVER_URL || identityImageUrl !== REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL) {
-    return failGovernedPolloJob({ jobId: leased.id, code: "wan_animate_input_contract_mismatch", error: new Error("Wan Animate requires the locked real KingCam driver and approved KingCam identity image."), releaseBudget: true });
+  const originalDriver = leased.metadata.kingcamWanAnimateRealDriverProof === true
+    && leased.sourceUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL
+    && motionDriverUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL;
+  const controlledPerformanceDriver = leased.metadata.kingcamWanAnimateControlledPerformanceProof === true
+    && leased.sourceUrl === REPLICATE_WAN_ANIMATE_CONTROLLED_PERFORMANCE_DRIVER_URL
+    && motionDriverUrl === REPLICATE_WAN_ANIMATE_CONTROLLED_PERFORMANCE_DRIVER_URL;
+  if ((!originalDriver && !controlledPerformanceDriver) || identityImageUrl !== REPLICATE_WAN_ANIMATE_IDENTITY_IMAGE_URL) {
+    return failGovernedPolloJob({ jobId: leased.id, code: "wan_animate_input_contract_mismatch", error: new Error("Wan Animate requires an approved KingCam identity image and one locked real KingCam performance driver."), releaseBudget: true });
   }
   const payload = {
     input: {
