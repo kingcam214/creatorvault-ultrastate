@@ -728,7 +728,6 @@ The Readiness ledger does not submit media, reserve credits, create a provider r
 ### Timed-out IMG_9808 original inspection — 2026-08-18
 
 The remaining supplied original `IMG_9808.MOV` was inspected locally after its clone-only upload timed out. It is not an eligible full-body motion driver: it contains close upper-body/face framing with only brief unstable feet glimpses and no continuous five-second crown-to-shoes shot with visible face, hands, and feet. It remains unregistered, must not be re-uploaded blindly, and is excluded from motion-transfer submission. No provider request, credit spend, transform, or edit occurred.
-
 ## 2026-08-18 — KINGCAM GOLD STANDARD BENCHMARK LIBRARY
 
 CreatorVault now seeds the **KingCam Gold Standard Library** inside the existing owner-only Clone Command authority. It defines eleven real performance cases: standing full body, walking toward camera, walking away/turning, side profile, arms/hands, sitting/rising, torso rotation, controlled performance, camera relationship, lighting/wardrobe variation, and longer continuity.
@@ -752,4 +751,16 @@ Any next request must be a separate clone-only one-output arms-and-hands benchma
 One and only one governed arms-and-hands benchmark was submitted as job `114` after the verified IMG_9741 source binding, live exact estimate (**11.13 Pollo credits / $0.667**), owner approval, and single-use permit. Pollo returned HTTP 400 before creating a provider task: `Duration must be 3–15 seconds.` The stored request carried a numeric seven-second duration, which is inside the provider’s published 3–15-second range and was accepted by the source-specific estimate endpoint. The job recorded `provider_http_400`, no provider job ID, no output URL, no actual cost, and its 11.13-credit reservation was released.
 
 This is a provider submission-contract inconsistency, not a visual-quality result. Do not automatically retry job 114, repeat this exact source/model/payload, or claim a watchable arms-and-hands benchmark. A later corrective decision must first obtain an authoritative submission-contract explanation or use a different eligible lane. The verified IMG_9741 source remains `source_verified` for the arms-and-hands Gold Standard case but has no generated outcome.
+
+## 2026-08-19 — DIRECT KLING MOTION CONTROL SOURCE CHECK
+
+The existing public `kingcam-hero-cam.mp4` was re-inspected against the official direct Kling Motion Control source rules. It passes one visible subject, head, full body, hands and feet, and stable framing. It fails the required real-performance gate: it contains obvious cuts/glitch transitions, stiff/unnatural movement, and is assessed as an AI-generated subject/environment rather than a real camera capture. It is permanently excluded as a driving source for direct Kling Motion Control, Wan Animate, SCAIL, MimicMotion, or any other real KingCam motion-transfer benchmark.
+
+This file may remain a visual platform asset only where its existing classification permits it. It cannot be a canonical performance source, identity-proven full-body driver, benchmark input, or proof of the KingCam Digital Performer.
+
+## 2026-08-19 — SILENT FULL-BODY DRIVER CORRECTION
+
+The screened owner-supplied file `bff8f30c-4116-4cfa-98b4-40c5cb7cd053.mp4` contains 62 seconds of real KingCam continuous full-body natural movement with visible hands and feet. Its former `driverReady: false` classification was incorrectly tied to lack of direct speech. That condition only bars spoken-clone and lip-sync claims; it does not bar a separate silent motion-only benchmark.
+
+The source is now classified as a clone-only `movement_driver` for one governed silent full-body motion benchmark. It must not be used for Body Cinema, a public demonstration, a talking clone, or any identity/voice claim until a watchable output passes full quality review. The source stays subject to the same automatic rejection gates for identity drift, anatomy, hands, feet, wardrobe, camera, props, and temporal instability.
 

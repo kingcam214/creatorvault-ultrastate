@@ -183,13 +183,13 @@ const SUPPLIED_REAL_KINGCAM_TRAINING_AUDITS: Array<{
   },
   {
     fileName: "bff8f30c-4116-4cfa-98b4-40c5cb7cd053.mp4",
-    trainingRole: "performance_candidate",
+    trainingRole: "movement_driver",
     fullBodySeconds: 62,
     naturalMotionScore: 85,
     speechSyncScore: 0,
-    driverReady: false,
-    defects: "No direct speech from KingCam in the usable full-body movement interval.",
-    evidence: "Cameron-supplied real-camera clip with 62 continuous seconds of clear full-body natural movement, visible hands, and feet. It is the strongest current gait and body-performance reference, but it cannot alone drive a speaking clone.",
+    driverReady: true,
+    defects: "No direct speech from KingCam in the usable full-body movement interval; this source is never eligible for a speaking-clone claim.",
+    evidence: "Cameron-supplied real-camera clip with 62 continuous seconds of clear full-body natural movement, visible hands, and feet. It is the strongest current silent gait and body-performance driver for one governed motion-only benchmark. It remains barred from spoken-clone, lip-sync, or public-demo claims until a separate direct-speech/full-body source and an accepted video exist.",
   },
   {
     fileName: "43df2204-c955-4b9e-968a-3bde65e30fbe.mp4",
