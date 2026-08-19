@@ -445,6 +445,62 @@ export const agentExecutorRouter = router({
       return { snapshot, receiptId, activated, autonomousExecutionEnabled: false };
     }),
 
+  runKingcamGoldStandardTruth: ownerProcedure
+    .mutation(async ({ ctx }) => {
+      const startedAt = new Date();
+      const safeRows = async (query: any): Promise<any[]> => {
+        try { return rowsFromExecute(await db.db.execute(query)); } catch { return []; }
+      };
+      const [caseRows, voiceRows, trainingRows] = await Promise.all([
+        safeRows(sql`
+          SELECT status, COUNT(*) AS count
+          FROM kingcam_clone_benchmark_cases
+          WHERE owner_id = ${ctx.user.id}
+          GROUP BY status
+        `),
+        safeRows(sql`
+          SELECT voice_id, COUNT(*) AS readySegments
+          FROM kingcam_clone_voice_tour_segments
+          WHERE owner_id = ${ctx.user.id} AND provider = 'elevenlabs' AND status = 'ready'
+          GROUP BY voice_id
+        `),
+        safeRows(sql`
+          SELECT training_role, classification, COUNT(*) AS count
+          FROM kingcam_clone_training_assets
+          WHERE owner_id = ${ctx.user.id}
+          GROUP BY training_role, classification
+        `),
+      ]);
+      const cases = caseRows.map((row: any) => ({ status: String(row.status), count: Number(row.count ?? 0) }));
+      const awaitingSource = cases.find((row) => row.status === 'awaiting_source_capture')?.count ?? 0;
+      const snapshot = {
+        source: 'kingcam_gold_standard_library',
+        benchmarkVersion: 'kingcam-gold-standard-v1',
+        cases,
+        canonicalVoice: voiceRows.map((row: any) => ({ voiceId: row.voice_id ? String(row.voice_id) : null, readySegments: Number(row.readySegments ?? 0) })),
+        trainingMaterials: trainingRows.map((row: any) => ({ role: String(row.training_role), classification: String(row.classification), count: Number(row.count ?? 0) })),
+        waitingForRealSourceCount: awaitingSource,
+        acceptedBenchmarkCount: cases.find((row) => row.status === 'accepted')?.count ?? 0,
+        rule: 'The agent may identify the next unmet proof requirement, but it cannot approve a source, activate a model, submit a provider request, or claim a clone result.',
+      };
+      const receiptId = await recordAgentActionReceipt({
+        agentSlug: 'kingcam-clone-agent',
+        agentName: 'KingCam Clone Agent',
+        agentCategory: 'clone',
+        taskType: 'kingcam_gold_standard_truth_snapshot',
+        action: 'read_canonical_benchmark_voice_and_training_readiness',
+        status: 'success',
+        outcomeSummary: `Read KingCam Gold Standard truth: ${awaitingSource} cases are waiting for a verified real source, ${snapshot.acceptedBenchmarkCount} cases have accepted evidence, and no provider task was created.`,
+        evidence: { requestedByUserId: ctx.user.id, ...snapshot },
+        artifacts: { snapshot },
+        revenueGenerated: 0,
+        startedAt,
+        finishedAt: new Date(),
+      });
+      const activated = await activateRegisteredProvenWeapon('kingcam-clone-agent');
+      return { snapshot, receiptId, activated, autonomousExecutionEnabled: false };
+    }),
+
   runPerformanceIntelligenceTruth: ownerProcedure
     .mutation(async ({ ctx }) => {
       const startedAt = new Date();
