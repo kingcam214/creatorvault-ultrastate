@@ -26,7 +26,7 @@ const KINGCAM_CLONE_ID = "kingcam-founder-clone";
 const KINGCAM_HERO_REFERENCE = "https://creatorvault.live/videos/kingcam-hero-cam.mp4";
 const KINGCAM_FULL_BODY_IMAGE = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge.webp";
 
-type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review" | "performance_capture_registered" | "training_library_synced" | "digital_performer_readiness";
+type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review" | "performance_capture_registered" | "training_library_synced" | "digital_performer_readiness" | "gold_standard_source_verified";
 type MotionRequestState = "planned" | "approved" | "submitted" | "provider_complete" | "accepted" | "rejected" | "failed";
 type KingcamTrainingRole = "identity_reference" | "wardrobe_reference" | "voice_reference" | "performance_candidate" | "movement_driver" | "rejected";
 type KingcamSourceKind = "real_camera" | "synthetic_or_generated" | "unknown";
@@ -945,6 +945,66 @@ export async function getKingcamGoldStandardBenchmarkLibrary(ownerId: number) {
       rejected: cases.filter((entry) => entry.status === "rejected").length,
     },
   };
+}
+
+export async function bindKingcamArmsHandsBenchmarkSource(input: { ownerId: number; mediaAssetId: string; evidenceReference: string }) {
+  assertOwner(input.ownerId);
+  await seedKingcamGoldStandardBenchmarkCases(input.ownerId);
+  const mediaAssetId = String(input.mediaAssetId || "").trim();
+  const evidenceReference = String(input.evidenceReference || "").trim();
+  if (!mediaAssetId || !evidenceReference) throw new Error("KingCam needs the exact CreatorVault media receipt and the completed visual-inspection reference.");
+  const assetRows = await rawQuery<any>(
+    `SELECT id, public_url, file_name, original_name, duration, width, height, status, created_by_feature
+     FROM media_assets
+     WHERE id = ? AND user_id = ? AND asset_type = 'video' AND status = 'ready'
+     LIMIT 1`,
+    [mediaAssetId, input.ownerId],
+  );
+  const asset = assetRows[0];
+  if (!asset) throw new Error("That KingCam performance source is not a ready CreatorVault video.");
+  if (String(asset.created_by_feature || "") !== "kingcam_performance_capture") {
+    throw new Error("Only a protected KingCam performance capture can enter the Gold Standard library.");
+  }
+  if (Number(asset.duration || 0) < 10 || Number(asset.width || 0) < 720 || Number(asset.height || 0) < 720) {
+    throw new Error("The arms-and-hands benchmark needs a clear CreatorVault performance take of at least ten seconds at 720p or better.");
+  }
+  const caseRows = await rawQuery<any>(
+    `SELECT id, status FROM kingcam_clone_benchmark_cases
+     WHERE clone_id = ? AND owner_id = ? AND case_key = 'arms-and-hands'
+     LIMIT 1`,
+    [KINGCAM_CLONE_ID, input.ownerId],
+  );
+  const benchmarkCase = caseRows[0];
+  if (!benchmarkCase) throw new Error("The KingCam arms-and-hands benchmark case is unavailable.");
+  if (["accepted", "rejected"].includes(String(benchmarkCase.status))) {
+    throw new Error("A reviewed arms-and-hands case cannot be replaced without a new explicit benchmark case.");
+  }
+  await rawExec(
+    `UPDATE kingcam_clone_benchmark_cases
+     SET status = 'source_verified', source_media_asset_id = ?, source_evidence_id = ?,
+         selected_model_key = NULL, benchmark_reference = NULL,
+         acceptance_note = 'Source only: a verified real KingCam hands-and-props performance is ready for a separately governed one-output benchmark. No provider output exists and this case is not accepted.',
+         updated_at = NOW()
+     WHERE id = ?`,
+    [mediaAssetId, evidenceReference, String(benchmarkCase.id)],
+  );
+  await recordKingcamCloneMemory({
+    ownerId: input.ownerId,
+    kind: "gold_standard_source_verified",
+    room: "KingCam Gold Standard",
+    payload: {
+      caseKey: "arms-and-hands",
+      mediaAssetId,
+      mediaUrl: String(asset.public_url),
+      mediaName: String(asset.file_name || asset.original_name || "KingCam performance source"),
+      evidenceReference,
+      cloneOnly: true,
+      bodyCinemaEligible: false,
+      providerTaskCreated: false,
+      acceptedResultClaimed: false,
+    },
+  });
+  return { caseKey: "arms-and-hands", mediaAssetId, sourceVerified: true, library: await getKingcamGoldStandardBenchmarkLibrary(input.ownerId) };
 }
 
 export async function getKingcamDigitalPerformerReadiness(ownerId: number) {
