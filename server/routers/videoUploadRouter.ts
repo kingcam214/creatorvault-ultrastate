@@ -11,7 +11,6 @@ import multer from "multer";
 import { writeFile, readFile, unlink, mkdir, rmdir, stat, readdir } from "fs/promises";
 import { createReadStream, existsSync } from "fs";
 import path from "path";
-import os from "os";
 import { createHash, randomUUID } from "crypto";
 import { execFile } from "child_process";
 import { promisify } from "util";
@@ -251,7 +250,10 @@ async function createVaultxSellableOutputs(file: { url: string; filename: string
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
 export const videoUploadRouter = Router();
 
-const UPLOAD_DIR = path.join(os.tmpdir(), "vaultx-uploads");
+// Incomplete creator uploads must survive PM2 reloads and production deployments.
+// Keep sessions under the same root-owned protected vault tree as final media, but in
+// a private staging directory that is never served as public creator content.
+const UPLOAD_DIR = path.join(DURABLE_UPLOADS_DIR, ".upload-sessions");
 const OWNER_IDS = [6, 33];
 
 async function requireCreatorUploadAccess(req: Request, res: Response, next: NextFunction) {

@@ -806,3 +806,8 @@ The repository token correctly rejected the attempted production-workflow update
 ## 2026-08-19 — EXISTING KINGCAM UPLOAD SESSION FINALIZATION REPAIR
 
 The high-throughput session for `IMG_4392.MOV` completed all 124 local chunks, but concurrent server responses left the stored session counter stale and the last response reported `received: 101`. No final asset or clone-only receipt was created. CreatorVault now exposes a protected session-status read that counts real stored chunks and requires the count to equal the declared total before final assembly. This lets the existing session be finalized or resumed from its actual state without re-sending the original video or producing a partial master.
+
+
+## 2026-08-19 — DURABLE CREATOR UPLOAD SESSIONS
+
+The in-progress `IMG_4392.MOV` session was lost because the chunk router staged its metadata and accepted chunks under `/tmp/vaultx-uploads`, which is erased on the production release lifecycle. Chunk sessions now live under `/root/uploads/content-vault/.upload-sessions`, a protected non-public staging area alongside final creator media. Direct source bytes retained in the controlled workspace will be re-ingested through this durable session after the release. A production reload must never again discard an accepted creator upload before immutable receipt creation.
