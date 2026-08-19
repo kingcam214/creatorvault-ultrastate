@@ -15,6 +15,7 @@ import {
   createGovernedKingcamActionImitationV2Draft,
   createGovernedKingcamKlingV3MotionDraft,
   createGovernedKingcamKlingOmniArmsHandsDraft,
+  createGovernedKingcamKlingOmniControlledPerformanceDraft,
   createGovernedKingcamKlingOmniRealGaitDraft,
   getGovernedPolloJob,
   getGovernedPolloConfig,
@@ -1510,6 +1511,30 @@ export async function launchKingcamKlingOmniArmsHandsBenchmark(input: { ownerId:
   await rawExec("UPDATE kingcam_clone_motion_requests SET state = ?, review_json = ?, updated_at = NOW() WHERE id = ? AND clone_id = ? AND owner_id = ?", [localState, json({ governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_ARMS_HANDS_HARD_CREDIT_CAP, providerQuotedCostUsd: KINGCAM_ARMS_HANDS_QUOTED_COST_USD, providerModelPath: "pollo/kling-ai/kling-v3-omni-ref2video", sourceMediaAssetId: armsHands.sourceMediaAssetId, motionDriverUrl: KINGCAM_ARMS_HANDS_SOURCE_URL, audioReferenceExcluded: true, qualityGate: KINGCAM_ARMS_HANDS_QUALITY_GATES }), motionRequestId, KINGCAM_CLONE_ID, input.ownerId]);
   await recordKingcamCloneMemory({ ownerId: input.ownerId, kind: "motion_proof_planned", room: "KingCam Gold Standard — Arms and Hands", payload: { motionRequestId, governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, benchmarkCaseKey: "arms-and-hands", hardCreditCap: KINGCAM_ARMS_HANDS_HARD_CREDIT_CAP, providerQuotedCostUsd: KINGCAM_ARMS_HANDS_QUOTED_COST_USD, sourceMediaAssetId: armsHands.sourceMediaAssetId, qualityGate: KINGCAM_ARMS_HANDS_QUALITY_GATES } });
   return { motionRequestId, governedJob: submitted, hardCreditCap: KINGCAM_ARMS_HANDS_HARD_CREDIT_CAP, qualityGate: KINGCAM_ARMS_HANDS_QUALITY_GATES };
+}
+
+export async function launchKingcamKlingOmniControlledPerformanceBenchmark(input: { ownerId: number; sceneBrief: string }) {
+  assertOwner(input.ownerId);
+  const sceneBrief = String(input.sceneBrief || "").trim();
+  if (sceneBrief.length < 40 || sceneBrief.length > 1800) throw new Error("KingCam controlled-performance benchmark brief must be between 40 and 1800 characters.");
+  await ensureProfile(input.ownerId);
+  const benchmark = await getKingcamGoldStandardBenchmarkLibrary(input.ownerId);
+  const controlled = benchmark.cases.find((entry) => entry.caseKey === "controlled-performance");
+  if (!controlled || controlled.status !== "source_verified" || controlled.sourceMediaAssetId !== "d9ec0e36-528b-4f96-8004-77b0af3e4f68") {
+    throw new Error("KingCam controlled-performance benchmark needs its verified IMG_4392 source before one governed output can launch.");
+  }
+  const motionRequestId = randomUUID();
+  const motionDriverUrl = "https://creatorvault.live/uploads/content-vault/36bd1982-8de5-4581-9896-70dcb21be904/IMG_4392.MOV";
+  const qualityGate = ["full body remains visible", "approved identity image carries face fidelity", "natural controlled movement", "hands and feet intact", "no crop, spin, cut, text, wardrobe drift, environment drift, plastic body, or anatomy defect", "silent output only", "no speech claim"];
+  await rawExec(`INSERT INTO kingcam_clone_motion_requests (id, clone_id, owner_id, source_url, source_kind, motion_reference_url, intended_lane, candidate_models_json, scene_brief, hard_credit_cap, consent_confirmed, ownership_confirmed, quality_gate_json, state, created_at, updated_at) VALUES (?, ?, ?, ?, 'verified_kingcam_controlled_performance_motion_only', ?, 'governed_pollo_kling_omni_controlled_performance_benchmark', ?, ?, ?, 1, 1, ?, 'planned', NOW(), NOW())`, [motionRequestId, KINGCAM_CLONE_ID, input.ownerId, KINGCAM_FULL_BODY_IMAGE, motionDriverUrl, json(["pollo/kling-ai/kling-v3-omni-ref2video"]), sceneBrief, 11.13, json(qualityGate)]);
+  const drafted = await createGovernedKingcamKlingOmniControlledPerformanceDraft({ creatorId: input.ownerId, requestedBy: input.ownerId, ownershipConfirmed: true, consentConfirmed: true, idempotencyKey: `kingcam-kling-omni-controlled-performance:${motionRequestId}`, requestId: motionRequestId, metadata: { kingcamCloneId: KINGCAM_CLONE_ID, kingcamMotionRequestId: motionRequestId, benchmarkCaseKey: "controlled-performance", sourceMediaAssetId: controlled.sourceMediaAssetId, sourceEvidenceId: controlled.sourceEvidenceId, sceneBrief, qualityGate } });
+  const approved = await approveGovernedPolloJob({ jobId: drafted.job.id, approverId: input.ownerId, expectedFingerprint: drafted.job.fingerprint, reason: "Owner-directed KingCam controlled-performance benchmark. One silent seven-second output only; exact 11.13-credit ceiling; reject any identity, body, hand, foot, motion, crop, spin, cut, text, wardrobe, environment, or anatomy failure." });
+  await authorizeSingleUseGovernedPolloSubmission({ jobId: approved.id, ownerId: input.ownerId, expectedFingerprint: approved.fingerprint, hardCreditCap: 11.13, expiresInMinutes: 10, reason: "One-time KingCam controlled-performance benchmark; exact 11.13-credit / $0.667 provider quote and no automatic retry." });
+  const submitted = await submitGovernedPolloJob({ jobId: approved.id, workerId: `kingcam-kling-omni-controlled-performance-owner-${input.ownerId}` });
+  const localState: MotionRequestState = submitted.state === "submitted" ? "submitted" : submitted.state === "failed" ? "failed" : "approved";
+  await rawExec("UPDATE kingcam_clone_motion_requests SET state = ?, review_json = ?, updated_at = NOW() WHERE id = ? AND clone_id = ? AND owner_id = ?", [localState, json({ governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: 11.13, providerQuotedCostUsd: 0.667, providerModelPath: "pollo/kling-ai/kling-v3-omni-ref2video", sourceMediaAssetId: controlled.sourceMediaAssetId, motionDriverUrl, audioReferenceExcluded: true, qualityGate }), motionRequestId, KINGCAM_CLONE_ID, input.ownerId]);
+  await recordKingcamCloneMemory({ ownerId: input.ownerId, kind: "motion_proof_planned", room: "KingCam Gold Standard — Controlled Performance", payload: { motionRequestId, governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, benchmarkCaseKey: "controlled-performance", hardCreditCap: 11.13, providerQuotedCostUsd: 0.667, sourceMediaAssetId: controlled.sourceMediaAssetId, qualityGate } });
+  return { motionRequestId, governedJob: submitted, hardCreditCap: 11.13, qualityGate };
 }
 
 export async function launchKingcamKlingOmniRealGaitFullBodyProof(input: { ownerId: number; sceneBrief: string }) {

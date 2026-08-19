@@ -17,6 +17,7 @@ import {
   launchKingcamActionImitationV2FullBodyProof,
   launchKingcamKlingV3MotionFullBodyProof,
   launchKingcamKlingOmniArmsHandsBenchmark,
+  launchKingcamKlingOmniControlledPerformanceBenchmark,
   launchKingcamKlingOmniRealGaitFullBodyProof,
   planKingcamFullBodyMotionProof,
   preflightKingcamElevenLabsVoice,
@@ -347,6 +348,17 @@ export const kingcamCloneOperatingSystemRouter = router({
         return await launchKingcamKlingOmniArmsHandsBenchmark({ ownerId: ctx.user.id, sceneBrief: input.sceneBrief });
       } catch (error) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam arms-and-hands benchmark could not launch." });
+      }
+    }),
+
+  launchKlingOmniControlledPerformanceBenchmark: protectedProcedure
+    .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))
+    .mutation(async ({ ctx, input }) => {
+      ownerOnly(ctx.user.id);
+      try {
+        return await launchKingcamKlingOmniControlledPerformanceBenchmark({ ownerId: ctx.user.id, sceneBrief: input.sceneBrief });
+      } catch (error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam controlled-performance benchmark could not launch." });
       }
     }),
 
