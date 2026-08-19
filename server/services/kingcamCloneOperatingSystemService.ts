@@ -1051,7 +1051,8 @@ export async function bindKingcamControlledPerformanceBenchmarkSource(input: { o
   if (["accepted", "rejected"].includes(String(benchmarkCase.status))) {
     throw new Error("A reviewed controlled-performance case cannot be replaced without a new explicit benchmark case.");
   }
-  const limitation = "Source only: verified real KingCam full-body performance. The 480p capture and obscured face make it motion-only; approved identity imagery must carry face fidelity, and this source cannot prove speech or direct facial identity.";
+  const sourceResolution = `${Number(asset.width)}x${Number(asset.height)}`;
+  const limitation = `Source only: verified real KingCam full-body performance at ${sourceResolution}. This is a motion reference, not voice or facial-identity proof; approved identity imagery must carry face fidelity and the source cannot prove speech.`;
   await rawExec(
     `UPDATE kingcam_clone_benchmark_cases
      SET status = 'source_verified', source_media_asset_id = ?, source_evidence_id = ?,
@@ -1073,8 +1074,8 @@ export async function bindKingcamControlledPerformanceBenchmarkSource(input: { o
       cloneOnly: true,
       motionOnly: true,
       identityImageRequired: true,
-      faceSourceObscured: true,
-      sourceResolution: `${Number(asset.width)}x${Number(asset.height)}`,
+      faceSourceObscured: null,
+      sourceResolution,
       bodyCinemaEligible: false,
       providerTaskCreated: false,
       acceptedResultClaimed: false,

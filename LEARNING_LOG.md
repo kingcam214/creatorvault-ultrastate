@@ -811,3 +811,8 @@ The high-throughput session for `IMG_4392.MOV` completed all 124 local chunks, b
 ## 2026-08-19 — DURABLE CREATOR UPLOAD SESSIONS
 
 The in-progress `IMG_4392.MOV` session was lost because the chunk router staged its metadata and accepted chunks under `/tmp/vaultx-uploads`, which is erased on the production release lifecycle. Chunk sessions now live under `/root/uploads/content-vault/.upload-sessions`, a protected non-public staging area alongside final creator media. Direct source bytes retained in the controlled workspace will be re-ingested through this durable session after the release. A production reload must never again discard an accepted creator upload before immutable receipt creation.
+
+
+## 2026-08-19 — IMG_4392 SOURCE-TRUTH CORRECTION
+
+The durable protected intake created ready KingCam performance asset `d9ec0e36-528b-4f96-8004-77b0af3e4f68` from `IMG_4392.MOV`, measured at 1920×1080 and 137.173 seconds. The controlled-performance source binder initially reused a stale 480p/face-obscured limitation from an earlier asset. That wording is corrected: this source is verified real full-body motion reference at its actual resolution, remains clone-only and motion-only, requires approved identity imagery for face fidelity, and cannot prove speech or direct facial identity. It is not an accepted provider result.
