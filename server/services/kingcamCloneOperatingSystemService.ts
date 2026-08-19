@@ -1018,6 +1018,71 @@ export async function bindKingcamArmsHandsBenchmarkSource(input: { ownerId: numb
   return { caseKey: "arms-and-hands", mediaAssetId, sourceVerified: true, library: await getKingcamGoldStandardBenchmarkLibrary(input.ownerId) };
 }
 
+export async function bindKingcamControlledPerformanceBenchmarkSource(input: { ownerId: number; mediaAssetId: string; evidenceReference: string }) {
+  assertOwner(input.ownerId);
+  await seedKingcamGoldStandardBenchmarkCases(input.ownerId);
+  const mediaAssetId = String(input.mediaAssetId || "").trim();
+  const evidenceReference = String(input.evidenceReference || "").trim();
+  if (!mediaAssetId || !evidenceReference) throw new Error("KingCam needs the exact CreatorVault media receipt and completed visual-inspection reference.");
+  if (evidenceReference.length > 96) throw new Error("KingCam's benchmark evidence key must stay within the case record limit.");
+  const assetRows = await rawQuery<any>(
+    `SELECT id, public_url, file_name, original_name, duration, width, height, status, created_by_feature
+     FROM media_assets
+     WHERE id = ? AND user_id = ? AND asset_type = 'video' AND status = 'ready'
+     LIMIT 1`,
+    [mediaAssetId, input.ownerId],
+  );
+  const asset = assetRows[0];
+  if (!asset) throw new Error("That KingCam performance source is not a ready CreatorVault video.");
+  if (String(asset.created_by_feature || "") !== "kingcam_performance_capture") {
+    throw new Error("Only a protected KingCam performance capture can enter the Gold Standard library.");
+  }
+  if (Number(asset.duration || 0) < 10 || Number(asset.width || 0) < 480 || Number(asset.height || 0) < 480) {
+    throw new Error("The controlled-performance benchmark needs a continuous CreatorVault performance take of at least ten seconds at 480p or better.");
+  }
+  const caseRows = await rawQuery<any>(
+    `SELECT id, status FROM kingcam_clone_benchmark_cases
+     WHERE clone_id = ? AND owner_id = ? AND case_key = 'controlled-performance'
+     LIMIT 1`,
+    [KINGCAM_CLONE_ID, input.ownerId],
+  );
+  const benchmarkCase = caseRows[0];
+  if (!benchmarkCase) throw new Error("The KingCam controlled-performance benchmark case is unavailable.");
+  if (["accepted", "rejected"].includes(String(benchmarkCase.status))) {
+    throw new Error("A reviewed controlled-performance case cannot be replaced without a new explicit benchmark case.");
+  }
+  const limitation = "Source only: verified real KingCam full-body performance. The 480p capture and obscured face make it motion-only; approved identity imagery must carry face fidelity, and this source cannot prove speech or direct facial identity.";
+  await rawExec(
+    `UPDATE kingcam_clone_benchmark_cases
+     SET status = 'source_verified', source_media_asset_id = ?, source_evidence_id = ?,
+         selected_model_key = NULL, benchmark_reference = NULL,
+         acceptance_note = ?, updated_at = NOW()
+     WHERE id = ?`,
+    [mediaAssetId, evidenceReference, limitation, String(benchmarkCase.id)],
+  );
+  await recordKingcamCloneMemory({
+    ownerId: input.ownerId,
+    kind: "gold_standard_source_verified",
+    room: "KingCam Gold Standard",
+    payload: {
+      caseKey: "controlled-performance",
+      mediaAssetId,
+      mediaUrl: String(asset.public_url),
+      mediaName: String(asset.file_name || asset.original_name || "KingCam performance source"),
+      evidenceReference,
+      cloneOnly: true,
+      motionOnly: true,
+      identityImageRequired: true,
+      faceSourceObscured: true,
+      sourceResolution: `${Number(asset.width)}x${Number(asset.height)}`,
+      bodyCinemaEligible: false,
+      providerTaskCreated: false,
+      acceptedResultClaimed: false,
+    },
+  });
+  return { caseKey: "controlled-performance", mediaAssetId, sourceVerified: true, motionOnly: true, library: await getKingcamGoldStandardBenchmarkLibrary(input.ownerId) };
+}
+
 export async function getKingcamDigitalPerformerReadiness(ownerId: number) {
   assertOwner(ownerId);
   const commandCenter = await getKingcamCloneOperatingSystem(ownerId);

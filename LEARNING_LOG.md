@@ -770,3 +770,12 @@ The 62-second owner-supplied `bff8f30c-4116-4cfa-98b4-40c5cb7cd053.mp4` remains 
 
 This source remains clone-only `performance_candidate` evidence. It is barred from provider motion-transfer, speaking-clone, lip-sync, public-demo, and Body Cinema use until a separate clean full-body natural-motion driver is verified. No provider request was created from the temporary classification.
 
+
+
+## 2026-08-19 — NEW KINGCAM MOTION-ONLY SOURCE REGISTERED
+
+Cameron supplied the real-camera file `bff8f30c-4116-4cfa-98b4-40c5cb7cd053.mp4`. CreatorVault stored it once through the authenticated canonical clone-only performance-capture upload path as media asset `5c2c0716-b078-46ca-9bcd-295879fe4945`, receipt `e418c86e-9525-46b3-a319-f00516aee2ed`, with a SHA-256 receipt. The source is 178.26 seconds, 848×480, H.264/AAC, fixed camera, and one continuous real KingCam take.
+
+Frame-level review confirms useful full-body natural-performance intervals at 00:04–00:25, 00:41–01:29, 01:52–02:00, and 02:16–02:50. It also confirms the face remains behind a wide-brimmed hat and sunglasses, no direct speech is present, and the source is 480p. It is therefore **motion-only source evidence** for the controlled-performance benchmark. It cannot be used as facial-identity proof, voice proof, lip-sync proof, or an accepted result claim. Any governed motion test must use an approved separate KingCam identity image, exclude audio, record this limitation, keep one output/no retry, and reject identity, anatomy, hand, wardrobe, prop, gait, framing, or continuity drift.
+
+The new owner-only source-binding control only records this evidence in Clone Command. It cannot create a draft, permit, provider task, or credit spend.

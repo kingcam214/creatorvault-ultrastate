@@ -4,6 +4,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import {   archiveKingcamMiniMaxH3PresenceLoop, auditPolloAvailableCredits, auditPolloKingcamActionImitationV2Candidate, auditPolloKingcamKlingOmniArmsHandsCandidate, auditPolloKingcamKlingOmniRealGaitCandidate, auditPolloKingcamKlingV3MotionCandidate, auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, auditPolloMiniMaxH3ReferenceCost, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
 import {
   bindKingcamArmsHandsBenchmarkSource,
+  bindKingcamControlledPerformanceBenchmarkSource,
   createKingcamGuideVoiceTour,
   getKingcamCloneOperatingSystem,
   getKingcamDigitalPerformerReadiness,
@@ -129,6 +130,17 @@ export const kingcamCloneOperatingSystemRouter = router({
         return await bindKingcamArmsHandsBenchmarkSource({ ownerId: ctx.user.id, ...input });
       } catch (error) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam arms-and-hands source could not be verified." });
+      }
+    }),
+
+  bindControlledPerformanceBenchmarkSource: protectedProcedure
+    .input(z.object({ mediaAssetId: z.string().uuid(), evidenceReference: z.string().trim().min(20).max(96) }))
+    .mutation(async ({ ctx, input }) => {
+      ownerOnly(ctx.user.id);
+      try {
+        return await bindKingcamControlledPerformanceBenchmarkSource({ ownerId: ctx.user.id, ...input });
+      } catch (error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam controlled-performance source could not be verified." });
       }
     }),
 
