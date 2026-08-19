@@ -310,6 +310,26 @@ async function rawExec(query: string, params: any[] = []): Promise<any> {
   await (db as any).execute(sql.raw(query));
 }
 
+async function registerChunkedVideoMediaAsset(input: {
+  req: Request;
+  file: { url: string; filename: string };
+  receipt: { durationSec: number; width: number; height: number };
+  sourceClassification?: string;
+}): Promise<{ mediaAssetId: string; createdByFeature: string }> {
+  const creatorId = Number((input.req as any).authenticatedUserId);
+  const requestedClassification = String(input.sourceClassification || "").trim().toLowerCase();
+  const kingcamPerformanceCapture = requestedClassification === "kingcam_performance_capture" && OWNER_IDS.includes(creatorId);
+  const createdByFeature = kingcamPerformanceCapture ? "kingcam_performance_capture" : "body_cinema_chunked_upload";
+  const mediaAssetId = randomUUID();
+  await rawExec(
+    `INSERT INTO media_assets
+      (id, user_id, source_type, asset_type, file_name, original_name, mime_type, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
+     VALUES (?, ?, 'upload', 'video', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?)`,
+    [mediaAssetId, creatorId, input.file.filename, input.file.filename, getMimeType(input.file.filename), input.file.url, input.file.url, input.file.url, input.receipt.durationSec, input.receipt.width, input.receipt.height, createdByFeature],
+  );
+  return { mediaAssetId, createdByFeature };
+}
+
 async function getCreatorId(userId: number): Promise<number | null> {
   const rows = await rawQuery("SELECT id FROM vaultx_creators WHERE user_id = ? AND is_active = 1 LIMIT 1", [userId]);
   return rows[0]?.id ?? null;
@@ -404,6 +424,7 @@ videoUploadRouter.post("/init", async (req: Request, res: Response) => {
           priceCents: req.body.priceCents,
           accessTier: req.body.accessTier,
           registerPaidContent: req.body.registerPaidContent !== false && req.body.registerPaidContent !== "false",
+          sourceClassification: String(req.body.sourceClassification || req.get("x-creatorvault-source-classification") || ""),
         })
 
     );
@@ -446,12 +467,15 @@ videoUploadRouter.post("/chunk", upload.single("chunk"), async (req: Request, re
         filePath: path.join(directory, finalFilename),
       });
       const file = { url, filename: finalFilename, storageId, directory };
+      const chunkedMedia = await registerChunkedVideoMediaAsset({ req, file, receipt: uploadReceipt, sourceClassification: meta.sourceClassification });
       const paidContent = meta.registerPaidContent === false ? null : await registerUploadedPaidContent(req, file, meta);
       return res.json({
         uploadId, chunkIndex, received: meta.receivedChunks, total: meta.totalChunks,
         complete: true,
         file,
         uploadReceipt,
+        mediaAssetId: chunkedMedia.mediaAssetId,
+        createdByFeature: chunkedMedia.createdByFeature,
         paidContent,
       });
     }
@@ -483,8 +507,9 @@ videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
       filePath: path.join(directory, finalFilename),
     });
     const file = { url, filename: finalFilename, storageId, directory };
+    const chunkedMedia = await registerChunkedVideoMediaAsset({ req, file, receipt: uploadReceipt, sourceClassification: meta.sourceClassification });
     const paidContent = meta.registerPaidContent === false ? null : await registerUploadedPaidContent(req, file, meta);
-    res.json({ url, filename: finalFilename, file, uploadReceipt, paidContent });
+    res.json({ url, filename: finalFilename, file, uploadReceipt, mediaAssetId: chunkedMedia.mediaAssetId, createdByFeature: chunkedMedia.createdByFeature, paidContent });
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }

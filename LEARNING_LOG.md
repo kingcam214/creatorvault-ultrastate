@@ -779,3 +779,8 @@ Cameron supplied the real-camera file `bff8f30c-4116-4cfa-98b4-40c5cb7cd053.mp4`
 Frame-level review confirms useful full-body natural-performance intervals at 00:04–00:25, 00:41–01:29, 01:52–02:00, and 02:16–02:50. It also confirms the face remains behind a wide-brimmed hat and sunglasses, no direct speech is present, and the source is 480p. It is therefore **motion-only source evidence** for the controlled-performance benchmark. It cannot be used as facial-identity proof, voice proof, lip-sync proof, or an accepted result claim. Any governed motion test must use an approved separate KingCam identity image, exclude audio, record this limitation, keep one output/no retry, and reject identity, anatomy, hand, wardrobe, prop, gait, framing, or continuity drift.
 
 The new owner-only source-binding control only records this evidence in Clone Command. It cannot create a draft, permit, provider task, or credit spend.
+
+
+## 2026-08-19 — OVERSIZED KINGCAM SOURCE INTAKE REPAIR
+
+The screened KingCam candidate `IMG_4392.MOV` is 258,032,696 bytes and correctly exceeded the single-shot 100 MB direct-upload limit before any file was stored. CreatorVault’s chunked intake now writes the same owner-bound `media_assets` record and immutable receipt as the direct route, including the explicit `kingcam_performance_capture` classification. This is a storage repair only. It cannot create paid content when `registerPaidContent=false`, cannot submit a provider request, and cannot spend credits.
