@@ -831,3 +831,8 @@ The verified 1920×1080 KingCam asset `d9ec0e36-528b-4f96-8004-77b0af3e4f68` has
 ## 2026-08-19 — CONTROLLED-PERFORMANCE PRE-SUBMISSION GATE REPAIR
 
 The first controlled-performance launch stopped before any governed draft, provider task, or credit charge. The selected 1080p source and 11.13-credit estimate were valid. The fragile comparison of the provider’s display-dollar field to a fixed literal was removed. The real protection remains exact provider credits: the source-specific estimate must equal 11.13 Pollo credits, and the single-use permit hard cap must equal that exact recorded number. Ownership, clone-only source binding, one output, no retry, silent-output, and mandatory watchable quality review remain unchanged.
+
+
+## 2026-08-19 — CONTROLLED-PERFORMANCE REQUEST-RECORD REPAIR
+
+The source-specific estimate remained valid and no governed job existed after the 412 launch responses, placing the stop before draft creation. The selected benchmark’s motion-request record used a new overly long source-kind label. It now uses the existing compact `verified_kingcam_motion` classification. This changes no media source, provider model, credit cap, output count, retry rule, or quality gate. No provider task or credit charge was created by either stopped launch attempt.
