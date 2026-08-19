@@ -1374,6 +1374,7 @@ export async function launchKingcamFullBodyMotionProof(input: { ownerId: number;
 
 export async function launchKingcamWanAnimateFullBodyProof(input: { ownerId: number; sceneBrief: string }) {
   assertOwner(input.ownerId);
+  throw new Error("This KingCam motion lane is removed because governed provider runs stalled without returning a video. It cannot be used until a different provider completes a watchable full-body result.");
   const sceneBrief = String(input.sceneBrief || "").trim();
   if (sceneBrief.length < 40 || sceneBrief.length > 1800) {
     throw new Error("KingCam real-driver motion brief must be between 40 and 1800 characters.");
