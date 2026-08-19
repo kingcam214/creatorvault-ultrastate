@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import {   archiveKingcamMiniMaxH3PresenceLoop, auditPolloAvailableCredits, auditPolloKingcamActionImitationV2Candidate, auditPolloKingcamKlingOmniArmsHandsCandidate, auditPolloKingcamKlingOmniRealGaitCandidate, auditPolloKingcamKlingV3MotionCandidate, auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, auditPolloMiniMaxH3ReferenceCost, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
+import {   archiveKingcamMiniMaxH3PresenceLoop, auditPolloAvailableCredits, auditPolloKingcamActionImitationV2Candidate, auditPolloKingcamKlingOmniArmsHandsCandidate, auditPolloKingcamKlingOmniControlledPerformanceCandidate, auditPolloKingcamKlingOmniRealGaitCandidate, auditPolloKingcamKlingV3MotionCandidate, auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, auditPolloMiniMaxH3ReferenceCost, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
 import {
   bindKingcamArmsHandsBenchmarkSource,
   bindKingcamControlledPerformanceBenchmarkSource,
@@ -88,6 +88,17 @@ export const kingcamCloneOperatingSystemRouter = router({
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "Kling 3 Omni real-gait configuration could not be audited." });
     }
   }),
+
+  auditKlingOmniControlledPerformanceCandidate: protectedProcedure
+    .input(z.object({ motionDriverUrl: z.string().url().refine((value) => value.startsWith("https://creatorvault.live/uploads/content-vault/"), "The controlled-performance estimate requires a CreatorVault media URL.") }))
+    .mutation(async ({ ctx, input }) => {
+      ownerOnly(ctx.user.id);
+      try {
+        return await auditPolloKingcamKlingOmniControlledPerformanceCandidate(input.motionDriverUrl);
+      } catch (error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "Kling 3 Omni controlled-performance estimate could not be audited." });
+      }
+    }),
 
   getTrainingLibrary: protectedProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);

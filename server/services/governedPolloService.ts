@@ -1618,6 +1618,45 @@ export async function auditPolloKingcamKlingOmniRealGaitCandidate(): Promise<{
   };
 }
 
+export async function auditPolloKingcamKlingOmniControlledPerformanceCandidate(motionDriverUrl: string): Promise<{
+  providerModelKey: string;
+  apiPath: string;
+  configAvailable: boolean;
+  quotedCredits: number | null;
+  quotedCostUsd: number | null;
+  eligibleForDraft: false;
+  reason: string;
+  providerRecord: Record<string, unknown> | null;
+}> {
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!/^https:\/\//i.test(motionDriverUrl)) return { providerModelKey: "kling-ai/kling-v3-omni-ref2video", apiPath: KINGCAM_KLING_OMNI_REAL_GAIT_ESTIMATE_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: "The controlled-performance estimate requires a secure CreatorVault motion-source URL. No provider task was created.", providerRecord: null };
+  if (!apiKey) return { providerModelKey: "kling-ai/kling-v3-omni-ref2video", apiPath: KINGCAM_KLING_OMNI_REAL_GAIT_ESTIMATE_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: "Pollo credential is unavailable; no estimate or provider task was requested.", providerRecord: null };
+  let response: Response;
+  try {
+    response = await fetch(`https://pollo.ai/api/platform${KINGCAM_KLING_OMNI_REAL_GAIT_ESTIMATE_API_PATH}`, {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ input: {
+        prompt: "KingCam clone-only controlled-performance benchmark. Preserve the approved KingCam identity image and the real full-body performance video. Preserve face identity, body proportions, natural controlled movement, hands, feet, wardrobe anchors, camera relationship, and environment continuity. No audio, no crop, no spin, no added person, no text, no cut, no wardrobe drift, no invented environment, and no plastic anatomy.",
+        refs: [
+          { type: "image", name: "KingCam approved identity", image: KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL, order: 1 },
+          { type: "video", name: "KingCam controlled performance", video: motionDriverUrl, order: 2 },
+        ],
+        duration: 7, aspectRatio: "16:9", resolution: "720p", generateAudio: false,
+      } }),
+    });
+  } catch (error) {
+    return { providerModelKey: "kling-ai/kling-v3-omni-ref2video", apiPath: KINGCAM_KLING_OMNI_REAL_GAIT_ESTIMATE_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: `The controlled-performance estimate could not be read: ${safeErrorMessage(error)}`, providerRecord: null };
+  }
+  const payload = await parseProviderJson(response);
+  if (!response.ok) return { providerModelKey: "kling-ai/kling-v3-omni-ref2video", apiPath: KINGCAM_KLING_OMNI_REAL_GAIT_ESTIMATE_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: `Pollo returned ${response.status} from the controlled-performance estimate: ${safeErrorMessage(payload.responseText ?? payload.message ?? "unknown error")}`, providerRecord: null };
+  const record = isProviderRecord(payload.data) ? payload.data : isProviderRecord(payload) ? payload : null;
+  if (!record) return { providerModelKey: "kling-ai/kling-v3-omni-ref2video", apiPath: KINGCAM_KLING_OMNI_REAL_GAIT_ESTIMATE_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: "Pollo accepted the controlled-performance estimate without a readable cost record. No draft or provider task was created.", providerRecord: null };
+  const quotedCredits = providerNumber(record, ["cost", "singleCost", "totalCost", "credit", "credits", "amount", "price", "discountCost"]);
+  const quotedCostUsd = providerNumber(record, ["costUsd", "singleCostUsd", "totalCostUsd", "usd", "amountUsd", "priceUsd", "priceUSD", "discountCostUsd"]);
+  return { providerModelKey: "kling-ai/kling-v3-omni-ref2video", apiPath: KINGCAM_KLING_OMNI_REAL_GAIT_ESTIMATE_API_PATH, configAvailable: true, quotedCredits, quotedCostUsd, eligibleForDraft: false, reason: quotedCredits !== null && quotedCredits > 0 ? "Pollo returned a source-specific Kling 3 Omni controlled-performance estimate. This is cost evidence only; no draft or provider task was created." : "Pollo returned the controlled-performance estimate without a usable positive credit amount. No draft or provider task was created.", providerRecord: record };
+}
+
 export async function auditPolloKingcamKlingOmniArmsHandsCandidate(): Promise<{
   providerModelKey: string;
   apiPath: string;
