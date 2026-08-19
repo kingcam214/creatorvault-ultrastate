@@ -801,3 +801,8 @@ The application’s 100 MB Multer limit was removed in the prior release, but th
 ### Correction — deployment permission boundary
 
 The repository token correctly rejected the attempted production-workflow update because it lacks GitHub Actions workflow permission. Therefore the Nginx edge/origin configuration change was **not deployed** and must not be treated as active. The live application limit is 2 GB; the live public `creatorvault.live` path still returns Cloudflare HTTP 413 for the 258 MB source. The source and partial chunk receipts remain preserved. The next permanent repair must use an existing authorized root-owned deployment/configuration path or a separately authorized DNS-only upload origin, not pretend the workflow edit reached production.
+
+
+## 2026-08-19 — EXISTING KINGCAM UPLOAD SESSION FINALIZATION REPAIR
+
+The high-throughput session for `IMG_4392.MOV` completed all 124 local chunks, but concurrent server responses left the stored session counter stale and the last response reported `received: 101`. No final asset or clone-only receipt was created. CreatorVault now exposes a protected session-status read that counts real stored chunks and requires the count to equal the declared total before final assembly. This lets the existing session be finalized or resumed from its actual state without re-sending the original video or producing a partial master.

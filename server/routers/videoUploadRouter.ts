@@ -436,6 +436,26 @@ videoUploadRouter.post("/init", async (req: Request, res: Response) => {
   }
 });
 
+// ─── /status — inspect an existing creator upload session without media transfer ─
+videoUploadRouter.get("/status", async (req: Request, res: Response) => {
+  try {
+    const uploadId = String(req.query.uploadId || "").trim();
+    if (!uploadId) return res.status(400).json({ error: "uploadId required" });
+    const sessionDir = path.join(UPLOAD_DIR, uploadId);
+    if (!existsSync(sessionDir)) return res.status(404).json({ error: "Upload session not found" });
+    const meta = JSON.parse(await readFile(path.join(sessionDir, "meta.json"), "utf-8"));
+    const indexes = (await readdir(sessionDir))
+      .map((name) => /^chunk-(\d+)$/.exec(name)?.[1])
+      .filter((value): value is string => Boolean(value))
+      .map((value) => Number(value));
+    const indexSet = new Set(indexes);
+    const missingIndexes = Array.from({ length: Number(meta.totalChunks) }, (_, index) => index).filter((index) => !indexSet.has(index));
+    res.json({ uploadId, received: indexes.length, total: Number(meta.totalChunks), missingIndexes, readyToFinalize: missingIndexes.length === 0 });
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
 // ─── /chunk — receive a chunk, auto-finalize on last chunk ───────────────────
 videoUploadRouter.post("/chunk", upload.single("chunk"), async (req: Request, res: Response) => {
   try {
@@ -507,6 +527,10 @@ videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Upload session not found" });
     }
     const meta = JSON.parse(await readFile(path.join(sessionDir, "meta.json"), "utf-8"));
+    const storedChunks = (await readdir(sessionDir)).filter((name) => /^chunk-\d+$/.test(name)).length;
+    if (storedChunks !== Number(meta.totalChunks)) {
+      return res.status(409).json({ error: "Upload is not complete", received: storedChunks, total: Number(meta.totalChunks) });
+    }
     if (filename) meta.filename = filename;
     const { url, filename: finalFilename, storageId, directory } = await assembleAndUpload(sessionDir, meta);
     const uploadReceipt = await writeVerifiedUploadReceipt({
