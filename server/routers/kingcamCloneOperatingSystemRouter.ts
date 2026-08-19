@@ -112,7 +112,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }),
 
   bindArmsHandsBenchmarkSource: protectedProcedure
-    .input(z.object({ mediaAssetId: z.string().uuid(), evidenceReference: z.string().trim().min(20).max(500) }))
+    .input(z.object({ mediaAssetId: z.string().uuid(), evidenceReference: z.string().trim().min(20).max(96) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
       try {

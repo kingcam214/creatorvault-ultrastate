@@ -953,6 +953,7 @@ export async function bindKingcamArmsHandsBenchmarkSource(input: { ownerId: numb
   const mediaAssetId = String(input.mediaAssetId || "").trim();
   const evidenceReference = String(input.evidenceReference || "").trim();
   if (!mediaAssetId || !evidenceReference) throw new Error("KingCam needs the exact CreatorVault media receipt and the completed visual-inspection reference.");
+  if (evidenceReference.length > 96) throw new Error("KingCam's benchmark evidence key must stay within the case record limit.");
   const assetRows = await rawQuery<any>(
     `SELECT id, public_url, file_name, original_name, duration, width, height, status, created_by_feature
      FROM media_assets
