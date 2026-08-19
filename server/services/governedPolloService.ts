@@ -443,6 +443,10 @@ function isKingcamKlingOmniRealGaitJob(job: Pick<GovernedPolloJob, "provider" | 
   return job.provider === "pollo" && job.providerModelPath === KINGCAM_KLING_OMNI_REAL_GAIT_MODEL_PATH && job.mode === KINGCAM_KLING_OMNI_REAL_GAIT_MODE && job.sourceUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL && job.metadata.kingcamKlingOmniRealGaitProof === true && job.metadata.cloneOnly === true && job.metadata.ownerDirectedPilot === true && job.metadata.candidateLimit === 1 && job.metadata.noAutomaticRetry === true && job.metadata.sourcePreservationRequired === true && job.metadata.hardCreditCap === KINGCAM_KLING_OMNI_REAL_GAIT_HARD_CREDIT_CAP && job.metadata.identityImageUrl === KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL && job.metadata.motionDriverUrl === REPLICATE_WAN_ANIMATE_DRIVER_URL && job.metadata.audioReferenceExcluded === true && job.metadata.bodyCinemaExcluded === true;
 }
 
+function isKingcamKlingOmniArmsHandsJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "sourceUrl" | "metadata">): boolean {
+  return job.provider === "pollo" && job.providerModelPath === KINGCAM_KLING_OMNI_ARMS_HANDS_MODEL_PATH && job.mode === KINGCAM_KLING_OMNI_ARMS_HANDS_MODE && job.sourceUrl === KINGCAM_KLING_OMNI_ARMS_HANDS_SOURCE_URL && job.metadata.kingcamKlingOmniArmsHandsProof === true && job.metadata.cloneOnly === true && job.metadata.ownerDirectedPilot === true && job.metadata.candidateLimit === 1 && job.metadata.noAutomaticRetry === true && job.metadata.sourcePreservationRequired === true && job.metadata.hardCreditCap === 11.13 && job.metadata.identityImageUrl === KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL && job.metadata.motionDriverUrl === KINGCAM_KLING_OMNI_ARMS_HANDS_SOURCE_URL && job.metadata.audioReferenceExcluded === true && job.metadata.bodyCinemaExcluded === true;
+}
+
 function isKingcamKlingV3MotionJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "sourceUrl" | "metadata">): boolean {
   return job.provider === "pollo"
     && job.providerModelPath === KINGCAM_KLING_V3_MOTION_MODEL_PATH
@@ -552,7 +556,7 @@ function isDesignImagePilot(job: Pick<GovernedPolloJob, "providerModelPath" | "m
 }
 
 function isSingleUseGovernedPilot(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "sourceUrl" | "metadata">): boolean {
-  return isSourceVideoReferenceJob(job) || isKingcamWanSpokenMotionJob(job) || isKingcamKlingOmniSpokenMotionJob(job) || isReplicateWanVideoEditJob(job) || isReplicateWanAnimateJob(job) || isKingcamGoEnhanceRealPerformanceJob(job) || isKingcamActionImitationV2Job(job) || isKingcamKlingOmniRealGaitJob(job) || isKingcamKlingV3MotionJob(job) || isReplicateOmniHumanJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isCreatorVaultVaceLightingJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
+  return isSourceVideoReferenceJob(job) || isKingcamWanSpokenMotionJob(job) || isKingcamKlingOmniSpokenMotionJob(job) || isReplicateWanVideoEditJob(job) || isReplicateWanAnimateJob(job) || isKingcamGoEnhanceRealPerformanceJob(job) || isKingcamActionImitationV2Job(job) || isKingcamKlingOmniRealGaitJob(job) || isKingcamKlingOmniArmsHandsJob(job) || isKingcamKlingV3MotionJob(job) || isReplicateOmniHumanJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isCreatorVaultVaceLightingJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
 }
 
 function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
@@ -1965,6 +1969,11 @@ function buildKingcamKlingOmniRealGaitInput(job: Pick<GovernedPolloJob, "sourceU
   return { prompt: job.prompt, duration: 7, aspectRatio: "16:9", resolution: "720P", videoNum: 1, generateAudio: false, refs: [{ type: "image", name: "KingCam identity", image: KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL, order: 1 }, { type: "video", name: "KingCam real gait", video: REPLICATE_WAN_ANIMATE_DRIVER_URL, order: 2 }] };
 }
 
+function buildKingcamKlingOmniArmsHandsInput(job: Pick<GovernedPolloJob, "sourceUrl" | "prompt" | "resolution" | "durationSeconds" | "aspectRatio" | "metadata">): Record<string, unknown> {
+  if (job.sourceUrl !== KINGCAM_KLING_OMNI_ARMS_HANDS_SOURCE_URL || job.resolution !== "720p" || job.durationSeconds !== 7 || job.aspectRatio !== "16:9" || job.metadata.identityImageUrl !== KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL || job.metadata.audioReferenceExcluded !== true) throw new Error("KingCam arms-and-hands benchmark requires the locked image-plus-real-video silent contract.");
+  return { prompt: job.prompt, duration: 7, aspectRatio: "16:9", resolution: "720P", videoNum: 1, generateAudio: false, refs: [{ type: "image", name: "KingCam identity", image: KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL, order: 1 }, { type: "video", name: "KingCam real arms and hands", video: KINGCAM_KLING_OMNI_ARMS_HANDS_SOURCE_URL, order: 2 }] };
+}
+
 function buildKingcamKlingOmniSpokenMotionInput(job: Pick<GovernedPolloJob, "sourceUrl" | "prompt" | "resolution" | "durationSeconds" | "aspectRatio" | "metadata">): Record<string, unknown> {
   if (job.sourceUrl !== KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL) throw new Error("KingCam Kling 3 Omni proof requires the approved full-body CreatorVault PNG reference.");
   if (job.resolution !== "1080p" || job.durationSeconds !== KINGCAM_KLING_OMNI_SPOKEN_MOTION_DURATION_SECONDS || job.aspectRatio !== "9:16") {
@@ -2264,6 +2273,12 @@ export async function createGovernedKingcamKlingOmniRealGaitDraft(input: { creat
   const quote = await auditPolloKingcamKlingOmniRealGaitCandidate();
   if (!quote.configAvailable || quote.quotedCredits !== KINGCAM_KLING_OMNI_REAL_GAIT_QUOTED_CREDITS || quote.quotedCostUsd !== KINGCAM_KLING_OMNI_REAL_GAIT_QUOTED_COST_USD) throw new Error("Kling 3 Omni real-gait proof requires the locked live 11.13-credit / $0.667 mixed-reference estimate.");
   return createGovernedPolloDraft({ creatorId: input.creatorId, requestedBy: input.requestedBy, provider: "pollo", sourceUrl: REPLICATE_WAN_ANIMATE_DRIVER_URL, sourceChecksum: null, prompt: "KingCam clone-only real-gait transfer. Preserve KingCam full body, burgundy gold-embroidered suit, crown, jewelry, black shoes, right-hand cigar, dark lounge geometry, natural gait, and hands and feet. No audio, crop, spin, substitution, environment drift, or text.", providerModelPath: KINGCAM_KLING_OMNI_REAL_GAIT_MODEL_PATH, resolution: "720p", durationSeconds: 7, aspectRatio: "16:9", mode: KINGCAM_KLING_OMNI_REAL_GAIT_MODE, outputCount: 1, estimatedCostCredits: quote.quotedCredits, costEvidenceReference: "Provider-verified Kling 3 Omni mixed-reference estimate: 11.13 Pollo credits / $0.667. One silent output only; the 11.13-credit provider quote is the absolute ceiling; no automatic retry.", ownershipConfirmed: input.ownershipConfirmed, consentConfirmed: input.consentConfirmed, idempotencyKey: input.idempotencyKey, requestId: input.requestId, metadata: { ...(input.metadata || {}), kingcamKlingOmniRealGaitProof: true, cloneOnly: true, ownerDirectedPilot: true, candidateLimit: 1, noAutomaticRetry: true, sourcePreservationRequired: true, providerCostCurrency: "Pollo credits", providerQuote: { credits: quote.quotedCredits, costUsd: quote.quotedCostUsd, source: "official_kling_omni_real_gait_estimate" }, providerQuotedCredits: quote.quotedCredits, providerQuotedCostUsd: quote.quotedCostUsd, hardCreditCap: KINGCAM_KLING_OMNI_REAL_GAIT_HARD_CREDIT_CAP, identityImageUrl: KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL, motionDriverUrl: REPLICATE_WAN_ANIMATE_DRIVER_URL, audioReferenceExcluded: true, providerContract: "pollo_kling_omni_image_plus_real_video_no_audio", bodyCinemaExcluded: true } });
+}
+
+export async function createGovernedKingcamKlingOmniArmsHandsDraft(input: { creatorId: number; requestedBy: number; ownershipConfirmed: boolean; consentConfirmed: boolean; idempotencyKey?: string | null; requestId?: string | null; metadata?: Record<string, unknown> }): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  const quote = await auditPolloKingcamKlingOmniArmsHandsCandidate();
+  if (!quote.configAvailable || quote.quotedCredits !== 11.13 || quote.quotedCostUsd !== 0.667) throw new Error("Kling 3 Omni arms-and-hands benchmark requires the locked live 11.13-credit / $0.667 source-specific estimate.");
+  return createGovernedPolloDraft({ creatorId: input.creatorId, requestedBy: input.requestedBy, provider: "pollo", sourceUrl: KINGCAM_KLING_OMNI_ARMS_HANDS_SOURCE_URL, sourceChecksum: null, prompt: "KingCam clone-only arms-and-hands benchmark. Preserve the real face, black shirt and sweatpants, sunglasses, gold chain, phone in the right hand, shopping bags in the left hand, real gesture timing, hands, fingers, anatomy, mirror environment, and stable camera. No audio, no walk claim, no crown, no cigar, no crop, no added person, no text, no wardrobe change, no cut, and no invented environment.", providerModelPath: KINGCAM_KLING_OMNI_ARMS_HANDS_MODEL_PATH, resolution: "720p", durationSeconds: 7, aspectRatio: "16:9", mode: KINGCAM_KLING_OMNI_ARMS_HANDS_MODE, outputCount: 1, estimatedCostCredits: quote.quotedCredits, costEvidenceReference: "Provider-verified Kling 3 Omni arms-and-hands estimate: 11.13 Pollo credits / $0.667. One silent output only, exact hard cap, and no automatic retry.", ownershipConfirmed: input.ownershipConfirmed, consentConfirmed: input.consentConfirmed, idempotencyKey: input.idempotencyKey, requestId: input.requestId, metadata: { ...(input.metadata || {}), kingcamKlingOmniArmsHandsProof: true, cloneOnly: true, ownerDirectedPilot: true, candidateLimit: 1, noAutomaticRetry: true, sourcePreservationRequired: true, providerCostCurrency: "Pollo credits", providerQuote: { credits: quote.quotedCredits, costUsd: quote.quotedCostUsd, source: "official_kling_omni_arms_hands_estimate" }, providerQuotedCredits: quote.quotedCredits, providerQuotedCostUsd: quote.quotedCostUsd, hardCreditCap: 11.13, identityImageUrl: KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL, motionDriverUrl: KINGCAM_KLING_OMNI_ARMS_HANDS_SOURCE_URL, audioReferenceExcluded: true, providerContract: "pollo_kling_omni_image_plus_real_arms_hands_video_no_audio", bodyCinemaExcluded: true } });
 }
 
 export async function createGovernedKingcamKlingV3MotionDraft(input: { creatorId: number; requestedBy: number; ownershipConfirmed: boolean; consentConfirmed: boolean; idempotencyKey?: string | null; requestId?: string | null; metadata?: Record<string, unknown> }): Promise<{ job: GovernedPolloJob; reused: boolean }> {
@@ -3467,6 +3482,8 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
         ? buildKingcamKlingOmniSpokenMotionInput(leased)
         : isKingcamKlingOmniRealGaitJob(leased)
           ? buildKingcamKlingOmniRealGaitInput(leased)
+          : isKingcamKlingOmniArmsHandsJob(leased)
+            ? buildKingcamKlingOmniArmsHandsInput(leased)
         : isHomepageTextToVideoPilot(leased)
         ? buildHomepageTextToVideoInput(leased)
       : designImage
@@ -3481,7 +3498,7 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
     ? `https://pollo.ai/api/platform/generation/${getSourceVideoReferenceContract(leased.providerModelPath)!.apiPath}`
     : isKingcamWanSpokenMotionJob(leased)
       ? "https://pollo.ai/api/platform/generation/wanx/wan-v2-7"
-      : isKingcamKlingOmniSpokenMotionJob(leased) || isKingcamKlingOmniRealGaitJob(leased)
+      : isKingcamKlingOmniSpokenMotionJob(leased) || isKingcamKlingOmniRealGaitJob(leased) || isKingcamKlingOmniArmsHandsJob(leased)
         ? "https://pollo.ai/api/platform/generation/kling-ai/kling-v3-omni/ref2video"
         : isHomepageTextToVideoPilot(leased)
       ? `https://pollo.ai/api/platform/generation/${HOMEPAGE_TEXT_TO_VIDEO_API_PATH}`

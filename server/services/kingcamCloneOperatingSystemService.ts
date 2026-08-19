@@ -14,6 +14,7 @@ import {
   createGovernedKingcamGoEnhanceRealPerformanceDraft,
   createGovernedKingcamActionImitationV2Draft,
   createGovernedKingcamKlingV3MotionDraft,
+  createGovernedKingcamKlingOmniArmsHandsDraft,
   createGovernedKingcamKlingOmniRealGaitDraft,
   getGovernedPolloJob,
   getGovernedPolloConfig,
@@ -49,6 +50,15 @@ const KINGCAM_KLING_V3_MOTION_HARD_CREDIT_CAP = 98;
 const KINGCAM_KLING_V3_MOTION_QUOTED_COST_USD = 5.88;
 const KINGCAM_KLING_OMNI_REAL_GAIT_HARD_CREDIT_CAP = 11.13;
 const KINGCAM_KLING_OMNI_REAL_GAIT_QUOTED_COST_USD = 0.667;
+const KINGCAM_ARMS_HANDS_SOURCE_URL = "https://creatorvault.live/uploads/content-vault/88de7e52-6b53-448a-a5c1-0479f9133ffe/IMG_9741.MOV";
+const KINGCAM_ARMS_HANDS_HARD_CREDIT_CAP = 11.13;
+const KINGCAM_ARMS_HANDS_QUOTED_COST_USD = 0.667;
+const KINGCAM_ARMS_HANDS_QUALITY_GATES = [
+  "The output shows the real KingCam hands-and-props performance as one continuous silent source-preserving sequence; it must not claim walking, full-body locomotion, speech delivery, or a finished full-body clone.",
+  "KingCam's visible face, black shirt and sweatpants, sunglasses, gold chain, phone in the right hand, shopping bags in the left hand, mirror environment, and real camera relationship remain intact without substitution.",
+  "Both hands, fingers, bags, phone, arms, torso, posture, skin, and clothing remain natural across the clip. Any morphing, extra finger, dropped prop, freeze, crop, new person, text, cut, or invented setting is an automatic rejection.",
+  "This source and output remain clone-only and excluded from Body Cinema. No artifact becomes public or accepted media without a watched review and canonical benchmark evidence.",
+] as const;
 const KINGCAM_GOENHANCE_REAL_PERFORMANCE_GATES = [
   "The result visibly shows real KingCam in continuous full-body movement from crown to shoes, retaining the original seven-second gait timing and wide framing.",
   "KingCam’s recognizable face, beard, build, burgundy suit with gold embroidery, crown, jewelry, black shoes, right-hand cigar, and lounge geometry remain intact without substitution.",
@@ -1412,6 +1422,28 @@ export async function launchKingcamWanAnimateFullBodyProof(input: { ownerId: num
     hardCreditCap: KINGCAM_WAN_ANIMATE_REAL_DRIVER_HARD_SPEND_CAP_USD,
     qualityGate: WAN_ANIMATE_REAL_DRIVER_QUALITY_GATES,
   };
+}
+
+export async function launchKingcamKlingOmniArmsHandsBenchmark(input: { ownerId: number; sceneBrief: string }) {
+  assertOwner(input.ownerId);
+  const sceneBrief = String(input.sceneBrief || "").trim();
+  if (sceneBrief.length < 40 || sceneBrief.length > 1800) throw new Error("KingCam arms-and-hands benchmark brief must be between 40 and 1800 characters.");
+  await ensureProfile(input.ownerId);
+  const benchmark = await getKingcamGoldStandardBenchmarkLibrary(input.ownerId);
+  const armsHands = benchmark.cases.find((entry) => entry.caseKey === "arms-and-hands");
+  if (!armsHands || armsHands.status !== "source_verified" || armsHands.sourceMediaAssetId !== "902aec2f-80db-4a76-ba06-8809bdb5603d") {
+    throw new Error("KingCam arms-and-hands needs its verified IMG_9741 Gold Standard source before one governed benchmark can launch.");
+  }
+  const motionRequestId = randomUUID();
+  await rawExec(`INSERT INTO kingcam_clone_motion_requests (id, clone_id, owner_id, source_url, source_kind, motion_reference_url, intended_lane, candidate_models_json, scene_brief, hard_credit_cap, consent_confirmed, ownership_confirmed, quality_gate_json, state, created_at, updated_at) VALUES (?, ?, ?, ?, 'verified_kingcam_arms_hands_performance', ?, 'governed_pollo_kling_omni_arms_hands_benchmark', ?, ?, ?, 1, 1, ?, 'planned', NOW(), NOW())`, [motionRequestId, KINGCAM_CLONE_ID, input.ownerId, KINGCAM_FULL_BODY_IMAGE, KINGCAM_ARMS_HANDS_SOURCE_URL, json(["pollo/kling-ai/kling-v3-omni-ref2video"]), sceneBrief, KINGCAM_ARMS_HANDS_HARD_CREDIT_CAP, json(KINGCAM_ARMS_HANDS_QUALITY_GATES)]);
+  const drafted = await createGovernedKingcamKlingOmniArmsHandsDraft({ creatorId: input.ownerId, requestedBy: input.ownerId, ownershipConfirmed: true, consentConfirmed: true, idempotencyKey: `kingcam-kling-omni-arms-hands:${motionRequestId}`, requestId: motionRequestId, metadata: { kingcamCloneId: KINGCAM_CLONE_ID, kingcamMotionRequestId: motionRequestId, benchmarkCaseKey: "arms-and-hands", sourceMediaAssetId: armsHands.sourceMediaAssetId, sourceEvidenceId: armsHands.sourceEvidenceId, sceneBrief, qualityGate: KINGCAM_ARMS_HANDS_QUALITY_GATES } });
+  const approved = await approveGovernedPolloJob({ jobId: drafted.job.id, approverId: input.ownerId, expectedFingerprint: drafted.job.fingerprint, reason: "Owner-directed KingCam arms-and-hands benchmark. One silent seven-second output only; exact 11.13-credit ceiling; reject every hand, prop, identity, anatomy, crop, cut, text, wardrobe, environment, or continuity defect." });
+  await authorizeSingleUseGovernedPolloSubmission({ jobId: approved.id, ownerId: input.ownerId, expectedFingerprint: approved.fingerprint, hardCreditCap: KINGCAM_ARMS_HANDS_HARD_CREDIT_CAP, expiresInMinutes: 10, reason: "One-time KingCam arms-and-hands benchmark; 11.13 credits / $0.667 exact provider quote, no automatic retry." });
+  const submitted = await submitGovernedPolloJob({ jobId: approved.id, workerId: `kingcam-kling-omni-arms-hands-owner-${input.ownerId}` });
+  const localState: MotionRequestState = submitted.state === "submitted" ? "submitted" : submitted.state === "failed" ? "failed" : "approved";
+  await rawExec("UPDATE kingcam_clone_motion_requests SET state = ?, review_json = ?, updated_at = NOW() WHERE id = ? AND clone_id = ? AND owner_id = ?", [localState, json({ governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, hardCreditCap: KINGCAM_ARMS_HANDS_HARD_CREDIT_CAP, providerQuotedCostUsd: KINGCAM_ARMS_HANDS_QUOTED_COST_USD, providerModelPath: "pollo/kling-ai/kling-v3-omni-ref2video", sourceMediaAssetId: armsHands.sourceMediaAssetId, motionDriverUrl: KINGCAM_ARMS_HANDS_SOURCE_URL, audioReferenceExcluded: true, qualityGate: KINGCAM_ARMS_HANDS_QUALITY_GATES }), motionRequestId, KINGCAM_CLONE_ID, input.ownerId]);
+  await recordKingcamCloneMemory({ ownerId: input.ownerId, kind: "motion_proof_planned", room: "KingCam Gold Standard — Arms and Hands", payload: { motionRequestId, governedJobId: submitted.id, providerJobId: submitted.providerJobId, state: submitted.state, benchmarkCaseKey: "arms-and-hands", hardCreditCap: KINGCAM_ARMS_HANDS_HARD_CREDIT_CAP, providerQuotedCostUsd: KINGCAM_ARMS_HANDS_QUOTED_COST_USD, sourceMediaAssetId: armsHands.sourceMediaAssetId, qualityGate: KINGCAM_ARMS_HANDS_QUALITY_GATES } });
+  return { motionRequestId, governedJob: submitted, hardCreditCap: KINGCAM_ARMS_HANDS_HARD_CREDIT_CAP, qualityGate: KINGCAM_ARMS_HANDS_QUALITY_GATES };
 }
 
 export async function launchKingcamKlingOmniRealGaitFullBodyProof(input: { ownerId: number; sceneBrief: string }) {

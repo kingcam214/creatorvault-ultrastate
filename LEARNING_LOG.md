@@ -741,3 +741,9 @@ The owner-only KingCam Gold Standard binding recorded existing CreatorVault medi
 
 This advances exactly one benchmark case to `source_verified`. It does **not** create a provider task, spend credits, prove full-body locomotion, prove speech delivery, or create accepted clone media. The source remains clone-only and excluded from Body Cinema. Any provider benchmark must be a distinct one-output, exact-quote, no-retry decision that evaluates only the arms-and-hands gate plus identity, anatomy, source continuity, and wardrobe/prop preservation.
 
+## 2026-08-19 — KINGCAM ARMS-AND-HANDS SOURCE-SPECIFIC QUOTE
+
+The live owner-only Kling 3 Omni mixed-reference estimate audit returned a source-specific price of **11.13 Pollo credits / $0.667** for the verified IMG_9741 arms-and-hands source plus the approved KingCam identity image. The estimate is no-charge evidence only; it did not create a draft, permit, provider task, output, or accepted media.
+
+Any next request must be a separate clone-only one-output arms-and-hands benchmark with the exact 11.13-credit cap, no audio, no automatic retry, and a finished-video review. It may test hand, prop, face, anatomy, wardrobe, source-continuity, and camera stability only. It must not claim full-body natural locomotion, full clone completion, speech delivery, or accepted public KingCam media.
+
