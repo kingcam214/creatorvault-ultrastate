@@ -345,11 +345,17 @@ export const agentExecutorRouter = router({
           return [];
         }
       };
-      const [profileRows, libraryRows, legacyRows, renderRows, trainingRows] = await Promise.all([
+      const [profileRows, canonicalVoiceRows, libraryRows, legacyRows, renderRows, trainingRows] = await Promise.all([
         safeRows(sql`
           SELECT id, voice_id, speaking_style, tone_guidelines, signature_intro, signature_outro, updated_at
           FROM kingcam_clone_profile
           ORDER BY id ASC LIMIT 1
+        `),
+        safeRows(sql`
+          SELECT voice_id, COUNT(*) AS readySegments, MAX(updated_at) AS lastUpdatedAt
+          FROM kingcam_clone_voice_tour_segments
+          WHERE owner_id = ${ctx.user.id} AND status = 'ready' AND provider = 'elevenlabs'
+          GROUP BY voice_id
         `),
         safeRows(sql`
           SELECT COUNT(*) AS libraryReadyCloneVideos, COALESCE(SUM(duration), 0) AS libraryReadyCloneDurationSeconds
@@ -382,11 +388,21 @@ export const agentExecutorRouter = router({
         `),
       ]);
       const profile = profileRows[0] || null;
+      const voiceSegments = canonicalVoiceRows.map((row: any) => ({
+        voiceId: row.voice_id ? String(row.voice_id) : null,
+        readySegments: Number(row.readySegments ?? 0),
+        lastUpdatedAt: row.lastUpdatedAt || null,
+      }));
       const library = libraryRows[0] || {};
       const legacy = legacyRows[0] || {};
       const snapshot = {
-        source: "creatorvault_clone_factory",
-        profile: profile ? {
+        source: "creatorvault_clone_operating_system_and_legacy_factory_audit",
+        canonicalVoice: {
+          ready: voiceSegments.reduce((total, segment) => total + segment.readySegments, 0) > 0,
+          segments: voiceSegments,
+          genericFallbackForbidden: true,
+        },
+        legacyCloneFactoryProfile: profile ? {
           configured: Boolean(profile.voice_id || profile.speaking_style || profile.tone_guidelines),
           hasVoiceReference: Boolean(profile.voice_id),
           hasSpeakingDirection: Boolean(profile.speaking_style || profile.tone_guidelines),
@@ -418,7 +434,7 @@ export const agentExecutorRouter = router({
         taskType: "clone_identity_truth_snapshot",
         action: "read_clone_profile_library_candidates_and_legacy_records",
         status: "success",
-        outcomeSummary: `Read KingCam Clone truth: ${snapshot.media.libraryReadyCloneVideos} verified Clone Factory library videos, ${snapshot.media.legacyReadyRecordsNotPlaybackVerified} legacy ready records not counted as playback-verified, ${snapshot.training.reduce((sum, item) => sum + item.count, 0)} training records, and ${snapshot.profile.configured ? "a configured identity profile" : "no configured identity profile"}.`,
+        outcomeSummary: `Read KingCam Clone truth: ${snapshot.canonicalVoice.ready ? "a ready CreatorVault ElevenLabs voice lane" : "no ready canonical voice-tour segment"}, ${snapshot.media.libraryReadyCloneVideos} media-library clone candidates, ${snapshot.media.legacyReadyRecordsNotPlaybackVerified} legacy ready records quarantined from playback proof, and ${snapshot.training.reduce((sum, item) => sum + item.count, 0)} legacy training records.`,
         evidence: { requestedByUserId: ctx.user.id, ...snapshot },
         artifacts: { snapshot },
         revenueGenerated: 0,
