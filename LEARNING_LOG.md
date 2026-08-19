@@ -784,3 +784,10 @@ The new owner-only source-binding control only records this evidence in Clone Co
 ## 2026-08-19 — OVERSIZED KINGCAM SOURCE INTAKE REPAIR
 
 The screened KingCam candidate `IMG_4392.MOV` is 258,032,696 bytes and correctly exceeded the single-shot 100 MB direct-upload limit before any file was stored. CreatorVault’s chunked intake now writes the same owner-bound `media_assets` record and immutable receipt as the direct route, including the explicit `kingcam_performance_capture` classification. This is a storage repair only. It cannot create paid content when `registerPaidContent=false`, cannot submit a provider request, and cannot spend credits.
+
+
+## 2026-08-19 — LARGE CREATOR VIDEO INTAKE CORRECTION
+
+Root cause: CreatorVault’s direct authenticated video route had an arbitrary 100 MB Multer memory limit. The selected real KingCam source `IMG_4392.MOV` is 258,032,696 bytes, so the direct route correctly returned HTTP 413 before storage. The original sequential chunk fallback then worked but was unacceptably slow because it was forced into 512 KB requests after larger requests timed out.
+
+Correction: the canonical protected direct intake now has a deliberate 2 GB safety ceiling, and the chunk path counts durable chunks from disk with a finalization lock so safe concurrent chunks can progress without losing receipt state or creating duplicate final assets. This is an owner-bound media-ingest repair only: no provider task, paid content, or credit spend is allowed. Proof still requires the actual 258 MB KingCam source to arrive with a durable receipt and clone-only media asset.

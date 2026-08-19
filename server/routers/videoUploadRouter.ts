@@ -8,7 +8,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 // @ts-ignore
 import multer from "multer";
-import { writeFile, readFile, unlink, mkdir, rmdir, stat } from "fs/promises";
+import { writeFile, readFile, unlink, mkdir, rmdir, stat, readdir } from "fs/promises";
 import { createReadStream, existsSync } from "fs";
 import path from "path";
 import os from "os";
@@ -246,7 +246,9 @@ async function createVaultxSellableOutputs(file: { url: string; filename: string
   await writeFile(path.join(outputDir, manifestName), JSON.stringify(manifest, null, 2));
   return { coverUrl, captionUrl, manifestUrl };
 }
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+// Real creator performance footage routinely exceeds 100 MB. Keep a deliberate safety ceiling
+// while allowing high-quality source video through the same authenticated receipt path.
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
 export const videoUploadRouter = Router();
 
 const UPLOAD_DIR = path.join(os.tmpdir(), "vaultx-uploads");
@@ -451,12 +453,21 @@ videoUploadRouter.post("/chunk", upload.single("chunk"), async (req: Request, re
     // @ts-ignore
     await writeFile(chunkPath, req.file.buffer);
 
-    const meta = JSON.parse(await readFile(path.join(sessionDir, "meta.json"), "utf-8"));
-    meta.receivedChunks = (meta.receivedChunks || 0) + 1;
+        const meta = JSON.parse(await readFile(path.join(sessionDir, "meta.json"), "utf-8"));
+    // Count the durable chunk files rather than incrementing a shared counter. This lets a
+    // large creator video transfer several safe chunks at once without losing progress to a race.
+    const storedChunks = (await readdir(sessionDir)).filter((name) => /^chunk-\d+$/.test(name)).length;
+    meta.receivedChunks = storedChunks;
     await writeFile(path.join(sessionDir, "meta.json"), JSON.stringify(meta));
-
-    // Auto-finalize when all chunks received — push to CDN
-    if (meta.receivedChunks >= meta.totalChunks) {
+    // Only one request may assemble the finished source. The other concurrent chunk requests
+    // return their durable receipt while this owner-bound finalization happens exactly once.
+    if (storedChunks >= meta.totalChunks) {
+      const finalizeLock = path.join(sessionDir, ".finalizing");
+      try {
+        await writeFile(finalizeLock, String(Date.now()), { flag: "wx" });
+      } catch {
+        return res.json({ uploadId, chunkIndex, received: storedChunks, total: meta.totalChunks, complete: false, finalizing: true });
+      }
       const { url, filename: finalFilename, storageId, directory } = await assembleAndUpload(sessionDir, meta);
       const uploadReceipt = await writeVerifiedUploadReceipt({
         storageId,
@@ -470,7 +481,7 @@ videoUploadRouter.post("/chunk", upload.single("chunk"), async (req: Request, re
       const chunkedMedia = await registerChunkedVideoMediaAsset({ req, file, receipt: uploadReceipt, sourceClassification: meta.sourceClassification });
       const paidContent = meta.registerPaidContent === false ? null : await registerUploadedPaidContent(req, file, meta);
       return res.json({
-        uploadId, chunkIndex, received: meta.receivedChunks, total: meta.totalChunks,
+        uploadId, chunkIndex, received: storedChunks, total: meta.totalChunks,
         complete: true,
         file,
         uploadReceipt,
@@ -480,7 +491,7 @@ videoUploadRouter.post("/chunk", upload.single("chunk"), async (req: Request, re
       });
     }
 
-    res.json({ uploadId, chunkIndex, received: meta.receivedChunks, total: meta.totalChunks, complete: false });
+    res.json({ uploadId, chunkIndex, received: storedChunks, total: meta.totalChunks, complete: false });
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }
