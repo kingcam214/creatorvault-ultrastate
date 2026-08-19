@@ -791,3 +791,13 @@ The screened KingCam candidate `IMG_4392.MOV` is 258,032,696 bytes and correctly
 Root cause: CreatorVault’s direct authenticated video route had an arbitrary 100 MB Multer memory limit. The selected real KingCam source `IMG_4392.MOV` is 258,032,696 bytes, so the direct route correctly returned HTTP 413 before storage. The original sequential chunk fallback then worked but was unacceptably slow because it was forced into 512 KB requests after larger requests timed out.
 
 Correction: the canonical protected direct intake now has a deliberate 2 GB safety ceiling, and the chunk path counts durable chunks from disk with a finalization lock so safe concurrent chunks can progress without losing receipt state or creating duplicate final assets. This is an owner-bound media-ingest repair only: no provider task, paid content, or credit spend is allowed. Proof still requires the actual 258 MB KingCam source to arrive with a durable receipt and clone-only media asset.
+
+
+## 2026-08-19 — CREATOR LARGE-VIDEO EDGE/ORIGIN REPAIR
+
+The application’s 100 MB Multer limit was removed in the prior release, but the supplied 258 MB KingCam source still returned HTTP 413 at `creatorvault.live` because the public route is Cloudflare-proxied and the origin reverse proxy also enforced a request-size ceiling. The production deployment now writes a validated Nginx `client_max_body_size 2g` policy together with 900-second creator-upload timeouts before the app reload. This is production infrastructure, not a test or proof lane. The next required proof is the real `IMG_4392.MOV` arriving through the exact protected direct route with one durable clone-only media receipt. If the Cloudflare edge remains the final 413 source, the follow-up architecture must use a separate DNS-only upload origin; it must not return to the tiny-chunk workaround.
+
+
+### Correction — deployment permission boundary
+
+The repository token correctly rejected the attempted production-workflow update because it lacks GitHub Actions workflow permission. Therefore the Nginx edge/origin configuration change was **not deployed** and must not be treated as active. The live application limit is 2 GB; the live public `creatorvault.live` path still returns Cloudflare HTTP 413 for the 258 MB source. The source and partial chunk receipts remain preserved. The next permanent repair must use an existing authorized root-owned deployment/configuration path or a separately authorized DNS-only upload origin, not pretend the workflow edit reached production.
