@@ -205,6 +205,10 @@ const KINGCAM_KLING_OMNI_REAL_GAIT_MODE = "kingcam_kling_omni_real_gait_mixed_re
 const KINGCAM_KLING_OMNI_REAL_GAIT_QUOTED_CREDITS = 11.13;
 const KINGCAM_KLING_OMNI_REAL_GAIT_HARD_CREDIT_CAP = 11.13;
 const KINGCAM_KLING_OMNI_REAL_GAIT_QUOTED_COST_USD = 0.667;
+const KINGCAM_KLING_OMNI_ARMS_HANDS_MODEL_PATH = "pollo/kling-ai/kling-v3-omni-ref2video";
+const KINGCAM_KLING_OMNI_ARMS_HANDS_MODE = "kingcam_kling_omni_arms_hands_mixed_reference";
+const KINGCAM_KLING_OMNI_ARMS_HANDS_SOURCE_URL = "https://creatorvault.live/uploads/content-vault/88de7e52-6b53-448a-a5c1-0479f9133ffe/IMG_9741.MOV";
+const KINGCAM_KLING_OMNI_ARMS_HANDS_ESTIMATE_API_PATH = "/v1/generation/kling-ai/kling-v3-omni/video/estimate";
 const SOURCE_VIDEO_REFERENCE_MODE = "ref2video";
 const SOURCE_VIDEO_REFERENCE_CONTRACTS = {
   [SOURCE_VIDEO_REFERENCE_MODEL_PATH]: {
@@ -1608,6 +1612,44 @@ export async function auditPolloKingcamKlingOmniRealGaitCandidate(): Promise<{
       : "Pollo returned a Kling 3 Omni real-gait estimate without a usable positive credit amount. No draft or provider task was created.",
     providerRecord: record,
   };
+}
+
+export async function auditPolloKingcamKlingOmniArmsHandsCandidate(): Promise<{
+  providerModelKey: string;
+  apiPath: string;
+  configAvailable: boolean;
+  quotedCredits: number | null;
+  quotedCostUsd: number | null;
+  eligibleForDraft: false;
+  reason: string;
+  providerRecord: Record<string, unknown> | null;
+}> {
+  const apiKey = String(process.env.POLLO_API_KEY || "").trim();
+  if (!apiKey) return { providerModelKey: "kling-ai/kling-v3-omni-ref2video", apiPath: KINGCAM_KLING_OMNI_ARMS_HANDS_ESTIMATE_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: "Pollo credential is unavailable; no estimate or provider task was requested.", providerRecord: null };
+  let response: Response;
+  try {
+    response = await fetch(`https://pollo.ai/api/platform${KINGCAM_KLING_OMNI_ARMS_HANDS_ESTIMATE_API_PATH}`, {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ input: {
+        prompt: "KingCam clone-only arms-and-hands benchmark. Preserve the actual KingCam face, black shirt and sweatpants, sunglasses, gold chain, phone in the right hand, shopping bags in the left hand, continuous real gesture timing, body anatomy, mirror environment, and camera relationship. Do not add speech, a step, a walk, a crown, a cigar, another person, text, a cut, a wardrobe change, or an invented environment.",
+        refs: [
+          { type: "image", name: "KingCam identity", image: KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL, order: 1 },
+          { type: "video", name: "KingCam real arms and hands", video: KINGCAM_KLING_OMNI_ARMS_HANDS_SOURCE_URL, order: 2 },
+        ],
+        duration: 7, aspectRatio: "16:9", resolution: "720p", generateAudio: false,
+      } }),
+    });
+  } catch (error) {
+    return { providerModelKey: "kling-ai/kling-v3-omni-ref2video", apiPath: KINGCAM_KLING_OMNI_ARMS_HANDS_ESTIMATE_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: `The arms-and-hands estimate could not be read: ${safeErrorMessage(error)}`, providerRecord: null };
+  }
+  const payload = await parseProviderJson(response);
+  if (!response.ok) return { providerModelKey: "kling-ai/kling-v3-omni-ref2video", apiPath: KINGCAM_KLING_OMNI_ARMS_HANDS_ESTIMATE_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: `Pollo returned ${response.status} from the arms-and-hands estimate: ${safeErrorMessage(payload.responseText ?? payload.message ?? "unknown error")}`, providerRecord: null };
+  const record = isProviderRecord(payload.data) ? payload.data : isProviderRecord(payload) ? payload : null;
+  if (!record) return { providerModelKey: "kling-ai/kling-v3-omni-ref2video", apiPath: KINGCAM_KLING_OMNI_ARMS_HANDS_ESTIMATE_API_PATH, configAvailable: false, quotedCredits: null, quotedCostUsd: null, eligibleForDraft: false, reason: "Pollo accepted the arms-and-hands estimate without a readable cost record. No draft or provider task was created.", providerRecord: null };
+  const quotedCredits = providerNumber(record, ["cost", "singleCost", "totalCost", "credit", "credits", "amount", "price", "discountCost"]);
+  const quotedCostUsd = providerNumber(record, ["costUsd", "singleCostUsd", "totalCostUsd", "usd", "amountUsd", "priceUsd", "priceUSD", "discountCostUsd"]);
+  return { providerModelKey: "kling-ai/kling-v3-omni-ref2video", apiPath: KINGCAM_KLING_OMNI_ARMS_HANDS_ESTIMATE_API_PATH, configAvailable: true, quotedCredits, quotedCostUsd, eligibleForDraft: false, reason: quotedCredits !== null && quotedCredits > 0 ? "Pollo returned a source-specific arms-and-hands estimate. This is cost evidence only; a separate governed one-output decision and watchable review are still required." : "Pollo returned the arms-and-hands estimate without a usable positive credit amount. No draft or provider task was created.", providerRecord: record };
 }
 
 export async function auditPolloKingcamKlingV3MotionCandidate(): Promise<{

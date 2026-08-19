@@ -734,3 +734,10 @@ The remaining supplied original `IMG_9808.MOV` was inspected locally after its c
 CreatorVault now seeds the **KingCam Gold Standard Library** inside the existing owner-only Clone Command authority. It defines eleven real performance cases: standing full body, walking toward camera, walking away/turning, side profile, arms/hands, sitting/rising, torso rotation, controlled performance, camera relationship, lighting/wardrobe variation, and longer continuity.
 
 These are **case definitions only**, not evidence, not source approval, not provider access, not a motion request, and not clone proof. Every case starts `awaiting_source_capture`. It cannot advance until a verified real source meets the case’s recorded requirements; then a separately eligible governed route must produce a watchable output, which must be reviewed and recorded through the canonical `creation_model_benchmarks` registry. No source, model, output, score, acceptance, or commercial role has been fabricated by this release.
+
+## 2026-08-19 — KINGCAM ARMS-AND-HANDS GOLD STANDARD SOURCE VERIFIED
+
+The owner-only KingCam Gold Standard binding recorded existing CreatorVault media asset `902aec2f-80db-4a76-ba06-8809bdb5603d` (`IMG_9741.MOV`, 15.913 seconds, 1920×1080) as the source for the **arms-and-hands** case only. Independent visual inspection `video-analysis-06e24b5c-1c9e-4b4b-870d-bd93bdfea188` found a single real-camera take with KingCam’s face visible, both hands continuously visible, a phone in the right hand, shopping bags in the left hand, stable natural gesture, consistent black clothing, sunglasses, gold chain, and no cuts from 00:00–00:15.
+
+This advances exactly one benchmark case to `source_verified`. It does **not** create a provider task, spend credits, prove full-body locomotion, prove speech delivery, or create accepted clone media. The source remains clone-only and excluded from Body Cinema. Any provider benchmark must be a distinct one-output, exact-quote, no-retry decision that evaluates only the arms-and-hands gate plus identity, anatomy, source continuity, and wardrobe/prop preservation.
+
