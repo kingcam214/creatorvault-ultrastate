@@ -69,6 +69,9 @@ import {
 } from "../services/digitalOceanVaceAutomationService";
 import { getDigitalOceanVaceProvisioningReadiness } from "../services/digitalOceanVaceProvisioningService";
 import { destroyCompletedH200VaceWorker, provisionApprovedH100VaceWorker } from "../services/digitalOceanVaceWorkerProvisioner";
+import { destroyWanAnimate2ProofWorker, provisionConfirmedWanAnimate2H200ProofWorker } from "../services/digitalOceanWanProofWorkerProvisioner";
+import { getWanProofWorkerConnectionState } from "../services/wanAnimateProofWorkerConnectionService";
+import { collectWanAnimate2ProofOutput, getWanAnimate2ProofJob, launchOneWanAnimate2Proof, probeWanAnimate2ProofWorker } from "../services/wanAnimate2ProofService";
 
 const OWNER_IDS = new Set([6, 33]);
 
@@ -163,6 +166,65 @@ export const governedPolloRouter = router({
     ownerOnly(ctx.user.id);
     try {
       return await destroyCompletedH200VaceWorker();
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  wanAnimate2ProofWorkerConnectionState: protectedProcedure.query(({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    return getWanProofWorkerConnectionState();
+  }),
+
+  provisionConfirmedWanAnimate2H200ProofWorker: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await provisionConfirmedWanAnimate2H200ProofWorker();
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  probeWanAnimate2ProofWorker: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await probeWanAnimate2ProofWorker();
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  launchOneWanAnimate2Proof: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await launchOneWanAnimate2Proof();
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  wanAnimate2ProofJob: protectedProcedure.input(z.object({ workerJobId: z.string().uuid() })).query(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await getWanAnimate2ProofJob(input.workerJobId);
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  collectWanAnimate2ProofOutput: protectedProcedure.input(z.object({ workerJobId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await collectWanAnimate2ProofOutput({ ownerId: ctx.user.id, workerJobId: input.workerJobId });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  destroyWanAnimate2ProofWorker: protectedProcedure.input(z.object({ dropletId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await destroyWanAnimate2ProofWorker(input.dropletId);
     } catch (error) {
       return asPrecondition(error);
     }
