@@ -30,6 +30,7 @@ type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" |
 type MotionRequestState = "planned" | "approved" | "submitted" | "provider_complete" | "accepted" | "rejected" | "failed";
 type KingcamTrainingRole = "identity_reference" | "wardrobe_reference" | "voice_reference" | "performance_candidate" | "movement_driver" | "rejected";
 type KingcamSourceKind = "real_camera" | "synthetic_or_generated" | "unknown";
+type KingcamBenchmarkCaseStatus = "awaiting_source_capture" | "source_verified" | "ready_for_governed_benchmark" | "watchable_output_required" | "accepted" | "rejected";
 // The verified KingCam motion source is 5.04 seconds; this proof must never request a longer output.
 const KINGCAM_FULL_BODY_PROOF_DURATION_SECONDS = 15;
 const KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP = 2;
@@ -200,6 +201,25 @@ const SUPPLIED_REAL_KINGCAM_TRAINING_AUDITS: Array<{
     defects: "Continuous camera tilts split feet from upper body and there is no direct speech.",
     evidence: "Cameron-supplied real-camera clip with clear natural feet, hands, posture, and body detail. It teaches body mechanics only; it cannot become a full speaking clone driver.",
   },
+];
+
+const KINGCAM_GOLD_STANDARD_CASES: Array<{
+  caseKey: string;
+  title: string;
+  motionFocus: string;
+  requiredEvidence: string[];
+}> = [
+  { caseKey: "standing-full-body", title: "Standing full body", motionFocus: "Crown-to-shoes identity, proportions, posture, wardrobe anchors, and stable framing.", requiredEvidence: ["single real KingCam subject", "face, hands, feet and full body visible", "continuous 5+ second source"] },
+  { caseKey: "walk-toward-camera", title: "Walking toward camera", motionFocus: "Forward locomotion, stride, weight transfer, face continuity, hands, shoes, and temporal stability.", requiredEvidence: ["single continuous take", "full body and face visible", "stable camera"] },
+  { caseKey: "walk-away-and-turn", title: "Walking away and turning", motionFocus: "Back/side/body continuity, turn mechanics, wardrobe geometry, and re-identification after rotation.", requiredEvidence: ["single continuous take", "crown-to-shoes visible", "turn returns face into view"] },
+  { caseKey: "side-profile", title: "Side profile", motionFocus: "Profile identity, silhouette, beard, body shape, and orientation consistency.", requiredEvidence: ["single continuous take", "clear profile", "full body visible"] },
+  { caseKey: "arms-and-hands", title: "Arms and hands", motionFocus: "Finger count, hand anatomy, jewelry/prop preservation, shoulder mechanics, and gesture timing.", requiredEvidence: ["hands visible throughout", "single subject", "no rapid cuts"] },
+  { caseKey: "sit-and-rise", title: "Sitting and standing", motionFocus: "Hip/waist continuity, knees, balance, body proportion, and chair/environment relationship.", requiredEvidence: ["seat visible", "full body visible", "single continuous take"] },
+  { caseKey: "torso-rotation", title: "Torso rotation", motionFocus: "Chest, waist, jacket geometry, chains, shoulders, and identity across rotational movement.", requiredEvidence: ["full torso visible", "single continuous take", "face returns to camera"] },
+  { caseKey: "controlled-performance", title: "Controlled performance movement", motionFocus: "Natural performance energy without freezes, spins, plastic motion, or anatomy failure.", requiredEvidence: ["moderate natural movement", "full body visible", "single continuous take"] },
+  { caseKey: "camera-relationship", title: "Camera relationship", motionFocus: "Stable subject framing and environment geometry while the real camera and body move together.", requiredEvidence: ["stable or intentionally simple camera", "full body visible", "no shot changes"] },
+  { caseKey: "lighting-and-wardrobe", title: "Lighting and wardrobe variation", motionFocus: "Face, skin, wardrobe, crown/jewelry, and prop continuity under a distinct real recording condition.", requiredEvidence: ["verified real KingCam", "wardrobe anchors documented", "single continuous take"] },
+  { caseKey: "longer-continuity", title: "Longer temporal sequence", motionFocus: "Identity, body, environment, and movement consistency beyond the shortest benchmark window.", requiredEvidence: ["10+ seconds continuous", "face/hands/feet visible", "no cuts"] },
 ];
 
 const KINGCAM_GUIDE_TOUR_SEGMENTS = [
@@ -658,6 +678,25 @@ export async function ensureKingcamCloneOperatingSystem(): Promise<void> {
     updated_at DATETIME NOT NULL,
     KEY kingcam_clone_motion_owner (clone_id, owner_id, state, created_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await rawExec(`CREATE TABLE IF NOT EXISTS kingcam_clone_benchmark_cases (
+    id CHAR(36) PRIMARY KEY,
+    clone_id VARCHAR(96) NOT NULL,
+    owner_id BIGINT NOT NULL,
+    case_key VARCHAR(96) NOT NULL,
+    title VARCHAR(191) NOT NULL,
+    motion_focus TEXT NOT NULL,
+    required_evidence_json LONGTEXT NOT NULL,
+    status VARCHAR(48) NOT NULL,
+    source_media_asset_id CHAR(36) NULL,
+    source_evidence_id VARCHAR(96) NULL,
+    selected_model_key VARCHAR(191) NULL,
+    benchmark_reference TEXT NULL,
+    acceptance_note TEXT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    UNIQUE KEY kingcam_clone_benchmark_case_unique (clone_id, owner_id, case_key),
+    KEY kingcam_clone_benchmark_case_status (clone_id, owner_id, status, updated_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
   await rawExec(`CREATE TABLE IF NOT EXISTS kingcam_clone_training_assets (
     id CHAR(36) PRIMARY KEY,
     clone_id VARCHAR(96) NOT NULL,
@@ -860,10 +899,59 @@ export async function getKingcamCloneTrainingLibrary(ownerId: number) {
   };
 }
 
+async function seedKingcamGoldStandardBenchmarkCases(ownerId: number): Promise<void> {
+  await ensureProfile(ownerId);
+  for (const definition of KINGCAM_GOLD_STANDARD_CASES) {
+    await rawExec(
+      `INSERT INTO kingcam_clone_benchmark_cases
+        (id, clone_id, owner_id, case_key, title, motion_focus, required_evidence_json, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'awaiting_source_capture', NOW(), NOW())
+       ON DUPLICATE KEY UPDATE title = VALUES(title), motion_focus = VALUES(motion_focus), required_evidence_json = VALUES(required_evidence_json), updated_at = NOW()`,
+      [randomUUID(), KINGCAM_CLONE_ID, ownerId, definition.caseKey, definition.title, definition.motionFocus, json(definition.requiredEvidence)],
+    );
+  }
+}
+
+export async function getKingcamGoldStandardBenchmarkLibrary(ownerId: number) {
+  assertOwner(ownerId);
+  await seedKingcamGoldStandardBenchmarkCases(ownerId);
+  const rows = await rawQuery<any>(
+    `SELECT case_key, title, motion_focus, required_evidence_json, status, source_media_asset_id, source_evidence_id, selected_model_key, benchmark_reference, acceptance_note, updated_at
+     FROM kingcam_clone_benchmark_cases
+     WHERE clone_id = ? AND owner_id = ?
+     ORDER BY case_key ASC`,
+    [KINGCAM_CLONE_ID, ownerId],
+  );
+  const cases = rows.map((row) => ({
+    caseKey: String(row.case_key), title: String(row.title), motionFocus: String(row.motion_focus),
+    requiredEvidence: parseJson<string[]>(row.required_evidence_json, []),
+    status: String(row.status) as KingcamBenchmarkCaseStatus,
+    sourceMediaAssetId: row.source_media_asset_id ? String(row.source_media_asset_id) : null,
+    sourceEvidenceId: row.source_evidence_id ? String(row.source_evidence_id) : null,
+    selectedModelKey: row.selected_model_key ? String(row.selected_model_key) : null,
+    benchmarkReference: row.benchmark_reference ? String(row.benchmark_reference) : null,
+    acceptanceNote: row.acceptance_note ? String(row.acceptance_note) : null,
+    updatedAt: row.updated_at,
+  }));
+  return {
+    benchmarkVersion: "kingcam-gold-standard-v1",
+    rule: "A case definition is not benchmark evidence. A case stays waiting until it has a verified source, an eligible governed model run, a watchable output, visual review, and a recorded accept-or-reject result in the canonical Creation Model Registry.",
+    cases,
+    summary: {
+      total: cases.length,
+      awaitingSource: cases.filter((entry) => entry.status === "awaiting_source_capture").length,
+      sourceVerified: cases.filter((entry) => entry.status === "source_verified" || entry.status === "ready_for_governed_benchmark").length,
+      accepted: cases.filter((entry) => entry.status === "accepted").length,
+      rejected: cases.filter((entry) => entry.status === "rejected").length,
+    },
+  };
+}
+
 export async function getKingcamDigitalPerformerReadiness(ownerId: number) {
   assertOwner(ownerId);
   const commandCenter = await getKingcamCloneOperatingSystem(ownerId);
   const trainingLibrary = await getKingcamCloneTrainingLibrary(ownerId);
+  const benchmarkLibrary = await getKingcamGoldStandardBenchmarkLibrary(ownerId);
   const motionDriver = trainingLibrary.approvedMovementDriver;
   const acceptedMotionProofs = commandCenter.motionRequests.filter((request) => request.state === "accepted");
   const realPerformanceAssets = trainingLibrary.assets.filter((asset) => asset.sourceKind === "real_camera" && asset.trainingRole !== "rejected");
@@ -922,6 +1010,7 @@ export async function getKingcamDigitalPerformerReadiness(ownerId: number) {
     rule: "Creation is not proof. A Digital-Performer claim becomes live only after a real source, one governed eligible motion run, a watchable output, and an accepted quality review.",
     layers,
     providerBoundary: "Provider documentation, estimate responses, and account configuration are not execution proof or accepted media. Only eligible governed runs with watchable accepted outputs may advance.",
+    benchmarkLibrary: benchmarkLibrary.summary,
     bodyCinemaBoundary: "KingCam clone-only identity, performance, and motion assets remain excluded from Body Cinema.",
   };
 }

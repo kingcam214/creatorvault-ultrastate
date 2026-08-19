@@ -728,3 +728,9 @@ The Readiness ledger does not submit media, reserve credits, create a provider r
 ### Timed-out IMG_9808 original inspection — 2026-08-18
 
 The remaining supplied original `IMG_9808.MOV` was inspected locally after its clone-only upload timed out. It is not an eligible full-body motion driver: it contains close upper-body/face framing with only brief unstable feet glimpses and no continuous five-second crown-to-shoes shot with visible face, hands, and feet. It remains unregistered, must not be re-uploaded blindly, and is excluded from motion-transfer submission. No provider request, credit spend, transform, or edit occurred.
+
+## 2026-08-18 — KINGCAM GOLD STANDARD BENCHMARK LIBRARY
+
+CreatorVault now seeds the **KingCam Gold Standard Library** inside the existing owner-only Clone Command authority. It defines eleven real performance cases: standing full body, walking toward camera, walking away/turning, side profile, arms/hands, sitting/rising, torso rotation, controlled performance, camera relationship, lighting/wardrobe variation, and longer continuity.
+
+These are **case definitions only**, not evidence, not source approval, not provider access, not a motion request, and not clone proof. Every case starts `awaiting_source_capture`. It cannot advance until a verified real source meets the case’s recorded requirements; then a separately eligible governed route must produce a watchable output, which must be reviewed and recorded through the canonical `creation_model_benchmarks` registry. No source, model, output, score, acceptance, or commercial role has been fabricated by this release.

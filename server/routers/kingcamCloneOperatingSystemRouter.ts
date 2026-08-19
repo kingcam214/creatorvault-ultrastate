@@ -6,6 +6,7 @@ import {
   createKingcamGuideVoiceTour,
   getKingcamCloneOperatingSystem,
   getKingcamDigitalPerformerReadiness,
+  getKingcamGoldStandardBenchmarkLibrary,
   getKingcamGuideVoiceTour,
   getKingcamCloneTrainingLibrary,
   launchKingcamFullBodyMotionProof,
@@ -42,6 +43,11 @@ export const kingcamCloneOperatingSystemRouter = router({
   getDigitalPerformerReadiness: protectedProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     return getKingcamDigitalPerformerReadiness(ctx.user.id);
+  }),
+
+  getGoldStandardBenchmarkLibrary: protectedProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    return getKingcamGoldStandardBenchmarkLibrary(ctx.user.id);
   }),
 
   auditActionImitationMotionCandidate: protectedProcedure.mutation(async ({ ctx }) => {
