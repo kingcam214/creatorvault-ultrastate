@@ -28,16 +28,26 @@ export function KingCamPerformanceCapture() {
   const [seconds, setSeconds] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [capturedAssetId, setCapturedAssetId] = useState<string | null>(null);
+  const [reviewChecks, setReviewChecks] = useState({ fullBody: false, naturalMotion: false, directSpeech: false });
+  const [reviewNotes, setReviewNotes] = useState("");
   const timerRef = useRef<number | null>(null);
   const register = trpc.kingcamCloneOperatingSystem.registerPerformanceCapture.useMutation({
-    onSuccess: () => {
+    onSuccess: (result) => {
+      setCapturedAssetId(result.capture.mediaAssetId);
       setState("ready");
-      setNotice("Your real full-body performance is secured in KingCam’s clone vault. It is reserved for the actual motion driver — not Body Cinema.");
+      setNotice("Your real full-body performance is secured in KingCam’s clone vault. Watch it back, then personally confirm whether it can become the one motion driver.");
     },
     onError: (error) => {
       setState("error");
       setNotice(error.message);
     },
+  });
+  const reviewCapture = trpc.kingcamCloneOperatingSystem.reviewPerformanceCapture.useMutation({
+    onSuccess: () => {
+      setNotice("KingCam’s real motion driver is now ready for one governed benchmark. That benchmark still has to make a watchable video and pass review before any public clone claim.");
+    },
+    onError: (error) => setNotice(error.message),
   });
 
   const stopTracks = () => {
@@ -153,6 +163,9 @@ export function KingCamPerformanceCapture() {
     stopTracks();
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
+    setCapturedAssetId(null);
+    setReviewChecks({ fullBody: false, naturalMotion: false, directSpeech: false });
+    setReviewNotes("");
     setSeconds(0);
     setNotice(null);
     setState("idle");
@@ -204,9 +217,11 @@ export function KingCamPerformanceCapture() {
           {isLiveCamera && <div className="pointer-events-none absolute inset-5 rounded-[1.25rem] border border-[#e8bd74]/55"><div className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[9px] font-black uppercase tracking-[.16em] text-[#f3d69c]">crown to shoes</div></div>}
           {state === "recording" && <div className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full bg-[#b8152b] px-3 py-2 text-[10px] font-black uppercase tracking-[.16em] text-white"><span className="h-2 w-2 rounded-full bg-white animate-pulse" /> {seconds}s live</div>}
           {(state === "uploading" || register.isPending) && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center"><Loader2 className="h-10 w-10 animate-spin text-[#e8bd74]" /><p className="mt-4 text-sm font-black text-[#f5dfb0]">LOCKING THE REAL TAKE INTO KINGCAM’S VAULT</p></div>}
-          {state === "ready" && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/72 px-8 text-center"><CheckCircle2 className="h-14 w-14 text-emerald-300" /><p className="mt-4 text-xl font-black text-white">REAL PERFORMANCE SECURED.</p><p className="mt-2 text-sm leading-6 text-white/70">This is now the only approved driver for the next full-body clone proof.</p></div>}
+          {state === "ready" && <div className="pointer-events-none absolute inset-x-4 bottom-4 rounded-2xl border border-emerald-300/35 bg-black/72 px-4 py-3 text-left backdrop-blur"><div className="flex items-center gap-2 text-sm font-black text-emerald-200"><CheckCircle2 className="h-4 w-4" /> Real performance secured</div><p className="mt-1 text-xs leading-5 text-white/70">Watch this exact take all the way through before you decide whether it deserves motion-driver status.</p></div>}
         </div>
       </div>
+
+      {state === "ready" && capturedAssetId && <section className="relative mt-5 rounded-[1.65rem] border border-[#e8bd74]/30 bg-black/35 p-5"><p className="text-[10px] font-black uppercase tracking-[.2em] text-[#e8bd74]">Your review decides the driver</p><h3 className="mt-2 text-2xl font-black tracking-[-.05em] text-white">Do not guess. Watch the whole take.</h3><p className="mt-2 max-w-2xl text-sm leading-6 text-white/65">Check these only if this exact recording shows your whole body from crown to shoes, natural movement, and your real spoken delivery from start to finish. If it misses any part, start a new take instead.</p><div className="mt-5 grid gap-2 md:grid-cols-3">{([{ key: "fullBody", label: "I can see crown to shoes the whole time" }, { key: "naturalMotion", label: "The movement looks natural and uninterrupted" }, { key: "directSpeech", label: "This is my real spoken delivery" }] as const).map((item) => <label key={item.key} className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/[.035] p-3 text-sm font-bold text-white"><input type="checkbox" checked={reviewChecks[item.key]} onChange={(event) => setReviewChecks((current) => ({ ...current, [item.key]: event.target.checked }))} className="mt-0.5 h-4 w-4 accent-[#e8bd74]" />{item.label}</label>)}</div><label className="mt-4 block"><span className="text-xs font-black text-white">What did you watch and verify?</span><textarea value={reviewNotes} onChange={(event) => setReviewNotes(event.target.value)} placeholder="Example: Full body stayed in frame, I took two natural steps, and the spoken words came directly from me." className="mt-2 min-h-24 w-full rounded-xl border border-white/15 bg-black/35 px-3 py-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#e8bd74]/60" /></label><button type="button" disabled={reviewCapture.isPending || !reviewChecks.fullBody || !reviewChecks.naturalMotion || !reviewChecks.directSpeech || reviewNotes.trim().length < 24} onClick={() => reviewCapture.mutate({ mediaAssetId: capturedAssetId, fullBodyConfirmed: true, naturalMotionConfirmed: true, directSpeechConfirmed: true, notes: reviewNotes.trim() })} className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#e8bd74] px-5 text-sm font-black text-[#210b08] disabled:cursor-not-allowed disabled:opacity-40">{reviewCapture.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Checking your real take</> : <><ShieldCheck className="h-4 w-4" /> This is the real motion driver</>}</button></section>}
 
       <div className="relative mt-5 flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-sm leading-6 text-white/62">{notice || (state === "recording" ? "Move naturally. Let the camera see your whole body and hear your real voice." : "Record one clean take. CreatorVault checks its duration, frame quality, ownership, and clone-only classification before it can be used.")}</p>

@@ -28,7 +28,7 @@ const KINGCAM_CLONE_ID = "kingcam-founder-clone";
 const KINGCAM_HERO_REFERENCE = "https://creatorvault.live/videos/kingcam-hero-cam.mp4";
 const KINGCAM_FULL_BODY_IMAGE = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge.webp";
 
-type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review" | "performance_capture_registered" | "training_library_synced" | "digital_performer_readiness" | "gold_standard_source_verified";
+type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review" | "performance_capture_registered" | "performance_capture_reviewed" | "training_library_synced" | "digital_performer_readiness" | "gold_standard_source_verified";
 type MotionRequestState = "planned" | "approved" | "submitted" | "provider_complete" | "accepted" | "rejected" | "failed";
 type KingcamTrainingRole = "identity_reference" | "wardrobe_reference" | "voice_reference" | "performance_candidate" | "movement_driver" | "rejected";
 type KingcamSourceKind = "real_camera" | "synthetic_or_generated" | "unknown";
@@ -1258,6 +1258,59 @@ export async function registerKingcamPerformanceCapture(input: { ownerId: number
     payload: capture,
   });
   return { ready: true, capture, trainingLibrary: await getKingcamCloneTrainingLibrary(input.ownerId) };
+}
+
+export async function reviewKingcamPerformanceCapture(input: { ownerId: number; mediaAssetId: string; fullBodyConfirmed: boolean; naturalMotionConfirmed: boolean; directSpeechConfirmed: boolean; notes: string }) {
+  assertOwner(input.ownerId);
+  const mediaAssetId = String(input.mediaAssetId || "").trim();
+  const notes = String(input.notes || "").trim();
+  if (!mediaAssetId) throw new Error("Choose the exact KingCam Performance Capture you personally reviewed.");
+  if (!input.fullBodyConfirmed || !input.naturalMotionConfirmed || !input.directSpeechConfirmed) {
+    throw new Error("A KingCam motion driver needs all three: continuous crown-to-shoes framing, natural movement, and direct spoken delivery.");
+  }
+  if (notes.length < 24) throw new Error("Write a short real review note before promoting a KingCam motion driver.");
+  await ensureProfile(input.ownerId);
+  const rows = await rawQuery<any>(
+    `SELECT t.media_asset_id, t.media_url, t.media_name, t.source_kind, t.training_role, t.full_body_seconds, t.analysis_json,
+            m.duration, m.width, m.height, m.status, m.created_by_feature
+     FROM kingcam_clone_training_assets t
+     INNER JOIN media_assets m ON m.id = t.media_asset_id AND m.user_id = t.owner_id
+     WHERE t.clone_id = ? AND t.owner_id = ? AND t.media_asset_id = ? LIMIT 1`,
+    [KINGCAM_CLONE_ID, input.ownerId, mediaAssetId],
+  );
+  const candidate = rows[0];
+  if (!candidate) throw new Error("That performance capture is not inside KingCam’s protected training vault.");
+  if (String(candidate.source_kind) !== "real_camera" || String(candidate.training_role) !== "performance_candidate") {
+    throw new Error("Only a pending real-camera KingCam Performance Capture can be promoted into the motion-driver lane.");
+  }
+  if (String(candidate.created_by_feature || "") !== "kingcam_performance_capture" || String(candidate.status || "") !== "ready") {
+    throw new Error("KingCam needs a verified direct Performance Capture receipt before it can promote this take.");
+  }
+  const duration = Number(candidate.duration || candidate.full_body_seconds || 0);
+  const width = Number(candidate.width || 0);
+  const height = Number(candidate.height || 0);
+  if (!Number.isFinite(duration) || duration < 7 || duration > 60 || width < 720 || height < 720) {
+    throw new Error("The capture must be a clear 7–60 second, 720p-or-better full-body take.");
+  }
+  const previous = parseJson<Record<string, unknown>>(candidate.analysis_json, {});
+  await upsertKingcamTrainingAsset({
+    ownerId: input.ownerId,
+    mediaAssetId,
+    mediaUrl: String(candidate.media_url),
+    mediaName: String(candidate.media_name || "KingCam direct performance capture"),
+    sourceKind: "real_camera",
+    trainingRole: "movement_driver",
+    fullBodySeconds: duration,
+    naturalMotionScore: 100,
+    speechSyncScore: 100,
+    driverReady: true,
+    evidence: "Owner-reviewed direct KingCam Performance Capture. The owner confirmed continuous crown-to-shoes framing, natural full-body movement, and direct spoken delivery before the driver was promoted.",
+    defects: null,
+    assessmentSource: "creatorvault_owner_performance_review",
+    analysis: { ...previous, cloneOnly: true, bodyCinemaEligible: false, driverReview: { reviewedBy: "owner", reviewedAt: new Date().toISOString(), fullBodyConfirmed: true, naturalMotionConfirmed: true, directSpeechConfirmed: true, notes } },
+  });
+  await recordKingcamCloneMemory({ ownerId: input.ownerId, kind: "performance_capture_reviewed", room: "KingCam Performance Capture", payload: { mediaAssetId, duration, width, height, notes, promotedTo: "movement_driver", cloneOnly: true, bodyCinemaEligible: false } });
+  return { ready: true, motionDriver: (await getKingcamCloneTrainingLibrary(input.ownerId)).approvedMovementDriver, rule: "The driver is now eligible for one governed motion benchmark. It is not a public clone result until a watchable output clears the quality review." };
 }
 
 export async function startKingcamCloneTour(input: { ownerId: number; roomId: string }) {

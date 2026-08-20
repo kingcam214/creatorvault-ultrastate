@@ -25,6 +25,7 @@ import {
   preflightKingcamReplicateOmniHuman,
   preflightKingcamReplicateWanAnimate,
   registerKingcamPerformanceCapture,
+  reviewKingcamPerformanceCapture,
   recordKingcamCloneMemory,
   reviewKingcamFullBodyMotionProof,
   startKingcamCloneTour,
@@ -165,6 +166,23 @@ export const kingcamCloneOperatingSystemRouter = router({
         return await registerKingcamPerformanceCapture({ ownerId: ctx.user.id, mediaAssetId: input.mediaAssetId });
       } catch (error) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam Performance Capture could not be registered." });
+      }
+    }),
+
+  reviewPerformanceCapture: protectedProcedure
+    .input(z.object({
+      mediaAssetId: z.string().uuid(),
+      fullBodyConfirmed: z.literal(true),
+      naturalMotionConfirmed: z.literal(true),
+      directSpeechConfirmed: z.literal(true),
+      notes: z.string().trim().min(24).max(1200),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      ownerOnly(ctx.user.id);
+      try {
+        return await reviewKingcamPerformanceCapture({ ownerId: ctx.user.id, ...input });
+      } catch (error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam Performance Capture could not be reviewed." });
       }
     }),
 
