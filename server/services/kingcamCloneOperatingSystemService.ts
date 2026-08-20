@@ -28,7 +28,7 @@ const KINGCAM_CLONE_ID = "kingcam-founder-clone";
 const KINGCAM_HERO_REFERENCE = "https://creatorvault.live/videos/kingcam-hero-cam.mp4";
 const KINGCAM_FULL_BODY_IMAGE = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge.webp";
 
-type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review" | "performance_capture_registered" | "performance_capture_reviewed" | "training_library_synced" | "digital_performer_readiness" | "gold_standard_source_verified";
+type CloneMemoryKind = "tour_started" | "tour_room_viewed" | "owner_directive" | "motion_proof_planned" | "quality_review" | "performance_capture_registered" | "performance_capture_reviewed" | "performance_role_reviewed" | "training_library_synced" | "digital_performer_readiness" | "gold_standard_source_verified" | "launch_mission_started";
 type MotionRequestState = "planned" | "approved" | "submitted" | "provider_complete" | "accepted" | "rejected" | "failed";
 type KingcamTrainingRole = "identity_reference" | "wardrobe_reference" | "voice_reference" | "performance_candidate" | "movement_driver" | "rejected";
 type KingcamSourceKind = "real_camera" | "synthetic_or_generated" | "unknown";
@@ -301,6 +301,76 @@ const TRUTH_LIBRARY: KingcamTruthCard[] = [
     restriction: "External models may render a controlled component, but they never become the clone's home or source of truth.",
   },
 ];
+
+type KingcamLaunchMissionId = "launch-story" | "creator-ownership" | "caption-impact" | "trailer-release" | "clone-presence";
+
+type KingcamLaunchMission = {
+  id: KingcamLaunchMissionId;
+  title: string;
+  command: string;
+  room: string;
+  route: string;
+  description: string;
+  proofNeeded: string;
+  status: "ready_now" | "requires_review" | "requires_real_performance";
+};
+
+const KINGCAM_LAUNCH_MISSIONS: KingcamLaunchMission[] = [
+  {
+    id: "launch-story",
+    title: "Build the launch story",
+    command: "Turn one real creator moment into a public CreatorVault story.",
+    room: "Creator Command",
+    route: "/king/content",
+    description: "Start from real media, choose the release angle, and keep every source inside the CreatorVault world.",
+    proofNeeded: "A saved source and a finished approved release asset.",
+    status: "ready_now",
+  },
+  {
+    id: "creator-ownership",
+    title: "Protect the creator’s world",
+    command: "Bring the real source, identity context, and next action into CreatorVault before anything moves outward.",
+    room: "Creator ownership",
+    route: "/king/media-vault",
+    description: "KingCam can direct the team to the protected media room where the source stays visible and governed.",
+    proofNeeded: "A creator-owned media asset and a documented source record.",
+    status: "ready_now",
+  },
+  {
+    id: "caption-impact",
+    title: "Make the words hit",
+    command: "Take a real talking moment to Caption Stage and turn the spoken message into a reviewed master.",
+    room: "Caption Stage",
+    route: "/creator/caption-stage",
+    description: "This mission preserves the original speaker and requires the words to be reviewed before the final captioned video exists.",
+    proofNeeded: "A playable reviewed captioned master.",
+    status: "ready_now",
+  },
+  {
+    id: "trailer-release",
+    title: "Cut the release moment",
+    command: "Build a real trailer from the strongest CreatorVault footage and shape the public payoff.",
+    room: "Trailer Maker",
+    route: "/trailer-maker",
+    description: "KingCam sends the team into the release-building room with a focused mission instead of an empty prompt.",
+    proofNeeded: "A watchable accepted trailer from a real source.",
+    status: "requires_review",
+  },
+  {
+    id: "clone-presence",
+    title: "Advance KingCam presence",
+    command: "Strengthen one part of KingCam—visual canon, direct delivery, gait, hands, reaction, or combined performance.",
+    room: "KingCam Clone Command",
+    route: "/king/clone-command",
+    description: "The clone grows through separately reviewed identity parts, not through one generic avatar button.",
+    proofNeeded: "A reviewed role capture and, for a moving clone claim, a watchable governed output.",
+    status: "requires_real_performance",
+  },
+];
+
+function buildKingcamLaunchMissionBoard() {
+  return KINGCAM_LAUNCH_MISSIONS.map((mission) => ({ ...mission }));
+}
 
 const QUALITY_GATES = [
   "Face, beard, skin tone, body build, crown, jewelry, wardrobe, and other approved identity anchors remain recognizable.",
@@ -770,7 +840,8 @@ function voicePolicy() {
 function buildKingcamIdentityPassport(input: { trainingLibrary: Awaited<ReturnType<typeof getKingcamCloneTrainingLibrary>>; motionPolicy: ReturnType<typeof motionPolicy> }) {
   const performanceCandidates = input.trainingLibrary.assets.filter((asset) => asset.trainingRole === "performance_candidate");
   const motionDriver = input.trainingLibrary.approvedMovementDriver;
-  const capturedRoles = new Set(performanceCandidates.map((asset) => String((asset.analysis as Record<string, unknown>).performanceRole || "")).filter((role): role is KingcamPerformanceRole => role in KINGCAM_PERFORMANCE_ROLE_LABELS));
+  const reviewedRoleCandidates = performanceCandidates.filter((asset) => Boolean((asset.analysis as Record<string, unknown>).roleEvidenceReviewed));
+  const capturedRoles = new Set(reviewedRoleCandidates.map((asset) => String((asset.analysis as Record<string, unknown>).performanceRole || "")).filter((role): role is KingcamPerformanceRole => role in KINGCAM_PERFORMANCE_ROLE_LABELS));
   const roleLabelsPresent = Array.from(capturedRoles).map((role) => KINGCAM_PERFORMANCE_ROLE_LABELS[role]);
   const roleLabelsNeeded = (Object.keys(KINGCAM_PERFORMANCE_ROLE_LABELS) as KingcamPerformanceRole[]).filter((role) => role !== "combined_performance" && !capturedRoles.has(role)).map((role) => KINGCAM_PERFORMANCE_ROLE_LABELS[role]);
   const realVoiceConfigured = Boolean(String(process.env.ELEVENLABS_API_KEY || "").trim() && String(process.env.KINGCAM_ELEVEN_VOICE_ID || "").trim());
@@ -801,7 +872,7 @@ function buildKingcamIdentityPassport(input: { trainingLibrary: Awaited<ReturnTy
       needs: ["owner-approved delivery styles", "clean single-speaker quality reference", "voice-to-video acceptance check"],
     },
     bodyPerformance: {
-      status: motionDriver ? "driver_ready_for_one_benchmark" : performanceCandidates.length ? "specialized_evidence_ready" : "needs_real_performance_evidence",
+      status: motionDriver ? "driver_ready_for_one_benchmark" : reviewedRoleCandidates.length ? "reviewed_role_evidence_ready" : performanceCandidates.length ? "capture_waits_for_owner_review" : "needs_real_performance_evidence",
       title: "Body, gait, hands, and performance",
       evidenceCount: performanceCandidates.length,
       carries: roleLabelsPresent.length ? roleLabelsPresent : ["body proportions", "selected motion references", "hands and feet evidence when visible"],
@@ -896,6 +967,7 @@ export async function getKingcamCloneOperatingSystem(ownerId: number) {
     identityPassport,
     qualityPolicy: parseJson(profile.quality_policy_json, { gates: QUALITY_GATES }),
     truthLibrary: TRUTH_LIBRARY,
+    launchMissionBoard: buildKingcamLaunchMissionBoard(),
     recentMemory: recentMemory.map((event) => ({
       id: String(event.id), kind: String(event.kind), room: event.room ? String(event.room) : null,
       payload: parseJson(event.payload_json, {}), createdAt: String(event.created_at),
@@ -910,6 +982,26 @@ export async function getKingcamCloneOperatingSystem(ownerId: number) {
       review: parseJson(request.review_json, null), createdAt: String(request.created_at), updatedAt: String(request.updated_at),
     })),
   };
+}
+
+export async function startKingcamLaunchMission(input: { ownerId: number; missionId: KingcamLaunchMissionId }) {
+  assertOwner(input.ownerId);
+  const mission = KINGCAM_LAUNCH_MISSIONS.find((entry) => entry.id === input.missionId);
+  if (!mission) throw new Error("That KingCam launch mission is not available.");
+  const memory = await recordKingcamCloneMemory({
+    ownerId: input.ownerId,
+    kind: "launch_mission_started",
+    room: mission.room,
+    payload: {
+      missionId: mission.id,
+      title: mission.title,
+      command: mission.command,
+      route: mission.route,
+      proofNeeded: mission.proofNeeded,
+      status: mission.status,
+    },
+  });
+  return { mission, memory, nextAction: mission.route };
 }
 
 export async function recordKingcamCloneMemory(input: { ownerId: number; kind: CloneMemoryKind; room?: string | null; payload: Record<string, unknown> }) {
@@ -1339,6 +1431,66 @@ export async function registerKingcamPerformanceCapture(input: { ownerId: number
   return { ready: true, capture, trainingLibrary: await getKingcamCloneTrainingLibrary(input.ownerId) };
 }
 
+export async function reviewKingcamPerformanceRoleEvidence(input: { ownerId: number; mediaAssetId: string; performanceRole: KingcamPerformanceRole; notes: string }) {
+  assertOwner(input.ownerId);
+  const mediaAssetId = String(input.mediaAssetId || "").trim();
+  const notes = String(input.notes || "").trim();
+  if (!mediaAssetId) throw new Error("Choose the exact KingCam Performance Capture you personally reviewed.");
+  if (notes.length < 24) throw new Error("Write a short real review note before locking a KingCam performance role.");
+  await ensureProfile(input.ownerId);
+  const rows = await rawQuery<any>(
+    `SELECT t.media_asset_id, t.training_role, t.analysis_json, m.status, m.created_by_feature
+     FROM kingcam_clone_training_assets t
+     INNER JOIN media_assets m ON m.id = t.media_asset_id AND m.user_id = t.owner_id
+     WHERE t.clone_id = ? AND t.owner_id = ? AND t.media_asset_id = ? LIMIT 1`,
+    [KINGCAM_CLONE_ID, input.ownerId, mediaAssetId],
+  );
+  const candidate = rows[0];
+  if (!candidate || String(candidate.training_role) !== "performance_candidate" || String(candidate.created_by_feature || "") !== "kingcam_performance_capture" || String(candidate.status || "") !== "ready") {
+    throw new Error("Only a ready KingCam Performance Capture can become reviewed role evidence.");
+  }
+  const previous = parseJson<Record<string, unknown>>(candidate.analysis_json, {});
+  const capturedRole = String(previous.performanceRole || "");
+  if (capturedRole !== input.performanceRole) {
+    throw new Error("Review this take using the exact KingCam performance role selected when it was recorded.");
+  }
+  const analysis = {
+    ...previous,
+    roleEvidenceReviewed: true,
+    roleReviewNotes: notes,
+    roleReviewedAt: new Date().toISOString(),
+    roleReviewOnly: true,
+    driverReady: false,
+    driverPromotionStillRequired: true,
+  };
+  await rawExec(
+    `UPDATE kingcam_clone_training_assets
+     SET evidence = ?, analysis_json = ?, updated_at = NOW()
+     WHERE clone_id = ? AND owner_id = ? AND media_asset_id = ?`,
+    [
+      `Owner-reviewed KingCam ${KINGCAM_PERFORMANCE_ROLE_LABELS[input.performanceRole]} evidence. It strengthens this specialized layer only and is not a full-body motion-driver or finished-clone claim. Review: ${notes}`,
+      json(analysis),
+      KINGCAM_CLONE_ID,
+      input.ownerId,
+      mediaAssetId,
+    ],
+  );
+  await recordKingcamCloneMemory({
+    ownerId: input.ownerId,
+    kind: "performance_role_reviewed",
+    room: "KingCam Performance Capture",
+    payload: { mediaAssetId, performanceRole: input.performanceRole, performanceRoleLabel: KINGCAM_PERFORMANCE_ROLE_LABELS[input.performanceRole], notes, driverReady: false, roleReviewOnly: true },
+  });
+  return {
+    ready: true,
+    mediaAssetId,
+    performanceRole: input.performanceRole,
+    performanceRoleLabel: KINGCAM_PERFORMANCE_ROLE_LABELS[input.performanceRole],
+    driverReady: false,
+    trainingLibrary: await getKingcamCloneTrainingLibrary(input.ownerId),
+  };
+}
+
 export async function reviewKingcamPerformanceCapture(input: { ownerId: number; mediaAssetId: string; fullBodyConfirmed: boolean; naturalMotionConfirmed: boolean; directSpeechConfirmed: boolean; notes: string }) {
   assertOwner(input.ownerId);
   const mediaAssetId = String(input.mediaAssetId || "").trim();
@@ -1386,7 +1538,7 @@ export async function reviewKingcamPerformanceCapture(input: { ownerId: number; 
     evidence: "Owner-reviewed direct KingCam Performance Capture. The owner confirmed continuous crown-to-shoes framing, natural full-body movement, and direct spoken delivery before the driver was promoted.",
     defects: null,
     assessmentSource: "creatorvault_owner_performance_review",
-    analysis: { ...previous, cloneOnly: true, bodyCinemaEligible: false, driverReview: { reviewedBy: "owner", reviewedAt: new Date().toISOString(), fullBodyConfirmed: true, naturalMotionConfirmed: true, directSpeechConfirmed: true, notes } },
+    analysis: { ...previous, cloneOnly: true, bodyCinemaEligible: false, roleEvidenceReviewed: true, roleReviewedAt: new Date().toISOString(), driverReview: { reviewedBy: "owner", reviewedAt: new Date().toISOString(), fullBodyConfirmed: true, naturalMotionConfirmed: true, directSpeechConfirmed: true, notes } },
   });
   await recordKingcamCloneMemory({ ownerId: input.ownerId, kind: "performance_capture_reviewed", room: "KingCam Performance Capture", payload: { mediaAssetId, duration, width, height, notes, promotedTo: "movement_driver", cloneOnly: true, bodyCinemaEligible: false } });
   return { ready: true, motionDriver: (await getKingcamCloneTrainingLibrary(input.ownerId)).approvedMovementDriver, rule: "The driver is now eligible for one governed motion benchmark. It is not a public clone result until a watchable output clears the quality review." };

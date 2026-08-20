@@ -26,9 +26,11 @@ import {
   preflightKingcamReplicateWanAnimate,
   registerKingcamPerformanceCapture,
   reviewKingcamPerformanceCapture,
+  reviewKingcamPerformanceRoleEvidence,
   recordKingcamCloneMemory,
   reviewKingcamFullBodyMotionProof,
   startKingcamCloneTour,
+  startKingcamLaunchMission,
   syncKingcamCloneTrainingLibrary,
 } from "../services/kingcamCloneOperatingSystemService";
 
@@ -124,6 +126,13 @@ export const kingcamCloneOperatingSystemRouter = router({
       return startKingcamCloneTour({ ownerId: ctx.user.id, roomId: input.roomId });
     }),
 
+  startLaunchMission: protectedProcedure
+    .input(z.object({ missionId: z.enum(["launch-story", "creator-ownership", "caption-impact", "trailer-release", "clone-presence"]) }))
+    .mutation(async ({ ctx, input }) => {
+      ownerOnly(ctx.user.id);
+      return startKingcamLaunchMission({ ownerId: ctx.user.id, missionId: input.missionId });
+    }),
+
   recordOwnerDirective: protectedProcedure
     .input(z.object({ directive: z.string().trim().min(8).max(3000), focus: z.string().trim().min(2).max(120).optional() }))
     .mutation(async ({ ctx, input }) => {
@@ -183,6 +192,21 @@ export const kingcamCloneOperatingSystemRouter = router({
         return await reviewKingcamPerformanceCapture({ ownerId: ctx.user.id, ...input });
       } catch (error) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam Performance Capture could not be reviewed." });
+      }
+    }),
+
+  reviewPerformanceRoleEvidence: protectedProcedure
+    .input(z.object({
+      mediaAssetId: z.string().uuid(),
+      performanceRole: z.enum(["presence", "gait", "hands_and_prop", "direct_delivery", "reaction", "combined_performance"]),
+      notes: z.string().trim().min(24).max(1200),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      ownerOnly(ctx.user.id);
+      try {
+        return await reviewKingcamPerformanceRoleEvidence({ ownerId: ctx.user.id, ...input });
+      } catch (error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam performance-role evidence could not be reviewed." });
       }
     }),
 

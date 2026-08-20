@@ -11,6 +11,14 @@ const kingcamMedia = {
   platformFilm: "/videos/vaultx-homepage-kingcam-trailer.mp4",
 };
 
+const kingcamVoiceTour = [
+  { key: "entry", chapter: "The entry", line: "CreatorVault starts with your presence, your content, and your power.", audio: "/uploads/content-vault/kingcam-voice-tour-v1/entry.mp3" },
+  { key: "body-cinema", chapter: "Body Cinema", line: "Real footage comes first. The treatment brings your strongest presence forward.", audio: "/uploads/content-vault/kingcam-voice-tour-v1/body-cinema.mp3" },
+  { key: "caption-stage", chapter: "Caption Stage", line: "Your words hit while the moment is alive.", audio: "/uploads/content-vault/kingcam-voice-tour-v1/caption-stage.mp3" },
+  { key: "trailer-maker", chapter: "Trailer Maker", line: "The release needs a beginning, a build, and a payoff.", audio: "/uploads/content-vault/kingcam-voice-tour-v1/trailer-maker.mp3" },
+  { key: "clone-command", chapter: "Clone Command", line: "The face, the voice, the rules, and the memory stay inside CreatorVault.", audio: "/uploads/content-vault/kingcam-voice-tour-v1/clone-command.mp3" },
+] as const;
+
 function Motion({ src, poster, className = "" }: { src: string; poster?: string; className?: string }) {
   return <video autoPlay muted loop playsInline preload="metadata" poster={poster} className={`h-full w-full object-cover ${className}`}><source src={src} type="video/mp4" /></video>;
 }
@@ -52,7 +60,7 @@ export default function KingCamProfile() {
             <p className="mt-6 max-w-lg text-base leading-7 text-white/78">The founder behind CreatorVault. The clone, the content, and the machine built to put creators in control.</p>
             <div className="mt-7 flex flex-wrap gap-3">
               {isKingCamOwner ? <Link href="/king/content"><a className="inline-flex min-h-12 items-center gap-2 rounded-full bg-[#d9a44e] px-6 text-sm font-black text-black transition active:scale-[.97]"><Sparkles className="h-4 w-4" /> Open your creation room</a></Link> : <Link href="/vault-x"><a className="inline-flex min-h-12 items-center gap-2 rounded-full bg-[#d9a44e] px-6 text-sm font-black text-black transition active:scale-[.97]"><Sparkles className="h-4 w-4" /> Enter CreatorVault</a></Link>}
-              <a href="#films" className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/30 bg-black/25 px-6 text-sm font-black backdrop-blur"><ArrowDown className="h-4 w-4" /> Watch the motion</a>
+              <a href="#films" className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/30 bg-black/25 px-6 text-sm font-black backdrop-blur"><ArrowDown className="h-4 w-4" /> Watch the motion</a><a href="#voice" className="inline-flex min-h-12 items-center gap-2 rounded-full border border-[#d9a44e]/55 bg-black/25 px-6 text-sm font-black text-[#f4d79c] backdrop-blur"><Play className="h-4 w-4 fill-current" /> Hear KingCam</a>
             </div>
           </div>
         </div>
@@ -77,6 +85,8 @@ export default function KingCamProfile() {
           </div>
         </div>
       </section>
+
+      <section id="voice" className="relative overflow-hidden border-y border-[#d9a44e]/25 bg-[radial-gradient(circle_at_80%_0%,rgba(163,18,37,.38),transparent_28%),#130807] px-5 py-16 sm:px-8 lg:px-12 lg:py-24"><div className="mx-auto max-w-7xl"><div className="flex flex-wrap items-end justify-between gap-6"><div><p className="text-xs font-black uppercase tracking-[.26em] text-[#e4bf7a]">KingCam voice tour</p><h2 className="mt-5 text-[15vw] font-black leading-[.7] tracking-[-.12em] sm:text-7xl">THE VOICE<br />IS <span className="text-[#d9a44e]">REAL.</span></h2></div><p className="max-w-md text-base leading-7 text-white/65">These are KingCam’s real CreatorVault voice chapters. They do not use a generic stand-in, and each one points back to a real part of the platform.</p></div><div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{kingcamVoiceTour.map((segment, index) => <article key={segment.key} className="rounded-[2rem] border border-white/10 bg-black/35 p-6"><div className="flex items-start justify-between gap-4"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#d9a44e]/12 text-sm font-black text-[#e9ce98]">0{index + 1}</span><Play className="h-5 w-5 text-[#d9a44e]" /></div><p className="mt-8 text-[10px] font-black uppercase tracking-[.2em] text-[#e5bf78]">{segment.chapter}</p><p className="mt-3 min-h-12 text-xl font-black leading-[.9] tracking-[-.05em] text-white">{segment.line}</p><audio controls preload="metadata" className="mt-6 w-full accent-[#d9a44e]"><source src={segment.audio} type="audio/mpeg" />Your browser cannot play this KingCam voice chapter.</audio></article>)}</div></div></section>
 
       <section className="relative overflow-hidden bg-[#180909] px-5 py-16 sm:px-8 lg:px-12 lg:py-24"><div className="absolute -left-28 bottom-0 h-80 w-80 rounded-full bg-[#a31225]/35 blur-3xl" /><div className="relative mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-center"><div className="relative aspect-square overflow-hidden rounded-[2.7rem] border border-[#d9a44e]/35 bg-black"><img src={kingcamMedia.crownLounge} alt="KingCam in burgundy royal styling" className="h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" /><p className="absolute bottom-7 left-7 right-7 text-3xl font-black leading-[.84] tracking-[-.08em] text-white">THE CLONE HAS TO FEEL LIKE HIM.</p></div><div><p className="text-xs font-black uppercase tracking-[.26em] text-[#e5bf78]">KingCam clone</p><h2 className="mt-5 text-[15vw] font-black leading-[.7] tracking-[-.12em] sm:text-7xl">THE FACE.<br />THE VOICE.<br /><span className="text-[#d9a44e]">THE MOVE.</span></h2><p className="mt-8 max-w-xl text-lg leading-8 text-white/68">KingCam’s clone stays inside his own protected CreatorVault creation rooms. It is not presented here as a fake person or a fake content feed.</p><div className="mt-8 flex flex-wrap gap-3">{isKingCamOwner ? <Link href="/clone-empire-home"><a className="inline-flex min-h-12 items-center gap-2 rounded-full bg-[#d9a44e] px-6 text-sm font-black text-black"><Video className="h-4 w-4" /> Open Clone Command</a></Link> : <Link href="/vault-x"><a className="inline-flex min-h-12 items-center gap-2 rounded-full border border-[#d9a44e]/60 px-6 text-sm font-black text-[#f6dda8]"><LockKeyhole className="h-4 w-4" /> CreatorVault is building</a></Link>}</div></div></div></section>
     </main>
