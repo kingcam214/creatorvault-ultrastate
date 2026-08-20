@@ -732,6 +732,10 @@ const ALLOWLISTS = {
     'server/routers/mediaAssets.ts',
     'scripts/scope-guard.js'
   ],
+  'media-hub': [
+    'client/src/pages/MediaHubPage.tsx',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',
