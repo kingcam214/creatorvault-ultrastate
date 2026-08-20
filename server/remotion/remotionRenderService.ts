@@ -10,6 +10,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import type { RenderContract, RenderResult, MotionPreset } from "./types.js";
 import { PRESET_REGISTRY } from "./types.js";
+import { CAPTION_ENGINE_TEMPLATES } from "../../shared/captionEngine.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -140,21 +141,48 @@ const Root = () => <Composition id="CreatorVaultRuntimeMotionFlyer" component={F
 registerRoot(Root);`;
 
 const RUNTIME_CAPTION_SOURCE = `import React from "react";
-import { AbsoluteFill, Composition, Video, registerRoot, useCurrentFrame, useVideoConfig } from "remotion";
-const getTheme = (style) => ({
-  command: { fontFamily: "Arial Black, Arial, sans-serif", weight: 900, textTransform: "uppercase", background: "rgba(4,4,6,.78)", color: "#FFFFFF", border: "2px solid rgba(255,255,255,.92)", shadow: "0 12px 36px rgba(0,0,0,.6)", letterSpacing: "-.05em" },
-  glow: { fontFamily: "Arial Black, Arial, sans-serif", weight: 900, textTransform: "uppercase", background: "rgba(57,22,87,.62)", color: "#F7EEFF", border: "2px solid #E8D2FF", shadow: "0 0 28px rgba(214,152,255,.9), 0 12px 36px rgba(0,0,0,.6)", letterSpacing: "-.045em" },
-  silk: { fontFamily: "Georgia, serif", weight: 700, textTransform: "none", background: "rgba(20,9,14,.72)", color: "#FFF7F0", border: "1px solid rgba(255,236,220,.72)", shadow: "0 12px 36px rgba(0,0,0,.64)", letterSpacing: "-.025em" },
-  paper: { fontFamily: "Arial Black, Arial, sans-serif", weight: 900, textTransform: "uppercase", background: "#F7F1E7", color: "#080808", border: "0", shadow: "0 12px 36px rgba(0,0,0,.48)", letterSpacing: "-.045em" },
-}[style] || {});
-const CaptionMaster = ({ backgroundVideoUrl = "", captionSegments = [], captionStyle = "command", captionPlacement = "lower", captionSafeZone = "vertical" }) => {
+import { AbsoluteFill, Composition, Video, interpolate, registerRoot, spring, useCurrentFrame, useVideoConfig } from "remotion";
+const TEMPLATES = ${JSON.stringify(CAPTION_ENGINE_TEMPLATES)};
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const templateFor = (id) => TEMPLATES.find((template) => template.id === id) || TEMPLATES.find((template) => template.id === "founder") || TEMPLATES[0];
+const wordsFor = (text) => String(text || "").trim().split(/\\s+/).filter(Boolean);
+const motion = (behavior, frame, fps) => {
+  const inFrame = Math.max(0, frame);
+  const settle = spring({ frame: inFrame, fps, config: { damping: behavior === "bounce" ? 10 : 18, stiffness: behavior === "punch" || behavior === "word_pop" ? 170 : 110, mass: .8 } });
+  if (behavior === "machine_gun") return { opacity: clamp(inFrame / 3, 0, 1), scale: 1.04 - clamp(inFrame / 6, 0, 1) * .04, y: 0 };
+  if (behavior === "word_pop") return { opacity: settle, scale: .58 + settle * .42, y: (1 - settle) * 22 };
+  if (behavior === "punch") return { opacity: settle, scale: .72 + settle * .28, y: (1 - settle) * 34 };
+  if (behavior === "bounce") return { opacity: settle, scale: .92 + settle * .08, y: Math.sin(inFrame / 3.4) * 7 * Math.max(0, 1 - inFrame / (fps * 1.2)) };
+  if (behavior === "impact_stack") return { opacity: settle, scale: .86 + settle * .14, y: (1 - settle) * 46 };
+  if (behavior === "slow_reveal" || behavior === "documentary") return { opacity: clamp(inFrame / (fps * .26), 0, 1), scale: 1, y: (1 - clamp(inFrame / (fps * .32), 0, 1)) * 12 };
+  if (behavior === "lower_third") return { opacity: settle, scale: 1, y: (1 - settle) * 42 };
+  if (behavior === "beat_pulse") return { opacity: settle, scale: 1 + Math.sin(inFrame / 4.2) * .025, y: 0 };
+  return { opacity: settle, scale: 1, y: 0 };
+};
+const emphasis = (word, index, words, template, activeIndex) => {
+  const clean = String(word || "").replace(/[^a-z0-9]/gi, "");
+  if (template.activeWordBehavior === "karaoke") return index === activeIndex;
+  if (template.emphasisRule === "first_phrase") return index === 0;
+  if (template.emphasisRule === "final_word") return index === words.length - 1;
+  if (template.emphasisRule === "high_energy") return index === activeIndex || clean.length >= 7;
+  if (template.emphasisRule === "keywords") return index === activeIndex || clean.length >= 7;
+  return false;
+};
+const CaptionMaster = ({ backgroundVideoUrl = "", captionSegments = [], captionStyle = "founder", captionPlacement = "adaptive", captionSafeZone = "platform_safe", captionTypography = {} }) => {
   const frame = useCurrentFrame(); const { fps, width, height } = useVideoConfig(); const seconds = frame / fps;
   const active = captionSegments.find((segment) => seconds >= Number(segment.start) && seconds <= Number(segment.end));
-  const theme = getTheme(captionStyle); const safeInset = captionSafeZone === "vertical" ? height * .13 : captionSafeZone === "square" ? height * .1 : height * .08;
-  const position = captionPlacement === "top" ? { top: safeInset } : captionPlacement === "center" ? { top: height * .5, transform: "translateY(-50%)" } : { bottom: safeInset };
+  const template = templateFor(captionStyle); const words = wordsFor(active && active.text); const duration = active ? Math.max(.12, Number(active.end) - Number(active.start)) : 1;
+  const progress = active ? clamp((seconds - Number(active.start)) / duration, 0, .999) : 0; const activeIndex = Math.min(Math.max(0, words.length - 1), Math.floor(progress * Math.max(1, words.length)));
+  const localFrame = active ? Math.max(0, frame - Math.round(Number(active.start) * fps)) : 0; const entrance = motion(template.entryMotion, localFrame, fps);
+  const resolveSafe = () => { if (captionSafeZone === "square") return height * .10; if (captionSafeZone === "landscape") return height * .085; if (captionSafeZone === "vertical" || height >= width) return height * .18; return height * .11; };
+  const safeInset = resolveSafe(); const selectedPlacement = captionPlacement === "adaptive" ? (template.placement === "adaptive" ? "lower" : template.placement) : captionPlacement;
+  const position = selectedPlacement === "top" ? { top: safeInset } : selectedPlacement === "center" ? { top: height * .5, transform: "translateY(-50%)" } : { bottom: safeInset };
+  const fontSize = Math.min(width * .075 * Number(captionTypography.size || template.size || 1), height * .064 * Number(captionTypography.size || template.size || 1));
+  const color = captionTypography.color || template.color; const highlight = captionTypography.highlightColor || template.highlightColor; const background = captionTypography.background || template.background;
+  const sweep = template.activeWordBehavior === "light_sweep" ? "linear-gradient(90deg, " + color + " 0%, " + highlight + " " + Math.round(progress * 100) + "%, " + color + " 100%)" : color;
   return <AbsoluteFill style={{ backgroundColor: "#050505", overflow: "hidden" }}>
     {backgroundVideoUrl ? <Video src={backgroundVideoUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
-    {active ? <div style={{ position: "absolute", left: width * .075, right: width * .075, display: "flex", justifyContent: "center", ...position }}><div style={{ maxWidth: width * .85, padding: Math.max(14, width*.022) + "px " + Math.max(18, width*.032) + "px", borderRadius: Math.max(12, width*.018), textAlign: "center", fontFamily: theme.fontFamily, fontWeight: theme.weight, textTransform: theme.textTransform, background: theme.background, color: theme.color, border: theme.border, boxShadow: theme.shadow, letterSpacing: theme.letterSpacing, fontSize: Math.min(width * .075, height * .064), lineHeight: .9 }}>{String(active.text || "").trim()}</div></div> : null}
+    {active ? <div style={{ position: "absolute", left: width * .075, right: width * .075, display: "flex", justifyContent: "center", ...position }}><div style={{ maxWidth: width * .85, padding: Math.max(14, width*.022) + "px " + Math.max(18, width*.032) + "px", borderRadius: Math.max(12, width*.018), textAlign: "center", fontFamily: captionTypography.font || template.font, fontWeight: captionTypography.weight || template.weight, textTransform: template.family === "premium_cinematic" || template.family === "creator_talking_head" ? "none" : "uppercase", background, color, border: template.stroke, boxShadow: template.shadow, letterSpacing: "-.04em", fontSize, lineHeight: .9, opacity: entrance.opacity, transform: (position.transform ? position.transform + " " : "") + "translateY(" + entrance.y + "px) scale(" + entrance.scale + ")" }}>{words.map((word, index) => <span key={index} style={{ color: emphasis(word, index, words, template, activeIndex) ? highlight : sweep, display: "inline-block", marginRight: "0.24em", transform: template.activeWordBehavior === "keyword_blast" && emphasis(word, index, words, template, activeIndex) ? "scale(1.12)" : "scale(1)", transition: "transform 90ms linear" }}>{word}</span>)}</div></div> : null}
   </AbsoluteFill>;
 };
 const Root = () => <Composition id="CreatorVaultRuntimeCaptionStage" component={CaptionMaster} durationInFrames={180} fps={30} width={1080} height={1920} defaultProps={{}} />;

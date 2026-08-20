@@ -61,9 +61,10 @@ export interface RenderContract {
   brandColors?: string[];
   outputPath?: string;
   captionSegments?: Array<{ start: number; end: number; text: string }>;
-  captionStyle?: "command" | "glow" | "silk" | "paper";
-  captionPlacement?: "top" | "center" | "lower";
-  captionSafeZone?: "vertical" | "square" | "landscape";
+  captionStyle?: string;
+  captionPlacement?: "top" | "center" | "lower" | "adaptive";
+  captionSafeZone?: "vertical" | "square" | "landscape" | "platform_safe";
+  captionTypography?: { size?: number; color?: string | null; highlightColor?: string | null; background?: string | null; font?: string | null; weight?: number | null };
 }
 
 export interface RenderResult {

@@ -7,6 +7,7 @@ import os from "os";
 import mysql from "mysql2/promise";
 import OpenAI from "openai";
 import { z } from "zod";
+import { CAPTION_ENGINE_FEELS, CAPTION_ENGINE_TEMPLATES, getCaptionEngineTemplate, recommendCaptionTemplates } from "@shared/captionEngine";
 import { protectedProcedure, router } from "../_core/trpc";
 import { analyzeCanonicalAudioAsset, registerCanonicalAudioAsset } from "../services/audioIntelligenceService";
 import { renderWithRemotion } from "../remotion/remotionRenderService";
@@ -16,21 +17,20 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const PUBLIC_APP_URL = (process.env.PUBLIC_APP_URL || process.env.APP_URL || "https://creatorvault.live").replace(/\/$/, "");
 const TEMP_ROOT = path.join(os.tmpdir(), "creatorvault-caption-stage");
 
-const CAPTION_STYLES = ["command", "glow", "silk", "paper"] as const;
-const CAPTION_PLACEMENTS = ["top", "center", "lower"] as const;
-const CAPTION_SAFE_ZONES = ["vertical", "square", "landscape"] as const;
-type CaptionStyle = (typeof CAPTION_STYLES)[number];
+const CAPTION_PLACEMENTS = ["top", "center", "lower", "adaptive"] as const;
+const CAPTION_SAFE_ZONES = ["vertical", "square", "landscape", "platform_safe"] as const;
+type CaptionStyle = string;
 type CaptionPlacement = (typeof CAPTION_PLACEMENTS)[number];
 type CaptionSafeZone = (typeof CAPTION_SAFE_ZONES)[number];
 
 function normalizeCaptionStyle(value: unknown): CaptionStyle {
-  return CAPTION_STYLES.includes(String(value) as CaptionStyle) ? String(value) as CaptionStyle : "command";
+  return getCaptionEngineTemplate(String(value || "founder")).id;
 }
 function normalizeCaptionPlacement(value: unknown): CaptionPlacement {
-  return CAPTION_PLACEMENTS.includes(String(value) as CaptionPlacement) ? String(value) as CaptionPlacement : "lower";
+  return CAPTION_PLACEMENTS.includes(String(value) as CaptionPlacement) ? String(value) as CaptionPlacement : "adaptive";
 }
 function normalizeCaptionSafeZone(value: unknown): CaptionSafeZone {
-  return CAPTION_SAFE_ZONES.includes(String(value) as CaptionSafeZone) ? String(value) as CaptionSafeZone : "vertical";
+  return CAPTION_SAFE_ZONES.includes(String(value) as CaptionSafeZone) ? String(value) as CaptionSafeZone : "platform_safe";
 }
 
 type CaptionSegment = { start: number; end: number; text: string };
@@ -78,6 +78,10 @@ async function ensureCaptionStageTable(connection: mysql.Connection): Promise<vo
     transcription_provider VARCHAR(64) NULL,
     caption_review_status VARCHAR(32) NOT NULL DEFAULT 'needs_review',
     caption_reviewed_at TIMESTAMP NULL,
+    caption_scale DECIMAL(5,2) NOT NULL DEFAULT 1.00,
+    caption_text_color VARCHAR(32) NULL,
+    caption_highlight_color VARCHAR(32) NULL,
+    caption_background VARCHAR(64) NULL,
     artifact_url TEXT NULL,
     thumbnail_url TEXT NULL,
     render_error MEDIUMTEXT NULL,
@@ -89,6 +93,10 @@ async function ensureCaptionStageTable(connection: mysql.Connection): Promise<vo
   await connection.execute("ALTER TABLE caption_stage_projects ADD COLUMN transcription_provider VARCHAR(64) NULL").catch(() => undefined);
   await connection.execute("ALTER TABLE caption_stage_projects ADD COLUMN caption_review_status VARCHAR(32) NOT NULL DEFAULT 'needs_review'").catch(() => undefined);
   await connection.execute("ALTER TABLE caption_stage_projects ADD COLUMN caption_reviewed_at TIMESTAMP NULL").catch(() => undefined);
+  await connection.execute("ALTER TABLE caption_stage_projects ADD COLUMN caption_scale DECIMAL(5,2) NOT NULL DEFAULT 1.00").catch(() => undefined);
+  await connection.execute("ALTER TABLE caption_stage_projects ADD COLUMN caption_text_color VARCHAR(32) NULL").catch(() => undefined);
+  await connection.execute("ALTER TABLE caption_stage_projects ADD COLUMN caption_highlight_color VARCHAR(32) NULL").catch(() => undefined);
+  await connection.execute("ALTER TABLE caption_stage_projects ADD COLUMN caption_background VARCHAR(64) NULL").catch(() => undefined);
   await connection.execute(`UPDATE caption_stage_projects
     SET status = 'needs_caption_review', artifact_url = NULL, thumbnail_url = NULL
     WHERE status = 'captioned_master_ready' AND COALESCE(caption_review_status, 'needs_review') <> 'creator_approved'`).catch(() => undefined);
@@ -259,6 +267,12 @@ function hydrate(row: any) {
     transcriptionProvider: row.transcription_provider ? String(row.transcription_provider) : null,
     captionReviewStatus: row.caption_review_status ? String(row.caption_review_status) : "needs_review",
     captionReviewedAt: row.caption_reviewed_at ? new Date(row.caption_reviewed_at).toISOString() : null,
+    captionTypography: {
+      size: Math.max(0.65, Math.min(1.45, toNumber(row.caption_scale) || 1)),
+      color: row.caption_text_color ? String(row.caption_text_color) : null,
+      highlightColor: row.caption_highlight_color ? String(row.caption_highlight_color) : null,
+      background: row.caption_background ? String(row.caption_background) : null,
+    },
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -266,12 +280,55 @@ function hydrate(row: any) {
 
 const projectInput = z.object({
   sourceAssetId: z.string().min(1),
-  captionStyle: z.enum(CAPTION_STYLES).default("command"),
-  captionPlacement: z.enum(CAPTION_PLACEMENTS).default("lower"),
-  safeZone: z.enum(CAPTION_SAFE_ZONES).default("vertical"),
+  captionStyle: z.string().min(1).max(64).transform((value) => normalizeCaptionStyle(value)).default("founder"),
+  captionPlacement: z.enum(CAPTION_PLACEMENTS).default("adaptive"),
+  safeZone: z.enum(CAPTION_SAFE_ZONES).default("platform_safe"),
 });
 
 export const captionStageRouter = router({
+  recommendTreatments: protectedProcedure.input(z.object({
+    feeling: z.enum(CAPTION_ENGINE_FEELS),
+    transcript: z.string().max(20_000).default(""),
+  })).mutation(async ({ input }) => {
+    const fallback = recommendCaptionTemplates(input.feeling, input.transcript);
+    const catalog = CAPTION_ENGINE_TEMPLATES.map((template) => ({ id: template.id, title: template.title, family: template.family, bestFor: template.bestFor, energy: template.energy }));
+    let selected = fallback;
+    let recommendationSource: "ai" | "caption_engine" = "caption_engine";
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-5-nano",
+        messages: [
+          { role: "system", content: "You are CreatorVault Caption Director. Recommend exactly three caption treatment IDs from the supplied catalog. Choose from the user’s stated feeling and the actual spoken transcript. Return JSON only in the shape {\\\"ids\\\":[\\\"id-1\\\",\\\"id-2\\\",\\\"id-3\\\"]}. Never invent IDs." },
+          { role: "user", content: JSON.stringify({ feeling: input.feeling, transcript: input.transcript.slice(0, 6000), catalog }) },
+        ],
+        max_completion_tokens: 180,
+      });
+      const raw = String(response.choices[0]?.message?.content || "").trim();
+      const ids = JSON.parse(raw)?.ids;
+      if (Array.isArray(ids)) {
+        const byId = new Map(CAPTION_ENGINE_TEMPLATES.map((template) => [template.id, template]));
+        const aiChoices = ids.map((id: unknown) => byId.get(String(id))).filter(Boolean) as typeof selected;
+        if (aiChoices.length === 3) {
+          selected = aiChoices;
+          recommendationSource = "ai";
+        }
+      }
+    } catch {
+      // Caption Engine remains useful even when the optional recommendation model is unavailable.
+    }
+    return {
+      source: recommendationSource,
+      treatments: selected.map((template) => ({
+        id: template.id,
+        title: template.title,
+        eyebrow: template.eyebrow,
+        detail: template.detail,
+        family: template.family,
+        energy: template.energy,
+      })),
+    };
+  }),
+
   createTimedCaptions: protectedProcedure.input(projectInput).mutation(async ({ ctx, input }) => {
     const connection = await getConnection();
     const projectId = randomUUID();
@@ -367,6 +424,7 @@ export const captionStageRouter = router({
         captionStyle: project.captionStyle,
         captionPlacement: project.captionPlacement,
         captionSafeZone: project.safeZone,
+        captionTypography: project.captionTypography,
       });
       if (!render.success || !render.videoUrl) throw new Error(String(render.error || "CreatorVault could not prepare the captioned master."));
       const artifactUrl = publicUrl(String(render.videoUrl));
@@ -414,16 +472,27 @@ export const captionStageRouter = router({
     }
   }),
 
-  updatePresentation: protectedProcedure.input(z.object({ projectId: z.string().min(1), captionStyle: z.enum(CAPTION_STYLES), captionPlacement: z.enum(CAPTION_PLACEMENTS), safeZone: z.enum(CAPTION_SAFE_ZONES) })).mutation(async ({ ctx, input }) => {
+  updatePresentation: protectedProcedure.input(z.object({
+    projectId: z.string().min(1),
+    captionStyle: z.string().min(1).max(64).transform((value) => normalizeCaptionStyle(value)),
+    captionPlacement: z.enum(CAPTION_PLACEMENTS),
+    safeZone: z.enum(CAPTION_SAFE_ZONES),
+    captionTypography: z.object({
+      size: z.number().min(0.65).max(1.45).default(1),
+      color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().default(null),
+      highlightColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().default(null),
+      background: z.string().min(3).max(64).nullable().default(null),
+    }).default({ size: 1, color: null, highlightColor: null, background: null }),
+  })).mutation(async ({ ctx, input }) => {
     const connection = await getConnection();
     try {
       await ensureCaptionStageTable(connection);
       await connection.execute(
-        `UPDATE caption_stage_projects
-            SET caption_style = ?, caption_placement = ?, safe_zone = ?, artifact_url = NULL, thumbnail_url = NULL,
+          `UPDATE caption_stage_projects
+            SET caption_style = ?, caption_placement = ?, safe_zone = ?, caption_scale = ?, caption_text_color = ?, caption_highlight_color = ?, caption_background = ?, artifact_url = NULL, thumbnail_url = NULL,
                 status = CASE WHEN segments_json IS NULL THEN status ELSE 'timed_captions_ready' END
           WHERE id = ? AND creator_id = ?`,
-        [input.captionStyle, input.captionPlacement, input.safeZone, input.projectId, ctx.user.id],
+          [input.captionStyle, input.captionPlacement, input.safeZone, input.captionTypography.size, input.captionTypography.color, input.captionTypography.highlightColor, input.captionTypography.background, input.projectId, ctx.user.id],
       );
       const [rows] = await connection.execute<any[]>("SELECT * FROM caption_stage_projects WHERE id = ? AND creator_id = ? LIMIT 1", [input.projectId, ctx.user.id]);
       if (!rows[0]) throw new Error("That Caption Stage project is not in your CreatorVault.");

@@ -434,6 +434,7 @@ const ALLOWLISTS = {
     'server/routers/captionStageRouter.ts',
     'server/remotion/remotionRenderService.ts',
     'server/remotion/types.ts',
+    'shared/captionEngine.ts',
     'scripts/verify-caption-stage-render.ts',
     'server/routers/captionStageRouter.test.ts',
     'scripts/scope-guard.js'
