@@ -247,6 +247,16 @@ const ALLOWLISTS = {
     'server/routers.ts',
     'scripts/scope-guard.js'
   ],
+  'kingcam-supreme-system': [
+    'client/src/pages/KingCamClone.tsx',
+    'server/routers.ts',
+    'server/routers/kingcamCloneOperatingSystemRouter.ts',
+    'server/services/kingcamCloneOperatingSystemService.ts',
+    'server/services/kingcamSupremeSystemService.ts',
+    'server/routers/kingcamSupremeSystemRouter.ts',
+    'LEARNING_LOG.md',
+    'scripts/scope-guard.js'
+  ],
   'kingcam-clone-operating-system': [
     'client/src/App.tsx',
     'client/src/pages/KingCamClone.tsx',
