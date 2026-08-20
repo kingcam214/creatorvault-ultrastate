@@ -200,6 +200,7 @@ const KINGCAM_KLING_OMNI_SPOKEN_MOTION_HARD_CREDIT_CAP = 75;
 const KINGCAM_KLING_OMNI_SPOKEN_MOTION_DURATION_SECONDS = 15;
 const KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge-reference.png";
 const KINGCAM_KLING_OMNI_SPOKEN_MOTION_AUDIO_URL = "https://creatorvault.live/uploads/content-vault/kingcam-voice-tour-v1/happyhorse-fullbody-proof.mp3";
+const KINGCAM_KLING_OMNI_SPOKEN_MOTION_DRIVER_URL = "https://creatorvault.live/uploads/content-vault/e46fd473-3bfb-45da-bbb8-47f8e03e26bf/kingcam-controlled-performance-0135-0147.mov";
 const KINGCAM_KLING_OMNI_REAL_GAIT_ESTIMATE_API_PATH = "/v1/generation/kling-ai/kling-v3-omni/video/estimate";
 const KINGCAM_KLING_OMNI_REAL_GAIT_MODEL_PATH = "pollo/kling-ai/kling-v3-omni-ref2video";
 const KINGCAM_KLING_OMNI_REAL_GAIT_MODE = "kingcam_kling_omni_real_gait_mixed_reference";
@@ -384,6 +385,7 @@ function isKingcamKlingOmniSpokenMotionJob(job: Pick<GovernedPolloJob, "provider
     && job.metadata.sourcePreservationRequired === true
     && job.metadata.genericVoiceFallbackForbidden === true
     && job.metadata.audioUrl === KINGCAM_KLING_OMNI_SPOKEN_MOTION_AUDIO_URL
+    && job.metadata.motionDriverUrl === KINGCAM_KLING_OMNI_SPOKEN_MOTION_DRIVER_URL
     && job.metadata.hardCreditCap === KINGCAM_KLING_OMNI_SPOKEN_MOTION_HARD_CREDIT_CAP;
 }
 
@@ -2041,15 +2043,18 @@ function buildKingcamKlingOmniSpokenMotionInput(job: Pick<GovernedPolloJob, "sou
     throw new Error("KingCam Kling 3 Omni proof must remain one 15-second vertical 1080p output.");
   }
   if (job.metadata.audioUrl !== KINGCAM_KLING_OMNI_SPOKEN_MOTION_AUDIO_URL) throw new Error("KingCam Kling 3 Omni proof requires the verified direct KingCam full-body speech asset.");
+  if (job.metadata.motionDriverUrl !== KINGCAM_KLING_OMNI_SPOKEN_MOTION_DRIVER_URL) throw new Error("KingCam Kling 3 Omni proof requires the approved controlled full-body motion reference.");
   return {
     prompt: job.prompt,
     duration: KINGCAM_KLING_OMNI_SPOKEN_MOTION_DURATION_SECONDS,
     aspectRatio: "9:16",
     resolution: "1080P",
     videoNum: 1,
+    generateAudio: false,
     refs: [
       { type: "image", name: "KingCam identity", image: KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL, order: 1 },
-      { type: "audio", name: "KingCam direct speech", audio: KINGCAM_KLING_OMNI_SPOKEN_MOTION_AUDIO_URL, order: 2 },
+      { type: "video", name: "KingCam controlled full-body movement", video: KINGCAM_KLING_OMNI_SPOKEN_MOTION_DRIVER_URL, order: 2 },
+      { type: "audio", name: "KingCam verified direct speech", audio: KINGCAM_KLING_OMNI_SPOKEN_MOTION_AUDIO_URL, order: 3 },
     ],
   };
 }
@@ -2067,7 +2072,7 @@ export async function createManualCappedKingcamKlingOmniSpokenMotionDraft(input:
 }): Promise<{ job: GovernedPolloJob; reused: boolean }> {
   requireOwner(input.requestedBy);
   if (input.creatorId !== input.requestedBy) throw new Error("The KingCam Kling 3 Omni proof must use the requesting owner as the identity owner.");
-  buildKingcamKlingOmniSpokenMotionInput({ sourceUrl: KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL, prompt: input.prompt, resolution: "1080p", durationSeconds: KINGCAM_KLING_OMNI_SPOKEN_MOTION_DURATION_SECONDS, aspectRatio: "9:16", metadata: { audioUrl: KINGCAM_KLING_OMNI_SPOKEN_MOTION_AUDIO_URL } });
+  buildKingcamKlingOmniSpokenMotionInput({ sourceUrl: KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL, prompt: input.prompt, resolution: "1080p", durationSeconds: KINGCAM_KLING_OMNI_SPOKEN_MOTION_DURATION_SECONDS, aspectRatio: "9:16", metadata: { audioUrl: KINGCAM_KLING_OMNI_SPOKEN_MOTION_AUDIO_URL, motionDriverUrl: KINGCAM_KLING_OMNI_SPOKEN_MOTION_DRIVER_URL } });
   return createGovernedPolloDraft({
     creatorId: input.creatorId,
     requestedBy: input.requestedBy,
@@ -2100,7 +2105,9 @@ export async function createManualCappedKingcamKlingOmniSpokenMotionDraft(input:
       providerQuoteUnavailable: true,
       providerPriceResolution: "manual_owner_cap_with_pre_post_balance_evidence",
       audioUrl: KINGCAM_KLING_OMNI_SPOKEN_MOTION_AUDIO_URL,
+      motionDriverUrl: KINGCAM_KLING_OMNI_SPOKEN_MOTION_DRIVER_URL,
       identityReferenceUrl: KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL,
+      providerContract: "pollo_kling_omni_verified_identity_plus_full_body_motion_plus_real_voice",
     },
   });
 }
