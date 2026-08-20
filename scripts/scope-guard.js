@@ -269,6 +269,7 @@ const ALLOWLISTS = {
     'server/services/wanAnimate2ProofService.ts',
     'server/services/kingcamPerformerWorkerConnectionService.ts',
     'server/services/digitalOceanKingcamPerformerWorkerProvisioner.ts',
+    'server/services/digitalOceanKingcamRecoveryAuditService.ts',
     'server/services/kingcamFullBodyPerformerService.ts',
     'workers/kingcam-performer/Dockerfile',
     'workers/kingcam-performer/requirements.txt',

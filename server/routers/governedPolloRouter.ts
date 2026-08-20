@@ -73,6 +73,7 @@ import { destroyWanAnimate2ProofWorker, provisionConfirmedWanAnimate2H200ProofWo
 import { getWanProofWorkerConnectionState } from "../services/wanAnimateProofWorkerConnectionService";
 import { collectWanAnimate2ProofOutput, getWanAnimate2ProofJob, launchOneWanAnimate2Proof, probeWanAnimate2ProofWorker } from "../services/wanAnimate2ProofService";
 import { destroyKingcamPerformerWorker, provisionApprovedKingcamPerformerH200Worker } from "../services/digitalOceanKingcamPerformerWorkerProvisioner";
+import { auditPriorKingcamDigitalOceanRun } from "../services/digitalOceanKingcamRecoveryAuditService";
 import { getKingcamPerformerWorkerConnectionState } from "../services/kingcamPerformerWorkerConnectionService";
 import {
   collectKingcamFullBodyPerformerOutput,
@@ -156,6 +157,15 @@ export const governedPolloRouter = router({
     ownerOnly(ctx.user.id);
     try {
       return await getDigitalOceanVaceProvisioningReadiness();
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  priorKingcamDigitalOceanRecoveryAudit: protectedProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await auditPriorKingcamDigitalOceanRun();
     } catch (error) {
       return asPrecondition(error);
     }
