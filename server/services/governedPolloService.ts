@@ -596,7 +596,7 @@ function isDesignImagePilot(job: Pick<GovernedPolloJob, "providerModelPath" | "m
 }
 
 function isSingleUseGovernedPilot(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "sourceUrl" | "metadata">): boolean {
-  return isSourceVideoReferenceJob(job) || isKingcamWanSpokenMotionJob(job) || isKingcamKlingOmniSpokenMotionJob(job) || isReplicateWanVideoEditJob(job) || isReplicateWanAnimateJob(job) || isKingcamGoEnhanceRealPerformanceJob(job) || isKingcamActionImitationV2Job(job) || isKingcamKlingOmniRealGaitJob(job) || isKingcamKlingOmniControlledPerformanceJob(job) || isKingcamKlingOmniArmsHandsJob(job) || isKingcamKlingV3MotionJob(job) || isReplicateOmniHumanJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isCreatorVaultVaceLightingJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
+  return isSourceVideoReferenceJob(job) || isKingcamWanSpokenMotionJob(job) || isKingcamKlingOmniSpokenMotionJob(job) || isKingcamHappyHorseAllReferenceJob(job) || isReplicateWanVideoEditJob(job) || isReplicateWanAnimateJob(job) || isKingcamGoEnhanceRealPerformanceJob(job) || isKingcamActionImitationV2Job(job) || isKingcamKlingOmniRealGaitJob(job) || isKingcamKlingOmniControlledPerformanceJob(job) || isKingcamKlingOmniArmsHandsJob(job) || isKingcamKlingV3MotionJob(job) || isReplicateOmniHumanJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isCreatorVaultVaceLightingJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
 }
 
 function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
