@@ -60,10 +60,13 @@ export interface RenderContract {
   callToAction?: string;
   brandColors?: string[];
   outputPath?: string;
-  captionSegments?: Array<{ start: number; end: number; text: string }>;
+  captionSegments?: Array<{ start: number; end: number; text: string; confidence?: number | null; speaker?: string | null; words?: Array<{ text: string; start: number; end: number; confidence?: number | null; speaker?: string | null }> }>;
   captionStyle?: string;
   captionPlacement?: "top" | "center" | "lower" | "adaptive";
   captionSafeZone?: "vertical" | "square" | "landscape" | "platform_safe";
+  captionPlatformProfile?: "tiktok" | "instagram_reels" | "youtube_shorts" | "instagram_square" | "youtube_landscape" | "creatorvault";
+  captionQualityMode?: "standard" | "strict";
+  captionFocusRegions?: Array<{ id: string; x: number; y: number; width: number; height: number; label?: string; source: "creator_marked" | "source_analysis"; confidence?: number | null }>;
   captionTypography?: { size?: number; color?: string | null; highlightColor?: string | null; background?: string | null; font?: string | null; weight?: number | null };
 }
 

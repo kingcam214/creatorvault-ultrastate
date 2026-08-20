@@ -145,10 +145,40 @@ import { AbsoluteFill, Composition, Video, interpolate, registerRoot, spring, us
 const TEMPLATES = ${JSON.stringify(CAPTION_ENGINE_TEMPLATES)};
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const templateFor = (id) => TEMPLATES.find((template) => template.id === id) || TEMPLATES.find((template) => template.id === "founder") || TEMPLATES[0];
-const wordsFor = (text) => String(text || "").trim().split(/\\s+/).filter(Boolean);
+const profileFor = (profile, safeZone, width, height) => {
+  const map = {
+    creatorvault: { top: .12, right: .075, bottom: .18, left: .075, preferred: "lower" },
+    tiktok: { top: .13, right: .11, bottom: .27, left: .075, preferred: "lower" },
+    instagram_reels: { top: .12, right: .075, bottom: .24, left: .075, preferred: "lower" },
+    youtube_shorts: { top: .12, right: .08, bottom: .21, left: .08, preferred: "lower" },
+    instagram_square: { top: .10, right: .09, bottom: .12, left: .09, preferred: "lower" },
+    youtube_landscape: { top: .08, right: .07, bottom: .10, left: .07, preferred: "lower" },
+  };
+  if (profile && map[profile]) return map[profile];
+  if (safeZone === "square" || Math.abs(width - height) < 12) return map.instagram_square;
+  if (safeZone === "landscape" || width > height) return map.youtube_landscape;
+  return map.creatorvault;
+};
+const wordsFor = (segment) => {
+  const supplied = Array.isArray(segment && segment.words) ? segment.words.filter((word) => String(word && word.text || "").trim() && Number(word.end) > Number(word.start)) : [];
+  if (supplied.length) return supplied.map((word) => ({ text: String(word.text).trim(), start: Number(word.start), end: Number(word.end), speaker: word.speaker || segment.speaker || null }));
+  const text = String(segment && segment.text || "").trim().split(/\s+/).filter(Boolean); const span = Math.max(.12, Number(segment.end) - Number(segment.start));
+  return text.map((word, index) => ({ text: word, start: Number(segment.start) + span * index / text.length, end: Number(segment.start) + span * (index + 1) / text.length, speaker: segment.speaker || null }));
+};
+const groupsFor = (segments, template) => {
+  const groups = [];
+  (segments || []).forEach((segment, segmentIndex) => {
+    const words = wordsFor(segment); if (!words.length) return;
+    if (template.timing === "sentence") { groups.push({ id: "s-" + segmentIndex, start: Number(segment.start), end: Number(segment.end), text: String(segment.text || "").trim(), words, speaker: segment.speaker || words[0].speaker || null }); return; }
+    let bucket = [];
+    const flush = () => { if (!bucket.length) return; groups.push({ id: "s-" + segmentIndex + "-" + groups.length, start: bucket[0].start, end: bucket[bucket.length - 1].end, text: bucket.map((word) => word.text).join(" ").replace(/\s+([,.!?;:])/g, "$1"), words: bucket, speaker: bucket.find((word) => word.speaker)?.speaker || segment.speaker || null }); bucket = []; };
+    words.forEach((word) => { bucket.push(word); const punctuation = /[,.!?;:]$/.test(word.text); if (template.timing === "word" || bucket.length >= Math.max(1, Number(template.maxWords || 4)) || (punctuation && bucket.length >= 2)) flush(); });
+    flush();
+  });
+  return groups;
+};
 const motion = (behavior, frame, fps) => {
-  const inFrame = Math.max(0, frame);
-  const settle = spring({ frame: inFrame, fps, config: { damping: behavior === "bounce" ? 10 : 18, stiffness: behavior === "punch" || behavior === "word_pop" ? 170 : 110, mass: .8 } });
+  const inFrame = Math.max(0, frame); const settle = spring({ frame: inFrame, fps, config: { damping: behavior === "bounce" ? 10 : 18, stiffness: behavior === "punch" || behavior === "word_pop" ? 170 : 110, mass: .8 } });
   if (behavior === "machine_gun") return { opacity: clamp(inFrame / 3, 0, 1), scale: 1.04 - clamp(inFrame / 6, 0, 1) * .04, y: 0 };
   if (behavior === "word_pop") return { opacity: settle, scale: .58 + settle * .42, y: (1 - settle) * 22 };
   if (behavior === "punch") return { opacity: settle, scale: .72 + settle * .28, y: (1 - settle) * 34 };
@@ -159,6 +189,15 @@ const motion = (behavior, frame, fps) => {
   if (behavior === "beat_pulse") return { opacity: settle, scale: 1 + Math.sin(inFrame / 4.2) * .025, y: 0 };
   return { opacity: settle, scale: 1, y: 0 };
 };
+const skinFor = (template) => {
+  const id = template.id;
+  if (["word-pop", "reaction", "machine-gun"].includes(id)) return { layout: "solo", noBox: true, case: "upper", tracking: "-.055em", radius: 0 };
+  if (["cinematic-minimal", "slow-reveal", "light-sweep", "noir", "storyteller", "confessional"].includes(id)) return { layout: "film", noBox: true, case: "none", tracking: "-.02em", radius: 0 };
+  if (["editorial-lower-third", "interview", "newsroom"].includes(id)) return { layout: "lowerThird", noBox: false, case: "none", tracking: "-.015em", radius: 12 };
+  if (["tutorial-callout", "product-demo", "announcement", "cta-finale"].includes(id)) return { layout: "banner", noBox: false, case: "upper", tracking: "-.03em", radius: 16 };
+  if (["quote-card", "luxury-serif", "documentary", "podcast-pro"].includes(id)) return { layout: "editorial", noBox: false, case: "none", tracking: "-.015em", radius: 20 };
+  return { layout: "impact", noBox: false, case: template.family === "premium_cinematic" || template.family === "creator_talking_head" ? "none" : "upper", tracking: "-.045em", radius: 18 };
+};
 const emphasis = (word, index, words, template, activeIndex) => {
   const clean = String(word || "").replace(/[^a-z0-9]/gi, "");
   if (template.activeWordBehavior === "karaoke") return index === activeIndex;
@@ -168,25 +207,21 @@ const emphasis = (word, index, words, template, activeIndex) => {
   if (template.emphasisRule === "keywords") return index === activeIndex || clean.length >= 7;
   return false;
 };
-const CaptionMaster = ({ backgroundVideoUrl = "", captionSegments = [], captionStyle = "founder", captionPlacement = "adaptive", captionSafeZone = "platform_safe", captionTypography = {} }) => {
-  const frame = useCurrentFrame(); const { fps, width, height } = useVideoConfig(); const seconds = frame / fps;
-  const active = captionSegments.find((segment) => seconds >= Number(segment.start) && seconds <= Number(segment.end));
-  const template = templateFor(captionStyle); const words = wordsFor(active && active.text); const duration = active ? Math.max(.12, Number(active.end) - Number(active.start)) : 1;
-  const progress = active ? clamp((seconds - Number(active.start)) / duration, 0, .999) : 0; const activeIndex = Math.min(Math.max(0, words.length - 1), Math.floor(progress * Math.max(1, words.length)));
-  const localFrame = active ? Math.max(0, frame - Math.round(Number(active.start) * fps)) : 0; const entrance = motion(template.entryMotion, localFrame, fps);
-  const resolveSafe = () => { if (captionSafeZone === "square") return height * .10; if (captionSafeZone === "landscape") return height * .085; if (captionSafeZone === "vertical" || height >= width) return height * .18; return height * .11; };
-  const safeInset = resolveSafe(); const selectedPlacement = captionPlacement === "adaptive" ? (template.placement === "adaptive" ? "lower" : template.placement) : captionPlacement;
-  const position = selectedPlacement === "top" ? { top: safeInset } : selectedPlacement === "center" ? { top: height * .5, transform: "translateY(-50%)" } : { bottom: safeInset };
-  const fontSize = Math.min(width * .075 * Number(captionTypography.size || template.size || 1), height * .064 * Number(captionTypography.size || template.size || 1));
-  const color = captionTypography.color || template.color; const highlight = captionTypography.highlightColor || template.highlightColor; const background = captionTypography.background || template.background;
+const CaptionMaster = ({ backgroundVideoUrl = "", captionSegments = [], captionStyle = "founder", captionPlacement = "adaptive", captionSafeZone = "platform_safe", captionPlatformProfile = "creatorvault", captionFocusRegions = [], captionTypography = {} }) => {
+  const frame = useCurrentFrame(); const { fps, width, height } = useVideoConfig(); const seconds = frame / fps; const template = templateFor(captionStyle); const groups = groupsFor(captionSegments, template);
+  const active = groups.find((group) => seconds >= Number(group.start) && seconds <= Number(group.end)); const words = active ? active.words : []; const duration = active ? Math.max(.12, Number(active.end) - Number(active.start)) : 1;
+  const progress = active ? clamp((seconds - Number(active.start)) / duration, 0, .999) : 0; const activeIndex = active ? Math.max(0, words.findIndex((word) => seconds >= word.start && seconds <= word.end)) : 0; const localFrame = active ? Math.max(0, frame - Math.round(Number(active.start) * fps)) : 0; const entrance = motion(template.entryMotion, localFrame, fps);
+  const safe = profileFor(captionPlatformProfile, captionSafeZone, width, height); const skin = skinFor(template); const focusRegions = Array.isArray(captionFocusRegions) ? captionFocusRegions : []; const captionRect = (placement) => placement === "top" ? { x: safe.left, y: safe.top, width: 1 - safe.left - safe.right, height: .18 } : placement === "center" ? { x: safe.left, y: .41, width: 1 - safe.left - safe.right, height: .18 } : { x: safe.left, y: 1 - safe.bottom - .18, width: 1 - safe.left - safe.right, height: .18 }; const collides = (placement) => { const rect = captionRect(placement); return focusRegions.some((focus) => rect.x < Number(focus.x) + Number(focus.width) && rect.x + rect.width > Number(focus.x) && rect.y < Number(focus.y) + Number(focus.height) && rect.y + rect.height > Number(focus.y)); }; const desiredPlacement = captionPlacement === "adaptive" ? safe.preferred : captionPlacement; const selectedPlacement = captionPlacement === "adaptive" ? [desiredPlacement, "top", "center", "lower"].find((candidate, index, all) => all.indexOf(candidate) === index && !collides(candidate)) || desiredPlacement : desiredPlacement; const position = selectedPlacement === "top" ? { top: height * safe.top } : selectedPlacement === "center" ? { top: height * .5, transform: "translateY(-50%)" } : { bottom: height * safe.bottom };
+  const fontSize = Math.min(width * .075 * Number(captionTypography.size || template.size || 1), height * .064 * Number(captionTypography.size || template.size || 1)); const color = captionTypography.color || template.color; const highlight = captionTypography.highlightColor || template.highlightColor; const background = captionTypography.background || template.background;
   const sweep = template.activeWordBehavior === "light_sweep" ? "linear-gradient(90deg, " + color + " 0%, " + highlight + " " + Math.round(progress * 100) + "%, " + color + " 100%)" : color;
+  const card = { maxWidth: width * (1 - safe.left - safe.right), padding: skin.noBox ? 0 : Math.max(14, width * .022) + "px " + Math.max(18, width * .032) + "px", borderRadius: skin.radius, textAlign: skin.layout === "lowerThird" ? "left" : "center", fontFamily: captionTypography.font || template.font, fontWeight: captionTypography.weight || template.weight, textTransform: skin.case === "upper" ? "uppercase" : "none", background: skin.noBox ? "transparent" : background, color, border: skin.noBox ? "0" : template.stroke, boxShadow: skin.noBox ? "none" : template.shadow, letterSpacing: skin.tracking, fontSize, lineHeight: skin.layout === "film" ? 1.08 : .9, opacity: entrance.opacity, transform: (position.transform ? position.transform + " " : "") + "translateY(" + entrance.y + "px) scale(" + entrance.scale + ")" };
   return <AbsoluteFill style={{ backgroundColor: "#050505", overflow: "hidden" }}>
-    {backgroundVideoUrl ? <Video src={backgroundVideoUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
-    {active ? <div style={{ position: "absolute", left: width * .075, right: width * .075, display: "flex", justifyContent: "center", ...position }}><div style={{ maxWidth: width * .85, padding: Math.max(14, width*.022) + "px " + Math.max(18, width*.032) + "px", borderRadius: Math.max(12, width*.018), textAlign: "center", fontFamily: captionTypography.font || template.font, fontWeight: captionTypography.weight || template.weight, textTransform: template.family === "premium_cinematic" || template.family === "creator_talking_head" ? "none" : "uppercase", background, color, border: template.stroke, boxShadow: template.shadow, letterSpacing: "-.04em", fontSize, lineHeight: .9, opacity: entrance.opacity, transform: (position.transform ? position.transform + " " : "") + "translateY(" + entrance.y + "px) scale(" + entrance.scale + ")" }}>{words.map((word, index) => <span key={index} style={{ color: emphasis(word, index, words, template, activeIndex) ? highlight : sweep, display: "inline-block", marginRight: "0.24em", transform: template.activeWordBehavior === "keyword_blast" && emphasis(word, index, words, template, activeIndex) ? "scale(1.12)" : "scale(1)", transition: "transform 90ms linear" }}>{word}</span>)}</div></div> : null}
+    {backgroundVideoUrl ? <Video src={backgroundVideoUrl} style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#000000" }} /> : null}
+    {active ? <div style={{ position: "absolute", left: width * safe.left, right: width * safe.right, display: "flex", justifyContent: skin.layout === "lowerThird" ? "flex-start" : "center", ...position }}><div style={card}>{active.speaker ? <div style={{ marginBottom: 8, color: active.speaker === "Voice B" ? "#00D9FF" : highlight, fontSize: Math.max(14, fontSize * .34), letterSpacing: ".12em", textTransform: "uppercase" }}>{active.speaker}</div> : null}{words.map((word, index) => <span key={index} style={{ color: emphasis(word.text, index, words.map((item) => item.text), template, activeIndex) ? highlight : sweep, display: "inline-block", marginRight: "0.24em", transform: template.activeWordBehavior === "keyword_blast" && emphasis(word.text, index, words.map((item) => item.text), template, activeIndex) ? "scale(1.12)" : "scale(1)", transition: "transform 90ms linear" }}>{word.text}</span>)}</div></div> : null}
   </AbsoluteFill>;
 };
 const Root = () => <Composition id="CreatorVaultRuntimeCaptionStage" component={CaptionMaster} durationInFrames={180} fps={30} width={1080} height={1920} defaultProps={{}} />;
-registerRoot(Root);`;
+registerRoot(Root);`
 
 async function getOrCreateBundle(contract: RenderContract): Promise<string> {
   const isRuntimeFlyer = contract.mode === "flyer";
