@@ -159,11 +159,11 @@ export const kingcamCloneOperatingSystemRouter = router({
     }),
 
   registerPerformanceCapture: protectedProcedure
-    .input(z.object({ mediaAssetId: z.string().uuid() }))
+    .input(z.object({ mediaAssetId: z.string().uuid(), performanceRole: z.enum(["presence", "gait", "hands_and_prop", "direct_delivery", "reaction", "combined_performance"]).default("combined_performance") }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
       try {
-        return await registerKingcamPerformanceCapture({ ownerId: ctx.user.id, mediaAssetId: input.mediaAssetId });
+        return await registerKingcamPerformanceCapture({ ownerId: ctx.user.id, mediaAssetId: input.mediaAssetId, performanceRole: input.performanceRole });
       } catch (error) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "KingCam Performance Capture could not be registered." });
       }

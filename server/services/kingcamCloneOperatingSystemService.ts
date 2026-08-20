@@ -33,6 +33,15 @@ type MotionRequestState = "planned" | "approved" | "submitted" | "provider_compl
 type KingcamTrainingRole = "identity_reference" | "wardrobe_reference" | "voice_reference" | "performance_candidate" | "movement_driver" | "rejected";
 type KingcamSourceKind = "real_camera" | "synthetic_or_generated" | "unknown";
 type KingcamBenchmarkCaseStatus = "awaiting_source_capture" | "source_verified" | "ready_for_governed_benchmark" | "watchable_output_required" | "accepted" | "rejected";
+type KingcamPerformanceRole = "presence" | "gait" | "hands_and_prop" | "direct_delivery" | "reaction" | "combined_performance";
+const KINGCAM_PERFORMANCE_ROLE_LABELS: Record<KingcamPerformanceRole, string> = {
+  presence: "Crown-and-suit presence",
+  gait: "Natural gait and weight",
+  hands_and_prop: "Hands and prop control",
+  direct_delivery: "Direct-to-camera delivery",
+  reaction: "Reaction and listening",
+  combined_performance: "Combined KingCam performance",
+};
 // The verified KingCam motion source is 5.04 seconds; this proof must never request a longer output.
 const KINGCAM_FULL_BODY_PROOF_DURATION_SECONDS = 15;
 const KINGCAM_FULL_BODY_PROOF_MANUAL_CREDIT_CAP = 2;
@@ -758,6 +767,68 @@ function voicePolicy() {
   };
 }
 
+function buildKingcamIdentityPassport(input: { trainingLibrary: Awaited<ReturnType<typeof getKingcamCloneTrainingLibrary>>; motionPolicy: ReturnType<typeof motionPolicy> }) {
+  const performanceCandidates = input.trainingLibrary.assets.filter((asset) => asset.trainingRole === "performance_candidate");
+  const motionDriver = input.trainingLibrary.approvedMovementDriver;
+  const capturedRoles = new Set(performanceCandidates.map((asset) => String((asset.analysis as Record<string, unknown>).performanceRole || "")).filter((role): role is KingcamPerformanceRole => role in KINGCAM_PERFORMANCE_ROLE_LABELS));
+  const roleLabelsPresent = Array.from(capturedRoles).map((role) => KINGCAM_PERFORMANCE_ROLE_LABELS[role]);
+  const roleLabelsNeeded = (Object.keys(KINGCAM_PERFORMANCE_ROLE_LABELS) as KingcamPerformanceRole[]).filter((role) => role !== "combined_performance" && !capturedRoles.has(role)).map((role) => KINGCAM_PERFORMANCE_ROLE_LABELS[role]);
+  const realVoiceConfigured = Boolean(String(process.env.ELEVENLABS_API_KEY || "").trim() && String(process.env.KINGCAM_ELEVEN_VOICE_ID || "").trim());
+  const motionExecutionReady = input.motionPolicy.executionState === "governed execution ready";
+  return {
+    title: "KingCam Identity Passport",
+    rule: "KingCam is a connected digital performer. No one source is allowed to pretend it proves face, voice, body, behavior, wardrobe, and finished motion all at once.",
+    visualCanon: {
+      status: "ready",
+      title: "Crown-and-suit visual canon",
+      evidence: ["KingCam crown-and-suit full-body visual reference", "Approved KingCam identity images"],
+      carries: ["crown", "burgundy velvet and gold wardrobe", "jewelry", "shoes", "cigar", "dark lounge", "full-body silhouette"],
+      cannotClaim: ["expressive eyes", "clear mouth performance", "direct speech", "continuous natural gait"],
+    },
+    faceExpression: {
+      status: "needs_expression_reference",
+      title: "Face, eyes, and expression",
+      evidence: ["Approved identity images", "Existing close speech references"],
+      carries: ["general face shape", "beard", "skin tone", "presence"],
+      needs: ["unobstructed eyes", "unobstructed mouth", "natural reactions", "direct-to-camera expression range"],
+    },
+    voice: {
+      status: realVoiceConfigured ? "configured" : "needs_voice_runtime",
+      title: "Real KingCam voice",
+      evidence: ["Authenticated KingCam voice-clone configuration", "Direct-speech reference media"],
+      carries: ["voice identity", "cadence", "pronunciation", "spoken delivery"],
+      rule: "No generic fallback voice is permitted for KingCam.",
+      needs: ["owner-approved delivery styles", "clean single-speaker quality reference", "voice-to-video acceptance check"],
+    },
+    bodyPerformance: {
+      status: motionDriver ? "driver_ready_for_one_benchmark" : performanceCandidates.length ? "specialized_evidence_ready" : "needs_real_performance_evidence",
+      title: "Body, gait, hands, and performance",
+      evidenceCount: performanceCandidates.length,
+      carries: roleLabelsPresent.length ? roleLabelsPresent : ["body proportions", "selected motion references", "hands and feet evidence when visible"],
+      needs: motionDriver ? ["one governed moving proof", "watchable quality review"] : roleLabelsNeeded.length ? roleLabelsNeeded : ["owner review of the right captured roles"],
+      rule: "A visual pose clip and a natural speaking-performance driver are separate kinds of evidence.",
+    },
+    behavior: {
+      status: "needs_owner_behavior_deck",
+      title: "Presence and behavior",
+      needs: ["opening energy", "pacing", "gaze", "hand energy", "humor", "values", "approved phrases", "what KingCam never claims"],
+      rule: "A generic chat prompt is not a behavioral clone.",
+    },
+    truthMemory: {
+      status: "needs_owner_truth_cards",
+      title: "Memory and knowledge",
+      needs: ["owner-approved facts", "evidence links", "where each fact may be spoken", "public versus private rules"],
+      rule: "KingCam only speaks facts that CreatorVault can trace back to owner-approved evidence.",
+    },
+    proof: {
+      status: motionExecutionReady && motionDriver ? "eligible_for_one_governed_proof" : motionDriver ? "waiting_for_video_lane" : "waiting_for_component_completion",
+      title: "Finished moving KingCam proof",
+      scorecard: ["face", "eyes and gaze", "mouth and lip-sync", "voice", "body mechanics", "hands and prop", "crown and wardrobe", "behavior", "continuity", "no-drift"],
+      rule: "A result cannot be called a finished KingCam clone until every required layer is visible, scored, and accepted.",
+    },
+  };
+}
+
 function motionPolicy() {
   const config = getGovernedPolloConfig();
   return {
@@ -789,9 +860,9 @@ async function ensureProfile(ownerId: number) {
   const motion = motionPolicy();
   const quality = { gates: QUALITY_GATES, reviewRequired: true, noAutomaticPublicPlacement: true };
   if (rows[0]) {
-    if (String(rows[0].truth_revision || "") !== "kingcam-digital-performer-v2") {
+    if (String(rows[0].truth_revision || "") !== "kingcam-digital-performer-v3") {
       await rawExec(`UPDATE kingcam_clone_operating_profiles
-        SET identity_vault_json = ?, voice_policy_json = ?, motion_policy_json = ?, quality_policy_json = ?, truth_revision = 'kingcam-digital-performer-v2', updated_at = NOW()
+        SET identity_vault_json = ?, voice_policy_json = ?, motion_policy_json = ?, quality_policy_json = ?, truth_revision = 'kingcam-digital-performer-v3', updated_at = NOW()
         WHERE clone_id = ? AND owner_id = ?`,
         [json(vault), json(voice), json(motion), json(quality), KINGCAM_CLONE_ID, ownerId]);
       return (await rawQuery<any>("SELECT * FROM kingcam_clone_operating_profiles WHERE clone_id = ? LIMIT 1", [KINGCAM_CLONE_ID]))[0];
@@ -800,7 +871,7 @@ async function ensureProfile(ownerId: number) {
   }
   await rawExec(`INSERT INTO kingcam_clone_operating_profiles
     (clone_id, owner_id, status, identity_vault_json, voice_policy_json, motion_policy_json, quality_policy_json, truth_revision, created_at, updated_at)
-    VALUES (?, ?, 'operational-spine', ?, ?, ?, ?, 'kingcam-digital-performer-v2', NOW(), NOW())`,
+    VALUES (?, ?, 'operational-spine', ?, ?, ?, ?, 'kingcam-digital-performer-v3', NOW(), NOW())`,
     [KINGCAM_CLONE_ID, ownerId, json(vault), json(voice), json(motion), json(quality)]);
   return (await rawQuery<any>("SELECT * FROM kingcam_clone_operating_profiles WHERE clone_id = ? LIMIT 1", [KINGCAM_CLONE_ID]))[0];
 }
@@ -813,12 +884,16 @@ export async function getKingcamCloneOperatingSystem(ownerId: number) {
   const requests = await rawQuery<any>(`SELECT id, source_url, source_kind, motion_reference_url, intended_lane, candidate_models_json,
     scene_brief, hard_credit_cap, consent_confirmed, ownership_confirmed, quality_gate_json, state, review_json, created_at, updated_at
     FROM kingcam_clone_motion_requests WHERE clone_id = ? AND owner_id = ? ORDER BY created_at DESC LIMIT 12`, [KINGCAM_CLONE_ID, ownerId]);
+  const resolvedMotionPolicy = parseJson(profile.motion_policy_json, motionPolicy());
+  const trainingLibrary = await getKingcamCloneTrainingLibrary(ownerId);
+  const identityPassport = buildKingcamIdentityPassport({ trainingLibrary, motionPolicy: resolvedMotionPolicy });
   return {
     cloneId: KINGCAM_CLONE_ID,
     status: String(profile.status),
     identityVault: parseJson(profile.identity_vault_json, identityVault()),
     voicePolicy: parseJson(profile.voice_policy_json, voicePolicy()),
-    motionPolicy: parseJson(profile.motion_policy_json, motionPolicy()),
+    motionPolicy: resolvedMotionPolicy,
+    identityPassport,
     qualityPolicy: parseJson(profile.quality_policy_json, { gates: QUALITY_GATES }),
     truthLibrary: TRUTH_LIBRARY,
     recentMemory: recentMemory.map((event) => ({
@@ -1206,10 +1281,12 @@ export async function syncKingcamCloneTrainingLibrary(ownerId: number) {
   return { registered, library: await getKingcamCloneTrainingLibrary(ownerId) };
 }
 
-export async function registerKingcamPerformanceCapture(input: { ownerId: number; mediaAssetId: string }) {
+export async function registerKingcamPerformanceCapture(input: { ownerId: number; mediaAssetId: string; performanceRole?: KingcamPerformanceRole }) {
   assertOwner(input.ownerId);
   await ensureProfile(input.ownerId);
   const mediaAssetId = String(input.mediaAssetId || "").trim();
+  const performanceRole = input.performanceRole || "combined_performance";
+  if (!(performanceRole in KINGCAM_PERFORMANCE_ROLE_LABELS)) throw new Error("Choose a real KingCam performance role before saving the take.");
   if (!mediaAssetId) throw new Error("KingCam Performance Capture needs the verified media receipt from CreatorVault.");
   const rows = await rawQuery<any>(
     `SELECT id, public_url, duration, width, height, mime_type, status, created_by_feature
@@ -1240,6 +1317,8 @@ export async function registerKingcamPerformanceCapture(input: { ownerId: number
     height,
     mimeType: String(asset.mime_type || "video/mp4"),
     classification: "kingcam_performance_driver",
+    performanceRole,
+    performanceRoleLabel: KINGCAM_PERFORMANCE_ROLE_LABELS[performanceRole],
     bodyCinemaEligible: false,
     cloneOnly: true,
   };
@@ -1247,7 +1326,7 @@ export async function registerKingcamPerformanceCapture(input: { ownerId: number
     ownerId: input.ownerId, mediaAssetId, mediaUrl: capture.mediaUrl, mediaName: "KingCam direct performance capture",
     sourceKind: "real_camera", trainingRole: "performance_candidate", fullBodySeconds: capture.durationSeconds,
     naturalMotionScore: 0, speechSyncScore: 0, driverReady: false,
-    evidence: "Direct owner-recorded KingCam Performance Capture. It awaits motion, framing, speech, hand, and identity inspection before any clone driver claim.",
+    evidence: `Direct owner-recorded KingCam Performance Capture for ${KINGCAM_PERFORMANCE_ROLE_LABELS[performanceRole]}. It awaits motion, framing, speech, hand, and identity inspection before any clone driver claim.`,
     defects: null, assessmentSource: "creatorvault_direct_performance_capture_pending_review",
     analysis: { ...capture, pendingHumanPerformanceReview: true },
   });

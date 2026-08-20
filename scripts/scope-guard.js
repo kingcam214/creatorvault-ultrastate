@@ -257,6 +257,7 @@ const ALLOWLISTS = {
     'client/public/images/kingcam-profile/kingcam-crown-lounge-reference.png',
     'server/routers.ts',
     'server/routers/kingcamCloneOperatingSystemRouter.ts',
+    'server/routers/kingcamBrainRouter.ts',
     'server/routers/mediaAssets.ts',
     'server/routers/videoUploadRouter.ts',
     'server/services/kingcamCloneOperatingSystemService.ts',

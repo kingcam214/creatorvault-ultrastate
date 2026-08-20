@@ -10,6 +10,15 @@ const captureMarks = [
   "Speak naturally for 15–30 seconds. Your real performance becomes the clone’s motion control.",
 ];
 
+const performanceRoles = [
+  { value: "presence", label: "Crown-and-suit presence", help: "Stand tall, show the full KingCam look, and let the camera hold your presence." },
+  { value: "gait", label: "Natural gait and weight", help: "Walk naturally, shift your weight, and let both shoes stay visible." },
+  { value: "hands_and_prop", label: "Hands and prop control", help: "Show natural hand movement and how you hold a real prop." },
+  { value: "direct_delivery", label: "Direct-to-camera delivery", help: "Look into the camera and speak with your real KingCam energy." },
+  { value: "reaction", label: "Reaction and listening", help: "Show calm listening, small reactions, gaze changes, and natural pauses." },
+  { value: "combined_performance", label: "Combined KingCam performance", help: "Bring several pieces together in one uninterrupted real take." },
+] as const;
+
 function recorderMimeType() {
   const options = [
     "video/webm;codecs=vp9,opus",
@@ -31,6 +40,7 @@ export function KingCamPerformanceCapture() {
   const [capturedAssetId, setCapturedAssetId] = useState<string | null>(null);
   const [reviewChecks, setReviewChecks] = useState({ fullBody: false, naturalMotion: false, directSpeech: false });
   const [reviewNotes, setReviewNotes] = useState("");
+  const [performanceRole, setPerformanceRole] = useState<(typeof performanceRoles)[number]["value"]>("combined_performance");
   const timerRef = useRef<number | null>(null);
   const register = trpc.kingcamCloneOperatingSystem.registerPerformanceCapture.useMutation({
     onSuccess: (result) => {
@@ -115,7 +125,7 @@ export function KingCamPerformanceCapture() {
         xhr.send(form);
       });
       if (!uploaded.mediaAssetId) throw new Error("CreatorVault did not verify the performance receipt.");
-      register.mutate({ mediaAssetId: uploaded.mediaAssetId });
+      register.mutate({ mediaAssetId: uploaded.mediaAssetId, performanceRole });
     } catch (error) {
       setState("error");
       setNotice(error instanceof Error ? error.message : "The performance take could not be stored.");
@@ -198,7 +208,7 @@ export function KingCamPerformanceCapture() {
               </div>
             ))}
           </div>
-          <div className="mt-7 rounded-2xl border border-[#e8bd74]/20 bg-[#e8bd74]/8 p-4 text-xs leading-5 text-[#f5dfb0]">No filters. No fake motion. No Body Cinema. This is the real performance control your clone has been missing.</div>
+          <label className="mt-7 block"><span className="text-[10px] font-black uppercase tracking-[.15em] text-[#e8bd74]">What part of KingCam are you building?</span><select value={performanceRole} onChange={(event) => setPerformanceRole(event.target.value as (typeof performanceRoles)[number]["value"])} className="mt-2 min-h-12 w-full rounded-xl border border-[#e8bd74]/25 bg-black/35 px-3 text-sm font-black text-white outline-none focus:border-[#e8bd74]/60">{performanceRoles.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}</select><p className="mt-2 text-xs leading-5 text-white/55">{performanceRoles.find((role) => role.value === performanceRole)?.help}</p></label><div className="mt-5 rounded-2xl border border-[#e8bd74]/20 bg-[#e8bd74]/8 p-4 text-xs leading-5 text-[#f5dfb0]">No filters. No fake motion. No Body Cinema. This is the real performance control your clone has been missing.</div>
         </div>
 
         <div className="relative min-h-[32rem] overflow-hidden rounded-[1.65rem] border border-white/15 bg-black">
