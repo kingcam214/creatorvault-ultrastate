@@ -281,6 +281,7 @@ const ALLOWLISTS = {
     'workers/wan-proof/app/main.py',
     'workers/wan-proof/app/patch_wan_bf16.py',
     'workers/wan-proof/app/wan_animate_2_proof.yaml',
+    'KINGCAM_EXECUTION_TRUTH_LEDGER.md',
     'LEARNING_LOG.md',
     'scripts/scope-guard.js'
   ],
