@@ -883,3 +883,16 @@ The official Wan-Animate-2 distilled proof contract is: approved full-body KingC
 The prior KingCam Kling 3 Omni spoken-motion builder was not sufficient for the full performer standard because it supplied visual identity and verified voice audio but no full-body motion reference. The route now requires the approved KingCam identity image, the approved controlled full-body performance video, and the verified KingCam direct-speech audio as named references in one 1080p vertical request. Generated replacement audio is disabled. The builder remains single-output, no-automatic-retry, source-preserving, and capped at 75 credits; it creates a draft only and needs a separate governed submission authorization before any provider request can spend credit.
 
 The CreatorVault owner-only control plane now exposes the additive draft path. Focused server bundles, the full production build, and the KingCam scope guard passed. No Pollo task was submitted and no credit was used. The resulting video, if any, must still pass identity, full body, natural motion, real voice and lip-sync, and visible CreatorVault teaching review before it is called KingCam.
+
+## 2026-08-20 — KINGCAM KLING 3 OMNI MULTIMODAL RUN 118: REJECTED BEFORE RENDER
+
+- **Authorized run:** governed job `118`; provider task `cmt1tjj790ztx6zxtc3c9xeol`; one 15-second 1080p vertical Kling 3 Omni request; exact references were the approved crown-and-suit identity image, the approved controlled full-body motion video, and verified KingCam direct speech. The owner approved the one-output run with a 75-credit ceiling and no automatic retry.
+- **Outcome:** the provider rejected the task before a video existed: `VideoNormalize failed, HDR video is not supported`.
+- **Truth:** there is no output URL, no artifact, no watchable KingCam performance, and no five-gate score. This is a technical input rejection, not a visual failure and not a partial KingCam result.
+- **Correction rule:** do not resend the HDR motion driver. First create a source-preserving SDR-compatible technical copy, verify its stream metadata, and preflight it with the same locked identity and real-voice references. A new provider request remains a separate owner decision; no retry is authorized by this rejected run.
+
+## 2026-08-20 — KINGCAM HDR INPUT CORRECTION: VERIFIED SDR DRIVER
+
+The rejected HDR driver was converted once into a durable CreatorVault-owned SDR technical copy. The corrected source is H.264, 1080×1920, 30fps, yuv420p, BT.709 transfer, 12.1 seconds, with a verified owner-bound receipt and SHA-256 fingerprint. A visual inspection confirmed upright crown-to-shoes framing, preserved full-body movement, natural nighttime exposure, and no visible crop, rotation, or conversion defect.
+
+The governed Kling 3 Omni KingCam multimodal builder now references only this SDR source. This correction does not submit a provider task and does not authorize a retry. Any new paid benchmark still requires a separate owner authorization.
