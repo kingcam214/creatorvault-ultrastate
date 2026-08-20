@@ -72,6 +72,14 @@ import { destroyCompletedH200VaceWorker, provisionApprovedH100VaceWorker } from 
 import { destroyWanAnimate2ProofWorker, provisionConfirmedWanAnimate2H200ProofWorker } from "../services/digitalOceanWanProofWorkerProvisioner";
 import { getWanProofWorkerConnectionState } from "../services/wanAnimateProofWorkerConnectionService";
 import { collectWanAnimate2ProofOutput, getWanAnimate2ProofJob, launchOneWanAnimate2Proof, probeWanAnimate2ProofWorker } from "../services/wanAnimate2ProofService";
+import { destroyKingcamPerformerWorker, provisionApprovedKingcamPerformerH200Worker } from "../services/digitalOceanKingcamPerformerWorkerProvisioner";
+import { getKingcamPerformerWorkerConnectionState } from "../services/kingcamPerformerWorkerConnectionService";
+import {
+  collectKingcamFullBodyPerformerOutput,
+  getKingcamFullBodyPerformerRun,
+  launchKingcamFullBodyTalkingBenchmark,
+  probeKingcamFullBodyPerformerWorker,
+} from "../services/kingcamFullBodyPerformerService";
 
 const OWNER_IDS = new Set([6, 33]);
 
@@ -225,6 +233,65 @@ export const governedPolloRouter = router({
     ownerOnly(ctx.user.id);
     try {
       return await destroyWanAnimate2ProofWorker(input.dropletId);
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  kingcamPerformerWorkerConnectionState: protectedProcedure.query(({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    return getKingcamPerformerWorkerConnectionState();
+  }),
+
+  provisionApprovedKingcamPerformerH200Worker: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await provisionApprovedKingcamPerformerH200Worker();
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  probeKingcamFullBodyPerformerWorker: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await probeKingcamFullBodyPerformerWorker();
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  launchKingcamFullBodyTalkingBenchmark: protectedProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await launchKingcamFullBodyTalkingBenchmark();
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  kingcamFullBodyPerformerRun: protectedProcedure.input(z.object({ workerJobId: z.string().uuid() })).query(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await getKingcamFullBodyPerformerRun(input.workerJobId);
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  collectKingcamFullBodyPerformerOutput: protectedProcedure.input(z.object({ workerJobId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await collectKingcamFullBodyPerformerOutput({ ownerId: ctx.user.id, workerJobId: input.workerJobId });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  destroyKingcamPerformerWorker: protectedProcedure.input(z.object({ dropletId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await destroyKingcamPerformerWorker(input.dropletId);
     } catch (error) {
       return asPrecondition(error);
     }
