@@ -216,7 +216,58 @@ export const mediaAssetsRouter = router({
         ORDER BY created_at DESC
         LIMIT ${limit}
       ` as any).then(extractRows).catch(() => [] as any[]);
-      const rows = [...extractRows(result), ...flyerRows];
+      const marketingRows = await db.execute(sql`
+        SELECT
+          CONCAT(id, '-still') AS id,
+          creator_id AS user_id,
+          'image' AS asset_type,
+          'finished_marketing_maker_still' AS source_type,
+          'recovered_marketing_maker' AS created_by_feature,
+          CONCAT(headline, ' — ', format, ' Still') AS file_name,
+          CONCAT(headline, ' — ', format, ' Still') AS original_name,
+          'image/png' AS mime_type,
+          NULL AS file_size,
+          still_url AS public_url,
+          still_url AS thumbnail_url,
+          NULL AS storage_path,
+          NULL AS duration,
+          CASE WHEN format = 'motion_mixtape_cover' THEN 1080 ELSE 1080 END AS width,
+          CASE WHEN format = 'motion_mixtape_cover' THEN 1080 ELSE 1920 END AS height,
+          'ready' AS status,
+          created_at
+        FROM marketing_maker_projects
+        WHERE creator_id = ${ctx.user.id}
+          AND status = 'ready'
+          AND still_url IS NOT NULL
+          AND still_url <> ''
+        UNION ALL
+        SELECT
+          CONCAT(id, '-motion') AS id,
+          creator_id AS user_id,
+          'video' AS asset_type,
+          'finished_marketing_maker_motion' AS source_type,
+          'recovered_marketing_maker' AS created_by_feature,
+          CONCAT(headline, ' — ', format, ' Motion') AS file_name,
+          CONCAT(headline, ' — ', format, ' Motion') AS original_name,
+          'video/mp4' AS mime_type,
+          NULL AS file_size,
+          motion_url AS public_url,
+          thumbnail_url,
+          NULL AS storage_path,
+          6 AS duration,
+          CASE WHEN format = 'motion_mixtape_cover' THEN 1080 ELSE 1080 END AS width,
+          CASE WHEN format = 'motion_mixtape_cover' THEN 1080 ELSE 1920 END AS height,
+          'ready' AS status,
+          created_at
+        FROM marketing_maker_projects
+        WHERE creator_id = ${ctx.user.id}
+          AND status = 'ready'
+          AND motion_url IS NOT NULL
+          AND motion_url <> ''
+        ORDER BY created_at DESC
+        LIMIT ${limit}
+      ` as any).then(extractRows).catch(() => [] as any[]);
+      const rows = [...extractRows(result), ...flyerRows, ...marketingRows];
       const verifiedSourceUrls = new Set(
         (await listBodyCinemaVerifiedSourceAttestations(Number(ctx.user.id))).map((attestation) => attestation.sourceMediaUrl),
       );
@@ -230,7 +281,7 @@ export const mediaAssetsRouter = router({
           ? "private_presence_loop"
           : row.created_by_feature === "kingcam_performance_capture"
             ? "kingcam_performance_driver"
-            : row.created_by_feature === "recovered_finished_motion_flyer"
+            : row.created_by_feature === "recovered_finished_motion_flyer" || row.created_by_feature === "recovered_marketing_maker"
               ? "finished_showcase"
               : row.created_by_feature === "creatorvault_approved_demo"
                 ? "approved_demo"

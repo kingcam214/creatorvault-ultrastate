@@ -77,6 +77,8 @@ export interface RenderResult {
   outputUrl?: string;
   videoPath?: string;
   videoUrl?: string;
+  imagePath?: string;
+  imageUrl?: string;
   thumbnailPath?: string;
   thumbnailUrl?: string;
   durationMs?: number;

@@ -736,6 +736,14 @@ const ALLOWLISTS = {
     'client/src/pages/MediaHubPage.tsx',
     'scripts/scope-guard.js'
   ],
+  'marketing-maker-revival': [
+    'client/src/pages/MotionFlyerAgent.tsx',
+    'server/routers/flyerStudioV2Router.ts',
+    'server/routers/mediaAssets.ts',
+    'server/remotion/remotionRenderService.ts',
+    'server/remotion/types.ts',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',

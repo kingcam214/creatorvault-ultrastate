@@ -121,16 +121,16 @@ const RUNTIME_FLYER_ENTRY = path.join(os.tmpdir(), "creatorvault-motion-flyer-ru
 const RUNTIME_CAPTION_ENTRY = path.join(os.tmpdir(), "creatorvault-caption-stage-runtime-entry.tsx");
 
 const RUNTIME_FLYER_SOURCE = `import React from "react";
-import { AbsoluteFill, Composition, Video, interpolate, registerRoot, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Composition, Img, Video, interpolate, registerRoot, spring, useCurrentFrame, useVideoConfig } from "remotion";
 const color = (value, fallback) => { const raw = String(value || "").trim(); return raw ? (raw.startsWith("#") ? raw : "#" + raw) : fallback; };
-const Flyer = ({ artistName = "CreatorVault", songTitle = "THE MOMENT", subtitle = "Make it impossible to ignore.", callToAction = "ENTER THE VAULT", accentColor = "D4AF37", textColor = "FFFFFF", backgroundVideoUrl = "" }) => {
+const Flyer = ({ artistName = "CreatorVault", songTitle = "THE MOMENT", subtitle = "Make it impossible to ignore.", callToAction = "ENTER THE VAULT", accentColor = "D4AF37", textColor = "FFFFFF", backgroundVideoUrl = "", sourceMediaUrl = "", sourceMediaType = "video" }) => {
   const frame = useCurrentFrame(); const { fps, width, height } = useVideoConfig(); const accent = color(accentColor, "#D4AF37"); const text = color(textColor, "#FFFFFF");
   const top = spring({ frame: Math.max(0, frame - 4), fps, config: { damping: 18, stiffness: 135 } });
   const title = spring({ frame: Math.max(0, frame - 13), fps, config: { damping: 17, stiffness: 105 } });
   const body = spring({ frame: Math.max(0, frame - 30), fps, config: { damping: 18, stiffness: 110 } });
   const exit = interpolate(frame, [Math.max(0, Math.round(fps * 5.2)), Math.round(fps * 5.85)], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return <AbsoluteFill style={{ backgroundColor: "#080706", overflow: "hidden" }}>
-    {backgroundVideoUrl ? <Video src={backgroundVideoUrl} muted style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center center" }} /> : null}
+    {sourceMediaType === "image" && sourceMediaUrl ? <Img src={sourceMediaUrl} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center center" }} /> : backgroundVideoUrl ? <Video src={backgroundVideoUrl} muted style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center center" }} /> : null}
     <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(8,7,6,.84) 0%, rgba(8,7,6,.15) 28%, rgba(8,7,6,.22) 56%, rgba(8,7,6,.92) 100%)" }} />
     <AbsoluteFill style={{ background: "linear-gradient(90deg, rgba(8,7,6,.72) 0%, transparent 57%, rgba(8,7,6,.18) 100%)" }} />
     <div style={{ position: "absolute", top: height * .075, left: width * .07, right: width * .07, opacity: top * (1 - exit), transform: "translateY(" + interpolate(top, [0,1], [-36,0]) + "px)" }}><div style={{ display: "flex", alignItems: "center", gap: 16 }}><div style={{ height: 2, width: 56, backgroundColor: accent }} /><div style={{ color: accent, fontFamily: "Arial, sans-serif", fontSize: Math.min(width*.026,29), fontWeight: 800, letterSpacing: ".24em", textTransform: "uppercase" }}>{artistName}</div></div></div>
@@ -496,6 +496,75 @@ export async function renderWithRemotion(contract: RenderContract & { sourceVide
       width,
       height,
       preset: motionPreset,
+      renderMs: Date.now() - startMs,
+      error: err.message,
+    };
+  }
+}
+
+
+/**
+ * Renders one deliberate editorial frame from the same source-driven Marketing Maker
+ * composition. This is a real PNG export, not a screenshot or synthetic placeholder.
+ */
+export async function renderMarketingStill(contract: RenderContract & {
+  format: "editorial_flyer" | "motion_flyer" | "motion_mixtape_cover";
+  sourceMediaUrl?: string;
+  sourceMediaType?: "image" | "video";
+}): Promise<RenderResult> {
+  const startMs = Date.now();
+  const { jobId, width, height } = contract;
+  const finalImagePath = path.join(UPLOADS_DIR, `marketing-${jobId}.png`);
+
+  try {
+    const bundleDir = await getOrCreateBundle({ ...contract, mode: "flyer" });
+    const { renderStill, selectComposition } = await import("@remotion/renderer");
+    const composition = await selectComposition({
+      serveUrl: bundleDir,
+      id: "CreatorVaultRuntimeMotionFlyer",
+      inputProps: contract as unknown as Record<string, unknown>,
+      chromiumOptions: { disableWebSecurity: true, headless: true },
+    });
+
+    await renderStill({
+      composition: { ...composition, width, height, fps: contract.fps, durationInFrames: Math.round(contract.durationSeconds * contract.fps) },
+      serveUrl: bundleDir,
+      output: finalImagePath,
+      frame: Math.max(1, Math.round(contract.fps * 1.6)),
+      imageFormat: "png",
+      inputProps: contract as unknown as Record<string, unknown>,
+      chromiumOptions: { disableWebSecurity: true, headless: true },
+      timeoutInMilliseconds: 300000,
+    });
+
+    if (!fs.existsSync(finalImagePath) || fs.statSync(finalImagePath).size < 10_000) {
+      throw new Error("Marketing Maker did not produce a valid still export.");
+    }
+
+    const imageUrl = `/uploads/marketing-${jobId}.png`;
+    return {
+      jobId,
+      success: true,
+      imagePath: finalImagePath,
+      imageUrl,
+      outputPath: finalImagePath,
+      outputUrl: imageUrl,
+      width,
+      height,
+      engine: "remotion",
+      renderMs: Date.now() - startMs,
+    };
+  } catch (err: any) {
+    try { fs.unlinkSync(finalImagePath); } catch {}
+    console.error(`[RemotionRender] Marketing still ${jobId} FAILED:`, err.message);
+    return {
+      jobId,
+      success: false,
+      imagePath: "",
+      imageUrl: "",
+      width,
+      height,
+      engine: "remotion",
       renderMs: Date.now() - startMs,
       error: err.message,
     };
