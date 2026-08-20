@@ -201,6 +201,14 @@ const KINGCAM_KLING_OMNI_SPOKEN_MOTION_DURATION_SECONDS = 15;
 const KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL = "https://creatorvault.live/images/kingcam-profile/kingcam-crown-lounge-reference.png";
 const KINGCAM_KLING_OMNI_SPOKEN_MOTION_AUDIO_URL = "https://creatorvault.live/uploads/content-vault/kingcam-voice-tour-v1/happyhorse-fullbody-proof.mp3";
 const KINGCAM_KLING_OMNI_SPOKEN_MOTION_DRIVER_URL = "https://creatorvault.live/uploads/content-vault/c51e95c5-eea0-489f-90b6-0d893c12ecb8/kingcam-controlled-performance-sdr-v2.mp4";
+const KINGCAM_HAPPYHORSE_ALL_REFERENCE_MODEL_PATH = "pollo/happyhorse/happyhorse-1-0-ref";
+const KINGCAM_HAPPYHORSE_ALL_REFERENCE_MODE = "kingcam_happyhorse_all_reference_full_performer";
+const KINGCAM_HAPPYHORSE_ALL_REFERENCE_HARD_CREDIT_CAP = 75;
+const KINGCAM_HAPPYHORSE_ALL_REFERENCE_DURATION_SECONDS = 15;
+const KINGCAM_HAPPYHORSE_IDENTITY_IMAGE_URL = KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL;
+const KINGCAM_HAPPYHORSE_BODY_MOTION_VIDEO_URL = KINGCAM_KLING_OMNI_SPOKEN_MOTION_DRIVER_URL;
+const KINGCAM_HAPPYHORSE_FACE_PERFORMANCE_VIDEO_URL = "https://creatorvault.live/uploads/content-vault/095edefc-59d3-4951-a871-630303b01b60/43df2204-c955-4b9e-968a-3bde65e30fbe.mp4";
+const KINGCAM_HAPPYHORSE_REAL_VOICE_AUDIO_URL = KINGCAM_KLING_OMNI_SPOKEN_MOTION_AUDIO_URL;
 const KINGCAM_KLING_OMNI_REAL_GAIT_ESTIMATE_API_PATH = "/v1/generation/kling-ai/kling-v3-omni/video/estimate";
 const KINGCAM_KLING_OMNI_REAL_GAIT_MODEL_PATH = "pollo/kling-ai/kling-v3-omni-ref2video";
 const KINGCAM_KLING_OMNI_REAL_GAIT_MODE = "kingcam_kling_omni_real_gait_mixed_reference";
@@ -387,6 +395,23 @@ function isKingcamKlingOmniSpokenMotionJob(job: Pick<GovernedPolloJob, "provider
     && job.metadata.audioUrl === KINGCAM_KLING_OMNI_SPOKEN_MOTION_AUDIO_URL
     && job.metadata.motionDriverUrl === KINGCAM_KLING_OMNI_SPOKEN_MOTION_DRIVER_URL
     && job.metadata.hardCreditCap === KINGCAM_KLING_OMNI_SPOKEN_MOTION_HARD_CREDIT_CAP;
+}
+
+function isKingcamHappyHorseAllReferenceJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
+  return job.provider === "pollo"
+    && job.providerModelPath === KINGCAM_HAPPYHORSE_ALL_REFERENCE_MODEL_PATH
+    && job.mode === KINGCAM_HAPPYHORSE_ALL_REFERENCE_MODE
+    && job.metadata.kingcamHappyHorseAllReferenceProof === true
+    && job.metadata.ownerDirectedPilot === true
+    && job.metadata.candidateLimit === 1
+    && job.metadata.noAutomaticRetry === true
+    && job.metadata.sourcePreservationRequired === true
+    && job.metadata.genericVoiceFallbackForbidden === true
+    && job.metadata.identityReferenceUrl === KINGCAM_HAPPYHORSE_IDENTITY_IMAGE_URL
+    && job.metadata.motionDriverUrl === KINGCAM_HAPPYHORSE_BODY_MOTION_VIDEO_URL
+    && job.metadata.facePerformanceVideoUrl === KINGCAM_HAPPYHORSE_FACE_PERFORMANCE_VIDEO_URL
+    && job.metadata.audioUrl === KINGCAM_HAPPYHORSE_REAL_VOICE_AUDIO_URL
+    && job.metadata.hardCreditCap === KINGCAM_HAPPYHORSE_ALL_REFERENCE_HARD_CREDIT_CAP;
 }
 
 function isReplicateWanVideoEditJob(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "metadata">): boolean {
@@ -2059,6 +2084,67 @@ function buildKingcamKlingOmniSpokenMotionInput(job: Pick<GovernedPolloJob, "sou
   };
 }
 
+function buildKingcamHappyHorseAllReferenceInput(job: Pick<GovernedPolloJob, "sourceUrl" | "prompt" | "resolution" | "durationSeconds" | "aspectRatio" | "metadata">): Record<string, unknown> {
+  if (!isKingcamHappyHorseAllReferenceJob({ provider: "pollo", providerModelPath: KINGCAM_HAPPYHORSE_ALL_REFERENCE_MODEL_PATH, mode: KINGCAM_HAPPYHORSE_ALL_REFERENCE_MODE, metadata: job.metadata })) throw new Error("KingCam Happy Horse candidate requires the locked all-reference contract.");
+  if (job.sourceUrl !== KINGCAM_HAPPYHORSE_IDENTITY_IMAGE_URL || job.resolution !== "1080p" || job.durationSeconds !== KINGCAM_HAPPYHORSE_ALL_REFERENCE_DURATION_SECONDS || job.aspectRatio !== "9:16") throw new Error("KingCam Happy Horse candidate must remain one 15-second vertical 1080p output.");
+  return {
+    prompt: job.prompt,
+    duration: KINGCAM_HAPPYHORSE_ALL_REFERENCE_DURATION_SECONDS,
+    aspectRatio: "9:16",
+    resolution: "1080P",
+    videoNum: 1,
+    refs: [
+      { type: "image", name: "KingCam crown-and-suit visual identity", image: KINGCAM_HAPPYHORSE_IDENTITY_IMAGE_URL, order: 1 },
+      { type: "video", name: "KingCam verified SDR full-body movement", video: KINGCAM_HAPPYHORSE_BODY_MOTION_VIDEO_URL, order: 2 },
+      { type: "video", name: "KingCam real face and mouth performance", video: KINGCAM_HAPPYHORSE_FACE_PERFORMANCE_VIDEO_URL, order: 3 },
+      { type: "audio", name: "KingCam verified real voice", audio: KINGCAM_HAPPYHORSE_REAL_VOICE_AUDIO_URL, order: 4 },
+    ],
+  };
+}
+
+export async function createManualCappedKingcamHappyHorseAllReferenceDraft(input: {
+  creatorId: number;
+  requestedBy: number;
+  prompt: string;
+  manualCreditCap: 75;
+  ownershipConfirmed: boolean;
+  consentConfirmed: boolean;
+  idempotencyKey?: string | null;
+  requestId?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<{ job: GovernedPolloJob; reused: boolean }> {
+  requireOwner(input.requestedBy);
+  if (input.creatorId !== input.requestedBy) throw new Error("The KingCam Happy Horse candidate must use the requesting owner as the identity owner.");
+  const metadata = {
+    ...(input.metadata || {}),
+    kingcamHappyHorseAllReferenceProof: true,
+    ownerDirectedPilot: true,
+    candidateLimit: 1,
+    noAutomaticRetry: true,
+    sourcePreservationRequired: true,
+    genericVoiceFallbackForbidden: true,
+    manualCreditCap: KINGCAM_HAPPYHORSE_ALL_REFERENCE_HARD_CREDIT_CAP,
+    hardCreditCap: KINGCAM_HAPPYHORSE_ALL_REFERENCE_HARD_CREDIT_CAP,
+    providerQuoteUnavailable: true,
+    providerPriceResolution: "manual_owner_cap_with_pre_post_balance_evidence",
+    identityReferenceUrl: KINGCAM_HAPPYHORSE_IDENTITY_IMAGE_URL,
+    motionDriverUrl: KINGCAM_HAPPYHORSE_BODY_MOTION_VIDEO_URL,
+    facePerformanceVideoUrl: KINGCAM_HAPPYHORSE_FACE_PERFORMANCE_VIDEO_URL,
+    audioUrl: KINGCAM_HAPPYHORSE_REAL_VOICE_AUDIO_URL,
+    providerContract: "pollo_happyhorse_image_plus_body_video_plus_face_video_plus_real_audio",
+  };
+  buildKingcamHappyHorseAllReferenceInput({ sourceUrl: KINGCAM_HAPPYHORSE_IDENTITY_IMAGE_URL, prompt: input.prompt, resolution: "1080p", durationSeconds: KINGCAM_HAPPYHORSE_ALL_REFERENCE_DURATION_SECONDS, aspectRatio: "9:16", metadata });
+  return createGovernedPolloDraft({
+    creatorId: input.creatorId, requestedBy: input.requestedBy, sourceUrl: KINGCAM_HAPPYHORSE_IDENTITY_IMAGE_URL,
+    sourceChecksum: null, prompt: input.prompt, provider: "pollo", providerModelPath: KINGCAM_HAPPYHORSE_ALL_REFERENCE_MODEL_PATH,
+    resolution: "1080p", durationSeconds: KINGCAM_HAPPYHORSE_ALL_REFERENCE_DURATION_SECONDS, aspectRatio: "9:16",
+    mode: KINGCAM_HAPPYHORSE_ALL_REFERENCE_MODE, outputCount: 1, estimatedCostCredits: KINGCAM_HAPPYHORSE_ALL_REFERENCE_HARD_CREDIT_CAP,
+    costEvidenceReference: "Owner-approved cap is required before any Happy Horse all-reference KingCam test. Provider price discovery is unavailable; pre/post balance evidence is mandatory.",
+    ownershipConfirmed: input.ownershipConfirmed, consentConfirmed: input.consentConfirmed,
+    idempotencyKey: input.idempotencyKey, requestId: input.requestId, metadata,
+  });
+}
+
 export async function createManualCappedKingcamKlingOmniSpokenMotionDraft(input: {
   creatorId: number;
   requestedBy: number;
@@ -3562,6 +3648,8 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
     })
     : isKingcamWanSpokenMotionJob(leased)
       ? buildKingcamWanSpokenMotionInput(leased)
+      : isKingcamHappyHorseAllReferenceJob(leased)
+        ? buildKingcamHappyHorseAllReferenceInput(leased)
       : isKingcamKlingOmniSpokenMotionJob(leased)
         ? buildKingcamKlingOmniSpokenMotionInput(leased)
         : isKingcamKlingOmniRealGaitJob(leased)
@@ -3584,6 +3672,8 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
     ? `https://pollo.ai/api/platform/generation/${getSourceVideoReferenceContract(leased.providerModelPath)!.apiPath}`
     : isKingcamWanSpokenMotionJob(leased)
       ? "https://pollo.ai/api/platform/generation/wanx/wan-v2-7"
+      : isKingcamHappyHorseAllReferenceJob(leased)
+        ? "https://pollo.ai/api/platform/generation/wanx/happyhorse-1-0/ref2video"
       : isKingcamKlingOmniSpokenMotionJob(leased) || isKingcamKlingOmniRealGaitJob(leased) || isKingcamKlingOmniControlledPerformanceJob(leased) || isKingcamKlingOmniArmsHandsJob(leased)
         ? "https://pollo.ai/api/platform/generation/kling-ai/kling-v3-omni/ref2video"
         : isHomepageTextToVideoPilot(leased)

@@ -35,6 +35,7 @@ import {
   reviewCompletedGovernedVaceLightingOutput,
   reconcileGovernedVaceSubmission,
   createManualCappedKingcamKlingOmniSpokenMotionDraft,
+  createManualCappedKingcamHappyHorseAllReferenceDraft,
 } from "../services/governedPolloService";
 import { assertBodyCinemaEvidenceReady, buildEvidenceBackedDirectionPrompt } from "../services/bodyCinemaEvidenceService";
 import { getOrCreateBodyCinemaEditBlueprint } from "../services/bodyCinemaEditBlueprintService";
@@ -530,6 +531,34 @@ export const governedPolloRouter = router({
           launchStandard: "identity_body_motion_real_voice_creatorvault_teaching",
           draftOnly: true,
           requiresExplicitSeparateSubmissionAuthorization: true,
+        },
+      });
+    } catch (error) {
+      return asPrecondition(error);
+    }
+  }),
+
+  createKingcamHappyHorseAllReferenceDraft: protectedProcedure.input(z.object({
+    prompt: z.string().trim().min(20).max(4_000),
+    ownershipConfirmed: z.literal(true),
+    consentConfirmed: z.literal(true),
+    idempotencyKey: z.string().trim().min(12).max(191).optional(),
+  })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id);
+    try {
+      return await createManualCappedKingcamHappyHorseAllReferenceDraft({
+        creatorId: ctx.user.id,
+        requestedBy: ctx.user.id,
+        prompt: input.prompt,
+        manualCreditCap: 75,
+        ownershipConfirmed: input.ownershipConfirmed,
+        consentConfirmed: input.consentConfirmed,
+        idempotencyKey: input.idempotencyKey,
+        metadata: {
+          launchStandard: "identity_body_motion_face_voice_creatorvault_teaching",
+          draftOnly: true,
+          requiresExplicitSeparateSubmissionAuthorization: true,
+          rejectedKlingRouteExcluded: true,
         },
       });
     } catch (error) {

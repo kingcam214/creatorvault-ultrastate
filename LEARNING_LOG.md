@@ -896,3 +896,15 @@ The CreatorVault owner-only control plane now exposes the additive draft path. F
 The rejected HDR driver was converted once into a durable CreatorVault-owned SDR technical copy. The corrected source is H.264, 1080×1920, 30fps, yuv420p, BT.709 transfer, 12.1 seconds, with a verified owner-bound receipt and SHA-256 fingerprint. A visual inspection confirmed upright crown-to-shoes framing, preserved full-body movement, natural nighttime exposure, and no visible crop, rotation, or conversion defect.
 
 The governed Kling 3 Omni KingCam multimodal builder now references only this SDR source. This correction does not submit a provider task and does not authorize a retry. Any new paid benchmark still requires a separate owner authorization.
+
+## 2026-08-20 — KINGCAM KLING 3 OMNI SDR RUN 119: OUTPUT REJECTED
+
+The corrected SDR input removed the provider’s HDR rejection and produced a real 15.04-second 1080×1920 video. The completed provider task charged 31.65 credits, within the approved 75-credit ceiling. The result is rejected and must not be used as KingCam media.
+
+The output held the crown-and-suit identity, full-body framing, and wardrobe consistency, but it froze at approximately 00:02 and stayed static. It did not contain an audible real-voice track, did not show mouth movement or believable lip-sync, and did not teach, tour, or demonstrate a real CreatorVault product surface. It therefore fails motion, real voice/lip-sync, and live CreatorVault teaching gates. There is no automatic retry authority from this run.
+
+## 2026-08-20 — KINGCAM HAPPY HORSE ALL-REFERENCE CANDIDATE
+
+The completed Kling 3 Omni SDR job 119 is rejected: it froze after approximately two seconds and had no usable audio/lip-sync. Official Kling 3 Omni documentation confirms that native audio is not supported when a video input is supplied, so that request shape cannot be presented as a one-step full-body talking KingCam route.
+
+A separate governed Happy Horse 1.0 Ref draft path now exists with no provider task submitted. Its locked candidate contract uses four owner-approved references in one request: the crown-and-suit identity image, the verified durable SDR full-body movement video, the direct KingCam face-and-mouth performance video, and the verified real KingCam voice audio. It is limited to one 15-second 1080p vertical output, a hard 75-credit cap, and no automatic retry. Official Happy Horse documentation supports image, video, and audio references together; this remains a candidate until separately approved, generated, and assessed against all five KingCam gates.
