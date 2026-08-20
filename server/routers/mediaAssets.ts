@@ -267,7 +267,58 @@ export const mediaAssetsRouter = router({
         ORDER BY created_at DESC
         LIMIT ${limit}
       ` as any).then(extractRows).catch(() => [] as any[]);
-      const rows = [...extractRows(result), ...flyerRows, ...marketingRows];
+      const killaGraphicsRows = await db.execute(sql`
+        SELECT
+          CONCAT(id, '-master') AS id,
+          creator_id AS user_id,
+          'image' AS asset_type,
+          'killagraphics_static_master' AS source_type,
+          'killagraphics_design_system' AS created_by_feature,
+          CONCAT(headline, ' — KillaGraphics Static Master') AS file_name,
+          CONCAT(headline, ' — KillaGraphics Static Master') AS original_name,
+          'image/png' AS mime_type,
+          NULL AS file_size,
+          static_master_url AS public_url,
+          static_master_url AS thumbnail_url,
+          NULL AS storage_path,
+          NULL AS duration,
+          1080 AS width,
+          CASE WHEN format = 'motion_mixtape_cover' THEN 1080 ELSE 1920 END AS height,
+          'ready' AS status,
+          created_at
+        FROM killagraphics_design_projects
+        WHERE creator_id = ${ctx.user.id}
+          AND status = 'ready'
+          AND static_master_url IS NOT NULL
+          AND static_master_url <> ''
+        UNION ALL
+        SELECT
+          CONCAT(id, '-motion') AS id,
+          creator_id AS user_id,
+          'video' AS asset_type,
+          'killagraphics_motion_master' AS source_type,
+          'killagraphics_design_system' AS created_by_feature,
+          CONCAT(headline, ' — KillaGraphics Motion') AS file_name,
+          CONCAT(headline, ' — KillaGraphics Motion') AS original_name,
+          'video/mp4' AS mime_type,
+          NULL AS file_size,
+          motion_url AS public_url,
+          thumbnail_url,
+          NULL AS storage_path,
+          7 AS duration,
+          1080 AS width,
+          CASE WHEN format = 'motion_mixtape_cover' THEN 1080 ELSE 1920 END AS height,
+          'ready' AS status,
+          created_at
+        FROM killagraphics_design_projects
+        WHERE creator_id = ${ctx.user.id}
+          AND status = 'ready'
+          AND motion_url IS NOT NULL
+          AND motion_url <> ''
+        ORDER BY created_at DESC
+        LIMIT ${limit}
+      ` as any).then(extractRows).catch(() => [] as any[]);
+      const rows = [...extractRows(result), ...flyerRows, ...marketingRows, ...killaGraphicsRows];
       const verifiedSourceUrls = new Set(
         (await listBodyCinemaVerifiedSourceAttestations(Number(ctx.user.id))).map((attestation) => attestation.sourceMediaUrl),
       );
@@ -281,7 +332,7 @@ export const mediaAssetsRouter = router({
           ? "private_presence_loop"
           : row.created_by_feature === "kingcam_performance_capture"
             ? "kingcam_performance_driver"
-            : row.created_by_feature === "recovered_finished_motion_flyer" || row.created_by_feature === "recovered_marketing_maker"
+            : row.created_by_feature === "recovered_finished_motion_flyer" || row.created_by_feature === "recovered_marketing_maker" || row.created_by_feature === "killagraphics_design_system"
               ? "finished_showcase"
               : row.created_by_feature === "creatorvault_approved_demo"
                 ? "approved_demo"
