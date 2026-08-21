@@ -8,13 +8,13 @@ import { HOMEPAGE_MEDIA, hasCertifiedPublicProof } from "@/lib/homepageMediaRegi
 type MarketingFormat = "editorial_flyer" | "motion_flyer" | "motion_mixtape_cover";
 type CreationMode = "from_scratch" | "master_art_motion" | "layered_poster_motion";
 type CompositionFamily = "monument_type_cutout" | "culture_event_collage" | "editorial_cover_world" | "premium_promo_action" | "client_identity_tour";
-type LayerRole = "background" | "hero" | "support" | "logo" | "texture";
+type LayerRole = "background" | "hero" | "support" | "logo" | "texture" | "subject" | "foreground" | "effect";
 type SelectedLayer = { url: string; mediaType: "image" | "video"; role: LayerRole; fileName: string };
 
 const formats: Array<{ id: MarketingFormat; label: string; eyebrow: string; badge: string }> = [
   { id: "editorial_flyer", label: "Static Master", eyebrow: "Print + social poster", badge: "PNG" },
   { id: "motion_flyer", label: "Motion Flyer", eyebrow: "Poster wakes up", badge: "PNG + MP4" },
-  { id: "motion_mixtape_cover", label: "Motion Cover", eyebrow: "Square release world", badge: "1:1 PNG + MP4" },
+  { id: "motion_mixtape_cover", label: "Living Motion Cover", eyebrow: "Vertical release world", badge: "9:16 PNG + MP4" },
 ];
 
 const families: Array<{ id: CompositionFamily; label: string; note: string; accent: string }> = [
@@ -26,11 +26,14 @@ const families: Array<{ id: CompositionFamily; label: string; note: string; acce
 ];
 
 const roles: Array<{ id: LayerRole; label: string; note: string }> = [
-  { id: "hero", label: "Hero", note: "The main person, cover, or strongest visual." },
-  { id: "background", label: "Background", note: "The main field, photo, or finished master artwork." },
-  { id: "support", label: "Support", note: "Second person, crowd, culture image, or detail image." },
+  { id: "background", label: "Background", note: "The real scene or environmental world behind the cover." },
+  { id: "subject", label: "Subject", note: "A real isolated artist, performer, or main person layer." },
+  { id: "foreground", label: "Foreground", note: "A real table, prop, product, vehicle, or front-pass layer." },
+  { id: "hero", label: "Hero", note: "The primary cover visual when a separate subject cutout is not available." },
+  { id: "support", label: "Support", note: "A second person, crowd, culture image, or detail image." },
   { id: "logo", label: "Logo", note: "Client, venue, artist, sponsor, or KillaGraphics mark." },
   { id: "texture", label: "Texture", note: "Approved visual texture or campaign detail layer." },
+  { id: "effect", label: "Effect", note: "Optional real approved smoke, light, particle, or overlay artwork." },
 ];
 
 function isVideo(asset: MediaAssetItem) {
@@ -83,7 +86,9 @@ export function MotionFlyerAgent() {
   const selectedFamily = families.find((item) => item.id === family) ?? families[0];
   const selectedFormat = formats.find((item) => item.id === format) ?? formats[1];
   const needsSource = creationMode !== "from_scratch";
-  const canBuild = Boolean(headline.trim()) && (!needsSource || layers.length > 0) && (creationMode !== "layered_poster_motion" || layers.length >= 2) && !createProject.isPending;
+  const isLivingMotionCover = format === "motion_mixtape_cover" && creationMode === "layered_poster_motion";
+  const livingMotionCoverReady = !isLivingMotionCover || (layers.length >= 3 && layers.some((layer) => layer.role === "background") && layers.some((layer) => layer.role === "foreground") && layers.some((layer) => layer.role === "subject" || layer.role === "hero"));
+  const canBuild = Boolean(headline.trim()) && (!needsSource || layers.length > 0) && (creationMode !== "layered_poster_motion" || layers.length >= 2) && livingMotionCoverReady && !createProject.isPending;
   const newestProject = killaProjectsQuery.data?.projects.find((project: any) => project.status === "ready" && project.staticMasterUrl);
   const legacyProof = legacyFlyersQuery.data?.flyers.find((flyer: any) => flyer.status === "ready" && flyer.artifactUrl);
   const acceptedProof = HOMEPAGE_MEDIA.motionFlyerProof;
@@ -96,13 +101,13 @@ export function MotionFlyerAgent() {
   const pickerSubtitle = useMemo(() => creationMode === "master_art_motion" ? "One finished CreatorVault flyer, cover, or poster. It will stay a flat master—CreatorVault will not fake recovered layers." : creationMode === "layered_poster_motion" ? "Choose real source layers only. Give each one its honest role so motion respects the original design." : "Media is optional from scratch. Add real people, logos, textures, or campaign visuals when the campaign needs them.", [creationMode]);
 
   const chooseAssets = (assets: MediaAssetItem[]) => {
-    const additions = assets.slice(0, Math.max(0, 4 - layers.length)).map((asset) => ({
+      const additions = assets.slice(0, Math.max(0, 6 - layers.length)).map((asset) => ({
       url: String(asset.publicUrl || asset.storagePath || ""),
       mediaType: isVideo(asset) ? "video" as const : "image" as const,
       role: nextRole,
       fileName: asset.fileName,
     })).filter((asset) => asset.url);
-    setLayers((existing) => creationMode === "master_art_motion" ? additions.slice(0, 1) : [...existing, ...additions].slice(0, 4));
+    setLayers((existing) => creationMode === "master_art_motion" ? additions.slice(0, 1) : [...existing, ...additions].slice(0, 6));
     setPickerOpen(false);
   };
 
@@ -163,7 +168,7 @@ export function MotionFlyerAgent() {
                     {layers[0] ? preview(layers[0]) : null}
                     {!layers[0] ? <div className="absolute inset-0 flex flex-col justify-end p-4"><ImageIcon className="mb-auto h-7 w-7 text-[#f0c04a]" /><span className="text-base font-black">{needsSource ? "Choose real CreatorVault artwork" : "Add real media if the campaign needs it"}</span></div> : <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 to-transparent p-3"><span className="text-[10px] font-black uppercase tracking-[.15em]">Add or change source</span></div>}
                   </button>
-                  <div className="flex flex-col justify-center"><p className="text-xl font-black">{creationMode === "from_scratch" ? "The campaign can begin with a blank poster field." : creationMode === "master_art_motion" ? "One finished master stays one finished master." : "Every layer gets an honest role."}</p><p className="mt-3 text-sm leading-relaxed text-zinc-400">{creationMode === "from_scratch" ? "Use real people, logos, textures, and approved campaign visuals when they belong in the flyer. The system will not invent somebody else’s campaign." : creationMode === "master_art_motion" ? "Motion uses controlled framing and depth only. It will not falsely claim the system rebuilt the original editable layers." : "Choose up to four real CreatorVault sources, then tell CreatorVault whether each is a hero, background, support image, logo, or texture."}</p></div>
+                  <div className="flex flex-col justify-center"><p className="text-xl font-black">{creationMode === "from_scratch" ? "The campaign can begin with a blank poster field." : creationMode === "master_art_motion" ? "One finished master stays one finished master." : "Every layer gets an honest role."}</p><p className="mt-3 text-sm leading-relaxed text-zinc-400">{creationMode === "from_scratch" ? "Use real people, logos, textures, and approved campaign visuals when they belong in the flyer. The system will not invent somebody else’s campaign." : creationMode === "master_art_motion" ? "Motion uses controlled framing and depth only. It will not falsely claim the system rebuilt the original editable layers." : "Choose up to six real CreatorVault sources. A Living Motion Cover must include a background, a subject or hero, and a foreground layer so it can create real depth—not a fake image wiggle."}</p></div>
                 </div>
                 {layers.length ? <div className="mt-4 grid gap-2">{layers.map((layer, index) => <div key={`${layer.url}-${index}`} className="flex flex-wrap items-center gap-2 border border-white/10 bg-white/[.03] p-2"><span className="max-w-48 truncate text-xs font-bold text-zinc-200">{layer.fileName}</span><select value={layer.role} onChange={(event) => setLayerRole(index, event.target.value as LayerRole)} className="border border-white/15 bg-black px-2 py-1 text-[10px] font-black uppercase tracking-[.08em] text-white outline-none">{roles.map((role) => <option key={role.id} value={role.id}>{role.label}</option>)}</select><button type="button" onClick={() => removeLayer(index)} className="ml-auto text-[10px] font-black uppercase tracking-[.12em] text-red-300">Remove</button></div>)}</div> : null}
               </div>
@@ -207,7 +212,7 @@ export function MotionFlyerAgent() {
         </div>
       </section>
 
-      <MediaPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onConfirm={chooseAssets} mode={creationMode === "master_art_motion" ? "single" : "multi"} maxSelect={creationMode === "master_art_motion" ? 1 : Math.max(1, 4 - layers.length)} title={pickerTitle} subtitle={pickerSubtitle} confirmLabel={creationMode === "master_art_motion" ? "Use finished master" : "Use real campaign source"} emptyActionHref="/media/hub" emptyActionLabel="Open Media Hub" />
+      <MediaPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onConfirm={chooseAssets} mode={creationMode === "master_art_motion" ? "single" : "multi"} maxSelect={creationMode === "master_art_motion" ? 1 : Math.max(1, 6 - layers.length)} title={pickerTitle} subtitle={pickerSubtitle} confirmLabel={creationMode === "master_art_motion" ? "Use finished master" : "Use real campaign source"} emptyActionHref="/media/hub" emptyActionLabel="Open Media Hub" />
     </main>
   );
 }

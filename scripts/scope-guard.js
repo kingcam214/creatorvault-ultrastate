@@ -750,6 +750,8 @@ const ALLOWLISTS = {
     'server/routers/mediaAssets.ts',
     'server/remotion/remotionRenderService.ts',
     'server/remotion/types.ts',
+    'server/remotion/Root.tsx',
+    'server/remotion/compositions/KillaGraphicsLivingMotionCover.tsx',
     'LEARNING_LOG.md',
     'scripts/scope-guard.js'
   ],

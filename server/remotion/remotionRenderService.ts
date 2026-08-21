@@ -50,6 +50,7 @@ function getCompositionId(contract: RenderContract): string {
 
   if (mode === "caption_stage") return "CreatorVaultRuntimeCaptionStage";
   if (mode === "source_preserving_master") return "CreatorVaultSourcePreservingMaster";
+  if (mode === "killagraphics_living_motion_cover") return "KillaGraphicsLivingMotionCover";
 
   // 3D Empire compositions
   if (mode === "episode_trailer") return "EpisodeTrailer";
@@ -533,11 +534,12 @@ export async function renderMarketingStill(contract: RenderContract & {
   const finalImagePath = path.join(UPLOADS_DIR, `marketing-${jobId}.png`);
 
   try {
-    const bundleDir = await getOrCreateBundle({ ...contract, mode: "flyer" });
+    const useLivingMotionCover = contract.mode === "killagraphics_living_motion_cover";
+    const bundleDir = await getOrCreateBundle(useLivingMotionCover ? contract : { ...contract, mode: "flyer" });
     const { renderStill, selectComposition } = await import("@remotion/renderer");
     const composition = await selectComposition({
       serveUrl: bundleDir,
-      id: "CreatorVaultRuntimeMotionFlyer",
+      id: useLivingMotionCover ? "KillaGraphicsLivingMotionCover" : "CreatorVaultRuntimeMotionFlyer",
       inputProps: contract as unknown as Record<string, unknown>,
       browserExecutable: REMOTION_CHROMIUM_EXECUTABLE,
       chromiumOptions: { disableWebSecurity: true, headless: true },

@@ -18,6 +18,7 @@ import { EpisodeTrailerComposition, type EpisodeTrailerProps } from "./compositi
 import { EmpireMapSnapshotComposition, type EmpireMapSnapshotProps } from "./compositions/EmpireMapSnapshotComposition";
 import { AutomatedDirectorComposition, type AutomatedDirectorProps } from "./compositions/AutomatedDirectorComposition";
 import { SourcePreservingMasterComposition, type SourcePreservingMasterProps } from "./compositions/SourcePreservingMasterComposition";
+import { KillaGraphicsLivingMotionCover, type KillaGraphicsLivingMotionCoverProps } from "./compositions/KillaGraphicsLivingMotionCover";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = React.ComponentType<any>;
@@ -109,6 +110,9 @@ export const RemotionRoot: React.FC = () => {
 
       {/* ── SOURCE-PRESERVING MASTER ── */}
       <Composition id="CreatorVaultSourcePreservingMaster" component={SourcePreservingMasterComposition as AnyComponent} durationInFrames={300} fps={30} width={1920} height={1080} defaultProps={{ sourceVideoUrl: "", preserveSourceAudio: true, backgroundColor: "#000000" } as SourcePreservingMasterProps} />
+
+      {/* ── KILLAGRAPHICS LIVING MOTION COVER ── */}
+      <Composition id="KillaGraphicsLivingMotionCover" component={KillaGraphicsLivingMotionCover as AnyComponent} durationInFrames={600} fps={30} width={1080} height={1920} defaultProps={{ ...defaultRenderContract, mode: "killagraphics_living_motion_cover", durationSeconds: 20, sourceLayers: [] } as KillaGraphicsLivingMotionCoverProps} />
 
       {/* ── 3D EMPIRE COMPOSITIONS ── */}
       <Composition id="EpisodeTrailer" component={EpisodeTrailerComposition as AnyComponent} durationInFrames={450} fps={30} width={1080} height={1920} defaultProps={defaultEpisodeTrailer} />

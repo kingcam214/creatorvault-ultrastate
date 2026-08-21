@@ -19,7 +19,8 @@ export type RenderMode =
   | "visual_dna_broll"
   | "visual_dna_title_card"
   | "caption_stage"
-  | "source_preserving_master";
+  | "source_preserving_master"
+  | "killagraphics_living_motion_cover";
 
 export type MotionPreset =
   | "neon_pulse"
@@ -68,6 +69,10 @@ export interface RenderContract {
   captionQualityMode?: "standard" | "strict";
   captionFocusRegions?: Array<{ id: string; x: number; y: number; width: number; height: number; label?: string; source: "creator_marked" | "source_analysis"; confidence?: number | null }>;
   captionTypography?: { size?: number; color?: string | null; highlightColor?: string | null; background?: string | null; font?: string | null; weight?: number | null };
+  sourceMediaUrl?: string;
+  sourceMediaType?: "image" | "video";
+  sourceLayers?: Array<{ url: string; mediaType: "image" | "video"; role: "background" | "hero" | "support" | "logo" | "texture" | "subject" | "foreground" | "effect"; fileName: string }>;
+  killaGraphicsPlan?: Record<string, unknown>;
 }
 
 export interface RenderResult {

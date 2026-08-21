@@ -18,7 +18,7 @@ const killaGraphicsFamilySchema = z.enum([
   "client_identity_tour",
 ]);
 const killaGraphicsCreationModeSchema = z.enum(["from_scratch", "master_art_motion", "layered_poster_motion"]);
-const sourceLayerRoleSchema = z.enum(["background", "hero", "support", "logo", "texture"]);
+const sourceLayerRoleSchema = z.enum(["background", "hero", "support", "logo", "texture", "subject", "foreground", "effect"]);
 
 function extractRows(result: unknown): Array<Record<string, unknown>> {
   if (Array.isArray(result) && Array.isArray(result[0])) return result[0] as Array<Record<string, unknown>>;
@@ -139,7 +139,8 @@ function directionTokens(direction: z.infer<typeof creativeDirectionSchema>) {
 }
 
 function outputDimensions(format: z.infer<typeof marketingFormatSchema>) {
-  return format === "motion_mixtape_cover" ? { width: 1080, height: 1080 } : { width: 1080, height: 1920 };
+  // The owner's proven motion-cover work is a vertical social release, not a tiny square template.
+  return { width: 1080, height: 1920 };
 }
 
 function killaGraphicsTokens(family: z.infer<typeof killaGraphicsFamilySchema>) {
@@ -196,7 +197,7 @@ const killaGraphicsProjectInput = z.object({
     mediaType: mediaTypeSchema,
     role: sourceLayerRoleSchema,
     fileName: z.string().trim().max(255).default("CreatorVault source"),
-  })).max(4).default([]),
+  })).max(6).default([]),
 });
 
 function cleanHex(value: string): string {
@@ -231,6 +232,12 @@ function buildKillaGraphicsPlan(input: z.infer<typeof killaGraphicsProjectInput>
       forbidden: ["fake_layers", "rubberized_people", "template_bounce", "random_glitch", "unreadable_information"],
       finalHoldRequired: true,
     },
+    livingMotionCover: input.format === "motion_mixtape_cover" && input.creationMode === "layered_poster_motion" ? {
+      durationSeconds: 20,
+      requiredRoles: ["background", "subject_or_hero", "foreground"],
+      motionLaw: ["continuous_depth_camera", "differential_layer_travel", "environmental_micro_animation", "protected_text_lock"],
+      explicitlyNotClaimed: ["limb_puppeting_without_declared_rig", "reconstructed_hidden_artwork_without_source", "flat_master_as_true_depth"],
+    } : null,
   };
 }
 
@@ -394,6 +401,16 @@ export const flyerStudioV2Router = router({
     if (input.creationMode === "layered_poster_motion" && sourceLayers.length < 2) {
       throw new Error("Layered Poster Motion needs at least two real declared CreatorVault layers. Use Bring Master to Life for one flattened flyer.");
     }
+    const isLayeredMotionCover = input.format === "motion_mixtape_cover" && input.creationMode === "layered_poster_motion";
+    if (isLayeredMotionCover) {
+      const roles = new Set(sourceLayers.map((layer) => layer.role));
+      if (!roles.has("background") || !(roles.has("subject") || roles.has("hero")) || !roles.has("foreground")) {
+        throw new Error("Living Motion Cover needs real declared background, subject, and foreground layers. Add an effect layer only when it is real approved artwork.");
+      }
+      if (sourceLayers.length < 3) {
+        throw new Error("Living Motion Cover needs at least three real source layers so CreatorVault can create truthful depth instead of a fake image wiggle.");
+      }
+    }
 
     const projectId = randomUUID();
     const connection = await getDb();
@@ -419,14 +436,14 @@ export const flyerStudioV2Router = router({
 
       const contract = {
         jobId: projectId,
-        mode: "flyer" as const,
+        mode: isLayeredMotionCover ? "killagraphics_living_motion_cover" as const : "flyer" as const,
         baseImagePath: "",
         baseImageUrl: "",
         backgroundVideoUrl: heroLayer?.mediaType === "video" ? heroLayer.url : "",
         width: dimensions.width,
         height: dimensions.height,
         fps: 30,
-        durationSeconds: 7,
+        durationSeconds: input.format === "motion_mixtape_cover" && input.creationMode === "layered_poster_motion" ? 20 : 7,
         motionPreset: tokens.motionPreset,
         premiumMode: true,
         cinematicMode: true,
