@@ -755,6 +755,13 @@ const ALLOWLISTS = {
     'LEARNING_LOG.md',
     'scripts/scope-guard.js'
   ],
+  'creatorvault-restart-constitution': [
+    'AGENTS.md',
+    'CREATORVAULT_MASTER_UNDERSTANDING.md',
+    'CREATORVAULT_VISION_REALITY_RECONCILIATION.md',
+    'CREATORVAULT_EXECUTION_CONSTITUTION.md',
+    'scripts/scope-guard.js'
+  ],
   'body-cinema': [
     'AGENTS.md',
     'CREATORVAULT_STANDARD.md',

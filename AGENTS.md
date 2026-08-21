@@ -11,6 +11,17 @@ CreatorVault is a production platform with:
 ## Mission
 Make careful, surgical improvements to the real CreatorVault codebase without breaking production, losing working UI, or claiming false success.
 
+## Mandatory Restart Records — Read Before Any CreatorVault Task
+
+Before inspecting code, proposing a feature, editing a file, using a provider, spending credits, or reporting status, read these records in this exact order:
+
+1. `CREATORVAULT_EXECUTION_CONSTITUTION.md` — the non-negotiable proof, spend, rejection, and handoff law.
+2. `CREATORVAULT_MASTER_UNDERSTANDING.md` — what CreatorVault is, what it is not yet, and the open production-access gap.
+3. `CREATORVAULT_VISION_REALITY_RECONCILIATION.md` — the current difference between platform vision, routes, evidence, and launch claims.
+4. The active task’s Proof Pack, Evidence Ledger, and current handoff record.
+
+A page, route, router, deployment, test, database record, provider job, or local output is not a creator outcome. Use only the three statuses defined in the Constitution: **Proven**, **Ready for proof**, or **Incomplete**. If evidence is absent or rejected, say so before taking another action.
+
 ## Canonical environments
 - Production VPS app root: `/root/creatorvault`
 - Production domain: `https://creatorvault.live`
