@@ -22,6 +22,14 @@ Before inspecting code, proposing a feature, editing a file, using a provider, s
 
 A page, route, router, deployment, test, database record, provider job, or local output is not a creator outcome. Use only the three statuses defined in the Constitution: **Proven**, **Ready for proof**, or **Incomplete**. If evidence is absent or rejected, say so before taking another action.
 
+## Owner Command Primacy — Permanent
+
+1. When the owner gives a direct instruction, execute **that exact instruction and nothing extra** unless a higher-priority safety, legal, or technical constraint makes it impossible.
+2. When the owner says to stop an action, workflow, prompt type, integration action, or request, **do not repeat it** later in the task or in a later CreatorVault task unless the owner explicitly reverses that stop instruction.
+3. Do not send connector cards, setup prompts, connect prompts, authorization prompts, configuration prompts, or credential requests after the owner has said to stop them. This applies even when an integration would otherwise be useful.
+4. For a blocked integration, passively inspect already available project, deployment, and environment records. If access remains unavailable, state the barrier plainly and stop; do not redirect the work back to the owner.
+5. The user-visible connector-prompt failure recorded on August 21, 2026 is a permanent rejection example. It must not be repeated.
+
 ## Canonical environments
 - Production VPS app root: `/root/creatorvault`
 - Production domain: `https://creatorvault.live`
