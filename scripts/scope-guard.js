@@ -4,6 +4,21 @@ import { execSync } from 'child_process';
 
 // Task allowlists
 const ALLOWLISTS = {
+  'video-studio-timeline': [
+    'OWNER_HANDOFF.md',
+    'VIDEO_STUDIO_TIMELINE_PROOF.md',
+    'client/src/App.tsx',
+    'client/src/pages/VideoStudioTimelinePage.tsx',
+    'client/src/components/video-studio/types.ts',
+    'client/src/components/video-studio/audioBeatDetector.ts',
+    'client/src/components/video-studio/BrandOverlayTrack.tsx',
+    'client/src/components/video-studio/VideoStudioTimeline.tsx',
+    'client/src/components/video-studio/__tests__/VideoStudioTimeline.test.tsx',
+    'package.json',
+    'scripts/check-video-studio-types.ts',
+    'scripts/scope-guard.js',
+    'vitest.video-studio.config.ts',
+  ],
   'persona-vault-chained-continuity': [
     'OWNER_HANDOFF.md',
     'PERSONA_VAULT_CHAINED_CONTINUITY_PROOF.md',

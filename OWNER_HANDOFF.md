@@ -1,5 +1,20 @@
 # OWNER HANDOFF — REAL WORLD AUDIT
 
+## Current task record — Video Studio Timeline and Beat-Matched Assembler — October 2, 2026
+
+The authoritative Task 3 record is [Video Studio Timeline Proof](VIDEO_STUDIO_TIMELINE_PROOF.md). Task 2 continuity and Task 1 payout controls are preserved.
+
+| Field | Current Task 3 record |
+|---|---|
+| Claim / kernel | A creator can direct an immutable Persona Vault chain in a dedicated timeline, view persisted start/terminal frame references, analyze a selected local audio file, snap local cut guidance to detected onsets, and preview CreatorVault overlay controls. |
+| Current status | **Ready for proof; not yet proven.** The non-spending route/UI exists; no real creator, owned source, persisted final master, watched output comparison, or owner acceptance exists. |
+| Evidence | `feat/video-studio-timeline`; Task 3 strict gate passed across 9 files; 4/4 focused component/unit tests passed; client production bundle passed; local browser route loaded and exposed all controls. |
+| Failure / absent proof | The existing global adult-access gate covered the local visual surface and was not bypassed/attested through. No authenticated persona chain, creator audio, stream, branded export, server-side edit persistence, quality review, or saved master proof was performed. |
+| Money / permits | External spend **$0**. No provider call, Task 2 owner authorization, worker activation, production migration, deployment, merge, or branch push occurred. |
+| Boundaries preserved | `startVideoChain` only creates the existing durable record; paid render remains behind Task 2 owner authorization, freeze, credit ceiling, and one-use permit controls. Timeline cut/overlay direction is local UI state and is not mislabeled as an exported or saved master. |
+| Release trace | Identify the local task commit with `git log -1 --format=%H -- VIDEO_STUDIO_TIMELINE_PROOF.md`; the route is `/studio/video` and `pnpm route-owner /studio/video` names `VideoStudioTimelinePage`. Normal `pnpm check` retains the exact same 8 pre-existing diagnostics. |
+| One next allowed action | Review the committed Task 3 diff/proof. Any real persona/audio chain proof requires a separate source record, bounded spend permit, saved-result location, watched review, and explicit owner decision. |
+
 ## Current task record — Persona Vault and Chained Continuity — October 2, 2026
 
 The authoritative Task 2 record is [Persona Vault and Chained Continuity Proof](PERSONA_VAULT_CHAINED_CONTINUITY_PROOF.md). Task 1's payout implementation is preserved.
