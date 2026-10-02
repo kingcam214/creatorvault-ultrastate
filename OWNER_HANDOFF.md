@@ -1,5 +1,20 @@
 # OWNER HANDOFF — REAL WORLD AUDIT
 
+## Current task record — Persona Vault and Chained Continuity — October 2, 2026
+
+The authoritative Task 2 record is [Persona Vault and Chained Continuity Proof](PERSONA_VAULT_CHAINED_CONTINUITY_PROOF.md). Task 1's payout implementation is preserved.
+
+| Field | Current Task 2 record |
+|---|---|
+| Claim / kernel | An owned, consented immutable persona snapshot drives a sequential chain; each actual decoded terminal frame is persisted and handed to the next segment with inherited camera/momentum and a governed one-use render identity. |
+| Current status | **Ready for proof; not yet proven.** Requested backend/schema/protected endpoints implemented; no real-persona generation, watched seam proof or owner acceptance. |
+| Evidence | `feat/persona-vault-chained-continuity`; 54 local contract/native/SQL tests passed; strict checking of all 18 changed/new TS files passed; Task 1 regression 58 tests passed; actual server bundle passed; additive migration applied only to a disposable local database. |
+| Failure / absent proof | Same 8 baseline normal compiler errors; whole-suite assertion/setup failure identities unchanged. Real provider route/account capabilities and identity/transition quality remain unverified. LoRA/voice IDs are provenance, not unsupported active API parameters. |
+| Money / permits | External provider/financial spending $0. No live render, production migration, branch push, merge or deployment. Existing freeze and owner gates remain intact. |
+| Stop / recovery | Uncertain provider acceptance stays quarantined until a matching original receipt is verified; no blind paid retry or invented no-charge result. Definitive failure requires explicit recovery and a fresh bounded grant; completed predecessors remain preserved. |
+| Release trace | Identify the local task commit with `git log -1 --format=%H -- PERSONA_VAULT_CHAINED_CONTINUITY_PROOF.md`; exported exact patch/diff and validation logs provide the source trace. |
+| One next allowed action | Review the committed Task 2 diff/proof; obtain separate bounded authority before any real-persona proof, live provider spending or production release. |
+
 ## Current task record — Stripe Connect net payouts — October 2, 2026
 
 The historical operational claims below were not reverified during this task. The current authoritative Task 1 record is [Stripe Connect Net Payouts Proof](STRIPE_CONNECT_NET_PAYOUTS_PROOF.md).

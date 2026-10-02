@@ -30,6 +30,7 @@ import { startChallengeAutomationCron } from "../routers/challengeAutomationRout
 import { startCreatorVaultOvernightRevenueCron } from "../services/creatorVaultOvernightRevenue";
 import { startPostScheduler } from "../services/postScheduler";
 import { isGovernedPolloExecutionEnabled, verifyGovernedPolloSchema } from "../services/governedPolloService";
+import { startPersonaContinuityWorker } from "../services/personaContinuityWorker";
 import { getBodyCinemaPreProviderAttestation, runBodyCinemaExistingMediaPreProviderProof } from "../services/bodyCinemaExistingMediaProofService";
 import {
   buildPolloCapabilitySummary,
@@ -414,6 +415,12 @@ async function startServer() {
 
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
+    const stopPersonaContinuity = startPersonaContinuityWorker();
+    if (stopPersonaContinuity) {
+      process.once("SIGTERM", stopPersonaContinuity);
+      process.once("SIGINT", stopPersonaContinuity);
+      server.once("close", stopPersonaContinuity);
+    }
     // This path analyzes existing owned media and prepares a governed draft only; it cannot submit a provider job.
     void runBodyCinemaExistingMediaPreProviderProof().catch(error =>
       console.log("[BodyCinema] pre-provider proof deferred:", error instanceof Error ? error.message : String(error)),

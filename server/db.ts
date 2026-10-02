@@ -573,3 +573,14 @@ export async function getStripePayoutSqlClient(): Promise<import("mysql2/promise
   const database = await getDb() as unknown as { $client: import("mysql2").Pool };
   return database.$client.promise();
 }
+
+// ============ PERSONA VAULT / CHAINED CONTINUITY ============
+export type PersonaVaultDatabase = import("drizzle-orm/mysql2").MySql2Database<typeof schema>;
+export type PersonaVaultTransaction = Parameters<Parameters<PersonaVaultDatabase["transaction"]>[0]>[0];
+export async function getPersonaVaultDb(): Promise<PersonaVaultDatabase> {
+  return await getDb() as unknown as PersonaVaultDatabase;
+}
+export async function getPersonaVaultSqlClient(): Promise<import("mysql2/promise").Pool> {
+  const database = await getDb() as unknown as { $client: import("mysql2").Pool };
+  return database.$client.promise();
+}

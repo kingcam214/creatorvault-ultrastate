@@ -4,13 +4,19 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import { sql } from "drizzle-orm";
-import { db } from "../db";
+import { db, getPersonaVaultSqlClient } from "../db";
+import type { RowDataPacket } from "mysql2/promise";
 import { buildFrameEvidence, probeVideo } from "./bodyCinemaExistingMediaProofService";
 import { reviewBodyCinemaOutput, type BodyCinemaOutputReview } from "./bodyCinemaOutputReviewService";
 import { assertBodyCinemaEditBlueprintReady } from "./bodyCinemaEditBlueprintService";
 import { assertBodyCinemaSourceMapReady } from "./bodyCinemaSourceMapService";
 import { recordBodyCinemaProviderFailure } from "./bodyCinemaProviderResilienceService";
 import { buildVaceMaskedEditContract, type VaceMaskedEditContract, vaceContractFingerprint } from "./bodyCinemaVaceWorkerContract";
+import {
+  buildPersonaContinuityProviderInput, isPersonaContinuityJob,
+  PERSONA_CONTINUITY_API_PATH, PERSONA_CONTINUITY_MODE, verifyPersonaContinuityReceipt,
+} from "./personaContinuityProviderContract";
+import { assertPersonaContinuitySubmission, getPersonaContinuityIngestion } from "./personaContinuitySubmissionGuard";
 import {
   TopazPrecisionProviderError,
   createTopazPrecisionVideoRequest,
@@ -344,6 +350,7 @@ export async function readPolloAvailableCredits(apiKey: string): Promise<number 
     const response = await fetch("https://pollo.ai/api/platform/credit/balance", {
       method: "GET",
       headers: { "x-api-key": apiKey, Accept: "application/json" },
+      signal: AbortSignal.timeout(15000),
     });
     if (!response.ok) return null;
     const payload = await parseProviderJson(response);
@@ -596,7 +603,7 @@ function isDesignImagePilot(job: Pick<GovernedPolloJob, "providerModelPath" | "m
 }
 
 function isSingleUseGovernedPilot(job: Pick<GovernedPolloJob, "provider" | "providerModelPath" | "mode" | "sourceUrl" | "metadata">): boolean {
-  return isSourceVideoReferenceJob(job) || isKingcamWanSpokenMotionJob(job) || isKingcamKlingOmniSpokenMotionJob(job) || isKingcamHappyHorseAllReferenceJob(job) || isReplicateWanVideoEditJob(job) || isReplicateWanAnimateJob(job) || isKingcamGoEnhanceRealPerformanceJob(job) || isKingcamActionImitationV2Job(job) || isKingcamKlingOmniRealGaitJob(job) || isKingcamKlingOmniControlledPerformanceJob(job) || isKingcamKlingOmniArmsHandsJob(job) || isKingcamKlingV3MotionJob(job) || isReplicateOmniHumanJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isCreatorVaultVaceLightingJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
+  return isPersonaContinuityJob(job) || isSourceVideoReferenceJob(job) || isKingcamWanSpokenMotionJob(job) || isKingcamKlingOmniSpokenMotionJob(job) || isKingcamHappyHorseAllReferenceJob(job) || isReplicateWanVideoEditJob(job) || isReplicateWanAnimateJob(job) || isKingcamGoEnhanceRealPerformanceJob(job) || isKingcamActionImitationV2Job(job) || isKingcamKlingOmniRealGaitJob(job) || isKingcamKlingOmniControlledPerformanceJob(job) || isKingcamKlingOmniArmsHandsJob(job) || isKingcamKlingV3MotionJob(job) || isReplicateOmniHumanJob(job) || isRunwayAlephVideoEditJob(job) || isTopazPrecisionVideoJob(job) || isCreatorVaultVaceLightingJob(job) || isHomepageTextToVideoPilot(job) || isDesignImagePilot(job);
 }
 
 function isProviderVerifiedZeroQuoteJob(job: Pick<GovernedPolloJob, "providerModelPath" | "mode" | "estimatedCostCredits" | "metadata">): boolean {
@@ -875,14 +882,17 @@ async function appendEvent(params: {
 }
 
 async function withNamedLock<T>(name: string, work: () => Promise<T>): Promise<T> {
-  const lock = await rawQuery("SELECT GET_LOCK(?, 10) AS acquired", [name]);
-  if (Number(lock[0]?.acquired ?? 0) !== 1) {
-    throw new Error("Could not acquire the governed media budget lock. Please retry without submitting a provider request.");
-  }
+  const connection = await (await getPersonaVaultSqlClient()).getConnection();
+  let acquired = false;
   try {
+    const [lock] = await connection.query<Array<RowDataPacket & { acquired: number }>>("SELECT GET_LOCK(?, 10) AS acquired", [name]);
+    acquired = Number(lock[0]?.acquired ?? 0) === 1;
+    if (!acquired) throw new Error("Could not acquire the governed media budget lock. Please retry without submitting a provider request.");
     return await work();
   } finally {
-    await rawQuery("SELECT RELEASE_LOCK(?)", [name]).catch(() => undefined);
+    try { if (acquired) await connection.query("SELECT RELEASE_LOCK(?)", [name]); }
+    catch { connection.destroy(); }
+    finally { connection.release(); }
   }
 }
 
@@ -1095,6 +1105,12 @@ export async function createGovernedPolloDraft(input: CreateGovernedPolloDraftIn
     && Boolean(input.metadata?.vaceContract);
   if (!approvedPolloModel && !approvedReplicateModel && !approvedRunwayModel && !approvedTopazPrecisionPilot && !approvedVaceLightingPilot) {
     throw new Error("Only an approved governed provider model path may be requested through this workflow.");
+  }
+  if (input.mode === PERSONA_CONTINUITY_MODE) {
+    buildPersonaContinuityProviderInput({
+      provider, providerModelPath, mode: input.mode, sourceUrl,
+      sourceChecksum: input.sourceChecksum ?? null, prompt, durationSeconds, metadata: input.metadata ?? {},
+    });
   }
   const requestedEstimate = input.estimatedCostCredits === null || input.estimatedCostCredits === undefined
     ? null
@@ -1847,12 +1863,17 @@ export async function authorizeSingleUseGovernedPolloSubmission(params: {
     throw new Error("Single-use hard credit cap must equal the recorded provider quote exactly.");
   }
   if (hardCreditCap === 0 && !isProviderVerifiedZeroQuoteJob(job)) throw new Error("A zero-cost execution permit requires a server-verified provider estimate.");
-  if (hardCreditCap === 33 && !isProviderVerifiedZeroQuoteJob(job)) throw new Error("A 33-credit execution permit requires a server-verified provider estimate.");
+  if (hardCreditCap === 33 && !isProviderVerifiedZeroQuoteJob(job) && !isPersonaContinuityJob(job)) throw new Error("A 33-credit execution permit requires a server-verified provider estimate.");
   const expiresInMinutes = Math.max(1, Math.min(30, Number(params.expiresInMinutes ?? 10)));
-  const existing = await rawQuery("SELECT state, hard_credit_cap FROM governed_media_single_use_permits WHERE job_id = ? LIMIT 1", [job.id]);
+  const existing = await rawQuery("SELECT state, hard_credit_cap, expires_at FROM governed_media_single_use_permits WHERE job_id = ? LIMIT 1", [job.id]);
   if (existing[0]) {
     if (String(existing[0].state) === "consumed") throw new Error("The single-use execution permit for this job has already been consumed.");
     if (String(existing[0].state) !== "authorized" || Number(existing[0].hard_credit_cap) !== hardCreditCap) throw new Error("A conflicting single-use execution permit already exists for this job.");
+    if (isPersonaContinuityJob(job) && new Date(String(existing[0].expires_at)).getTime() <= Date.now()) {
+      await assertPersonaContinuitySubmission(job);
+      await rawExec("UPDATE governed_media_single_use_permits SET expires_at = DATE_ADD(NOW(), INTERVAL ? MINUTE) WHERE job_id = ? AND state = 'authorized' AND expires_at <= NOW()", [expiresInMinutes, job.id]);
+      await appendEvent({ jobId: job.id, eventType: "persona_unused_permit_renewed", fromState: job.state, toState: job.state, actorId: params.ownerId, correlationId: job.requestId, detail: { hardCreditCap, expiresInMinutes } });
+    }
     return job;
   }
   await rawExec(
@@ -2940,7 +2961,10 @@ async function reserveBudget(job: GovernedPolloJob, approverId: number): Promise
     getReservedCredits("creator_daily", job.creatorId),
     rawQuery(
       `SELECT COUNT(*) AS count FROM governed_media_jobs
-       WHERE state IN ('queued', 'submitted', 'submission_unknown', 'provider_complete', 'quality_review')`,
+       WHERE state IN ('approved', 'queued', 'submitted', 'submission_unknown', 'provider_complete', 'quality_review')
+         AND NOT (render_mode = ? AND state = 'provider_complete'
+           AND JSON_EXTRACT(metadata_json, '$.personaContinuityIngested.segmentId') IS NOT NULL)`,
+      [PERSONA_CONTINUITY_MODE],
     ),
   ]);
   if (globalReserved + estimated > config.globalDailyCreditCap) throw new Error("Global daily Pollo credit cap would be exceeded.");
@@ -2975,7 +2999,7 @@ export async function approveGovernedPolloJob(params: { jobId: number; approverI
     throw new Error("A zero-cost job requires a server-verified provider estimate.");
   }
 
-  const lockName = `governed_pollo_approval:${initial.creatorId}:${new Date().toISOString().slice(0, 10)}`;
+  const lockName = "governed_pollo_approval:global";
   return withNamedLock(lockName, async () => {
     const job = await getGovernedPolloJob(params.jobId);
     if (!job) throw new Error("Governed media job disappeared during approval.");
@@ -3042,6 +3066,10 @@ export async function claimGovernedPolloJob(params: { jobId: number; workerId: s
   if (job.state !== "approved") throw new Error(`Job in state ${job.state} cannot be leased for submission.`);
 
   const config = getGovernedPolloConfig();
+  if (isPersonaContinuityJob(job) && !isGovernedPolloExecutionEnabled()) {
+    throw new Error("Persona Continuity remains behind the governed media execution freeze. No chargeable request was sent.");
+  }
+  if (isPersonaContinuityJob(job)) await assertPersonaContinuitySubmission(job);
   if (isSingleUseGovernedPilot(job)) {
     return withNamedLock(`governed_pollo_single_use:${job.id}`, async () => {
       const locked = await getGovernedPolloJob(job.id);
@@ -3637,7 +3665,8 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
       [safeJson({ ...leased.metadata, designImageReferenceFrameUrl: designImage.referenceFrameUrl }), leased.id],
     );
   }
-  const requestBody = isSourceVideoReferenceJob(leased)
+  const personaInput = isPersonaContinuityJob(leased) ? buildPersonaContinuityProviderInput(leased) : null;
+  const requestBody = personaInput ?? (isSourceVideoReferenceJob(leased)
     ? buildSourceVideoReferenceInput({
       providerModelPath: leased.providerModelPath,
       sourceUrl: leased.sourceUrl,
@@ -3667,8 +3696,10 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
           prompt: leased.prompt,
           length: leased.durationSeconds,
           mode: leased.mode,
-        };
-  const providerUrl = isSourceVideoReferenceJob(leased)
+        });
+  const providerUrl = personaInput
+    ? `https://pollo.ai/api/platform${PERSONA_CONTINUITY_API_PATH}`
+    : isSourceVideoReferenceJob(leased)
     ? `https://pollo.ai/api/platform/generation/${getSourceVideoReferenceContract(leased.providerModelPath)!.apiPath}`
     : isKingcamWanSpokenMotionJob(leased)
       ? "https://pollo.ai/api/platform/generation/wanx/wan-v2-7"
@@ -3690,12 +3721,22 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
     );
   }
 
+  if (personaInput) {
+    try {
+      if (!isGovernedPolloExecutionEnabled()) throw new Error("Governed media execution was frozen before submission");
+      await assertPersonaContinuitySubmission(leased);
+      if (!isGovernedPolloExecutionEnabled()) throw new Error("Governed media execution was frozen during frame verification");
+    } catch (error) {
+      return failGovernedPolloJob({ jobId: leased.id, code: "persona_chain_authorization_closed", error, releaseBudget: true });
+    }
+  }
   let response: Response;
   try {
     response = await fetch(providerUrl, {
       method: "POST",
       headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({ input: requestBody }),
+      signal: personaInput ? AbortSignal.timeout(30000) : undefined,
     });
   } catch (error) {
     return markGovernedPolloSubmissionUnknown({ jobId: leased.id, workerId: params.workerId, error });
@@ -3792,9 +3833,11 @@ export async function pollGovernedPolloProviderJob(params: { jobId: number; acto
 
   const apiKey = String(process.env.POLLO_API_KEY || "").trim();
   if (!apiKey) throw new Error("POLLO_API_KEY is not configured; provider status cannot be read.");
-  const response = await fetch(`https://pollo.ai/api/platform/generation/${encodeURIComponent(job.providerJobId)}/status`, {
+  const statusPrefix = isPersonaContinuityJob(job) ? "v1/generation" : "generation";
+  const response = await fetch(`https://pollo.ai/api/platform/${statusPrefix}/${encodeURIComponent(job.providerJobId)}/status`, {
     method: "GET",
     headers: { "x-api-key": apiKey, Accept: "application/json" },
+    signal: isPersonaContinuityJob(job) ? AbortSignal.timeout(15000) : undefined,
   });
   const providerResponse = await parseProviderJson(response);
   if (!response.ok) {
@@ -4349,3 +4392,58 @@ export function isTerminalGovernedPolloState(state: string): boolean {
 }
 
 export const governedPolloModelPath = DEFAULT_MODEL_PATH;
+
+/** Technical ingestion is not aesthetic/identity acceptance or a budget release. */
+export async function recordGovernedPersonaContinuityIngestion(params: { jobId: number; ownerId: number; segmentId: string }): Promise<void> {
+  requireOwner(params.ownerId);
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isPersonaContinuityJob(job) || !["provider_complete", "accepted"].includes(job.state)) throw new Error("A completed Persona Continuity render is required for ingestion");
+  const ingestion = await getPersonaContinuityIngestion(job, params.segmentId);
+  const existing = job.metadata.personaContinuityIngested;
+  if (existing && typeof existing === "object" && "terminalFrameSha256" in existing && existing.terminalFrameSha256 === ingestion.terminalFrameSha256) return;
+  await rawExec("UPDATE governed_media_jobs SET metadata_json = ?, updated_at = NOW() WHERE id = ? AND state IN ('provider_complete','accepted')",
+    [safeJson({ ...job.metadata, personaContinuityIngested: ingestion }), job.id]);
+  await appendEvent({ jobId: job.id, eventType: "persona_chain_media_ingested", fromState: job.state, toState: job.state,
+    actorId: params.ownerId, correlationId: job.requestId, detail: ingestion });
+}
+
+export async function reconcileGovernedPersonaContinuitySubmission(params: { jobId: number; ownerId: number; providerTaskId: string }): Promise<GovernedPolloJob> {
+  requireOwner(params.ownerId);
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isPersonaContinuityJob(job) || !["queued", "submission_unknown"].includes(job.state) || job.providerJobId) throw new Error("Only an uncertain Persona Continuity submission can be reconciled");
+  if (!/^[A-Za-z0-9_-]{1,191}$/.test(params.providerTaskId)) throw new Error("Invalid provider task ID");
+  const apiKey = process.env.POLLO_API_KEY;
+  if (!apiKey) throw new Error("POLLO_API_KEY is not configured for read-only receipt reconciliation");
+  const response = await fetch(`https://pollo.ai/api/platform/v1/generation/${encodeURIComponent(params.providerTaskId)}/status`, {
+    method: "GET", headers: { "x-api-key": apiKey, Accept: "application/json" }, signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) throw new Error(`Provider receipt returned HTTP ${response.status}; the uncertain render remains quarantined`);
+  const raw: unknown = await response.json();
+  const receipt = verifyPersonaContinuityReceipt(buildPersonaContinuityProviderInput(job), raw, params.providerTaskId);
+  if (job.estimatedCostCredits === null || receipt.credit > job.estimatedCostCredits) throw new Error("The recovered provider charge exceeds its quote; retain the hold for owner cost reconciliation");
+  const result = await rawExec(`UPDATE governed_media_jobs SET state = 'submitted', provider_job_id = ?, provider_response_json = ?,
+      submitted_at = COALESCE(submitted_at,NOW()), updated_at = NOW()
+    WHERE id = ? AND state IN ('queued','submission_unknown') AND provider_job_id IS NULL AND fingerprint = ?`,
+    [receipt.taskId, safeJson(receipt), job.id, job.fingerprint]);
+  if (!affectedRows(result)) throw new Error("Receipt reconciliation raced another governed state change");
+  await appendEvent({ jobId: job.id, eventType: "persona_chain_submission_reconciled", fromState: job.state, toState: "submitted",
+    actorId: params.ownerId, correlationId: job.requestId, detail: { providerTaskId: receipt.taskId, credit: receipt.credit, noGenerationCall: true } });
+  const reconciled = await getGovernedPolloJob(job.id);
+  if (!reconciled) throw new Error("The reconciled governed job was not found");
+  return reconciled;
+}
+
+/** Compensation is allowed only before a queued/consumed outbound submission. */
+export async function closeUnusedPersonaContinuityApproval(params: { jobId: number; reason: string }): Promise<boolean> {
+  const job = await getGovernedPolloJob(params.jobId);
+  if (!job || !isPersonaContinuityJob(job)) return false;
+  const result = await rawExec(`UPDATE governed_media_jobs SET state='failed', failure_code='persona_unused_approval_closed', failure_message=?, updated_at=NOW()
+    WHERE id=? AND state='approved' AND provider_job_id IS NULL AND lease_owner IS NULL AND lease_expires_at IS NULL`, [params.reason.slice(0,1200), job.id]);
+  const updated = await getGovernedPolloJob(job.id);
+  if (!updated || updated.state !== "failed" || updated.failureCode !== "persona_unused_approval_closed") return false;
+  // The ledger's unique (job,scope,entry_type) key makes crash recovery/replay safe.
+  await releaseGovernedPolloBudget({ jobId: job.id, reason: "persona_unused_approval_closed" });
+  if (affectedRows(result)) await appendEvent({ jobId: job.id, eventType: "persona_unused_approval_closed", fromState: job.state, toState: "failed",
+    actorId: job.approvedBy, correlationId: job.requestId, detail: { reason: params.reason, noSubmissionClaimed: true } });
+  return true;
+}

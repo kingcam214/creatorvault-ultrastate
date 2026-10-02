@@ -1,6 +1,8 @@
 import { boolean, index, int, json, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
 export { stripeCreatorPayouts, stripeCreatorPayoutPolicy } from "./schema-stripe-payouts";
 export type { StripeCreatorPayout, InsertStripeCreatorPayout } from "./schema-stripe-payouts";
+export { personaVaults, personaAssets, videoGenerationChains, videoChainSegments } from "./schema-persona-vaults";
+export type { PersonaVault, PersonaAsset, VideoGenerationChain, VideoChainSegment } from "./schema-persona-vaults";
 
 /**
  * Core user table with CreatorVault extensions

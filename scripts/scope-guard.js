@@ -4,6 +4,32 @@ import { execSync } from 'child_process';
 
 // Task allowlists
 const ALLOWLISTS = {
+  'persona-vault-chained-continuity': [
+    'OWNER_HANDOFF.md',
+    'PERSONA_VAULT_CHAINED_CONTINUITY_PROOF.md',
+    'drizzle/0025_persona_vault_chained_continuity.sql',
+    'drizzle/meta/_journal.json',
+    'drizzle/schema.ts',
+    'drizzle/schema-persona-vaults.ts',
+    'package.json',
+    'scripts/check-persona-continuity-types.ts',
+    'scripts/scope-guard.js',
+    'server/db.ts',
+    'server/_core/index.ts',
+    'server/routers.ts',
+    'server/routers/personaVaultRouter.ts',
+    'server/services/personaVaultContracts.ts',
+    'server/services/personaVaultService.ts',
+    'server/services/personaContinuityProviderContract.ts',
+    'server/services/personaContinuitySubmissionGuard.ts',
+    'server/services/personaVideoProvider.ts',
+    'server/services/personaContinuityWorker.ts',
+    'server/services/videoChainMedia.ts',
+    'server/services/videoChainedContinuity.ts',
+    'server/services/videoChainedContinuity.test.ts',
+    'server/services/governedPolloService.ts',
+    'vitest.persona-continuity.config.ts',
+  ],
   'stripe-connect-net-payouts': [
     'OWNER_HANDOFF.md',
     'STRIPE_CONNECT_NET_PAYOUTS_PROOF.md',
