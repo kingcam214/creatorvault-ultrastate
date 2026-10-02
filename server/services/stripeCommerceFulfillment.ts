@@ -1,6 +1,8 @@
 import type Stripe from "stripe";
 import { randomUUID } from "crypto";
-import { db } from "../db";
+import { getStripePayoutDb, getStripePayoutSqlClient, type StripePayoutTransaction } from "../db";
+import { stripeCreatorPayouts, type StripeCreatorPayout } from "../../drizzle/schema-stripe-payouts";
+import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import {
   marketplaceProducts,
   marketplaceOrders,
@@ -44,35 +46,33 @@ export interface CommerceFulfillmentResult {
   reason?: string;
 }
 
-export async function fulfillCommerceCheckoutSession(session: Stripe.Checkout.Session): Promise<CommerceFulfillmentResult> {
+export async function fulfillCommerceCheckoutSession(session: Stripe.Checkout.Session, payout: StripeCreatorPayout): Promise<CommerceFulfillmentResult> {
   const metadata = parseCommerceCheckoutMetadata(session.metadata);
-  if (!metadata) {
-    return { status: "ignored", stripeSessionId: session.id, reason: "not_creatorvault_commerce_checkout" };
-  }
-
-  const amountTotal = session.amount_total || 0;
+  if (!metadata) return { status: "ignored", stripeSessionId: session.id, reason: "not_creatorvault_commerce_checkout" };
+  if (session.payment_status !== "paid" || payout.stripeFeeInCents === null || payout.grossAmountInCents !== session.amount_total) throw new Error("Commerce requires a paid, verified fee-aware creator charge");
   const currency = (session.currency || "usd").toUpperCase();
   const stripePaymentIntentId = getStripePaymentIntentId(session);
-  const split = calculateCommerceRevenueSplit(amountTotal, metadata.recruiterId);
-
-  if (metadata.itemType === "product") {
-    return fulfillProductCheckout({ metadata, split, currency, stripeSessionId: session.id, stripePaymentIntentId });
-  }
-
-  if (metadata.itemType === "course") {
-    return fulfillCourseCheckout({ metadata, split, currency, stripeSessionId: session.id, stripePaymentIntentId });
-  }
-
-  return fulfillServiceCheckout({ metadata, split, currency, stripeSessionId: session.id, stripePaymentIntentId });
+  if (payout.stripePaymentIntentId !== stripePaymentIntentId) throw new Error("Commerce payout and payment intent differ");
+  const split = calculateCommerceRevenueSplit(payout.grossAmountInCents, metadata.recruiterId, payout.stripeFeeInCents);
+  const database = await getStripePayoutDb();
+  return database.transaction(async (db) => {
+    await db.select({ id: stripeCreatorPayouts.id }).from(stripeCreatorPayouts).where(eq(stripeCreatorPayouts.id, payout.id)).for("update");
+    const params = { metadata, split, currency, stripeSessionId: session.id, stripePaymentIntentId, database: db };
+    if (metadata.itemType === "product") return fulfillProductCheckout(params);
+    if (metadata.itemType === "course") return fulfillCourseCheckout(params);
+    return fulfillServiceCheckout(params);
+  });
 }
 
 async function fulfillProductCheckout(params: {
+  database: StripePayoutTransaction;
   metadata: CommerceCheckoutMetadata;
   split: CommerceRevenueSplit;
   currency: string;
   stripeSessionId: string;
   stripePaymentIntentId?: string;
 }): Promise<CommerceFulfillmentResult> {
+  const db = params.database;
   const existing = await db
     .select()
     .from(marketplaceOrders)
@@ -80,7 +80,7 @@ async function fulfillProductCheckout(params: {
     .limit(1);
 
   if (existing[0]) {
-    await ensureCommissionEvents({
+    await ensureCommissionEvents({ database: db,
       refType: "order",
       refId: existing[0].id,
       creatorId: params.metadata.creatorId || 0,
@@ -105,7 +105,7 @@ async function fulfillProductCheckout(params: {
 
   const creatorId = params.metadata.creatorId || product.creatorId;
   const recruiterId = params.metadata.recruiterId || product.recruiterId || undefined;
-  const split = recruiterId && !params.metadata.recruiterId ? calculateCommerceRevenueSplit(params.split.grossAmount, recruiterId) : params.split;
+  const split = params.split;
   const orderId = randomUUID();
 
   await db.insert(marketplaceOrders).values({
@@ -124,18 +124,20 @@ async function fulfillProductCheckout(params: {
     status: "paid",
   });
 
-  await ensureCommissionEvents({ refType: "order", refId: orderId, creatorId, recruiterId, currency: params.currency, ...split });
+  await ensureCommissionEvents({ database: db, refType: "order", refId: orderId, creatorId, recruiterId, currency: params.currency, ...split });
   await recordAttributionPurchase({ metadata: params.metadata, grossAmount: split.grossAmount, stripeSessionId: params.stripeSessionId });
   return buildFulfilledResult("order", orderId, "product", params, split);
 }
 
 async function fulfillCourseCheckout(params: {
+  database: StripePayoutTransaction;
   metadata: CommerceCheckoutMetadata;
   split: CommerceRevenueSplit;
   currency: string;
   stripeSessionId: string;
   stripePaymentIntentId?: string;
 }): Promise<CommerceFulfillmentResult> {
+  const db = params.database;
   const courseRows = await db
     .select()
     .from(universityCourses)
@@ -168,7 +170,7 @@ async function fulfillCourseCheckout(params: {
     });
   }
 
-  await ensureCommissionEvents({
+  await ensureCommissionEvents({ database: db,
     refType: "enrollment",
     refId,
     creatorId,
@@ -187,12 +189,14 @@ async function fulfillCourseCheckout(params: {
 }
 
 async function fulfillServiceCheckout(params: {
+  database: StripePayoutTransaction;
   metadata: CommerceCheckoutMetadata;
   split: CommerceRevenueSplit;
   currency: string;
   stripeSessionId: string;
   stripePaymentIntentId?: string;
 }): Promise<CommerceFulfillmentResult> {
+  const db = params.database;
   const existing = await db
     .select()
     .from(servicesSales)
@@ -200,7 +204,7 @@ async function fulfillServiceCheckout(params: {
     .limit(1);
 
   if (existing[0]) {
-    await ensureCommissionEvents({
+    await ensureCommissionEvents({ database: db,
       refType: "sale",
       refId: existing[0].id,
       creatorId: params.metadata.creatorId || 0,
@@ -241,7 +245,7 @@ async function fulfillServiceCheckout(params: {
     status: "paid",
   });
 
-  await ensureCommissionEvents({
+  await ensureCommissionEvents({ database: db,
     refType: "sale",
     refId: saleId,
     creatorId: providerId,
@@ -307,34 +311,20 @@ async function recordAttributionPurchase(params: {
   }
 }
 
-async function rawQuery(query: string, params: any[] = []): Promise<any[]> {
-  const pool = (db as any).$client || (db as any).client;
-  if (pool && typeof pool.promise === "function") {
-    const [rows] = await pool.promise().query(query, params);
-    return rows as any[];
-  }
-  if (pool && typeof pool.execute === "function") {
-    const [rows] = await pool.execute(query, params);
-    return rows as any[];
-  }
-  const result = await (db as any).execute(sql.raw(query));
-  return (result as any).rows || result || [];
+async function rawQuery<T extends RowDataPacket = RowDataPacket>(query: string, params: readonly unknown[] = []): Promise<T[]> {
+  const client = await getStripePayoutSqlClient();
+  const [rows] = await client.query<T[]>(query, [...params]);
+  return rows;
 }
 
-async function rawExec(query: string, params: any[] = []): Promise<any> {
-  const pool = (db as any).$client || (db as any).client;
-  if (pool && typeof pool.promise === "function") {
-    const [result] = await pool.promise().query(query, params);
-    return result;
-  }
-  if (pool && typeof pool.execute === "function") {
-    const [result] = await pool.execute(query, params);
-    return result;
-  }
-  return await (db as any).execute(sql.raw(query));
+async function rawExec(query: string, params: readonly unknown[] = []): Promise<ResultSetHeader> {
+  const client = await getStripePayoutSqlClient();
+  const [result] = await client.query<ResultSetHeader>(query, [...params]);
+  return result;
 }
 
 async function ensureCommissionEvents(params: {
+  database: StripePayoutTransaction;
   refType: "order" | "sale" | "enrollment";
   refId: string;
   creatorId: number;
@@ -346,6 +336,7 @@ async function ensureCommissionEvents(params: {
   platformAmount: number;
   currency: string;
 }) {
+  const db = params.database;
   const existing = await db
     .select()
     .from(commissionEvents)

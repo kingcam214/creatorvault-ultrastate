@@ -1,4 +1,6 @@
 import { boolean, index, int, json, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
+export { stripeCreatorPayouts, stripeCreatorPayoutPolicy } from "./schema-stripe-payouts";
+export type { StripeCreatorPayout, InsertStripeCreatorPayout } from "./schema-stripe-payouts";
 
 /**
  * Core user table with CreatorVault extensions
@@ -24,6 +26,7 @@ export const users = mysqlTable("users", {
   paypalEmail: varchar("paypal_email", { length: 320 }),
   zelleHandle: varchar("zelle_handle", { length: 100 }),
   applepayHandle: varchar("applepay_handle", { length: 100 }),
+  stripeConnectAccountId: varchar("stripe_connect_account_id", { length: 255 }).unique(),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -447,6 +450,8 @@ export const universityEnrollments = mysqlTable("university_enrollments", {
     currentModule?: string;
     currentLesson?: string;
     lastAccessedAt?: number;
+    stripeSessionId?: string;
+    stripePaymentIntentId?: string;
   }>(),
   
   certificateUrl: varchar("certificate_url", { length: 512 }),
@@ -1107,8 +1112,10 @@ export const transactions = mysqlTable("transactions", {
   fanId: int("fan_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   amountInCents: int("amount_in_cents").notNull(),
-  creatorShareInCents: int("creator_share_in_cents").notNull(), // 70%
-  platformShareInCents: int("platform_share_in_cents").notNull(), // 30%
+  creatorShareInCents: int("creator_share_in_cents").notNull(), // 85% of net for Stripe
+  platformShareInCents: int("platform_share_in_cents").notNull(), // remainder of net
+  stripeFeeInCents: int("stripe_fee_in_cents"),
+  stripeCreatorPayoutId: int("stripe_creator_payout_id").unique(),
   stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
   status: mysqlEnum("status", ["pending", "completed", "failed", "refunded"]).default("pending"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -1687,6 +1694,7 @@ export const liveStreamTips = mysqlTable("live_stream_tips", {
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // in dollars
   creatorShare: decimal("creator_share", { precision: 10, scale: 2 }).notNull(), // 85%
   platformShare: decimal("platform_share", { precision: 10, scale: 2 }).notNull(), // 15%
+  stripeCreatorPayoutId: int("stripe_creator_payout_id").unique(),
   message: text("message"),
   
   // Status
@@ -1715,6 +1723,7 @@ export const liveStreamDonations = mysqlTable("live_stream_donations", {
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   creatorShare: decimal("creator_share", { precision: 10, scale: 2 }).notNull(), // 85%
   platformShare: decimal("platform_share", { precision: 10, scale: 2 }).notNull(), // 15%
+  stripeCreatorPayoutId: int("stripe_creator_payout_id").unique(),
   paymentMethod: varchar("payment_method", { length: 50 }).notNull(),
   message: text("message"),
   

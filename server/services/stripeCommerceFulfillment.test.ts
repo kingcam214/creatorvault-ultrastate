@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  calculateCommerceRevenueSplit,
-  getStripePaymentIntentId,
-  isCommerceCheckoutSession,
-  parseCommerceCheckoutMetadata,
-} from "./commerceFulfillmentRules";
+import { calculateCommerceRevenueSplit, getStripePaymentIntentId, isCommerceCheckoutSession, parseCommerceCheckoutMetadata } from "./commerceFulfillmentRules";
 
 describe("stripeCommerceFulfillment", () => {
   it("recognizes only complete CreatorVault commerce checkout metadata", () => {
@@ -15,55 +10,23 @@ describe("stripeCommerceFulfillment", () => {
     expect(isCommerceCheckoutSession({ itemId: "prod_1", itemType: "product" })).toBe(false);
     expect(isCommerceCheckoutSession({ itemId: "prod_1", itemType: "other", buyerId: "42" })).toBe(false);
   });
-
-  it("parses numeric buyer, creator, and recruiter metadata safely", () => {
-    const parsed = parseCommerceCheckoutMetadata({
-      itemId: "prod_1",
-      itemType: "product",
-      buyerId: "42",
-      creatorId: "7",
-      recruiterId: "8",
-      trackingCode: "track_abc",
-      attributionSessionId: "session_xyz",
-    });
-
-    expect(parsed).toMatchObject({
-      itemId: "prod_1",
-      itemType: "product",
-      buyerId: 42,
-      creatorId: 7,
-      recruiterId: 8,
-      trackingCode: "track_abc",
-      attributionSessionId: "session_xyz",
-    });
+  it("parses buyer, creator, and recruiter attribution", () => {
+    expect(parseCommerceCheckoutMetadata({ itemId: "prod_1", itemType: "product", buyerId: "42", creatorId: "7", recruiterId: "8", trackingCode: "track_abc", attributionSessionId: "session_xyz" }))
+      .toMatchObject({ itemId: "prod_1", itemType: "product", buyerId: 42, creatorId: 7, recruiterId: 8, trackingCode: "track_abc", attributionSessionId: "session_xyz" });
   });
-
-  it("calculates the canonical 70/20/10 split when recruiter attribution exists", () => {
-    expect(calculateCommerceRevenueSplit(10000, 8)).toEqual({
-      grossAmount: 10000,
-      creatorAmount: 7000,
-      recruiterAmount: 2000,
-      platformAmount: 1000,
-    });
+  it("calculates 85% of actual net when recruiter attribution exists", () => {
+    expect(calculateCommerceRevenueSplit(10000, 8, 320)).toEqual({ grossAmount: 10000, creatorAmount: 8228, recruiterAmount: 0, platformAmount: 1452 });
   });
-
-  it("keeps the recruiter share on platform when no recruiter is attributed", () => {
-    expect(calculateCommerceRevenueSplit(10000)).toEqual({
-      grossAmount: 10000,
-      creatorAmount: 7000,
-      recruiterAmount: 0,
-      platformAmount: 3000,
-    });
+  it("uses the same net payout when no recruiter is attributed", () => {
+    expect(calculateCommerceRevenueSplit(10000, undefined, 320)).toEqual({ grossAmount: 10000, creatorAmount: 8228, recruiterAmount: 0, platformAmount: 1452 });
   });
-
-  it("rejects non-positive Stripe totals instead of inventing fake revenue", () => {
-    expect(() => calculateCommerceRevenueSplit(0)).toThrow(/positive integer/);
-    expect(() => calculateCommerceRevenueSplit(-100)).toThrow(/positive integer/);
+  it("rejects non-positive Stripe totals", () => {
+    expect(() => calculateCommerceRevenueSplit(0, undefined, 0)).toThrow(/positive integer/);
+    expect(() => calculateCommerceRevenueSplit(-100, undefined, 0)).toThrow(/positive integer/);
   });
-
-  it("extracts payment intent IDs from expanded and non-expanded Stripe sessions", () => {
+  it("extracts IDs from expanded and unexpanded payment intents", () => {
     expect(getStripePaymentIntentId({ payment_intent: "pi_123" })).toBe("pi_123");
-    expect(getStripePaymentIntentId({ payment_intent: { id: "pi_expanded" } as any })).toBe("pi_expanded");
+    expect(getStripePaymentIntentId({ payment_intent: { id: "pi_expanded" } })).toBe("pi_expanded");
     expect(getStripePaymentIntentId({ payment_intent: null })).toBeUndefined();
   });
 });

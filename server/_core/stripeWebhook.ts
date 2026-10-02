@@ -9,8 +9,9 @@
 
 import type { Request, Response } from "express";
 import Stripe from "stripe";
-import { verifyWebhookSignature } from "../services/stripeVaultLive";
-import * as dbVaultLive from "../db-vaultlive";
+import { getStripe, verifyWebhookSignature } from "../services/stripeVaultLive";
+import { settleCreatorCheckout, settleCreatorStripeEvent } from "../services/stripeCreatorPayoutEvents";
+import { recordStripeVaultLiveCheckout } from "../services/stripeVaultLiveRevenue";
 import { creditChallengePaymentCents, type ChallengePaymentProof } from "../challengePaymentHook";
 
 /**
@@ -47,9 +48,18 @@ export async function handleStripeWebhook(req: Request, res: Response) {
   console.log(`[Stripe Webhook] Received event: ${event.type}`, { livemode: event.livemode });
 
   try {
-    // Handle checkout.session.completed
-    if (event.type === "checkout.session.completed") {
+    if (event.account && event.type !== "account.updated") return res.json({ received: true, skipped: true });
+    if (event.type !== "checkout.session.completed" && event.type !== "checkout.session.async_payment_succeeded") {
+      await settleCreatorStripeEvent(getStripe(), event);
+    }
+    // Completion alone does not prove an asynchronous payment succeeded.
+    if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
       const session = event.data.object as Stripe.Checkout.Session;
+      if (session.payment_status !== "paid") return res.json({ received: true, awaitingPayment: true });
+      const payout = await settleCreatorCheckout(getStripe(), session, event.id);
+      if (payout && ["review_required", "reversed"].includes(payout.status)) {
+        return res.json({ received: true, payoutHeld: true });
+      }
       
       // Credit AI Agent Challenge revenue only when the checkout was created
       // explicitly for the challenge. Other live Stripe payments remain real
@@ -81,11 +91,13 @@ export async function handleStripeWebhook(req: Request, res: Response) {
       } else {
         const { isCommerceCheckoutSession, fulfillCommerceCheckoutSession } = await import("../services/stripeCommerceFulfillment");
         if (isCommerceCheckoutSession(session.metadata)) {
-          const result = await fulfillCommerceCheckoutSession(session);
+          if (!payout) throw new Error("Creator commerce checkout has no verified net payout");
+          const result = await fulfillCommerceCheckoutSession(session, payout);
           console.log("[Stripe Webhook] CreatorVault commerce checkout fulfilled", result);
         } else {
-          // VaultLive tip/donation
-          await handleCheckoutCompleted(session);
+          if (payout && (session.metadata?.type === "vaultlive_tip" || session.metadata?.type === "vaultlive_donation")) {
+            await recordStripeVaultLiveCheckout(session, payout);
+          }
         }
       }
     } else if (event.type === "payment_intent.succeeded") {
@@ -182,136 +194,40 @@ async function handleVaultxPpvCheckout(session: Stripe.Checkout.Session) {
   console.log("[Stripe Webhook] VaultX PPV checkout completed", { sessionId: session.id, contentId, fanUserId, result });
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const metadata = session.metadata;
-
-  if (!metadata) {
-    console.error("[Stripe Webhook] No metadata in session");
-    return;
-  }
-
-  const { type, streamId, creatorId, creatorAmount, platformAmount, message } = metadata;
-
-  if (!type || !streamId || !creatorId || !creatorAmount || !platformAmount) {
-    console.error("[Stripe Webhook] Missing required metadata");
-    return;
-  }
-
-  const streamIdNum = parseInt(streamId, 10);
-  const creatorIdNum = parseInt(creatorId, 10);
-  const creatorAmountNum = parseInt(creatorAmount, 10);
-  const platformAmountNum = parseInt(platformAmount, 10);
-  const totalAmount = creatorAmountNum + platformAmountNum;
-
-  console.log(`[Stripe Webhook] Processing ${type} for stream ${streamIdNum}, creator ${creatorIdNum}, amount ${totalAmount}`);
-
-  // Get customer email from session
-  const customerEmail = session.customer_email || session.customer_details?.email;
-
-  if (type === "vaultlive_tip") {
-    // Record tip in database
-    // Note: We don't have viewer ID from Stripe, so we'll use creator ID as placeholder
-    // In production, you'd want to pass viewer ID through metadata
-    await dbVaultLive.recordTip(
-      streamIdNum,
-      creatorIdNum, // TODO: Get actual viewer ID from session metadata
-      totalAmount,
-      message || undefined
-    );
-
-    console.log(`[Stripe Webhook] Tip recorded: $${(totalAmount / 100).toFixed(2)} (Creator: $${(creatorAmountNum / 100).toFixed(2)}, Platform: $${(platformAmountNum / 100).toFixed(2)})`);
-  } else if (type === "vaultlive_donation") {
-    // Record donation in database
-    await dbVaultLive.recordDonation(
-      streamIdNum,
-      creatorIdNum, // TODO: Get actual viewer ID from session metadata
-      totalAmount,
-      "stripe",
-      message || undefined
-    );
-
-    // Update donation status to completed
-    // Note: We'd need to store Stripe session ID to update the specific donation
-    // For now, we'll just log it
-    console.log(`[Stripe Webhook] Donation recorded: $${(totalAmount / 100).toFixed(2)} (Creator: $${(creatorAmountNum / 100).toFixed(2)}, Platform: $${(platformAmountNum / 100).toFixed(2)})`);
-  }
-
-  console.log(`[Stripe Webhook] Payment completed successfully`);
-}
-
 /**
  * Handle subscription checkout
  */
-async function handleSubscriptionCheckout(session: Stripe.Checkout.Session) {
-  const { tierId, creatorId, fanId } = session.metadata!;
-
-  if (!tierId || !creatorId || !fanId) {
-    console.error("[Stripe Webhook] Missing subscription metadata");
-    return;
-  }
-
-  const { db } = await import("../db");
-  const { subscriptions, transactions, creatorBalances } = await import("../../drizzle/schema");
+async function handleSubscriptionCheckout(session: Stripe.Checkout.Session): Promise<void> {
+  const { positiveMetadataId } = await import("../services/stripeCreatorPayoutEvents");
+  const tierId = positiveMetadataId(session.metadata?.tierId);
+  const creatorId = positiveMetadataId(session.metadata?.creatorId);
+  const fanId = positiveMetadataId(session.metadata?.fanId);
+  const subscriptionValue = session.subscription;
+  const stripeSubscriptionId = typeof subscriptionValue === "string" ? subscriptionValue : subscriptionValue?.id;
+  if (!tierId || !creatorId || !fanId || !stripeSubscriptionId) throw new Error("Missing valid subscription source metadata");
+  const { getStripePayoutDb } = await import("../db");
+  const { subscriptions, users } = await import("../../drizzle/schema");
   const { eq } = await import("drizzle-orm");
-
-  // Create subscription record
-  const subResult = await db.insert(subscriptions).values({
-    fanId: parseInt(fanId),
-    creatorId: parseInt(creatorId),
-    tierId: parseInt(tierId),
-    stripeSubscriptionId: session.subscription as string,
-    status: "active",
-    currentPeriodStart: new Date(),
-    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-  });
-
-  const subscriptionId = Number((subResult as any).insertId);
-  const amountInCents = session.amount_total || 0;
-
-  // Calculate 70/30 split
-  const creatorShare = Math.floor(amountInCents * 0.85); // 85% to creator (15% platform fee — THIS IS LAW)
-  const platformShare = amountInCents - creatorShare; // 15% platform fee
-
-  // Create transaction record
-  await db.insert(transactions).values({
-    subscriptionId,
-    fanId: parseInt(fanId),
-    creatorId: parseInt(creatorId),
-    amountInCents,
-    creatorShareInCents: creatorShare,
-    platformShareInCents: platformShare,
-    stripePaymentIntentId: session.payment_intent as string,
-    status: "completed",
-  });
-
-  // Update creator balance
-  const [existingBalance] = await db
-    .select()
-    .from(creatorBalances)
-    .where(eq(creatorBalances.creatorId, parseInt(creatorId)));
-
-  if (existingBalance) {
-    await db
-      .update(creatorBalances)
-      .set({
-        availableBalanceInCents: existingBalance.availableBalanceInCents + creatorShare,
-        lifetimeEarningsInCents: existingBalance.lifetimeEarningsInCents + creatorShare,
-        updatedAt: new Date(),
-      })
-      .where(eq(creatorBalances.creatorId, parseInt(creatorId)));
-  } else {
-    await db.insert(creatorBalances).values({
-      creatorId: parseInt(creatorId),
-      availableBalanceInCents: creatorShare,
-      pendingBalanceInCents: 0,
-      lifetimeEarningsInCents: creatorShare,
+  const subscription = await getStripe().subscriptions.retrieve(stripeSubscriptionId);
+  const item = subscription.items.data[0];
+  if (!item) throw new Error("Stripe subscription has no billing item");
+  const database = await getStripePayoutDb();
+  await database.transaction(async (tx) => {
+    // Serialize creation for this user without silently deleting historical
+    // duplicate subscriptions to introduce a new uniqueness constraint.
+    await tx.select({ id: users.id }).from(users).where(eq(users.id, creatorId)).for("update");
+    const [existing] = await tx.select().from(subscriptions).where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId));
+    if (existing) {
+      if (existing.creatorId !== creatorId || existing.fanId !== fanId || existing.tierId !== tierId) throw new Error("Stripe subscription ownership conflicts with its saved record");
+      return;
+    }
+    await tx.insert(subscriptions).values({
+      fanId, creatorId, tierId, stripeSubscriptionId,
+      status: subscription.status === "canceled" ? "canceled" : subscription.status === "past_due" ? "past_due" : subscription.status === "unpaid" ? "unpaid" : "active",
+      currentPeriodStart: new Date(item.current_period_start * 1000),
+      currentPeriodEnd: new Date(item.current_period_end * 1000),
     });
-  }
-
-  console.log("[Stripe Webhook] Subscription created", {
-    subscriptionId,
-    creatorId,
-    creatorShare: `$${(creatorShare / 100).toFixed(2)}`,
-    platformShare: `$${(platformShare / 100).toFixed(2)}`,
   });
+  // invoice.paid owns initial-payment and renewal fee calculation, transfers,
+  // transaction persistence, and creator balances. Checkout does not credit again.
 }

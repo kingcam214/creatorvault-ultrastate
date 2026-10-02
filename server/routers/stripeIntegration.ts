@@ -1,17 +1,15 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
-import Stripe from "stripe";
+import { getStripe } from "../services/stripeVaultLive";
+import { createCreatorConnectOnboarding } from "../services/stripeConnectAccounts";
 import * as db from "../db";
 import { eq } from "drizzle-orm";
-
-    // @ts-ignore
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" });
 
 export const stripeIntegration = router({
   createPaymentIntent: protectedProcedure.input(z.object({
     amount: z.number().positive(), currency: z.string().default("usd"), description: z.string(),
   })).mutation(async ({ ctx, input }) => {
-    const intent = await stripe.paymentIntents.create({
+    const intent = await getStripe().paymentIntents.create({
       amount: Math.round(input.amount * 100),
       currency: input.currency,
       description: input.description,
@@ -22,7 +20,7 @@ export const stripeIntegration = router({
   createCheckoutSession: protectedProcedure.input(z.object({
     priceId: z.string(), successUrl: z.string(), cancelUrl: z.string(),
   })).mutation(async ({ ctx, input }) => {
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [{ price: input.priceId, quantity: 1 }],
       mode: "payment",
@@ -37,11 +35,7 @@ export const stripeIntegration = router({
     return payments;
   }),
   createConnectedAccount: protectedProcedure.mutation(async ({ ctx }) => {
-    const account = await stripe.accounts.create({
-      type: "express",
-      metadata: { userId: ctx.user.id.toString() },
-    });
-    return { accountId: account.id };
+    return createCreatorConnectOnboarding(getStripe(), ctx.user.id, process.env.APP_URL || process.env.VITE_APP_URL || "https://creatorvault.live");
   }),
 });
 

@@ -120,6 +120,13 @@
       "when": 1766526915152,
       "tag": "0016_violet_the_professor",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1790952426555,
+      "tag": "0024_stripe_creator_net_payouts",
+      "breakpoints": true
     }
   ]
 }
