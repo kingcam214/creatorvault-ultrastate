@@ -35,7 +35,7 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_EVENT_NAME" = 'push'
-          test "$CREATORVAULT_RELEASE_BEFORE" = 'f440fc58b39e2aca0aca89812a0a89322af4dd81'
+          test "$CREATORVAULT_RELEASE_BEFORE" = '186a840a08567e937af7b908173133fc66c1d3af'
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           git merge-base --is-ancestor 3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da HEAD
           git merge-base --is-ancestor ccba8cd56f887d041311d4f37d3ec912fd57322d HEAD
@@ -175,12 +175,14 @@ jobs:
           import fs from 'node:fs/promises';
           import path from 'node:path';
           import crypto from 'node:crypto';
+          import {pathToFileURL} from 'node:url';
           const root=process.env.ARTIFACT_ROOT;
           if(process.getuid()!==0 || !root || await fs.realpath(root)!==root || root==='/root/creatorvault/dist' || root.startsWith('/root/creatorvault/'))throw new Error('UNSAFE_BUILD_METADATA_ROOT');
+          const {BASELINE_STATIC_HOMEPAGE_ASSETS,isBaselineStaticHomepagePath}=await import(pathToFileURL(path.join(root,'consolidated-release-runtime.mjs')).href);
           const items=[];
-          async function walk(file){const meta=await fs.lstat(file);if(meta.isSymbolicLink() || (!meta.isDirectory()&&!meta.isFile()) || (meta.isFile()&&meta.nlink!==1))throw new Error('UNSAFE_BUILD_METADATA_PATH');const relative=path.relative(root,file);if(/(^|\/)(?:\.env(?:\.|$)|node_modules|uploads|logs)(?:\/|$)/.test(relative)||/\.(?:pem|key|crt|p12)$/i.test(relative))throw new Error('UNSAFE_BUILD_METADATA_CONTENT');items.push({file,meta});if(meta.isDirectory()){for(const child of await fs.readdir(file))await walk(path.join(file,child));}}
+          async function walk(file){const meta=await fs.lstat(file);if(meta.isSymbolicLink() || (!meta.isDirectory()&&!meta.isFile()) || (meta.isFile()&&meta.nlink!==1))throw new Error('UNSAFE_BUILD_METADATA_PATH');const relative=path.relative(root,file);if((/(^|\/)(?:\.env(?:\.|$)|node_modules|uploads|logs)(?:\/|$)/.test(relative)&&!isBaselineStaticHomepagePath(relative,meta.isDirectory()))||/\.(?:pem|key|crt|p12)$/i.test(relative))throw new Error('UNSAFE_BUILD_METADATA_CONTENT');items.push({file,meta});if(meta.isDirectory()){for(const child of await fs.readdir(file))await walk(path.join(file,child));}}
           await walk(root);
-          async function digest(){const hash=crypto.createHash('sha256');for(const item of items){hash.update(path.relative(root,item.file)+'\0');if(item.meta.isFile()){const h=await fs.open(item.file,'r');try{for await(const chunk of h.createReadStream())hash.update(chunk);}finally{await h.close();}}}return hash.digest('hex');}
+          async function digest(){const hash=crypto.createHash('sha256');for(const item of items){const relative=path.relative(root,item.file);hash.update(relative+'\0');if(item.meta.isFile()){const h=await fs.open(item.file,'r');const staticHash=crypto.createHash('sha256');try{for await(const chunk of h.createReadStream()){hash.update(chunk);staticHash.update(chunk);}}finally{await h.close();}if(Object.hasOwn(BASELINE_STATIC_HOMEPAGE_ASSETS,relative)&&staticHash.digest('hex')!==BASELINE_STATIC_HOMEPAGE_ASSETS[relative])throw new Error('STATIC_BASELINE_ASSET_CHANGED');}}return hash.digest('hex');}
           const before=await digest();
           for(const item of items){if(item.meta.uid!==0||item.meta.gid!==0)await fs.chown(item.file,0,0);await fs.chmod(item.file,item.meta.isDirectory()?0o750:0o640);}
           if(await digest()!==before)throw new Error('BUILD_BYTES_CHANGED_DURING_METADATA_SEAL');

@@ -794,6 +794,31 @@ async function assertCandidateArtifact(
   );
 }
 
+export const BASELINE_STATIC_HOMEPAGE_ASSETS: Readonly<Record<string, string>> =
+  {
+    "public/uploads/vaultx/homepage-trailer/platform_native_pollo_kling3_2026-06-09T12-46-40-227Z.json":
+      "3b9fb7e85beb5a77a256721841788e23e7aa82e40c035601feccfd9c4065f3ff",
+    "public/uploads/vaultx/homepage-trailer/platform_native_pollo_kling3_latest.json":
+      "3b9fb7e85beb5a77a256721841788e23e7aa82e40c035601feccfd9c4065f3ff",
+    "public/uploads/vaultx/homepage-trailer/platform_native_pollo_kling3_latest.mp4":
+      "daa6ba740816fbea344bfa9f7a10f55d99886acd01539793ba05999df5286661",
+    "public/uploads/vaultx/homepage-trailer/vaultx_homepage_kingcam_trailer_provenance.json":
+      "e3f32ef6f2e1c5a1992073113469aaf5a5b14397036c4c8d9c1ddf5069f36c8e",
+  };
+
+export function isBaselineStaticHomepagePath(
+  relative: string,
+  directory: boolean
+): boolean {
+  return directory
+    ? [
+        "public/uploads",
+        "public/uploads/vaultx",
+        "public/uploads/vaultx/homepage-trailer",
+      ].includes(relative)
+    : Object.hasOwn(BASELINE_STATIC_HOMEPAGE_ASSETS, relative);
+}
+
 async function treeDigest(directory: string): Promise<string> {
   const digest = createHash("sha256");
   async function visit(current: string): Promise<void> {
@@ -807,9 +832,11 @@ async function treeDigest(directory: string): Promise<string> {
         "CONSOLIDATED_UNSAFE_ARTIFACT_TREE"
       );
       requireRelease(
-        !/(^|\/)(?:\.env(?:\.|$)|node_modules|uploads|logs)(?:\/|$)/.test(
+        (!/(^|\/)(?:\.env(?:\.|$)|node_modules|uploads|logs)(?:\/|$)/.test(
           relative
-        ) && !/\.(?:pem|key|crt|p12)$/i.test(relative),
+        ) ||
+          isBaselineStaticHomepagePath(relative, entry.isDirectory())) &&
+          !/\.(?:pem|key|crt|p12)$/i.test(relative),
         "CONSOLIDATED_SECRET_OR_RUNTIME_FILE_IN_ARTIFACT"
       );
       const meta = await fs.lstat(file);
@@ -829,8 +856,17 @@ async function treeDigest(directory: string): Promise<string> {
           constants.O_RDONLY | constants.O_NOFOLLOW
         );
         try {
-          for await (const chunk of handle.createReadStream())
+          const staticDigest = createHash("sha256");
+          for await (const chunk of handle.createReadStream()) {
             digest.update(chunk);
+            staticDigest.update(chunk);
+          }
+          if (Object.hasOwn(BASELINE_STATIC_HOMEPAGE_ASSETS, relative))
+            requireRelease(
+              staticDigest.digest("hex") ===
+                BASELINE_STATIC_HOMEPAGE_ASSETS[relative],
+              "CONSOLIDATED_STATIC_BASELINE_ASSET_CHANGED"
+            );
         } finally {
           await handle.close();
         }

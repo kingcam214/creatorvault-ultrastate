@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  BASELINE_STATIC_HOMEPAGE_ASSETS,
+  isBaselineStaticHomepagePath,
   requiresFailureStop,
   validControllerArguments,
   type ReleaseState,
@@ -106,5 +109,29 @@ describe("consolidated non-rotating guarded release", () => {
     ])
       expect(launcher).toContain(`-u ${key}`);
     expect(source).toContain("CONSOLIDATED_UNTRUSTED_PRELOAD_ENVIRONMENT");
+  });
+  it("permits only exact hash-pinned unchanged static homepage files, never runtime uploads", () => {
+    expect(Object.keys(BASELINE_STATIC_HOMEPAGE_ASSETS)).toHaveLength(4);
+    for (const [relative, digest] of Object.entries(
+      BASELINE_STATIC_HOMEPAGE_ASSETS
+    )) {
+      expect(isBaselineStaticHomepagePath(relative, false)).toBe(true);
+      const bytes = readFileSync(path.join(root, "client", relative));
+      expect(createHash("sha256").update(bytes).digest("hex")).toBe(digest);
+    }
+    for (const relative of [
+      "uploads",
+      "public/uploads/user.mp4",
+      "public/uploads/vaultx/homepage-trailer/other.mp4",
+      "public/logs",
+      "public/.env",
+      "public/uploads/../.env",
+    ])
+      expect(isBaselineStaticHomepagePath(relative, false)).toBe(false);
+    expect(isBaselineStaticHomepagePath("public/uploads", true)).toBe(true);
+    expect(
+      isBaselineStaticHomepagePath("public/uploads/real-users", true)
+    ).toBe(false);
+    expect(source).toContain("CONSOLIDATED_STATIC_BASELINE_ASSET_CHANGED");
   });
 });
