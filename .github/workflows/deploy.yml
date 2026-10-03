@@ -28,16 +28,16 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify direct production-baseline child
+      - name: Verify approved security-release successor
         run: |
           set -euo pipefail
-          baseline='46d3021a1bd09222a61ff1390c9cfe8f82d06422'
+          release_parent='966bb94f361cf87cd13d0aef5816be4c6fe59706'
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_EVENT_NAME" = 'push'
-          test "$CREATORVAULT_RELEASE_BEFORE" = "$baseline"
+          test "$CREATORVAULT_RELEASE_BEFORE" = "$release_parent"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git show -s --format=%P HEAD)" = "$baseline"
-          test "$(git rev-list --count "$baseline..HEAD")" = '1'
+          test "$(git show -s --format=%P HEAD)" = "$release_parent"
+          test "$(git rev-list --count "$release_parent..HEAD")" = '1'
           case "$(realpath "$GITHUB_WORKSPACE")/" in /root/creatorvault/*) exit 42 ;; esac
           test ! -L dist
           if test -d dist; then test -z "$(find dist -type l -printf x -quit)"; fi

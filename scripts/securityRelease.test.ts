@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   APPROVED_RELEASE_PATHS,
   REQUIRED_LIVE_BASELINE,
+  REQUIRED_RELEASE_PARENT,
   APP_ROOT,
   PUBLIC_ORIGIN,
   ReleaseFailure,
@@ -267,10 +268,10 @@ const loginEnv: Record<string, string> = {
 const checkout = (patch: Partial<CheckoutEvidence> = {}): CheckoutEvidence => ({
   ref: "refs/heads/main",
   event: "push",
-  before: REQUIRED_LIVE_BASELINE,
+  before: REQUIRED_RELEASE_PARENT,
   sha: SHA,
   head: SHA,
-  parent: REQUIRED_LIVE_BASELINE,
+  parent: REQUIRED_RELEASE_PARENT,
   commitCount: 1,
   baselineDiffPaths: [...APPROVED_RELEASE_PATHS],
   packageUnchanged: true,
@@ -434,6 +435,7 @@ describe("release metadata and constant-time comparison primitives", () => {
     expect(REQUIRED_LIVE_BASELINE).toBe(
       "46d3021a1bd09222a61ff1390c9cfe8f82d06422"
     );
+    expect(REQUIRED_RELEASE_PARENT).toBe("966bb94f361cf87cd13d0aef5816be4c6fe59706");
     expect(APP_ROOT).toBe("/root/creatorvault");
     expect(PUBLIC_ORIGIN).toBe("https://creatorvault.live");
     expect(APPROVED_RELEASE_PATHS).toEqual(EXPECTED_APPROVED_RELEASE_PATHS);
@@ -514,7 +516,7 @@ describe("fail-closed direct-baseline checkout and complete exact release path g
     ["absent parent", { parent: "" }, "UNAPPROVED_RELEASE_LINEAGE"],
     [
       "merge parents",
-      { parent: `${REQUIRED_LIVE_BASELINE} ${"b".repeat(40)}` },
+      { parent: `${REQUIRED_RELEASE_PARENT} ${"b".repeat(40)}` },
       "UNAPPROVED_RELEASE_LINEAGE",
     ],
     ["zero commits", { commitCount: 0 }, "UNAPPROVED_RELEASE_LINEAGE"],
@@ -2272,16 +2274,16 @@ describe("static single-controller workflow and deployment safety contracts", ()
     expect(workflow).toContain("test \"$GITHUB_EVENT_NAME\" = 'push'");
     expect(workflow).toContain("CREATORVAULT_RELEASE_BEFORE: ${{ github.event.before }}");
     expect(workflow).toContain("runs-on: [self-hosted, linux, creatorvault-production]");
-    expect(workflow).toContain(`baseline='${REQUIRED_LIVE_BASELINE}'`);
+    expect(workflow).toContain(`release_parent='${REQUIRED_RELEASE_PARENT}'`);
     expect(workflow).toContain(
-      'test "$CREATORVAULT_RELEASE_BEFORE" = "$baseline"'
+      'test "$CREATORVAULT_RELEASE_BEFORE" = "$release_parent"'
     );
     expect(workflow).toContain('test "$(git rev-parse HEAD)" = "$GITHUB_SHA"');
     expect(workflow).toContain(
-      'test "$(git show -s --format=%P HEAD)" = "$baseline"'
+      'test "$(git show -s --format=%P HEAD)" = "$release_parent"'
     );
     expect(workflow).toContain(
-      'test "$(git rev-list --count "$baseline..HEAD")" = \'1\''
+      'test "$(git rev-list --count "$release_parent..HEAD")" = \'1\''
     );
     expect(workflow).toContain(
       "pnpm exec tsx scripts/securityReleaseIntegrity.ts"
@@ -2290,7 +2292,7 @@ describe("static single-controller workflow and deployment safety contracts", ()
       /APPROVED_SECURITY_PARENT|1204f479|3076e8c|6c1cbf|case\s+"\$\(git diff --name-only/
     );
     expectOrdered(workflow, [
-      "Verify direct production-baseline child",
+      "Verify approved security-release successor",
       "Enable pnpm",
       "Install dependencies",
     ]);
@@ -2825,7 +2827,7 @@ describe("durable failure-stop policy and one cancellation-independent root supe
       `--setenv=CREATORVAULT_RELEASE_SHA=${SHA}`,
       "--setenv=CREATORVAULT_RELEASE_REF=refs/heads/main",
       "--setenv=CREATORVAULT_RELEASE_EVENT=push",
-      `--setenv=CREATORVAULT_RELEASE_BEFORE=${REQUIRED_LIVE_BASELINE}`,
+      `--setenv=CREATORVAULT_RELEASE_BEFORE=${REQUIRED_RELEASE_PARENT}`,
       "--setenv=CREATORVAULT_RELEASE_WORKSPACE=/synthetic/workspace",
       "--setenv=CREATORVAULT_RELEASE_PARENT_PID=4242",
     ]);

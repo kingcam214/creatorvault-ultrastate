@@ -2,6 +2,15 @@ import { timingSafeEqual } from "node:crypto";
 
 export const REQUIRED_LIVE_BASELINE =
   "46d3021a1bd09222a61ff1390c9cfe8f82d06422";
+/** Existing main contains the reviewed security release and its memory-only correction. */
+export const REQUIRED_RELEASE_PARENT = "966bb94f361cf87cd13d0aef5816be4c6fe59706";
+export const APPROVED_GUARD_CORRECTION_PATHS: readonly string[] = [
+  ".github/workflows/deploy.yml",
+  "scripts/securityRelease.test.ts",
+  "scripts/securityReleaseIntegrity.test.ts",
+  "scripts/securityReleaseIntegrity.ts",
+  "scripts/securityReleasePolicy.ts",
+];
 export const APP_ROOT = "/root/creatorvault";
 export const PUBLIC_ORIGIN = "https://creatorvault.live";
 export const APPROVED_RELEASE_PATHS: readonly string[] = [
@@ -120,9 +129,9 @@ export function assertCheckout(e: CheckoutEvidence): void {
     "CHECKOUT_SHA_MISMATCH"
   );
   requireRelease(
-    e.parent === REQUIRED_LIVE_BASELINE &&
+    e.parent === REQUIRED_RELEASE_PARENT &&
       e.commitCount === 1 &&
-      e.before === REQUIRED_LIVE_BASELINE,
+      e.before === REQUIRED_RELEASE_PARENT,
     "UNAPPROVED_RELEASE_LINEAGE"
   );
   requireRelease(
@@ -359,7 +368,7 @@ export function supervisorCommand(
     `--setenv=CREATORVAULT_RELEASE_SHA=${sha}`,
     "--setenv=CREATORVAULT_RELEASE_REF=refs/heads/main",
     "--setenv=CREATORVAULT_RELEASE_EVENT=push",
-    `--setenv=CREATORVAULT_RELEASE_BEFORE=${REQUIRED_LIVE_BASELINE}`,
+    `--setenv=CREATORVAULT_RELEASE_BEFORE=${REQUIRED_RELEASE_PARENT}`,
     `--setenv=CREATORVAULT_RELEASE_WORKSPACE=${workspace}`,
     `--setenv=CREATORVAULT_RELEASE_PARENT_PID=${parentPid}`,
     "/usr/bin/flock",

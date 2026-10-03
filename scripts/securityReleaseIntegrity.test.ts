@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   APPROVED_RELEASE_PATHS,
   REQUIRED_LIVE_BASELINE,
+  REQUIRED_RELEASE_PARENT,
   assertCheckout,
   assertRuntime,
   executeRelease,
@@ -19,10 +20,10 @@ import {
 const checkout = (patch: Partial<CheckoutEvidence> = {}): CheckoutEvidence => ({
   ref: "refs/heads/main",
   event: "push",
-  before: REQUIRED_LIVE_BASELINE,
+  before: REQUIRED_RELEASE_PARENT,
   sha: "a".repeat(40),
   head: "a".repeat(40),
-  parent: REQUIRED_LIVE_BASELINE,
+  parent: REQUIRED_RELEASE_PARENT,
   commitCount: 1,
   baselineDiffPaths: [...APPROVED_RELEASE_PATHS],
   packageUnchanged: true,
@@ -41,7 +42,7 @@ describe("final immutable direct-baseline release integrity", () => {
   });
   it.each([
     ["different parent", { parent: "b".repeat(40) }],
-    ["merge commit", { parent: `${REQUIRED_LIVE_BASELINE} ${"b".repeat(40)}` }],
+    ["merge commit", { parent: `${REQUIRED_RELEASE_PARENT} ${"b".repeat(40)}` }],
     ["extra commit", { commitCount: 2 }],
     [
       "extra file",
@@ -68,7 +69,8 @@ describe("final immutable direct-baseline release integrity", () => {
         ),
       },
     ],
-    ["wrong push baseline", { before: "b".repeat(40) }],
+    ["old live baseline is not current main", { before: REQUIRED_LIVE_BASELINE }],
+    ["wrong push parent", { before: "b".repeat(40) }],
     ["different checked-out SHA", { head: "b".repeat(40) }],
     [
       "duplicate allowed path",

@@ -4,7 +4,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   APPROVED_RELEASE_PATHS,
+  APPROVED_GUARD_CORRECTION_PATHS,
   REQUIRED_LIVE_BASELINE,
+  REQUIRED_RELEASE_PARENT,
   assertCheckout,
   requireRelease,
   ReleaseFailure,
@@ -195,7 +197,8 @@ export function assertClosure(e: ClosureEvidence): void {
     e.workflow.includes("pnpm exec tsx scripts/securityReleaseIntegrity.ts") &&
       e.workflow.includes("CREATORVAULT_RELEASE_BEFORE") &&
       e.workflow.includes("github.event.before") &&
-      e.workflow.includes(REQUIRED_LIVE_BASELINE),
+      e.workflow.includes(REQUIRED_LIVE_BASELINE) &&
+      e.workflow.includes(REQUIRED_RELEASE_PARENT),
     "WORKFLOW_INTEGRITY_GATE_MISSING"
   );
   requireRelease(
@@ -245,6 +248,15 @@ export function validateReleaseTree(root: string, tree: string): void {
   requireRelease(
     APPROVED_RELEASE_PATHS.every(p => safe.has(p)),
     "UNSAFE_OR_MISSING_RELEASE_FILE"
+  );
+  const correctionPaths = lines(
+    git(root, ["diff", "--name-only", REQUIRED_RELEASE_PARENT, tree])
+  );
+  requireRelease(
+    correctionPaths.length === APPROVED_GUARD_CORRECTION_PATHS.length &&
+      new Set(correctionPaths).size === correctionPaths.length &&
+      correctionPaths.every(p => APPROVED_GUARD_CORRECTION_PATHS.includes(p)),
+    "UNAPPROVED_GUARD_CORRECTION"
   );
   for (const [file, digest] of Object.entries(APPROVED_APPLICATION_DIGESTS)) {
     requireRelease(
@@ -297,7 +309,7 @@ export function checkoutEvidence(
     head: git(root, ["rev-parse", tree]),
     parent,
     commitCount: Number(
-      git(root, ["rev-list", "--count", `${REQUIRED_LIVE_BASELINE}..HEAD`])
+      git(root, ["rev-list", "--count", `${REQUIRED_RELEASE_PARENT}..HEAD`])
     ),
     baselineDiffPaths: changes,
     packageUnchanged: true,
@@ -331,7 +343,7 @@ export function checkReleaseCheckout(
 /** Prospective immutable staged tree; no commit is created by this audit. */
 export function checkStagedRelease(root: string): void {
   requireRelease(
-    git(root, ["rev-parse", "HEAD"]) === REQUIRED_LIVE_BASELINE,
+    git(root, ["rev-parse", "HEAD"]) === REQUIRED_RELEASE_PARENT,
     "STAGED_RELEASE_NOT_BASELINE"
   );
   requireRelease(
@@ -345,10 +357,10 @@ export function checkStagedRelease(root: string): void {
   assertCheckout({
     ref: "refs/heads/main",
     event: "push",
-    before: REQUIRED_LIVE_BASELINE,
+    before: REQUIRED_RELEASE_PARENT,
     sha: "a".repeat(40),
     head: "a".repeat(40),
-    parent: REQUIRED_LIVE_BASELINE,
+    parent: REQUIRED_RELEASE_PARENT,
     commitCount: 1,
     baselineDiffPaths: paths,
     packageUnchanged: true,
