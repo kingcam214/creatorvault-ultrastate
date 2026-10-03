@@ -163,13 +163,13 @@ describe("final immutable direct-baseline release integrity", () => {
       })
     ).toThrow();
   });
-  it("bounds both compiler heaps at 1536 MiB without changing commands or failure gates", () => {
-    for (const [name, command] of [
-      ["Strict security type check", "pnpm check:security"],
-      ["Mandatory whole-project type check", "pnpm check"],
+  it("bounds compiler heaps for cold runs without changing commands or failure gates", () => {
+    for (const [name, command, heap] of [
+      ["Strict security type check", "pnpm check:security", 1536],
+      ["Mandatory whole-project type check", "pnpm check", 3072],
     ]) {
       const block = workflow.split(`- name: ${name}\n`)[1]?.split("\n      - name:")[0];
-      expect(block).toContain("NODE_OPTIONS: --max-old-space-size=1536");
+      expect(block).toContain(`NODE_OPTIONS: --max-old-space-size=${heap}`);
       expect(block).toContain("set -euo pipefail");
       expect(block).toContain(`\n          ${command}\n`);
     }

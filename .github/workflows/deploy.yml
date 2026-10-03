@@ -31,7 +31,7 @@ jobs:
       - name: Verify approved security-release successor
         run: |
           set -euo pipefail
-          release_parent='695d03386191ae065618ff56091abae8d8d3c83a'
+          release_parent='d49019e60eece395c0fe60b5c12bcfeaae5f32ac'
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_EVENT_NAME" = 'push'
           test "$CREATORVAULT_RELEASE_BEFORE" = "$release_parent"
@@ -107,11 +107,28 @@ jobs:
 
       - name: Mandatory whole-project type check
         env:
-          NODE_OPTIONS: --max-old-space-size=1536
+          NODE_OPTIONS: --max-old-space-size=3072
         run: |
           set -euo pipefail
           export PNPM_HOME="/home/runner/.local/share/pnpm"
           export PATH="$PNPM_HOME:$PATH"
+          # Cold check measured 2,128,264 KiB RSS; preserve headroom for the live service.
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import v8 from 'node:v8';
+          const mem=Object.fromEntries([...fs.readFileSync('/proc/meminfo','utf8').matchAll(/^(MemTotal|MemAvailable|SwapFree):\s+(\d+) kB$/gm)].map(m=>[m[1],Number(m[2])*1024]));
+          let ram=mem.MemAvailable, swap=mem.SwapFree;
+          const group=/^0::(.*)$/m.exec(fs.readFileSync('/proc/self/cgroup','utf8'))?.[1];
+          const root=group ? path.resolve('/sys/fs/cgroup','.'+group) : '/sys/fs/cgroup';
+          const read=(name)=>{for(const dir of [root,'/sys/fs/cgroup']){const file=path.join(dir,name);if(fs.existsSync(file))return fs.readFileSync(file,'utf8').trim();}return undefined;};
+          const bound=(available,max,current)=>max!==undefined && max!=='max' ? Math.min(available,Math.max(0,Number(max)-Number(current))) : available;
+          ram=bound(ram,read('memory.max'),read('memory.current'));
+          swap=bound(swap,read('memory.swap.max'),read('memory.swap.current'));
+          const mib=n=>Math.floor(n/1048576);
+          console.log(JSON.stringify({node:process.version,totalRamMiB:mib(mem.MemTotal),availableRamMiB:mib(ram),availableSwapMiB:mib(swap),heapLimitMiB:mib(v8.getHeapStatistics().heap_size_limit),requiredHeadroomMiB:2560}));
+          if(!Number.isFinite(ram+swap) || ram+swap < 2560*1048576) throw new Error('INSUFFICIENT_RUNNER_MEMORY_FOR_COLD_TYPECHECK');
+          JS
           pnpm check
 
       - name: Build release
