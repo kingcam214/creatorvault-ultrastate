@@ -145,6 +145,23 @@ describe("supportedMySqlDialect", () => {
     expect(supportedMySqlDialect("5.7.25-TiDB-v7", "TiDB Server")).toBeNull();
     expect(supportedMySqlDialect("10.11.14-MariaDB", "Ubuntu")).toBe("mariadb");
   });
+  it("recognizes the documented Ubuntu MySQL package signature only", () => {
+    expect(supportedMySqlDialect("8.0.19-0ubuntu0.19.10.3", "(Ubuntu)")).toBe(
+      "mysql"
+    );
+    expect(supportedMySqlDialect("8.0.43-0ubuntu0.24.04.2", "Ubuntu")).toBe(
+      "mysql"
+    );
+    expect(
+      supportedMySqlDialect("8.0.43", "Unknown Compatible Server")
+    ).toBeNull();
+    expect(
+      supportedMySqlDialect("8.0.43-0ubuntu0.24.04.2-TiDB", "Ubuntu")
+    ).toBeNull();
+    expect(
+      supportedMySqlDialect("8.0.43-0ubuntu0.24.04.2", "Vitess")
+    ).toBeNull();
+  });
 });
 
 describeLocal(

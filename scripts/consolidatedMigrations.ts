@@ -24,6 +24,7 @@ export type ConsolidatedMigrationErrorCode =
   | "CONNECTION_FAILED"
   | "LOCK_UNAVAILABLE"
   | "UNSUPPORTED_DIALECT"
+  | "UNSUPPORTED_DIALECT_TIDB"
   | "DATABASE_INSPECTION_FAILED"
   | "BASELINE_INVALID"
   | "MIGRATION_METADATA_INVALID"
@@ -878,6 +879,11 @@ export function supportedMySqlDialect(
     identity.includes("postgres")
   )
     return null;
+  if (
+    /^8\.0\.\d+-0ubuntu[0-9.a-z]+$/i.test(version) &&
+    ["(ubuntu)", "ubuntu"].includes(versionComment.trim().toLowerCase())
+  )
+    return "mysql";
   return identity.includes("mysql") ? "mysql" : null;
 }
 
@@ -1312,6 +1318,8 @@ async function serverInfo(connection: Connection): Promise<ServerInfo> {
   if (version === null || comment === null)
     throw failure("UNSUPPORTED_DIALECT");
   const dialect = supportedMySqlDialect(version, comment);
+  if (dialect === null && /tidb/i.test(`${version} ${comment}`))
+    throw failure("UNSUPPORTED_DIALECT_TIDB");
   if (dialect === null) throw failure("UNSUPPORTED_DIALECT");
   return {
     dialect,
