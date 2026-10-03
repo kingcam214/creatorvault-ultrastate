@@ -13,7 +13,7 @@ import { collectPrivilegedProcedurePaths } from "./securityProcedureInventory";
 export const CONSOLIDATED_SECURITY_BASELINE =
   "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da";
 export const CONSOLIDATED_RELEASE_PARENT =
-  "5a6e4b42f628656b2aa5436174ed15e21cf1af0b";
+  "cb624c55029c3b43a700ab147905c8ae8ac8162b";
 export const APP_ROOT = "/root/creatorvault";
 export const APPROVED_FEATURE_HEADS = {
   stripe: "ccba8cd56f887d041311d4f37d3ec912fd57322d",

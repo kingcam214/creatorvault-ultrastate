@@ -24,6 +24,22 @@ jobs:
     runs-on: [self-hosted, linux, creatorvault-production]
     timeout-minutes: 45
     steps:
+      - name: Restore disposable build ownership for checkout
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$GITHUB_EVENT_NAME" = 'push'
+          sudo -n env PATH="$PATH" RUNNER_WORKSPACE="$GITHUB_WORKSPACE" RUNNER_BUILD_UID="$(id -u)" RUNNER_BUILD_GID="$(id -g)" node --input-type=module <<'JS'
+          import fs from 'node:fs/promises';
+          import path from 'node:path';
+          const workspace=process.env.RUNNER_WORKSPACE,uid=Number(process.env.RUNNER_BUILD_UID),gid=Number(process.env.RUNNER_BUILD_GID);
+          if(process.getuid()!==0 || !workspace || !workspace.includes('/_work/') || workspace.startsWith('/root/creatorvault/') || workspace==='/root/creatorvault' || !Number.isSafeInteger(uid) || !Number.isSafeInteger(gid) || uid<0 || gid<0)throw new Error('UNSAFE_DISPOSABLE_BUILD_METADATA_ROOT');
+          const root=path.join(workspace,'dist');
+          const meta=await fs.lstat(root).catch(error=>{if(error.code==='ENOENT')return undefined;throw error;});
+          if(meta){if(await fs.realpath(workspace)!==workspace || await fs.realpath(root)!==root)throw new Error('UNSAFE_DISPOSABLE_BUILD_METADATA_ROOT');const items=[];async function walk(file){const m=await fs.lstat(file);if(m.isSymbolicLink() || (!m.isDirectory()&&!m.isFile()) || (m.isFile()&&m.nlink!==1))throw new Error('UNSAFE_DISPOSABLE_BUILD_METADATA_PATH');items.push(file);if(m.isDirectory())for(const child of await fs.readdir(file))await walk(path.join(file,child));}await walk(root);for(const file of items)await fs.chown(file,uid,gid);}
+          console.log('DISPOSABLE_BUILD_OWNER_RESTORED_PRODUCTION_UNCHANGED');
+          JS
+
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
@@ -35,7 +51,7 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_EVENT_NAME" = 'push'
-          test "$CREATORVAULT_RELEASE_BEFORE" = '5a6e4b42f628656b2aa5436174ed15e21cf1af0b'
+          test "$CREATORVAULT_RELEASE_BEFORE" = 'cb624c55029c3b43a700ab147905c8ae8ac8162b'
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           git merge-base --is-ancestor 3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da HEAD
           git merge-base --is-ancestor ccba8cd56f887d041311d4f37d3ec912fd57322d HEAD
