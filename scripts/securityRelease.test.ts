@@ -435,7 +435,7 @@ describe("release metadata and constant-time comparison primitives", () => {
     expect(REQUIRED_LIVE_BASELINE).toBe(
       "46d3021a1bd09222a61ff1390c9cfe8f82d06422"
     );
-    expect(REQUIRED_RELEASE_PARENT).toBe("966bb94f361cf87cd13d0aef5816be4c6fe59706");
+    expect(REQUIRED_RELEASE_PARENT).toBe("695d03386191ae065618ff56091abae8d8d3c83a");
     expect(APP_ROOT).toBe("/root/creatorvault");
     expect(PUBLIC_ORIGIN).toBe("https://creatorvault.live");
     expect(APPROVED_RELEASE_PATHS).toEqual(EXPECTED_APPROVED_RELEASE_PATHS);

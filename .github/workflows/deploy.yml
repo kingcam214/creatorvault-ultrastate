@@ -31,7 +31,7 @@ jobs:
       - name: Verify approved security-release successor
         run: |
           set -euo pipefail
-          release_parent='966bb94f361cf87cd13d0aef5816be4c6fe59706'
+          release_parent='695d03386191ae065618ff56091abae8d8d3c83a'
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_EVENT_NAME" = 'push'
           test "$CREATORVAULT_RELEASE_BEFORE" = "$release_parent"
@@ -106,6 +106,8 @@ jobs:
           bash -n deploy_work_to_prod.sh
 
       - name: Mandatory whole-project type check
+        env:
+          NODE_OPTIONS: --max-old-space-size=1536
         run: |
           set -euo pipefail
           export PNPM_HOME="/home/runner/.local/share/pnpm"

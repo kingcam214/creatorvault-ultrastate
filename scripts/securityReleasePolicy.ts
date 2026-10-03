@@ -3,12 +3,11 @@ import { timingSafeEqual } from "node:crypto";
 export const REQUIRED_LIVE_BASELINE =
   "46d3021a1bd09222a61ff1390c9cfe8f82d06422";
 /** Existing main contains the reviewed security release and its memory-only correction. */
-export const REQUIRED_RELEASE_PARENT = "966bb94f361cf87cd13d0aef5816be4c6fe59706";
+export const REQUIRED_RELEASE_PARENT = "695d03386191ae065618ff56091abae8d8d3c83a";
 export const APPROVED_GUARD_CORRECTION_PATHS: readonly string[] = [
   ".github/workflows/deploy.yml",
   "scripts/securityRelease.test.ts",
   "scripts/securityReleaseIntegrity.test.ts",
-  "scripts/securityReleaseIntegrity.ts",
   "scripts/securityReleasePolicy.ts",
 ];
 export const APP_ROOT = "/root/creatorvault";

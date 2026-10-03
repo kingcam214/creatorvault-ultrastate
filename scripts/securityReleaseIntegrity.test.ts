@@ -163,6 +163,21 @@ describe("final immutable direct-baseline release integrity", () => {
       })
     ).toThrow();
   });
+  it("bounds both compiler heaps at 1536 MiB without changing commands or failure gates", () => {
+    for (const [name, command] of [
+      ["Strict security type check", "pnpm check:security"],
+      ["Mandatory whole-project type check", "pnpm check"],
+    ]) {
+      const block = workflow.split(`- name: ${name}\n`)[1]?.split("\n      - name:")[0];
+      expect(block).toContain("NODE_OPTIONS: --max-old-space-size=1536");
+      expect(block).toContain("set -euo pipefail");
+      expect(block).toContain(`\n          ${command}\n`);
+    }
+    expect(workflow.match(/NODE_OPTIONS:/g)).toHaveLength(2);
+    expect(workflow).not.toMatch(/continue-on-error|\|\|\s*true|always\(\)/);
+    expect(workflow.indexOf("pnpm check\n")).toBeLessThan(workflow.indexOf("pnpm build\n"));
+    expect(workflow.indexOf("pnpm build\n")).toBeLessThan(workflow.indexOf('bash "$GITHUB_WORKSPACE/deploy_work_to_prod.sh"'));
+  });
   const basePackage = {
     dependencies: { pinned: "1.0.0" },
     devDependencies: { compiler: "1.0.0" },
