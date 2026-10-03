@@ -18,8 +18,11 @@ command -v node >/dev/null 2>&1 || fail NODE_MISSING
 command -v pm2 >/dev/null 2>&1 || fail PM2_MISSING
 cd -- "$CREATORVAULT_RELEASE_WORKSPACE"
 [ -f scripts/consolidatedReleaseRunner.ts ] || fail RELEASE_CONTROLLER_MISSING
+[ -f dist/consolidated-release-runtime.mjs ] || fail BUILT_RELEASE_CONTROLLER_MISSING
 
 # Only fixed error codes and verified nonsecret release metadata are emitted.
 # The controller owns preflight, protected backup, additive migrations,
 # artifact activation, one reload, live verification and fixture cleanup.
-exec pnpm exec tsx scripts/consolidatedReleaseRunner.ts
+exec env -u NODE_OPTIONS -u NODE_PATH -u NODE_DEBUG -u NODE_DEBUG_NATIVE \
+  -u DEBUG -u BASH_ENV -u ENV -u LD_PRELOAD -u LD_LIBRARY_PATH \
+  node "$PWD/dist/consolidated-release-runtime.mjs"

@@ -87,4 +87,24 @@ describe("consolidated non-rotating guarded release", () => {
     ).toHaveLength(1);
     expect(source).toContain("CONSOLIDATED_AUTHORITATIVE_ENV_CHANGED");
   });
+  it("launches the built controller with plain Node and a hook-free environment", () => {
+    const launcher = readFileSync(
+      path.join(root, "deploy_work_to_prod.sh"),
+      "utf8"
+    );
+    expect(launcher).not.toContain("exec pnpm exec tsx");
+    expect(launcher).toContain(
+      'node "$PWD/dist/consolidated-release-runtime.mjs"'
+    );
+    for (const key of [
+      "NODE_OPTIONS",
+      "NODE_PATH",
+      "NODE_DEBUG",
+      "NODE_DEBUG_NATIVE",
+      "LD_PRELOAD",
+      "LD_LIBRARY_PATH",
+    ])
+      expect(launcher).toContain(`-u ${key}`);
+    expect(source).toContain("CONSOLIDATED_UNTRUSTED_PRELOAD_ENVIRONMENT");
+  });
 });
