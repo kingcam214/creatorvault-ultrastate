@@ -8,8 +8,7 @@ import { sql } from "drizzle-orm";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
-import { registerEmailAuthRoutes } from "./emailAuthRoutes";
+import { registerAuthenticationRoutes } from "./authenticationRoutes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -188,23 +187,7 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  // OAuth callback under /api/oauth/callback
-  registerOAuthRoutes(app);
-  // Email + password login (POST /api/auth/login)
-  registerEmailAuthRoutes(app);
-  // Temporary dev login for testing
-  app.get("/api/dev-login", async (req, res) => {
-    try {
-      const { sdk } = await import("./sdk");
-      const { getSessionCookieOptions } = await import("./cookies");
-      const { COOKIE_NAME, ONE_YEAR_MS } = await import("../../shared/const");
-      const token = await sdk.createSessionToken("local_kingcam_6", { name: "Cameron White" });
-      const cookieOptions = getSessionCookieOptions(req);
-      res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-      const redirectTo = (req.query.redirect as string) || "/";
-      res.redirect(302, redirectTo);
-    } catch (e) { res.status(500).json({ error: String(e) }); }
-  });
+  registerAuthenticationRoutes(app);
   
   // Authenticated CreatorVault media playback. This route must be registered before
   // the Vite single-page-app fallback; otherwise saved media URLs return index.html.

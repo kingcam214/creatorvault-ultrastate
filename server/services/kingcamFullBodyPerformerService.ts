@@ -72,6 +72,10 @@ export async function getKingcamFullBodyPerformerRun(workerJobId: string): Promi
   return workerRequest(`/v1/kingcam-performer/runs/${encodeURIComponent(workerJobId)}`);
 }
 
+export function performerMediaAssetInput(input: { ownerId: number; workerJobId: string; url: string; duration: number | null }): { userId: number; workerJobId: string; url: string; duration: number | null } {
+  return { userId: input.ownerId, workerJobId: input.workerJobId, url: input.url, duration: input.duration };
+}
+
 async function insertPerformerMediaAsset(input: { userId: number; workerJobId: string; url: string; duration: number | null }): Promise<string> {
   const db = await mysql.createConnection(DB_URL);
   const assetId = randomUUID();
@@ -108,6 +112,6 @@ export async function collectKingcamFullBodyPerformerOutput(input: { ownerId: nu
   if (actualSha !== job.outputSha256) throw new KingcamFullBodyPerformerError("KingCam performer output checksum changed during collection.");
   const key = `content-vault/kingcam/full-body-performer/${input.workerJobId}.mp4`;
   const stored = await storagePut(key, buffer, "video/mp4");
-  const mediaAssetId = await insertPerformerMediaAsset({ ownerId: input.ownerId, workerJobId: input.workerJobId, url: stored.url, duration: Number(job.finalProof.durationSeconds || 0) || null });
+  const mediaAssetId = await insertPerformerMediaAsset(performerMediaAssetInput({ ownerId: input.ownerId, workerJobId: input.workerJobId, url: stored.url, duration: Number(job.finalProof.durationSeconds || 0) || null }));
   return { mediaAssetId, outputUrl: stored.url, finalProof: job.finalProof, outputSha256: job.outputSha256 };
 }

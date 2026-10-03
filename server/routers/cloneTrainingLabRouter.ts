@@ -7,7 +7,7 @@
 import { z } from "zod";
 import path from "path";
 import fs from "fs";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, kingProcedure, protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import { getLabStats, getCloneLabPaths, CLONE_LAB_BASE, ensureDir } from "../services/cloneTrainingLab";
 import { extractFramesFromVideo } from "../services/cloneFrameExtractor";
@@ -26,12 +26,7 @@ import {
 } from "../services/cloneModelRegistry";
 
 // ─── KING-ONLY GUARD ─────────────────────────────────────────────────────────
-const kingProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  if (ctx.user.role !== "king" && ctx.user.role !== "admin") {
-    throw new Error("UNAUTHORIZED: Clone Training Lab is King-only");
-  }
-  return next();
-});
+
 
 export const cloneTrainingLabRouter = router({
 

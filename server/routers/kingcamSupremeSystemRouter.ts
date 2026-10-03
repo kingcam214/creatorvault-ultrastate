@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { ownerProcedure, protectedProcedure, router } from "../_core/trpc";
 import {
   createKingcamCreatorJobCapsule,
   getKingcamSupremeCommandCenter,
@@ -27,17 +27,17 @@ const assetKind = z.enum([
 ]);
 
 export const kingcamSupremeSystemRouter = router({
-  getCommandCenter: protectedProcedure.query(async ({ ctx }) => {
+  getCommandCenter: ownerProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     return getKingcamSupremeCommandCenter(ctx.user.id);
   }),
 
-  listAssets: protectedProcedure.query(async ({ ctx }) => {
+  listAssets: ownerProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     return listKingcamSupremeAssets(ctx.user.id);
   }),
 
-  registerOwnedAsset: protectedProcedure
+  registerOwnedAsset: ownerProcedure
     .input(z.object({
       kind: assetKind,
       title: z.string().trim().min(3).max(191),
@@ -57,7 +57,7 @@ export const kingcamSupremeSystemRouter = router({
       }
     }),
 
-  createCreatorJobCapsule: protectedProcedure
+  createCreatorJobCapsule: ownerProcedure
     .input(z.object({
       title: z.string().trim().min(5).max(191),
       characterCanonVersion: z.string().trim().min(2).max(96),

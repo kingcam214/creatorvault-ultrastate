@@ -12,7 +12,8 @@ import { CreatorVaultUniversity } from "./services/university/university";
 import { PRODUCTS } from "./products";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { kingProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { assertRoleAssignment } from "./_core/authorizationPolicy";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { stripe } from "./_core/stripe";
 import { storagePut } from "./storage";
@@ -301,13 +302,6 @@ const servicesEngine = new CoursesServicesEngine();
 
 // ============ MIDDLEWARE ============
 
-const kingProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "king" && ctx.user.role !== "admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "King access required" });
-  }
-  return next({ ctx });
-});
-
 const creatorProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "creator" && ctx.user.role !== "king" && ctx.user.role !== "admin") {
     throw new TRPCError({ code: "FORBIDDEN", message: "Creator access required" });
@@ -379,6 +373,7 @@ export const appRouter = router({
       zelleHandle: z.string().optional(),
       applepayHandle: z.string().optional(),
     })).mutation(async ({ ctx, input }) => {
+      if (input.role !== undefined) assertRoleAssignment(ctx.user.role, input.role);
       if (input.name) {
         await db.updateUserProfile(ctx.user.id, { name: input.name });
       }
@@ -423,7 +418,8 @@ export const appRouter = router({
     updateRole: kingProcedure.input(z.object({
       userId: z.number(),
       role: z.enum(["user", "creator", "influencer", "celebrity", "admin", "king"]),
-    })).mutation(async ({ input }) => {
+    })).mutation(async ({ ctx, input }) => {
+      assertRoleAssignment(ctx.user.role, input.role);
       await db.updateUserRole(input.userId, input.role);
       return { success: true };
     }),

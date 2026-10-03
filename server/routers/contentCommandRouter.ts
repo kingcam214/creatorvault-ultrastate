@@ -5,7 +5,7 @@
  * Fixed: custom type GPT-4o JSON bug.
  */
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc.js";
+import { ownerProcedure, router, protectedProcedure } from "../_core/trpc.js";
 import { TRPCError } from "@trpc/server";
 import mysql from "mysql2/promise";
 import OpenAI from "openai";
@@ -211,7 +211,7 @@ async function saveHistory(userId: number, contentType: string, outputs: any): P
 
 export const contentCommandRouter = router({
 
-  generateContent: protectedProcedure
+  generateContent: ownerProcedure
     .input(z.object({
       contentType: z.enum(["clone_drop", "clone_series", "body_cinema_drop", "social_post", "creator_campaign", "telegram_blast", "custom"]),
       brief: z.record(z.string(), z.any()).default({}),
@@ -388,7 +388,7 @@ export const contentCommandRouter = router({
       }
     }),
 
-  generateBatch: protectedProcedure
+  generateBatch: ownerProcedure
     .input(z.object({
       contentType: z.enum(["clone_drop", "social_post", "telegram_blast"]),
       brief: z.record(z.string(), z.any()).default({}),
@@ -404,7 +404,7 @@ export const contentCommandRouter = router({
       return { variations, count: variations.length };
     }),
 
-  postToTelegram: protectedProcedure
+  postToTelegram: ownerProcedure
     .input(z.object({
       channel: z.enum(["kingcam", "owner", "both"]),
       caption: z.string(),
@@ -419,7 +419,7 @@ export const contentCommandRouter = router({
       });
     }),
 
-  saveToVault: protectedProcedure
+  saveToVault: ownerProcedure
     .input(z.object({ url: z.string().url(), assetType: z.enum(["video", "image", "voice"]), title: z.string().optional(), contentType: z.string().optional() }))
     .mutation(async ({ input, ctx }) => {
       ownerGuard(ctx.user.id);
@@ -430,7 +430,7 @@ export const contentCommandRouter = router({
       } finally { db.end(); }
     }),
 
-  getHistory: protectedProcedure
+  getHistory: ownerProcedure
     .input(z.object({ limit: z.number().min(1).max(500).default(20), offset: z.number().min(0).default(0), contentType: z.string().optional() }).default({ limit: 20, offset: 0 }))
     .query(async ({ ctx, input }) => {
       ownerGuard(ctx.user.id);
@@ -446,7 +446,7 @@ export const contentCommandRouter = router({
       } finally { db.end(); }
     }),
 
-  remixContent: protectedProcedure
+  remixContent: ownerProcedure
     .input(z.object({ historyId: z.number(), variation: z.string().optional() }))
     .mutation(async ({ input, ctx }) => {
       ownerGuard(ctx.user.id);
@@ -463,7 +463,7 @@ export const contentCommandRouter = router({
       } finally { db.end(); }
     }),
 
-  distributeAll: protectedProcedure
+  distributeAll: ownerProcedure
     .input(z.object({ caption: z.string(), videoUrl: z.string().optional(), imageUrl: z.string().optional() }))
     .mutation(async ({ input, ctx }) => {
       ownerGuard(ctx.user.id);

@@ -1,3 +1,4 @@
+import { isOwnerRole } from "../_core/authorizationPolicy";
 /**
  * vaultxRouter — Production VaultX Platform Router
  * All procedures query real MySQL tables. Zero stubs. Zero mocks.
@@ -5,7 +6,7 @@
  * Owner userIds: 6 and 33
  */
 import { z } from "zod";
-import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
+import { router, ownerProcedure, protectedProcedure, publicProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import Stripe from "stripe";
 import { db } from "../db";
@@ -61,7 +62,6 @@ import {
   getGovernedPolloJob,
 } from "../services/governedPolloService";
 
-const OWNER_IDS = [6, 33];
 const PLATFORM_FEE = 0.15;
 const UPLOAD_DIR = "/root/creatorvault/dist/public/uploads/vaultx";
 const PUBLIC_UPLOADS_DIR = path.resolve(process.cwd(), "..", "uploads");
@@ -213,12 +213,41 @@ function buildVaultxPackagePolloPrompt(pkg: any): string {
   ].join(" ");
 }
 
-async function assertPackageOwner(packageId: number, userId: number): Promise<any> {
+type VaultxRevenuePackageRow = Record<string, unknown> & {
+  id: number;
+  user_id: number;
+  creator_id: number;
+  source_media_url: string | null;
+  pollo_job_id: string | null;
+  asset_status: string | null;
+  asset_url: string | null;
+  asset_quality_passed: boolean | number | null;
+  asset_prompt: string | null;
+  checkout_url: string | null;
+  stripe_checkout_session_id: string | null;
+  title: string;
+  teaser_description: string;
+  price_cents: number;
+  vip_price_cents: number | null;
+  telegram_mode: VaultxPackageMode;
+  public_teaser_copy: string | null;
+  vaultx_content_id: number | null;
+  content_type: string | null;
+  telegram_campaign_id: number | null;
+  telegram_tracking_code: string | null;
+  status: string | null;
+};
+
+async function assertPackageOwner(
+  packageId: number,
+  userId: number,
+  actorRole: string
+): Promise<VaultxRevenuePackageRow> {
   await ensureVaultxRevenuePackageSchema();
   const rows = await rawQuery("SELECT * FROM vaultx_revenue_packages WHERE id = ? LIMIT 1", [packageId]);
-  const pkg = rows[0];
+  const pkg = rows[0] as VaultxRevenuePackageRow | undefined;
   if (!pkg) throw new TRPCError({ code: "NOT_FOUND", message: "VaultX revenue package not found." });
-  if (!isCreatorOrOwner(userId, Number(pkg.user_id))) {
+  if (!isCreatorOrOwner(userId, Number(pkg.user_id), actorRole)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "You do not own this VaultX revenue package." });
   }
   return pkg;
@@ -252,8 +281,8 @@ async function rawExec(query: string, params: any[] = []): Promise<any> {
   await (db as any).execute(sql.raw(query));
 }
 
-function isCreatorOrOwner(userId: number, creatorId?: number): boolean {
-  return OWNER_IDS.includes(userId) || (creatorId !== undefined && userId === creatorId);
+function isCreatorOrOwner(userId: number, creatorId: number | undefined, actorRole: string): boolean {
+  return isOwnerRole(actorRole) || (creatorId !== undefined && userId === creatorId);
 }
 
 function validateVaultxWorkflowCopy(text: string, purpose: "metadata" | "mass-message" | "ai-chatter", recipientKey?: string | number): string {
@@ -1320,7 +1349,7 @@ export const vaultxRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const creatorId = await getCreatorId(ctx.user.id);
-      if (!creatorId && !OWNER_IDS.includes(ctx.user.id)) {
+      if (!creatorId && !isOwnerRole(ctx.user.role)) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile required." });
       }
       validateVaultxMetadata(input.title, input.description || null);
@@ -1393,7 +1422,7 @@ export const vaultxRouter = router({
       const creatorId = await getCreatorId(ctx.user.id);
       const cid = creatorId || ctx.user.id;
       const existing = await rawQuery("SELECT id FROM vaultx_content WHERE id = ? AND creator_id = ? LIMIT 1", [input.contentId, cid]);
-      if (!existing.length && !OWNER_IDS.includes(ctx.user.id)) {
+      if (!existing.length && !isOwnerRole(ctx.user.role)) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Content not found or access denied." });
       }
       if (input.title !== undefined || input.description !== undefined) {
@@ -1983,7 +2012,7 @@ export const vaultxRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       if (!POLLO_API_KEY) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "POLLO_API_KEY is not configured for VaultX media generation." });
-      const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
+      const pkg = await assertPackageOwner(input.packageId, ctx.user.id, ctx.user.role);
       const rawSource = input.sourceMediaUrl || pkg.source_media_url;
       if (!rawSource) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Upload your video before generating a VaultX drop." });
@@ -2125,7 +2154,7 @@ export const vaultxRouter = router({
   getPackageAssetStatus: protectedProcedure
     .input(z.object({ packageId: z.number().int().positive(), jobId: z.string().min(3).optional() }))
     .query(async ({ ctx, input }) => {
-      const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
+      const pkg = await assertPackageOwner(input.packageId, ctx.user.id, ctx.user.role);
       const jobId = input.jobId || pkg.pollo_job_id;
       if (!jobId) {
         const artifacts = await listVaultxPackageArtifacts(Number(pkg.creator_id), input.packageId);
@@ -2203,7 +2232,7 @@ export const vaultxRouter = router({
       outputReviewId: z.string().uuid().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
+      const pkg = await assertPackageOwner(input.packageId, ctx.user.id, ctx.user.role);
       let readyArtifact;
       try {
         readyArtifact = await assertReadyVaultxPackageArtifact(Number(pkg.creator_id), input.packageId);
@@ -2268,7 +2297,7 @@ export const vaultxRouter = router({
       outputReviewId: z.string().uuid().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
+      const pkg = await assertPackageOwner(input.packageId, ctx.user.id, ctx.user.role);
       let readyArtifact;
       try {
         readyArtifact = await assertReadyVaultxPackageArtifact(Number(pkg.creator_id), input.packageId);
@@ -2801,7 +2830,7 @@ export const vaultxRouter = router({
       if (!stripe) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "STRIPE_SECRET_KEY is not configured for VaultX checkout creation." });
       await ensureVaultxRevenuePackageSchema();
       await ensureVaultxArtifactSchema();
-      const pkg = await assertPackageOwner(input.packageId, ctx.user.id);
+      const pkg = await assertPackageOwner(input.packageId, ctx.user.id, ctx.user.role);
       const packageId = Number(pkg.id);
       const creatorId = Number(pkg.creator_id);
       const jobId = String(pkg.pollo_job_id || "");
@@ -3147,7 +3176,7 @@ export const vaultxRouter = router({
         "SELECT tier FROM vaultx_subscriptions WHERE fan_id = ? AND creator_id = ? AND status = 'active' LIMIT 1",
         [ctx.user.id, input.creatorId]
       );
-      const isSubscribed = sub.length > 0 || OWNER_IDS.includes(ctx.user.id);
+      const isSubscribed = sub.length > 0 || isOwnerRole(ctx.user.role);
       const subTier = sub[0]?.tier || null;
       const tierOrder: Record<string, number> = { basic: 1, premium: 2, vip: 3 };
       const fanTierLevel = subTier ? tierOrder[subTier] : 0;
@@ -3168,7 +3197,7 @@ export const vaultxRouter = router({
             "SELECT id FROM vaultx_ppv_purchases WHERE fan_id = ? AND content_id = ? AND status = 'completed' LIMIT 1",
             [ctx.user.id, row.id]
           );
-          hasAccess = purchased.length > 0 || OWNER_IDS.includes(ctx.user.id);
+          hasAccess = purchased.length > 0 || isOwnerRole(ctx.user.role);
         }
         await rawExec("UPDATE vaultx_content SET view_count = view_count + 1 WHERE id = ?", [row.id]);
         return {
@@ -3849,8 +3878,8 @@ export const vaultxRouter = router({
   // ═══════════════════════════════════════════════════════════════════════════
   // PROCEDURE 45 — getAllCreators (admin/owner only)
   // ═══════════════════════════════════════════════════════════════════════════
-  getAllCreators: protectedProcedure.query(async ({ ctx }) => {
-    if (!OWNER_IDS.includes(ctx.user.id)) {
+  getAllCreators: ownerProcedure.query(async ({ ctx }) => {
+    if (!isOwnerRole(ctx.user.role)) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Owner access required." });
     }
     const rows = await rawQuery(
@@ -3868,8 +3897,8 @@ export const vaultxRouter = router({
   // ═══════════════════════════════════════════════════════════════════════════
   // PROCEDURE 46 — getPlatformRevenue (admin/owner only)
   // ═══════════════════════════════════════════════════════════════════════════
-  getPlatformRevenue: protectedProcedure.query(async ({ ctx }) => {
-    if (!OWNER_IDS.includes(ctx.user.id)) {
+  getPlatformRevenue: ownerProcedure.query(async ({ ctx }) => {
+    if (!isOwnerRole(ctx.user.role)) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Owner access required." });
     }
     const totals = await rawQuery(
@@ -3891,13 +3920,13 @@ export const vaultxRouter = router({
   // ═══════════════════════════════════════════════════════════════════════════
   // PROCEDURE 47 — flagContent (admin/owner only)
   // ═══════════════════════════════════════════════════════════════════════════
-  flagContent: protectedProcedure
+  flagContent: ownerProcedure
     .input(z.object({
       contentId: z.number(),
       reason: z.string().max(500),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (!OWNER_IDS.includes(ctx.user.id)) {
+      if (!isOwnerRole(ctx.user.role)) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Owner access required." });
       }
       await rawExec("UPDATE vaultx_content SET status = 'archived' WHERE id = ?", [input.contentId]);
@@ -4029,7 +4058,7 @@ export const vaultxRouter = router({
     .input(z.object({ creatorId: z.number(), limit: z.number().default(20), offset: z.number().default(0) }))
     .query(async ({ ctx, input }) => {
       const viewerCreatorId = await getCreatorId(ctx.user.id);
-      const isCreatorOwner = viewerCreatorId === input.creatorId || ctx.user.id === input.creatorId || OWNER_IDS.includes(ctx.user.id);
+      const isCreatorOwner = viewerCreatorId === input.creatorId || ctx.user.id === input.creatorId || isOwnerRole(ctx.user.role);
       const subRows = await rawQuery("SELECT id FROM subscriptions WHERE fan_id = ? AND creator_id = ? AND status = 'active' LIMIT 1", [ctx.user.id, input.creatorId]);
       const isSubscribed = subRows.length > 0 || isCreatorOwner;
       const legacyRows = await rawQuery(

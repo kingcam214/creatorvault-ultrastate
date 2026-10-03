@@ -1,80 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
-# CreatorVault production deploy entrypoint.
-# This script is intentionally committed so GitHub Actions and the VPS use the same deploy path.
+# One-time clean security release only. No credentials or signing keys are inputs.
+# This script deliberately refuses the previous generic deploy/start/restart path.
+fail() { printf '[creatorvault-security-release] FAIL %s\n' "$1" >&2; exit 1; }
 
-APP_NAME="${CREATORVAULT_PM2_APP:-creatorvault}"
-APP_ENTRY="${CREATORVAULT_APP_ENTRY:-dist/index.js}"
-APP_PORT="${PORT:-3000}"
-HEALTH_PATH="${CREATORVAULT_HEALTH_PATH:-/api/health}"
-RELEASE_FILE="public/release.json"
-GOVERNED_MEDIA_SCHEMA_VERIFIER="${CREATORVAULT_GOVERNED_MEDIA_SCHEMA_VERIFIER:-dist/ensure-governed-media-schema.js}"
+[ "$#" -eq 0 ] || fail UNSUPPORTED_ARGUMENTS
+[ "$(id -u)" -eq 0 ] || fail EXISTING_ROOT_DEPLOY_CONTEXT_REQUIRED
+[ "${CREATORVAULT_RELEASE_REF:-}" = 'refs/heads/main' ] || fail UNAPPROVED_REF
+[ "${CREATORVAULT_RELEASE_EVENT:-}" = 'push' ] || fail UNAPPROVED_EVENT
+[ -n "${CREATORVAULT_RELEASE_SHA:-}" ] || fail MISSING_RELEASE_SHA
+[ -n "${CREATORVAULT_RELEASE_WORKSPACE:-}" ] || fail MISSING_CHECKOUT_WORKSPACE
 
-log() {
-  printf '[creatorvault-deploy] %s\n' "$*"
-}
+command -v pnpm >/dev/null 2>&1 || fail PNPM_MISSING
+command -v node >/dev/null 2>&1 || fail NODE_MISSING
+command -v pm2 >/dev/null 2>&1 || fail PM2_MISSING
+cd -- "$CREATORVAULT_RELEASE_WORKSPACE"
+[ -f scripts/securityReleaseRunner.ts ] || fail RELEASE_CONTROLLER_MISSING
 
-fail() {
-  printf '[creatorvault-deploy:ERROR] %s\n' "$*" >&2
-  exit 1
-}
-
-log "starting deploy in $(pwd)"
-
-command -v node >/dev/null 2>&1 || fail "node is not installed or not in PATH"
-command -v pnpm >/dev/null 2>&1 || fail "pnpm is not installed or not in PATH"
-
-if ! command -v pm2 >/dev/null 2>&1; then
-  log "pm2 missing; installing pm2 globally with npm"
-  command -v npm >/dev/null 2>&1 || fail "npm is required to install pm2"
-  npm install -g pm2
-fi
-
-[ -f package.json ] || fail "package.json missing; wrong working directory"
-[ -f "$APP_ENTRY" ] || fail "$APP_ENTRY missing; pnpm build must complete before deployment"
-[ -f "$GOVERNED_MEDIA_SCHEMA_VERIFIER" ] || fail "$GOVERNED_MEDIA_SCHEMA_VERIFIER missing; governed media safety verification cannot proceed"
-[ -f "$RELEASE_FILE" ] || log "$RELEASE_FILE not found; continuing without release stamp"
-
-# This verifier performs only idempotent schema DDL and information-schema inspection; it never submits media work.
-log "verifying governed media schema before the application reload"
-node "$GOVERNED_MEDIA_SCHEMA_VERIFIER"
-
-mkdir -p logs uploads tmp
-
-log "node=$(node --version) pnpm=$(pnpm --version) app=${APP_NAME} entry=${APP_ENTRY} port=${APP_PORT}"
-
-if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
-  log "reloading existing pm2 app ${APP_NAME}"
-  pm2 reload "$APP_NAME" --update-env
-else
-  log "starting new pm2 app ${APP_NAME}"
-  NODE_ENV=production PORT="$APP_PORT" pm2 start "$APP_ENTRY" --name "$APP_NAME" --time --update-env
-fi
-
-pm2 save || log "pm2 save failed; process is still running but resurrection state may not be persisted"
-
-log "pm2 status for ${APP_NAME}"
-pm2 describe "$APP_NAME" >/dev/null 2>&1 || fail "pm2 app ${APP_NAME} is not registered after deploy"
-pm2 jlist | APP_NAME="$APP_NAME" node -e "let data='';process.stdin.on('data',d=>data+=d);process.stdin.on('end',()=>{const apps=JSON.parse(data||'[]');const app=apps.find(a=>a.name===process.env.APP_NAME); if(!app){process.exit(2)}; console.log(JSON.stringify({name:app.name,status:app.pm2_env.status,restarts:app.pm2_env.restart_time,pid:app.pid},null,2)); if(app.pm2_env.status!=='online') process.exit(3);})" || fail "pm2 app ${APP_NAME} is not online"
-
-if command -v curl >/dev/null 2>&1; then
-  log "health probe http://127.0.0.1:${APP_PORT}${HEALTH_PATH}"
-  HEALTH_OK=0
-  for attempt in $(seq 1 20); do
-    if curl -fsS --max-time 8 "http://127.0.0.1:${APP_PORT}${HEALTH_PATH}" >/tmp/creatorvault-health.txt 2>/tmp/creatorvault-health.err; then
-      HEALTH_OK=1
-      break
-    fi
-    sleep 1
-  done
-  if [ "$HEALTH_OK" = "1" ]; then
-    log "health probe passed"
-  else
-    log "health probe did not pass after retries; showing recent pm2 logs and continuing only if process is online"
-    cat /tmp/creatorvault-health.err >&2 || true
-    pm2 logs "$APP_NAME" --lines 40 --nostream || true
-  fi
-fi
-
-log "deploy complete"
+# The controller captures all environment-bearing output in memory, reports only
+# fixed failure codes, proves the active local source, stages the secure artifact,
+# persists the key atomically, then uses PM2 reload --update-env exactly once.
+exec pnpm exec tsx scripts/securityReleaseRunner.ts

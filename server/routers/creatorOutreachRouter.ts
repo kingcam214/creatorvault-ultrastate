@@ -4,19 +4,13 @@
  * 50 outreach messages/day with Magic Links to onboarding portal
  */
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure, ownerProcedure } from "../_core/trpc";
 import OpenAI from "openai";
 import { db } from "../db";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import crypto from "crypto";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const isOwner = ctx.user.id === 6 || ctx.user.id === 33 || ctx.user.role === "king" || ctx.user.role === "admin";
-  if (!isOwner) throw new Error("This private creator relationship workspace is reserved for the owner.");
-  return next({ ctx });
-});
 
 function requireOutreachExecutionEnabled() {
   if (process.env.CREATORVAULT_OUTREACH_EXECUTION_ENABLED !== "true") {

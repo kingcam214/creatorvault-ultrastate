@@ -1,3 +1,5 @@
+import { isOwnerRole } from "../_core/authorizationPolicy";
+import type { User } from "../../drizzle/schema";
 /**
  * VaultX Content Vault — Chunked Upload Router
  * ============================================================================
@@ -257,7 +259,7 @@ const UPLOAD_DIR = path.join(DURABLE_UPLOADS_DIR, ".upload-sessions");
 const OWNER_IDS = [6, 33];
 
 async function requireCreatorUploadAccess(req: Request, res: Response, next: NextFunction) {
-  let user: any;
+  let user: User;
   try {
     user = await sdk.authenticateRequest(req);
   } catch {
@@ -267,9 +269,10 @@ async function requireCreatorUploadAccess(req: Request, res: Response, next: Nex
   try {
     const userId = Number(user.id);
     const creatorId = await getCreatorId(userId);
-    if (!creatorId && !OWNER_IDS.includes(userId)) {
+    if (!creatorId && !isOwnerRole(user.role)) {
       return res.status(403).json({ error: "An active creator profile is required to upload content." });
     }
+    (req as Request & { authenticatedOwnerRole: boolean }).authenticatedOwnerRole = isOwnerRole(user.role);
     (req as any).authenticatedUserId = userId;
     (req as any).authenticatedCreatorId = creatorId || userId;
     return next();
@@ -322,7 +325,7 @@ async function registerChunkedVideoMediaAsset(input: {
 }): Promise<{ mediaAssetId: string; createdByFeature: string }> {
   const creatorId = Number((input.req as any).authenticatedUserId);
   const requestedClassification = String(input.sourceClassification || "").trim().toLowerCase();
-  const kingcamPerformanceCapture = requestedClassification === "kingcam_performance_capture" && OWNER_IDS.includes(creatorId);
+  const kingcamPerformanceCapture = requestedClassification === "kingcam_performance_capture" && OWNER_IDS.includes(creatorId) && (input.req as Request & { authenticatedOwnerRole?: boolean }).authenticatedOwnerRole === true;
   const createdByFeature = kingcamPerformanceCapture ? "kingcam_performance_capture" : "body_cinema_chunked_upload";
   const mediaAssetId = randomUUID();
   await rawExec(
@@ -360,7 +363,7 @@ async function registerUploadedPaidContent(req: Request, file: { url: string; fi
   const user = await sdk.authenticateRequest(req);
   const creatorId = await getCreatorId(Number(user.id));
   const cid = creatorId || Number(user.id);
-  if (!cid || (!creatorId && !OWNER_IDS.includes(Number(user.id)))) {
+  if (!cid || (!creatorId && !isOwnerRole(user.role))) {
     throw new Error("Authenticated creator profile required to register paid VaultX content.");
   }
 
@@ -583,8 +586,8 @@ videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, re
     const creatorId = Number((req as any).authenticatedUserId);
     const creatorProfileId = Number((req as any).authenticatedCreatorId);
     const requestedClassification = String(req.get("x-creatorvault-source-classification") || "").trim().toLowerCase();
-    const approvedDemo = requestedClassification === "approved_demo" && OWNER_IDS.includes(creatorId);
-    const kingcamPerformanceCapture = requestedClassification === "kingcam_performance_capture" && OWNER_IDS.includes(creatorId) && isVideoUpload;
+    const approvedDemo = requestedClassification === "approved_demo" && OWNER_IDS.includes(creatorId) && (req as Request & { authenticatedOwnerRole?: boolean }).authenticatedOwnerRole === true;
+    const kingcamPerformanceCapture = requestedClassification === "kingcam_performance_capture" && OWNER_IDS.includes(creatorId) && (req as Request & { authenticatedOwnerRole?: boolean }).authenticatedOwnerRole === true && isVideoUpload;
     // media_assets.source_type is a constrained legacy field. Creator-recorded
     // KingCam performance is still creator-owned footage, but the immutable
     // feature tag keeps it out of Body Cinema and reserves it for clone motion.

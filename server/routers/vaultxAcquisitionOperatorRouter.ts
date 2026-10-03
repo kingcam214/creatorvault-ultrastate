@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
+import { router, ownerProcedure, publicProcedure } from "../_core/trpc";
 import {
   ensureVaultXAcquisitionSchema,
   getVaultXAcquisitionBoard,
@@ -34,12 +34,6 @@ const leadInput = z.object({
   email: z.string().email().optional(),
   phone: z.string().max(80).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
-});
-
-const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const isOwner = ctx.user.id === 6 || ctx.user.id === 33 || ctx.user.role === "king" || ctx.user.role === "admin";
-  if (!isOwner) throw new Error("VaultX acquisition records are private to the owner.");
-  return next({ ctx });
 });
 
 function requireVaultXAcquisitionExecutionEnabled() {
@@ -115,7 +109,7 @@ export const vaultxAcquisitionOperatorRouter = router({
     return { success: true, count: results.length, leads: results };
   }),
 
-  runNow: protectedProcedure.input(z.object({
+  runNow: ownerProcedure.input(z.object({
     mode: z.enum(["auto", "manual", "test"]).default("manual"),
     sourceLimit: z.number().int().min(1).max(1000).optional(),
     outreachLimit: z.number().int().min(1).max(1000).optional(),

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure, router } from "../_core/trpc";
+import { ownerProcedure, protectedProcedure, router } from "../_core/trpc";
 import {   archiveKingcamMiniMaxH3PresenceLoop, auditPolloAvailableCredits, auditPolloKingcamActionImitationV2Candidate, auditPolloKingcamKlingOmniArmsHandsCandidate, auditPolloKingcamKlingOmniControlledPerformanceCandidate, auditPolloKingcamKlingOmniRealGaitCandidate, auditPolloKingcamKlingV3MotionCandidate, auditPolloKingcamVideoToVideoCandidate, auditPolloMiniMaxH3ReferenceConfig, auditPolloMiniMaxH3ReferenceCost, quoteGovernedPolloSourceVideoReference } from "../services/governedPolloService";
 import {
   bindKingcamArmsHandsBenchmarkSource,
@@ -43,22 +43,22 @@ function ownerOnly(userId: number): void {
 }
 
 export const kingcamCloneOperatingSystemRouter = router({
-  getCommandCenter: protectedProcedure.query(async ({ ctx }) => {
+  getCommandCenter: ownerProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     return getKingcamCloneOperatingSystem(ctx.user.id);
   }),
 
-  getDigitalPerformerReadiness: protectedProcedure.query(async ({ ctx }) => {
+  getDigitalPerformerReadiness: ownerProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     return getKingcamDigitalPerformerReadiness(ctx.user.id);
   }),
 
-  getGoldStandardBenchmarkLibrary: protectedProcedure.query(async ({ ctx }) => {
+  getGoldStandardBenchmarkLibrary: ownerProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     return getKingcamGoldStandardBenchmarkLibrary(ctx.user.id);
   }),
 
-  auditActionImitationMotionCandidate: protectedProcedure.mutation(async ({ ctx }) => {
+  auditActionImitationMotionCandidate: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await auditPolloKingcamActionImitationV2Candidate();
@@ -67,7 +67,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  auditKlingV3MotionCandidate: protectedProcedure.mutation(async ({ ctx }) => {
+  auditKlingV3MotionCandidate: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await auditPolloKingcamKlingV3MotionCandidate();
@@ -76,7 +76,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  auditKlingOmniArmsHandsCandidate: protectedProcedure.mutation(async ({ ctx }) => {
+  auditKlingOmniArmsHandsCandidate: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await auditPolloKingcamKlingOmniArmsHandsCandidate();
@@ -85,7 +85,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  auditKlingOmniRealGaitCandidate: protectedProcedure.mutation(async ({ ctx }) => {
+  auditKlingOmniRealGaitCandidate: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await auditPolloKingcamKlingOmniRealGaitCandidate();
@@ -94,7 +94,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  auditKlingOmniControlledPerformanceCandidate: protectedProcedure
+  auditKlingOmniControlledPerformanceCandidate: ownerProcedure
     .input(z.object({ motionDriverUrl: z.string().url().refine((value) => value.startsWith("https://creatorvault.live/uploads/content-vault/"), "The controlled-performance estimate requires a CreatorVault media URL.") }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -105,12 +105,12 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  getTrainingLibrary: protectedProcedure.query(async ({ ctx }) => {
+  getTrainingLibrary: ownerProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     return getKingcamCloneTrainingLibrary(ctx.user.id);
   }),
 
-  syncTrainingLibrary: protectedProcedure.mutation(async ({ ctx }) => {
+  syncTrainingLibrary: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await syncKingcamCloneTrainingLibrary(ctx.user.id);
@@ -119,21 +119,21 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  beginTour: protectedProcedure
+  beginTour: ownerProcedure
     .input(z.object({ roomId: z.enum(["creator-ownership", "body-cinema", "caption-stage", "trailer-maker", "clone-command"]) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
       return startKingcamCloneTour({ ownerId: ctx.user.id, roomId: input.roomId });
     }),
 
-  startLaunchMission: protectedProcedure
+  startLaunchMission: ownerProcedure
     .input(z.object({ missionId: z.enum(["launch-story", "creator-ownership", "caption-impact", "trailer-release", "clone-presence"]) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
       return startKingcamLaunchMission({ ownerId: ctx.user.id, missionId: input.missionId });
     }),
 
-  recordOwnerDirective: protectedProcedure
+  recordOwnerDirective: ownerProcedure
     .input(z.object({ directive: z.string().trim().min(8).max(3000), focus: z.string().trim().min(2).max(120).optional() }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -145,7 +145,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       });
     }),
 
-  bindArmsHandsBenchmarkSource: protectedProcedure
+  bindArmsHandsBenchmarkSource: ownerProcedure
     .input(z.object({ mediaAssetId: z.string().uuid(), evidenceReference: z.string().trim().min(20).max(96) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -156,7 +156,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  bindControlledPerformanceBenchmarkSource: protectedProcedure
+  bindControlledPerformanceBenchmarkSource: ownerProcedure
     .input(z.object({ mediaAssetId: z.string().uuid(), evidenceReference: z.string().trim().min(20).max(96) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -167,7 +167,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  registerPerformanceCapture: protectedProcedure
+  registerPerformanceCapture: ownerProcedure
     .input(z.object({ mediaAssetId: z.string().uuid(), performanceRole: z.enum(["presence", "gait", "hands_and_prop", "direct_delivery", "reaction", "combined_performance"]).default("combined_performance") }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -178,7 +178,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  reviewPerformanceCapture: protectedProcedure
+  reviewPerformanceCapture: ownerProcedure
     .input(z.object({
       mediaAssetId: z.string().uuid(),
       fullBodyConfirmed: z.literal(true),
@@ -195,7 +195,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  reviewPerformanceRoleEvidence: protectedProcedure
+  reviewPerformanceRoleEvidence: ownerProcedure
     .input(z.object({
       mediaAssetId: z.string().uuid(),
       performanceRole: z.enum(["presence", "gait", "hands_and_prop", "direct_delivery", "reaction", "combined_performance"]),
@@ -210,7 +210,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  planFullBodyProof: protectedProcedure
+  planFullBodyProof: ownerProcedure
     .input(z.object({
       hardCreditCap: z.number().int().positive().max(1_000_000),
       sceneBrief: z.string().trim().min(40).max(1800),
@@ -224,12 +224,12 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  getGuideVoiceTour: protectedProcedure.query(async ({ ctx }) => {
+  getGuideVoiceTour: ownerProcedure.query(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     return getKingcamGuideVoiceTour(ctx.user.id);
   }),
 
-  createGuideVoiceTour: protectedProcedure.mutation(async ({ ctx }) => {
+  createGuideVoiceTour: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await createKingcamGuideVoiceTour(ctx.user.id);
@@ -238,7 +238,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  preflightRealKingcamVoice: protectedProcedure.mutation(async ({ ctx }) => {
+  preflightRealKingcamVoice: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await preflightKingcamElevenLabsVoice(ctx.user.id);
@@ -247,7 +247,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  preflightOmniHumanCloneLane: protectedProcedure.mutation(async ({ ctx }) => {
+  preflightOmniHumanCloneLane: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await preflightKingcamReplicateOmniHuman(ctx.user.id);
@@ -256,7 +256,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  preflightWanAnimateCloneLane: protectedProcedure.mutation(async ({ ctx }) => {
+  preflightWanAnimateCloneLane: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await preflightKingcamReplicateWanAnimate(ctx.user.id);
@@ -265,7 +265,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  auditNextSourceVideoCandidate: protectedProcedure.mutation(async ({ ctx }) => {
+  auditNextSourceVideoCandidate: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await auditPolloKingcamVideoToVideoCandidate();
@@ -274,7 +274,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  archiveMiniMaxPresenceLoop: protectedProcedure
+  archiveMiniMaxPresenceLoop: ownerProcedure
     .input(z.object({ jobId: z.literal(102) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -285,7 +285,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  auditPolloBalance: protectedProcedure.mutation(async ({ ctx }) => {
+  auditPolloBalance: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await auditPolloAvailableCredits();
@@ -294,7 +294,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  auditMiniMaxH3ReferenceCost: protectedProcedure.mutation(async ({ ctx }) => {
+  auditMiniMaxH3ReferenceCost: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await auditPolloMiniMaxH3ReferenceCost();
@@ -303,7 +303,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  auditMiniMaxH3LiveConfig: protectedProcedure.mutation(async ({ ctx }) => {
+  auditMiniMaxH3LiveConfig: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await auditPolloMiniMaxH3ReferenceConfig();
@@ -312,7 +312,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  auditMiniMaxH3ReferenceQuote: protectedProcedure.mutation(async ({ ctx }) => {
+  auditMiniMaxH3ReferenceQuote: ownerProcedure.mutation(async ({ ctx }) => {
     ownerOnly(ctx.user.id);
     try {
       return await quoteGovernedPolloSourceVideoReference({
@@ -328,7 +328,7 @@ export const kingcamCloneOperatingSystemRouter = router({
     }
   }),
 
-  launchFullBodyProof: protectedProcedure
+  launchFullBodyProof: ownerProcedure
     .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -339,7 +339,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  launchWanAnimateControlledPerformanceBenchmark: protectedProcedure
+  launchWanAnimateControlledPerformanceBenchmark: ownerProcedure
     .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -350,7 +350,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  launchWanAnimateProof: protectedProcedure
+  launchWanAnimateProof: ownerProcedure
     .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -361,7 +361,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  launchGoEnhanceRealPerformanceProof: protectedProcedure
+  launchGoEnhanceRealPerformanceProof: ownerProcedure
     .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -372,7 +372,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  launchActionImitationV2Proof: protectedProcedure
+  launchActionImitationV2Proof: ownerProcedure
     .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -383,7 +383,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  launchKlingV3MotionProof: protectedProcedure
+  launchKlingV3MotionProof: ownerProcedure
     .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -394,7 +394,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  launchKlingOmniArmsHandsBenchmark: protectedProcedure
+  launchKlingOmniArmsHandsBenchmark: ownerProcedure
     .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -405,7 +405,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  launchKlingOmniControlledPerformanceBenchmark: protectedProcedure
+  launchKlingOmniControlledPerformanceBenchmark: ownerProcedure
     .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -416,7 +416,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  launchKlingOmniRealGaitProof: protectedProcedure
+  launchKlingOmniRealGaitProof: ownerProcedure
     .input(z.object({ sceneBrief: z.string().trim().min(40).max(1800) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);
@@ -427,7 +427,7 @@ export const kingcamCloneOperatingSystemRouter = router({
       }
     }),
 
-  reviewFullBodyProof: protectedProcedure
+  reviewFullBodyProof: ownerProcedure
     .input(z.object({ requestId: z.string().uuid(), accepted: z.boolean(), overallScore: z.number().min(0).max(100), notes: z.string().trim().min(12).max(3000) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);

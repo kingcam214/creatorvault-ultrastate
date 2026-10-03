@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../_core/trpc";
+import { ownerProcedure, router, protectedProcedure } from "../_core/trpc";
 import OpenAI from "openai";
 import { invokeLLM } from "../_core/llm";
 import { getKingcamCloneOperatingSystem } from "../services/kingcamCloneOperatingSystemService";
@@ -17,6 +17,12 @@ function ownerOnly(userId: number): void {
 function responseText(content: string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } } | { type: "file_url"; file_url: { url: string } }>): string {
   if (typeof content === "string") return content.trim();
   return content.filter((part): part is { type: "text"; text: string } => part.type === "text").map(part => part.text).join("\n").trim();
+}
+
+export function ownerDirectiveFromPayload(payload: unknown): string | null {
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) return null;
+  const directive = (payload as Record<string, unknown>).directive;
+  return typeof directive === "string" ? directive : null;
 }
 
 function commandContext(system: Awaited<ReturnType<typeof getKingcamCloneOperatingSystem>>) {
@@ -39,7 +45,7 @@ function commandContext(system: Awaited<ReturnType<typeof getKingcamCloneOperati
   const directives = system.recentMemory
     .filter((event) => event.kind === "owner_directive")
     .slice(0, 8)
-    .map((event) => ({ room: event.room, directive: typeof event.payload.directive === "string" ? event.payload.directive : null, createdAt: event.createdAt }));
+    .map((event) => ({ room: event.room, directive: ownerDirectiveFromPayload(event.payload), createdAt: event.createdAt }));
 
   return JSON.stringify({
     clone: system.cloneId,
@@ -67,7 +73,7 @@ export const kingcamBrainRouter = router({
 
   // New owner-only command. It is grounded in CreatorVault’s actual system,
   // not a generic persona prompt, and it never claims unproven output as real.
-  askKingcamCommand: protectedProcedure
+  askKingcamCommand: ownerProcedure
     .input(z.object({ query: z.string().trim().min(4).max(1600) }))
     .mutation(async ({ ctx, input }) => {
       ownerOnly(ctx.user.id);

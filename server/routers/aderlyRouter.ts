@@ -15,7 +15,7 @@
  * ============================================================================
  */
 import { z } from "zod";
-import { router, protectedProcedure, publicProcedure } from "../_core/trpc.js";
+import { ownerProcedure, router, protectedProcedure, publicProcedure } from "../_core/trpc.js";
 import { TRPCError } from "@trpc/server";
 import { stripe } from "../_core/stripe.js";
 import { randomUUID } from "crypto";
@@ -186,7 +186,7 @@ export const aderlyRouter = router({
       return { checkoutUrl: session.url, sessionId: session.id };
     }),
 
-  createDrop: protectedProcedure
+  createDrop: ownerProcedure
     .input(z.object({
       title: z.string(),
       teaser: z.string(),
@@ -206,7 +206,7 @@ export const aderlyRouter = router({
       return { dropId, title: input.title, price: input.price, blasted: input.blastTelegram };
     }),
 
-  getVaultStats: protectedProcedure.query(async ({ ctx }) => {
+  getVaultStats: ownerProcedure.query(async ({ ctx }) => {
     if (!OWNER_IDS.includes(ctx.user.id)) throw new TRPCError({ code: "FORBIDDEN" });
     // Revenue projection based on current pricing
     return {
@@ -231,7 +231,7 @@ export const aderlyRouter = router({
     };
   }),
 
-  blastTelegram: protectedProcedure
+  blastTelegram: ownerProcedure
     .input(z.object({
       message: z.string(),
       chatId: z.string().optional(),

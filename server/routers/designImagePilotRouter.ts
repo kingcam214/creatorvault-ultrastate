@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure, router } from "../_core/trpc";
+import { ownerProcedure, protectedProcedure, router } from "../_core/trpc";
 import { createGovernedPolloDraft, getGovernedPolloJobByRequestId } from "../services/governedPolloService";
 
 const OWNER_IDS = new Set([6, 33]);
@@ -24,7 +24,7 @@ function requireOwner(userId: number): void {
 }
 
 export const designImagePilotRouter = router({
-  create: protectedProcedure.mutation(async ({ ctx }) => {
+  create: ownerProcedure.mutation(async ({ ctx }) => {
     requireOwner(ctx.user.id);
     try {
       const draft = await createGovernedPolloDraft({
@@ -63,7 +63,7 @@ export const designImagePilotRouter = router({
     }
   }),
 
-  job: protectedProcedure.query(async ({ ctx }) => {
+  job: ownerProcedure.query(async ({ ctx }) => {
     requireOwner(ctx.user.id);
     return getGovernedPolloJobByRequestId(DESIGN_IMAGE_PILOT_REQUEST_ID);
   }),

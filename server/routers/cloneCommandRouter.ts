@@ -14,7 +14,7 @@
  * ============================================================================
  */
 import { z } from "zod";
-import { router, protectedProcedure, publicProcedure } from "../_core/trpc.js";
+import { router, ownerProcedure, publicProcedure } from "../_core/trpc.js";
 import { TRPCError } from "@trpc/server";
 import mysql from "mysql2/promise";
 import { assertLegacyPolloExecutionAllowed } from "../services/polloEmergencyFreeze.js";
@@ -142,7 +142,7 @@ export const cloneCommandRouter = router({
   /**
    * 0. previewImagePrompt — No-credit final prompt preview before paid generation.
    */
-  previewImagePrompt: protectedProcedure
+  previewImagePrompt: ownerProcedure
     .input(
       z.object({
         prompt: z.string().min(1).max(2000),
@@ -163,7 +163,7 @@ export const cloneCommandRouter = router({
   /**
    * 1. generateImage — Fire a Replicate prediction for fluxdevcam
    */
-  generateImage: protectedProcedure
+  generateImage: ownerProcedure
     .input(
       z.object({
         prompt: z.string().min(1).max(2000),
@@ -248,7 +248,7 @@ export const cloneCommandRouter = router({
   /**
    * 2. getPredictionStatus — Poll a prediction and update DB
    */
-  getPredictionStatus: protectedProcedure
+  getPredictionStatus: ownerProcedure
     .input(z.object({ predictionId: z.string() }))
     .query(async ({ ctx, input }) => {
       ownerGuard(ctx.user.id);
@@ -296,7 +296,7 @@ export const cloneCommandRouter = router({
    * 3. generateCloneVideo — Turn a selected clone image into a short motion asset.
    * Uses the existing Pollo image-to-video production path and stores jobs in pollo_generations.
    */
-  generateCloneVideo: protectedProcedure
+  generateCloneVideo: ownerProcedure
     .input(
       z.object({
         imageUrl: z.string().url(),
@@ -377,7 +377,7 @@ export const cloneCommandRouter = router({
   /**
    * 4. getCloneVideoStatus — Poll and persist Clone Command video status.
    */
-  getCloneVideoStatus: protectedProcedure
+  getCloneVideoStatus: ownerProcedure
     .input(z.object({ taskId: z.string() }))
     .query(async ({ ctx, input }) => {
       ownerGuard(ctx.user.id);
@@ -428,7 +428,7 @@ export const cloneCommandRouter = router({
   /**
    * 5a. getCloneHistory — Backward-compatible live Clone Command history alias.
    */
-  getCloneHistory: protectedProcedure
+  getCloneHistory: ownerProcedure
     .input(
       z.object({
         limit: z.number().min(1).max(100).default(20),
@@ -485,7 +485,7 @@ export const cloneCommandRouter = router({
   /**
    * 5. getGenerationHistory — Paginated list of all generations
    */
-  getGenerationHistory: protectedProcedure
+  getGenerationHistory: ownerProcedure
     .input(
       z.object({
         limit: z.number().min(1).max(100).default(20),
@@ -542,7 +542,7 @@ export const cloneCommandRouter = router({
   /**
    * 6. saveToVault — Mark generation as saved
    */
-  saveToVault: protectedProcedure
+  saveToVault: ownerProcedure
     .input(
       z.object({
         generationId: z.number(),
@@ -567,7 +567,7 @@ export const cloneCommandRouter = router({
   /**
    * 7. getAvailableModels — List active clone models
    */
-  getAvailableModels: protectedProcedure.query(async ({ ctx }) => {
+  getAvailableModels: ownerProcedure.query(async ({ ctx }) => {
     ownerGuard(ctx.user.id);
 
     const conn = await getDb();
@@ -595,7 +595,7 @@ export const cloneCommandRouter = router({
   /**
    * 8. setHeroImage — Update the platform hero image URL
    */
-  setHeroImage: protectedProcedure
+  setHeroImage: ownerProcedure
     .input(z.object({ imageUrl: z.string().url() }))
     .mutation(async ({ ctx, input }) => {
       ownerGuard(ctx.user.id);

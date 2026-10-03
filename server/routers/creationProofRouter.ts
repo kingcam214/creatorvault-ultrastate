@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { ownerProcedure, protectedProcedure, router } from "../_core/trpc";
 import {
   listCreationProofs,
   reviewCreationProof,
@@ -39,7 +39,7 @@ export const creationProofRouter = router({
       return listCreationProofs(Number(ctx.user.id), input?.status as ProofStatus | undefined);
     }),
 
-  review: protectedProcedure
+  review: ownerProcedure
     .input(z.object({
       assetId: z.string().min(3).max(191),
       creationProjectId: z.string().uuid().optional(),

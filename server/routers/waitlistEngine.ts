@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
+import { router, ownerProcedure, publicProcedure } from "../_core/trpc";
 import * as db from "../db";
 import { eq, desc, count } from "drizzle-orm";
 export const waitlistEngine = router({
@@ -10,9 +10,7 @@ export const waitlistEngine = router({
     const [entry] = await db.db.insert(db.schema.waitlist).values({ email: input.email, name: input.name || "", source: input.source || "direct", position: (total.count || 0) + 1, createdAt: new Date() }).$returningId();
     return { joined: true, position: (total.count || 0) + 1, id: entry.id };
   }),
-  getWaitlistStats: protectedProcedure.query(async ({ ctx }) => {
-    // @ts-ignore
-    if (ctx.user.role !== "owner" && ctx.user.role !== "admin") throw new Error("Admin access required");
+  getWaitlistStats: ownerProcedure.query(async ({ ctx }) => {
     const [total] = await db.db.select({ count: count() }).from(db.schema.waitlist);
     return { total: total.count };
   }),

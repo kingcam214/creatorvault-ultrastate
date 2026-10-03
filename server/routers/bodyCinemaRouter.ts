@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { sql } from "drizzle-orm";
-import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
+import { router, ownerProcedure, protectedProcedure, publicProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import { TRPCError } from "@trpc/server";
 import { BodyCinemaRouter, createDefaultProviderProfiles } from "../services/bodyCinemaProviderRouter";
@@ -93,14 +93,14 @@ function evidencePrecondition(message: string): TRPCError {
 }
 
 export const bodyCinemaRouter = router({
-  savedSourceInventory: protectedProcedure.query(async ({ ctx }) => {
+  savedSourceInventory: ownerProcedure.query(async ({ ctx }) => {
     if (![6, 33].includes(Number(ctx.user.id))) {
       throw new TRPCError({ code: "FORBIDDEN", message: "This private source inventory is reserved for the owner workspace." });
     }
     return getBodyCinemaSavedSourceInventory();
   }),
 
-  goldStandardBaselines: protectedProcedure.query(async ({ ctx }) => {
+  goldStandardBaselines: ownerProcedure.query(async ({ ctx }) => {
     const creatorId = Number(ctx.user.id);
     if (![6, 33].includes(creatorId)) {
       throw new TRPCError({ code: "FORBIDDEN", message: "This internal proof library is reserved for the owner workspace." });
@@ -108,7 +108,7 @@ export const bodyCinemaRouter = router({
     return listBodyCinemaGoldStandardBaselines(creatorId);
   }),
 
-  registerAcceptedTechnicalBaseline: protectedProcedure.input(z.object({
+  registerAcceptedTechnicalBaseline: ownerProcedure.input(z.object({
     evidenceId: z.string().uuid(),
     sourceMediaUrl: z.string().url(),
     outputFingerprint: z.string().regex(/^[0-9a-f]{64}$/i),
@@ -172,7 +172,7 @@ export const bodyCinemaRouter = router({
     }
   }),
 
-  recoverVerifiedLegacySourceEligibility: protectedProcedure.input(z.object({
+  recoverVerifiedLegacySourceEligibility: ownerProcedure.input(z.object({
     sourceMediaUrl: z.string().url(),
   })).mutation(async ({ ctx, input }) => {
     const creatorId = Number(ctx.user.id);

@@ -10,7 +10,7 @@
  * ============================================================================
  */
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { ownerProcedure, router, protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import { TRPCError } from "@trpc/server";
 // Remotion engine disabled - using fallback
@@ -279,7 +279,7 @@ const SYSTEM_NODES = [
 // ─── Router ───────────────────────────────────────────────────────────────────
 export const kingWorld3DRouter = router({
   // ── Episode Theater data ────────────────────────────────────────────────────
-  getEpisodes: protectedProcedure
+  getEpisodes: ownerProcedure
     .input(z.object({
       filter: z.enum(["all", "money", "emma", "lizzy", "dr-tours"]).default("all"),
     }))
@@ -357,7 +357,7 @@ export const kingWorld3DRouter = router({
     }),
 
   // ── Empire Map data ─────────────────────────────────────────────────────────
-  getEmpireNodes: protectedProcedure
+  getEmpireNodes: ownerProcedure
     .query(async ({ ctx }) => {
       assertKing(ctx.user);
       const db = getDb();
@@ -482,7 +482,7 @@ export const kingWorld3DRouter = router({
     }),
 
   // ── Render episode trailer via Remotion ─────────────────────────────────────
-  renderEpisodeTrailer: protectedProcedure
+  renderEpisodeTrailer: ownerProcedure
     .input(z.object({
       episodeId: z.string(),
       title: z.string(),
@@ -530,7 +530,7 @@ export const kingWorld3DRouter = router({
     }),
 
   // ── Poll render job status ───────────────────────────────────────────────────
-  getRenderJobStatus: protectedProcedure
+  getRenderJobStatus: ownerProcedure
     .input(z.object({ jobId: z.string() }))
     // @ts-ignore
     .query(async ({ input, ctx }) => {
@@ -556,7 +556,7 @@ export const kingWorld3DRouter = router({
     }),
 
   // ── Render empire map snapshot via Remotion ──────────────────────────────────
-  renderEmpireMapSnapshot: protectedProcedure
+  renderEmpireMapSnapshot: ownerProcedure
     .input(z.object({
       accentColor: z.string().default("#00D9FF"),
       creatorCount: z.number().optional(),

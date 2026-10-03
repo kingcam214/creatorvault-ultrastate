@@ -9,7 +9,7 @@ type MarketingFormat = "editorial_flyer" | "motion_flyer" | "motion_mixtape_cove
 type CreationMode = "from_scratch" | "master_art_motion" | "layered_poster_motion";
 type CompositionFamily = "monument_type_cutout" | "culture_event_collage" | "editorial_cover_world" | "premium_promo_action" | "client_identity_tour";
 type LayerRole = "background" | "hero" | "support" | "logo" | "texture" | "subject" | "foreground" | "effect";
-type SelectedLayer = { url: string; mediaType: "image" | "video"; role: LayerRole; fileName: string };
+export type SelectedLayer = { url: string; mediaType: "image" | "video"; role: LayerRole; fileName: string };
 
 const formats: Array<{ id: MarketingFormat; label: string; eyebrow: string; badge: string }> = [
   { id: "editorial_flyer", label: "Static Master", eyebrow: "Print + social poster", badge: "PNG" },
@@ -40,12 +40,17 @@ function isVideo(asset: MediaAssetItem) {
   return asset.assetType === "video" || String(asset.mimeType || "").startsWith("video/");
 }
 
-function preview(asset: MediaAssetItem | SelectedLayer | null) {
+export function resolveMediaPreview(asset: MediaAssetItem | SelectedLayer | null): { url: string; isVideo: boolean } | null {
   if (!asset) return null;
-  const url = "publicUrl" in asset ? (asset.publicUrl || asset.storagePath || "") : asset.url;
-  if (!url) return null;
-  const video = "mediaType" in asset ? asset.mediaType === "video" : isVideo(asset);
-  return video ? <video src={url} muted autoPlay loop playsInline className="h-full w-full object-cover" /> : <img src={url} alt={asset.fileName} className="h-full w-full object-cover" />;
+  if ("mediaType" in asset) return asset.url ? { url: asset.url, isVideo: asset.mediaType === "video" } : null;
+  const url = asset.publicUrl || asset.storagePath || "";
+  return url ? { url, isVideo: isVideo(asset) } : null;
+}
+
+function preview(asset: MediaAssetItem | SelectedLayer | null) {
+  const source = resolveMediaPreview(asset);
+  if (!source || !asset) return null;
+  return source.isVideo ? <video src={source.url} muted autoPlay loop playsInline className="h-full w-full object-cover" /> : <img src={source.url} alt={asset.fileName} className="h-full w-full object-cover" />;
 }
 
 function projectTitle(project: any) {

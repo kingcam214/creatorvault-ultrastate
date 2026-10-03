@@ -1,6 +1,7 @@
+import { isOwnerRole } from "../_core/authorizationPolicy";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure, router } from "../_core/trpc";
+import { ownerProcedure, protectedProcedure, router } from "../_core/trpc";
 import {
   approveGovernedPolloJob,
   cancelGovernedPolloJob,
@@ -86,14 +87,14 @@ import {
 
 const OWNER_IDS = new Set([6, 33]);
 
-function ownerOnly(userId: number): void {
-  if (!OWNER_IDS.has(Number(userId))) {
+function ownerOnly(userId: number, role: string): void {
+  if (!isOwnerRole(role) || !OWNER_IDS.has(Number(userId))) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Owner approval is required for governed media operations." });
   }
 }
 
-function canReadJob(userId: number, job: { creatorId: number }): void {
-  if (Number(userId) !== Number(job.creatorId) && !OWNER_IDS.has(Number(userId))) {
+function canReadJob(userId: number, job: { creatorId: number }, role: string): void {
+  if (Number(userId) !== Number(job.creatorId) && !(isOwnerRole(role) && OWNER_IDS.has(Number(userId)))) {
     throw new TRPCError({ code: "FORBIDDEN", message: "You do not have access to this governed media request." });
   }
 }
@@ -123,15 +124,15 @@ const draftInput = z.object({
 });
 
 export const governedPolloRouter = router({
-  topazProductionCredentialState: protectedProcedure.query(({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  topazProductionCredentialState: ownerProcedure.query(({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     return getTopazProductionCredentialState();
   }),
 
-  activateTopazProductionCredential: protectedProcedure.input(z.object({
+  activateTopazProductionCredential: ownerProcedure.input(z.object({
     apiKey: z.string().uuid(),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await activateTopazProductionCredential({ apiKey: input.apiKey });
     } catch (error) {
@@ -139,15 +140,15 @@ export const governedPolloRouter = router({
     }
   }),
 
-  digitalOceanVaceAutomationState: protectedProcedure.query(({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  digitalOceanVaceAutomationState: ownerProcedure.query(({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     return getDigitalOceanVaceAutomationState();
   }),
 
-  activateDigitalOceanVaceAutomation: protectedProcedure.input(z.object({
+  activateDigitalOceanVaceAutomation: ownerProcedure.input(z.object({
     token: z.string().trim().min(32).max(512),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await activateDigitalOceanVaceAutomation(input);
     } catch (error) {
@@ -155,8 +156,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  digitalOceanVaceProvisioningReadiness: protectedProcedure.query(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  digitalOceanVaceProvisioningReadiness: ownerProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await getDigitalOceanVaceProvisioningReadiness();
     } catch (error) {
@@ -164,8 +165,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  priorKingcamDigitalOceanRecoveryAudit: protectedProcedure.query(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  priorKingcamDigitalOceanRecoveryAudit: ownerProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await auditPriorKingcamDigitalOceanRun();
     } catch (error) {
@@ -173,8 +174,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  provisionApprovedH100VaceWorker: protectedProcedure.mutation(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  provisionApprovedH100VaceWorker: ownerProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await provisionApprovedH100VaceWorker();
     } catch (error) {
@@ -182,8 +183,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  destroyCompletedH200VaceWorker: protectedProcedure.mutation(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  destroyCompletedH200VaceWorker: ownerProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await destroyCompletedH200VaceWorker();
     } catch (error) {
@@ -191,13 +192,13 @@ export const governedPolloRouter = router({
     }
   }),
 
-  wanAnimate2ProofWorkerConnectionState: protectedProcedure.query(({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  wanAnimate2ProofWorkerConnectionState: ownerProcedure.query(({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     return getWanProofWorkerConnectionState();
   }),
 
-  provisionConfirmedWanAnimate2H200ProofWorker: protectedProcedure.mutation(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  provisionConfirmedWanAnimate2H200ProofWorker: ownerProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await provisionConfirmedWanAnimate2H200ProofWorker();
     } catch (error) {
@@ -205,8 +206,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  probeWanAnimate2ProofWorker: protectedProcedure.mutation(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  probeWanAnimate2ProofWorker: ownerProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await probeWanAnimate2ProofWorker();
     } catch (error) {
@@ -214,8 +215,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  launchOneWanAnimate2Proof: protectedProcedure.mutation(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  launchOneWanAnimate2Proof: ownerProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await launchOneWanAnimate2Proof();
     } catch (error) {
@@ -223,8 +224,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  wanAnimate2ProofJob: protectedProcedure.input(z.object({ workerJobId: z.string().uuid() })).query(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  wanAnimate2ProofJob: ownerProcedure.input(z.object({ workerJobId: z.string().uuid() })).query(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await getWanAnimate2ProofJob(input.workerJobId);
     } catch (error) {
@@ -232,8 +233,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  collectWanAnimate2ProofOutput: protectedProcedure.input(z.object({ workerJobId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  collectWanAnimate2ProofOutput: ownerProcedure.input(z.object({ workerJobId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await collectWanAnimate2ProofOutput({ ownerId: ctx.user.id, workerJobId: input.workerJobId });
     } catch (error) {
@@ -241,8 +242,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  destroyWanAnimate2ProofWorker: protectedProcedure.input(z.object({ dropletId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  destroyWanAnimate2ProofWorker: ownerProcedure.input(z.object({ dropletId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await destroyWanAnimate2ProofWorker(input.dropletId);
     } catch (error) {
@@ -250,13 +251,13 @@ export const governedPolloRouter = router({
     }
   }),
 
-  kingcamPerformerWorkerConnectionState: protectedProcedure.query(({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  kingcamPerformerWorkerConnectionState: ownerProcedure.query(({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     return getKingcamPerformerWorkerConnectionState();
   }),
 
-  provisionApprovedKingcamPerformerH200Worker: protectedProcedure.mutation(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  provisionApprovedKingcamPerformerH200Worker: ownerProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await provisionApprovedKingcamPerformerH200Worker();
     } catch (error) {
@@ -264,8 +265,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  probeKingcamFullBodyPerformerWorker: protectedProcedure.mutation(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  probeKingcamFullBodyPerformerWorker: ownerProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await probeKingcamFullBodyPerformerWorker();
     } catch (error) {
@@ -273,8 +274,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  launchKingcamFullBodyTalkingBenchmark: protectedProcedure.mutation(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  launchKingcamFullBodyTalkingBenchmark: ownerProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await launchKingcamFullBodyTalkingBenchmark();
     } catch (error) {
@@ -282,8 +283,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  kingcamFullBodyPerformerRun: protectedProcedure.input(z.object({ workerJobId: z.string().uuid() })).query(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  kingcamFullBodyPerformerRun: ownerProcedure.input(z.object({ workerJobId: z.string().uuid() })).query(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await getKingcamFullBodyPerformerRun(input.workerJobId);
     } catch (error) {
@@ -291,8 +292,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  collectKingcamFullBodyPerformerOutput: protectedProcedure.input(z.object({ workerJobId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  collectKingcamFullBodyPerformerOutput: ownerProcedure.input(z.object({ workerJobId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await collectKingcamFullBodyPerformerOutput({ ownerId: ctx.user.id, workerJobId: input.workerJobId });
     } catch (error) {
@@ -300,8 +301,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  destroyKingcamPerformerWorker: protectedProcedure.input(z.object({ dropletId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  destroyKingcamPerformerWorker: ownerProcedure.input(z.object({ dropletId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await destroyKingcamPerformerWorker(input.dropletId);
     } catch (error) {
@@ -309,16 +310,16 @@ export const governedPolloRouter = router({
     }
   }),
 
-  vaceWorkerConnectionState: protectedProcedure.query(({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  vaceWorkerConnectionState: ownerProcedure.query(({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     return getVaceWorkerConnectionState();
   }),
 
-  activateVaceWorkerConnection: protectedProcedure.input(z.object({
+  activateVaceWorkerConnection: ownerProcedure.input(z.object({
     workerUrl: z.string().url().max(512),
     workerToken: z.string().trim().min(32).max(512),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await activateVaceWorkerConnection(input);
     } catch (error) {
@@ -326,8 +327,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  probeVaceWorkerAvailability: protectedProcedure.mutation(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  probeVaceWorkerAvailability: ownerProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     const health = await probeVaceWorkerHealth();
     if (health.workerReady) {
       await recordBodyCinemaProviderHealthy({
@@ -340,8 +341,8 @@ export const governedPolloRouter = router({
     return health;
   }),
 
-  bodyCinemaResilienceSnapshot: protectedProcedure.query(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  bodyCinemaResilienceSnapshot: ownerProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     const [models, providerHealth] = await Promise.all([
       getRoutableCreationModels(),
       listBodyCinemaProviderHealth(),
@@ -357,11 +358,11 @@ export const governedPolloRouter = router({
     };
   }),
 
-  recordBodyCinemaProviderAvailability: protectedProcedure.input(z.object({
+  recordBodyCinemaProviderAvailability: ownerProcedure.input(z.object({
     providerKey: z.enum(["runway_aleph", "topaz_video", "creatorvault_vace", "creatorvault_technical_continuity"]),
     evidence: z.string().trim().min(12).max(2_000),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await recordBodyCinemaProviderHealthy({
         providerKey: input.providerKey,
@@ -389,7 +390,7 @@ export const governedPolloRouter = router({
     metadata: z.record(z.string(), z.unknown()).optional(),
   })).mutation(async ({ ctx, input }) => {
     const creatorId = input.creatorId ?? ctx.user.id;
-    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id, ctx.user.role);
     try {
       const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
       return await createQuotedGovernedPolloSourceVideoDraft({
@@ -418,7 +419,7 @@ export const governedPolloRouter = router({
 
   createDraft: protectedProcedure.input(draftInput).mutation(async ({ ctx, input }) => {
     const creatorId = input.creatorId ?? ctx.user.id;
-    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id, ctx.user.role);
     try {
       const evidenceContext = await assertBodyCinemaEvidenceReady({
         creatorId,
@@ -461,14 +462,14 @@ export const governedPolloRouter = router({
   job: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).query(async ({ ctx, input }) => {
     const job = await getGovernedPolloJob(input.jobId);
     if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "Governed media request was not found." });
-    canReadJob(ctx.user.id, job);
+    canReadJob(ctx.user.id, job, ctx.user.role);
     return job;
   }),
 
   events: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).query(async ({ ctx, input }) => {
     const job = await getGovernedPolloJob(input.jobId);
     if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "Governed media request was not found." });
-    canReadJob(ctx.user.id, job);
+    canReadJob(ctx.user.id, job, ctx.user.role);
     return listGovernedPolloEvents(input.jobId);
   }),
 
@@ -480,13 +481,13 @@ export const governedPolloRouter = router({
     }
   }),
 
-  ownerDashboard: protectedProcedure.query(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  ownerDashboard: ownerProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     return getGovernedPolloDashboard();
   }),
 
-  capabilitySnapshot: protectedProcedure.query(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  capabilitySnapshot: ownerProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     const snapshot = await getLatestPolloCapabilitySnapshot();
     return {
       snapshot,
@@ -496,8 +497,8 @@ export const governedPolloRouter = router({
     };
   }),
 
-  refreshCapabilitySnapshot: protectedProcedure.mutation(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  refreshCapabilitySnapshot: ownerProcedure.mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       const snapshot = await refreshPolloCapabilitySnapshot(ctx.user.id);
       return {
@@ -511,13 +512,13 @@ export const governedPolloRouter = router({
     }
   }),
 
-  createKingcamFullBodyTalkingDraft: protectedProcedure.input(z.object({
+  createKingcamFullBodyTalkingDraft: ownerProcedure.input(z.object({
     prompt: z.string().trim().min(20).max(4_000),
     ownershipConfirmed: z.literal(true),
     consentConfirmed: z.literal(true),
     idempotencyKey: z.string().trim().min(12).max(191).optional(),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await createManualCappedKingcamKlingOmniSpokenMotionDraft({
         creatorId: ctx.user.id,
@@ -538,13 +539,13 @@ export const governedPolloRouter = router({
     }
   }),
 
-  createKingcamHappyHorseAllReferenceDraft: protectedProcedure.input(z.object({
+  createKingcamHappyHorseAllReferenceDraft: ownerProcedure.input(z.object({
     prompt: z.string().trim().min(20).max(4_000),
     ownershipConfirmed: z.literal(true),
     consentConfirmed: z.literal(true),
     idempotencyKey: z.string().trim().min(12).max(191).optional(),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await createManualCappedKingcamHappyHorseAllReferenceDraft({
         creatorId: ctx.user.id,
@@ -566,13 +567,13 @@ export const governedPolloRouter = router({
     }
   }),
 
-  latestControlledSourceVideoAttempt: protectedProcedure.query(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  latestControlledSourceVideoAttempt: ownerProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     return getLatestControlledSourceVideoAttemptDetail(ctx.user.id);
   }),
 
-  existingReplicateAccountAccess: protectedProcedure.query(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  existingReplicateAccountAccess: ownerProcedure.query(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     const token = String(process.env.REPLICATE_API_TOKEN || "").trim();
     if (!token) return { configured: false, reachable: false, provider: "replicate", message: "No existing Replicate runtime credential is configured for CreatorVault." };
     try {
@@ -593,7 +594,7 @@ export const governedPolloRouter = router({
     }
   }),
 
-  createReplicateWanVideoEditDraft: protectedProcedure.input(z.object({
+  createReplicateWanVideoEditDraft: ownerProcedure.input(z.object({
     creatorId: z.number().int().positive().optional(),
     evidenceId: z.string().uuid(),
     sourceUrl: z.string().url().max(4000),
@@ -606,9 +607,9 @@ export const governedPolloRouter = router({
     consentConfirmed: z.literal(true),
     idempotencyKey: z.string().trim().min(12).max(191).optional(),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     const creatorId = input.creatorId ?? ctx.user.id;
-    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id, ctx.user.role);
     try {
       const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
       return await createGovernedReplicateWanVideoEditDraft({
@@ -634,7 +635,7 @@ export const governedPolloRouter = router({
     }
   }),
 
-  createRunwayAlephVideoEditBenchmarkDraft: protectedProcedure.input(z.object({
+  createRunwayAlephVideoEditBenchmarkDraft: ownerProcedure.input(z.object({
     creatorId: z.number().int().positive().optional(),
     evidenceId: z.string().uuid(),
     sourceUrl: z.string().url().max(4000),
@@ -651,9 +652,9 @@ export const governedPolloRouter = router({
     editBlueprintId: z.string().uuid().optional(),
     idempotencyKey: z.string().trim().min(12).max(191).optional(),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     const creatorId = input.creatorId ?? ctx.user.id;
-    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id, ctx.user.role);
     try {
       const providerVideo = new URL(input.runwayReferenceVideoUrl);
       const signedRunwayVideo = providerVideo.hostname === "d2jqrm6oza8nb6.cloudfront.net" && providerVideo.searchParams.has("_jwt");
@@ -706,7 +707,7 @@ export const governedPolloRouter = router({
     }
   }),
 
-  createVaceLightingBenchmarkDraft: protectedProcedure.input(z.object({
+  createVaceLightingBenchmarkDraft: ownerProcedure.input(z.object({
     creatorId: z.number().int().positive().optional(),
     evidenceId: z.string().uuid(),
     sourceUrl: z.string().url().max(4000),
@@ -717,9 +718,9 @@ export const governedPolloRouter = router({
     editBlueprintId: z.string().uuid().optional(),
     idempotencyKey: z.string().trim().min(12).max(191).optional(),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     const creatorId = input.creatorId ?? ctx.user.id;
-    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id, ctx.user.role);
     try {
       const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
       const editBlueprint = await getOrCreateBodyCinemaEditBlueprint({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
@@ -748,7 +749,7 @@ export const governedPolloRouter = router({
     }
   }),
 
-  createTopazPrecisionVideoDraft: protectedProcedure.input(z.object({
+  createTopazPrecisionVideoDraft: ownerProcedure.input(z.object({
     creatorId: z.number().int().positive().optional(),
     evidenceId: z.string().uuid(),
     sourceUrl: z.string().url().max(4000),
@@ -761,9 +762,9 @@ export const governedPolloRouter = router({
     editBlueprintId: z.string().uuid().optional(),
     idempotencyKey: z.string().trim().min(12).max(191).optional(),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     const creatorId = input.creatorId ?? ctx.user.id;
-    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id, ctx.user.role);
     try {
       const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
       const editBlueprint = await getOrCreateBodyCinemaEditBlueprint({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
@@ -794,8 +795,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  leaseRunwayAlephVideoEditPilot: protectedProcedure.input(z.object({ jobId: z.number().int().positive(), workerId: z.string().trim().min(3).max(191) })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  leaseRunwayAlephVideoEditPilot: ownerProcedure.input(z.object({ jobId: z.number().int().positive(), workerId: z.string().trim().min(3).max(191) })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       const job = await getGovernedPolloJob(input.jobId);
       if (!job || job.provider !== "runway" || job.mode !== "runway_aleph_2_source_video_edit") throw new Error("A prepared Runway Aleph benchmark is required.");
@@ -805,8 +806,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  recordRunwayAlephVideoEditSubmission: protectedProcedure.input(z.object({ jobId: z.number().int().positive(), workerId: z.string().trim().min(3).max(191), providerTaskId: z.string().trim().min(2).max(191), providerResponse: z.record(z.string(), z.unknown()).optional() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  recordRunwayAlephVideoEditSubmission: ownerProcedure.input(z.object({ jobId: z.number().int().positive(), workerId: z.string().trim().min(3).max(191), providerTaskId: z.string().trim().min(2).max(191), providerResponse: z.record(z.string(), z.unknown()).optional() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       const job = await getGovernedPolloJob(input.jobId);
       if (!job || job.provider !== "runway" || job.mode !== "runway_aleph_2_source_video_edit") throw new Error("A queued Runway Aleph benchmark is required.");
@@ -816,16 +817,16 @@ export const governedPolloRouter = router({
     }
   }),
 
-  submitReplicateWanVideoEditPilot: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx }) => {
-    ownerOnly(ctx.user.id);
+  submitReplicateWanVideoEditPilot: ownerProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Replicate remains reserved for the Clone workflow and cannot be used by Body Cinema." });
   }),
 
-  correctRunwayAlephWorkspaceLimit: protectedProcedure.input(z.object({
+  correctRunwayAlephWorkspaceLimit: ownerProcedure.input(z.object({
     jobId: z.number().int().positive(),
     reason: z.string().trim().min(3).max(1200),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await reclassifyGovernedRunwayAlephWorkspaceLimit({
         jobId: input.jobId,
@@ -837,8 +838,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  recordRunwayAlephVideoEditFailure: protectedProcedure.input(z.object({ jobId: z.number().int().positive(), reason: z.string().trim().min(3).max(1200) })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  recordRunwayAlephVideoEditFailure: ownerProcedure.input(z.object({ jobId: z.number().int().positive(), reason: z.string().trim().min(3).max(1200) })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await recordGovernedRunwayAlephVideoEditFailure({ jobId: input.jobId, ownerId: ctx.user.id, reason: input.reason });
     } catch (error) {
@@ -846,12 +847,12 @@ export const governedPolloRouter = router({
     }
   }),
 
-  reconcileRunwayAlephSubmissionTimeout: protectedProcedure.input(z.object({
+  reconcileRunwayAlephSubmissionTimeout: ownerProcedure.input(z.object({
     jobId: z.number().int().positive(),
     reason: z.string().trim().min(3).max(1200),
     failureCode: z.enum(["runway_submission_timeout_no_task", "runway_workspace_limit"]).optional(),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await reconcileGovernedRunwayAlephSubmissionTimeout({
         jobId: input.jobId,
@@ -864,8 +865,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  ingestRunwayAlephVideoEditOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  ingestRunwayAlephVideoEditOutput: ownerProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await ingestCompletedGovernedRunwayAlephVideoEditOutput({ jobId: input.jobId, ownerId: ctx.user.id });
     } catch (error) {
@@ -873,8 +874,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  reviewRunwayAlephVideoEditOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  reviewRunwayAlephVideoEditOutput: ownerProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await reviewCompletedGovernedRunwayAlephVideoEditOutput({ jobId: input.jobId, ownerId: ctx.user.id });
     } catch (error) {
@@ -882,12 +883,12 @@ export const governedPolloRouter = router({
     }
   }),
 
-  reconcileVaceSubmission: protectedProcedure.input(z.object({
+  reconcileVaceSubmission: ownerProcedure.input(z.object({
     jobId: z.number().int().positive(),
     workerId: z.string().trim().min(3).max(191),
     workerJobId: z.string().uuid(),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await reconcileGovernedVaceSubmission({ jobId: input.jobId, ownerId: ctx.user.id, workerId: input.workerId, workerJobId: input.workerJobId });
     } catch (error) {
@@ -895,8 +896,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  ingestVaceLightingOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  ingestVaceLightingOutput: ownerProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await ingestCompletedGovernedVaceLightingOutput({ jobId: input.jobId, ownerId: ctx.user.id });
     } catch (error) {
@@ -904,8 +905,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  reviewVaceLightingOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  reviewVaceLightingOutput: ownerProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await reviewCompletedGovernedVaceLightingOutput({ jobId: input.jobId, ownerId: ctx.user.id });
     } catch (error) {
@@ -913,8 +914,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  ingestTopazPrecisionVideoOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  ingestTopazPrecisionVideoOutput: ownerProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await ingestCompletedGovernedTopazPrecisionVideoOutput({ jobId: input.jobId, ownerId: ctx.user.id });
     } catch (error) {
@@ -922,8 +923,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  reviewTopazPrecisionVideoOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  reviewTopazPrecisionVideoOutput: ownerProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await reviewCompletedGovernedTopazPrecisionVideoOutput({ jobId: input.jobId, ownerId: ctx.user.id });
     } catch (error) {
@@ -931,8 +932,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  ingestReplicateWanVideoEditOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  ingestReplicateWanVideoEditOutput: ownerProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await ingestCompletedGovernedReplicateWanVideoEditOutput({ jobId: input.jobId, ownerId: ctx.user.id });
     } catch (error) {
@@ -940,8 +941,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  reviewReplicateWanVideoEditOutput: protectedProcedure.input(z.object({ jobId: z.number().int().positive(), evidenceId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  reviewReplicateWanVideoEditOutput: ownerProcedure.input(z.object({ jobId: z.number().int().positive(), evidenceId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       const job = await getGovernedPolloJob(input.jobId);
       if (!job?.providerJobId) throw new Error("A completed governed Replicate prediction is required before review.");
@@ -968,7 +969,7 @@ export const governedPolloRouter = router({
     sourceUrl: z.string().url().max(4000),
   })).query(async ({ ctx, input }) => {
     const creatorId = input.creatorId ?? ctx.user.id;
-    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await preflightBodyCinemaSourceVideo({
         creatorId,
@@ -980,15 +981,15 @@ export const governedPolloRouter = router({
     }
   }),
 
-  runNextControlledSourceVideoAccessAttempt: protectedProcedure.input(z.object({
+  runNextControlledSourceVideoAccessAttempt: ownerProcedure.input(z.object({
     creatorId: z.number().int().positive().optional(),
     evidenceId: z.string().uuid(),
     sourceUrl: z.string().url().max(4000),
     prompt: z.string().trim().min(8).max(6000),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     const creatorId = input.creatorId ?? ctx.user.id;
-    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id, ctx.user.role);
     try {
       const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
       return await runNextControlledSourceVideoAccessAttempt({
@@ -1003,10 +1004,10 @@ export const governedPolloRouter = router({
     }
   }),
 
-  ingestAndSettleControlledSourceVideoTask: protectedProcedure.input(z.object({
+  ingestAndSettleControlledSourceVideoTask: ownerProcedure.input(z.object({
     taskId: z.string().trim().min(8).max(191),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await ingestAndSettleControlledSourceVideoTask({ ownerId: ctx.user.id, taskId: input.taskId });
     } catch (error) {
@@ -1014,11 +1015,11 @@ export const governedPolloRouter = router({
     }
   }),
 
-  reviewIngestedControlledSourceVideoTask: protectedProcedure.input(z.object({
+  reviewIngestedControlledSourceVideoTask: ownerProcedure.input(z.object({
     evidenceId: z.string().uuid(),
     taskId: z.string().trim().min(8).max(191),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await reviewIngestedControlledSourceVideoTask({ ownerId: ctx.user.id, evidenceId: input.evidenceId, taskId: input.taskId });
     } catch (error) {
@@ -1026,11 +1027,11 @@ export const governedPolloRouter = router({
     }
   }),
 
-  settleControlledSourceVideoTask: protectedProcedure.input(z.object({
+  settleControlledSourceVideoTask: ownerProcedure.input(z.object({
     taskId: z.string().trim().min(8).max(191),
     durableOutputUrl: z.string().url().max(4000),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await settleControlledSourceVideoTask({
         ownerId: ctx.user.id,
@@ -1042,8 +1043,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  ownerJobs: protectedProcedure.input(z.object({ creatorId: z.number().int().positive().optional(), limit: z.number().int().min(1).max(200).optional() }).optional()).query(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  ownerJobs: ownerProcedure.input(z.object({ creatorId: z.number().int().positive().optional(), limit: z.number().int().min(1).max(200).optional() }).optional()).query(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     return listGovernedPolloJobs({ creatorId: input?.creatorId, limit: input?.limit });
   }),
 
@@ -1057,7 +1058,7 @@ export const governedPolloRouter = router({
     aspectRatio: z.enum(["9:16", "16:9", "1:1"]),
   })).mutation(async ({ ctx, input }) => {
     const creatorId = input.creatorId ?? ctx.user.id;
-    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id);
+    if (creatorId !== ctx.user.id) ownerOnly(ctx.user.id, ctx.user.role);
     try {
       const evidenceContext = await assertBodyCinemaEvidenceReady({ creatorId, evidenceId: input.evidenceId, sourceMediaUrl: input.sourceUrl });
       return await quoteGovernedPolloSourceVideoReference({
@@ -1072,13 +1073,13 @@ export const governedPolloRouter = router({
     }
   }),
 
-  setCostEstimate: protectedProcedure.input(z.object({
+  setCostEstimate: ownerProcedure.input(z.object({
     jobId: z.number().int().positive(),
     estimatedCostCredits: z.number().positive().max(1_000_000),
     costEvidenceReference: z.string().trim().min(3).max(3000),
     reason: z.string().trim().max(1200).optional(),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await setGovernedPolloCostEstimate({
         jobId: input.jobId,
@@ -1092,8 +1093,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  approve: protectedProcedure.input(z.object({ jobId: z.number().int().positive(), fingerprint: z.string().length(64), reason: z.string().trim().max(1200).optional() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  approve: ownerProcedure.input(z.object({ jobId: z.number().int().positive(), fingerprint: z.string().length(64), reason: z.string().trim().max(1200).optional() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await approveGovernedPolloJob({ jobId: input.jobId, approverId: ctx.user.id, expectedFingerprint: input.fingerprint, reason: input.reason });
     } catch (error) {
@@ -1101,14 +1102,14 @@ export const governedPolloRouter = router({
     }
   }),
 
-  authorizeSingleUseSubmission: protectedProcedure.input(z.object({
+  authorizeSingleUseSubmission: ownerProcedure.input(z.object({
     jobId: z.number().int().positive(),
     fingerprint: z.string().length(64),
     hardCreditCap: z.number().min(0).max(1_000_000),
     reason: z.string().trim().min(3).max(1200),
     expiresInMinutes: z.number().int().min(1).max(30).optional(),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await authorizeSingleUseGovernedPolloSubmission({
         jobId: input.jobId,
@@ -1123,8 +1124,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  submitApproved: protectedProcedure.input(z.object({ jobId: z.number().int().positive(), workerId: z.string().trim().min(3).max(191) })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  submitApproved: ownerProcedure.input(z.object({ jobId: z.number().int().positive(), workerId: z.string().trim().min(3).max(191) })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await submitGovernedPolloJob({ jobId: input.jobId, workerId: input.workerId });
     } catch (error) {
@@ -1132,8 +1133,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  pollProviderStatus: protectedProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  pollProviderStatus: ownerProcedure.input(z.object({ jobId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await pollGovernedPolloProviderJob({ jobId: input.jobId, actorId: ctx.user.id });
     } catch (error) {
@@ -1141,8 +1142,8 @@ export const governedPolloRouter = router({
     }
   }),
 
-  recordProviderCompletion: protectedProcedure.input(z.object({ jobId: z.number().int().positive(), providerJobId: z.string().trim().min(2).max(191), outputUrl: z.string().url().max(4000), providerResponse: z.record(z.string(), z.unknown()).optional() })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+  recordProviderCompletion: ownerProcedure.input(z.object({ jobId: z.number().int().positive(), providerJobId: z.string().trim().min(2).max(191), outputUrl: z.string().url().max(4000), providerResponse: z.record(z.string(), z.unknown()).optional() })).mutation(async ({ ctx, input }) => {
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await recordGovernedPolloProviderCompletion({
         jobId: input.jobId,
@@ -1155,14 +1156,14 @@ export const governedPolloRouter = router({
     }
   }),
 
-  reviewOutput: protectedProcedure.input(z.object({
+  reviewOutput: ownerProcedure.input(z.object({
     jobId: z.number().int().positive(),
     accepted: z.boolean(),
     artifactUrl: z.string().url().max(4000).optional(),
     qualityScore: z.number().min(0).max(100).optional(),
     reason: z.string().trim().min(3).max(3000),
   })).mutation(async ({ ctx, input }) => {
-    ownerOnly(ctx.user.id);
+    ownerOnly(ctx.user.id, ctx.user.role);
     try {
       return await reviewGovernedPolloOutput({
         jobId: input.jobId,

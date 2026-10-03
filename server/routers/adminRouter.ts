@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import * as db from "../db";
+import { assertRoleAssignment } from "../_core/authorizationPolicy";
 import { eq, desc, count } from "drizzle-orm";
 
 const adminGuard = protectedProcedure.use(({ ctx, next }) => {
@@ -45,7 +46,8 @@ export const adminRouter = router({
   updateUserRole: adminGuard.input(z.object({
     userId: z.number(),
     role: z.enum(["user", "creator", "admin", "king"]),
-  })).mutation(async ({ input }) => {
+  })).mutation(async ({ ctx, input }) => {
+    assertRoleAssignment(ctx.user.role, input.role);
     await db.db.update(db.schema.users)
       .set({ role: input.role })
       .where(eq(db.schema.users.id, input.userId));

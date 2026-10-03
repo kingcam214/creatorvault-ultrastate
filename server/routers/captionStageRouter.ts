@@ -5,7 +5,7 @@ import os from "os";
 import mysql from "mysql2/promise";
 import { z } from "zod";
 import { CAPTION_ENGINE_FEELS, CAPTION_ENGINE_TEMPLATES, getCaptionEngineTemplate } from "@shared/captionEngine";
-import { analyzeCaptionTranscript, normalizeCaptionSegments, recommendCaptionTreatmentDecisions, type CaptionSegment, type CaptionTranscriptAnalysis, type CaptionTreatmentDecision } from "@shared/captionEngineIntelligence";
+import { analyzeCaptionTranscript, normalizeCaptionSegments, recommendCaptionTreatmentDecisions, type CaptionSegment, type CaptionTranscriptAnalysis, type CaptionTreatmentDecision, type CaptionWord } from "@shared/captionEngineIntelligence";
 import { evaluateCaptionQuality, normalizeFocusRegions, type CaptionFocusRegion, type CaptionQualityReport } from "@shared/captionEngineQuality";
 import { protectedProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
@@ -159,17 +159,53 @@ async function downloadSource(url: string, destination: string): Promise<Buffer>
   return bytes;
 }
 
-function normalizeSegments(rawSegments: unknown[]): CaptionSegment[] {
-  return normalizeCaptionSegments(rawSegments
-    .map((segment: any) => ({
-      start: Math.max(0, toNumber(segment?.start)),
-      end: Math.max(toNumber(segment?.start) + 0.12, toNumber(segment?.end)),
-      text: String(segment?.text || "").trim().replace(/\s+/g, " "),
-      confidence: Number.isFinite(Number(segment?.confidence)) ? Number(segment.confidence) : null,
-      speaker: segment?.speaker || segment?.speaker_id || null,
-      words: Array.isArray(segment?.words) ? segment.words : undefined,
-    }))
-    .filter((segment): segment is CaptionSegment => segment.text.length > 0 && segment.end > segment.start));
+function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function nullableText(value: unknown): string | null {
+  const text = String(value ?? "").trim();
+  return text || null;
+}
+
+function normalizeCaptionWords(value: unknown): CaptionWord[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const words: CaptionWord[] = [];
+  for (const rawWord of value) {
+    if (!isUnknownRecord(rawWord)) continue;
+    const text = nullableText(rawWord.text);
+    const start = Math.max(0, toNumber(rawWord.start));
+    const end = Math.max(start + 0.08, toNumber(rawWord.end));
+    if (!text || end <= start) continue;
+    words.push({
+      text,
+      start,
+      end,
+      confidence: Number.isFinite(Number(rawWord.confidence)) ? Number(rawWord.confidence) : null,
+      speaker: nullableText(rawWord.speaker) ?? nullableText(rawWord.speaker_id),
+    });
+  }
+  return words.length ? words : undefined;
+}
+
+export function normalizeSegments(rawSegments: unknown[]): CaptionSegment[] {
+  const segments: CaptionSegment[] = [];
+  for (const rawSegment of rawSegments) {
+    if (!isUnknownRecord(rawSegment)) continue;
+    const start = Math.max(0, toNumber(rawSegment.start));
+    const end = Math.max(start + 0.12, toNumber(rawSegment.end));
+    const text = String(rawSegment.text ?? "").trim().replace(/\s+/g, " ");
+    if (!text || end <= start) continue;
+    segments.push({
+      start,
+      end,
+      text,
+      confidence: Number.isFinite(Number(rawSegment.confidence)) ? Number(rawSegment.confidence) : null,
+      speaker: nullableText(rawSegment.speaker) ?? nullableText(rawSegment.speaker_id),
+      words: normalizeCaptionWords(rawSegment.words),
+    });
+  }
+  return normalizeCaptionSegments(segments);
 }
 
 function groupScribeWords(words: unknown[]): CaptionSegment[] {
@@ -339,7 +375,7 @@ export const captionStageRouter = router({
       speaker: z.string().nullable().optional(),
       words: z.array(z.object({ text: z.string().max(100), start: z.number(), end: z.number(), confidence: z.number().nullable().optional(), speaker: z.string().nullable().optional() })).optional(),
     })).max(500).default([]),
-  })).mutation(async ({ input }) => {
+  })).mutation(async ({ ctx, input }) => {
     const analysis = analyzeCaptionTranscript({ transcript: input.transcript, segments: input.segments, language: input.language });
     let decisions = recommendCaptionTreatmentDecisions({ feel: input.feeling, analysis, templates: CAPTION_ENGINE_TEMPLATES });
     let recommendationSource: "ai_reviewed" | "caption_engine" = "caption_engine";

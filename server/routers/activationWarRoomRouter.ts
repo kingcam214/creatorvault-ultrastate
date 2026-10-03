@@ -1,13 +1,7 @@
-import { router, protectedProcedure } from "../_core/trpc.js";
+import { router, protectedProcedure, ownerProcedure } from "../_core/trpc.js";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.id !== 6 && ctx.user.id !== 33 && ctx.user.role !== "king" && ctx.user.role !== "admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Owner review is required to change Activation War Room records." });
-  }
-  return next({ ctx });
-});
 import mysql from "mysql2/promise";
 
 async function getDb() {
@@ -799,7 +793,7 @@ const dateInput = z.object({
 });
 
 export const activationWarRoomRouter = router({
-  commandCenter: protectedProcedure
+  commandCenter: ownerProcedure
     .input(dateInput.extend({ limit: z.number().int().min(1).max(200).default(50) }))
     .query(async ({ input }) => {
       const date = isoDate(input.date);
@@ -868,7 +862,7 @@ export const activationWarRoomRouter = router({
     }),
 
 
-  top5Sprint: protectedProcedure
+  top5Sprint: ownerProcedure
     .input(dateInput)
     .query(async ({ input }) => {
       const date = isoDate(input.date);
@@ -930,7 +924,7 @@ export const activationWarRoomRouter = router({
     }),
 
 
-  firstDollarRecovery: protectedProcedure
+  firstDollarRecovery: ownerProcedure
     .input(dateInput.extend({ limit: z.number().int().min(1).max(200).default(100) }))
     .query(async ({ input }) => {
       const conn = await getDb();

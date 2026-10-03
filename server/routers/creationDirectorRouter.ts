@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { ownerProcedure, protectedProcedure, router } from "../_core/trpc";
 import {
   buildCreationCapabilities,
   getCreationPlan,
@@ -131,7 +131,7 @@ export const creationDirectorRouter = router({
     return toCreatorFacingCreationPlan(plan);
   }),
 
-  renderSourcePreservingMaster: protectedProcedure.input(z.object({
+  renderSourcePreservingMaster: ownerProcedure.input(z.object({
     requestId: z.string().uuid(),
   })).mutation(async ({ ctx, input }) => {
     assertOwner(ctx);
@@ -152,7 +152,7 @@ export const creationDirectorRouter = router({
     }
   }),
 
-  submitGoverned: protectedProcedure.input(z.object({
+  submitGoverned: ownerProcedure.input(z.object({
     requestId: z.string().uuid(),
     reason: z.string().min(3).max(1200),
   })).mutation(async ({ ctx, input }) => {
@@ -169,7 +169,7 @@ export const creationDirectorRouter = router({
     }
   }),
 
-  acceptArtifact: protectedProcedure.input(z.object({
+  acceptArtifact: ownerProcedure.input(z.object({
     requestId: z.string().uuid(),
     reason: z.string().min(3).max(3000),
   })).mutation(async ({ ctx, input }) => {
@@ -202,24 +202,24 @@ export const creationDirectorRouter = router({
     }
   }),
 
-  getOwnerArsenal: protectedProcedure.query(async ({ ctx }) => {
+  getOwnerArsenal: ownerProcedure.query(async ({ ctx }) => {
     assertOwner(ctx);
     return getRoutableCreationModels();
   }),
 
-  getOwnerRegistry: protectedProcedure.query(async ({ ctx }) => {
+  getOwnerRegistry: ownerProcedure.query(async ({ ctx }) => {
     assertOwner(ctx);
     return getCreationModelRegistry();
   }),
 
-  getOwnerBenchmarks: protectedProcedure.input(z.object({
+  getOwnerBenchmarks: ownerProcedure.input(z.object({
     modelKey: z.string().min(3).max(191),
   })).query(async ({ ctx, input }) => {
     assertOwner(ctx);
     return getCreationModelBenchmarks(input.modelKey);
   }),
 
-  recordBenchmark: protectedProcedure.input(z.object({
+  recordBenchmark: ownerProcedure.input(z.object({
     modelKey: z.string().min(3).max(191),
     sourceEvidenceId: z.string().min(3).max(96),
     benchmarkVersion: z.string().min(3).max(191),
@@ -243,7 +243,7 @@ export const creationDirectorRouter = router({
     }
   }),
 
-  invalidateBenchmarkEvidence: protectedProcedure.input(z.object({
+  invalidateBenchmarkEvidence: ownerProcedure.input(z.object({
     modelKey: z.string().min(3).max(191),
     evidenceReference: z.string().min(3).max(5000),
     reason: z.string().min(12).max(3000),
@@ -259,7 +259,7 @@ export const creationDirectorRouter = router({
     }
   }),
 
-  setModelActivation: protectedProcedure.input(z.object({
+  setModelActivation: ownerProcedure.input(z.object({
     modelKey: z.string().min(3).max(191),
     activationState: z.enum(["planned", "configured", "benchmarking", "active", "deprecated", "blocked"]),
     commercialEligibility: z.enum(["verified", "conditional", "unverified", "ineligible"]).optional(),

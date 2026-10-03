@@ -5,83 +5,141 @@ on:
     branches:
       - main
 
+# Never cancel a release between atomic key persistence and reload.
+concurrency:
+  group: creatorvault-production-security-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CREATORVAULT_RELEASE_BEFORE: ${{ github.event.before }}
+
 jobs:
   deploy:
     runs-on: [self-hosted, linux, creatorvault-production]
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify direct production-baseline child
+        run: |
+          set -euo pipefail
+          baseline='46d3021a1bd09222a61ff1390c9cfe8f82d06422'
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$GITHUB_EVENT_NAME" = 'push'
+          test "$CREATORVAULT_RELEASE_BEFORE" = "$baseline"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git show -s --format=%P HEAD)" = "$baseline"
+          test "$(git rev-list --count "$baseline..HEAD")" = '1'
+          case "$(realpath "$GITHUB_WORKSPACE")/" in /root/creatorvault/*) exit 42 ;; esac
+          test ! -L dist
+          if test -d dist; then test -z "$(find dist -type l -printf x -quit)"; fi
+          # One canonical exact-file policy below; no separate partial allowlist.
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import {execFileSync} from 'node:child_process';
+          import {isDeepStrictEqual} from 'node:util';
+          const before=JSON.parse(execFileSync('git',['show','46d3021a1bd09222a61ff1390c9cfe8f82d06422:package.json'],{encoding:'utf8'}));
+          const after=JSON.parse(fs.readFileSync('package.json','utf8'));
+          const {scripts:oldScripts,...a}=before;
+          const {scripts:newScripts,...b}=after;
+          if (!isDeepStrictEqual(a,b)) throw new Error('DEPENDENCY_OR_PACKAGE_METADATA_CHANGE');
+          const expected={...oldScripts,'test:security':'vitest run --config vitest.security.config.ts','check:security':'tsx scripts/check-security-types.ts'};
+          if (!isDeepStrictEqual(expected,newScripts)) throw new Error('UNAPPROVED_PACKAGE_SCRIPT_CHANGE');
+          if (execFileSync('git',['diff','--name-only','46d3021a1bd09222a61ff1390c9cfe8f82d06422','HEAD','--','pnpm-lock.yaml','package-lock.json','yarn.lock'],{encoding:'utf8'}).trim()) throw new Error('LOCKFILE_CHANGED');
+          JS
 
       - name: Enable pnpm
-        run: |
-          export PNPM_HOME="/home/runner/.local/share/pnpm"
-          export PATH="$PNPM_HOME:$PATH"
-          npm install -g pnpm@10.4.1 2>/dev/null || true
-          pnpm --version
-
-      - name: Install dependencies
-        run: |
-          export PNPM_HOME="/home/runner/.local/share/pnpm"
-          export PATH="$PNPM_HOME:$PATH"
-          pnpm install --frozen-lockfile
-
-      - name: Generate release stamp
-        run: |
-          mkdir -p client/public
-          echo "{\"commit\":\"${{ github.sha }}\",\"branch\":\"${{ github.ref_name }}\",\"timestamp\":\"$(date -Iseconds)\",\"environment\":\"production\"}" > client/public/release.json
-
-      - name: Build release
-        run: |
-          export PNPM_HOME="/home/runner/.local/share/pnpm"
-          export PATH="$PNPM_HOME:$PATH"
-          pnpm build
-
-      - name: Verify build artifacts
-        run: |
-          test -f dist/index.js
-          test -f dist/public/index.html
-          test -f dist/public/release.json
-          echo "Build artifacts verified"
-
-      - name: Deploy to production
         run: |
           set -euo pipefail
           export PNPM_HOME="/home/runner/.local/share/pnpm"
           export PATH="$PNPM_HOME:$PATH"
-          COMMIT="${{ github.sha }}"
+          command -v pnpm >/dev/null
+          pnpm --version
 
-          # Stage built dist atomically in the root-owned application directory.
-          # Remove an interrupted prior stage so cp cannot nest the next release.
-          sudo rm -rf /root/creatorvault/dist.new 2>/dev/null || true
-          sudo cp -r dist /root/creatorvault/dist.new
-          sudo rm -rf /root/creatorvault/dist.old 2>/dev/null || true
-          sudo mv /root/creatorvault/dist /root/creatorvault/dist.old 2>/dev/null || true
-          sudo mv /root/creatorvault/dist.new /root/creatorvault/dist
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          export PNPM_HOME="/home/runner/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+          pnpm install --frozen-lockfile
 
-          # Copy package files
-          sudo cp package.json pnpm-lock.yaml /root/creatorvault/
+      - name: Validate complete immutable release and closure
+        run: |
+          set -euo pipefail
+          export PNPM_HOME="/home/runner/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+          pnpm exec tsx scripts/securityReleaseIntegrity.ts
+          pnpm exec tsx scripts/securityReleaseRunner.ts --check-checkout
 
-          # Install production deps inside the root-owned application directory.
-          # The self-hosted runner cannot cd into /root before sudo.
-          sudo env PATH="$PATH" bash -c 'cd /root/creatorvault && pnpm install --frozen-lockfile'
+      - name: Security regression tests
+        run: |
+          set -euo pipefail
+          export PNPM_HOME="/home/runner/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+          pnpm test:security
 
-          # Run the committed production entrypoint from the application directory.
-          sudo env PATH="$PATH" bash -c 'cd /root/creatorvault && chmod +x ./deploy_work_to_prod.sh && ./deploy_work_to_prod.sh'
+      - name: Strict security type check
+        run: |
+          set -euo pipefail
+          export PNPM_HOME="/home/runner/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+          pnpm check:security
 
-          # Verify release stamp (full SHA or short SHA prefix both accepted)
-          DEPLOY_SHA="${{ github.sha }}"
-          sudo env PATH="$PATH" node -e "
-            const r=require('fs').readFileSync('/root/creatorvault/dist/public/release.json','utf8');
-            const parsed=JSON.parse(r);
-            const commit='${{ github.sha }}';
-            if(parsed.commit !== commit && !commit.startsWith(parsed.commit) && !parsed.commit.startsWith(commit)) {
-              console.error('Release mismatch:', r);
-              process.exit(1);
-            }
-            console.log('release-stamp-ok', r);
-          "
+      - name: Controlled release integrity and parser regression tests
+        run: |
+          set -euo pipefail
+          export PNPM_HOME="/home/runner/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+          pnpm exec vitest run --config vitest.security-release.config.ts
+          pnpm exec vitest run --config vitest.github-workflow-preflight.config.ts
+          pnpm exec tsx scripts/check-security-release-types.ts
+          bash -n deploy_work_to_prod.sh
 
-          # Reload app
-          sudo pm2 reload creatorvault --update-env || sudo pm2 restart creatorvault --update-env
-          echo "Deployment complete"
+      - name: Mandatory whole-project type check
+        run: |
+          set -euo pipefail
+          export PNPM_HOME="/home/runner/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+          pnpm check
+
+      - name: Build release
+        run: |
+          set -euo pipefail
+          export PNPM_HOME="/home/runner/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+          pnpm build
+
+      - name: Stamp and validate secure release artifact
+        run: |
+          set -euo pipefail
+          export PNPM_HOME="/home/runner/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+          pnpm exec tsx scripts/prepareSecurityReleaseArtifact.ts
+          test -f dist/index.js
+          test -f dist/secure-app.js
+          test -f dist/security-release-runtime.mjs
+          test -f dist/public/index.html
+          test -f dist/ensure-governed-media-schema.js
+          node --input-type=module -e 'import fs from "node:fs"; fs.writeFileSync("dist/public/release.json", JSON.stringify({commit:process.env.GITHUB_SHA,branch:"main",timestamp:new Date().toISOString(),environment:"production"})+"\n");'
+
+      - name: Deploy approved security release and rotate JWT locally
+        run: |
+          set -euo pipefail
+          export PNPM_HOME="/home/runner/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+          # Public immutable release evidence only; never a signing-key input.
+          sudo -n env PATH="$PATH" \
+            CREATORVAULT_RELEASE_SHA="$GITHUB_SHA" \
+            CREATORVAULT_RELEASE_REF="$GITHUB_REF" \
+            CREATORVAULT_RELEASE_EVENT="$GITHUB_EVENT_NAME" \
+            CREATORVAULT_RELEASE_BEFORE="$CREATORVAULT_RELEASE_BEFORE" \
+            CREATORVAULT_RELEASE_WORKSPACE="$GITHUB_WORKSPACE" \
+            bash "$GITHUB_WORKSPACE/deploy_work_to_prod.sh"

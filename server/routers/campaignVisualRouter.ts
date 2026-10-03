@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { ownerProcedure, protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { createCreationProject, updateCreationProjectLinks } from "../services/creationProjectService";
 import { createGovernedPolloDraft, getGovernedPolloJob, ingestAcceptedCampaignVisual } from "../services/governedPolloService";
@@ -71,7 +71,7 @@ async function requireCertifiedOwnedSource(creatorId: number, sourceAssetId: str
 }
 
 export const campaignVisualRouter = router({
-  sources: protectedProcedure.query(async ({ ctx }) => {
+  sources: ownerProcedure.query(async ({ ctx }) => {
     requireOwner(ctx.user.id);
     const available: Array<{ id: string; label: string; sourceUrl: string; classification: string }> = [];
     for (const [id, source] of Object.entries(CERTIFIED_CAMPAIGN_SOURCES)) {
@@ -85,7 +85,7 @@ export const campaignVisualRouter = router({
     return available;
   }),
 
-  createDraft: protectedProcedure
+  createDraft: ownerProcedure
     .input(z.object({ sourceAssetId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       requireOwner(ctx.user.id);
@@ -161,7 +161,7 @@ export const campaignVisualRouter = router({
       }
     }),
 
-  backfillAcceptedAsset: protectedProcedure
+  backfillAcceptedAsset: ownerProcedure
     .input(z.object({ jobId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       requireOwner(ctx.user.id);
@@ -174,7 +174,7 @@ export const campaignVisualRouter = router({
       return { assetId, projectId: typeof job.metadata.creationProjectId === "string" ? job.metadata.creationProjectId : null, artifactUrl: job.artifactUrl };
     }),
 
-  job: protectedProcedure
+  job: ownerProcedure
     .input(z.object({ jobId: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
       requireOwner(ctx.user.id);

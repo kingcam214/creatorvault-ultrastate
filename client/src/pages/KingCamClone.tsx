@@ -13,6 +13,12 @@ const roomIcons = {
   "clone-command": Wand2,
 } as const;
 
+export function directiveDraftToClear(focus: string | undefined): "behavior" | "truth" | null {
+  if (focus === "KingCam behavior deck") return "behavior";
+  if (focus === "KingCam truth memory") return "truth";
+  return null;
+}
+
 function StatusPill({ value }: { value: string }) {
   const state = value.toLowerCase();
   const tone = state.includes("live") || state.includes("ready") || state.includes("accepted") ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-200" : state.includes("progress") || state.includes("planned") ? "border-amber-200/30 bg-amber-200/10 text-amber-100" : "border-white/20 bg-white/5 text-white/65";
@@ -39,8 +45,10 @@ export default function KingCamClone() {
   });
   const saveCloneDirective = trpc.kingcamCloneOperatingSystem.recordOwnerDirective.useMutation({
     onSuccess: (_result, variables) => {
-      if (variables.focus === "KingCam behavior deck") setBehaviorDraft("");
-      if (variables.focus === "KingCam truth memory") setTruthDraft("");
+      const focus = typeof variables === "object" && variables !== null ? variables.focus : undefined;
+      const draftToClear = directiveDraftToClear(focus);
+      if (draftToClear === "behavior") setBehaviorDraft("");
+      if (draftToClear === "truth") setTruthDraft("");
       setNotice("KingCam saved that in the right part of his protected identity system.");
       command.refetch();
     },

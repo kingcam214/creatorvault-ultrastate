@@ -1,15 +1,9 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc.js";
+import { router, ownerProcedure } from "../_core/trpc.js";
 import mysql from "mysql2/promise";
 import { assertLegacyPolloExecutionAllowed } from "../services/polloEmergencyFreeze.js";
 
-// Owner gate middleware - only userId 6 or 33
-const ownerOnlyProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  if (ctx.user.id !== 6 && ctx.user.id !== 33) {
-    throw new Error("Access denied: Owner only");
-  }
-  return next();
-});
+const ownerOnlyProcedure = ownerProcedure;
 
 const POLLO_API_KEY = process.env.POLLO_API_KEY;
 const POLLO_BASE_URL = "https://pollo.ai/api/platform";
