@@ -12,6 +12,8 @@ import { collectPrivilegedProcedurePaths } from "./securityProcedureInventory";
 
 export const CONSOLIDATED_SECURITY_BASELINE =
   "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da";
+export const CONSOLIDATED_RELEASE_PARENT =
+  "e0ca4c14cf0f717e8180abd59c1bad8fc803d080";
 export const APP_ROOT = "/root/creatorvault";
 export const APPROVED_FEATURE_HEADS = {
   stripe: "ccba8cd56f887d041311d4f37d3ec912fd57322d",
@@ -98,6 +100,8 @@ const integrationPaths = [
   "scripts/check-consolidated-release-types.ts",
   "scripts/run-consolidation-regressions.sh",
   "scripts/run-historical-security-release-checks.sh",
+  "scripts/portableMariaDbTools.ts",
+  "scripts/portableMariaDbTools.test.ts",
   "scripts/security-privileged-procedures.json",
   "vitest.consolidated-release.config.ts",
   "server/routers/governedPolloRouter.ts",
@@ -181,7 +185,7 @@ export function checkConsolidatedCheckout(
     "UNAPPROVED_CONSOLIDATED_TRIGGER"
   );
   requireRelease(
-    before === CONSOLIDATED_SECURITY_BASELINE,
+    before === CONSOLIDATED_RELEASE_PARENT,
     "UNAPPROVED_CONSOLIDATED_BASELINE"
   );
   const root = realpathSync(workspace);

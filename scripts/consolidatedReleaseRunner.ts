@@ -23,6 +23,10 @@ import {
 } from "./consolidatedReleasePolicy";
 import { applyConsolidatedMigrations } from "./consolidatedMigrations";
 import {
+  preparePortableMariaDbTools,
+  portableMariaDbServiceEnvironment,
+} from "./portableMariaDbTools";
+import {
   OWNER_READ,
   cleanupLoginVerifier,
   prepareLoginProof,
@@ -206,12 +210,13 @@ function silentCommand(
   cwd: string,
   command: string,
   args: readonly string[],
-  timeout = 60000
+  timeout = 60000,
+  privateToolEnvironment?: NodeJS.ProcessEnv
 ): string {
   try {
     return execFileSync(command, [...args], {
       cwd,
-      env: scrubEnvironment(),
+      env: privateToolEnvironment ?? scrubEnvironment(),
       stdio: ["ignore", "pipe", "pipe"],
       timeout,
       maxBuffer: 4 * 1024 * 1024,
@@ -960,6 +965,7 @@ async function protectedDatabaseBackup(
   const details = parsedDatabase(databaseUrl);
   const binaries = ["/usr/bin/mysqldump", "/usr/bin/mariadb-dump"];
   let dump: string | undefined;
+  let privateToolEnvironment: NodeJS.ProcessEnv | undefined;
   for (const candidate of binaries) {
     const meta = await optionalLstat(candidate);
     if (
@@ -972,6 +978,23 @@ async function protectedDatabaseBackup(
       dump = candidate;
       break;
     }
+  }
+  if (!dump) {
+    const toolsRoot = path.join(controlPath(sha), "portable-db-tools");
+    await fs.mkdir(toolsRoot, { mode: 0o700 });
+    await assertRootDirectory(
+      toolsRoot,
+      "CONSOLIDATED_PRIVATE_BACKUP_TOOLS_INVALID"
+    );
+    const tools = await preparePortableMariaDbTools(toolsRoot).catch(() => {
+      throw new ReleaseFailure(
+        "CONSOLIDATED_PRIVATE_BACKUP_TOOL_PREPARATION_FAILED"
+      );
+    });
+    dump = tools.dump;
+    privateToolEnvironment = portableMariaDbServiceEnvironment(
+      tools.libraryPath
+    );
   }
   requireRelease(dump, "CONSOLIDATED_BACKUP_TOOL_UNAVAILABLE");
   let handle: fs.FileHandle | undefined;
@@ -1016,9 +1039,10 @@ async function protectedDatabaseBackup(
       "--hex-blob",
       "--add-drop-table",
       `--result-file=${backup}`,
+      "--",
       details.database,
     ];
-    silentCommand(APP_ROOT, dump, args, 300000);
+    silentCommand(APP_ROOT, dump, args, 300000, privateToolEnvironment);
     const backupHandle = await fs.open(
       backup,
       constants.O_RDONLY | constants.O_NOFOLLOW

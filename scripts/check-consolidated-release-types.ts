@@ -12,6 +12,8 @@ const files = [
   "scripts/prepareConsolidatedReleaseArtifact.ts",
   "scripts/consolidatedRelease.test.ts",
   "scripts/consolidatedMigrations.test.ts",
+  "scripts/portableMariaDbTools.ts",
+  "scripts/portableMariaDbTools.test.ts",
   "vitest.consolidated-release.config.ts",
   "scripts/check-consolidated-release-types.ts",
 ];

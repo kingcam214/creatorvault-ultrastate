@@ -35,7 +35,7 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_EVENT_NAME" = 'push'
-          test "$CREATORVAULT_RELEASE_BEFORE" = '3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da'
+          test "$CREATORVAULT_RELEASE_BEFORE" = 'e0ca4c14cf0f717e8180abd59c1bad8fc803d080'
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           git merge-base --is-ancestor 3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da HEAD
           git merge-base --is-ancestor ccba8cd56f887d041311d4f37d3ec912fd57322d HEAD
@@ -95,19 +95,12 @@ jobs:
       - name: Isolated regression prerequisite availability
         run: |
           set -euo pipefail
-          missing=()
-          if ! command -v mariadb-install-db >/dev/null || ! command -v mariadbd >/dev/null; then missing+=(mariadb-server-core); fi
-          if ! command -v mariadb >/dev/null; then missing+=(mariadb-client-core); fi
-          if ! command -v mysqldump >/dev/null && ! command -v mariadb-dump >/dev/null; then missing+=(mariadb-client); fi
-          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then missing+=(ffmpeg); fi
-          if [ "${#missing[@]}" -gt 0 ]; then
-            plan="$(mktemp)"
-            trap 'rm -f -- "$plan"' EXIT
-            sudo -n apt-get update -qq
-            sudo -n apt-get -s --no-upgrade --no-install-recommends install "${missing[@]}" > "$plan"
-            if grep -qE '^Remv |^Inst .*\[' "$plan"; then printf 'UNSAFE_PREREQUISITE_PACKAGE_CHANGE\n' >&2; exit 1; fi
-            sudo -n env DEBIAN_FRONTEND=noninteractive apt-get -y --no-upgrade --no-install-recommends install "${missing[@]}"
-          fi
+          command -v apt-get >/dev/null
+          command -v dpkg-deb >/dev/null
+          command -v ffmpeg >/dev/null
+          command -v ffprobe >/dev/null
+          # Database binaries are extracted privately if needed, never installed.
+          sudo -n apt-get update -qq
 
       - name: Full Stripe Persona Video Studio and additive migration regressions
         run: |

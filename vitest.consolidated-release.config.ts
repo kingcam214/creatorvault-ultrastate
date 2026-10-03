@@ -17,6 +17,7 @@ export default defineConfig({
     include: [
       "scripts/consolidatedRelease.test.ts",
       "scripts/consolidatedMigrations.test.ts",
+      "scripts/portableMariaDbTools.test.ts",
     ],
     fileParallelism: false,
     testTimeout: 30000,
