@@ -13,6 +13,8 @@ import {
 } from "./securityReleasePolicy";
 
 export const OWNER_READ = "/api/trpc/waitlistEngine.getWaitlistStats";
+// Baseline stats incorrectly reject king; this existing read gates both trusted roles.
+export const PRE_RELEASE_OWNER_READ = "/api/trpc/waitlist.getAll";
 const SESSION_COOKIE = "app_session_id";
 export type LoginProof = {
   email: string;
@@ -304,10 +306,11 @@ export async function prepareLoginProof(
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
       .setExpirationTime(Math.floor(Date.now() / 1000) + 60)
       .sign(Buffer.from(env.JWT_SECRET ?? ""));
-    const ownerRead = await requestPublic(OWNER_READ, { token: ownerSession });
+    const ownerRead = await requestPublic(PRE_RELEASE_OWNER_READ, {
+      token: ownerSession,
+    });
     requireRelease(
-      ownerRead.status === 200 &&
-        typeof record(trpcData(ownerRead.body)).total === "number",
+      ownerRead.status === 200 && Array.isArray(trpcData(ownerRead.body)),
       "PRE_RELEASE_OWNER_READ_FAILED"
     );
     return {

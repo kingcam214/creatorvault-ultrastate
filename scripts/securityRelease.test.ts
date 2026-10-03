@@ -30,6 +30,7 @@ import {
 } from "./securityReleasePolicy";
 import {
   OWNER_READ,
+  PRE_RELEASE_OWNER_READ,
   requestPublic,
   trpcData,
   prepareLoginProof,
@@ -330,22 +331,20 @@ function loginResponse(
     cookie === null ? {} : { "set-cookie": cookie }
   );
 }
-function queuePrepareSuccess(): void {
+function queuePrepareSuccess(ownerRole: "king" | "admin" = "king"): void {
   mocks.execute.mockResolvedValueOnce([
     [{ id: proof.id, openId: proof.openId, role: proof.role }],
     [],
   ]);
   mocks.execute.mockResolvedValueOnce([
-    [{ openId: proof.ownerOpenId, role: "king" }],
+    [{ openId: proof.ownerOpenId, role: ownerRole }],
     [],
   ]);
   fetchMock.mockResolvedValueOnce(loginResponse());
   fetchMock.mockResolvedValueOnce(
     response({ result: { data: { json: { id: proof.id, role: proof.role } } } })
   );
-  fetchMock.mockResolvedValueOnce(
-    response({ result: { data: { json: { total: 3 } } } })
-  );
+  fetchMock.mockResolvedValueOnce(response({ result: { data: { json: [] } } }));
 }
 function verificationResponses(): Response[] {
   return [
@@ -582,7 +581,7 @@ describe("release metadata and constant-time comparison primitives", () => {
       "46d3021a1bd09222a61ff1390c9cfe8f82d06422"
     );
     expect(REQUIRED_RELEASE_PARENT).toBe(
-      "ee6825566b41b369904c8a049913b72c01ca0840"
+      "985144d35c40d294cf5548c7ba5d0110cbd82910"
     );
     expect(APP_ROOT).toBe("/root/creatorvault");
     expect(PUBLIC_ORIGIN).toBe("https://creatorvault.live");
@@ -1576,9 +1575,7 @@ describe("existing ordinary login proof is read-only and required before rotatio
     fetchMock.mockResolvedValueOnce(
       response({ result: { data: { id: proof.id } } })
     );
-    fetchMock.mockResolvedValueOnce(
-      response({ result: { data: { total: 3 } } })
-    );
+    fetchMock.mockResolvedValueOnce(response({ result: { data: [] } }));
     expect((await prepareLoginProof(loginEnv)).role).toBe("creator");
   });
   it("rejects an absent owner ID before public login", async () => {
@@ -2785,13 +2782,38 @@ describe("pre-release old signing-source and existing owner read proofs", () => 
         name: "Security release verification",
       },
     ]);
-    expect(fetchMock.mock.calls[2]?.[0]).toBe(`${PUBLIC_ORIGIN}${OWNER_READ}`);
+    expect(fetchMock.mock.calls[2]?.[0]).toBe(
+      `${PUBLIC_ORIGIN}${PRE_RELEASE_OWNER_READ}`
+    );
     expect(fetchMock.mock.calls[2]?.[1]?.headers).toMatchObject({
       Cookie: "app_session_id=synthetic-one-shot-owner-token",
     });
     expect(mocks.execute).toHaveBeenCalledTimes(2);
     expect(mocks.end).toHaveBeenCalledOnce();
   });
+  it.each(["king", "admin"] as const)(
+    "requires an actual baseline-compatible privileged read for trusted %s without changing any account",
+    async role => {
+      queuePrepareSuccess(role);
+      await expect(prepareLoginProof(loginEnv)).resolves.toMatchObject({
+        ownerOpenId: proof.ownerOpenId,
+      });
+      expect(PRE_RELEASE_OWNER_READ).toBe("/api/trpc/waitlist.getAll");
+      expect(OWNER_READ).toBe("/api/trpc/waitlistEngine.getWaitlistStats");
+      expect(fetchMock.mock.calls[2]?.[1]?.method).toBe("GET");
+      expect(source("server/routers.ts")).toMatch(
+        /getAll:\s*kingProcedure\.query\(async \(\) => \{\s*return await db\.getAllWaitlist\(\)/
+      );
+      const preparation =
+        source("scripts/securityReleaseVerification.ts")
+          .split("export async function prepareLoginProof")[1]
+          ?.split("export async function verifyLiveRelease")[0] ?? "";
+      expect(preparation).not.toMatch(
+        /UPDATE |INSERT |DELETE |updateRole|createSessionToken/
+      );
+      expect(mocks.execute).toHaveBeenCalledTimes(2);
+    }
+  );
   it("rejects old login JWT signing-source mismatch before auth.me or owner-read", async () => {
     queuePrepareSuccess();
     mocks.jwtVerify.mockRejectedValueOnce(
@@ -2841,19 +2863,19 @@ describe("pre-release old signing-source and existing owner read proofs", () => 
       "PRE_RELEASE_OWNER_READ_FAILED",
     ],
     [
-      "missing total",
+      "missing owner list",
       () => response({ result: { data: {} } }),
       "PRE_RELEASE_OWNER_READ_FAILED",
     ],
     [
-      "nonnumeric total",
+      "wrong owner-list shape",
       () => response({ result: { data: { total: "3" } } }),
       "PRE_RELEASE_OWNER_READ_FAILED",
     ],
     [
       "malformed data",
       () => response({ result: { data: null } }),
-      "INVALID_METADATA",
+      "PRE_RELEASE_OWNER_READ_FAILED",
     ],
     [
       "redirected owner",
@@ -3685,7 +3707,7 @@ describe("durably owned nonprivileged native-login verifier provisioning", () =>
     queueResponses([
       loginResponse(),
       response({ result: { data: { id: proof.id } } }),
-      response({ result: { data: { total: 3 } } }),
+      response({ result: { data: [] } }),
     ]);
     const realProof = await prepareLoginProof(virtualEnv);
     expect(realProof).toMatchObject({
