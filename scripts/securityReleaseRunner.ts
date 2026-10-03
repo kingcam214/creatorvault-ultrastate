@@ -408,6 +408,19 @@ export function maintenanceMode(
       ? (current & 0o050) | 0o700
       : (current & 0o150) | 0o600;
 }
+/** PM2's official fork container replaces argv with this exact process title. */
+export function isCanonicalPm2Title(
+  argv: readonly string[],
+  launcher: string,
+  sourceVerified: boolean
+): boolean {
+  return (
+    sourceVerified &&
+    launcher === NODE_ENTRY &&
+    argv.length === 1 &&
+    argv[0] === `node ${NODE_ENTRY}`
+  );
+}
 /** Owner-authorized maintenance: metadata only, exact targets, no recursive changes. */
 async function maintainProductionPermissions(
   workspace: string,
@@ -1013,6 +1026,7 @@ async function proveRuntime(
     /\/pm2\/lib\/ProcessContainerFork\.js$/.test(containerPath) &&
     e.launcher === NODE_ENTRY &&
     (preload || applicationDotenv);
+  const pm2Title = isCanonicalPm2Title(argv, e.launcher, applicationDotenv);
   const proof: RuntimeProof = {
     status: String(e.raw.status ?? ""),
     mode: String(e.raw.exec_mode ?? ""),
@@ -1025,7 +1039,7 @@ async function proveRuntime(
     interpreter: e.interpreter,
     launcherMatchesApproved: matchesLauncher,
     actualNodeCommand:
-      /\/node$/.test(executable) && (nodeEntry || pm2Container),
+      /\/node$/.test(executable) && (nodeEntry || pm2Container || pm2Title),
     processKeyMatchesFile:
       typeof liveKey === "string" && safeEqual(liveKey, oldKey),
     dotenvPath: inherited.get("DOTENV_CONFIG_PATH"),
@@ -1034,6 +1048,12 @@ async function proveRuntime(
     applicationDotenvVerified: applicationDotenv,
     initialKeyAbsent: liveKey === undefined,
   };
+  requireRelease(proof.actualNodeCommand, "UNVERIFIED_NODE_PROCESS_IDENTITY");
+  requireRelease(
+    proof.processKeyMatchesFile ||
+      (applicationDotenv && proof.initialKeyAbsent),
+    "ACTIVE_SIGNING_SOURCE_MISMATCH"
+  );
   e.source = assertRuntime(proof);
   requireRelease(
     e.cwd === APP_ROOT && e.raw.autorestart === true,

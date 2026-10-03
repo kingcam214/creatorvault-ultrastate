@@ -4,14 +4,13 @@ export const REQUIRED_LIVE_BASELINE =
   "46d3021a1bd09222a61ff1390c9cfe8f82d06422";
 /** Existing main contains the reviewed security release and its memory-only correction. */
 export const REQUIRED_RELEASE_PARENT =
-  "65349dc7cc7805301103052053d665ff0e4075d3";
+  "00138844498c7f11b6d0dd008e5bce1315e66001";
 export const APPROVED_GUARD_CORRECTION_PATHS: readonly string[] = [
   ".github/workflows/deploy.yml",
   "SECURITY_RELEASE_ROTATION_HANDOFF.md",
   "scripts/securityRelease.test.ts",
   "scripts/securityReleasePolicy.ts",
   "scripts/securityReleaseRunner.ts",
-  "scripts/securityReleaseEntrypoint.ts",
 ];
 export const APP_ROOT = "/root/creatorvault";
 export const PUBLIC_ORIGIN = "https://creatorvault.live";

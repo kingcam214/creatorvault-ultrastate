@@ -44,6 +44,7 @@ import {
   stopFailedRelease,
   assertAppBootAuthorized,
   maintenanceMode,
+  isCanonicalPm2Title,
 } from "./securityReleaseRunner";
 import { prepareSecurityReleaseArtifact } from "./prepareSecurityReleaseArtifact";
 import { APPROVED_APPLICATION_DIGESTS } from "./securityReleaseIntegrity";
@@ -483,13 +484,105 @@ describe("authorized production permission maintenance", () => {
     expect(runner).toContain('"UNVERIFIED_PERMISSION_MAINTENANCE"');
   });
 });
+describe("exact PM2 fork process-title compatibility", () => {
+  const entry = `${APP_ROOT}/dist/index.js`;
+  const title = `node ${entry}`;
+  it("accepts only the exact one-argument title with the canonical launcher and verified source", () => {
+    expect(isCanonicalPm2Title([title], entry, true)).toBe(true);
+    for (const inheritedKeyMatches of [true, false]) {
+      expect(
+        assertRuntime(
+          runtime({
+            launcher: entry,
+            interpreter: "node",
+            launcherMatchesApproved: false,
+            actualNodeCommand: isCanonicalPm2Title([title], entry, true),
+            applicationDotenvVerified: true,
+            processKeyMatchesFile: inheritedKeyMatches,
+            initialKeyAbsent: !inheritedKeyMatches,
+          })
+        )
+      ).toBe("application-dotenv");
+    }
+  });
+  it.each([
+    { argv: ["creatorvault"], launcher: entry, verified: true },
+    { argv: ["node /tmp/index.js"], launcher: entry, verified: true },
+    { argv: ["node dist/index.js"], launcher: entry, verified: true },
+    {
+      argv: [`node ${APP_ROOT}/dist/../dist/index.js`],
+      launcher: entry,
+      verified: true,
+    },
+    { argv: [title], launcher: `${APP_ROOT}/start.sh`, verified: true },
+    { argv: [title], launcher: "/tmp/index.js", verified: true },
+    { argv: [title], launcher: entry, verified: false },
+    { argv: [], launcher: entry, verified: true },
+    { argv: [title, "--inspect"], launcher: entry, verified: true },
+    { argv: ["node", entry], launcher: entry, verified: true },
+    { argv: [title + " "], launcher: entry, verified: true },
+  ])(
+    "rejects noncanonical title evidence %j",
+    ({ argv, launcher, verified }) => {
+      expect(isCanonicalPm2Title(argv, launcher, verified)).toBe(false);
+    }
+  );
+  it("never hides a mismatched inherited signing key behind the canonical title", () => {
+    expectFailure(
+      () =>
+        assertRuntime(
+          runtime({
+            launcher: entry,
+            interpreter: "node",
+            launcherMatchesApproved: false,
+            actualNodeCommand: isCanonicalPm2Title([title], entry, true),
+            applicationDotenvVerified: true,
+            initialKeyAbsent: false,
+            processKeyMatchesFile: false,
+          })
+        ),
+      "UNPROVEN_ACTIVE_SECRET_SOURCE"
+    );
+  });
+  it("preserves independent kernel Node, source import, root identity and launcher verification", () => {
+    const runner = source("scripts/securityReleaseRunner.ts");
+    const runtimeSource = runner.slice(
+      runner.indexOf("async function proveRuntime"),
+      runner.indexOf("async function assertArtifact")
+    );
+    expect(runtimeSource).toContain(
+      "isCanonicalPm2Title(argv, e.launcher, applicationDotenv)"
+    );
+    expect(runtimeSource).toContain(
+      "/\\/node$/.test(executable) && (nodeEntry || pm2Container || pm2Title)"
+    );
+    expect(runtimeSource).toContain("fs.readlink(`/proc/${e.pid}/exe`)");
+    expect(runtimeSource).toContain(
+      'fs.readFile(`/proc/${e.pid}/status`, "utf8")'
+    );
+    expect(runtimeSource).toContain("e.launcher === NODE_ENTRY");
+    expect(runtimeSource).toContain("meta.uid === 0");
+    expect(runtimeSource).toContain(
+      "applicationDotenvVerified: applicationDotenv"
+    );
+    expect(runtimeSource).toContain("e.source = assertRuntime(proof)");
+    expectFailure(
+      () => assertRuntime(runtime({ actualNodeCommand: false })),
+      "UNPROVEN_ACTIVE_SECRET_SOURCE"
+    );
+    expectFailure(
+      () => assertRuntime(runtime({ uid: 1000 })),
+      "UNSUPPORTED_PM2_PROCESS"
+    );
+  });
+});
 describe("release metadata and constant-time comparison primitives", () => {
   it("pins the direct live baseline, application root, origin, and complete 62-file release set", () => {
     expect(REQUIRED_LIVE_BASELINE).toBe(
       "46d3021a1bd09222a61ff1390c9cfe8f82d06422"
     );
     expect(REQUIRED_RELEASE_PARENT).toBe(
-      "65349dc7cc7805301103052053d665ff0e4075d3"
+      "00138844498c7f11b6d0dd008e5bce1315e66001"
     );
     expect(APP_ROOT).toBe("/root/creatorvault");
     expect(PUBLIC_ORIGIN).toBe("https://creatorvault.live");
