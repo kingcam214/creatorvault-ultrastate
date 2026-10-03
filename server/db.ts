@@ -418,3 +418,158 @@ export async function getBrandAffiliationsByUserId(userId: number) {
 // Re-export schema so routers can use: import * as db from "../db"; db.schema.tableName
 import * as schema from "../drizzle/schema";
 export { schema };
+
+// ============ STRIPE CONNECT NET PAYOUTS ============
+// Use the real Drizzle contract for financial writes; the legacy facade above is
+// retained for existing unrelated callers and is not used by this pipeline.
+export type StripePayoutDatabase = import("drizzle-orm/mysql2").MySql2Database<typeof schema>;
+export type StripePayoutTransaction = Parameters<Parameters<StripePayoutDatabase["transaction"]>[0]>[0];
+
+export async function getStripePayoutDb(): Promise<StripePayoutDatabase> {
+  return await getDb() as unknown as StripePayoutDatabase;
+}
+
+export async function getStripeCreatorPayout(chargeId: string): Promise<schema.StripeCreatorPayout | null> {
+  const database = await getStripePayoutDb();
+  const [payout] = await database.select().from(schema.stripeCreatorPayouts)
+    .where(eq(schema.stripeCreatorPayouts.stripeChargeId, chargeId)).limit(1);
+  return payout ?? null;
+}
+
+export async function ensureStripeCreatorPayout(
+  input: import("../drizzle/schema-stripe-payouts").InsertStripeCreatorPayout,
+): Promise<import("../drizzle/schema-stripe-payouts").StripeCreatorPayout> {
+  const database = await getStripePayoutDb();
+  return database.transaction(async (tx) => {
+    await tx.insert(schema.stripeCreatorPayouts).values(input).onDuplicateKeyUpdate({
+      set: { stripeChargeId: sql`${schema.stripeCreatorPayouts.stripeChargeId}` },
+    });
+    const [payout] = await tx.select().from(schema.stripeCreatorPayouts)
+      .where(eq(schema.stripeCreatorPayouts.stripeChargeId, input.stripeChargeId)).for("update");
+    if (!payout || payout.creatorId !== input.creatorId || payout.currency !== input.currency ||
+      payout.grossAmountInCents !== input.grossAmountInCents ||
+      payout.stripePaymentIntentId !== (input.stripePaymentIntentId ?? null)) {
+      throw new Error("Stripe payout source conflicts with the persisted charge");
+    }
+    return payout;
+  });
+}
+
+export async function updateStripePayoutBeforeAttempt(
+  payoutId: number,
+  values: Partial<import("../drizzle/schema-stripe-payouts").InsertStripeCreatorPayout>,
+): Promise<void> {
+  const database = await getStripePayoutDb();
+  // A transfer's amount, destination, metadata, and currency are immutable once
+  // its first attempt begins. A retry must replay exactly the same request.
+  await database.update(schema.stripeCreatorPayouts).set(values)
+    .where(and(eq(schema.stripeCreatorPayouts.id, payoutId), sql`${schema.stripeCreatorPayouts.firstAttemptAt} IS NULL`));
+}
+
+export async function claimStripeCreatorPayout(
+  chargeId: string,
+  leaseToken: string,
+  now = new Date(),
+): Promise<import("../drizzle/schema-stripe-payouts").StripeCreatorPayout | null> {
+  const database = await getStripePayoutDb();
+  return database.transaction(async (tx) => {
+    const [payout] = await tx.select().from(schema.stripeCreatorPayouts)
+      .where(eq(schema.stripeCreatorPayouts.stripeChargeId, chargeId)).for("update");
+    if (!payout) throw new Error("Stripe payout is not persisted");
+    if (["transferred", "no_payout", "review_required", "reversed"].includes(payout.status)) return null;
+    if (payout.status === "pending_fee" || payout.status === "blocked_account") return null;
+    if (payout.leaseExpiresAt && payout.leaseExpiresAt > now) return null;
+    if (!payout.stripeConnectAccountId || payout.creatorPayoutInCents === null || payout.creatorPayoutInCents <= 0) {
+      throw new Error("Stripe payout has no verified transfer calculation or destination");
+    }
+    const leaseExpiresAt = new Date(now.getTime() + 5 * 60 * 1000);
+    await tx.update(schema.stripeCreatorPayouts).set({
+      status: "processing", leaseToken, leaseExpiresAt,
+      firstAttemptAt: payout.firstAttemptAt ?? now, lastError: null,
+    }).where(eq(schema.stripeCreatorPayouts.id, payout.id));
+    return { ...payout, status: "processing", leaseToken, leaseExpiresAt, firstAttemptAt: payout.firstAttemptAt ?? now };
+  });
+}
+
+export async function finishStripeCreatorPayout(
+  payoutId: number,
+  leaseToken: string,
+  result: { status: "transferred"; transferId: string } | { status: "failed" | "review_required"; error: string },
+): Promise<void> {
+  const database = await getStripePayoutDb();
+  await database.transaction(async (tx) => {
+    const [payout] = await tx.select().from(schema.stripeCreatorPayouts)
+      .where(eq(schema.stripeCreatorPayouts.id, payoutId)).for("update");
+    if (!payout || payout.leaseToken !== leaseToken) throw new Error("Stripe payout lease changed; reconcile before retrying");
+    if (result.status === "transferred" && payout.currency === "usd" && payout.revenueRecordedAt && payout.creatorPayoutInCents !== null && !payout.stripeTransferId) {
+      await tx.update(schema.creatorBalances).set({
+        pendingBalanceInCents: sql`${schema.creatorBalances.pendingBalanceInCents} - ${payout.creatorPayoutInCents}`,
+        lastPayoutAt: new Date(),
+      }).where(eq(schema.creatorBalances.creatorId, payout.creatorId));
+    }
+    const reviewed = payout.status === "review_required";
+    await tx.update(schema.stripeCreatorPayouts).set({
+      status: reviewed ? "review_required" : result.status,
+      stripeTransferId: result.status === "transferred" ? result.transferId : payout.stripeTransferId,
+      transferredAt: result.status === "transferred" ? new Date() : payout.transferredAt,
+      lastError: reviewed ? payout.lastError : result.status === "transferred" ? null : result.error,
+      leaseToken: null, leaseExpiresAt: null,
+    }).where(eq(schema.stripeCreatorPayouts.id, payoutId));
+  });
+}
+
+/** Stripe revenue is never made available to the separate manual payout rails. */
+export async function recordStripeCreatorRevenue(chargeId: string): Promise<void> {
+  const database = await getStripePayoutDb();
+  await database.transaction(async (tx) => {
+    const [payout] = await tx.select().from(schema.stripeCreatorPayouts)
+      .where(eq(schema.stripeCreatorPayouts.stripeChargeId, chargeId)).for("update");
+    if (!payout || payout.creatorPayoutInCents === null || payout.platformRevenueInCents === null || payout.stripeFeeInCents === null) {
+      throw new Error("Stripe processing fees are not yet available");
+    }
+    if (payout.revenueRecordedAt) return;
+    // Legacy aggregate balances/transactions have no currency column and are
+    // USD-only. Other currencies remain fully accounted in the canonical payout
+    // ledger; never sum EUR/JPY minor units into a USD withdrawal balance.
+    if (payout.currency === "usd") {
+      const amount = payout.creatorPayoutInCents;
+      const pending = payout.status === "transferred" ? 0 : amount;
+      await tx.insert(schema.creatorBalances).values({
+        creatorId: payout.creatorId, availableBalanceInCents: 0,
+        pendingBalanceInCents: pending, lifetimeEarningsInCents: amount,
+      }).onDuplicateKeyUpdate({ set: {
+        pendingBalanceInCents: sql`${schema.creatorBalances.pendingBalanceInCents} + ${pending}`,
+        lifetimeEarningsInCents: sql`${schema.creatorBalances.lifetimeEarningsInCents} + ${amount}`,
+      } });
+      const fanId = Number(payout.sourceMetadata.fanId || payout.sourceMetadata.viewerId || payout.sourceMetadata.buyerId);
+      if (Number.isSafeInteger(fanId) && fanId > 0) {
+        await tx.insert(schema.transactions).values({
+          fanId, creatorId: payout.creatorId,
+          amountInCents: payout.grossAmountInCents,
+          creatorShareInCents: amount, platformShareInCents: payout.platformRevenueInCents,
+          stripeFeeInCents: payout.stripeFeeInCents, stripeCreatorPayoutId: payout.id,
+          stripePaymentIntentId: payout.stripePaymentIntentId, status: "completed",
+        });
+      }
+    }
+    await tx.update(schema.stripeCreatorPayouts).set({ revenueRecordedAt: new Date() })
+      .where(eq(schema.stripeCreatorPayouts.id, payout.id));
+  });
+}
+
+export async function saveCreatorStripeConnectAccount(creatorId: number, accountId: string): Promise<void> {
+  if (!/^acct_[a-zA-Z0-9]+$/.test(accountId)) throw new Error("Invalid Stripe Connect account ID");
+  const database = await getStripePayoutDb();
+  await database.transaction(async (tx) => {
+    const [creator] = await tx.select({ accountId: schema.users.stripeConnectAccountId }).from(schema.users)
+      .where(eq(schema.users.id, creatorId)).for("update");
+    if (!creator) throw new Error("Creator account not found");
+    if (creator.accountId && creator.accountId !== accountId) throw new Error("Creator already has a different Stripe Connect account");
+    await tx.update(schema.users).set({ stripeConnectAccountId: accountId }).where(eq(schema.users.id, creatorId));
+  });
+}
+
+export async function getStripePayoutSqlClient(): Promise<import("mysql2/promise").Pool> {
+  const database = await getDb() as unknown as { $client: import("mysql2").Pool };
+  return database.$client.promise();
+}

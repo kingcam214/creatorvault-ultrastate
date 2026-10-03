@@ -4,6 +4,7 @@ import { stripe } from "../_core/stripe";
 import { db } from "../db";
 import { subscriptionTiers } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { CREATOR_NET_PAYOUT_RULE } from "../services/stripeCreatorPayouts";
 
 const VAULTX_PUBLIC_OFFERS: Record<string, {
   name: string;
@@ -45,6 +46,7 @@ export const stripeCheckoutRouter = router({
       }
 
       const appUrl = process.env.VITE_APP_URL || process.env.APP_URL || "https://creatorvault.live";
+      if (!stripe) throw new Error("Stripe is not configured");
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: [
@@ -102,8 +104,11 @@ export const stripeCheckoutRouter = router({
         throw new Error("Tier not found");
       }
 
-      // Create Stripe Checkout Session
-    // @ts-ignore
+      if (!stripe) throw new Error("Stripe is not configured");
+      const metadata = {
+        tierId: String(tier.id), creatorId: String(tier.creatorId),
+        fanId: String(ctx.user.id), payoutRule: CREATOR_NET_PAYOUT_RULE,
+      };
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: [
@@ -125,11 +130,8 @@ export const stripeCheckoutRouter = router({
         mode: "subscription",
         success_url: `${process.env.VITE_APP_URL || "http://localhost:3000"}/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.VITE_APP_URL || "http://localhost:3000"}/subscribe/${tier.id}`,
-        metadata: {
-          tierId: tier.id.toString(),
-          creatorId: tier.creatorId.toString(),
-          fanId: ctx.user.id.toString(),
-        },
+        metadata,
+        subscription_data: { metadata },
       });
 
       return {

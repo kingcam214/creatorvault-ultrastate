@@ -842,67 +842,12 @@ export async function completeVaultxPpvPurchase(input: {
   buyerTelegramId?: number;
   trackingCode?: string;
 }): Promise<{ purchaseId?: number; success: boolean; alreadyPurchased?: boolean; paymentIntentId?: string }> {
-      const content = await rawQuery("SELECT * FROM vaultx_content WHERE id = ? AND is_ppv = 1 LIMIT 1", [input.contentId]);
-      if (!content.length) throw new TRPCError({ code: "NOT_FOUND", message: "PPV content not found." });
-      const existing = await rawQuery(
-        "SELECT id FROM vaultx_ppv_purchases WHERE fan_id = ? AND content_id = ? AND status = 'completed' LIMIT 1",
-        [input.fanUserId, input.contentId]
-      );
-      if (existing.length) return { success: true, alreadyPurchased: true };
-      if (!stripe) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe is not configured; PPV purchases cannot be completed safely." });
-      }
-      const paymentIntent = await stripe.paymentIntents.retrieve(input.paymentIntentId);
-      if (paymentIntent.status !== "succeeded") {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: `Payment has not succeeded. Current status: ${paymentIntent.status}` });
-      }
-      const expectedCents = Math.round(Number(content[0].ppv_price) * 100);
-      if ((paymentIntent.amount_received || 0) < expectedCents) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Stripe payment amount is lower than the PPV unlock price." });
-      }
-      const duplicatePayment = await rawQuery(
-        "SELECT id FROM vaultx_ppv_purchases WHERE stripe_payment_intent_id = ? AND status = 'completed' LIMIT 1",
-        [input.paymentIntentId]
-      );
-      if (duplicatePayment.length) {
-        throw new TRPCError({ code: "CONFLICT", message: "This Stripe payment intent has already been used for a completed VaultX purchase." });
-      }
-      const result = await rawExec(
-        `INSERT INTO vaultx_ppv_purchases
-         (fan_id, creator_id, content_id, amount_paid, stripe_payment_intent_id, status)
-         VALUES (?, ?, ?, ?, ?, 'completed')`,
-        [input.fanUserId, content[0].creator_id, input.contentId, content[0].ppv_price, input.paymentIntentId]
-      );
-      await rawExec(
-        "UPDATE vaultx_content SET purchase_count = purchase_count + 1, revenue_generated = revenue_generated + ? WHERE id = ?",
-        [content[0].ppv_price, input.contentId]
-      );
-      const purchaseId = (result as any).insertId;
-      const platformFeeCents = Math.round(expectedCents * PLATFORM_FEE);
-      const creatorShareCents = Math.max(0, expectedCents - platformFeeCents);
-      await rawExec(
-        "UPDATE vaultx_ppv_purchases SET platform_fee_cents = ?, creator_revenue_cents = ? WHERE id = ?",
-        [platformFeeCents, creatorShareCents, purchaseId]
-      );
-      await rawExec(
-        "UPDATE vaultx_creators SET total_revenue = total_revenue + ? WHERE id = ?",
-        [creatorShareCents / 100, content[0].creator_id]
-      );
-      await rawExec(
-        `INSERT INTO transactions
-         (fan_id, creator_id, amount_in_cents, creator_share_in_cents, platform_share_in_cents, stripe_payment_intent_id, status)
-         VALUES (?, ?, ?, ?, ?, ?, 'completed')`,
-        [input.fanUserId, content[0].creator_id, expectedCents, creatorShareCents, platformFeeCents, input.paymentIntentId]
-      );
-      await rawExec(
-        `INSERT INTO creator_balances (creator_id, available_balance_in_cents, pending_balance_in_cents, lifetime_earnings_in_cents)
-         VALUES (?, ?, 0, ?)
-         ON DUPLICATE KEY UPDATE
-           available_balance_in_cents = available_balance_in_cents + VALUES(available_balance_in_cents),
-           lifetime_earnings_in_cents = lifetime_earnings_in_cents + VALUES(lifetime_earnings_in_cents),
-           updated_at = NOW()`,
-        [content[0].creator_id, creatorShareCents, creatorShareCents]
-      );
+      const { completeStripeVaultxPpvPurchase } = await import("../services/stripeVaultxPpvSettlement");
+      const settlement = await completeStripeVaultxPpvPurchase(input);
+      if (settlement.alreadyPurchased) return settlement;
+      const purchaseId = settlement.purchaseId;
+      if (!purchaseId) throw new Error("VaultX purchase has no saved receipt");
+      const content = await rawQuery("SELECT * FROM vaultx_content WHERE id = ? LIMIT 1", [input.contentId]);
 
       // ── Post-purchase: attribution + VIP upsell (non-blocking) ──────────────
       setImmediate(async () => {
@@ -3095,6 +3040,11 @@ export const vaultxRouter = router({
         }],
         success_url: `${FRONTEND_BASE_URL}/vaultx?content=${input.contentId}&checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${FRONTEND_BASE_URL}/vaultx?content=${input.contentId}&checkout=cancelled`,
+        payment_intent_data: { metadata: {
+          type: "vaultx_ppv", vaultxContentId: String(input.contentId),
+          creatorId: String(content[0].creator_id), fanId: String(ctx.user.id),
+          payoutRule: "creator_net_85_v1",
+        } },
         metadata: {
           type: "vaultx_ppv",
           vaultxContentId: String(input.contentId),
@@ -3102,6 +3052,7 @@ export const vaultxRouter = router({
           fanId: String(ctx.user.id),
           trackingCode: input.trackingCode || "",
           buyerTelegramId: input.buyerTelegramId ? String(input.buyerTelegramId) : "",
+          payoutRule: "creator_net_85_v1",
           platformFeeBps: "1500",
           creatorKeepBps: "8500",
         },

@@ -209,6 +209,7 @@ export const vaultLiveRouter = router({
         creatorId: stream.userId,
         creatorName: creator.name || "Creator",
         amount: input.amount,
+        viewerId: ctx.user.id,
         viewerEmail: ctx.user.email || undefined,
         message: input.message,
       });

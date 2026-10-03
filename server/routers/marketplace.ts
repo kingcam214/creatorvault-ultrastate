@@ -5,8 +5,14 @@ import { getDb } from "../db";
 import { marketplaceProducts, marketplaceOrders } from "../../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { stripe } from "../_core/stripe";
+import { CREATOR_NET_PAYOUT_RULE } from "../services/stripeCreatorPayouts";
 
-function isPublicMarketplaceProduct(product: any) {
+type PublicMarketplaceProduct = Pick<typeof marketplaceProducts.$inferSelect, "title" | "shortDescription" | "description" | "productVideo"> & {
+  short_description?: string | null;
+  product_video?: string | null;
+};
+
+function isPublicMarketplaceProduct(product: PublicMarketplaceProduct) {
   const identity = [product?.title, product?.shortDescription, product?.short_description, product?.description]
     .filter(Boolean)
     .join(" ");
@@ -65,7 +71,7 @@ export const marketplaceRouter = router({
     const db = await getDb();
     if (!db) return { totalProducts: 0, totalSales: 0, totalRevenue: 0, avgProductPrice: 0 };
     
-    const products = await db.select().from(marketplaceProducts).where(eq(marketplaceProducts.creatorId, ctx.user.id));
+    const products: Array<typeof marketplaceProducts.$inferSelect> = await db.select().from(marketplaceProducts).where(eq(marketplaceProducts.creatorId, ctx.user.id));
     
     const totalProducts = products.length;
     const totalSales = products.reduce((sum, p) => sum + (p.salesCount || 0), 0);
@@ -272,7 +278,7 @@ export const marketplaceRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
       
-      const orders = await db.select().from(marketplaceOrders).where(eq(marketplaceOrders.productId, input.productId));
+      const orders: Array<typeof marketplaceOrders.$inferSelect> = await db.select().from(marketplaceOrders).where(eq(marketplaceOrders.productId, input.productId));
       
       return {
         views: product.viewCount || 0,
@@ -315,14 +321,8 @@ export const marketplaceRouter = router({
       
       const origin = (ctx.req.headers.origin as string | undefined) ?? "http://localhost:3000";
       const currentPrice = product.salePrice || product.priceAmount;
-      const totalAmount = currentPrice + (product.shippingCost || 0);
-      
-      // Calculate revenue split
-      const creatorAmount = Math.floor(totalAmount * 0.85); // 85% to creator (15% platform fee — LAW)
-      const platformAmount = Math.floor(totalAmount * 0.3);
-      const recruiterAmount = product.recruiterId ? Math.floor(platformAmount * 0.1) : 0;
-      
-    // @ts-ignore
+      if (!stripe) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe is not configured" });
+      // The actual net split cannot be known before Stripe captures the charge.
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         customer_email: ctx.user.email ?? undefined,
@@ -339,9 +339,7 @@ export const marketplaceRouter = router({
           product_id: product.id,
           creator_id: String(product.creatorId),
           recruiter_id: product.recruiterId ? String(product.recruiterId) : "",
-          creator_amount: String(creatorAmount),
-          platform_amount: String(platformAmount),
-          recruiter_amount: String(recruiterAmount),
+          payoutRule: CREATOR_NET_PAYOUT_RULE,
         },
         line_items: [
           {

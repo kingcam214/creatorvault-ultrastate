@@ -1,5 +1,21 @@
 # OWNER HANDOFF — REAL WORLD AUDIT
 
+## Current task record — Stripe Connect net payouts — October 2, 2026
+
+The historical operational claims below were not reverified during this task. The current authoritative Task 1 record is [Stripe Connect Net Payouts Proof](STRIPE_CONNECT_NET_PAYOUTS_PROOF.md).
+
+| Field | Current Task 1 record |
+|---|---|
+| Claim / kernel | A signed, paid creator charge produces one recorded Connect transfer of 85% of actual net, with real fee and recipient evidence and no duplicate manual withdrawal credit. |
+| Current status | **Ready for proof; not yet proven.** No live creator payment or bank payout was accepted in this task. |
+| Evidence | Local feature branch `feat/stripe-connect-net-payouts`; 58 focused tests passed; strict checking of 23 modified/new TypeScript files passed; actual server bundle passed; additive migration applied to an isolated local MariaDB database. |
+| Failure / absent proof | Production was not accessed or changed; Stripe test-mode/live end-to-end creator proof and owner acceptance are absent. The existing production-VPS/document-access gap remains unresolved. Whole-project checking still has the same eight pre-existing errors. |
+| Money / permits | External financial/provider spend **$0**. No live payment, account, transfer, deployment, or production-migration permit was opened. |
+| Release trace | Local task commit on the named branch; identify it with `git log -1 --format=%H -- STRIPE_CONNECT_NET_PAYOUTS_PROOF.md`. No production release exists for this task. |
+| One next allowed action | Review the committed Task 1 patch and its proof record; await a separate bounded authorization before any real Stripe proof or production action. |
+
+## Historical handoff — retained for context, not current proof
+
 ## ✅ QUICK START (OWNER)
 
 ### Telegram Webhook URLs (Copy/Paste Ready)

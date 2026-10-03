@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { calculateNetCreatorRevenue } from "./stripeCreatorPayouts";
 
 export type CommerceItemType = "product" | "course" | "service";
 
@@ -49,25 +50,20 @@ export function isCommerceCheckoutSession(metadata: Stripe.Metadata | null | und
   return parseCommerceCheckoutMetadata(metadata) !== null;
 }
 
-export function getStripePaymentIntentId(session: Pick<Stripe.Checkout.Session, "payment_intent">): string | undefined {
+export function getStripePaymentIntentId(session: { payment_intent: string | Pick<Stripe.PaymentIntent, "id"> | null }): string | undefined {
   const paymentIntent = session.payment_intent;
   if (!paymentIntent) return undefined;
   return typeof paymentIntent === "string" ? paymentIntent : paymentIntent.id;
 }
 
-export function calculateCommerceRevenueSplit(amountInCents: number, recruiterId?: number): CommerceRevenueSplit {
-  if (!Number.isInteger(amountInCents) || amountInCents <= 0) {
-    throw new Error("Commerce fulfillment requires a positive integer Stripe amount_total");
-  }
-
-  const creatorAmount = Math.round(amountInCents * 0.7);
-  const recruiterAmount = recruiterId ? Math.round(amountInCents * 0.2) : 0;
-  const platformAmount = amountInCents - creatorAmount - recruiterAmount;
-
+export function calculateCommerceRevenueSplit(amountInCents: number, _recruiterId: number | undefined, stripeFeeInCents: number): CommerceRevenueSplit {
+  const net = calculateNetCreatorRevenue(amountInCents, stripeFeeInCents);
+  // Attribution is preserved, but the old 20%-of-gross recruiter allocation
+  // cannot coexist with the owner's explicit 85%-of-net creator payout law.
   return {
     grossAmount: amountInCents,
-    creatorAmount,
-    recruiterAmount,
-    platformAmount,
+    creatorAmount: net.creatorPayoutInCents,
+    recruiterAmount: 0,
+    platformAmount: net.platformRevenueInCents,
   };
 }
