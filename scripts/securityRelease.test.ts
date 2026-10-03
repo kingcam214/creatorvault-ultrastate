@@ -582,7 +582,7 @@ describe("release metadata and constant-time comparison primitives", () => {
       "46d3021a1bd09222a61ff1390c9cfe8f82d06422"
     );
     expect(REQUIRED_RELEASE_PARENT).toBe(
-      "00138844498c7f11b6d0dd008e5bce1315e66001"
+      "ee6825566b41b369904c8a049913b72c01ca0840"
     );
     expect(APP_ROOT).toBe("/root/creatorvault");
     expect(PUBLIC_ORIGIN).toBe("https://creatorvault.live");
@@ -1161,6 +1161,36 @@ describe("release transaction ordering, fail-stop behavior, and forward-only rot
       code: "SYNTHETIC_BUILD_GATE_FAILED",
     });
     expect(trace).toEqual(["preflight", "clearSensitiveMemory"]);
+  });
+  it("records the sanitized preflight rejection without promoting an unactivated release to a stop-required phase", async () => {
+    const { trace, effects } = transactionFixture({
+      fail: "preflight",
+      error: new ReleaseFailure("EXISTING_OWNER_ROLE_UNVERIFIED"),
+    });
+    const result = await executeRelease(effects);
+    expect(result).toEqual({
+      ok: false,
+      rotated: false,
+      phase: "preflight",
+      code: "EXISTING_OWNER_ROLE_UNVERIFIED",
+    });
+    expect(
+      needsFailureStop({ sha: SHA, phase: "preflight", code: result.code }, SHA)
+    ).toBe(false);
+    expect(trace).toEqual(["preflight", "clearSensitiveMemory"]);
+    const runner = source("scripts/securityReleaseRunner.ts");
+    expectOrdered(
+      runner.slice(
+        runner.indexOf("let result: TransactionResult"),
+        runner.indexOf("async function assertRequesterAlive")
+      ),
+      [
+        "result = await executeRelease(effects)",
+        'else if (result.phase === "preflight")',
+        'await writeJournal(sha, "preflight", result.code)',
+        "await failureGuard(sha)",
+      ]
+    );
   });
   it("generator exception persists nothing and reloads nothing", async () => {
     const { trace, effects } = transactionFixture({ fail: "generateKey" });

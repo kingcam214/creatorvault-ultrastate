@@ -1556,6 +1556,8 @@ export async function runProductionRelease(
     if (result.ok)
       await writeJournal(sha, "verified", "SECURITY_RELEASE_VERIFIED");
     else if (result.rotated) await writeJournal(sha, "failed", result.code);
+    else if (result.phase === "preflight")
+      await writeJournal(sha, "preflight", result.code);
     if (!result.ok) {
       // Fail closed: retain the secure artifact/key, never restore the old key,
       // retry generation, restart an old process or leave it serving old sessions.
