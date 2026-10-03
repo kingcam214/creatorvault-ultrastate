@@ -1,5 +1,13 @@
 # CreatorVault — Final Integrated Security Release
 
+## Current authorized recovery — October 3, 2026
+
+Main is `bada9255449aa394e9526dcd03da8b1b18e39d47`; the last verified live baseline remains `46d3021a1bd09222a61ff1390c9cfe8f82d06422`. The production runner has passed both compiler checks, the full build and guarded artifact preparation. Its last deployment stopped at `UNSAFE_APPLICATION_DIRECTORY` before activation, rotation or reload.
+
+The owner authorizes completing this same security deployment and necessary narrowly scoped production maintenance. The existing controller now inspects only metadata, ACL availability and the actual root service identity before repairing exact application-root, secret, launcher, active-artifact-directory and optional log-directory ownership/modes. It does not recursively chmod/chown, change file contents, expose credentials, change accounts/SSH/firewall/database/provider settings, or deploy features. Secret bytes are verified unchanged and cleared from memory. Permission-only ctime changes are accepted only with a root-protected metadata record tied to the same process lifetime and exact unchanged source identity; actual signing-source, launcher bytes and live-login verification remain required.
+
+The live result is not inferred from this record: the existing production workflow, its sanitized controller result, verified journal, and public release stamp supply the final outcome. All original feature exclusions and forward-only rotation safeguards remain in force. Later historical preparation statements below are not current release-status evidence.
+
 ## Release contract
 
 The final candidate is prepared on `release/creatorvault-security-final` as exactly one direct, non-merge child of production baseline `46d3021a1bd09222a61ff1390c9cfe8f82d06422`. No intermediate release commit is a prerequisite. The final SHA is determined by Git only after closure and all local validation pass; it is not embedded in its own source.

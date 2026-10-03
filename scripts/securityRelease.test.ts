@@ -43,6 +43,7 @@ import {
   secretSnapshot,
   stopFailedRelease,
   assertAppBootAuthorized,
+  maintenanceMode,
 } from "./securityReleaseRunner";
 import { prepareSecurityReleaseArtifact } from "./prepareSecurityReleaseArtifact";
 import { APPROVED_APPLICATION_DIGESTS } from "./securityReleaseIntegrity";
@@ -430,12 +431,66 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe("authorized production permission maintenance", () => {
+  it.each([0o755, 0o775, 0o777, 0o700, 0o750])(
+    "tightens directory mode %i without world or group-write access",
+    mode => {
+      const safe = maintenanceMode("directory", mode);
+      expect(safe & 0o700).toBe(0o700);
+      expect(safe & 0o027).toBe(0);
+      expect(safe & 0o050).toBe(mode & 0o050);
+    }
+  );
+  it.each([0o644, 0o660, 0o600, 0o400, 0o777])(
+    "restricts secret mode %i to root read/write only",
+    mode => {
+      expect(maintenanceMode("secret", mode)).toBe(0o600);
+    }
+  );
+  it.each([0o644, 0o755, 0o775, 0o700])(
+    "preserves launcher executable intent without widening access for %i",
+    mode => {
+      const safe = maintenanceMode("launcher", mode);
+      expect(safe & 0o600).toBe(0o600);
+      expect(safe & 0o100).toBe(mode & 0o100);
+      expect(safe & 0o027).toBe(0);
+    }
+  );
+  it("rejects invalid permission metadata", () => {
+    for (const value of [-1, Number.NaN, Number.POSITIVE_INFINITY, 0.5])
+      expect(() => maintenanceMode("secret", value)).toThrow();
+  });
+  it("keeps repairs confined, byte-preserving, non-recursive and ahead of the unchanged root guard", () => {
+    const runner = source("scripts/securityReleaseRunner.ts");
+    const maintenance = runner.slice(
+      runner.indexOf("async function maintainProductionPermissions"),
+      runner.indexOf("async function assertSourceLifetime")
+    );
+    expect(maintenance).not.toMatch(
+      /recursive|chmod\s+-R|chown\s+-R|\.writeFile\(original/
+    );
+    expect(maintenance).toContain("original.equals(verified)");
+    expect(maintenance).toContain("MAINTENANCE_SERVICE_IDENTITY_UNVERIFIED");
+    expect(maintenance).toContain("MAINTENANCE_SERVICE_CHANGED");
+    const launch = runner.slice(
+      runner.indexOf("async function launchSupervisor")
+    );
+    expect(
+      launch.indexOf("await maintainProductionPermissions(workspace, sha)")
+    ).toBeLessThan(launch.indexOf("await protectedRoot()"));
+    expect(runner).toContain('"UNSAFE_APPLICATION_DIRECTORY"');
+    expect(runner).toContain("entry.bytesPreserved === true");
+    expect(runner).toContain('"UNVERIFIED_PERMISSION_MAINTENANCE"');
+  });
+});
 describe("release metadata and constant-time comparison primitives", () => {
   it("pins the direct live baseline, application root, origin, and complete 62-file release set", () => {
     expect(REQUIRED_LIVE_BASELINE).toBe(
       "46d3021a1bd09222a61ff1390c9cfe8f82d06422"
     );
-    expect(REQUIRED_RELEASE_PARENT).toBe("d49019e60eece395c0fe60b5c12bcfeaae5f32ac");
+    expect(REQUIRED_RELEASE_PARENT).toBe(
+      "bada9255449aa394e9526dcd03da8b1b18e39d47"
+    );
     expect(APP_ROOT).toBe("/root/creatorvault");
     expect(PUBLIC_ORIGIN).toBe("https://creatorvault.live");
     expect(APPROVED_RELEASE_PATHS).toEqual(EXPECTED_APPROVED_RELEASE_PATHS);
@@ -535,10 +590,7 @@ describe("fail-closed direct-baseline checkout and complete exact release path g
     [
       "extra release path",
       {
-        baselineDiffPaths: [
-          ...APPROVED_RELEASE_PATHS,
-          "client/src/feature.ts",
-        ],
+        baselineDiffPaths: [...APPROVED_RELEASE_PATHS, "client/src/feature.ts"],
       },
       "EXCLUDED_OR_MISSING_RELEASE_PATH",
     ],
@@ -2272,8 +2324,12 @@ describe("static single-controller workflow and deployment safety contracts", ()
     const workflow = source(".github/workflows/deploy.yml");
     expect(workflow).toContain("test \"$GITHUB_REF\" = 'refs/heads/main'");
     expect(workflow).toContain("test \"$GITHUB_EVENT_NAME\" = 'push'");
-    expect(workflow).toContain("CREATORVAULT_RELEASE_BEFORE: ${{ github.event.before }}");
-    expect(workflow).toContain("runs-on: [self-hosted, linux, creatorvault-production]");
+    expect(workflow).toContain(
+      "CREATORVAULT_RELEASE_BEFORE: ${{ github.event.before }}"
+    );
+    expect(workflow).toContain(
+      "runs-on: [self-hosted, linux, creatorvault-production]"
+    );
     expect(workflow).toContain(`release_parent='${REQUIRED_RELEASE_PARENT}'`);
     expect(workflow).toContain(
       'test "$CREATORVAULT_RELEASE_BEFORE" = "$release_parent"'
@@ -2342,7 +2398,9 @@ describe("static single-controller workflow and deployment safety contracts", ()
     expect(workflow).toContain(
       "# One canonical exact-file policy below; no separate partial allowlist."
     );
-    expect(workflow).toContain("pnpm exec tsx scripts/securityReleaseIntegrity.ts");
+    expect(workflow).toContain(
+      "pnpm exec tsx scripts/securityReleaseIntegrity.ts"
+    );
     expect(workflow).not.toMatch(/case\s+"\$\(git diff --name-only/);
     expect(integrity).toContain("APPROVED_RELEASE_PATHS");
     expect(integrity).toContain("assertCheckout(checkoutEvidence(");
@@ -2442,10 +2500,10 @@ describe("static single-controller workflow and deployment safety contracts", ()
       /await writeJournal\(sha, "activation-intent"\);\s*await fs\.rename\(`\$\{APP_ROOT\}\/dist`, PRIOR_PATH\);/
     );
     expectOrdered(activation, [
-      "await writeJournal(sha, \"activation-intent\")",
+      'await writeJournal(sha, "activation-intent")',
       "await fs.rename(`${APP_ROOT}/dist`, PRIOR_PATH)",
-      "await fs.rename(path.join(STAGE_PATH, \"dist\"), `${APP_ROOT}/dist`)",
-      "await writeJournal(sha, \"staged\")",
+      'await fs.rename(path.join(STAGE_PATH, "dist"), `${APP_ROOT}/dist`)',
+      'await writeJournal(sha, "staged")',
     ]);
     expect(activation).not.toContain(
       "await fs.rename(PRIOR_PATH, `${APP_ROOT}/dist`)"
@@ -2457,11 +2515,14 @@ describe("static single-controller workflow and deployment safety contracts", ()
       runner.indexOf("export async function assertAppBootAuthorized"),
       runner.indexOf("async function launchSupervisor")
     );
-    expectOrdered(boot.replace(/\s+/g, ""), [
-      'if (state.phase === "verified") return;',
-      'requireRelease(state.phase === "rotated", "BOOT_RELEASE_REQUIRES_FORWARD_FIX")',
-      '"is-active"',
-    ].map(gate => gate.replace(/\s+/g, "")));
+    expectOrdered(
+      boot.replace(/\s+/g, ""),
+      [
+        'if (state.phase === "verified") return;',
+        'requireRelease(state.phase === "rotated", "BOOT_RELEASE_REQUIRES_FORWARD_FIX")',
+        '"is-active"',
+      ].map(gate => gate.replace(/\s+/g, ""))
+    );
     expect(boot).not.toMatch(
       /state\.phase === "(?:preflight|activation-intent|staged|rotation-intent)"/
     );
@@ -2490,7 +2551,7 @@ describe("static single-controller workflow and deployment safety contracts", ()
     const outputLines = runner
       .split("\n")
       .filter(line => /console\.(?:log|error)\(/.test(line));
-    expect(outputLines).toHaveLength(3);
+    expect(outputLines).toHaveLength(8);
     for (const line of outputLines)
       expect(line).not.toMatch(
         /JSON\.stringify\((?:error|e\.raw|e\.root|env|loginProof|proof|original|newKey)\)|console\.(?:log|error)\(error\)/
@@ -4101,7 +4162,7 @@ describe("controller persists only public fixture ownership and never requires e
     const output = source("scripts/securityReleaseRunner.ts")
       .split("\n")
       .filter(line => /console\.(?:log|error)\(/.test(line));
-    expect(output).toHaveLength(3);
+    expect(output).toHaveLength(8);
     for (const line of output)
       expect(line).not.toMatch(
         /verifier|openId|ownership|fixture|password|email|oldSession|ownerSession|token|env|\.message|\.stack/i

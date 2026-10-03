@@ -374,6 +374,346 @@ export async function checkCheckout(
     process.env.CREATORVAULT_RELEASE_BEFORE ?? ""
   );
 }
+const PERMISSION_RECORD = `${APP_ROOT}/.security-release-permission-maintenance.json`;
+type PermissionEntry = {
+  file: string;
+  before: FileSnapshot;
+  after: FileSnapshot;
+  bytesPreserved: boolean;
+};
+function permissionSnapshot(s: Stats): FileSnapshot {
+  return {
+    dev: s.dev,
+    ino: s.ino,
+    size: s.size,
+    mtimeMs: s.mtimeMs,
+    ctimeMs: s.ctimeMs,
+    uid: s.uid,
+    gid: s.gid,
+    mode: s.mode,
+  };
+}
+export function maintenanceMode(
+  kind: "directory" | "secret" | "launcher",
+  current: number
+): number {
+  requireRelease(
+    Number.isSafeInteger(current) && current >= 0,
+    "INVALID_PERMISSION_METADATA"
+  );
+  return kind === "secret"
+    ? 0o600
+    : kind === "directory"
+      ? (current & 0o050) | 0o700
+      : (current & 0o150) | 0o600;
+}
+/** Owner-authorized maintenance: metadata only, exact targets, no recursive changes. */
+async function maintainProductionPermissions(
+  workspace: string,
+  sha: string
+): Promise<void> {
+  requireRelease(
+    process.getuid?.() === 0 && process.getgid?.() === 0,
+    "RUNNER_ROOT_CONTEXT_REQUIRED"
+  );
+  const socket = await fs.lstat("/root/.pm2/rpc.sock");
+  requireRelease(
+    socket.isSocket() && socket.uid === 0,
+    "EXISTING_PM2_CONTEXT_UNAVAILABLE"
+  );
+  const app = await pm2Evidence(workspace);
+  const status = await fs.readFile(`/proc/${app.pid}/status`, "utf8");
+  const uid = Number(/^Uid:\s+(\d+)/m.exec(status)?.[1]);
+  const cwd = await fs.readlink(`/proc/${app.pid}/cwd`);
+  requireRelease(
+    uid === 0 && app.raw.status === "online" && cwd === APP_ROOT,
+    "MAINTENANCE_SERVICE_IDENTITY_UNVERIFIED"
+  );
+  const inspect = async (file: string): Promise<void> => {
+    const s = await metadataIfPresent(file);
+    if (!s) {
+      console.log(
+        JSON.stringify({ maintenance: "inspect", file, exists: false })
+      );
+      return;
+    }
+    let namedAclEntries: number | null = null;
+    let defaultAclEntries: number | null = null;
+    try {
+      const acl = silentCommand(workspace, "getfacl", ["-cp", "--", file]);
+      namedAclEntries = acl
+        .split("\n")
+        .filter(line => /^(?:user|group):[^:]+:/.test(line)).length;
+      defaultAclEntries = acl
+        .split("\n")
+        .filter(line => line.startsWith("default:")).length;
+    } catch {
+      /* ACL utility is optional; chmod still enforces the effective POSIX mask. */
+    }
+    console.log(
+      JSON.stringify({
+        maintenance: "inspect",
+        file,
+        uid: s.uid,
+        gid: s.gid,
+        mode: (s.mode & 0o7777).toString(8),
+        directory: s.isDirectory(),
+        symlink: s.isSymbolicLink(),
+        links: s.nlink,
+        namedAclEntries,
+        defaultAclEntries,
+      })
+    );
+  };
+  for (const file of [
+    "/",
+    "/root",
+    APP_ROOT,
+    SECRET_PATH,
+    `${APP_ROOT}/start.sh`,
+    `${APP_ROOT}/dist`,
+    `${APP_ROOT}/logs`,
+    `${APP_ROOT}/uploads`,
+    `${APP_ROOT}/tmp`,
+  ])
+    await inspect(file);
+  console.log(
+    JSON.stringify({
+      maintenance: "service",
+      deploymentUid: process.getuid?.(),
+      deploymentGid: process.getgid?.(),
+      pid: app.pid,
+      uid,
+      cwd,
+      launcher: app.launcher,
+      interpreter: app.interpreter,
+      status: app.raw.status,
+    })
+  );
+  app.raw = {};
+  app.root = {};
+  for (const parent of ["/", "/root"]) {
+    const s = await fs.lstat(parent);
+    requireRelease(
+      s.isDirectory() &&
+        !s.isSymbolicLink() &&
+        s.uid === 0 &&
+        (s.mode & 0o022) === 0,
+      "UNSAFE_APPLICATION_PARENT_DIRECTORY"
+    );
+  }
+  requireRelease(
+    (await fs.realpath(APP_ROOT)) === APP_ROOT,
+    "APPLICATION_DIRECTORY_SYMLINK_REQUIRES_CANONICAL_REPAIR"
+  );
+  const entries: PermissionEntry[] = [];
+  const targets: readonly [
+    string,
+    "directory" | "secret" | "launcher",
+    boolean,
+  ][] = [
+    [APP_ROOT, "directory", false],
+    [SECRET_PATH, "secret", true],
+    [`${APP_ROOT}/start.sh`, "launcher", true],
+    [`${APP_ROOT}/dist`, "directory", false],
+    [`${APP_ROOT}/logs`, "directory", false],
+  ];
+  for (const [file, kind, preserveBytes] of targets) {
+    const initial = await metadataIfPresent(file);
+    if (!initial && file === `${APP_ROOT}/logs`) continue;
+    requireRelease(
+      initial &&
+        !initial.isSymbolicLink() &&
+        (kind === "directory"
+          ? initial.isDirectory()
+          : initial.isFile() && initial.nlink === 1),
+      "UNSAFE_MAINTENANCE_TARGET"
+    );
+    const mode = maintenanceMode(kind, initial.mode);
+    if (
+      initial.uid === 0 &&
+      initial.gid === 0 &&
+      (initial.mode & 0o7777) === mode
+    )
+      continue;
+    requireRelease(
+      !preserveBytes || initial.size <= 1024 * 1024,
+      "UNBOUNDED_MAINTENANCE_SOURCE"
+    );
+    let original: Buffer | undefined;
+    let verified: Buffer | undefined;
+    const handle = await fs.open(
+      file,
+      constants.O_RDONLY |
+        constants.O_NOFOLLOW |
+        (kind === "directory" ? constants.O_DIRECTORY : 0)
+    );
+    try {
+      requireRelease(
+        unchanged(
+          permissionSnapshot(initial),
+          permissionSnapshot(await handle.stat())
+        ),
+        "MAINTENANCE_TARGET_CHANGED"
+      );
+      if (preserveBytes) original = await fs.readFile(file);
+      await handle.chown(0, 0);
+      await handle.chmod(mode);
+      const after = await handle.stat();
+      const current = await fs.lstat(file);
+      requireRelease(
+        current.dev === initial.dev &&
+          current.ino === initial.ino &&
+          current.uid === 0 &&
+          current.gid === 0 &&
+          (current.mode & 0o7777) === mode,
+        "MAINTENANCE_TARGET_CHANGED"
+      );
+      if (original) {
+        verified = await fs.readFile(file);
+        requireRelease(
+          original.equals(verified) &&
+            after.size === initial.size &&
+            after.mtimeMs === initial.mtimeMs,
+          "MAINTENANCE_SOURCE_BYTES_CHANGED"
+        );
+      }
+      entries.push({
+        file,
+        before: permissionSnapshot(initial),
+        after: permissionSnapshot(after),
+        bytesPreserved: preserveBytes,
+      });
+      console.log(
+        JSON.stringify({
+          maintenance: "repaired",
+          file,
+          uid: after.uid,
+          gid: after.gid,
+          mode: (after.mode & 0o777).toString(8),
+          bytesPreserved: preserveBytes,
+        })
+      );
+    } finally {
+      original?.fill(0);
+      verified?.fill(0);
+      await handle.close();
+    }
+  }
+  if (entries.length) {
+    const prior = await metadataIfPresent(PERMISSION_RECORD);
+    let retained: unknown[] = [];
+    if (prior) {
+      assertSecretFile({
+        uid: prior.uid,
+        gid: prior.gid,
+        mode: prior.mode,
+        regular: prior.isFile(),
+        symlink: prior.isSymbolicLink(),
+        links: prior.nlink,
+      });
+      requireRelease(prior.size <= 32768, "UNVERIFIED_PERMISSION_MAINTENANCE");
+      const old = record(
+        JSON.parse(await fs.readFile(PERMISSION_RECORD, "utf8")) as unknown
+      );
+      if (
+        old.pid === app.pid &&
+        old.uptime === app.uptime &&
+        Array.isArray(old.entries)
+      )
+        retained = old.entries.filter(
+          (value: unknown) =>
+            !entries.some(entry => entry.file === record(value).file)
+        );
+    }
+    const handle = await fs.open(
+      PERMISSION_RECORD,
+      constants.O_WRONLY |
+        constants.O_CREAT |
+        constants.O_TRUNC |
+        constants.O_NOFOLLOW,
+      0o600
+    );
+    try {
+      await handle.writeFile(
+        JSON.stringify({
+          sha,
+          pid: app.pid,
+          uptime: app.uptime,
+          entries: [...retained, ...entries],
+        }) + "\n",
+        "utf8"
+      );
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+  }
+  const repeated = await pm2Evidence(workspace);
+  requireRelease(
+    repeated.pid === app.pid &&
+      repeated.uptime === app.uptime &&
+      repeated.raw.status === "online",
+    "MAINTENANCE_SERVICE_CHANGED"
+  );
+  repeated.raw = {};
+  repeated.root = {};
+  console.log("PRODUCTION_PERMISSION_MAINTENANCE=PASS");
+}
+async function assertSourceLifetime(
+  workspace: string,
+  file: string,
+  current: FileSnapshot,
+  runtime: Pm2Evidence
+): Promise<void> {
+  if (current.mtimeMs <= runtime.uptime && current.ctimeMs <= runtime.uptime)
+    return;
+  const meta = await metadataIfPresent(PERMISSION_RECORD);
+  requireRelease(
+    meta && meta.size <= 32768,
+    "SECRET_SOURCE_CHANGED_SINCE_PROCESS_START"
+  );
+  assertSecretFile({
+    uid: meta.uid,
+    gid: meta.gid,
+    mode: meta.mode,
+    regular: meta.isFile(),
+    symlink: meta.isSymbolicLink(),
+    links: meta.nlink,
+  });
+  const proof = record(
+    JSON.parse(await fs.readFile(PERMISSION_RECORD, "utf8")) as unknown
+  );
+  requireRelease(
+    typeof proof.sha === "string" &&
+      /^[a-f0-9]{40}$/.test(proof.sha) &&
+      proof.pid === runtime.pid &&
+      proof.uptime === runtime.uptime &&
+      Array.isArray(proof.entries),
+    "UNVERIFIED_PERMISSION_MAINTENANCE"
+  );
+  silentCommand(workspace, "git", [
+    "merge-base",
+    "--is-ancestor",
+    proof.sha,
+    "HEAD",
+  ]);
+  const matches = proof.entries.filter(
+    (value: unknown) => record(value).file === file
+  );
+  requireRelease(matches.length === 1, "UNVERIFIED_PERMISSION_MAINTENANCE");
+  const entry = record(matches[0]);
+  const before = record(entry.before);
+  const after = record(entry.after);
+  requireRelease(
+    entry.bytesPreserved === true &&
+      before.mtimeMs === current.mtimeMs &&
+      Number(before.mtimeMs) <= runtime.uptime &&
+      Number(before.ctimeMs) <= runtime.uptime &&
+      Object.entries(current).every(([key, value]) => after[key] === value),
+    "UNVERIFIED_PERMISSION_MAINTENANCE"
+  );
+}
 async function protectedRoot(): Promise<void> {
   requireRelease(
     process.getuid?.() === 0 && process.getgid?.() === 0,
@@ -593,9 +933,11 @@ async function proveRuntime(
         (meta.mode & 0o022) === 0,
       "UNSAFE_PRODUCTION_LAUNCHER"
     );
-    requireRelease(
-      meta.mtimeMs <= e.uptime && meta.ctimeMs <= e.uptime,
-      "LAUNCHER_CHANGED_SINCE_PROCESS_START"
+    await assertSourceLifetime(
+      workspace,
+      e.launcher,
+      permissionSnapshot(meta),
+      e
     );
     matchesLauncher =
       (await fs.readFile(e.launcher, "utf8")) ===
@@ -906,10 +1248,11 @@ export async function runProductionRelease(
       locateJwtKey(original);
       processProof = await proveRuntime(workspace, original);
       await proveWritableSource(snapshot);
-      requireRelease(
-        snapshot.mtimeMs <= processProof.uptime &&
-          snapshot.ctimeMs <= processProof.uptime,
-        "SECRET_SOURCE_CHANGED_SINCE_PROCESS_START"
+      await assertSourceLifetime(
+        workspace,
+        SECRET_PATH,
+        snapshot,
+        processProof
       );
       const env = parseDotenv(original);
       requireRelease(
@@ -1204,20 +1547,18 @@ async function launchSupervisor(
   event: string
 ): Promise<TransactionResult> {
   await checkCheckout(workspace, sha, ref, event);
-  await protectedRoot();
   await assertArtifact(path.join(workspace, "dist"), sha);
   const live = await requestPublic("/__release");
   requireRelease(live.status === 200, "LIVE_BASELINE_UNAVAILABLE");
   assertBaseline(live.body);
+  await maintainProductionPermissions(workspace, sha);
+  await protectedRoot();
   const snapshot = await secretSnapshot();
   let original = await readSecretFile(snapshot);
   try {
     const runtime = await proveRuntime(workspace, original);
     await proveWritableSource(snapshot);
-    requireRelease(
-      snapshot.mtimeMs <= runtime.uptime && snapshot.ctimeMs <= runtime.uptime,
-      "SECRET_SOURCE_CHANGED_SINCE_PROCESS_START"
-    );
+    await assertSourceLifetime(workspace, SECRET_PATH, snapshot, runtime);
     const env = parseDotenv(original);
     requireRelease(
       safeEqual(env.JWT_SECRET ?? "", locateJwtKey(original).value),

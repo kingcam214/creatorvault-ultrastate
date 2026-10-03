@@ -31,7 +31,7 @@ jobs:
       - name: Verify approved security-release successor
         run: |
           set -euo pipefail
-          release_parent='d49019e60eece395c0fe60b5c12bcfeaae5f32ac'
+          release_parent='bada9255449aa394e9526dcd03da8b1b18e39d47'
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_EVENT_NAME" = 'push'
           test "$CREATORVAULT_RELEASE_BEFORE" = "$release_parent"
