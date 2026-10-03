@@ -87,6 +87,8 @@ jobs:
           pnpm test:security
 
       - name: Strict security type check
+        env:
+          NODE_OPTIONS: --max-old-space-size=1536
         run: |
           set -euo pipefail
           export PNPM_HOME="/home/runner/.local/share/pnpm"
