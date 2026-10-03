@@ -283,6 +283,7 @@ import { agentTelemetryRouter } from "./routers/agentTelemetryRouter";
 import { challengeAutomationRouter } from "./routers/challengeAutomationRouter";
 import { polloRouter } from "./routers/polloRouter";
 import { governedPolloRouter } from "./routers/governedPolloRouter";
+import { personaVaultRouter } from "./routers/personaVaultRouter";
 import { creationDirectorRouter } from "./routers/creationDirectorRouter";
 import { creationProjectsRouter } from "./routers/creationProjectsRouter";
 import { creationProofRouter } from "./routers/creationProofRouter";
@@ -1086,6 +1087,7 @@ export const appRouter = router({
   aiChatter: aiChatterRouter,
   pollo: polloRouter,
   governedPollo: governedPolloRouter,
+  personaVault: personaVaultRouter,
   distribution: distributionRouter,
   socialSpine: socialSpineRouter,
 });

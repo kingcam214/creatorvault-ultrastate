@@ -127,6 +127,13 @@
       "when": 1790952426555,
       "tag": "0024_stripe_creator_net_payouts",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1790959430000,
+      "tag": "0025_persona_vault_chained_continuity",
+      "breakpoints": true
     }
   ]
 }
