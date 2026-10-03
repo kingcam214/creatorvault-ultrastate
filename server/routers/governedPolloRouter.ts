@@ -85,16 +85,14 @@ import {
   probeKingcamFullBodyPerformerWorker,
 } from "../services/kingcamFullBodyPerformerService";
 
-const OWNER_IDS = new Set([6, 33]);
-
-function ownerOnly(userId: number, role: string): void {
-  if (!isOwnerRole(role) || !OWNER_IDS.has(Number(userId))) {
+function ownerOnly(_userId: number, role: string): void {
+  if (!isOwnerRole(role)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Owner approval is required for governed media operations." });
   }
 }
 
 function canReadJob(userId: number, job: { creatorId: number }, role: string): void {
-  if (Number(userId) !== Number(job.creatorId) && !(isOwnerRole(role) && OWNER_IDS.has(Number(userId)))) {
+  if (Number(userId) !== Number(job.creatorId) && !isOwnerRole(role)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "You do not have access to this governed media request." });
   }
 }

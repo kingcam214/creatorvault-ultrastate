@@ -19,6 +19,7 @@ import {
   personaSnapshotSchema,
   startVideoChainSchema,
   type ChainAuthorization,
+  type TrustedPersonaChainOwnerActor,
 } from "./personaVaultContracts";
 import {
   continuityContextSchema,
@@ -60,7 +61,6 @@ function validAuthorization(chain: VideoGenerationChain): ChainAuthorization {
       "An open owner authorization is required before generation"
     );
   const authorization = chainAuthorizationSchema.parse(chain.authorization);
-  assertPersonaChainOwner(authorization.ownerId);
   if (
     authorization.requestHash !== chain.requestHash ||
     Date.parse(authorization.expiresAt) <= Date.now()
@@ -97,10 +97,10 @@ async function requireLease(
   return chain;
 }
 export async function approveVideoChain(
-  ownerId: number,
+  actor: TrustedPersonaChainOwnerActor,
   raw: z.input<typeof approveVideoChainSchema>
 ) {
-  assertPersonaChainOwner(ownerId);
+  const ownerRole = assertPersonaChainOwner(actor);
   const input = approveVideoChainSchema.parse(raw);
   const database = await getPersonaVaultDb();
   await database.transaction(async tx => {
@@ -130,29 +130,38 @@ export async function approveVideoChain(
         message:
           "Completed chains cannot be reauthorized; failed segments need explicit recovery first",
       });
-    if (
-      chain.authorization &&
-      !chain.authorizationClosedAt &&
-      Date.parse(chain.authorization.expiresAt) > Date.now()
-    ) {
-      if (
-        chain.authorization.ownerId === ownerId &&
-        chain.authorization.maxCreditsPerSegment ===
-          input.maxCreditsPerSegment &&
-        chain.authorization.reason === input.reason
-      )
-        return;
-      throw new TRPCError({
-        code: "CONFLICT",
-        message: "An active chain authorization cannot be silently replaced",
-      });
+    if (chain.authorization && !chain.authorizationClosedAt) {
+      const existingAuthorization = chainAuthorizationSchema.safeParse(
+        chain.authorization
+      );
+      if (!existingAuthorization.success)
+        throw new TRPCError({
+          code: "CONFLICT",
+          message:
+            "The stored chain authorization has invalid owner-role provenance and cannot be reused",
+        });
+      if (Date.parse(existingAuthorization.data.expiresAt) > Date.now()) {
+        if (
+          existingAuthorization.data.ownerId === actor.id &&
+          existingAuthorization.data.ownerRole === ownerRole &&
+          existingAuthorization.data.maxCreditsPerSegment ===
+            input.maxCreditsPerSegment &&
+          existingAuthorization.data.reason === input.reason
+        )
+          return;
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "An active chain authorization cannot be silently replaced",
+        });
+      }
     }
     const segments = await tx
       .select()
       .from(videoChainSegments)
       .where(eq(videoChainSegments.chainId, chain.id));
     const authorization: ChainAuthorization = {
-      ownerId,
+      ownerId: actor.id,
+      ownerRole,
       requestHash: chain.requestHash,
       maxCreditsPerSegment: input.maxCreditsPerSegment,
       maximumOutputs: segments.filter(

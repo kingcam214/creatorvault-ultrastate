@@ -59,6 +59,7 @@ function context(
             paypalEmail: null,
             zelleHandle: null,
             applepayHandle: null,
+            stripeConnectAccountId: null,
             createdAt: new Date(0),
             updatedAt: new Date(0),
             lastSignedIn: new Date(0),

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { isOwnerRole } from "../_core/authorizationPolicy";
 
 export const secureMediaUrlSchema = z
   .string()
@@ -151,8 +152,10 @@ export const personaSnapshotSchema = z.strictObject({
   wardrobe: wardrobeSchema.nullable(),
   accessoryAttributes: accessoryAttributesSchema,
 });
+export const personaChainOwnerRoleSchema = z.enum(["king", "admin"]);
 export const chainAuthorizationSchema = z.strictObject({
   ownerId: z.number().int().positive(),
+  ownerRole: personaChainOwnerRoleSchema,
   requestHash: z.string().regex(/^[a-f0-9]{64}$/),
   maxCreditsPerSegment: z.number().finite().positive().max(10000),
   maximumOutputs: z.number().int().positive().max(24),
@@ -179,6 +182,12 @@ export type StartVideoChainInput = z.input<typeof startVideoChainSchema>;
 export type StartVideoChainRequest = z.infer<typeof startVideoChainSchema>;
 export type PersonaIdentitySnapshot = z.infer<typeof personaSnapshotSchema>;
 export type ChainAuthorization = z.infer<typeof chainAuthorizationSchema>;
+export type PersonaChainOwnerRole = z.infer<typeof personaChainOwnerRoleSchema>;
+/** Supplied only from an authenticated server context, never a request payload. */
+export type TrustedPersonaChainOwnerActor = Readonly<{
+  id: number;
+  role: string;
+}>;
 
 function canonicalValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalValue);
@@ -227,9 +236,16 @@ export function inheritCameraMetadata(
       previous?.angularVelocity ?? { yaw: 0, pitch: 0, roll: 0 },
   });
 }
-export function assertPersonaChainOwner(userId: number): void {
-  if (![6, 33].includes(userId))
+export function assertPersonaChainOwner(
+  actor: TrustedPersonaChainOwnerActor
+): PersonaChainOwnerRole {
+  if (
+    !Number.isSafeInteger(actor.id) ||
+    actor.id <= 0 ||
+    !isOwnerRole(actor.role)
+  )
     throw new Error(
-      "Only the existing CreatorVault owners may authorize paid chain outputs"
+      "A trusted king or admin role is required to authorize paid chain outputs"
     );
+  return personaChainOwnerRoleSchema.parse(actor.role);
 }

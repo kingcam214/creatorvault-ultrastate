@@ -1,6 +1,5 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { ownerProcedure, protectedProcedure, router } from "../_core/trpc";
 import {
   approveVideoChainSchema,
   createPersonaSchema,
@@ -20,14 +19,6 @@ import {
 } from "../services/videoChainedContinuity";
 import { reconcilePersonaContinuityReceipt } from "../services/personaVideoProvider";
 
-const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (![6, 33].includes(ctx.user.id))
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "Owner authorization is required for paid chain operations",
-    });
-  return next({ ctx });
-});
 export const personaVaultRouter = router({
   createPersona: protectedProcedure
     .input(createPersonaSchema)
@@ -46,7 +37,9 @@ export const personaVaultRouter = router({
     .query(({ ctx, input }) => getVideoChainStatus(ctx.user.id, input.chainId)),
   approveVideoChain: ownerProcedure
     .input(approveVideoChainSchema)
-    .mutation(({ ctx, input }) => approveVideoChain(ctx.user.id, input)),
+    .mutation(({ ctx, input }) =>
+      approveVideoChain({ id: ctx.user.id, role: ctx.user.role }, input)
+    ),
   retryVideoChain: protectedProcedure
     .input(
       z.strictObject({
@@ -71,6 +64,9 @@ export const personaVaultRouter = router({
       })
     )
     .mutation(({ ctx, input }) =>
-      reconcilePersonaContinuityReceipt(ctx.user.id, input)
+      reconcilePersonaContinuityReceipt(
+        { id: ctx.user.id, role: ctx.user.role },
+        input
+      )
     ),
 });

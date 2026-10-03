@@ -26,6 +26,7 @@ import {
   createPersonaSchema,
   updatePersonaSchema,
   startVideoChainSchema,
+  chainAuthorizationSchema,
   inheritCameraMetadata,
   identityHash,
   type PersonaIdentitySnapshot,
@@ -139,14 +140,17 @@ function jobContract() {
     metadata: { personaContinuity: context },
   };
 }
-function user(id: number): User {
+function ownerActor(id: number, role: "king" | "admin" = "king") {
+  return { id, role };
+}
+function user(id: number, role: User["role"] = "creator"): User {
   return {
     id,
     openId: `fixture-${id}`,
     name: "Local Fixture User",
     email: null,
     loginMethod: null,
-    role: id === 6 ? "king" : "creator",
+    role,
     language: "en",
     country: null,
     referredBy: null,
@@ -528,6 +532,32 @@ describe("Persona continuity strict domain contracts", () => {
       identityHash({ ...snapshot, loraModelId: "fixture-lora-v2" })
     );
   });
+  it("requires persisted king or admin grant provenance", () => {
+    const authorization = {
+      ownerId: 81,
+      ownerRole: "king" as const,
+      requestHash: "a".repeat(64),
+      maxCreditsPerSegment: 20,
+      maximumOutputs: 1,
+      authorizedAt: "2026-01-01T00:00:00.000Z",
+      expiresAt: "2026-01-01T00:10:00.000Z",
+      reason: "Local persisted grant provenance contract",
+    };
+    const { ownerRole, ...withoutOwnerRole } = authorization;
+    expect(ownerRole).toBe("king");
+    expect(chainAuthorizationSchema.safeParse(authorization).success).toBe(
+      true
+    );
+    expect(chainAuthorizationSchema.safeParse(withoutOwnerRole).success).toBe(
+      false
+    );
+    expect(
+      chainAuthorizationSchema.safeParse({
+        ...authorization,
+        ownerRole: "creator",
+      }).success
+    ).toBe(false);
+  });
   it("rejects unrelated receipts and multiple candidates", () => {
     const input = buildPersonaContinuityProviderInput(jobContract());
     expect(() =>
@@ -724,7 +754,7 @@ integration(
       );
       if (!tables.length) {
         await pool.query(
-          "CREATE TABLE users (id INT PRIMARY KEY, openId VARCHAR(64) UNIQUE, name TEXT)"
+          "CREATE TABLE users (id INT PRIMARY KEY, openId VARCHAR(64) UNIQUE, name TEXT, role VARCHAR(16) NOT NULL)"
         );
         await pool.query(
           "CREATE TABLE media_assets (id VARCHAR(191) PRIMARY KEY, user_id INT NOT NULL, asset_type VARCHAR(32), mime_type VARCHAR(100), public_url TEXT, status VARCHAR(32))"
@@ -786,7 +816,7 @@ integration(
       ])
         await pool.query(`DELETE FROM \`${table}\``);
       await pool.query(
-        "INSERT INTO users(id,openId,name) VALUES(6,'owner-fixture','Owner'),(42,'creator-fixture','Creator')"
+        "INSERT INTO users(id,openId,name,role) VALUES(6,'creator-fixture','Creator','creator'),(42,'other-creator-fixture','Other Creator','creator'),(81,'king-fixture','King','king'),(82,'admin-fixture','Admin','admin')"
       );
       await pool.query(
         "INSERT INTO media_assets(id,user_id,asset_type,mime_type,public_url,status) VALUES('fixture-image',6,'image','image/png',?,'ready')",
@@ -814,12 +844,12 @@ integration(
     });
     async function newChain(
       shots = 2,
-      extra: { endFrame?: boolean; aspectRatio?: "1:1" | "9:16" } = {}
+      extra: { endFrame?: boolean; aspectRatio?: "1:1" | "9:16"; personaName?: string } = {}
     ) {
       const persona = await vault.createPersona(
         6,
         {
-          personaName: "Fixture Persona",
+          personaName: extra.personaName ?? "Fixture Persona",
           avatarBaseUrl: sourceUrl,
           loraModelId: "fixture-lora-v1",
           voiceProfileId: "fixture-voice-v1",
@@ -857,7 +887,7 @@ integration(
     }
     async function authorize(chainId: string) {
       const status = await vault.getVideoChainStatus(6, chainId);
-      return engine.approveVideoChain(6, {
+      return engine.approveVideoChain(ownerActor(81), {
         chainId,
         creatorId: 6,
         expectedRequestHash: status.requestHash,
@@ -995,19 +1025,116 @@ integration(
       expect(submissions).toHaveLength(0);
       expect(await count("governed_media_jobs")).toBe(0);
       await expect(
-        engine.approveVideoChain(42, {
-          chainId: chain.id,
+        engine.approveVideoChain(
+          { id: 42, role: "creator" },
+          {
+            chainId: chain.id,
+            creatorId: 6,
+            expectedRequestHash: chain.requestHash,
+            maxCreditsPerSegment: 20,
+            reason: "Not the existing owner",
+          }
+        )
+      ).rejects.toThrow(/trusted king or admin/);
+    });
+    it("denies ordinary roles with legacy IDs and allows king or admin roles with nonmagic IDs", async () => {
+      const { chain: ordinaryChain } = await newChain(1);
+      const ordinaryApproval = {
+        chainId: ordinaryChain.id,
+        creatorId: 6,
+        expectedRequestHash: ordinaryChain.requestHash,
+        maxCreditsPerSegment: 20,
+        reason: "Role authorization test; no provider execution is requested",
+      };
+      await expect(
+        engine.approveVideoChain({ id: 6, role: "creator" }, ordinaryApproval)
+      ).rejects.toThrow(/trusted king or admin/);
+      await expect(
+        engine.approveVideoChain({ id: 33, role: "creator" }, ordinaryApproval)
+      ).rejects.toThrow(/trusted king or admin/);
+      const kingApproval = await engine.approveVideoChain(
+        ownerActor(81, "king"),
+        ordinaryApproval
+      );
+      expect(kingApproval.authorization).toMatchObject({
+        ownerId: 81,
+        ownerRole: "king",
+      });
+      const { chain: adminChain } = await newChain(1, { personaName: "Admin Fixture Persona" });
+      const adminApproval = await engine.approveVideoChain(
+        ownerActor(82, "admin"),
+        {
+          chainId: adminChain.id,
           creatorId: 6,
-          expectedRequestHash: chain.requestHash,
+          expectedRequestHash: adminChain.requestHash,
           maxCreditsPerSegment: 20,
-          reason: "Not the existing owner",
+          reason:
+            "Admin authorization test; no provider execution is requested",
+        }
+      );
+      expect(adminApproval.authorization).toMatchObject({
+        ownerId: 82,
+        ownerRole: "admin",
+      });
+      expect(submissions).toHaveLength(0);
+    });
+    it("uses current local DB roles for Persona handoff approval without provider submission", async () => {
+      const draftFor = async () => {
+        const { chain } = await newChain(1, { personaName: `Handoff Fixture ${randomUUID()}` });
+        const segment = chain.segments[0];
+        const context = continuityContextSchema.parse({
+          chainId: chain.id,
+          segmentId: segment.id,
+          segmentOrder: segment.segmentOrder,
+          attempt: segment.attempt,
+          snapshot: chain.personaSnapshot,
+          camera: segment.cameraMetadata,
+          incomingCamera: segment.inheritedCameraMetadata,
+          sourceFrameUrl: segment.startFrameUrl,
+          sourceFrameSha256: segment.startFrameSha256,
+          endFrameUrl: segment.endFrameUrl,
+          endFrameSha256: segment.endFrameSha256,
+          promptText: segment.promptText,
+          durationSec: segment.durationSec,
+          frameRate: chain.frameRate,
+          aspectRatio: chain.aspectRatio,
+        });
+        return provider.governedPersonaVideoProvider.createDraft(context, 20);
+      };
+      const creatorDraft = await draftFor();
+      await expect(
+        governance.approveGovernedPolloJob({
+          jobId: Number(creatorDraft.id),
+          approverId: 6,
+          expectedFingerprint: creatorDraft.fingerprint,
         })
-      ).rejects.toThrow(/owners/);
+      ).rejects.toThrow(/Owner approval/);
+      const kingDraft = await draftFor();
+      await expect(
+        governance.approveGovernedPolloJob({
+          jobId: Number(kingDraft.id),
+          approverId: 81,
+          expectedFingerprint: kingDraft.fingerprint,
+        })
+      ).resolves.toMatchObject({ state: "approved", approvedBy: 81 });
+      await governance.closeUnusedPersonaContinuityApproval({
+        jobId: Number(kingDraft.id),
+        reason: "Local king authorization test cleanup",
+      });
+      const adminDraft = await draftFor();
+      await expect(
+        governance.approveGovernedPolloJob({
+          jobId: Number(adminDraft.id),
+          approverId: 82,
+          expectedFingerprint: adminDraft.fingerprint,
+        })
+      ).resolves.toMatchObject({ state: "approved", approvedBy: 82 });
+      expect(submissions).toHaveLength(0);
     });
     it("rejects wrong approval hashes and honors the existing emergency freeze", async () => {
       const { chain } = await newChain(1);
       await expect(
-        engine.approveVideoChain(6, {
+        engine.approveVideoChain(ownerActor(6), {
           chainId: chain.id,
           creatorId: 6,
           expectedRequestHash: "b".repeat(64),
@@ -1162,7 +1289,7 @@ integration(
       await expect(
         engine.retryVideoChain(6, chain.id, stopped.segments[0].id)
       ).rejects.toThrow(/receipt/);
-      await provider.reconcilePersonaContinuityReceipt(6, {
+      await provider.reconcilePersonaContinuityReceipt(ownerActor(81), {
         creatorId: 6,
         chainId: chain.id,
         segmentId: stopped.segments[0].id,
@@ -1220,12 +1347,28 @@ integration(
       const owner = personaRouter.personaVaultRouter.createCaller({
         req: express.request,
         res: express.response,
-        user: user(6),
+        user: user(6, "king"),
       });
       const stranger = personaRouter.personaVaultRouter.createCaller({
         req: express.request,
         res: express.response,
         user: user(42),
+      });
+      const ordinaryLegacySix = personaRouter.personaVaultRouter.createCaller({
+        req: express.request,
+        res: express.response,
+        user: user(6, "creator"),
+      });
+      const ordinaryLegacyThirtyThree =
+        personaRouter.personaVaultRouter.createCaller({
+          req: express.request,
+          res: express.response,
+          user: user(33, "creator"),
+        });
+      const nonmagicAdmin = personaRouter.personaVaultRouter.createCaller({
+        req: express.request,
+        res: express.response,
+        user: user(82, "admin"),
       });
       const anonymous = personaRouter.personaVaultRouter.createCaller({
         req: express.request,
@@ -1250,6 +1393,31 @@ integration(
           reason: "Unapproved stranger operation",
         })
       ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      for (const ordinaryCaller of [
+        ordinaryLegacySix,
+        ordinaryLegacyThirtyThree,
+      ])
+        await expect(
+          ordinaryCaller.approveVideoChain({
+            chainId: chain.id,
+            creatorId: 6,
+            expectedRequestHash: chain.requestHash,
+            maxCreditsPerSegment: 20,
+            reason: "Legacy ID without an owner role must be denied",
+          })
+        ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      const approved = await nonmagicAdmin.approveVideoChain({
+        chainId: chain.id,
+        creatorId: 6,
+        expectedRequestHash: chain.requestHash,
+        maxCreditsPerSegment: 20,
+        reason:
+          "Nonmagic admin role authorization; no provider execution is requested",
+      });
+      expect(approved.authorization).toMatchObject({
+        ownerId: 82,
+        ownerRole: "admin",
+      });
     });
     it("rejects cross-owner foreign-key writes and duplicate segment orders at database level", async () => {
       const { persona, chain } = await newChain(1);
@@ -1313,7 +1481,7 @@ integration(
       );
       await governance.approveGovernedPolloJob({
         jobId: Number(draft.id),
-        approverId: 6,
+        approverId: 81,
         expectedFingerprint: draft.fingerprint,
       });
       const db = await database.getPersonaVaultDb();

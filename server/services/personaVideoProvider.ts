@@ -21,8 +21,12 @@ import {
   quotePersonaContinuityProvider,
   type ContinuityContext,
 } from "./personaContinuityProviderContract";
-import { identityHash, type ChainAuthorization } from "./personaVaultContracts";
-import { assertPersonaChainOwner } from "./personaVaultContracts";
+import {
+  assertPersonaChainOwner,
+  identityHash,
+  type ChainAuthorization,
+  type TrustedPersonaChainOwnerActor,
+} from "./personaVaultContracts";
 import { getVideoChainStatus } from "./personaVaultService";
 
 export type VideoChainRenderJob = {
@@ -224,7 +228,7 @@ export const governedPersonaVideoProvider: PersonaVideoProvider = {
 };
 
 export async function reconcilePersonaContinuityReceipt(
-  ownerId: number,
+  actor: TrustedPersonaChainOwnerActor,
   input: {
     creatorId: number;
     chainId: string;
@@ -232,7 +236,7 @@ export async function reconcilePersonaContinuityReceipt(
     providerTaskId: string;
   }
 ) {
-  assertPersonaChainOwner(ownerId);
+  assertPersonaChainOwner(actor);
   const status = await getVideoChainStatus(input.creatorId, input.chainId);
   const segment = status.segments.find(
     candidate => candidate.id === input.segmentId
@@ -247,7 +251,7 @@ export async function reconcilePersonaContinuityReceipt(
     );
   const reconciled = await reconcileGovernedPersonaContinuitySubmission({
     jobId: numericJobId(segment.renderJobId),
-    ownerId,
+    ownerId: actor.id,
     providerTaskId: input.providerTaskId,
   });
   return {

@@ -5,6 +5,7 @@ import { promisify } from "util";
 import path from "path";
 import { sql } from "drizzle-orm";
 import { db, getPersonaVaultSqlClient } from "../db";
+import { isOwnerRole } from "../_core/authorizationPolicy";
 import type { RowDataPacket } from "mysql2/promise";
 import { buildFrameEvidence, probeVideo } from "./bodyCinemaExistingMediaProofService";
 import { reviewBodyCinemaOutput, type BodyCinemaOutputReview } from "./bodyCinemaOutputReviewService";
@@ -248,7 +249,6 @@ const SOURCE_VIDEO_REFERENCE_CONTRACTS = {
     providerResolution: () => "2K",
   },
 } as const;
-const OWNER_IDS = new Set([6, 33]);
 const ACTIVE_LEASE_STATES: GovernedPolloJobState[] = ["queued", "submitted", "submission_unknown", "provider_complete", "quality_review"];
 const TERMINAL_STATES: GovernedPolloJobState[] = ["accepted", "rejected", "failed", "cancelled"];
 
@@ -290,8 +290,25 @@ export function isGovernedPolloExecutionEnabled(): boolean {
     && config.maxConcurrentJobs > 0;
 }
 
-function requireOwner(userId: number): void {
-  if (!OWNER_IDS.has(Number(userId))) {
+interface UserRoleRow extends RowDataPacket {
+  role: string | null;
+}
+
+async function requireOwner(userId: number): Promise<void> {
+  if (!Number.isSafeInteger(userId) || userId <= 0) {
+    throw new Error("Owner approval is required for governed Pollo operations.");
+  }
+  let rows: UserRoleRow[];
+  try {
+    const client = await getPersonaVaultSqlClient();
+    [rows] = await client.query<UserRoleRow[]>(
+      "SELECT role FROM users WHERE id = ? LIMIT 2",
+      [userId]
+    );
+  } catch {
+    throw new Error("Owner role verification failed; access is denied.");
+  }
+  if (rows.length !== 1 || !isOwnerRole(rows[0].role)) {
     throw new Error("Owner approval is required for governed Pollo operations.");
   }
 }
@@ -1851,7 +1868,7 @@ export async function authorizeSingleUseGovernedPolloSubmission(params: {
   reason: string;
   expiresInMinutes?: number;
 }): Promise<GovernedPolloJob> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   await ensureGovernedPolloSchema();
   const job = await getGovernedPolloJob(params.jobId);
   if (!job) throw new Error("Governed media job was not found.");
@@ -1950,7 +1967,7 @@ export async function createManualCappedKingcamMiniMaxH3Draft(input: {
   requestId?: string | null;
   metadata?: Record<string, unknown>;
 }): Promise<{ job: GovernedPolloJob; reused: boolean }> {
-  requireOwner(input.requestedBy);
+  await requireOwner(input.requestedBy);
   if (input.creatorId !== input.requestedBy) throw new Error("The MiniMax H3 manual-cap proof must use the requesting owner as the source owner.");
   if (!Number.isInteger(input.manualCreditCap) || input.manualCreditCap < 1 || input.manualCreditCap > 75) {
     throw new Error("The MiniMax H3 manual credit ceiling must be a whole number between 1 and 75.");
@@ -2026,7 +2043,7 @@ export async function createManualCappedKingcamWanSpokenMotionDraft(input: {
   requestId?: string | null;
   metadata?: Record<string, unknown>;
 }): Promise<{ job: GovernedPolloJob; reused: boolean }> {
-  requireOwner(input.requestedBy);
+  await requireOwner(input.requestedBy);
   if (input.creatorId !== input.requestedBy) throw new Error("The KingCam Wan spoken-motion proof must use the requesting owner as the identity owner.");
   buildKingcamWanSpokenMotionInput({ sourceUrl: KINGCAM_WAN_SPOKEN_MOTION_IMAGE_URL, prompt: input.prompt, resolution: "1080p", durationSeconds: KINGCAM_WAN_SPOKEN_MOTION_DURATION_SECONDS, aspectRatio: "9:16", metadata: { audioUrl: KINGCAM_WAN_SPOKEN_MOTION_AUDIO_URL } });
   return createGovernedPolloDraft({
@@ -2134,7 +2151,7 @@ export async function createManualCappedKingcamHappyHorseAllReferenceDraft(input
   requestId?: string | null;
   metadata?: Record<string, unknown>;
 }): Promise<{ job: GovernedPolloJob; reused: boolean }> {
-  requireOwner(input.requestedBy);
+  await requireOwner(input.requestedBy);
   if (input.creatorId !== input.requestedBy) throw new Error("The KingCam Happy Horse candidate must use the requesting owner as the identity owner.");
   const metadata = {
     ...(input.metadata || {}),
@@ -2177,7 +2194,7 @@ export async function createManualCappedKingcamKlingOmniSpokenMotionDraft(input:
   requestId?: string | null;
   metadata?: Record<string, unknown>;
 }): Promise<{ job: GovernedPolloJob; reused: boolean }> {
-  requireOwner(input.requestedBy);
+  await requireOwner(input.requestedBy);
   if (input.creatorId !== input.requestedBy) throw new Error("The KingCam Kling 3 Omni proof must use the requesting owner as the identity owner.");
   buildKingcamKlingOmniSpokenMotionInput({ sourceUrl: KINGCAM_KLING_OMNI_SPOKEN_MOTION_IMAGE_URL, prompt: input.prompt, resolution: "1080p", durationSeconds: KINGCAM_KLING_OMNI_SPOKEN_MOTION_DURATION_SECONDS, aspectRatio: "9:16", metadata: { audioUrl: KINGCAM_KLING_OMNI_SPOKEN_MOTION_AUDIO_URL, motionDriverUrl: KINGCAM_KLING_OMNI_SPOKEN_MOTION_DRIVER_URL } });
   return createGovernedPolloDraft({
@@ -2220,7 +2237,7 @@ export async function createManualCappedKingcamKlingOmniSpokenMotionDraft(input:
 }
 
 export async function archiveKingcamMiniMaxH3PresenceLoop(params: { ownerId: number; jobId: 102 }): Promise<{ assetId: string; outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number; outputFingerprint: string }> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || job.id !== 102 || job.providerModelPath !== MINIMAX_H3_SOURCE_VIDEO_REFERENCE_MODEL_PATH) {
     throw new Error("Only the exact KingCam MiniMax H3 proof can be archived as this private presence loop.");
@@ -2865,7 +2882,7 @@ export async function createGovernedVaceLightingDraft(input: {
 }
 
 export async function setGovernedPolloCostEstimate(params: { jobId: number; ownerId: number; estimatedCostCredits: number; costEvidenceReference: string; reason?: string | null }): Promise<GovernedPolloJob> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   await ensureGovernedPolloSchema();
   const job = await getGovernedPolloJob(params.jobId);
   if (!job) throw new Error("Governed media job was not found.");
@@ -2985,7 +3002,7 @@ async function reserveBudget(job: GovernedPolloJob, approverId: number): Promise
 }
 
 export async function approveGovernedPolloJob(params: { jobId: number; approverId: number; expectedFingerprint: string; reason?: string | null }): Promise<GovernedPolloJob> {
-  requireOwner(params.approverId);
+  await requireOwner(params.approverId);
   await ensureGovernedPolloSchema();
   const initial = await getGovernedPolloJob(params.jobId);
   if (!initial) throw new Error("Governed media job was not found.");
@@ -3536,7 +3553,7 @@ async function submitGovernedVaceLightingJob(leased: GovernedPolloJob, workerId:
 }
 
 export async function reconcileGovernedVaceSubmission(params: { jobId: number; ownerId: number; workerId: string; workerJobId: string }): Promise<GovernedPolloJob> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isCreatorVaultVaceLightingJob(job)) throw new Error("A queued CreatorVault VACE benchmark is required for submission reconciliation.");
   if (job.providerJobId || !["queued", "submission_unknown"].includes(job.state)) {
@@ -3563,7 +3580,7 @@ export async function reconcileGovernedVaceSubmission(params: { jobId: number; o
 }
 
 export async function pollGovernedVaceLightingJob(params: { jobId: number; ownerId: number }): Promise<GovernedPolloJob> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isCreatorVaultVaceLightingJob(job)) throw new Error("A submitted CreatorVault VACE benchmark is required for worker polling.");
   if (job.state !== "submitted" || !job.providerJobId) throw new Error(`VACE benchmark in state ${job.state} cannot be polled.`);
@@ -3589,7 +3606,7 @@ export async function pollGovernedVaceLightingJob(params: { jobId: number; owner
 }
 
 export async function ingestCompletedGovernedVaceLightingOutput(params: { jobId: number; ownerId: number }): Promise<{ outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number; outputFingerprint: string }> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isCreatorVaultVaceLightingJob(job)) throw new Error("A completed CreatorVault VACE benchmark is required for Media Vault ingestion.");
   if (job.state !== "provider_complete" || !job.providerJobId || !job.outputUrl) throw new Error("CreatorVault will only ingest a completed VACE worker output.");
@@ -3627,7 +3644,7 @@ export async function ingestCompletedGovernedVaceLightingOutput(params: { jobId:
 }
 
 export async function reviewCompletedGovernedVaceLightingOutput(params: { jobId: number; ownerId: number }): Promise<{ reviewedJob: GovernedPolloJob; outputReview: BodyCinemaOutputReview; outputAssetUrl: string }> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   const ingested = await ingestCompletedGovernedVaceLightingOutput(params);
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isCreatorVaultVaceLightingJob(job)) throw new Error("A completed CreatorVault VACE benchmark is required for output review.");
@@ -3771,7 +3788,7 @@ export async function submitGovernedPolloJob(params: { jobId: number; workerId: 
 }
 
 export async function pollGovernedPolloProviderJob(params: { jobId: number; actorId: number }): Promise<GovernedPolloJob> {
-  requireOwner(params.actorId);
+  await requireOwner(params.actorId);
   await ensureGovernedPolloSchema();
   const job = await getGovernedPolloJob(params.jobId);
   if (!job) throw new Error("Governed media job was not found.");
@@ -3931,7 +3948,7 @@ export async function recordGovernedPolloProviderCompletion(params: { jobId: num
 }
 
 export async function ingestCompletedGovernedReplicateWanVideoEditOutput(params: { jobId: number; ownerId: number }): Promise<{ outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number }> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   await ensureGovernedPolloSchema();
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isReplicateWanVideoEditJob(job)) throw new Error("A completed governed Replicate Wan job is required for durable output ingestion.");
@@ -3981,7 +3998,7 @@ export async function ingestCompletedGovernedReplicateWanVideoEditOutput(params:
 }
 
 export async function recordGovernedRunwayAlephVideoEditFailure(params: { jobId: number; ownerId: number; reason: string }): Promise<GovernedPolloJob> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isRunwayAlephVideoEditJob(job)) throw new Error("A submitted governed Runway Aleph benchmark is required to record this provider failure.");
   if (job.state !== "submitted") throw new Error(`Runway Aleph benchmark in state ${job.state} cannot record a provider failure.`);
@@ -4007,7 +4024,7 @@ export async function reclassifyGovernedRunwayAlephWorkspaceLimit(params: {
   ownerId: number;
   reason: string;
 }): Promise<GovernedPolloJob> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isRunwayAlephVideoEditJob(job)) throw new Error("A governed Runway Aleph benchmark is required for workspace-limit correction.");
   if (job.state !== "failed" || job.providerJobId || job.outputUrl) {
@@ -4040,7 +4057,7 @@ export async function reconcileGovernedRunwayAlephSubmissionTimeout(params: {
   reason: string;
   failureCode?: "runway_submission_timeout_no_task" | "runway_workspace_limit";
 }): Promise<GovernedPolloJob> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isRunwayAlephVideoEditJob(job)) {
     throw new Error("A leased governed Runway Aleph benchmark is required to reconcile this timeout.");
@@ -4073,7 +4090,7 @@ export async function reconcileGovernedRunwayAlephSubmissionTimeout(params: {
 }
 
 export async function ingestCompletedGovernedRunwayAlephVideoEditOutput(params: { jobId: number; ownerId: number }): Promise<{ outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number; outputFingerprint: string }> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   await ensureGovernedPolloSchema();
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isRunwayAlephVideoEditJob(job)) throw new Error("A completed governed Runway Aleph benchmark is required for Media Vault ingestion.");
@@ -4129,7 +4146,7 @@ export async function ingestCompletedGovernedRunwayAlephVideoEditOutput(params: 
 }
 
 export async function reviewCompletedGovernedRunwayAlephVideoEditOutput(params: { jobId: number; ownerId: number }): Promise<{ reviewedJob: GovernedPolloJob; outputReview: BodyCinemaOutputReview; outputAssetUrl: string }> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   const ingested = await ingestCompletedGovernedRunwayAlephVideoEditOutput({ jobId: params.jobId, ownerId: params.ownerId });
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isRunwayAlephVideoEditJob(job)) throw new Error("A completed governed Runway Aleph benchmark is required for output review.");
@@ -4156,7 +4173,7 @@ export async function reviewCompletedGovernedRunwayAlephVideoEditOutput(params: 
 }
 
 export async function ingestCompletedGovernedTopazPrecisionVideoOutput(params: { jobId: number; ownerId: number }): Promise<{ outputAssetUrl: string; durationSeconds: number; width: number; height: number; sizeBytes: number; outputFingerprint: string }> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isTopazPrecisionVideoJob(job)) throw new Error("A completed governed Topaz precision request is required for Media Vault ingestion.");
   if (job.state !== "provider_complete" || !job.providerJobId || !job.outputUrl) throw new Error("CreatorVault will only ingest a completed Topaz provider output.");
@@ -4202,7 +4219,7 @@ export async function ingestCompletedGovernedTopazPrecisionVideoOutput(params: {
 }
 
 export async function reviewCompletedGovernedTopazPrecisionVideoOutput(params: { jobId: number; ownerId: number }): Promise<{ reviewedJob: GovernedPolloJob; outputReview: BodyCinemaOutputReview; outputAssetUrl: string }> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   const ingested = await ingestCompletedGovernedTopazPrecisionVideoOutput(params);
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isTopazPrecisionVideoJob(job)) throw new Error("A completed governed Topaz precision request is required for output review.");
@@ -4234,7 +4251,7 @@ export async function reviewCompletedGovernedTopazPrecisionVideoOutput(params: {
 }
 
 export async function reviewGovernedPolloOutput(params: { jobId: number; reviewerId: number; accepted: boolean; artifactUrl?: string | null; qualityScore?: number | null; reason: string }): Promise<GovernedPolloJob> {
-  requireOwner(params.reviewerId);
+  await requireOwner(params.reviewerId);
   await ensureGovernedPolloSchema();
   const job = await getGovernedPolloJob(params.jobId);
   if (!job) throw new Error("Governed media job was not found.");
@@ -4272,7 +4289,7 @@ export async function cancelGovernedPolloJob(params: { jobId: number; actorId: n
   await ensureGovernedPolloSchema();
   const job = await getGovernedPolloJob(params.jobId);
   if (!job) throw new Error("Governed media job was not found.");
-  if (job.creatorId !== params.actorId && !OWNER_IDS.has(Number(params.actorId))) throw new Error("Only the creator or an owner may cancel this governed media job.");
+  if (job.creatorId !== params.actorId) await requireOwner(params.actorId);
   if (job.state === "submitted" && (isReplicateWanVideoEditJob(job) || isReplicateWanAnimateJob(job) || isReplicateOmniHumanJob(job))) {
     const token = String(process.env.REPLICATE_API_TOKEN || "").trim();
     if (!token) throw new Error("Replicate cancellation cannot run because REPLICATE_API_TOKEN is not configured.");
@@ -4395,7 +4412,7 @@ export const governedPolloModelPath = DEFAULT_MODEL_PATH;
 
 /** Technical ingestion is not aesthetic/identity acceptance or a budget release. */
 export async function recordGovernedPersonaContinuityIngestion(params: { jobId: number; ownerId: number; segmentId: string }): Promise<void> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isPersonaContinuityJob(job) || !["provider_complete", "accepted"].includes(job.state)) throw new Error("A completed Persona Continuity render is required for ingestion");
   const ingestion = await getPersonaContinuityIngestion(job, params.segmentId);
@@ -4408,7 +4425,7 @@ export async function recordGovernedPersonaContinuityIngestion(params: { jobId: 
 }
 
 export async function reconcileGovernedPersonaContinuitySubmission(params: { jobId: number; ownerId: number; providerTaskId: string }): Promise<GovernedPolloJob> {
-  requireOwner(params.ownerId);
+  await requireOwner(params.ownerId);
   const job = await getGovernedPolloJob(params.jobId);
   if (!job || !isPersonaContinuityJob(job) || !["queued", "submission_unknown"].includes(job.state) || job.providerJobId) throw new Error("Only an uncertain Persona Continuity submission can be reconciled");
   if (!/^[A-Za-z0-9_-]{1,191}$/.test(params.providerTaskId)) throw new Error("Invalid provider task ID");

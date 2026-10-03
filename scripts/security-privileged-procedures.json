@@ -275,6 +275,8 @@
   "ownerControl.getStats",
   "ownerControl.toggleBot",
   "ownerControl.toggleBroadcast",
+  "personaVault.approveVideoChain",
+  "personaVault.reconcileVideoChainSegment",
   "pollo.generateVideo",
   "pollo.getGenerationHistory",
   "pollo.getTaskStatus",

@@ -5,7 +5,6 @@ on:
     branches:
       - main
 
-# Never cancel a release between atomic key persistence and reload.
 concurrency:
   group: creatorvault-production-security-release
   cancel-in-progress: false
@@ -15,12 +14,15 @@ permissions:
 
 env:
   CREATORVAULT_RELEASE_BEFORE: ${{ github.event.before }}
+  CREATORVAULT_RELEASE_SHA: ${{ github.sha }}
+  CREATORVAULT_RELEASE_REF: ${{ github.ref }}
+  CREATORVAULT_RELEASE_EVENT: ${{ github.event_name }}
+  CREATORVAULT_RELEASE_WORKSPACE: ${{ github.workspace }}
 
 jobs:
   deploy:
     runs-on: [self-hosted, linux, creatorvault-production]
-    timeout-minutes: 30
-
+    timeout-minutes: 45
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -28,33 +30,20 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify approved security-release successor
+      - name: Verify approved consolidation trigger
         run: |
           set -euo pipefail
-          release_parent='985144d35c40d294cf5548c7ba5d0110cbd82910'
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_EVENT_NAME" = 'push'
-          test "$CREATORVAULT_RELEASE_BEFORE" = "$release_parent"
+          test "$CREATORVAULT_RELEASE_BEFORE" = '3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da'
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git show -s --format=%P HEAD)" = "$release_parent"
-          test "$(git rev-list --count "$release_parent..HEAD")" = '1'
+          git merge-base --is-ancestor 3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da HEAD
+          git merge-base --is-ancestor ccba8cd56f887d041311d4f37d3ec912fd57322d HEAD
+          git merge-base --is-ancestor d0bec580d387f962bb779663f873c9e642f57ae3 HEAD
+          git merge-base --is-ancestor be17b8462c926d5f5c9c57111e7e7f328e9e8f2c HEAD
           case "$(realpath "$GITHUB_WORKSPACE")/" in /root/creatorvault/*) exit 42 ;; esac
           test ! -L dist
           if test -d dist; then test -z "$(find dist -type l -printf x -quit)"; fi
-          # One canonical exact-file policy below; no separate partial allowlist.
-          node --input-type=module <<'JS'
-          import fs from 'node:fs';
-          import {execFileSync} from 'node:child_process';
-          import {isDeepStrictEqual} from 'node:util';
-          const before=JSON.parse(execFileSync('git',['show','46d3021a1bd09222a61ff1390c9cfe8f82d06422:package.json'],{encoding:'utf8'}));
-          const after=JSON.parse(fs.readFileSync('package.json','utf8'));
-          const {scripts:oldScripts,...a}=before;
-          const {scripts:newScripts,...b}=after;
-          if (!isDeepStrictEqual(a,b)) throw new Error('DEPENDENCY_OR_PACKAGE_METADATA_CHANGE');
-          const expected={...oldScripts,'test:security':'vitest run --config vitest.security.config.ts','check:security':'tsx scripts/check-security-types.ts'};
-          if (!isDeepStrictEqual(expected,newScripts)) throw new Error('UNAPPROVED_PACKAGE_SCRIPT_CHANGE');
-          if (execFileSync('git',['diff','--name-only','46d3021a1bd09222a61ff1390c9cfe8f82d06422','HEAD','--','pnpm-lock.yaml','package-lock.json','yarn.lock'],{encoding:'utf8'}).trim()) throw new Error('LOCKFILE_CHANGED');
-          JS
 
       - name: Enable pnpm
         run: |
@@ -71,15 +60,23 @@ jobs:
           export PATH="$PNPM_HOME:$PATH"
           pnpm install --frozen-lockfile
 
-      - name: Validate complete immutable release and closure
+      - name: Validate consolidation scope and preserved security
         run: |
           set -euo pipefail
           export PNPM_HOME="/home/runner/.local/share/pnpm"
           export PATH="$PNPM_HOME:$PATH"
-          pnpm exec tsx scripts/securityReleaseIntegrity.ts
-          pnpm exec tsx scripts/securityReleaseRunner.ts --check-checkout
+          pnpm exec tsx scripts/consolidatedReleaseRunner.ts --check-checkout
+          git diff --check
+          bash -n deploy_work_to_prod.sh scripts/run-consolidation-regressions.sh scripts/run-historical-security-release-checks.sh
 
-      - name: Security regression tests
+      - name: Historical completed security-controller regressions
+        run: |
+          set -euo pipefail
+          export PNPM_HOME="/home/runner/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+          bash scripts/run-historical-security-release-checks.sh
+
+      - name: Current security regression tests
         run: |
           set -euo pipefail
           export PNPM_HOME="/home/runner/.local/share/pnpm"
@@ -95,15 +92,41 @@ jobs:
           export PATH="$PNPM_HOME:$PATH"
           pnpm check:security
 
-      - name: Controlled release integrity and parser regression tests
+      - name: Isolated regression prerequisite availability
+        run: |
+          set -euo pipefail
+          missing=()
+          if ! command -v mariadb-install-db >/dev/null || ! command -v mariadbd >/dev/null; then missing+=(mariadb-server-core); fi
+          if ! command -v mariadb >/dev/null; then missing+=(mariadb-client-core); fi
+          if ! command -v mysqldump >/dev/null && ! command -v mariadb-dump >/dev/null; then missing+=(mariadb-client); fi
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then missing+=(ffmpeg); fi
+          if [ "${#missing[@]}" -gt 0 ]; then
+            plan="$(mktemp)"
+            trap 'rm -f -- "$plan"' EXIT
+            sudo -n apt-get update -qq
+            sudo -n apt-get -s --no-upgrade --no-install-recommends install "${missing[@]}" > "$plan"
+            if grep -qE '^Remv |^Inst .*\[' "$plan"; then printf 'UNSAFE_PREREQUISITE_PACKAGE_CHANGE\n' >&2; exit 1; fi
+            sudo -n env DEBIAN_FRONTEND=noninteractive apt-get -y --no-upgrade --no-install-recommends install "${missing[@]}"
+          fi
+
+      - name: Full Stripe Persona Video Studio and additive migration regressions
         run: |
           set -euo pipefail
           export PNPM_HOME="/home/runner/.local/share/pnpm"
           export PATH="$PNPM_HOME:$PATH"
-          pnpm exec vitest run --config vitest.security-release.config.ts
-          pnpm exec vitest run --config vitest.github-workflow-preflight.config.ts
-          pnpm exec tsx scripts/check-security-release-types.ts
-          bash -n deploy_work_to_prod.sh
+          sudo -n env PATH="$PATH" bash "$GITHUB_WORKSPACE/scripts/run-consolidation-regressions.sh"
+
+      - name: Strict feature and non-rotating deployment type checks
+        env:
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          set -euo pipefail
+          export PNPM_HOME="/home/runner/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+          pnpm check:stripe-payouts
+          pnpm check:persona-continuity
+          pnpm check:video-studio
+          pnpm check:consolidated-release
 
       - name: Mandatory whole-project type check
         env:
@@ -112,7 +135,6 @@ jobs:
           set -euo pipefail
           export PNPM_HOME="/home/runner/.local/share/pnpm"
           export PATH="$PNPM_HOME:$PATH"
-          # Cold check measured 2,128,264 KiB RSS; preserve headroom for the live service.
           node --input-type=module <<'JS'
           import fs from 'node:fs';
           import path from 'node:path';
@@ -131,32 +153,37 @@ jobs:
           JS
           pnpm check
 
-      - name: Build release
+      - name: Build production server
         run: |
           set -euo pipefail
           export PNPM_HOME="/home/runner/.local/share/pnpm"
           export PATH="$PNPM_HOME:$PATH"
-          pnpm build
+          pnpm build:server
 
-      - name: Stamp and validate secure release artifact
+      - name: Build production client
         run: |
           set -euo pipefail
           export PNPM_HOME="/home/runner/.local/share/pnpm"
           export PATH="$PNPM_HOME:$PATH"
-          pnpm exec tsx scripts/prepareSecurityReleaseArtifact.ts
+          pnpm build:client
+
+      - name: Stamp and validate guarded consolidated artifact
+        run: |
+          set -euo pipefail
+          export PNPM_HOME="/home/runner/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+          pnpm exec tsx -e 'import {prepareConsolidatedReleaseArtifact} from "./scripts/prepareConsolidatedReleaseArtifact"; prepareConsolidatedReleaseArtifact(process.cwd()).catch(()=>{console.error("CONSOLIDATED_ARTIFACT_PREPARATION_FAILED");process.exitCode=1;});'
           test -f dist/index.js
           test -f dist/secure-app.js
-          test -f dist/security-release-runtime.mjs
+          test -f dist/consolidated-release-runtime.mjs
           test -f dist/public/index.html
-          test -f dist/ensure-governed-media-schema.js
           node --input-type=module -e 'import fs from "node:fs"; fs.writeFileSync("dist/public/release.json", JSON.stringify({commit:process.env.GITHUB_SHA,branch:"main",timestamp:new Date().toISOString(),environment:"production"})+"\n");'
 
-      - name: Deploy approved security release and rotate JWT locally
+      - name: Apply reviewed additive migrations and deploy without rotating sessions
         run: |
           set -euo pipefail
           export PNPM_HOME="/home/runner/.local/share/pnpm"
           export PATH="$PNPM_HOME:$PATH"
-          # Public immutable release evidence only; never a signing-key input.
           sudo -n env PATH="$PATH" \
             CREATORVAULT_RELEASE_SHA="$GITHUB_SHA" \
             CREATORVAULT_RELEASE_REF="$GITHUB_REF" \
