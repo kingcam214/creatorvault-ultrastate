@@ -71,6 +71,7 @@ import OwnerStatus from "./pages/OwnerStatus";
 import AgentCommand from "./pages/AgentCommand";
 import CreatorVideoStudio from "./pages/CreatorVideoStudio";
 import CaptionStage from "./pages/CaptionStage";
+import VideoStudioTimelinePage from "./pages/VideoStudioTimelinePage";
 // import VideoStudio from './pages/VideoStudio';
 // import CreatorManagement from "./pages/CreatorManagement";
 // import Onboard from "./pages/Onboard";
@@ -405,6 +406,7 @@ function Router() {
       <Route path={"/creator/toolbox"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator-toolbox"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/video-studio"} component={CreatorVideoStudio} />
+      <Route path={"/studio/video"} component={VideoStudioTimelinePage} />
       <Route path={"/creator/caption-stage"} component={CaptionStage} />
       <Route path={"/creator-video-studio"}>{() => { window.location.replace("/creator/video-studio"); return null; }}</Route>
       <Route path={"/creator/subscriptions"} component={CreatorSubscriptions} />
