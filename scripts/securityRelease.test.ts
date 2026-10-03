@@ -489,7 +489,7 @@ describe("release metadata and constant-time comparison primitives", () => {
       "46d3021a1bd09222a61ff1390c9cfe8f82d06422"
     );
     expect(REQUIRED_RELEASE_PARENT).toBe(
-      "bada9255449aa394e9526dcd03da8b1b18e39d47"
+      "65349dc7cc7805301103052053d665ff0e4075d3"
     );
     expect(APP_ROOT).toBe("/root/creatorvault");
     expect(PUBLIC_ORIGIN).toBe("https://creatorvault.live");
@@ -811,6 +811,92 @@ describe("known runtime source and current live key equality", () => {
         "dotenv-override"
       )
   );
+  it("accepts verified application dotenv when the exec-time environment has no signing key", () => {
+    expect(
+      assertRuntime(
+        runtime({
+          launcher: `${APP_ROOT}/dist/index.js`,
+          interpreter: "node",
+          launcherMatchesApproved: false,
+          applicationDotenvVerified: true,
+          initialKeyAbsent: true,
+          processKeyMatchesFile: false,
+        })
+      )
+    ).toBe("application-dotenv");
+  });
+  it("accepts verified application dotenv with a matching inherited key", () => {
+    expect(
+      assertRuntime(
+        runtime({
+          launcher: `${APP_ROOT}/dist/index.js`,
+          interpreter: "node",
+          launcherMatchesApproved: false,
+          applicationDotenvVerified: true,
+          initialKeyAbsent: false,
+        })
+      )
+    ).toBe("application-dotenv");
+  });
+  it("never accepts a different inherited key or an unverified import", () => {
+    for (const patch of [
+      { initialKeyAbsent: false },
+      { applicationDotenvVerified: false },
+    ]) {
+      expect(() =>
+        assertRuntime(
+          runtime({
+            launcher: `${APP_ROOT}/dist/index.js`,
+            interpreter: "node",
+            launcherMatchesApproved: false,
+            applicationDotenvVerified: true,
+            initialKeyAbsent: true,
+            processKeyMatchesFile: false,
+            ...patch,
+          })
+        )
+      ).toThrow();
+    }
+  });
+  it("does not accept a different dotenv path for the application source", () => {
+    expect(() =>
+      assertRuntime(
+        runtime({
+          launcher: `${APP_ROOT}/dist/index.js`,
+          interpreter: "node",
+          applicationDotenvVerified: true,
+          dotenvPath: "/tmp/other.env",
+        })
+      )
+    ).toThrow();
+  });
+  it("loads only the protected signing key after boot authorization, without writing it to PM2 or provider settings", () => {
+    const entry = source("scripts/securityReleaseEntrypoint.ts");
+    expectOrdered(entry, [
+      "await guard()",
+      "await activate()",
+      'await import(new URL("./secure-app.js"',
+    ]);
+    const runner = source("scripts/securityReleaseRunner.ts");
+    const loader = runner.slice(
+      runner.indexOf(
+        "export async function activateAuthoritativeSigningSource"
+      ),
+      runner.indexOf("async function launchSupervisor")
+    );
+    expectOrdered(loader, [
+      "await protectedRoot()",
+      "await secretSnapshot()",
+      "await readSecretFile(snapshot)",
+      "assertNewKey(value)",
+      "process.env.JWT_SECRET = value",
+    ]);
+    expect(loader).not.toMatch(
+      /console\.|writeFile|silentCommand|process\.env\.(?:STRIPE|TELEGRAM|POLLO|DATABASE)/
+    );
+    expect(runner).toContain("applicationDotenvVerified: applicationDotenv");
+    expect(runner).toContain("initialKeyAbsent: liveKey === undefined");
+  });
   const cases: [string, Partial<RuntimeProof>, string][] = [
     ["offline", { status: "stopped" }, "UNSUPPORTED_PM2_PROCESS"],
     ["cluster", { mode: "cluster_mode" }, "UNSUPPORTED_PM2_PROCESS"],

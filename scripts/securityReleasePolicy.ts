@@ -4,13 +4,14 @@ export const REQUIRED_LIVE_BASELINE =
   "46d3021a1bd09222a61ff1390c9cfe8f82d06422";
 /** Existing main contains the reviewed security release and its memory-only correction. */
 export const REQUIRED_RELEASE_PARENT =
-  "bada9255449aa394e9526dcd03da8b1b18e39d47";
+  "65349dc7cc7805301103052053d665ff0e4075d3";
 export const APPROVED_GUARD_CORRECTION_PATHS: readonly string[] = [
   ".github/workflows/deploy.yml",
   "SECURITY_RELEASE_ROTATION_HANDOFF.md",
   "scripts/securityRelease.test.ts",
   "scripts/securityReleasePolicy.ts",
   "scripts/securityReleaseRunner.ts",
+  "scripts/securityReleaseEntrypoint.ts",
 ];
 export const APP_ROOT = "/root/creatorvault";
 export const PUBLIC_ORIGIN = "https://creatorvault.live";
@@ -250,10 +251,12 @@ export type RuntimeProof = {
   dotenvPath?: string;
   dotenvOverride?: string;
   nodePreload?: boolean;
+  applicationDotenvVerified?: boolean;
+  initialKeyAbsent?: boolean;
 };
 export function assertRuntime(
   e: RuntimeProof
-): "shell-env" | "dotenv-override" {
+): "shell-env" | "dotenv-override" | "application-dotenv" {
   requireRelease(
     e.status === "online" &&
       e.mode === "fork_mode" &&
@@ -264,7 +267,10 @@ export function assertRuntime(
     "UNSUPPORTED_PM2_PROCESS"
   );
   requireRelease(
-    e.cwd === APP_ROOT && e.actualNodeCommand && e.processKeyMatchesFile,
+    e.cwd === APP_ROOT &&
+      e.actualNodeCommand &&
+      (e.processKeyMatchesFile ||
+        (e.applicationDotenvVerified === true && e.initialKeyAbsent === true)),
     "UNPROVEN_ACTIVE_SECRET_SOURCE"
   );
   if (
@@ -281,6 +287,13 @@ export function assertRuntime(
     e.dotenvOverride === "true"
   )
     return "dotenv-override";
+  if (
+    e.launcher === `${APP_ROOT}/dist/index.js` &&
+    (e.interpreter === "node" || /\/node$/.test(e.interpreter)) &&
+    e.applicationDotenvVerified === true &&
+    (!e.dotenvPath || e.dotenvPath === `${APP_ROOT}/.env`)
+  )
+    return "application-dotenv";
   throw new ReleaseFailure("UNKNOWN_RUNTIME_SOURCE");
 }
 export type ReleaseEffects = {

@@ -17,6 +17,14 @@ async function boot(): Promise<void> {
       throw new Error("SECURITY_BOOT_GATE_UNAVAILABLE");
     const guard = candidate as () => Promise<void>;
     await guard();
+    if (
+      !("activateAuthoritativeSigningSource" in runtime) ||
+      typeof runtime.activateAuthoritativeSigningSource !== "function"
+    )
+      throw new Error("SECURITY_SIGNING_SOURCE_UNAVAILABLE");
+    const activate =
+      runtime.activateAuthoritativeSigningSource as () => Promise<void>;
+    await activate();
     await import(new URL("./secure-app.js", import.meta.url).href);
   } catch {
     // Neither runtime errors nor configuration values are printed.

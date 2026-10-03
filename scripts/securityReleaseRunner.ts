@@ -8,6 +8,7 @@ import {
   APP_ROOT,
   REQUIRED_LIVE_BASELINE,
   assertBaseline,
+  assertNewKey,
   assertRuntime,
   assertSecretFile,
   assertShellEnvSource,
@@ -64,7 +65,7 @@ type Pm2Evidence = {
   cwd: string;
   interpreter: string;
   nodeArgs: unknown;
-  source?: "shell-env" | "dotenv-override";
+  source?: "shell-env" | "dotenv-override" | "application-dotenv";
   raw: Record<string, unknown>;
   root: Record<string, unknown>;
 };
@@ -471,6 +472,7 @@ async function maintainProductionPermissions(
     APP_ROOT,
     SECRET_PATH,
     `${APP_ROOT}/start.sh`,
+    NODE_ENTRY,
     `${APP_ROOT}/dist`,
     `${APP_ROOT}/logs`,
     `${APP_ROOT}/uploads`,
@@ -515,6 +517,7 @@ async function maintainProductionPermissions(
     [APP_ROOT, "directory", false],
     [SECRET_PATH, "secret", true],
     [`${APP_ROOT}/start.sh`, "launcher", true],
+    [NODE_ENTRY, "launcher", true],
     [`${APP_ROOT}/dist`, "directory", false],
     [`${APP_ROOT}/logs`, "directory", false],
   ];
@@ -537,7 +540,8 @@ async function maintainProductionPermissions(
     )
       continue;
     requireRelease(
-      !preserveBytes || initial.size <= 1024 * 1024,
+      !preserveBytes ||
+        initial.size <= (file === NODE_ENTRY ? 16 : 1) * 1024 * 1024,
       "UNBOUNDED_MAINTENANCE_SOURCE"
     );
     let original: Buffer | undefined;
@@ -953,6 +957,48 @@ async function proveRuntime(
       : [];
   const preload =
     args.length === 2 && args[0] === "-r" && args[1] === "dotenv/config";
+  let applicationDotenv = false;
+  if (
+    e.launcher === NODE_ENTRY &&
+    args.length === 0 &&
+    (!inherited.get("DOTENV_CONFIG_PATH") ||
+      inherited.get("DOTENV_CONFIG_PATH") === SECRET_PATH) &&
+    (!inherited.get("DOTENV_CONFIG_ENCODING") ||
+      /^(?:utf8|utf-8)$/i.test(inherited.get("DOTENV_CONFIG_ENCODING") ?? ""))
+  ) {
+    const meta = await fs.lstat(NODE_ENTRY);
+    requireRelease(
+      meta.isFile() &&
+        !meta.isSymbolicLink() &&
+        meta.nlink === 1 &&
+        meta.uid === 0 &&
+        (meta.mode & 0o022) === 0 &&
+        meta.size <= 16 * 1024 * 1024,
+      "UNSAFE_ACTIVE_APPLICATION_ENTRY"
+    );
+    await assertSourceLifetime(
+      workspace,
+      NODE_ENTRY,
+      permissionSnapshot(meta),
+      e
+    );
+    let entry = await fs.readFile(NODE_ENTRY, "utf8");
+    const approvedSource = silentCommand(workspace, "git", [
+      "show",
+      `${REQUIRED_LIVE_BASELINE}:server/_core/index.ts`,
+    ]);
+    applicationDotenv =
+      /^import\s+["']dotenv\/config["'];?\s*$/m.test(entry) &&
+      /^import\s+["']dotenv\/config["'];?\s*$/m.test(approvedSource);
+    entry = "";
+    requireRelease(
+      unchanged(
+        permissionSnapshot(meta),
+        permissionSnapshot(await fs.lstat(NODE_ENTRY))
+      ),
+      "ACTIVE_APPLICATION_ENTRY_CHANGED"
+    );
+  }
   // Shell exec node, or PM2's documented Node container with the approved absolute script.
   const nodeEntry =
     argv.length === 2 &&
@@ -966,7 +1012,7 @@ async function proveRuntime(
   const pm2Container =
     /\/pm2\/lib\/ProcessContainerFork\.js$/.test(containerPath) &&
     e.launcher === NODE_ENTRY &&
-    preload;
+    (preload || applicationDotenv);
   const proof: RuntimeProof = {
     status: String(e.raw.status ?? ""),
     mode: String(e.raw.exec_mode ?? ""),
@@ -985,6 +1031,8 @@ async function proveRuntime(
     dotenvPath: inherited.get("DOTENV_CONFIG_PATH"),
     dotenvOverride: inherited.get("DOTENV_CONFIG_OVERRIDE"),
     nodePreload: preload,
+    applicationDotenvVerified: applicationDotenv,
+    initialKeyAbsent: liveKey === undefined,
   };
   e.source = assertRuntime(proof);
   requireRelease(
@@ -1539,6 +1587,25 @@ export async function assertAppBootAuthorized(): Promise<void> {
     active === "active" || active === "activating",
     "BOOT_RELEASE_REQUIRES_FORWARD_FIX"
   );
+}
+/** Called only after the boot guard: no PM2 cache, provider setting or other variable is changed. */
+export async function activateAuthoritativeSigningSource(): Promise<void> {
+  await protectedRoot();
+  const snapshot = await secretSnapshot();
+  let source = await readSecretFile(snapshot);
+  const env = parseDotenv(source);
+  try {
+    const value = locateJwtKey(source).value;
+    assertNewKey(value);
+    requireRelease(
+      safeEqual(env.JWT_SECRET ?? "", value),
+      "AUTHORITATIVE_SIGNING_SOURCE_INVALID"
+    );
+    process.env.JWT_SECRET = value;
+  } finally {
+    source = "";
+    for (const key of Object.keys(env)) delete env[key];
+  }
 }
 async function launchSupervisor(
   workspace: string,
