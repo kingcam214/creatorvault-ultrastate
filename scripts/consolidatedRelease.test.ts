@@ -42,12 +42,12 @@ describe("consolidated non-rotating guarded release", () => {
     expect(source).toContain("assertNewKey(key)");
   });
 
-  it("pins exactly one visual successor to the verified 7b consolidated artifact while preserving the 3762 signing epoch", () => {
+  it("pins exactly one visual successor to the verified 3cb visual artifact while preserving the 3762 signing epoch", () => {
     expect(CONSOLIDATED_RELEASE_PARENT).toBe(
-      "7b63a1e1f84c83a75b7ca135d23cadd4d58b1fcc"
+      "3cb144abdcc4c2025223df6c45c3b3aa3dd854e2"
     );
     expect(CONSOLIDATED_RELEASE_CHECKOUT_PARENT).toBe(
-      "291d23f6e653a54dcf9a49a70ad2434a2b54115e"
+      "3cb144abdcc4c2025223df6c45c3b3aa3dd854e2"
     );
     expect(CONSOLIDATED_SECURITY_BASELINE).toBe(
       "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da"

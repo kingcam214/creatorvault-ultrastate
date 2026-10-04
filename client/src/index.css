@@ -1246,47 +1246,47 @@ h6 {
   text-transform: uppercase;
 }
 .display-xl {
-  font-size: clamp(72px, 9vw, 144px);
-  line-height: 0.92;
-  letter-spacing: 0.015em;
+  font-size: clamp(64px, 14vw, 120px);
+  line-height: 0.9;
+  letter-spacing: 0.02em;
 }
 .display-lg {
-  font-size: clamp(56px, 7vw, 96px);
+  font-size: clamp(48px, 10vw, 88px);
   line-height: 0.95;
   letter-spacing: 0.025em;
 }
 .display-md {
-  font-size: clamp(44px, 5vw, 72px);
+  font-size: clamp(36px, 8vw, 64px);
   line-height: 1;
   letter-spacing: 0.03em;
 }
 .heading-xl {
-  font-size: clamp(36px, 4vw, 56px);
-  line-height: 1.05;
+  font-size: clamp(28px, 6vw, 48px);
+  line-height: 1;
   letter-spacing: 0.03em;
 }
 .heading-lg {
-  font-size: 40px;
-  line-height: 1.1;
+  font-size: 36px;
+  line-height: 1;
   letter-spacing: 0.03em;
 }
 .heading-md {
-  font-size: 32px;
-  line-height: 1.15;
+  font-size: 28px;
+  line-height: 1;
   letter-spacing: 0.035em;
 }
 .heading-sm {
-  font-size: 24px;
-  line-height: 1.2;
+  font-size: 22px;
+  line-height: 1.1;
   letter-spacing: 0.04em;
 }
 .heading-xs {
   font-size: 18px;
-  line-height: 1.25;
+  line-height: 1.1;
   letter-spacing: 0.05em;
 }
 .cta-text {
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.2;
   letter-spacing: 0.1em;
 }
@@ -1301,24 +1301,29 @@ h6 {
   font-family: var(--kc-font-ui);
 }
 .body-xl {
-  font-size: 22px;
-  line-height: 1.65;
+  font-size: 18px;
+  line-height: 1.6;
+  font-weight: 400;
 }
 .body-lg {
-  font-size: 18px;
-  line-height: 1.65;
+  font-size: 16px;
+  line-height: 1.6;
+  font-weight: 400;
 }
 .body-md {
-  font-size: 16px;
-  line-height: 1.65;
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 400;
 }
 .body-sm {
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 400;
 }
 .body-xs {
   font-size: 12px;
-  line-height: 1.6;
+  line-height: 1.4;
+  font-weight: 400;
 }
 .label-lg {
   font-size: 16px;
@@ -1346,36 +1351,41 @@ h6 {
   font-family: var(--kc-font-mono);
 }
 .data-xl {
-  font-size: 48px;
+  font-size: 24px;
+  font-weight: 700;
   line-height: 1.15;
 }
 .data-lg {
-  font-size: 32px;
+  font-size: 18px;
+  font-weight: 700;
   line-height: 1.2;
 }
 .data-md {
-  font-size: 20px;
+  font-size: 14px;
+  font-weight: 400;
   line-height: 1.4;
 }
 .data-sm {
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 400;
   line-height: 1.5;
 }
 .data-xs {
-  font-size: 12px;
+  font-size: 10px;
+  letter-spacing: 0.15em;
   line-height: 1.5;
 }
 .eyebrow,
 .cv-eyebrow {
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.6;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 .badge-text {
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1.5;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
 }
 .cv-page,
@@ -1384,14 +1394,14 @@ h6 {
   color: var(--text-primary);
   font-family: var(--kc-font-ui);
 }
-.cv-dna :is(h1, h2, h3, h4) {
+.cv-dna :is(h1, h2, h3, h4):not([class*="display-"]):not([class*="heading-"]) {
   font-family: var(--kc-font-display);
   font-weight: 400;
   letter-spacing: 0.025em;
   line-height: 1;
   text-transform: uppercase;
 }
-.cv-dna :is(nav a, button:not(.cv-ghost), a.cv-cta, a.cv-cta-outline) {
+.cv-dna :where(nav a, button:not(.cv-ghost), a.cv-cta, a.cv-cta-outline) {
   font-family: var(--kc-font-display);
   font-weight: 400;
   font-size: max(14px, 1em);
@@ -1410,7 +1420,10 @@ h6 {
   font-size: 12px;
   letter-spacing: 0.035em;
 }
-.cv-dna p {
+.cv-dna
+  p:not(.eyebrow):not(.cv-eyebrow):not(.badge-text):not([class*="body-"]):not(
+    [class*="data-"]
+  ):not([class*="display-"]):not([class*="heading-"]):not(.cta-text) {
   font-family: var(--kc-font-ui);
   font-size: max(12px, 1em);
 }
@@ -1552,8 +1565,8 @@ h6 {
   padding: 6px 10px;
   border: 1px solid var(--border-medium);
   border-radius: 2px;
-  font: 400 10px/1.5 var(--kc-font-mono);
-  letter-spacing: 0.12em;
+  font: 400 9px/1.5 var(--kc-font-mono);
+  letter-spacing: 0.15em;
   text-transform: uppercase;
 }
 .cv-badge-cyan {
@@ -1715,19 +1728,19 @@ h6 {
   animation: fadeIn 0.3s ease both;
 }
 .animate-scale-in {
-  animation: scaleIn 0.4s ease both;
+  animation: scaleIn 0.3s ease forwards;
 }
 .live-stat {
   animation: dataFlicker 4s linear infinite;
 }
 .cta-pulse-cyan {
-  animation: pulseCyan 3s ease-in-out infinite;
+  animation: pulseCyan 2.5s ease infinite;
 }
 .cta-pulse-gold {
-  animation: pulseGold 3s ease-in-out infinite;
+  animation: pulseGold 2.5s ease infinite;
 }
 .float {
-  animation: float 4s ease-in-out infinite;
+  animation: float 3s ease-in-out infinite;
 }
 .cv-shimmer {
   background: linear-gradient(
@@ -1753,7 +1766,9 @@ h6 {
 }
 @media (max-width: 640px) {
   .cv-dna
-    :is(.body-lg, .body-md, p:not(.eyebrow):not(.cv-eyebrow):not(.badge-text)) {
+    p:not(.eyebrow):not(.cv-eyebrow):not(.badge-text):not([class*="body-"]):not(
+      [class*="data-"]
+    ):not([class*="display-"]):not([class*="heading-"]):not(.cta-text) {
     font-size: max(14px, 1em);
     line-height: 1.6;
   }
@@ -1806,7 +1821,7 @@ h6 {
 }
 
 .cv-cta:not(:disabled) {
-  animation: pulseCyan 3s ease-in-out infinite;
+  animation: pulseCyan 2.5s ease infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .cv-cta:not(:disabled) {

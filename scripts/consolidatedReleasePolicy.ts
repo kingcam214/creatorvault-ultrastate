@@ -18,9 +18,9 @@ export const CONSOLIDATED_SECURITY_BASELINE =
  * exact current main; the security signing epoch above remains immutable.
  */
 export const CONSOLIDATED_RELEASE_PARENT =
-  "7b63a1e1f84c83a75b7ca135d23cadd4d58b1fcc";
+  "3cb144abdcc4c2025223df6c45c3b3aa3dd854e2";
 export const CONSOLIDATED_RELEASE_CHECKOUT_PARENT =
-  "291d23f6e653a54dcf9a49a70ad2434a2b54115e";
+  "3cb144abdcc4c2025223df6c45c3b3aa3dd854e2";
 export const APP_ROOT = "/root/creatorvault";
 export const APPROVED_FEATURE_HEADS = {
   stripe: "ccba8cd56f887d041311d4f37d3ec912fd57322d",

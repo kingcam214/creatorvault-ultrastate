@@ -496,22 +496,22 @@ The single next action required to unblock it:
 DO NOT SAY “COMPLETE” UNLESS THE LIVE VPS DEPLOYMENT AND LIVE VISUAL VERIFICATION HAVE BOTH PASSED.
 ~~~~
 
-## Implementation mapping — explicit supplement, not recovered values
+## Exact owner-supplied typography — current canonical values
 
-The supplied task names typography classes but contains no numeric type-scale table or additional original DNA attachment. No missing original sizes are claimed to have been recovered. The following direct semantic mapping preserves the stated role, floor, responsive hierarchy, weight, spacing and line-height intent. Exact stated CTA/input/card numbers remain unchanged.
+The subsequent owner instruction supplies the numeric type scale explicitly. These values replace the earlier provisional mapping, not the preserved stronger brand, product, or safety rules. Primary CTA remains 18px; secondary CTA and the generic `cta-text` class remain 16px. Explicit semantic typography must not be overridden by generic paragraph/headline styling, on desktop or mobile.
 
 | Class | Size | Weight | Line height | Tracking | Family |
 | --- | --- | --- | --- | --- | --- |
-| display-xl | 72–144px responsive | 400 | .92 | .015em | Bebas Neue |
-| display-lg | 56–96px responsive | 400 | .95 | .025em | Bebas Neue |
-| display-md | 44–72px responsive | 400 | 1 | .03em | Bebas Neue |
-| heading-xl | 36–56px responsive | 400 | 1.05 | .03em | Bebas Neue |
-| heading-lg / md / sm / xs | 40 / 32 / 24 / 18px | 400 | 1.1 / 1.15 / 1.2 / 1.25 | .03 / .035 / .04 / .05em | Bebas Neue |
-| cta-text | 18px | 400 | 1.2 | .1em | Bebas Neue |
-| body-xl / lg / md / sm / xs | 22 / 18 / 16 / 14 / 12px | 400 | 1.65 / 1.65 / 1.65 / 1.6 / 1.6 | normal | DM Sans |
+| display-xl | clamp(64px, 14vw, 120px) | 400 | .9 | .02em | Bebas Neue |
+| display-lg | clamp(48px, 10vw, 88px) | 400 | .95 | inherited display tracking | Bebas Neue |
+| display-md | clamp(36px, 8vw, 64px) | 400 | 1 | inherited display tracking | Bebas Neue |
+| heading-xl | clamp(28px, 6vw, 48px) | 400 | 1 | inherited heading tracking | Bebas Neue |
+| heading-lg / md / sm / xs | 36 / 28 / 22 / 18px | 400 | 1 / 1 / 1.1 / 1.1 | inherited heading tracking | Bebas Neue |
+| cta-text | 16px | 400 | 1.2 | .1em | Bebas Neue |
+| body-xl / lg / md / sm / xs | 18 / 16 / 15 / 13 / 12px | 400 | 1.6 / 1.6 / 1.5 / 1.5 / 1.4 | normal | DM Sans |
 | label-lg / md / sm | 16 / 14 / 12px | 600 / 500 / 500 | 1.4 | normal | DM Sans |
-| data-xl / lg / md / sm / xs | 48 / 32 / 20 / 14 / 12px | 400 | 1.15 / 1.2 / 1.4 / 1.5 / 1.5 | normal | Space Mono |
-| eyebrow / badge-text | 11 / 10px | 400 | 1.6 / 1.5 | .18 / .12em | Space Mono |
+| data-xl / lg / md / sm / xs | 24 / 18 / 14 / 12 / 10px | 700 / 700 / 400 / 400 / 400 | inherited readable data line height | data-xs: .15em | Space Mono |
+| eyebrow / badge-text | 10 / 9px | 400 | 1.6 / 1.5 | .2 / .15em | Space Mono |
 
 ## Canonical source and compatibility
 
@@ -521,3 +521,515 @@ The supplied task names typography classes but contains no numeric type-scale ta
 - Selected journey roots use `cv-dna`; legacy routes are not falsely certified. Global token aliases resolve to the DNA; retained hardcoded legacy colors on non-selected routes are recorded as deferred rather than silently rewritten.
 - Existing homepage certified source paths remain intact; poster/error/reduced-motion behavior is presentation only, never a replacement output.
 - A visual release is not acceptance of a creator output, rights/compliance, monetization or a soft launch.
+
+
+## Current owner release instruction — preserved unabridged
+
+The exact numeric typography and motion above follow this instruction; all stronger preserved product and safety constraints remain in force.
+
+~~~~text
+MANUS AGENT LEVEL: MAX
+
+CREATORVAULT — VISUAL DNA IMPLEMENTATION, CANONICAL RELEASE, VPS DEPLOYMENT, AND LIVE VERIFICATION
+
+THIS IS THE ONLY AUTHORIZED NEXT DEVELOPMENT TASK.
+
+Do not run another audit.
+Do not create another protocol or recovery document except the required immutable visual-DNA file.
+Do not retry or repair browser takeover.
+Do not work on FFmpeg, Local Trailer Cut, automated test tooling, provider generation, KingCam, Persona, Body Cinema, payments, Stripe, payouts, publishing, outreach, email, or new product modules.
+Do not create a new app, repository, branch-as-a-substitute, demo, static mockup, or local-only parallel implementation.
+Do not stop at local proof.
+
+The previous browser-takeover issue is an agent tooling limitation only. The user has confirmed their real phone and real CreatorVault use work. If browser takeover is unavailable, use the established alternate disposable-account / automated-browser validation route. Do not treat takeover failure as a CreatorVault, user-phone, user-browser, keyboard, or account problem.
+
+────────────────────────────────────────────────────────
+THE ONLY DEFINITION OF DONE
+────────────────────────────────────────────────────────
+
+This task is NOT complete unless every item below is completed and reported:
+
+1. Canonical CreatorVault repository identified.
+2. Canonical branch identified.
+3. Starting commit SHA recorded.
+4. Existing VPS deployment mechanism identified from the real project configuration.
+5. Rollback reference identified before changing anything.
+6. Immutable CreatorVault Visual and Design DNA persisted in canonical source.
+7. Real shared app styles/tokens/fonts/motion/components updated.
+8. Existing real soft-launch creator journey updated—not a separate demo.
+9. Application tests, type checks, lint/build checks pass.
+10. Final commit created.
+11. Canonical branch pushed.
+12. Exact final commit deployed through the real VPS deployment path.
+13. Live production routes verified on desktop.
+14. Live production routes verified on mobile viewport.
+15. Live visual-DNA pass/fail assessment recorded.
+16. Rollback reference recorded after deployment.
+
+If any item cannot be completed safely, STOP and report the exact blocker. Do not claim completion. Do not replace missing VPS work with local screenshots.
+
+────────────────────────────────────────────────────────
+PHASE 0 — DISCOVER THE REAL SOURCE OF TRUTH
+────────────────────────────────────────────────────────
+
+Before editing anything:
+
+1. Locate the actual checked-out CreatorVault project that is used for deployment.
+2. Inspect:
+   - `git remote -v`
+   - active branch
+   - `git status`
+   - current HEAD SHA
+   - `.github/workflows/`
+   - deployment scripts/configuration
+   - package scripts
+   - README/deployment documentation
+   - environment/deployment references
+   - current global styles, font setup, component system, route structure, and media assets.
+3. Read:
+   - `CREATORVAULT_RECOVERY_2026-10-03/02_RECOVERY_REGISTER.md`
+   - `CREATORVAULT_RECOVERY_2026-10-03/03_CURRENT_SYSTEM_MAP.md`
+   - `CREATORVAULT_RECOVERY_2026-10-03/04_CREATORVAULT_MASTER_BIBLE.md`
+   - `CREATORVAULT_RECOVERY_2026-10-03/14_AGENT_BROWSER_TAKEOVER_TESTING_PROTOCOL.md`
+4. Identify the existing most-complete creator journey suitable for controlled soft launch.
+5. Identify the exact deployment mechanism that sends canonical source to the VPS.
+6. Identify a safe rollback commit/tag/reference before any code changes.
+
+STOP IMMEDIATELY IF:
+- The project is not the canonical source used for VPS deployment.
+- The deployment path cannot be verified.
+- You cannot identify the canonical repository and branch.
+- You are about to build a substitute app/repo/demo/local-only version.
+
+Report the blocker with evidence. Do not continue into implementation.
+
+────────────────────────────────────────────────────────
+IMMUTABLE CREATORVAULT VISUAL AND DESIGN DNA
+────────────────────────────────────────────────────────
+
+This is law. It is not optional styling direction. It must govern every creator-facing route, component, state, and release review.
+
+VISUAL BENCHMARK:
+
+Apple.com product launch
+× Dior campaign site
+× NBA playoff broadcast graphics
+× Active Theory / Resn agency work
+
+CreatorVault is a luxury creative universe that happens to be a platform.
+
+CreatorVault is NOT:
+- A generic SaaS dashboard.
+- A developer tools interface.
+- A generic startup site.
+- A Canva-style layout.
+- A dark recolored template.
+- A generic AI wrapper.
+- A card-grid-first interface with no visual story.
+
+AUTOMATIC FAILURE CONDITIONS:
+
+- Any white or light background.
+- Any light-gray page, panel, modal, form, empty state, or error state.
+- Generic SaaS dashboard composition.
+- Generic startup landing page structure.
+- Generic purple or generic bright-blue palette.
+- Bubbly controls or oversized rounded-pill UI used as a substitute for hierarchy.
+- Generic stock imagery as a substitute for intentional art direction.
+- Static/dead landing or campaign hero where cinematic media is appropriate.
+- Default browser inputs, selects, loading states, errors, or empty states.
+- Fake completion, fake output, fake live indicators, fake revenue, or fake provider state.
+- Local proof presented as production proof.
+
+PASS CONDITIONS:
+
+- A still screenshot makes someone stop scrolling.
+- A page looks like it cost $5,000 to make, not $5.
+- The platform feels premium, cinematic, editorial, culturally credible, and intentionally designed.
+- Desktop and mobile both feel composed, not merely resized.
+- The same DNA extends through productive work surfaces, loading, errors, empty states, forms, saves, and result states.
+
+────────────────────────────────────────────────────────
+REQUIRED GLOBAL TOKENS
+────────────────────────────────────────────────────────
+
+Add the following to the canonical global stylesheet or canonical design-token system. Do not remove or weaken them.
+
+```css
+:root {
+  --bg-void:            #0A0A0A;
+  --bg-surface:         #1A1A1A;
+  --bg-elevated:        #2A2A2A;
+  --bg-glass:           rgba(255,255,255,0.04);
+  --bg-glass-dark:      rgba(0,0,0,0.6);
+
+  --accent-cyan:        #00D9FF;
+  --accent-cyan-dim:    rgba(0,217,255,0.15);
+  --accent-cyan-border: rgba(0,217,255,0.3);
+  --accent-cyan-glow:   0 0 24px rgba(0,217,255,0.4);
+
+  --accent-gold:        #C9A84C;
+  --accent-gold-dim:    rgba(201,168,76,0.15);
+  --accent-gold-border: rgba(201,168,76,0.3);
+  --accent-gold-glow:   0 0 24px rgba(201,168,76,0.4);
+
+  --text-primary:       #FFFFFF;
+  --text-secondary:     rgba(255,255,255,0.6);
+  --text-muted:         rgba(255,255,255,0.3);
+  --text-disabled:      rgba(255,255,255,0.15);
+
+  --border-subtle:      rgba(255,255,255,0.08);
+  --border-medium:      rgba(255,255,255,0.15);
+  --border-accent-cyan: rgba(0,217,255,0.3);
+  --border-accent-gold: rgba(201,168,76,0.3);
+
+  --success:            #00FF94;
+  --danger:             #FF3B3B;
+  --warning:            #FFB800;
+  --live:               #FF3B3B;
+
+  --gradient-hero: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.05) 0%,
+    rgba(0,0,0,0.3) 40%,
+    rgba(0,0,0,0.75) 70%,
+    #0A0A0A 100%
+  );
+
+  --gradient-card: linear-gradient(
+    135deg,
+    #1A1A1A 0%,
+    #0F0F0F 100%
+  );
+
+  --gradient-gold: linear-gradient(
+    135deg,
+    rgba(201,168,76,0.2) 0%,
+    rgba(201,168,76,0.05) 100%
+  );
+
+  --gradient-cyan: linear-gradient(
+    135deg,
+    rgba(0,217,255,0.15) 0%,
+    rgba(0,217,255,0.03) 100%
+  );
+}
+COLOR RULES:
+Void black is the app/page foundation.
+Surface/elevated black values are for panels and interaction states.
+Cyan is for primary action, active states, platform/technical readouts, progress, and links.
+Gold is only for KingCam, revenue, VIP, empire, founder/crown, and premium signals.
+Red is danger/live only.
+Purple is forbidden except legacy elements being explicitly removed.
+No generic blue.
+Gradients must remain dark-to-darker.
+────────────────────────────────────────────────────────
+REQUIRED TYPOGRAPHY
+────────────────────────────────────────────────────────
+Load globally:
+Bebas Neue.
+DM Sans: 300, 400, 500, 600, 700.
+Space Mono: 400, 700.
+MANDATORY ROLES:
+BEBAS NEUE:
+Display/page/section headlines.
+Feature/product names.
+Navigation labels.
+CTA labels.
+Major impact and stat values.
+Never paragraph body copy.
+Never below 14px.
+DM SANS:
+Body copy.
+Descriptions.
+Form values.
+Input text.
+Helper text.
+Tooltips.
+Conversational text.
+Never below 12px.
+SPACE MONO:
+Eyebrows.
+Technical/system labels.
+Dates/times.
+Status.
+Badge text.
+Financial/readout data.
+Live counters.
+Never long-form body copy.
+Implement the required typography classes or a direct semantic equivalent:
+.display-xl  { font-family: 'Bebas Neue'; font-size: clamp(64px, 14vw, 120px); line-height: 0.9; letter-spacing: 0.02em; }
+.display-lg  { font-family: 'Bebas Neue'; font-size: clamp(48px, 10vw, 88px); line-height: 0.95; }
+.display-md  { font-family: 'Bebas Neue'; font-size: clamp(36px, 8vw, 64px); line-height: 1; }
+.heading-xl  { font-family: 'Bebas Neue'; font-size: clamp(28px, 6vw, 48px); line-height: 1; }
+.heading-lg  { font-family: 'Bebas Neue'; font-size: 36px; line-height: 1; }
+.heading-md  { font-family: 'Bebas Neue'; font-size: 28px; line-height: 1; }
+.heading-sm  { font-family: 'Bebas Neue'; font-size: 22px; line-height: 1.1; }
+.heading-xs  { font-family: 'Bebas Neue'; font-size: 18px; line-height: 1.1; }
+.cta-text    { font-family: 'Bebas Neue'; font-size: 16px; letter-spacing: 0.1em; }
+
+.body-xl     { font-family: 'DM Sans'; font-size: 18px; line-height: 1.6; font-weight: 400; }
+.body-lg     { font-family: 'DM Sans'; font-size: 16px; line-height: 1.6; font-weight: 400; }
+.body-md     { font-family: 'DM Sans'; font-size: 15px; line-height: 1.5; font-weight: 400; }
+.body-sm     { font-family: 'DM Sans'; font-size: 13px; line-height: 1.5; font-weight: 400; }
+.body-xs     { font-family: 'DM Sans'; font-size: 12px; line-height: 1.4; font-weight: 400; }
+
+.data-xl     { font-family: 'Space Mono'; font-size: 24px; font-weight: 700; }
+.data-lg     { font-family: 'Space Mono'; font-size: 18px; font-weight: 700; }
+.data-md     { font-family: 'Space Mono'; font-size: 14px; font-weight: 400; }
+.data-sm     { font-family: 'Space Mono'; font-size: 12px; font-weight: 400; }
+.data-xs     { font-family: 'Space Mono'; font-size: 10px; letter-spacing: 0.15em; }
+.eyebrow     { font-family: 'Space Mono'; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; }
+.badge-text  { font-family: 'Space Mono'; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; }
+────────────────────────────────────────────────────────
+REQUIRED MOTION SYSTEM
+────────────────────────────────────────────────────────
+Implement or reconcile these global animation utilities:
+fadeUp
+fadeIn
+scaleIn
+pulseCyan
+pulseGold
+scanDown
+dataFlicker
+float
+emberFloat
+shimmer
+expandWidth
+Required utility classes:
+.animate-fade-up  { animation: fadeUp 0.4s ease forwards; }
+.animate-fade-in  { animation: fadeIn 0.3s ease forwards; }
+.animate-scale-in { animation: scaleIn 0.3s ease forwards; }
+.live-stat        { animation: dataFlicker 4s infinite; }
+.cta-pulse-cyan   { animation: pulseCyan 2.5s ease infinite; }
+.cta-pulse-gold   { animation: pulseGold 2.5s ease infinite; }
+.float            { animation: float 3s ease-in-out infinite; }
+MOTION RULES:
+Entry animations: 0.3–0.5 seconds.
+Related elements stagger approximately 0.1 seconds.
+No bouncing.
+No slow/unnecessarily long UI animation.
+Content loading uses shimmer, not generic spinning indicators.
+Primary CTAs use subtle cyan/gold pulse.
+Hover: restrained scale/brightness.
+Active: restrained compression.
+Ambient effects only when meaningful.
+Respect prefers-reduced-motion; disable/reduce nonessential movement.
+────────────────────────────────────────────────────────
+REQUIRED SHARED COMPONENT SYSTEM
+────────────────────────────────────────────────────────
+Inspect the current architecture and use existing patterns where possible. Do not force a framework migration.
+Create or reconcile shared primitives that enforce this DNA:
+Primary CTA:
+52px height.
+Cyan fill.
+Void-black text.
+Bebas Neue.
+18px / 0.1em tracking.
+2px radius.
+Cyan pulse.
+Restrained hover/active motion.
+Secondary CTA:
+52px height.
+Cyan outline.
+Bebas Neue.
+16px / 0.1em tracking.
+2px radius.
+Gold CTA:
+Reserved for revenue/founder/empire/KingCam/premium actions.
+52px height.
+Gold fill / void-black text.
+Bebas Neue.
+Gold pulse.
+Ghost and danger actions:
+Ghost: restrained dark surface/DM Sans.
+Danger: red only for real destructive action.
+Cards:
+Standard dark surface.
+Elevated dark surface.
+Cyan featured.
+Gold featured.
+Glass over media.
+8px card radius.
+Restrained border/glow treatment.
+No white cards.
+No excessive glass blur.
+Badges/status:
+Space Mono microtype/uppercase/tracking.
+Cyan/gold/success/danger/muted semantic variants.
+Live state only if truthful.
+Forms:
+Dark 48px inputs.
+DM Sans input text.
+Space Mono labels.
+Cyan focus ring.
+Custom select treatment.
+No browser defaults.
+Stats:
+Space Mono label.
+Bebas Neue impact value.
+Cyan/gold animated accent line.
+Revenue live styling only for actual revenue data.
+Loading/empty/error/success:
+Fully designed under the same DNA.
+Truthful language.
+No fake completion.
+No default spinner-as-content experience.
+────────────────────────────────────────────────────────
+HERO / CAMPAIGN MEDIA SYSTEM
+────────────────────────────────────────────────────────
+For landing pages and major campaign/entry surfaces where appropriate:
+Full viewport composition.
+Real page-specific cinematic media or intentionally art-directed visual media.
+object-fit: cover.
+Dark readability gradient overlay.
+Optional cyan scan line only on appropriate platform/tech pages.
+Layered hierarchy:
+Space Mono eyebrow.
+Bebas Neue impact statement.
+DM Sans support copy.
+Cyan/gold CTA hierarchy.
+Use optimized/lazy-loaded visual media and intentional fallback/poster.
+Honor reduced motion.
+Do not mechanically force video hero treatment onto every internal work screen.
+The CreatorVault visual language must continue inside Creator OS, workspace, saved work, Video Studio, Trailer Maker, media selection, forms, loading, errors, empty states, and results—not stop at the landing page.
+────────────────────────────────────────────────────────
+IMPLEMENTATION SCOPE
+────────────────────────────────────────────────────────
+PHASE 1 — PERSIST THE STANDARD
+Create or preserve this canonical file:
+docs/CREATORVAULT_VISUAL_AND_DESIGN_DNA.md
+It must contain the Visual DNA rules above in durable form.
+Link it from the canonical README, engineering guide, or deployment guide.
+Add the global token/font/motion/reduced-motion foundation to the actual app.
+Do not overwrite stronger pre-existing CreatorVault visual direction with a weaker generic interpretation.
+PHASE 2 — APPLY TO THE REAL SOFT-LAUNCH JOURNEY
+Identify the most complete existing creator journey.
+Update only existing routes necessary to complete it.
+Prioritize:
+Entry / landing / authenticated entry.
+Sign-in if already part of the active journey.
+Creator workspace / project selection.
+Source media selection/upload.
+Trailer Maker or existing direction path.
+Video Studio / truthful next-action/output path.
+Related loading, empty, error, save, and restore states.
+Preserve real behavior, ownership, data model, and truthful state.
+Do not replace live behavior with static mockups.
+Do not claim an AI output, edited output, provider output, revenue, or completion unless the app actually has it.
+Make desktop and mobile intentional—not merely responsive by accident.
+PHASE 3 — VALIDATE, RELEASE, VERIFY
+Run the project’s applicable formatting/lint/type/build/test commands.
+Resolve failures related to the selected journey or visual-system changes.
+Use browser takeover if functional.
+If browser takeover is unavailable, use the documented alternate validation method:
+direct automated browser testing;
+disposable creator account;
+disposable media;
+upload/select/playback;
+workspace save;
+Trailer Maker direction save;
+leave/re-enter;
+restoration confirmation;
+evidence capture;
+fixture cleanup.
+Capture desktop and mobile screenshots for the selected launch journey.
+Assess every capture against the immutable visual DNA.
+Create one focused commit.
+Push the canonical branch.
+Deploy using the verified VPS deployment mechanism.
+Verify the LIVE production application:
+real production URL;
+desktop route(s);
+mobile viewport route(s);
+selected creator journey;
+no blocking console/runtime failures;
+no unexpected light/generic UI;
+no dead-end/misleading state.
+Record rollback reference.
+────────────────────────────────────────────────────────
+STRICT PROHIBITIONS
+────────────────────────────────────────────────────────
+DO NOT:
+Create a separate demo.
+Create a new repository.
+Create a parallel “visual proof” app.
+Stop after local screenshots.
+Call local/deployed-source test results a production release.
+Continue or deploy the test-only Local Trailer Cut FFmpeg lane.
+Present FFmpeg as a creative editor/generator.
+Execute paid providers.
+Execute payments, payouts, Stripe, checkout, or billing actions.
+Publish externally.
+Send email, social, messages, or outreach.
+Run destructive database migrations.
+Delete production data.
+Expose secrets.
+Replace functionality with static mockups.
+Claim success without real evidence.
+────────────────────────────────────────────────────────
+FINAL RESPONSE FORMAT — EXACTLY
+────────────────────────────────────────────────────────
+CREATORVAULT VISUAL DNA + VPS RELEASE RESULT
+Canonical source
+Repository:
+Branch:
+Starting commit:
+Final commit:
+Push result:
+VPS deployment mechanism:
+VPS deployment result:
+Rollback reference:
+Immutable visual DNA
+Canonical DNA file:
+Existing DNA artifacts found:
+Documentation link added:
+Token/style files changed:
+Font setup:
+Motion/reduced-motion setup:
+Shared system
+Components/primitives created or reconciled:
+Existing components updated:
+Routes deliberately not changed:
+Reason:
+Soft-launch creator journey
+Selected existing journey:
+Routes updated:
+Functional behavior verified:
+Persistence/truthfulness verified:
+Browser takeover used: YES/NO
+If NO, approved fallback used:
+Validation
+Tests:
+Type check:
+Lint:
+Production build:
+Desktop visual QA:
+Mobile visual QA:
+Visual-DNA failures found and fixed:
+Any remaining visual failure:
+Live proof
+Production URLs tested:
+Live desktop results:
+Live mobile results:
+Runtime/console issues:
+Evidence artifact paths:
+Live verification timestamp:
+Explicit non-actions
+FFmpeg Local Trailer Cut expanded/deployed: NO
+Providers/paid AI generation: NONE
+Payments/payouts/Stripe: NONE
+External publishing/sends: NONE
+Destructive database operations: NONE
+New repository/demo/parallel app: NONE
+IF BLOCKED, DO NOT CLAIM COMPLETE. USE THIS EXACT FORMAT:
+BLOCKED
+Blocked requirement:
+Exact evidence:
+What was verified:
+What was NOT done:
+Why it was unsafe or impossible to continue:
+Single next action required:
+No-production-change confirmation:
+STOP AFTER THE FINAL REPORT.
+~~~~

@@ -64,6 +64,84 @@ describe("immutable CreatorVault visual DNA", () => {
     expect(css).not.toContain("@import url(");
   });
 
+  it("uses the owner's exact numeric typography scale rather than a framework substitute", () => {
+    const declarations = (name: string) => {
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const blocks = [
+        ...css.matchAll(new RegExp(`\\.${escaped}\\s*\\{([^}]+)\\}`, "g")),
+      ];
+      expect(blocks.length, name).toBeGreaterThan(0);
+      return Object.fromEntries(
+        blocks
+          .flatMap(block => [...block[1].matchAll(/([a-z-]+):\s*([^;]+);/g)])
+          .map(match => [match[1], match[2].trim()])
+      );
+    };
+    for (const [name, size, height] of [
+      ["display-xl", "clamp(64px, 14vw, 120px)", "0.9"],
+      ["display-lg", "clamp(48px, 10vw, 88px)", "0.95"],
+      ["display-md", "clamp(36px, 8vw, 64px)", "1"],
+      ["heading-xl", "clamp(28px, 6vw, 48px)", "1"],
+      ["heading-lg", "36px", "1"],
+      ["heading-md", "28px", "1"],
+      ["heading-sm", "22px", "1.1"],
+      ["heading-xs", "18px", "1.1"],
+      ["body-xl", "18px", "1.6"],
+      ["body-lg", "16px", "1.6"],
+      ["body-md", "15px", "1.5"],
+      ["body-sm", "13px", "1.5"],
+      ["body-xs", "12px", "1.4"],
+    ]) {
+      expect(declarations(name)).toMatchObject({
+        "font-size": size,
+        "line-height": height,
+      });
+    }
+    for (const [name, size, weight] of [
+      ["data-xl", "24px", "700"],
+      ["data-lg", "18px", "700"],
+      ["data-md", "14px", "400"],
+      ["data-sm", "12px", "400"],
+    ]) {
+      expect(declarations(name)).toMatchObject({
+        "font-size": size,
+        "font-weight": weight,
+      });
+    }
+    expect(declarations("cta-text")).toMatchObject({
+      "font-size": "16px",
+      "letter-spacing": "0.1em",
+    });
+    expect(declarations("display-xl")).toMatchObject({
+      "letter-spacing": "0.02em",
+    });
+    expect(declarations("data-xs")).toMatchObject({
+      "font-size": "10px",
+      "letter-spacing": "0.15em",
+    });
+    expect(declarations("badge-text")).toMatchObject({
+      "font-size": "9px",
+      "letter-spacing": "0.15em",
+    });
+    expect(css).toMatch(
+      /\.eyebrow,\s*\.cv-eyebrow\s*\{\s*font-size: 10px;[\s\S]*?letter-spacing: 0\.2em;/
+    );
+    expect(css).not.toMatch(/\.cv-dna p\s*\{/);
+    expect(css).toContain(':not([class*="body-"])');
+    expect(css).toContain(':not([class*="display-"])');
+    expect(css).toContain(':not([class*="heading-"])');
+    expect(css).toContain(":not(.cta-text)");
+    expect(css).toContain(
+      ".cv-dna :where(nav a, button:not(.cv-ghost), a.cv-cta, a.cv-cta-outline)"
+    );
+    expect(css).not.toContain(
+      ".cv-dna :is(nav a, button:not(.cv-ghost), a.cv-cta, a.cv-cta-outline)"
+    );
+    expect(css).toContain("animation: pulseCyan 2.5s ease infinite");
+    expect(css).toContain("animation: pulseGold 2.5s ease infinite");
+    expect(css).toContain("animation: float 3s ease-in-out infinite");
+  });
+
   it("retains every required animation and accessible reduced motion", () => {
     for (const name of [
       "fadeUp",
