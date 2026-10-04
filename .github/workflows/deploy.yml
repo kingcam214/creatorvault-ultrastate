@@ -51,9 +51,9 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_EVENT_NAME" = 'push'
-          test "$CREATORVAULT_RELEASE_BEFORE" = '7b63a1e1f84c83a75b7ca135d23cadd4d58b1fcc'
+          test "$CREATORVAULT_RELEASE_BEFORE" = '291d23f6e653a54dcf9a49a70ad2434a2b54115e'
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git rev-parse "$GITHUB_SHA^")" = '7b63a1e1f84c83a75b7ca135d23cadd4d58b1fcc'
+          test "$(git rev-parse "$GITHUB_SHA^")" = '291d23f6e653a54dcf9a49a70ad2434a2b54115e'
           git merge-base --is-ancestor 3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da HEAD
           git merge-base --is-ancestor ccba8cd56f887d041311d4f37d3ec912fd57322d HEAD
           git merge-base --is-ancestor d0bec580d387f962bb779663f873c9e642f57ae3 HEAD

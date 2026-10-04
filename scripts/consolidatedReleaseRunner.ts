@@ -1147,16 +1147,30 @@ async function verifyMigratedTables(databaseUrl: string): Promise<void> {
  * applies a migration. Both reviewed additive migrations were applied by the
  * verified consolidated release and are now only proved read-only.
  */
+export function alreadyAppliedSchemaMatches(inspection: {
+  pending: readonly string[];
+  alreadyApplied: readonly string[];
+}): boolean {
+  const expected = Object.keys(APPROVED_MIGRATION_HASHES).map(file =>
+    path.basename(file, ".sql")
+  );
+  return (
+    inspection.pending.length === 0 &&
+    expected.length === inspection.alreadyApplied.length &&
+    expected.every(migration => inspection.alreadyApplied.includes(migration))
+  );
+}
+
 async function verifyExistingApprovedAdditiveSchema(
   databaseUrl: string,
   workspace: string
 ): Promise<{ migrations: number; alreadyApplied: number }> {
-  const inspection = await inspectConsolidatedMigrations(databaseUrl, workspace);
-  const expected = Object.keys(APPROVED_MIGRATION_HASHES);
+  const inspection = await inspectConsolidatedMigrations(
+    databaseUrl,
+    workspace
+  );
   requireRelease(
-    inspection.pending.length === 0 &&
-      expected.length === inspection.alreadyApplied.length &&
-      expected.every(migration => inspection.alreadyApplied.includes(migration)),
+    alreadyAppliedSchemaMatches(inspection),
     "CONSOLIDATED_ADDITIVE_SCHEMA_NOT_ALREADY_APPLIED"
   );
   await verifyMigratedTables(databaseUrl);

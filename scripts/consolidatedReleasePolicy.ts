@@ -13,12 +13,14 @@ import { collectPrivilegedProcedurePaths } from "./securityProcedureInventory";
 export const CONSOLIDATED_SECURITY_BASELINE =
   "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da";
 /**
- * The last verified consolidated artifact. This is the only permitted direct
- * parent for the additive visual release; the security signing epoch above is
- * intentionally historical and remains immutable.
+ * The last verified live consolidated artifact remains the visual diff,
+ * artifact and session-preservation baseline. The checkout parent below is
+ * exact current main; the security signing epoch above remains immutable.
  */
 export const CONSOLIDATED_RELEASE_PARENT =
   "7b63a1e1f84c83a75b7ca135d23cadd4d58b1fcc";
+export const CONSOLIDATED_RELEASE_CHECKOUT_PARENT =
+  "291d23f6e653a54dcf9a49a70ad2434a2b54115e";
 export const APP_ROOT = "/root/creatorvault";
 export const APPROVED_FEATURE_HEADS = {
   stripe: "ccba8cd56f887d041311d4f37d3ec912fd57322d",
@@ -292,7 +294,7 @@ export function checkConsolidatedCheckout(
     "UNAPPROVED_CONSOLIDATED_TRIGGER"
   );
   requireRelease(
-    before === CONSOLIDATED_RELEASE_PARENT,
+    before === CONSOLIDATED_RELEASE_CHECKOUT_PARENT,
     "UNAPPROVED_CONSOLIDATED_BASELINE"
   );
   const root = realpathSync(workspace);
@@ -306,7 +308,8 @@ export function checkConsolidatedCheckout(
     "CONSOLIDATED_CHECKOUT_IDENTITY_MISMATCH"
   );
   requireRelease(
-    git(root, ["rev-parse", `${sha}^`]) === CONSOLIDATED_RELEASE_PARENT,
+    git(root, ["rev-parse", `${sha}^`]) ===
+      CONSOLIDATED_RELEASE_CHECKOUT_PARENT,
     "CONSOLIDATED_RELEASE_PARENT_MISMATCH"
   );
   requireRelease(

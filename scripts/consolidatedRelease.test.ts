@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  alreadyAppliedSchemaMatches,
   BASELINE_STATIC_HOMEPAGE_ASSETS,
   isBaselineStaticHomepagePath,
   requiresFailureStop,
@@ -10,6 +11,7 @@ import {
   type ReleaseState,
 } from "./consolidatedReleaseRunner";
 import {
+  CONSOLIDATED_RELEASE_CHECKOUT_PARENT,
   CONSOLIDATED_RELEASE_PARENT,
   CONSOLIDATED_SECURITY_BASELINE,
   CONSOLIDATED_VISUAL_RELEASE_ALLOWED_PATHS,
@@ -44,18 +46,19 @@ describe("consolidated non-rotating guarded release", () => {
     expect(CONSOLIDATED_RELEASE_PARENT).toBe(
       "7b63a1e1f84c83a75b7ca135d23cadd4d58b1fcc"
     );
+    expect(CONSOLIDATED_RELEASE_CHECKOUT_PARENT).toBe(
+      "291d23f6e653a54dcf9a49a70ad2434a2b54115e"
+    );
     expect(CONSOLIDATED_SECURITY_BASELINE).toBe(
       "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da"
     );
     expect(policySource).toContain("CONSOLIDATED_RELEASE_PARENT_MISMATCH");
     expect(source).toContain("assertLiveConsolidatedRelease");
-    expect(source).toContain(
-      "CONSOLIDATED_ACTIVE_RELEASE_SECURITY_UNPROVEN"
-    );
+    expect(source).toContain("CONSOLIDATED_ACTIVE_RELEASE_SECURITY_UNPROVEN");
     expect(source).toContain("rollbackArtifact: priorArtifactPath()");
   });
 
-  it("allows only the visual, creator-workspace, and release-controller paths for the direct 7b successor", () => {
+  it("allows only the reviewed visual tree and its exact-parent controller maintenance", () => {
     for (const allowed of [
       "client/src/index.css",
       "client/src/pages/Home.tsx",
@@ -126,12 +129,47 @@ describe("consolidated non-rotating guarded release", () => {
     expect(source).toContain("code: errorCode(error)");
   });
 
+  it("recognizes only both exact already-applied inspector stems with nothing pending", () => {
+    const names = [
+      "0024_stripe_creator_net_payouts",
+      "0025_persona_vault_chained_continuity",
+    ];
+    expect(
+      alreadyAppliedSchemaMatches({ pending: [], alreadyApplied: names })
+    ).toBe(true);
+    expect(
+      alreadyAppliedSchemaMatches({
+        pending: [],
+        alreadyApplied: [...names].reverse(),
+      })
+    ).toBe(true);
+    for (const alreadyApplied of [
+      [],
+      names.slice(0, 1),
+      [names[0]!, names[0]!],
+      [...names, "unknown"],
+      names.map(name => `drizzle/${name}.sql`),
+      names.map(name => `${name}.sql`),
+    ]) {
+      expect(alreadyAppliedSchemaMatches({ pending: [], alreadyApplied })).toBe(
+        false
+      );
+    }
+    expect(
+      alreadyAppliedSchemaMatches({
+        pending: [names[0]!],
+        alreadyApplied: names,
+      })
+    ).toBe(false);
+  });
   it("keeps root protections, read-only existing-schema proof, and one guarded reload explicit", () => {
     expect(source).toContain("CONSOLIDATED_ROOT_CONTEXT_REQUIRED");
     expect(source).toContain("assertRootPrivateFile(lock");
     expect(source).toContain("inspectConsolidatedMigrations");
     expect(source).toContain("verifyExistingApprovedAdditiveSchema");
-    expect(source).toContain("CONSOLIDATED_ADDITIVE_SCHEMA_NOT_ALREADY_APPLIED");
+    expect(source).toContain(
+      "CONSOLIDATED_ADDITIVE_SCHEMA_NOT_ALREADY_APPLIED"
+    );
     expect(source).not.toContain("applyConsolidatedMigrations");
     expect(source).not.toContain("await protectedDatabaseBackup(");
     expect(
