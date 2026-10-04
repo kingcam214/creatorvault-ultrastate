@@ -1,0 +1,1156 @@
+{
+  "recordedAt": "2026-10-04T05:06:01.969Z",
+  "result": "pass",
+  "scope": "local-disposable-only",
+  "harness": "scripts/runVisualDnaLocalProof.ts",
+  "sourceFixture": {
+    "repositoryPath": "client/public/videos/creator-pages/aderly-follow-me.mp4",
+    "copiedIntoDisposableFixture": true
+  },
+  "application": {
+    "server": "scripts/cvVideo026LocalProofServer.ts",
+    "auth": "Native POST /api/auth/login with the existing signed loopback session cookie",
+    "storage": "temporary local proof storage disposed after completion",
+    "database": "isolated loopback MariaDB database disposed after completion"
+  },
+  "nativeFlow": {
+    "ordinaryCreatorId": 1,
+    "uploadedMediaAssetId": "370412a5-79cc-41f3-8528-e3a2970490a9",
+    "uploadedSourceUrl": "/uploads/content-vault/1034b5cc-b364-4d74-862d-e4e4d83f0f06/aderly-follow-me.mp4",
+    "workspaceId": "45f0f265-1005-4f48-94d7-4ddaa0f542cd",
+    "trailerProjectId": "9a004538-e459-4fdd-a6c9-9ab25676d7a4",
+    "reentryVerified": true
+  },
+  "localTrailerCut": {
+    "environment": "CREATORVAULT_LOCAL_TRAILER_CUT_ENABLED=0",
+    "creationControlClicked": false,
+    "encoderInvokedByHarness": false,
+    "expectedVisibleState": "Local Trailer Cut is not enabled in this environment. No output has been created.",
+    "verification": {
+      "expectedUnavailableLabelObserved": true,
+      "alerts": [],
+      "queryResponses": [
+        {
+          "status": 200,
+          "url": "https://127.0.0.1:37893/api/trpc/creatorWorkspace.getLocalTrailerCut?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22workspaceId%22%3A%2245f0f265-1005-4f48-94d7-4ddaa0f542cd%22%2C%22sourceMediaAssetId%22%3A%22370412a5-79cc-41f3-8528-e3a2970490a9%22%2C%22trailerProjectId%22%3A%229a004538-e459-4fdd-a6c9-9ab25676d7a4%22%7D%7D%7D",
+          "route": "https://127.0.0.1:37893/creator/workspace?draft=45f0f265-1005-4f48-94d7-4ddaa0f542cd&view=direction",
+          "body": "[{\"result\":{\"data\":{\"json\":{\"available\":false,\"cut\":null}}}}]"
+        }
+      ],
+      "diagnosticScreenshot": null,
+      "visibleMainText": null
+    }
+  },
+  "visualChecks": {
+    "screenshots": [
+      {
+        "state": "entry-gate-pre-acknowledgement",
+        "route": "/",
+        "finalUrl": "https://127.0.0.1:37893/",
+        "file": "local-desktop-entry-gate-pre-acknowledgement-1440x1000.png",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "viewportWidth": 1440,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": false,
+            "visibleCtaCount": 3,
+            "cyanCtaCount": 3,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Join CreatorVault",
+                "width": 172.69,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              },
+              {
+                "text": "Enter Creator OS",
+                "width": 170.08,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              },
+              {
+                "text": "Start with a source",
+                "width": 214.3,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "entry-gate-pre-acknowledgement",
+        "route": "/",
+        "finalUrl": "https://127.0.0.1:37893/",
+        "file": "local-mobile-entry-gate-pre-acknowledgement-390x844.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "viewportWidth": 390,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": false,
+            "visibleCtaCount": 2,
+            "cyanCtaCount": 2,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Enter Creator OS",
+                "width": 350,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              },
+              {
+                "text": "Start with a source",
+                "width": 350,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "home-pre-upload",
+        "route": "/",
+        "finalUrl": "https://127.0.0.1:37893/",
+        "file": "local-desktop-home-pre-upload-1440x1000.png",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "viewportWidth": 1440,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 3,
+            "cyanCtaCount": 3,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Join CreatorVault",
+                "width": 172.69,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              },
+              {
+                "text": "Enter Creator OS",
+                "width": 170.08,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              },
+              {
+                "text": "Start with a source",
+                "width": 214.3,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": [],
+          "reducedMotionHero": {
+            "renderedAsStillOrPaused": true,
+            "videoCount": 0,
+            "pausedVideoCount": 0,
+            "posterOrFallbackCount": 2
+          }
+        }
+      },
+      {
+        "state": "home-pre-upload",
+        "route": "/",
+        "finalUrl": "https://127.0.0.1:37893/",
+        "file": "local-mobile-home-pre-upload-390x844.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "viewportWidth": 390,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 2,
+            "cyanCtaCount": 2,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Enter Creator OS",
+                "width": 350,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              },
+              {
+                "text": "Start with a source",
+                "width": 350,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "home-mobile-navigation-open",
+        "route": "/",
+        "finalUrl": "https://127.0.0.1:37893/",
+        "file": "local-mobile-home-mobile-navigation-open-390x844.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "viewportWidth": 390,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 3,
+            "cyanCtaCount": 3,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Join CreatorVault",
+                "width": 358,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              },
+              {
+                "text": "Enter Creator OS",
+                "width": 350,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              },
+              {
+                "text": "Start with a source",
+                "width": 350,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "mobileNavigation": {
+            "open": true,
+            "headingFontSizesPx": [
+              18,
+              18,
+              18
+            ],
+            "headingXsNotOversized": true,
+            "menuControl": {
+              "width": 44,
+              "height": 44,
+              "paddingInlineStart": "0px",
+              "paddingInlineEnd": "0px",
+              "svgWidth": 20,
+              "svgHeight": 20
+            },
+            "compactControlMatchesReleaseRule": true
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "login-pre-upload",
+        "route": "/login",
+        "finalUrl": "https://127.0.0.1:37893/login",
+        "file": "local-desktop-login-pre-upload-1440x1000.png",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "viewportWidth": 1440,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Enter my CreatorVault",
+                "width": 448,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "login-pre-upload",
+        "route": "/login",
+        "finalUrl": "https://127.0.0.1:37893/login",
+        "file": "local-mobile-login-pre-upload-390x844.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "viewportWidth": 390,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Enter my CreatorVault",
+                "width": 350,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "dashboard-pre-upload",
+        "route": "/dashboard",
+        "finalUrl": "https://127.0.0.1:37893/dashboard",
+        "file": "local-desktop-dashboard-pre-upload-1440x1000.png",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "viewportWidth": 1440,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Open Video Studio",
+                "width": 172.81,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "dashboard-pre-upload",
+        "route": "/dashboard",
+        "finalUrl": "https://127.0.0.1:37893/dashboard",
+        "file": "local-mobile-dashboard-pre-upload-390x844.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "viewportWidth": 390,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Open Video Studio",
+                "width": 350,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "creator-video-studio-pre-upload",
+        "route": "/creator/video-studio",
+        "finalUrl": "https://127.0.0.1:37893/creator/video-studio",
+        "file": "local-desktop-creator-video-studio-pre-upload-1440x1000.png",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "viewportWidth": 1440,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Choose source video",
+                "width": 190.39,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "creator-video-studio-pre-upload",
+        "route": "/creator/video-studio",
+        "finalUrl": "https://127.0.0.1:37893/creator/video-studio",
+        "file": "local-mobile-creator-video-studio-pre-upload-390x844.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "viewportWidth": 390,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Choose source video",
+                "width": 300,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "creator-video-studio-selected-upload",
+        "route": "/creator/video-studio",
+        "finalUrl": "https://127.0.0.1:37893/creator/video-studio",
+        "file": "local-desktop-creator-video-studio-selected-upload-1440x1000.png",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "viewportWidth": 1440,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Choose source video",
+                "width": 190.39,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "creator-video-studio-selected-upload",
+        "route": "/creator/video-studio",
+        "finalUrl": "https://127.0.0.1:37893/creator/video-studio",
+        "file": "local-mobile-creator-video-studio-selected-upload-390x844.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "viewportWidth": 390,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Choose source video",
+                "width": 300,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "creator-video-studio-selected-upload-preview",
+        "route": "/creator/video-studio",
+        "finalUrl": "https://127.0.0.1:37893/creator/video-studio",
+        "file": "local-desktop-creator-video-studio-selected-upload-preview-1440x1000.png",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "viewportWidth": 1440,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Choose source video",
+                "width": 190.39,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "creator-video-studio-selected-upload-preview",
+        "route": "/creator/video-studio",
+        "finalUrl": "https://127.0.0.1:37893/creator/video-studio",
+        "file": "local-mobile-creator-video-studio-selected-upload-preview-390x844.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "viewportWidth": 390,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Choose source video",
+                "width": 300,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "creator-workspace-new",
+        "route": "/creator/workspace",
+        "finalUrl": "https://127.0.0.1:37893/creator/workspace",
+        "file": "local-desktop-creator-workspace-new-1440x1000.png",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "viewportWidth": 1440,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": false,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 0,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Save workspace draft",
+                "width": 382,
+                "height": 52,
+                "backgroundColor": "rgb(42, 42, 42)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "creator-workspace-new",
+        "route": "/creator/workspace",
+        "finalUrl": "https://127.0.0.1:37893/creator/workspace",
+        "file": "local-mobile-creator-workspace-new-390x844.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "viewportWidth": 390,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": false,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 0,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Save workspace draft",
+                "width": 300,
+                "height": 52,
+                "backgroundColor": "rgb(42, 42, 42)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "creator-workspace-saved",
+        "route": "/creator/workspace",
+        "finalUrl": "https://127.0.0.1:37893/creator/workspace",
+        "file": "local-desktop-creator-workspace-saved-1440x1000.png",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "viewportWidth": 1440,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 2,
+            "cyanCtaCount": 2,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Update workspace draft",
+                "width": 382,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              },
+              {
+                "text": "Start delivery in Trailer Maker",
+                "width": 291.77,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "creator-workspace-saved",
+        "route": "/creator/workspace",
+        "finalUrl": "https://127.0.0.1:37893/creator/workspace",
+        "file": "local-mobile-creator-workspace-saved-390x844.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "viewportWidth": 390,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 2,
+            "cyanCtaCount": 2,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Update workspace draft",
+                "width": 300,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              },
+              {
+                "text": "Start delivery in Trailer Maker",
+                "width": 291.77,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "trailer-maker-source",
+        "route": "/trailer-maker?sourceAssetId=370412a5-79cc-41f3-8528-e3a2970490a9",
+        "finalUrl": "https://127.0.0.1:37893/trailer-maker?sourceAssetId=370412a5-79cc-41f3-8528-e3a2970490a9",
+        "file": "local-desktop-trailer-maker-source-1440x1000.png",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "viewportWidth": 1440,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": false,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Next: Pick a template",
+                "width": 768,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "trailer-maker-source",
+        "route": "/trailer-maker?sourceAssetId=370412a5-79cc-41f3-8528-e3a2970490a9",
+        "finalUrl": "https://127.0.0.1:37893/trailer-maker?sourceAssetId=370412a5-79cc-41f3-8528-e3a2970490a9",
+        "file": "local-mobile-trailer-maker-source-390x844.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "viewportWidth": 390,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": false,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Next: Pick a template",
+                "width": 358,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "trailer-maker-draft",
+        "route": "/trailer-maker?sourceAssetId=370412a5-79cc-41f3-8528-e3a2970490a9",
+        "finalUrl": "https://127.0.0.1:37893/trailer-maker?sourceAssetId=370412a5-79cc-41f3-8528-e3a2970490a9",
+        "file": "local-desktop-trailer-maker-draft-1440x1000.png",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "viewportWidth": 1440,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": false,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Trailer direction saved",
+                "width": 812,
+                "height": 52.78,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "trailer-maker-draft",
+        "route": "/trailer-maker?sourceAssetId=370412a5-79cc-41f3-8528-e3a2970490a9",
+        "finalUrl": "https://127.0.0.1:37893/trailer-maker?sourceAssetId=370412a5-79cc-41f3-8528-e3a2970490a9",
+        "file": "local-mobile-trailer-maker-draft-390x844.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "viewportWidth": 390,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": false,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Trailer direction saved",
+                "width": 361.51,
+                "height": 52.51,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "creator-workspace-direction-local-cut-unavailable",
+        "route": "/creator/workspace?draft=45f0f265-1005-4f48-94d7-4ddaa0f542cd&view=direction",
+        "finalUrl": "https://127.0.0.1:37893/creator/workspace?draft=45f0f265-1005-4f48-94d7-4ddaa0f542cd&view=direction",
+        "file": "local-desktop-creator-workspace-direction-local-cut-unavailable-1440x1000.png",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "viewportWidth": 1440,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Open Trailer Maker",
+                "width": 211.38,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      },
+      {
+        "state": "creator-workspace-direction-local-cut-unavailable",
+        "route": "/creator/workspace?draft=45f0f265-1005-4f48-94d7-4ddaa0f542cd&view=direction",
+        "finalUrl": "https://127.0.0.1:37893/creator/workspace?draft=45f0f265-1005-4f48-94d7-4ddaa0f542cd&view=direction",
+        "file": "local-mobile-creator-workspace-direction-local-cut-unavailable-390x844.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "checks": {
+          "noHorizontalOverflow": true,
+          "documentScrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "viewportWidth": 390,
+          "fontsLoaded": {
+            "Bebas Neue": true,
+            "DM Sans": true,
+            "Space Mono": true
+          },
+          "cta": {
+            "applicable": true,
+            "visibleCtaCount": 1,
+            "cyanCtaCount": 1,
+            "allCyanCtasAtLeast52px": true,
+            "samples": [
+              {
+                "text": "Open Trailer Maker",
+                "width": 300,
+                "height": 52,
+                "backgroundColor": "rgb(0, 217, 255)",
+                "fontFamily": "\"Bebas Neue\", \"Arial Narrow\", sans-serif"
+              }
+            ]
+          },
+          "pageErrorsSinceNavigation": [],
+          "blockingConsoleSinceNavigation": []
+        }
+      }
+    ],
+    "reducedMotionHero": {
+      "renderedAsStillOrPaused": true,
+      "videoCount": 0,
+      "pausedVideoCount": 0,
+      "posterOrFallbackCount": 2
+    },
+    "browserConsole": {
+      "filteredBenignEvents": [
+        {
+          "type": "error",
+          "text": "[API Query Error] TRPCClientError: No procedure found on path \"socialSpine.commandSummary\"     at TRPCClientError2.from (https://127.0.0.1:37893/@fs/home/ubuntu/creatorvault-ultrastate/node_modules/.vite/deps/chunk-E2BJR3HA.js?v=5032c9ef:2028:44)     at https://127.0.0.1:37893/@fs/home/ubuntu/creatorvault-ultrastate/node_modules/.vite/deps/chunk-E2BJR3HA.js?v=5032c9ef:2422:44",
+          "source": "https://127.0.0.1:37893/src/main.tsx?v=S7et90fn7sp3794UedfVV",
+          "route": "https://127.0.0.1:37893/dashboard",
+          "filteredAsBenign": true,
+          "filterReason": "exact local-proof server exclusion: socialSpine.commandSummary is intentionally absent; the real dashboard renders UNAVAILABLE and the native local journey remains unblocked"
+        }
+      ],
+      "blockingConsoleEvents": [],
+      "pageErrors": [],
+      "sourceFiltering": "Only exact optional-asset 404 console errors and the exact local-proof socialSpine.commandSummary router exclusion are filtered as benign. The socialSpine event retains its raw console text, source, and route because the isolated proof server intentionally omits that unchanged dashboard procedure while the real dashboard truthfully renders UNAVAILABLE. All other console errors and every pageerror remain blocking evidence."
+    }
+  },
+  "productionBoundary": {
+    "publicHomepageBaseline": "docs/evidence/visual-dna/public-home-before.json",
+    "productionAuthenticationAttempted": false,
+    "productionWrites": false,
+    "authenticatedProductionE2E": "not attempted and not claimed"
+  },
+  "restrictions": {
+    "mockRoutesUsed": false,
+    "providerCredentialsUsed": false,
+    "providerCallsMade": false,
+    "paymentsTouched": false,
+    "externalPublishingOrSends": false,
+    "localTrailerCutCreated": false,
+    "durableFixtureRemoved": true
+  },
+  "outcomeFiles": [
+    "local-desktop-entry-gate-pre-acknowledgement-1440x1000.png",
+    "local-mobile-entry-gate-pre-acknowledgement-390x844.png",
+    "local-desktop-home-pre-upload-1440x1000.png",
+    "local-mobile-home-pre-upload-390x844.png",
+    "local-mobile-home-mobile-navigation-open-390x844.png",
+    "local-desktop-login-pre-upload-1440x1000.png",
+    "local-mobile-login-pre-upload-390x844.png",
+    "local-desktop-dashboard-pre-upload-1440x1000.png",
+    "local-mobile-dashboard-pre-upload-390x844.png",
+    "local-desktop-creator-video-studio-pre-upload-1440x1000.png",
+    "local-mobile-creator-video-studio-pre-upload-390x844.png",
+    "local-desktop-creator-video-studio-selected-upload-1440x1000.png",
+    "local-mobile-creator-video-studio-selected-upload-390x844.png",
+    "local-desktop-creator-video-studio-selected-upload-preview-1440x1000.png",
+    "local-mobile-creator-video-studio-selected-upload-preview-390x844.png",
+    "local-desktop-creator-workspace-new-1440x1000.png",
+    "local-mobile-creator-workspace-new-390x844.png",
+    "local-desktop-creator-workspace-saved-1440x1000.png",
+    "local-mobile-creator-workspace-saved-390x844.png",
+    "local-desktop-trailer-maker-source-1440x1000.png",
+    "local-mobile-trailer-maker-source-390x844.png",
+    "local-desktop-trailer-maker-draft-1440x1000.png",
+    "local-mobile-trailer-maker-draft-390x844.png",
+    "local-desktop-creator-workspace-direction-local-cut-unavailable-1440x1000.png",
+    "local-mobile-creator-workspace-direction-local-cut-unavailable-390x844.png"
+  ],
+  "failure": null
+}

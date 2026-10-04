@@ -192,6 +192,8 @@ See `.env.example` for full list.
 
 ## Key Documents
 
+- **[CREATORVAULT VISUAL AND DESIGN DNA](docs/CREATORVAULT_VISUAL_AND_DESIGN_DNA.md)** — authoritative immutable current UI standard; overrides older conflicting visual palettes/fonts below without changing business rules. The current production path is main-push Actions on `creatorvault-production` via `deploy_work_to_prod.sh`, not the historical Railway guidance.
+
 - **DOPEST_APP_STANDARDS.md** - Brand standards, core principles, design guidelines
 - **BRAND_ASSETS.md** - Logo files, usage guide, color palette
 - **RAILWAY_DEPLOY_GUIDE.md** - Step-by-step deployment instructions

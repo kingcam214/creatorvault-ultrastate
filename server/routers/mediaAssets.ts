@@ -3,8 +3,10 @@ import { z } from "zod";
 import { sql } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { buildAdaptiveTrailerPlan, buildCloneAwareTrailerMode } from "../services/adaptiveTrailerPlanner";
-import { buildCinematicPacingPlan, buildSoundDesignPlan, buildTimelineInspectorModel, buildVoiceoverSyncPlan } from "../services/cinematicPacingEngine";
+import { buildAdaptiveTrailerPlan, buildCloneAwareTrailerMode ,
+} from "../services/adaptiveTrailerPlanner";
+import { buildCinematicPacingPlan, buildSoundDesignPlan, buildTimelineInspectorModel, buildVoiceoverSyncPlan ,
+} from "../services/cinematicPacingEngine";
 import { analyzeTrailerRetention } from "../services/trailerRetentionAnalyzer";
 import { buildTrailerMediaOSManifest } from "../media-os/orchestration/trailerMediaOSOrchestrator";
 import { listBodyCinemaVerifiedSourceAttestations } from "../services/bodyCinemaVerifiedSourceAttestationService";
@@ -35,48 +37,173 @@ function assetKind(row: any): string {
   return type.includes("video") ? "video" : type.includes("image") ? "image" : "media";
 }
 
+type DirectionScene = {
+  sceneIndex: number;
+  role: string | null;
+  durationSeconds: number | null;
+  overlayText: string | null;
+  visualDescription: string | null;
+  sourceAssetId: string | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function textOrNull(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function numberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function parseJsonValue(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function directionScenes(value: unknown): DirectionScene[] {
+  const parsed = parseJsonValue(value);
+  if (!Array.isArray(parsed)) return [];
+  return parsed.flatMap((scene, index) => {
+    if (!isRecord(scene)) return [];
+    const sceneIndex = numberOrNull(scene.sceneIndex) ?? index;
+    return [
+      {
+        sceneIndex,
+        role: textOrNull(scene.role),
+        durationSeconds:
+          numberOrNull(scene.durationSeconds) ?? numberOrNull(scene.duration),
+        overlayText: textOrNull(scene.overlayText) ?? textOrNull(scene.text),
+        visualDescription: textOrNull(scene.visualDescription),
+        sourceAssetId: textOrNull(scene.sourceAssetId),
+      },
+    ];
+  });
+}
+
+function directionHooks(value: unknown): string[] {
+  const parsed = parseJsonValue(value);
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter((item): item is string => typeof item === "string");
+}
+
+function trailerDirectionFromRow(row: unknown) {
+  if (!isRecord(row)) return null;
+  const id = textOrNull(row.id);
+  const projectName = textOrNull(row.project_name);
+  const projectType = textOrNull(row.project_type);
+  const format = textOrNull(row.format);
+  const sourceAssetId = textOrNull(row.source_asset_id);
+  const status = textOrNull(row.status);
+  if (
+    !id ||
+    !projectName ||
+    !projectType ||
+    !format ||
+    !sourceAssetId ||
+    !status
+  ) {
+    return null;
+  }
+  return {
+    id,
+    projectName,
+    projectType,
+    title: textOrNull(row.title),
+    concept: textOrNull(row.concept),
+    scriptText: textOrNull(row.script_text),
+    format,
+    sourceAssetId,
+    status,
+    hooks: directionHooks(row.hooks),
+    scenes: directionScenes(row.scenes_json),
+  };
+}
+
 function defaultSceneCopy(role: string, projectName: string, title?: string | null): string {
   const name = (title || projectName || "the offer").trim();
   if (role === "hook") return `Stop scrolling. ${name} is built to turn attention into momentum.`;
-  if (role === "proof") return "Real media, real proof, and a trailer system that understands the sale.";
-  if (role === "offer") return "One cinematic package: hook, story, captions, voice, variants, and launch assets.";
-  if (role === "cta") return "Launch the trailer. Ship the campaign. Keep the factory moving.";
+  if (role === "proof")
+    return "Real media, real proof, and a trailer system that understands the sale.";
+  if (role === "offer")
+    return "One cinematic package: hook, story, captions, voice, variants, and launch assets.";
+  if (role === "cta")
+    return "Launch the trailer. Ship the campaign. Keep the factory moving.";
   return "Show the transformation fast, clean, and impossible to ignore.";
 }
 
-function buildTrailerProductionPackage(input: any, id: string, ownedAssets: any[], selectedAssetIds: string[]) {
+function buildTrailerProductionPackage(
+  input: any,
+  id: string,
+  ownedAssets: any[],
+  selectedAssetIds: string[]
+) {
   const generatedAt = new Date().toISOString();
   const scriptLines = String(input.scriptText ?? "")
     .split("\n")
-    .map((line) => line.trim())
+    .map(line => line.trim())
     .filter(Boolean);
   const hooks = (input.hooks?.length ? input.hooks : scriptLines).slice(0, 6);
   const roles = ["hook", "proof", "transformation", "offer", "cta"];
-  const sceneInputs = Array.isArray(input.segments) && input.segments.length > 0 ? input.segments : ownedAssets.map((asset, index) => ({
-    sceneIndex: index,
-    text: scriptLines[index] || hooks[index] || defaultSceneCopy(roles[Math.min(index, roles.length - 1)] ?? "transformation", input.projectName, input.title),
-    visualDescription: `${assetKind(asset)} asset ${String(asset.original_name ?? asset.file_name ?? asset.id)} drives this beat.`,
-    duration: assetKind(asset) === "video" ? Math.min(6, Math.max(3, asNumber(asset.duration, 4))) : 3.5,
-  }));
+  const sceneInputs =
+    Array.isArray(input.segments) && input.segments.length > 0
+      ? input.segments
+      : ownedAssets.map((asset, index) => ({
+          sceneIndex: index,
+          text:
+            scriptLines[index] ||
+            hooks[index] ||
+            defaultSceneCopy(
+              roles[Math.min(index, roles.length - 1)] ?? "transformation",
+              input.projectName,
+              input.title
+            ),
+          visualDescription: `${assetKind(asset)} asset ${String(asset.original_name ?? asset.file_name ?? asset.id)} drives this beat.`,
+          duration:
+            assetKind(asset) === "video"
+              ? Math.min(6, Math.max(3, asNumber(asset.duration, 4)))
+              : 3.5,
+        }));
 
   const scenes = sceneInputs.map((scene: any, index: number) => {
-    const asset = ownedAssets[index % Math.max(1, ownedAssets.length)] ?? ownedAssets[0] ?? {};
+    const asset =
+      ownedAssets[index % Math.max(1, ownedAssets.length)] ??
+      ownedAssets[0] ??
+      {};
     const role = roles[Math.min(index, roles.length - 1)] ?? "transformation";
     return {
       sceneIndex: asNumber(scene.sceneIndex, index),
       role,
-      durationSeconds: asNumber(scene.duration, role === "hook" ? 3.2 : role === "cta" ? 4 : 4.5),
-      overlayText: String(scene.text || defaultSceneCopy(role, input.projectName, input.title)),
+      durationSeconds: asNumber(
+        scene.duration,
+        role === "hook" ? 3.2 : role === "cta" ? 4 : 4.5
+      ),
+      overlayText: String(
+        scene.text || defaultSceneCopy(role, input.projectName, input.title)
+      ),
       visualDescription: scene.visualDescription ?? null,
-      sourceAssetId: String(asset.id ?? selectedAssetIds[index] ?? selectedAssetIds[0] ?? ""),
+      sourceAssetId: String(
+        asset.id ?? selectedAssetIds[index] ?? selectedAssetIds[0] ?? ""
+      ),
       sourceUrl: asset.public_url ?? asset.storage_path ?? null,
       assetKind: assetKind(asset),
       sourceFeature: asset.source_type ?? null,
-      warnings: asset.status && asset.status !== "ready" ? [`Asset status is ${asset.status}; render gate must revalidate before output.`] : [],
+      warnings:
+        asset.status && asset.status !== "ready"
+          ? [
+              `Asset status is ${asset.status}; render gate must revalidate before output.`,
+            ]
+          : [],
     };
   });
 
-  const assetIntelligence = ownedAssets.map((asset) => ({
+  const assetIntelligence = ownedAssets.map(asset => ({
     id: String(asset.id),
     kind: assetKind(asset),
     fileName: asset.original_name ?? asset.file_name ?? "Untitled asset",
@@ -91,8 +218,16 @@ function buildTrailerProductionPackage(input: any, id: string, ownedAssets: any[
   }));
 
   const readinessWarnings = [
-    ...(ownedAssets.length < 3 ? ["Add at least three grounded assets for a stronger multi-beat trailer."] : []),
-    ...(scriptLines.length === 0 ? ["No script lines supplied; deterministic scene copy was generated from the project brief."] : []),
+    ...(ownedAssets.length < 3
+      ? [
+          "Add at least three grounded assets for a stronger multi-beat trailer.",
+        ]
+      : []),
+    ...(scriptLines.length === 0
+      ? [
+          "No script lines supplied; deterministic scene copy was generated from the project brief.",
+        ]
+      : []),
   ];
 
   const blueprint = {
@@ -110,7 +245,10 @@ function buildTrailerProductionPackage(input: any, id: string, ownedAssets: any[
     readiness: {
       assetCount: ownedAssets.length,
       visualSceneCount: scenes.length,
-      estimatedDurationSeconds: scenes.reduce((sum: number, scene: any) => sum + asNumber(scene.durationSeconds, 4), 0),
+      estimatedDurationSeconds: scenes.reduce(
+        (sum: number, scene: any) => sum + asNumber(scene.durationSeconds, 4),
+        0
+      ),
       warnings: readinessWarnings,
     },
     hooks,
@@ -118,19 +256,47 @@ function buildTrailerProductionPackage(input: any, id: string, ownedAssets: any[
     assetIntelligence,
     lineage: { selectedAssetIds },
     manifestIntegrity: {
-      deterministicBasis: "ordered ready user-owned media_assets plus user project input",
-      noRenderClaim: "This package is a production blueprint and command-center manifest; output URLs require a downstream render job.",
+      deterministicBasis:
+        "ordered ready user-owned media_assets plus user project input",
+      noRenderClaim:
+        "This package is a production blueprint and command-center manifest; output URLs require a downstream render job.",
     },
   };
 
   const pacingPlan = buildCinematicPacingPlan(blueprint as any);
-  const soundDesignPlan = buildSoundDesignPlan(blueprint as any, pacingPlan as any);
-  const voiceoverSync = buildVoiceoverSyncPlan(blueprint as any, pacingPlan as any);
-  const timelineInspector = buildTimelineInspectorModel(blueprint as any, pacingPlan as any, soundDesignPlan as any, voiceoverSync as any);
-  const adaptiveTrailerPlan = buildAdaptiveTrailerPlan(blueprint as any, pacingPlan as any);
-  const retentionReport = analyzeTrailerRetention(blueprint as any, pacingPlan as any, adaptiveTrailerPlan as any);
+  const soundDesignPlan = buildSoundDesignPlan(
+    blueprint as any,
+    pacingPlan as any
+  );
+  const voiceoverSync = buildVoiceoverSyncPlan(
+    blueprint as any,
+    pacingPlan as any
+  );
+  const timelineInspector = buildTimelineInspectorModel(
+    blueprint as any,
+    pacingPlan as any,
+    soundDesignPlan as any,
+    voiceoverSync as any
+  );
+  const adaptiveTrailerPlan = buildAdaptiveTrailerPlan(
+    blueprint as any,
+    pacingPlan as any
+  );
+  const retentionReport = analyzeTrailerRetention(
+    blueprint as any,
+    pacingPlan as any,
+    adaptiveTrailerPlan as any
+  );
 
-  return { blueprint, pacingPlan, soundDesignPlan, voiceoverSync, timelineInspector, adaptiveTrailerPlan, retentionReport };
+  return {
+    blueprint,
+    pacingPlan,
+    soundDesignPlan,
+    voiceoverSync,
+    timelineInspector,
+    adaptiveTrailerPlan,
+    retentionReport,
+  };
 }
 
 export const mediaAssetsRouter = router({
@@ -154,8 +320,8 @@ export const mediaAssetsRouter = router({
         filter === "videos"
           ? sql`AND (asset_type = 'video' OR mime_type LIKE 'video/%')`
           : filter === "images"
-          ? sql`AND (asset_type = 'image' OR mime_type LIKE 'image/%')`
-          : sql``;
+            ? sql`AND (asset_type = 'image' OR mime_type LIKE 'image/%')`
+            : sql``;
 
       const query = sql`
         SELECT
@@ -189,7 +355,9 @@ export const mediaAssetsRouter = router({
       `;
 
       const result = await db.execute(query as any);
-      const flyerRows = await db.execute(sql`
+      const flyerRows = await db
+        .execute(
+          sql`
         SELECT
           id,
           creator_id AS user_id,
@@ -215,8 +383,13 @@ export const mediaAssetsRouter = router({
           AND artifact_url <> ''
         ORDER BY created_at DESC
         LIMIT ${limit}
-      ` as any).then(extractRows).catch(() => [] as any[]);
-      const marketingRows = await db.execute(sql`
+      ` as any
+        )
+        .then(extractRows)
+        .catch(() => [] as any[]);
+      const marketingRows = await db
+        .execute(
+          sql`
         SELECT
           CONCAT(id, '-still') AS id,
           creator_id AS user_id,
@@ -266,8 +439,13 @@ export const mediaAssetsRouter = router({
           AND motion_url <> ''
         ORDER BY created_at DESC
         LIMIT ${limit}
-      ` as any).then(extractRows).catch(() => [] as any[]);
-      const killaGraphicsRows = await db.execute(sql`
+      ` as any
+        )
+        .then(extractRows)
+        .catch(() => [] as any[]);
+      const killaGraphicsRows = await db
+        .execute(
+          sql`
         SELECT
           CONCAT(id, '-master') AS id,
           creator_id AS user_id,
@@ -317,10 +495,20 @@ export const mediaAssetsRouter = router({
           AND motion_url <> ''
         ORDER BY created_at DESC
         LIMIT ${limit}
-      ` as any).then(extractRows).catch(() => [] as any[]);
-      const rows = [...extractRows(result), ...flyerRows, ...marketingRows, ...killaGraphicsRows];
+      ` as any
+        )
+        .then(extractRows)
+        .catch(() => [] as any[]);
+      const rows = [
+        ...extractRows(result),
+        ...flyerRows,
+        ...marketingRows,
+        ...killaGraphicsRows,
+      ];
       const verifiedSourceUrls = new Set(
-        (await listBodyCinemaVerifiedSourceAttestations(Number(ctx.user.id))).map((attestation) => attestation.sourceMediaUrl),
+        (
+          await listBodyCinemaVerifiedSourceAttestations(Number(ctx.user.id))
+        ).map(attestation => attestation.sourceMediaUrl)
       );
 
       return rows.map((row: any) => ({
@@ -328,26 +516,31 @@ export const mediaAssetsRouter = router({
         userId: Number(row.user_id),
         assetType: row.asset_type ?? null,
         sourceType: row.source_type ?? null,
-        classification: row.created_by_feature === "kingcam_private_presence_loop"
-          ? "private_presence_loop"
-          : row.created_by_feature === "kingcam_performance_capture"
-            ? "kingcam_performance_driver"
-            : row.created_by_feature === "recovered_finished_motion_flyer" || row.created_by_feature === "recovered_marketing_maker" || row.created_by_feature === "killagraphics_design_system"
-              ? "finished_showcase"
-              : row.created_by_feature === "creatorvault_approved_demo"
-                ? "approved_demo"
-                : "creator_owned_or_generated",
+        classification:
+          row.created_by_feature === "kingcam_private_presence_loop"
+            ? "private_presence_loop"
+            : row.created_by_feature === "kingcam_performance_capture"
+              ? "kingcam_performance_driver"
+              : row.created_by_feature === "recovered_finished_motion_flyer" ||
+                  row.created_by_feature === "recovered_marketing_maker" ||
+                  row.created_by_feature === "killagraphics_design_system"
+                ? "finished_showcase"
+                : row.created_by_feature === "creatorvault_approved_demo"
+                  ? "approved_demo"
+                  : "creator_owned_or_generated",
         // A media row alone never authorizes Body Cinema. KingCam performance
         // drivers are clone-only and may never leak into a treatment source lane.
-        bodyCinemaEligible: row.created_by_feature === "kingcam_performance_capture"
-          ? false
-          : verifiedSourceUrls.has(String(row.public_url || "")),
+        bodyCinemaEligible:
+          row.created_by_feature === "kingcam_performance_capture"
+            ? false
+            : verifiedSourceUrls.has(String(row.public_url || "")),
         fileName: row.file_name ?? row.original_name ?? "Untitled",
         originalName: row.original_name ?? null,
         mimeType: row.mime_type ?? null,
         fileSize: row.file_size ? Number(row.file_size) : null,
         publicUrl: row.public_url ?? row.storage_path ?? null,
-        thumbnailUrl: row.thumbnail_url ?? row.public_url ?? row.storage_path ?? null,
+        thumbnailUrl:
+          row.thumbnail_url ?? row.public_url ?? row.storage_path ?? null,
         storagePath: row.storage_path ?? null,
         duration: row.duration ? Number(row.duration) : null,
         width: row.width ? Number(row.width) : null,
@@ -362,7 +555,12 @@ export const mediaAssetsRouter = router({
       z.object({
         projectName: z.string().min(1).max(200),
         projectType: z
-          .enum(["launch_trailer", "creator_case_study", "feature_promo", "emma_domination"])
+          .enum([
+            "launch_trailer",
+            "creator_case_study",
+            "feature_promo",
+            "emma_domination",
+          ])
           .default("launch_trailer"),
         format: z.enum(["16:9", "9:16", "1:1"]).default("16:9"),
         title: z.string().max(300).optional(),
@@ -390,7 +588,10 @@ export const mediaAssetsRouter = router({
 
       const id = randomUUID();
 
-      const selectedIdsSql = sql.join(input.selectedAssetIds.map((assetId) => sql`${assetId}`), sql`, `);
+      const selectedIdsSql = sql.join(
+        input.selectedAssetIds.map(assetId => sql`${assetId}`),
+        sql`, `
+      );
       const ownedAssetsResult = await db.execute(
         sql`
           SELECT
@@ -417,8 +618,12 @@ export const mediaAssetsRouter = router({
         ` as any
       );
       const ownedAssetsUnsorted = extractRows(ownedAssetsResult);
-      const ownedById = new Map(ownedAssetsUnsorted.map((asset: any) => [String(asset.id), asset]));
-      const ownedAssets = input.selectedAssetIds.map((assetId) => ownedById.get(String(assetId))).filter(Boolean);
+      const ownedById = new Map(
+        ownedAssetsUnsorted.map((asset: any) => [String(asset.id), asset])
+      );
+      const ownedAssets = input.selectedAssetIds
+        .map(assetId => ownedById.get(String(assetId)))
+        .filter(Boolean);
 
       if (ownedAssets.length === 0) {
         throw new Error("No valid media assets selected");
@@ -426,8 +631,15 @@ export const mediaAssetsRouter = router({
 
       const primaryAssetId = String((ownedAssets[0] as any).id);
       const hooks = input.hooks ?? [];
-      const productionCore = buildTrailerProductionPackage(input, id, ownedAssets, input.selectedAssetIds);
-      const cloneAwareTrailerMode = await buildCloneAwareTrailerMode(productionCore.blueprint as any);
+      const productionCore = buildTrailerProductionPackage(
+        input,
+        id,
+        ownedAssets,
+        input.selectedAssetIds
+      );
+      const cloneAwareTrailerMode = await buildCloneAwareTrailerMode(
+        productionCore.blueprint as any
+      );
       const mediaOSManifest = buildTrailerMediaOSManifest({
         ...productionCore.blueprint,
         cinematicPacing: productionCore.pacingPlan,
@@ -440,8 +652,15 @@ export const mediaAssetsRouter = router({
         renderHandoff: {
           status: "approved_creation_lane_required",
           recommendedNextEngine: "approved_creatorvault_creation_lane",
-          requiredBeforeRender: ["asset_file_access_verified", "approved_creation_lane_selected", "watchable_output_review_completed", "output_storage_path_allocated"],
-          warnings: ["No finished trailer is claimed until an approved creation lane produces a watchable MP4 that passes review."],
+          requiredBeforeRender: [
+            "asset_file_access_verified",
+            "approved_creation_lane_selected",
+            "watchable_output_review_completed",
+            "output_storage_path_allocated",
+          ],
+          warnings: [
+            "No finished trailer is claimed until an approved creation lane produces a watchable MP4 that passes review.",
+          ],
         },
       } as any);
       const scenesJson = JSON.stringify(productionCore.blueprint.scenes);
@@ -493,14 +712,53 @@ export const mediaAssetsRouter = router({
             status: "approved_creation_lane_required",
             canClaimRenderedOutput: false,
             nextEngine: "approved_creatorvault_creation_lane",
-            requiredBeforeRender: ["asset_file_access_verified", "approved_creation_lane_selected", "watchable_output_review_completed", "output_storage_path_allocated"],
+            requiredBeforeRender: [
+              "asset_file_access_verified",
+              "approved_creation_lane_selected",
+              "watchable_output_review_completed",
+              "output_storage_path_allocated",
+            ],
           },
         },
       };
     }),
 
+  getTrailerProject: protectedProcedure
+    .input(z.object({ trailerProjectId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) return null;
+      const result = await db.execute(
+        sql`
+          SELECT
+            id,
+            project_name,
+            project_type,
+            title,
+            concept,
+            script_text,
+            format,
+            source_asset_id,
+            scenes_json,
+            hooks,
+            status
+          FROM trailer_projects
+          WHERE id = ${input.trailerProjectId}
+            AND user_id = ${ctx.user.id}
+            AND project_type <> ${"creator_workspace"}
+            AND project_type <> ${"local_trailer_cut"}
+          LIMIT 1
+        ` as any
+      );
+      return trailerDirectionFromRow(extractRows(result)[0]);
+    }),
+
   listTrailerProjects: protectedProcedure
-    .input(z.object({ limit: z.number().int().min(1).max(100).default(20) }).optional())
+    .input(
+      z
+        .object({ limit: z.number().int().min(1).max(100).default(20) })
+        .optional()
+    )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
@@ -511,6 +769,7 @@ export const mediaAssetsRouter = router({
           SELECT id, project_name, project_type, status, source_asset_id, created_at, updated_at
           FROM trailer_projects
           WHERE user_id = ${ctx.user.id}
+          AND project_type <> ${"local_trailer_cut"}
           ORDER BY created_at DESC
           LIMIT ${limit}
         ` as any

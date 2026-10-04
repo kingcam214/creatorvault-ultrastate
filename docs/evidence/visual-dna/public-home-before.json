@@ -1,0 +1,34 @@
+{
+  "recordedAt": "2026-10-04T04:36:42.858Z",
+  "scope": "production-public-read-only-baseline",
+  "url": "https://creatorvault.live/",
+  "productionWrites": false,
+  "productionAuthenticationAttempted": false,
+  "captures": [
+    {
+      "file": "public-home-before-desktop-1440x1000.png",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "finalUrl": "https://creatorvault.live/",
+      "httpStatus": 200,
+      "title": "CreatorVault ULTRASTATE",
+      "consoleEvents": [],
+      "pageErrors": []
+    },
+    {
+      "file": "public-home-before-mobile-390x844.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "finalUrl": "https://creatorvault.live/",
+      "httpStatus": 200,
+      "title": "CreatorVault ULTRASTATE",
+      "consoleEvents": [],
+      "pageErrors": []
+    }
+  ],
+  "limitation": "This records only the anonymous public homepage baseline. It is not authenticated production E2E proof and makes no claim about protected creator workflow success."
+}

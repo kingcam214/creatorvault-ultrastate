@@ -9,11 +9,20 @@ import {
   validControllerArguments,
   type ReleaseState,
 } from "./consolidatedReleaseRunner";
+import {
+  CONSOLIDATED_RELEASE_PARENT,
+  CONSOLIDATED_SECURITY_BASELINE,
+  CONSOLIDATED_VISUAL_RELEASE_ALLOWED_PATHS,
+} from "./consolidatedReleasePolicy";
 
 const SHA = "a".repeat(40);
 const root = path.resolve(import.meta.dirname, "..");
 const source = readFileSync(
   path.join(root, "scripts/consolidatedReleaseRunner.ts"),
+  "utf8"
+);
+const policySource = readFileSync(
+  path.join(root, "scripts/consolidatedReleasePolicy.ts"),
   "utf8"
 );
 
@@ -29,6 +38,44 @@ describe("consolidated non-rotating guarded release", () => {
     expect(source).toContain("jwtRotation: false");
     expect(source).toContain("activateConsolidatedSigningSource");
     expect(source).toContain("assertNewKey(key)");
+  });
+
+  it("pins exactly one visual successor to the verified 7b consolidated artifact while preserving the 3762 signing epoch", () => {
+    expect(CONSOLIDATED_RELEASE_PARENT).toBe(
+      "7b63a1e1f84c83a75b7ca135d23cadd4d58b1fcc"
+    );
+    expect(CONSOLIDATED_SECURITY_BASELINE).toBe(
+      "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da"
+    );
+    expect(policySource).toContain("CONSOLIDATED_RELEASE_PARENT_MISMATCH");
+    expect(source).toContain("assertLiveConsolidatedRelease");
+    expect(source).toContain(
+      "CONSOLIDATED_ACTIVE_RELEASE_SECURITY_UNPROVEN"
+    );
+    expect(source).toContain("rollbackArtifact: priorArtifactPath()");
+  });
+
+  it("allows only the visual, creator-workspace, and release-controller paths for the direct 7b successor", () => {
+    for (const allowed of [
+      "client/src/index.css",
+      "client/src/pages/Home.tsx",
+      "client/src/pages/Login.tsx",
+      "client/src/components/AppHeader.tsx",
+      "client/src/pages/CreatorWorkspace.tsx",
+      "server/routers/creatorWorkspace.ts",
+      "server/services/localTrailerCut.ts",
+      "scripts/consolidatedReleaseRunner.ts",
+      ".github/workflows/deploy.yml",
+    ])
+      expect(CONSOLIDATED_VISUAL_RELEASE_ALLOWED_PATHS).toContain(allowed);
+    for (const blocked of [
+      "package.json",
+      "drizzle/schema.ts",
+      "server/routers/stripeCheckout.ts",
+      "server/services/personaVideoProvider.ts",
+      "server/_core/authenticationRoutes.ts",
+    ])
+      expect(CONSOLIDATED_VISUAL_RELEASE_ALLOWED_PATHS).not.toContain(blocked);
   });
 
   it("holds the verified security baseline on pre-activation failure and fails closed only after activation intent", () => {
@@ -79,16 +126,35 @@ describe("consolidated non-rotating guarded release", () => {
     expect(source).toContain("code: errorCode(error)");
   });
 
-  it("keeps root protections, backup-before-migration, and one guarded reload explicit", () => {
+  it("keeps root protections, read-only existing-schema proof, and one guarded reload explicit", () => {
     expect(source).toContain("CONSOLIDATED_ROOT_CONTEXT_REQUIRED");
     expect(source).toContain("assertRootPrivateFile(lock");
-    expect(source).toContain("CONSOLIDATED_BACKUP_TOOL_UNAVAILABLE");
-    expect(source).toContain("beforeApply: async");
-    expect(source).toContain("protectedDatabaseBackup");
+    expect(source).toContain("inspectConsolidatedMigrations");
+    expect(source).toContain("verifyExistingApprovedAdditiveSchema");
+    expect(source).toContain("CONSOLIDATED_ADDITIVE_SCHEMA_NOT_ALREADY_APPLIED");
+    expect(source).not.toContain("applyConsolidatedMigrations");
+    expect(source).not.toContain("await protectedDatabaseBackup(");
     expect(
       source.match(/\[\s*"reload",\s*"creatorvault",\s*"--update-env",?\s*\]/g)
     ).toHaveLength(1);
     expect(source).toContain("CONSOLIDATED_AUTHORITATIVE_ENV_CHANGED");
+  });
+  it("retains root, homepage, session, fresh-login, ordinary-role, and owner proofs", () => {
+    for (const required of [
+      "verifyHomepage",
+      "CONSOLIDATED_RETAINED_SESSION_FAILED",
+      "CONSOLIDATED_NATIVE_LOGIN_SIGNATURE_FAILED",
+      "CONSOLIDATED_ORDINARY_OWNER_READ_NOT_DENIED",
+      "CONSOLIDATED_OWNER_READ_FAILED",
+      "CONSOLIDATED_DEVELOPMENT_LOGIN_NOT_RETIRED",
+    ])
+      expect(source).toContain(required);
+  });
+  it("permits the local trailer cut only under the existing test proof gate", () => {
+    expect(policySource).toContain(
+      "LOCAL_TRAILER_CUT_PRODUCTION_ENABLEMENT_FORBIDDEN"
+    );
+    expect(policySource).toContain('environment\\.NODE_ENV !== "test"');
   });
   it("launches the built controller with plain Node and a hook-free environment", () => {
     const launcher = readFileSync(

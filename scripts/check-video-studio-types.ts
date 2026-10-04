@@ -4,6 +4,20 @@ import ts from "typescript";
 const root = process.cwd();
 const files = [
   "client/src/App.tsx",
+  "client/src/components/AppHeader.tsx",
+  "client/src/components/ui/button.tsx",
+  "client/src/pages/Home.tsx",
+  "client/src/pages/Login.tsx",
+  "client/src/pages/CreatorHome.tsx",
+  "client/src/pages/VisualDna.test.ts",
+  "client/src/components/CreatorSourceVideoIntake.tsx",
+  "client/src/components/MediaPicker.tsx",
+  "client/src/components/TrailerDirectionPreview.tsx",
+  "client/src/pages/CreatorVideoStudio.tsx",
+  "client/src/pages/CreatorVideoStudioSourceIntake.test.tsx",
+  "client/src/pages/CreatorWorkspace.tsx",
+  "client/src/pages/CreatorWorkspace.test.tsx",
+  "client/src/pages/TrailerDirectionPreview.test.tsx",
   "client/src/pages/VideoStudioTimelinePage.tsx",
   "client/src/components/video-studio/types.ts",
   "client/src/components/video-studio/audioBeatDetector.ts",
@@ -12,6 +26,13 @@ const files = [
   "client/src/components/video-studio/__tests__/VideoStudioTimeline.test.tsx",
   "vitest.video-studio.config.ts",
   "scripts/check-video-studio-types.ts",
+  "scripts/cvVideo026LocalProofServer.ts",
+  "scripts/runCvVideo026LocalProof.ts",
+  "scripts/runVisualDnaLocalProof.ts",
+  "server/routers/creatorWorkspace.ts",
+  "server/routers/mediaAssets.ts",
+  "server/services/localTrailerCut.ts",
+  "server/services/localTrailerCut.test.ts",
 ];
 const configPath = ts.findConfigFile(root, ts.sys.fileExists, "tsconfig.json");
 if (!configPath) throw new Error("Project tsconfig.json is missing");

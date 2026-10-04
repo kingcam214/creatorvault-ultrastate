@@ -18,10 +18,12 @@ import {
 } from "./securityReleasePolicy";
 import {
   APP_ROOT,
+  APPROVED_MIGRATION_HASHES,
   CONSOLIDATED_SECURITY_BASELINE,
+  CONSOLIDATED_RELEASE_PARENT,
   checkConsolidatedCheckout,
 } from "./consolidatedReleasePolicy";
-import { applyConsolidatedMigrations } from "./consolidatedMigrations";
+import { inspectConsolidatedMigrations } from "./consolidatedMigrations";
 import {
   preparePortableMariaDbTools,
   portableMariaDbServiceEnvironment,
@@ -104,6 +106,7 @@ type VerificationEvidence = {
   restarts: number;
   migrations: number;
   alreadyApplied: number;
+  rollbackArtifact: string;
 };
 
 export type ConsolidatedReleaseResult = {
@@ -135,7 +138,7 @@ function controlPath(sha: string): string {
 }
 
 function priorArtifactPath(): string {
-  return `${APP_ROOT}/dist.secure-${CONSOLIDATED_SECURITY_BASELINE}`;
+  return `${APP_ROOT}/dist.secure-${CONSOLIDATED_RELEASE_PARENT}`;
 }
 
 function backupDirectory(): string {
@@ -556,15 +559,15 @@ export function checkConsolidatedReleaseCheckout(
   checkConsolidatedCheckout(workspace, sha, ref, event, before);
 }
 
-async function assertLiveBaseline(): Promise<void> {
+async function assertLiveConsolidatedRelease(): Promise<void> {
   const response = await requestPublic("/__release");
   const release = record(response.body);
   requireRelease(
     response.status === 200 &&
-      release.commit === CONSOLIDATED_SECURITY_BASELINE &&
+      release.commit === CONSOLIDATED_RELEASE_PARENT &&
       release.branch === "main" &&
       release.environment === "production",
-    "CONSOLIDATED_LIVE_BASELINE_MISMATCH"
+    "CONSOLIDATED_LIVE_RELEASE_MISMATCH"
   );
 }
 
@@ -739,7 +742,18 @@ async function assertProtectedActiveArtifact(sha: string): Promise<void> {
         server.includes("res.status(404)"),
       "CONSOLIDATED_ACTIVE_BASELINE_SECURITY_UNPROVEN"
     );
+    return;
   }
+  const wrapper = await fs.readFile(ENTRY_PATH, "utf8");
+  const server = await fs.readFile(SECURE_APP_PATH, "utf8");
+  requireRelease(
+    wrapper.includes("assertConsolidatedAppBootAuthorized") &&
+      wrapper.includes("secure-app.js") &&
+      !server.includes("local_kingcam_6") &&
+      server.includes('"/api/dev-login"') &&
+      server.includes("res.status(404)"),
+    "CONSOLIDATED_ACTIVE_RELEASE_SECURITY_UNPROVEN"
+  );
 }
 
 async function assertCandidateArtifact(
@@ -1128,6 +1142,27 @@ async function verifyMigratedTables(databaseUrl: string): Promise<void> {
   }
 }
 
+/**
+ * The visual successor never creates the Drizzle ledger, executes SQL, or
+ * applies a migration. Both reviewed additive migrations were applied by the
+ * verified consolidated release and are now only proved read-only.
+ */
+async function verifyExistingApprovedAdditiveSchema(
+  databaseUrl: string,
+  workspace: string
+): Promise<{ migrations: number; alreadyApplied: number }> {
+  const inspection = await inspectConsolidatedMigrations(databaseUrl, workspace);
+  const expected = Object.keys(APPROVED_MIGRATION_HASHES);
+  requireRelease(
+    inspection.pending.length === 0 &&
+      expected.length === inspection.alreadyApplied.length &&
+      expected.every(migration => inspection.alreadyApplied.includes(migration)),
+    "CONSOLIDATED_ADDITIVE_SCHEMA_NOT_ALREADY_APPLIED"
+  );
+  await verifyMigratedTables(databaseUrl);
+  return { migrations: 0, alreadyApplied: inspection.alreadyApplied.length };
+}
+
 async function persistFixtureOwnership(
   sha: string,
   openId: string
@@ -1486,6 +1521,7 @@ async function verifyLive(
     restarts: stable.restarts,
     migrations: migrationCounts.migrations,
     alreadyApplied: migrationCounts.alreadyApplied,
+    rollbackArtifact: priorArtifactPath(),
   };
 }
 
@@ -1602,9 +1638,9 @@ async function runProductionRelease(
       path.join(inputs.workspace, "dist"),
       inputs.sha
     );
-    await assertLiveBaseline();
+    await assertLiveConsolidatedRelease();
     await assertPackageParity(inputs.workspace);
-    await assertProtectedActiveArtifact(CONSOLIDATED_SECURITY_BASELINE);
+    await assertProtectedActiveArtifact(CONSOLIDATED_RELEASE_PARENT);
     capture = await captureAuthoritativeEnv();
     settings = parseDotenv(capture.source);
     signingKey = locateJwtKey(capture.source).value;
@@ -1655,77 +1691,14 @@ async function runProductionRelease(
       writeState({
         sha: inputs.sha,
         phase,
-        code: "CONSOLIDATED_MIGRATION_PENDING",
+        code: "CONSOLIDATED_SCHEMA_VERIFICATION_PENDING",
       })
     );
-    let backupComplete = false;
     const migrations = await guardedMutation(capture.snapshot, () =>
-      applyConsolidatedMigrations(
+      verifyExistingApprovedAdditiveSchema(
         settings.DATABASE_URL ?? "",
-        inputs.workspace,
-        {
-          beforeApply: async () => {
-            requireRelease(
-              !backupComplete,
-              "CONSOLIDATED_BACKUP_CALLBACK_REPEATED"
-            );
-            await assertEnvUnchanged(
-              capture?.snapshot ?? {
-                dev: -1,
-                ino: -1,
-                size: -1,
-                mtimeMs: -1,
-                ctimeMs: -1,
-                uid: -1,
-                gid: -1,
-                mode: -1,
-              }
-            );
-            await protectedDatabaseBackup(
-              settings.DATABASE_URL ?? "",
-              inputs.sha
-            );
-            backupComplete = true;
-            await assertEnvUnchanged(
-              capture?.snapshot ?? {
-                dev: -1,
-                ino: -1,
-                size: -1,
-                mtimeMs: -1,
-                ctimeMs: -1,
-                uid: -1,
-                gid: -1,
-                mode: -1,
-              }
-            );
-          },
-          onProgress: async event => {
-            await guardedMutation(
-              capture?.snapshot ?? {
-                dev: -1,
-                ino: -1,
-                size: -1,
-                mtimeMs: -1,
-                ctimeMs: -1,
-                uid: -1,
-                gid: -1,
-                mode: -1,
-              },
-              () =>
-                writeState({
-                  sha: inputs.sha,
-                  phase: "migrating",
-                  code: "CONSOLIDATED_MIGRATION_PROGRESS",
-                  migrations: event.statement,
-                  proof: "PROGRESS_RECORDED",
-                })
-            );
-          },
-        }
+        inputs.workspace
       )
-    );
-    await guardedMutation(capture.snapshot, () =>
-      verifyMigratedTables(settings.DATABASE_URL ?? "")
     );
     phase = "activation-intent";
     activationStarted = true;
@@ -1734,8 +1707,8 @@ async function runProductionRelease(
         sha: inputs.sha,
         phase,
         code: "CONSOLIDATED_ACTIVATION_INTENT",
-        migrations: migrations.applied.length,
-        alreadyApplied: migrations.alreadyApplied.length,
+        migrations: migrations.migrations,
+        alreadyApplied: migrations.alreadyApplied,
       })
     );
     await guardedMutation(capture.snapshot, () =>
@@ -1747,8 +1720,8 @@ async function runProductionRelease(
         sha: inputs.sha,
         phase,
         code: "CONSOLIDATED_READY_FOR_VERIFICATION",
-        migrations: migrations.applied.length,
-        alreadyApplied: migrations.alreadyApplied.length,
+        migrations: migrations.migrations,
+        alreadyApplied: migrations.alreadyApplied,
       })
     );
     await guardedMutation(capture.snapshot, async () => {
@@ -1770,8 +1743,8 @@ async function runProductionRelease(
         preReloadProcess,
         cursors,
         {
-          migrations: migrations.applied.length,
-          alreadyApplied: migrations.alreadyApplied.length,
+          migrations: migrations.migrations,
+          alreadyApplied: migrations.alreadyApplied,
         }
       )
     );
@@ -1787,8 +1760,8 @@ async function runProductionRelease(
         sha: inputs.sha,
         phase,
         code: "CONSOLIDATED_RELEASE_VERIFIED",
-        migrations: migrations.applied.length,
-        alreadyApplied: migrations.alreadyApplied.length,
+        migrations: migrations.migrations,
+        alreadyApplied: migrations.alreadyApplied,
         proof: "NATIVE_LOGIN_SESSION_PRESERVED",
       })
     );
@@ -1986,7 +1959,7 @@ async function launchSupervisor(
     path.join(inputs.workspace, "dist"),
     inputs.sha
   );
-  await assertLiveBaseline();
+  await assertLiveConsolidatedRelease();
   await assertPackageParity(inputs.workspace);
   await assertSupervisorTools();
   const control = controlPath(inputs.sha);
@@ -2028,6 +2001,7 @@ async function launchSupervisor(
         restarts: active?.restarts ?? 0,
         migrations: state.migrations ?? 0,
         alreadyApplied: state.alreadyApplied ?? 0,
+        rollbackArtifact: priorArtifactPath(),
       }
     : undefined;
   return {
@@ -2071,6 +2045,7 @@ function outputResult(result: ConsolidatedReleaseResult): void {
           applied: result.evidence.migrations,
           alreadyApplied: result.evidence.alreadyApplied,
         },
+        rollbackArtifact: result.evidence.rollbackArtifact,
         health: "HTTP_200",
         logPass: true,
         cleanup: "PASS",

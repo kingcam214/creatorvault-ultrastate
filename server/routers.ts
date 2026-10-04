@@ -84,6 +84,7 @@ import { commentRouter } from "./routers/commentRouter";
 import { contentRepurposingRouter } from "./routers/contentRepurposing";
 import { mediaCoreRouter } from "./routers/mediaCoreRouter";
 import { mediaAssetsRouter } from "./routers/mediaAssets";
+import { creatorWorkspaceRouter } from "./routers/creatorWorkspace";
 import { creatorToolsRouter } from "./routers/creatorTools";
 import { crossVerticalMarketplaceRouter } from "./routers/crossVerticalMarketplace";
 import { culturalRouter } from "./routers/culturalRouter";
@@ -857,6 +858,7 @@ export const appRouter = router({
   contentRepurposing: contentRepurposingRouter,
   mediaCore: mediaCoreRouter,
   mediaAssets: mediaAssetsRouter,
+  creatorWorkspace: creatorWorkspaceRouter,
   creatorAnalytics: analyticsRouter,
   creatorTools: creatorToolsRouter,
   crossVerticalMarketplace: crossVerticalMarketplaceRouter,

@@ -12,8 +12,13 @@ import { collectPrivilegedProcedurePaths } from "./securityProcedureInventory";
 
 export const CONSOLIDATED_SECURITY_BASELINE =
   "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da";
+/**
+ * The last verified consolidated artifact. This is the only permitted direct
+ * parent for the additive visual release; the security signing epoch above is
+ * intentionally historical and remains immutable.
+ */
 export const CONSOLIDATED_RELEASE_PARENT =
-  "cb624c55029c3b43a700ab147905c8ae8ac8162b";
+  "7b63a1e1f84c83a75b7ca135d23cadd4d58b1fcc";
 export const APP_ROOT = "/root/creatorvault";
 export const APPROVED_FEATURE_HEADS = {
   stripe: "ccba8cd56f887d041311d4f37d3ec912fd57322d",
@@ -112,6 +117,108 @@ export const CONSOLIDATED_ALLOWED_PATHS = [
   ...new Set([...featurePaths, ...integrationPaths]),
 ].sort();
 
+/**
+ * This successor is not another feature consolidation. Keep its surface
+ * deliberately small: visual DNA, the creator-owned intake/workspace proof,
+ * and this release controller only. In particular, money, providers,
+ * migrations, auth-core, package metadata, and lockfiles are not admitted.
+ */
+const visualReleasePaths = [
+  ".github/workflows/deploy.yml",
+  "README.md",
+  "TODO.md",
+  "client/index.html",
+  "client/public/fonts/08e268f050baed80.woff2",
+  "client/public/fonts/3bfe4586eb9a33ec.woff2",
+  "client/public/fonts/3d1febe5209a9a87.woff2",
+  "client/public/fonts/59802b9ab070b846.woff2",
+  "client/public/fonts/63296b0a0d86c514.woff2",
+  "client/public/fonts/713ca32c3c8b2ada.woff2",
+  "client/public/fonts/7b03e2b3eb91c069.woff2",
+  "client/public/fonts/b978e4a38f40204c.woff2",
+  "client/public/fonts/bebasneue-OFL.txt",
+  "client/public/fonts/ca181a34b6a22c64.woff2",
+  "client/public/fonts/dmsans-OFL.txt",
+  "client/public/fonts/f68f7fa97d7cca14.woff2",
+  "client/public/fonts/font-source-manifest.json",
+  "client/public/fonts/spacemono-OFL.txt",
+  "client/public/fonts/visual-dna-fonts.css",
+  "client/public/manus-routes.json",
+  "client/src/App.tsx",
+  "client/src/components/AppHeader.tsx",
+  "client/src/components/CreatorSourceVideoIntake.tsx",
+  "client/src/components/MediaPicker.tsx",
+  "client/src/components/TrailerDirectionPreview.tsx",
+  "client/src/components/ui/button.tsx",
+  "client/src/index.css",
+  "client/src/pages/CreatorHome.tsx",
+  "client/src/pages/CreatorVideoStudio.tsx",
+  "client/src/pages/CreatorVideoStudioSourceIntake.test.tsx",
+  "client/src/pages/CreatorWorkspace.test.tsx",
+  "client/src/pages/CreatorWorkspace.tsx",
+  "client/src/pages/Home.tsx",
+  "client/src/pages/Login.tsx",
+  "client/src/pages/TrailerDirectionPreview.test.tsx",
+  "client/src/pages/TrailerStudio.tsx",
+  "client/src/pages/VisualDna.test.ts",
+  "docs/CREATORVAULT_VISUAL_AND_DESIGN_DNA.md",
+  "docs/evidence/visual-dna/README.md",
+  "docs/evidence/visual-dna/local-desktop-creator-video-studio-pre-upload-1440x1000.png",
+  "docs/evidence/visual-dna/local-desktop-creator-video-studio-selected-upload-1440x1000.png",
+  "docs/evidence/visual-dna/local-desktop-creator-video-studio-selected-upload-preview-1440x1000.png",
+  "docs/evidence/visual-dna/local-desktop-creator-workspace-direction-local-cut-unavailable-1440x1000.png",
+  "docs/evidence/visual-dna/local-desktop-creator-workspace-new-1440x1000.png",
+  "docs/evidence/visual-dna/local-desktop-creator-workspace-saved-1440x1000.png",
+  "docs/evidence/visual-dna/local-desktop-dashboard-pre-upload-1440x1000.png",
+  "docs/evidence/visual-dna/local-desktop-entry-gate-pre-acknowledgement-1440x1000.png",
+  "docs/evidence/visual-dna/local-desktop-home-pre-upload-1440x1000.png",
+  "docs/evidence/visual-dna/local-desktop-home-reduced-motion-1440x1000.png",
+  "docs/evidence/visual-dna/local-desktop-login-pre-upload-1440x1000.png",
+  "docs/evidence/visual-dna/local-desktop-trailer-maker-draft-1440x1000.png",
+  "docs/evidence/visual-dna/local-desktop-trailer-maker-source-1440x1000.png",
+  "docs/evidence/visual-dna/local-mobile-creator-video-studio-pre-upload-390x844.png",
+  "docs/evidence/visual-dna/local-mobile-creator-video-studio-selected-upload-390x844.png",
+  "docs/evidence/visual-dna/local-mobile-creator-video-studio-selected-upload-preview-390x844.png",
+  "docs/evidence/visual-dna/local-mobile-creator-workspace-direction-local-cut-unavailable-390x844.png",
+  "docs/evidence/visual-dna/local-mobile-creator-workspace-new-390x844.png",
+  "docs/evidence/visual-dna/local-mobile-creator-workspace-saved-390x844.png",
+  "docs/evidence/visual-dna/local-mobile-dashboard-pre-upload-390x844.png",
+  "docs/evidence/visual-dna/local-mobile-entry-gate-pre-acknowledgement-390x844.png",
+  "docs/evidence/visual-dna/local-mobile-home-mobile-navigation-open-390x844.png",
+  "docs/evidence/visual-dna/local-mobile-home-pre-upload-390x844.png",
+  "docs/evidence/visual-dna/local-mobile-login-pre-upload-390x844.png",
+  "docs/evidence/visual-dna/local-mobile-trailer-maker-draft-390x844.png",
+  "docs/evidence/visual-dna/local-mobile-trailer-maker-source-390x844.png",
+  "docs/evidence/visual-dna/public-home-before-desktop-1440x1000.png",
+  "docs/evidence/visual-dna/public-home-before-mobile-390x844.png",
+  "docs/evidence/visual-dna/public-home-before.json",
+  "docs/evidence/visual-dna/visual-dna-local-proof.json",
+  "scripts/check-video-studio-types.ts",
+  "scripts/consolidatedRelease.test.ts",
+  "scripts/consolidatedReleasePolicy.ts",
+  "scripts/consolidatedReleaseRunner.ts",
+  "scripts/cvVideo026LocalProofServer.ts",
+  "scripts/runCvVideo026LocalProof.ts",
+  "scripts/runVisualDnaLocalProof.ts",
+  "scripts/videoUploadRouter.localProof.test.ts",
+  "server/routers.ts",
+  "server/routers/creatorWorkspace.ts",
+  "server/routers/mediaAssets.ts",
+  "server/routers/videoUploadRouter.ts",
+  "server/services/localTrailerCut.test.ts",
+  "server/services/localTrailerCut.ts",
+  "vitest.video-studio.config.ts",
+];
+const visualReleaseControllerPaths = [
+  ".github/workflows/deploy.yml",
+  "scripts/consolidatedReleasePolicy.ts",
+  "scripts/consolidatedReleaseRunner.ts",
+  "scripts/consolidatedRelease.test.ts",
+];
+export const CONSOLIDATED_VISUAL_RELEASE_ALLOWED_PATHS = [
+  ...new Set([...visualReleasePaths, ...visualReleaseControllerPaths]),
+].sort();
+
 function git(root: string, args: string[]): string {
   try {
     return execFileSync("git", args, {
@@ -199,6 +306,10 @@ export function checkConsolidatedCheckout(
     "CONSOLIDATED_CHECKOUT_IDENTITY_MISMATCH"
   );
   requireRelease(
+    git(root, ["rev-parse", `${sha}^`]) === CONSOLIDATED_RELEASE_PARENT,
+    "CONSOLIDATED_RELEASE_PARENT_MISMATCH"
+  );
+  requireRelease(
     git(root, ["status", "--porcelain", "--untracked-files=all"]) === "",
     "DIRTY_CONSOLIDATED_CHECKOUT"
   );
@@ -210,25 +321,25 @@ export function checkConsolidatedCheckout(
   const names = git(root, [
     "diff",
     "--name-only",
-    CONSOLIDATED_SECURITY_BASELINE,
+    CONSOLIDATED_RELEASE_PARENT,
     sha,
   ])
     .split("\n")
     .filter(Boolean);
-  const allowed = new Set(CONSOLIDATED_ALLOWED_PATHS);
+  const allowed = new Set(CONSOLIDATED_VISUAL_RELEASE_ALLOWED_PATHS);
   requireRelease(
     names.length > 0 && names.every(name => allowed.has(name)),
-    "UNAPPROVED_CONSOLIDATED_PATH"
+    "UNAPPROVED_VISUAL_RELEASE_PATH"
   );
   requireRelease(
     !git(root, [
       "diff",
       "--name-only",
       "--diff-filter=DR",
-      CONSOLIDATED_SECURITY_BASELINE,
+      CONSOLIDATED_RELEASE_PARENT,
       sha,
     ]),
-    "CONSOLIDATED_DELETE_OR_RENAME_FORBIDDEN"
+    "VISUAL_RELEASE_DELETE_OR_RENAME_FORBIDDEN"
   );
   for (const file of names) {
     const meta = lstatSync(path.join(root, file));
@@ -239,7 +350,21 @@ export function checkConsolidatedCheckout(
     requireRelease(
       sha256(readFileSync(path.join(root, file))) ===
         sha256(gitBytes(root, ["show", `${sha}:${file}`])),
-      "CONSOLIDATED_SOURCE_BYTES_CHANGED"
+      "VISUAL_RELEASE_SOURCE_BYTES_CHANGED"
+    );
+  }
+  if (names.includes("server/services/localTrailerCut.ts")) {
+    const localTrailerCut = readFileSync(
+      path.join(root, "server/services/localTrailerCut.ts"),
+      "utf8"
+    );
+    requireRelease(
+      /localProofMode !== "1"\s*\|\|\s*environment\.NODE_ENV !== "test"\s*\|\|\s*enabled !== "1"/.test(
+        localTrailerCut
+      ) &&
+        localTrailerCut.includes("LOCAL_TRAILER_CUT_CONFIGURATION_REJECTED") &&
+        localTrailerCut.includes("CREATORVAULT_LOCAL_TRAILER_CUT_ENABLED"),
+      "LOCAL_TRAILER_CUT_PRODUCTION_ENABLEMENT_FORBIDDEN"
     );
   }
   for (const file of ["pnpm-lock.yaml", "package-lock.json", "yarn.lock"])
@@ -247,7 +372,7 @@ export function checkConsolidatedCheckout(
       !git(root, [
         "diff",
         "--name-only",
-        CONSOLIDATED_SECURITY_BASELINE,
+        CONSOLIDATED_RELEASE_PARENT,
         sha,
         "--",
         file,

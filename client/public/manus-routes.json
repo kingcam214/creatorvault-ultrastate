@@ -1,0 +1,1057 @@
+{
+  "routes": [
+    {
+      "path": "/"
+    },
+    {
+      "path": "/2257"
+    },
+    {
+      "path": "/__release"
+    },
+    {
+      "path": "/_dev/components"
+    },
+    {
+      "path": "/_dev/test-checkout"
+    },
+    {
+      "path": "/admin/manual-payments"
+    },
+    {
+      "path": "/admin/payouts"
+    },
+    {
+      "path": "/admin/tips"
+    },
+    {
+      "path": "/adult-editor"
+    },
+    {
+      "path": "/adult-sales-bot"
+    },
+    {
+      "path": "/agent-tracker"
+    },
+    {
+      "path": "/agents"
+    },
+    {
+      "path": "/agents/approvals"
+    },
+    {
+      "path": "/agents/command-tower"
+    },
+    {
+      "path": "/agents/motion-flyer-agent"
+    },
+    {
+      "path": "/agents/music-library-agent"
+    },
+    {
+      "path": "/ai-agent-challenge"
+    },
+    {
+      "path": "/ai-bot"
+    },
+    {
+      "path": "/ai-chatter"
+    },
+    {
+      "path": "/analytics"
+    },
+    {
+      "path": "/animated-flyer-studio"
+    },
+    {
+      "path": "/apparel-lab"
+    },
+    {
+      "path": "/artist/storefront"
+    },
+    {
+      "path": "/body-cinema"
+    },
+    {
+      "path": "/bots/monetization"
+    },
+    {
+      "path": "/brand-deals"
+    },
+    {
+      "path": "/business-cards"
+    },
+    {
+      "path": "/business-cards/ai-designer"
+    },
+    {
+      "path": "/business-cards/editor"
+    },
+    {
+      "path": "/business-cards/editor/:cardId"
+    },
+    {
+      "path": "/challenges"
+    },
+    {
+      "path": "/chica"
+    },
+    {
+      "path": "/chica/funnels"
+    },
+    {
+      "path": "/chuuch"
+    },
+    {
+      "path": "/chuuch/archive"
+    },
+    {
+      "path": "/chuuch/archive/:slug"
+    },
+    {
+      "path": "/chuuch/code"
+    },
+    {
+      "path": "/chuuch/elders"
+    },
+    {
+      "path": "/chuuch/elders/:slug"
+    },
+    {
+      "path": "/chuuch/events"
+    },
+    {
+      "path": "/chuuch/media"
+    },
+    {
+      "path": "/chuuch/members"
+    },
+    {
+      "path": "/chuuch/merch"
+    },
+    {
+      "path": "/chuuch/teaching"
+    },
+    {
+      "path": "/chuuch/teaching/:slug"
+    },
+    {
+      "path": "/chuuch/transition"
+    },
+    {
+      "path": "/clone"
+    },
+    {
+      "path": "/clone-empire-home"
+    },
+    {
+      "path": "/clone/command-center"
+    },
+    {
+      "path": "/clone/render-studio"
+    },
+    {
+      "path": "/command-center"
+    },
+    {
+      "path": "/command-hub"
+    },
+    {
+      "path": "/command-hub-v2"
+    },
+    {
+      "path": "/content-dashboard"
+    },
+    {
+      "path": "/control-room"
+    },
+    {
+      "path": "/creator"
+    },
+    {
+      "path": "/creator-analytics"
+    },
+    {
+      "path": "/creator-management"
+    },
+    {
+      "path": "/creator-toolbox"
+    },
+    {
+      "path": "/creator-tools"
+    },
+    {
+      "path": "/creator-video-studio"
+    },
+    {
+      "path": "/creator/:creatorId/protected-demo"
+    },
+    {
+      "path": "/creator/:handle"
+    },
+    {
+      "path": "/creator/analytics"
+    },
+    {
+      "path": "/creator/caption-stage"
+    },
+    {
+      "path": "/creator/earnings"
+    },
+    {
+      "path": "/creator/editor"
+    },
+    {
+      "path": "/creator/profile-page"
+    },
+    {
+      "path": "/creator/subscription-tiers"
+    },
+    {
+      "path": "/creator/subscriptions"
+    },
+    {
+      "path": "/creator/toolbox"
+    },
+    {
+      "path": "/creator/tools"
+    },
+    {
+      "path": "/creator/video-studio"
+    },
+    {
+      "path": "/creator/workspace"
+    },
+    {
+      "path": "/creators"
+    },
+    {
+      "path": "/creators/:creatorSlug"
+    },
+    {
+      "path": "/creators/aderly"
+    },
+    {
+      "path": "/creators/diana"
+    },
+    {
+      "path": "/creators/leslie"
+    },
+    {
+      "path": "/creators/luv-roxie"
+    },
+    {
+      "path": "/creators/maily"
+    },
+    {
+      "path": "/creators/reshula"
+    },
+    {
+      "path": "/creators/the-biggest-b"
+    },
+    {
+      "path": "/culture-selection"
+    },
+    {
+      "path": "/dashboard"
+    },
+    {
+      "path": "/dayshift-doctor"
+    },
+    {
+      "path": "/demos-home"
+    },
+    {
+      "path": "/design-department"
+    },
+    {
+      "path": "/dmca"
+    },
+    {
+      "path": "/dominican"
+    },
+    {
+      "path": "/dominicana"
+    },
+    {
+      "path": "/drop"
+    },
+    {
+      "path": "/emma"
+    },
+    {
+      "path": "/emma-ai-agents"
+    },
+    {
+      "path": "/emma-empire"
+    },
+    {
+      "path": "/emma-university"
+    },
+    {
+      "path": "/emma/network"
+    },
+    {
+      "path": "/emma/reset"
+    },
+    {
+      "path": "/emma/reset-dashboard"
+    },
+    {
+      "path": "/emma/reset-home"
+    },
+    {
+      "path": "/emma/reset-success"
+    },
+    {
+      "path": "/empire-brain"
+    },
+    {
+      "path": "/empire-brain-dashboard"
+    },
+    {
+      "path": "/empire-brain-rules"
+    },
+    {
+      "path": "/empire-brain-showrunner"
+    },
+    {
+      "path": "/empire-cockpit-v2"
+    },
+    {
+      "path": "/empire-cockpit-v3"
+    },
+    {
+      "path": "/empire-command"
+    },
+    {
+      "path": "/empire-state"
+    },
+    {
+      "path": "/explore"
+    },
+    {
+      "path": "/feed"
+    },
+    {
+      "path": "/flyer-composer"
+    },
+    {
+      "path": "/flyer-design-studio"
+    },
+    {
+      "path": "/flyer-generator"
+    },
+    {
+      "path": "/flyer-studio-v2"
+    },
+    {
+      "path": "/follow-list/:userId/:type"
+    },
+    {
+      "path": "/font-library"
+    },
+    {
+      "path": "/for-you"
+    },
+    {
+      "path": "/funnels"
+    },
+    {
+      "path": "/god-mode"
+    },
+    {
+      "path": "/greatest-show"
+    },
+    {
+      "path": "/greatest-show-studio"
+    },
+    {
+      "path": "/greatest-show/aderly"
+    },
+    {
+      "path": "/greatest-show/adult"
+    },
+    {
+      "path": "/greatest-show/apply"
+    },
+    {
+      "path": "/greatest-show/canisha"
+    },
+    {
+      "path": "/greatest-show/dance"
+    },
+    {
+      "path": "/greatest-show/delbania"
+    },
+    {
+      "path": "/greatest-show/diana"
+    },
+    {
+      "path": "/greatest-show/emma"
+    },
+    {
+      "path": "/greatest-show/fitness"
+    },
+    {
+      "path": "/greatest-show/leslie"
+    },
+    {
+      "path": "/greatest-show/lifestyle"
+    },
+    {
+      "path": "/greatest-show/lirys"
+    },
+    {
+      "path": "/greatest-show/lirys-missed-revenue"
+    },
+    {
+      "path": "/greatest-show/luvroxie"
+    },
+    {
+      "path": "/greatest-show/maily"
+    },
+    {
+      "path": "/greatest-show/marielka-profile"
+    },
+    {
+      "path": "/greatest-show/pole"
+    },
+    {
+      "path": "/greatest-show/subscribe"
+    },
+    {
+      "path": "/greatest-show/subscribe-success"
+    },
+    {
+      "path": "/greatest-show/thebiggestb"
+    },
+    {
+      "path": "/guia"
+    },
+    {
+      "path": "/hire"
+    },
+    {
+      "path": "/hollywood-academy"
+    },
+    {
+      "path": "/hollywood-creator-dashboard"
+    },
+    {
+      "path": "/hollywood-replacement"
+    },
+    {
+      "path": "/hollywood-shows"
+    },
+    {
+      "path": "/hollywood-studio"
+    },
+    {
+      "path": "/hollywood/:slug"
+    },
+    {
+      "path": "/hollywood/channel/:creatorId"
+    },
+    {
+      "path": "/hollywood/episode/:episodeId"
+    },
+    {
+      "path": "/image-lab"
+    },
+    {
+      "path": "/influencer"
+    },
+    {
+      "path": "/join-vaultlive"
+    },
+    {
+      "path": "/king"
+    },
+    {
+      "path": "/king/agent-live"
+    },
+    {
+      "path": "/king/analytics"
+    },
+    {
+      "path": "/king/backoffice"
+    },
+    {
+      "path": "/king/campaign-visual"
+    },
+    {
+      "path": "/king/campaign-visuals"
+    },
+    {
+      "path": "/king/challenge"
+    },
+    {
+      "path": "/king/challenge-story"
+    },
+    {
+      "path": "/king/clone-command"
+    },
+    {
+      "path": "/king/clone-studio"
+    },
+    {
+      "path": "/king/clone-training-lab"
+    },
+    {
+      "path": "/king/command-center"
+    },
+    {
+      "path": "/king/connect-socials"
+    },
+    {
+      "path": "/king/content"
+    },
+    {
+      "path": "/king/demos"
+    },
+    {
+      "path": "/king/dubbing"
+    },
+    {
+      "path": "/king/emma"
+    },
+    {
+      "path": "/king/empire"
+    },
+    {
+      "path": "/king/empire-3d"
+    },
+    {
+      "path": "/king/empire-doc"
+    },
+    {
+      "path": "/king/empire-verticals"
+    },
+    {
+      "path": "/king/engine"
+    },
+    {
+      "path": "/king/episodes-3d"
+    },
+    {
+      "path": "/king/flyer-design-studio"
+    },
+    {
+      "path": "/king/flyer-generator"
+    },
+    {
+      "path": "/king/gallery"
+    },
+    {
+      "path": "/king/gem-center"
+    },
+    {
+      "path": "/king/god-mode"
+    },
+    {
+      "path": "/king/hollywood-ai"
+    },
+    {
+      "path": "/king/import"
+    },
+    {
+      "path": "/king/launch-command"
+    },
+    {
+      "path": "/king/life"
+    },
+    {
+      "path": "/king/media-vault"
+    },
+    {
+      "path": "/king/money-mission"
+    },
+    {
+      "path": "/king/music-composer"
+    },
+    {
+      "path": "/king/platform-war-room"
+    },
+    {
+      "path": "/king/presentation-builder"
+    },
+    {
+      "path": "/king/script-director"
+    },
+    {
+      "path": "/king/script-writer"
+    },
+    {
+      "path": "/king/telegram-hub"
+    },
+    {
+      "path": "/king/users"
+    },
+    {
+      "path": "/king/vault-remix"
+    },
+    {
+      "path": "/king/video-editor"
+    },
+    {
+      "path": "/king/video-editor/:projectId"
+    },
+    {
+      "path": "/king/video-lab"
+    },
+    {
+      "path": "/king/waitlist"
+    },
+    {
+      "path": "/king/whatsapp-bot"
+    },
+    {
+      "path": "/kingcam"
+    },
+    {
+      "path": "/kingcam-clone"
+    },
+    {
+      "path": "/kingcam-demos"
+    },
+    {
+      "path": "/kingcam-showcase"
+    },
+    {
+      "path": "/kingcam-tours"
+    },
+    {
+      "path": "/kingcam/guide"
+    },
+    {
+      "path": "/kingcam/vault"
+    },
+    {
+      "path": "/launch-trailer-studio"
+    },
+    {
+      "path": "/lead-capture"
+    },
+    {
+      "path": "/learn"
+    },
+    {
+      "path": "/live"
+    },
+    {
+      "path": "/live-demo"
+    },
+    {
+      "path": "/login"
+    },
+    {
+      "path": "/loyalty-command"
+    },
+    {
+      "path": "/mark-cuban-agent"
+    },
+    {
+      "path": "/marketplace"
+    },
+    {
+      "path": "/marketplace/:productId"
+    },
+    {
+      "path": "/marketplace/analytics/:productId"
+    },
+    {
+      "path": "/marketplace/create"
+    },
+    {
+      "path": "/marketplace/manage"
+    },
+    {
+      "path": "/media/hub"
+    },
+    {
+      "path": "/messages"
+    },
+    {
+      "path": "/messages/:conversationId"
+    },
+    {
+      "path": "/mi-panel/bcb-panel"
+    },
+    {
+      "path": "/mi-panel/delbania-panel"
+    },
+    {
+      "path": "/mi-panel/marielka-dashboard"
+    },
+    {
+      "path": "/monetization"
+    },
+    {
+      "path": "/music-library"
+    },
+    {
+      "path": "/music/album-cover"
+    },
+    {
+      "path": "/music/cover-studio"
+    },
+    {
+      "path": "/my-loyalty"
+    },
+    {
+      "path": "/my-subscriptions"
+    },
+    {
+      "path": "/nfc-cards"
+    },
+    {
+      "path": "/notifications"
+    },
+    {
+      "path": "/nurse"
+    },
+    {
+      "path": "/oauth/social/callback"
+    },
+    {
+      "path": "/onboard"
+    },
+    {
+      "path": "/onboard/creator"
+    },
+    {
+      "path": "/onboard/influencer"
+    },
+    {
+      "path": "/onboarding"
+    },
+    {
+      "path": "/operator"
+    },
+    {
+      "path": "/ops/status"
+    },
+    {
+      "path": "/outreach"
+    },
+    {
+      "path": "/owner-cockpit"
+    },
+    {
+      "path": "/owner-cockpit/ai-empire"
+    },
+    {
+      "path": "/owner-cockpit/apple-queue"
+    },
+    {
+      "path": "/owner-cockpit/chicas-empire"
+    },
+    {
+      "path": "/owner-cockpit/espionage"
+    },
+    {
+      "path": "/owner-cockpit/presentation-empire"
+    },
+    {
+      "path": "/owner-cockpit/recruitment"
+    },
+    {
+      "path": "/owner-control"
+    },
+    {
+      "path": "/owner-status"
+    },
+    {
+      "path": "/payout-setup"
+    },
+    {
+      "path": "/performance-insights"
+    },
+    {
+      "path": "/podcast-studio"
+    },
+    {
+      "path": "/podcasting"
+    },
+    {
+      "path": "/podcasting-home"
+    },
+    {
+      "path": "/presentation-builder"
+    },
+    {
+      "path": "/presentation-empire"
+    },
+    {
+      "path": "/privacy"
+    },
+    {
+      "path": "/profile/:username"
+    },
+    {
+      "path": "/profile/edit"
+    },
+    {
+      "path": "/proof-gate"
+    },
+    {
+      "path": "/real-estate-empire"
+    },
+    {
+      "path": "/realgpt/dashboard"
+    },
+    {
+      "path": "/recruiter"
+    },
+    {
+      "path": "/recruiter-dashboard"
+    },
+    {
+      "path": "/register"
+    },
+    {
+      "path": "/reshula24"
+    },
+    {
+      "path": "/sector/haiti"
+    },
+    {
+      "path": "/services"
+    },
+    {
+      "path": "/shop"
+    },
+    {
+      "path": "/shows/:slug"
+    },
+    {
+      "path": "/shows/:slug/episodes/:episodeId"
+    },
+    {
+      "path": "/signup"
+    },
+    {
+      "path": "/smart-album"
+    },
+    {
+      "path": "/social"
+    },
+    {
+      "path": "/social-audit"
+    },
+    {
+      "path": "/social-autoposter"
+    },
+    {
+      "path": "/social-hub"
+    },
+    {
+      "path": "/social/factory"
+    },
+    {
+      "path": "/social/posting-hub"
+    },
+    {
+      "path": "/stream/:id"
+    },
+    {
+      "path": "/studio-slots"
+    },
+    {
+      "path": "/studio/lipsync"
+    },
+    {
+      "path": "/studio/video"
+    },
+    {
+      "path": "/subscribe/:creatorId"
+    },
+    {
+      "path": "/subscription/success"
+    },
+    {
+      "path": "/subscriptions"
+    },
+    {
+      "path": "/telegram-hub"
+    },
+    {
+      "path": "/telegram-setup"
+    },
+    {
+      "path": "/terms"
+    },
+    {
+      "path": "/thumbnail-generator"
+    },
+    {
+      "path": "/tools/spatial-composer"
+    },
+    {
+      "path": "/tools/viral-optimizer"
+    },
+    {
+      "path": "/tools/viral-optimizer-v2"
+    },
+    {
+      "path": "/trailer-maker"
+    },
+    {
+      "path": "/trailers"
+    },
+    {
+      "path": "/university"
+    },
+    {
+      "path": "/university/enroll-success"
+    },
+    {
+      "path": "/vault-analytics"
+    },
+    {
+      "path": "/vault-ayiti"
+    },
+    {
+      "path": "/vault-culture"
+    },
+    {
+      "path": "/vault-drop"
+    },
+    {
+      "path": "/vault-guardian"
+    },
+    {
+      "path": "/vault-live"
+    },
+    {
+      "path": "/vault-market-home"
+    },
+    {
+      "path": "/vault-moment"
+    },
+    {
+      "path": "/vault-pass"
+    },
+    {
+      "path": "/vault-pay"
+    },
+    {
+      "path": "/vault-remix"
+    },
+    {
+      "path": "/vault-rise"
+    },
+    {
+      "path": "/vault-snap"
+    },
+    {
+      "path": "/vault-x"
+    },
+    {
+      "path": "/vault-x/analytics"
+    },
+    {
+      "path": "/vault-x/editor"
+    },
+    {
+      "path": "/vault-x/fan-library"
+    },
+    {
+      "path": "/vault-x/library/:jobId"
+    },
+    {
+      "path": "/vault-x/studio"
+    },
+    {
+      "path": "/vault-x/trailers"
+    },
+    {
+      "path": "/vault/cut"
+    },
+    {
+      "path": "/vaultlive"
+    },
+    {
+      "path": "/vaultlive/control-room"
+    },
+    {
+      "path": "/vaultlive/stream"
+    },
+    {
+      "path": "/vaultspace-dashboard"
+    },
+    {
+      "path": "/vaultx"
+    },
+    {
+      "path": "/vaultx-challenges"
+    },
+    {
+      "path": "/vaultx-video-editor"
+    },
+    {
+      "path": "/vaultx/capcut"
+    },
+    {
+      "path": "/vaultx/distribution"
+    },
+    {
+      "path": "/vaultx/drop"
+    },
+    {
+      "path": "/vaultx/editor"
+    },
+    {
+      "path": "/vaultx/onboarding"
+    },
+    {
+      "path": "/vaultx/studio"
+    },
+    {
+      "path": "/vaultx/studio-advanced"
+    },
+    {
+      "path": "/vaultx/trailers"
+    },
+    {
+      "path": "/vaultx/video-editor"
+    },
+    {
+      "path": "/vaultx/video-editor/:projectId"
+    },
+    {
+      "path": "/vertical-pack"
+    },
+    {
+      "path": "/video-lab"
+    },
+    {
+      "path": "/video-lab-pro"
+    },
+    {
+      "path": "/video-os"
+    },
+    {
+      "path": "/video-production-studio"
+    },
+    {
+      "path": "/video-studio"
+    },
+    {
+      "path": "/videoeditor/vaultx"
+    },
+    {
+      "path": "/videoeditor/vaultx-projects"
+    },
+    {
+      "path": "/viral-optimizer"
+    },
+    {
+      "path": "/waitlist"
+    },
+    {
+      "path": "/whatsapp-content"
+    }
+  ]
+}

@@ -70,6 +70,7 @@ import OwnerControl from "./pages/OwnerControl";
 import OwnerStatus from "./pages/OwnerStatus";
 import AgentCommand from "./pages/AgentCommand";
 import CreatorVideoStudio from "./pages/CreatorVideoStudio";
+import CreatorWorkspace from "./pages/CreatorWorkspace";
 import CaptionStage from "./pages/CaptionStage";
 import VideoStudioTimelinePage from "./pages/VideoStudioTimelinePage";
 // import VideoStudio from './pages/VideoStudio';
@@ -698,6 +699,7 @@ function Router() {
       <Route path="/vaultx/capcut">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/adult-editor">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
       <Route path="/creator/editor">{() => { window.location.replace("/vault-x/studio"); return null; }}</Route>
+      <Route path="/creator/workspace" component={CreatorWorkspace} />
       <Route path={"/creator/:handle"} component={PublicCreatorLanding} />
       <Route path="/vault-x/analytics" component={VaultXAnalytics} />
       <Route path="/vault-x/fan-library" component={VaultXFanLibrary} />

@@ -10,8 +10,10 @@ import type { User } from "../../drizzle/schema";
 import { Router, Request, Response, NextFunction } from "express";
 // @ts-ignore
 import multer from "multer";
-import { writeFile, readFile, unlink, mkdir, rmdir, stat, readdir } from "fs/promises";
+import { writeFile, readFile, unlink, mkdir, rmdir, stat, readdir ,
+} from "fs/promises";
 import { createReadStream, existsSync } from "fs";
+import os from "os";
 import path from "path";
 import { createHash, randomUUID } from "crypto";
 import { execFile } from "child_process";
@@ -23,7 +25,8 @@ import {
   isSupportedBodyCinemaVideoSelection,
   sanitiseBodyCinemaUploadFilename,
 } from "../services/bodyCinemaReliability";
-import { registerCanonicalAudioAsset, registerCreatorOwnedAudioUpload } from "../services/audioIntelligenceService";
+import { registerCanonicalAudioAsset, registerCreatorOwnedAudioUpload ,
+} from "../services/audioIntelligenceService";
 
 // ─── Helper: mime type from filename ─────────────────────────────────────────
 function getMimeType(filename: string): string {
@@ -41,23 +44,92 @@ function getMimeType(filename: string): string {
 // ─── Helper: assemble chunks + write to durable local disk ─────────────────────
 // storagePut (Manus CDN proxy) is unavailable from VPS — write directly to
 // /root/uploads/content-vault/{uuid}/{filename} and return a public HTTPS URL.
-const DURABLE_UPLOADS_DIR = "/root/uploads/content-vault";
-const PRIVATE_UPLOAD_RECEIPTS_DIR = "/root/uploads/content-vault-receipts";
-const execFileAsync = promisify(execFile);
+export type LocalProofUploadStorage = {
+  durableUploadsDir: string;
+  privateReceiptsDir: string;
+  publicUploadBase: string;
+};
 
-function isSupportedAudioSelection(filename: string, suppliedMime: string): boolean {
-  const extension = filename.split(".").pop()?.toLowerCase() ?? "";
-  return ["mp3", "wav", "m4a", "aac", "ogg", "flac"].includes(extension)
-    && (suppliedMime.startsWith("audio/") || suppliedMime === "application/octet-stream");
+export function resolveLocalProofUploadStorage(
+  input: {
+    enabled?: string;
+    nodeEnv?: string;
+    root?: string;
+    tempDirectory?: string;
+  } = {}
+): LocalProofUploadStorage | null {
+  if (input.enabled === undefined || input.enabled === "") return null;
+  if (input.enabled !== "1" || input.nodeEnv !== "test") {
+    throw new Error("LOCAL_PROOF_STORAGE_CONFIGURATION_REJECTED");
+  }
+
+  const configuredRoot = input.root;
+  if (!configuredRoot || !path.isAbsolute(configuredRoot)) {
+    throw new Error("LOCAL_PROOF_STORAGE_CONFIGURATION_REJECTED");
+  }
+
+  const tempDirectory = path.resolve(input.tempDirectory ?? os.tmpdir());
+  const root = path.resolve(configuredRoot);
+  const allowedPrefix = path.join(tempDirectory, "creatorvault-cv-video-026-");
+  if (!root.startsWith(allowedPrefix)) {
+    throw new Error("LOCAL_PROOF_STORAGE_CONFIGURATION_REJECTED");
+  }
+
+  return {
+    durableUploadsDir: path.join(root, "content-vault"),
+    privateReceiptsDir: path.join(root, "content-vault-receipts"),
+    publicUploadBase: "/uploads/content-vault",
+  };
 }
 
-async function validateDirectAudio(filePath: string): Promise<{ codec: string; sampleRate: number; channels: number; durationSec: number }> {
+const LOCAL_PROOF_UPLOAD_STORAGE = resolveLocalProofUploadStorage({
+  enabled: process.env.CREATORVAULT_LOCAL_PROOF_MODE,
+  nodeEnv: process.env.NODE_ENV,
+  root: process.env.CREATORVAULT_LOCAL_PROOF_STORAGE_ROOT,
+});
+const DURABLE_UPLOADS_DIR = LOCAL_PROOF_UPLOAD_STORAGE?.durableUploadsDir ??
+  "/root/uploads/content-vault";
+const PRIVATE_UPLOAD_RECEIPTS_DIR = LOCAL_PROOF_UPLOAD_STORAGE?.privateReceiptsDir ??
+  "/root/uploads/content-vault-receipts";
+const PUBLIC_UPLOAD_BASE =
+  LOCAL_PROOF_UPLOAD_STORAGE?.publicUploadBase ??
+  "https://creatorvault.live/uploads/content-vault";
+const execFileAsync = promisify(execFile);
+
+function publicUploadUrl(storageId: string, filename: string): string {
+  return `${PUBLIC_UPLOAD_BASE}/${storageId}/${encodeURIComponent(filename) }`;
+}
+
+function isSupportedAudioSelection(
+  filename: string,
+  suppliedMime: string
+): boolean {
+  const extension = filename.split(".").pop()?.toLowerCase() ?? "";
+  return (
+    ["mp3", "wav", "m4a", "aac", "ogg", "flac"].includes(extension) &&
+    (suppliedMime.startsWith("audio/") ||
+      suppliedMime === "application/octet-stream")
+  );
+}
+
+async function validateDirectAudio(filePath: string): Promise<{
+  codec: string;
+  sampleRate: number;
+  channels: number;
+  durationSec: number;
+}> {
   const { stdout } = await execFileAsync(
     "ffprobe",
     [
-      "-v", "error", "-select_streams", "a:0",
-      "-show_entries", "stream=codec_name,sample_rate,channels,duration:format=duration",
-      "-of", "json", filePath,
+      "-v",
+      "error",
+      "-select_streams",
+      "a:0",
+      "-show_entries",
+      "stream=codec_name,sample_rate,channels,duration:format=duration",
+      "-of",
+      "json",
+      filePath,
     ],
     { timeout: 15_000, maxBuffer: 1024 * 1024, encoding: "utf8" }
   );
@@ -66,23 +138,45 @@ async function validateDirectAudio(filePath: string): Promise<{ codec: string; s
   const durationSec = Number(probe?.format?.duration ?? stream?.duration);
   const sampleRate = Number(stream?.sample_rate);
   const channels = Number(stream?.channels);
-  if (!stream?.codec_name || !Number.isFinite(sampleRate) || sampleRate < 8_000 || !Number.isFinite(channels) || channels < 1) {
+  if (
+    !stream?.codec_name ||
+    !Number.isFinite(sampleRate) ||
+    sampleRate < 8_000 ||
+    !Number.isFinite(channels) ||
+    channels < 1
+  ) {
     throw new Error("The selected file does not contain readable audio.");
   }
   if (!Number.isFinite(durationSec) || durationSec < 0.1 || durationSec > 600) {
-    throw new Error("CreatorVault accepts soundtracks between 0.1 seconds and 10 minutes.");
+    throw new Error(
+      "CreatorVault accepts soundtracks between 0.1 seconds and 10 minutes."
+    );
   }
-  return { codec: String(stream.codec_name), sampleRate, channels, durationSec: Number(durationSec.toFixed(3)) };
+  return {
+    codec: String(stream.codec_name),
+    sampleRate,
+    channels,
+    durationSec: Number(durationSec.toFixed(3)),
+  };
 }
 
-async function validateDirectVideo(filePath: string): Promise<{ codec: string; width: number; height: number; durationSec: number }> {
+async function validateDirectVideo(filePath: string): Promise<{
+  codec: string;
+  width: number;
+  height: number;
+  durationSec: number;
+}> {
   const { stdout } = await execFileAsync(
     "ffprobe",
     [
-      "-v", "error",
-      "-select_streams", "v:0",
-      "-show_entries", "stream=codec_name,width,height,duration:format=duration",
-      "-of", "json",
+      "-v",
+      "error",
+      "-select_streams",
+      "v:0",
+      "-show_entries",
+      "stream=codec_name,width,height,duration:format=duration",
+      "-of",
+      "json",
       filePath,
     ],
     { timeout: 15_000, maxBuffer: 1024 * 1024, encoding: "utf8" }
@@ -92,13 +186,28 @@ async function validateDirectVideo(filePath: string): Promise<{ codec: string; w
   const durationSec = Number(probe?.format?.duration ?? stream?.duration);
   const width = Number(stream?.width);
   const height = Number(stream?.height);
-  if (!stream?.codec_name || !Number.isFinite(width) || width < 16 || !Number.isFinite(height) || height < 16) {
-    throw new Error("The selected file does not contain a readable video stream.");
+  if (
+    !stream?.codec_name ||
+    !Number.isFinite(width) ||
+    width < 16 ||
+    !Number.isFinite(height) ||
+    height < 16
+  ) {
+    throw new Error(
+      "The selected file does not contain a readable video stream."
+    );
   }
   if (!Number.isFinite(durationSec) || durationSec < 0.1 || durationSec > 600) {
-    throw new Error("Body Cinema accepts verified videos between 0.1 seconds and 10 minutes.");
+    throw new Error(
+      "Body Cinema accepts verified videos between 0.1 seconds and 10 minutes."
+    );
   }
-  return { codec: String(stream.codec_name), width, height, durationSec: Number(durationSec.toFixed(3)) };
+  return {
+    codec: String(stream.codec_name),
+    width,
+    height,
+    durationSec: Number(durationSec.toFixed(3)),
+  };
 }
 
 function checksumFile(filePath: string): Promise<string> {
@@ -106,7 +215,7 @@ function checksumFile(filePath: string): Promise<string> {
     const hash = createHash("sha256");
     const stream = createReadStream(filePath);
     stream.on("error", reject);
-    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("data", chunk => hash.update(chunk));
     stream.on("end", () => resolve(hash.digest("hex")));
   });
 }
@@ -118,7 +227,16 @@ async function writeVerifiedUploadReceipt(input: {
   url: string;
   filename: string;
   filePath: string;
-}): Promise<{ id: string; sha256: string; verified: true; createdAt: string; codec: string; width: number; height: number; durationSec: number }> {
+}): Promise<{
+  id: string;
+  sha256: string;
+  verified: true;
+  createdAt: string;
+  codec: string;
+  width: number;
+  height: number;
+  durationSec: number;
+}> {
   const [media, fileStat, sha256] = await Promise.all([
     validateDirectVideo(input.filePath),
     stat(input.filePath),
@@ -126,23 +244,38 @@ async function writeVerifiedUploadReceipt(input: {
   ]);
   const createdAt = new Date().toISOString();
   await mkdir(PRIVATE_UPLOAD_RECEIPTS_DIR, { recursive: true });
-  await writeFile(path.join(PRIVATE_UPLOAD_RECEIPTS_DIR, `${input.storageId}.json`), JSON.stringify({
-    id: input.storageId,
-    creatorId: input.creatorId,
-    creatorProfileId: input.creatorProfileId || null,
-    url: input.url,
-    filename: input.filename,
-    size: Number(fileStat.size),
-    mime: getMimeType(input.filename),
-    sha256,
-    media,
-    verified: true,
-    createdAt,
-  }, null, 2));
+  await writeFile(
+    path.join(PRIVATE_UPLOAD_RECEIPTS_DIR, `${ input.storageId}.json`),
+    JSON.stringify(
+      {
+        id: input.storageId,
+        creatorId: input.creatorId,
+        creatorProfileId: input.creatorProfileId || null,
+        url: input.url,
+        filename: input.filename,
+        size: Number(fileStat.size),
+        mime: getMimeType(input.filename),
+        sha256,
+        media,
+        verified: true,
+        createdAt,
+      },
+      null,
+      2
+    )
+  );
   return { id: input.storageId, sha256, verified: true, createdAt, ...media };
 }
 
-async function assembleAndUpload(sessionDir: string, meta: any): Promise<{ url: string; filename: string; storageId: string; directory: string }> {
+async function assembleAndUpload(
+  sessionDir: string,
+  meta: any
+): Promise<{
+  url: string;
+  filename: string;
+  storageId: string;
+  directory: string;
+}> {
   const chunks: Buffer[] = [];
   for (let i = 0; i < meta.totalChunks; i++) {
     const cp = path.join(sessionDir, `chunk-${i.toString().padStart(5, "0")}`);
@@ -155,14 +288,22 @@ async function assembleAndUpload(sessionDir: string, meta: any): Promise<{ url: 
   await mkdir(destDir, { recursive: true });
   const destPath = path.join(destDir, finalFilename);
   await writeFile(destPath, combined);
-  const url = `https://creatorvault.live/uploads/content-vault/${fileUuid}/${finalFilename}`;
+  const url = publicUploadUrl(fileUuid, finalFilename);
   // Cleanup temp chunks
   for (let i = 0; i < meta.totalChunks; i++) {
-    await unlink(path.join(sessionDir, `chunk-${i.toString().padStart(5, "0")}`)).catch(() => {});
+    await unlink(
+      path.join(sessionDir, `chunk-${
+    i.toString().padStart(5, "0")}`)
+    ).catch(() => {});
   }
   await unlink(path.join(sessionDir, "meta.json")).catch(() => {});
   await rmdir(sessionDir).catch(() => {});
-  return { url, filename: finalFilename, storageId: fileUuid, directory: destDir };
+  return {
+    url,
+    filename: finalFilename,
+    storageId: fileUuid,
+    directory: destDir,
+  };
 }
 
 function escapeXml(value: string): string {
@@ -175,20 +316,34 @@ function escapeXml(value: string): string {
 }
 
 function slugifyAssetName(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48) || "vaultx-release";
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48) || "vaultx-release"
+  );
 }
 
-async function createVaultxSellableOutputs(file: { url: string; filename: string; storageId?: string; directory?: string }, meta: any, title: string, ppvPriceCents: number) {
+async function createVaultxSellableOutputs(
+  file: {
+    url: string;
+    filename: string;
+    storageId?: string;
+    directory?: string;
+  },
+  meta: any,
+  title: string,
+  ppvPriceCents: number
+) {
   const priceLabel = `$${(ppvPriceCents / 100).toFixed(2)}`;
   const base = slugifyAssetName(title);
-  const outputDir = file.directory || path.join(DURABLE_UPLOADS_DIR, file.storageId || randomUUID());
+  const outputDir =
+    file.directory ||
+    path.join(DURABLE_UPLOADS_DIR, file.storageId || randomUUID());
   const publicBase = file.storageId
-    ? `https://creatorvault.live/uploads/content-vault/${file.storageId}`
-    : `https://creatorvault.live/uploads/content-vault/${path.basename(outputDir)}`;
+    ? `${PUBLIC_UPLOAD_BASE}/${file.storageId}`
+    : `${PUBLIC_UPLOAD_BASE}/${path.basename(outputDir)}`;
   await mkdir(outputDir, { recursive: true });
 
   const coverName = `${base}-vaultx-cover.svg`;
@@ -198,7 +353,11 @@ async function createVaultxSellableOutputs(file: { url: string; filename: string
   const captionUrl = `${publicBase}/${captionName}`;
   const manifestUrl = `${publicBase}/${manifestName}`;
   const safeTitle = escapeXml(title);
-  const safeType = escapeXml(String(meta.contentType || contentTypeFromFilename(file.filename)).toUpperCase());
+  const safeType = escapeXml(
+    String(
+      meta.contentType || contentTypeFromFilename(file.filename)
+    ).toUpperCase()
+  );
 
   const coverSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
   <defs>
@@ -233,7 +392,13 @@ async function createVaultxSellableOutputs(file: { url: string; filename: string
     teaserCoverUrl: coverUrl,
     captionUrl,
     priceCents: ppvPriceCents,
-    sellableOutputs: ["paid_master", "branded_teaser_cover", "ppv_checkout_unlock", "distribution_caption", "buyer_access_receipt"],
+    sellableOutputs: [
+      "paid_master",
+      "branded_teaser_cover",
+      "ppv_checkout_unlock",
+      "distribution_caption",
+      "buyer_access_receipt",
+    ],
     operationalProof: {
       requiresStripeCheckout: true,
       logsPurchase: true,
@@ -244,12 +409,18 @@ async function createVaultxSellableOutputs(file: { url: string; filename: string
 
   await writeFile(path.join(outputDir, coverName), coverSvg);
   await writeFile(path.join(outputDir, captionName), caption);
-  await writeFile(path.join(outputDir, manifestName), JSON.stringify(manifest, null, 2));
+  await writeFile(
+    path.join(outputDir, manifestName),
+    JSON.stringify(manifest, null, 2)
+  );
   return { coverUrl, captionUrl, manifestUrl };
 }
 // Real creator performance footage routinely exceeds 100 MB. Keep a deliberate safety ceiling
 // while allowing high-quality source video through the same authenticated receipt path.
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 },
+});
 export const videoUploadRouter = Router();
 
 // Incomplete creator uploads must survive PM2 reloads and production deployments.
@@ -258,7 +429,11 @@ export const videoUploadRouter = Router();
 const UPLOAD_DIR = path.join(DURABLE_UPLOADS_DIR, ".upload-sessions");
 const OWNER_IDS = [6, 33];
 
-async function requireCreatorUploadAccess(req: Request, res: Response, next: NextFunction) {
+async function requireCreatorUploadAccess(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   let user: User;
   try {
     user = await sdk.authenticateRequest(req);
@@ -270,15 +445,21 @@ async function requireCreatorUploadAccess(req: Request, res: Response, next: Nex
     const userId = Number(user.id);
     const creatorId = await getCreatorId(userId);
     if (!creatorId && !isOwnerRole(user.role)) {
-      return res.status(403).json({ error: "An active creator profile is required to upload content." });
+      return res.status(403).json({
+        error: "An active creator profile is required to upload content.",
+      });
     }
-    (req as Request & { authenticatedOwnerRole: boolean }).authenticatedOwnerRole = isOwnerRole(user.role);
+    (
+      req as Request & { authenticatedOwnerRole: boolean }
+    ).authenticatedOwnerRole = isOwnerRole(user.role);
     (req as any).authenticatedUserId = userId;
     (req as any).authenticatedCreatorId = creatorId || userId;
     return next();
   } catch (error) {
     console.error("[VaultX Upload] Creator access check failed:", error);
-    return res.status(500).json({ error: "We could not verify your Creator HQ. Please try again." });
+    return res.status(500).json({
+      error: "We could not verify your Creator HQ. Please try again.",
+    });
   }
 }
 
@@ -332,8 +513,8 @@ async function registerChunkedVideoMediaAsset(input: {
     `INSERT INTO media_assets
       (id, user_id, source_type, asset_type, file_name, original_name, mime_type, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
      VALUES (?, ?, 'upload', 'video', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?)`,
-    [mediaAssetId, creatorId, input.file.filename, input.file.filename, getMimeType(input.file.filename), input.file.url, input.file.url, input.file.url, input.receipt.durationSec, input.receipt.width, input.receipt.height, createdByFeature],
-  );
+    [mediaAssetId, creatorId, input.file.filename, input.file.filename, getMimeType(input.file.filename), input.file.url, input.file.url, input.file.url, input.receipt.durationSec, input.receipt.width, input.receipt.height, createdByFeature,
+    ]);
   return { mediaAssetId, createdByFeature };
 }
 
@@ -359,7 +540,8 @@ function contentTypeFromFilename(filename: string): "video" | "photo" | "audio" 
   return "video";
 }
 
-async function registerUploadedPaidContent(req: Request, file: { url: string; filename: string; storageId?: string; directory?: string }, meta: any) {
+async function registerUploadedPaidContent(req: Request, file: { url: string; filename: string; storageId?: string; directory?: string ;
+  }, meta: any) {
   const user = await sdk.authenticateRequest(req);
   const creatorId = await getCreatorId(Number(user.id));
   const cid = creatorId || Number(user.id);
@@ -374,7 +556,8 @@ async function registerUploadedPaidContent(req: Request, file: { url: string; fi
     : contentTypeFromFilename(file.filename);
   const ppvPriceCents = parsePriceCents(meta.ppvPrice ?? meta.priceCents ?? meta.price ?? meta.unlockPrice);
   const ppvPriceDollars = Number((ppvPriceCents / 100).toFixed(2));
-  const tags = JSON.stringify(["vaultx", "upload", "paid-content", "money-loop", "processed-package"]);
+  const tags = JSON.stringify(["vaultx", "upload", "paid-content", "money-loop", "processed-package",
+  ]);
   const assets = await createVaultxSellableOutputs(file, meta, title, ppvPriceCents);
   const packagedDescription = `${description}\n\nVaultX package outputs: protected master, branded teaser cover, Stripe PPV unlock route, distribution caption, and sellable-output manifest. Caption: ${assets.captionUrl}. Manifest: ${assets.manifestUrl}.`;
 
@@ -386,10 +569,23 @@ async function registerUploadedPaidContent(req: Request, file: { url: string; fi
       access_tier, tags, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
     [
-      cid, title, packagedDescription, contentType,
-      file.url, assets.coverUrl, assets.coverUrl, assets.coverUrl,
-      1, ppvPriceDollars, 0, 0, 0,
-      ["basic", "premium", "vip", "ppv"].includes(String(meta.accessTier)) ? String(meta.accessTier) : "ppv", tags,
+      cid,
+      title,
+      packagedDescription,
+      contentType,
+      file.url,
+      assets.coverUrl,
+      assets.coverUrl,
+      assets.coverUrl,
+      1,
+      ppvPriceDollars,
+      0,
+      0,
+      0,
+      ["basic", "premium", "vip", "ppv"].includes(String(meta.accessTier))
+        ? String(meta.accessTier)
+        : "ppv",
+      tags,
     ]
   );
 
@@ -413,27 +609,34 @@ videoUploadRouter.post("/init", async (req: Request, res: Response) => {
   try {
     const { uploadId, totalChunks, filename } = req.body;
     if (!uploadId || !totalChunks || !filename) {
-      return res.status(400).json({ error: "uploadId, totalChunks, filename required" });
+      return res
+        .status(400)
+        .json({ error: "uploadId, totalChunks, filename required" });
     }
     const sessionDir = path.join(UPLOAD_DIR, uploadId);
     await mkdir(sessionDir, { recursive: true });
     await writeFile(
       path.join(sessionDir, "meta.json"),
-              JSON.stringify({
-          uploadId,
-          totalChunks: parseInt(totalChunks),
-          filename,
-          receivedChunks: 0,
-          title: req.body.title,
-          description: req.body.description,
-          contentType: req.body.contentType,
-          ppvPrice: req.body.ppvPrice,
-          priceCents: req.body.priceCents,
-          accessTier: req.body.accessTier,
-          registerPaidContent: req.body.registerPaidContent !== false && req.body.registerPaidContent !== "false",
-          sourceClassification: String(req.body.sourceClassification || req.get("x-creatorvault-source-classification") || ""),
-        })
-
+      JSON.stringify({
+        uploadId,
+        totalChunks: parseInt(totalChunks),
+        filename,
+        receivedChunks: 0,
+        title: req.body.title,
+        description: req.body.description,
+        contentType: req.body.contentType,
+        ppvPrice: req.body.ppvPrice,
+        priceCents: req.body.priceCents,
+        accessTier: req.body.accessTier,
+        registerPaidContent:
+          req.body.registerPaidContent !== false &&
+          req.body.registerPaidContent !== "false",
+        sourceClassification: String(
+          req.body.sourceClassification ||
+            req.get("x-creatorvault-source-classification") ||
+            ""
+        ),
+      })
     );
     res.json({ uploadId, status: "initialized" });
   } catch (e) {
@@ -447,80 +650,138 @@ videoUploadRouter.get("/status", async (req: Request, res: Response) => {
     const uploadId = String(req.query.uploadId || "").trim();
     if (!uploadId) return res.status(400).json({ error: "uploadId required" });
     const sessionDir = path.join(UPLOAD_DIR, uploadId);
-    if (!existsSync(sessionDir)) return res.status(404).json({ error: "Upload session not found" });
-    const meta = JSON.parse(await readFile(path.join(sessionDir, "meta.json"), "utf-8"));
+    if (!existsSync(sessionDir))
+      return res.status(404).json({ error: "Upload session not found" });
+    const meta = JSON.parse(
+      await readFile(path.join(sessionDir, "meta.json"), "utf-8")
+    );
     const indexes = (await readdir(sessionDir))
-      .map((name) => /^chunk-(\d+)$/.exec(name)?.[1])
+      .map(name => /^chunk-(\d+)$/.exec(name)?.[1])
       .filter((value): value is string => Boolean(value))
-      .map((value) => Number(value));
+      .map(value => Number(value));
     const indexSet = new Set(indexes);
-    const missingIndexes = Array.from({ length: Number(meta.totalChunks) }, (_, index) => index).filter((index) => !indexSet.has(index));
-    res.json({ uploadId, received: indexes.length, total: Number(meta.totalChunks), missingIndexes, readyToFinalize: missingIndexes.length === 0 });
+    const missingIndexes = Array.from(
+      { length: Number(meta.totalChunks) },
+      (_, index) => index
+    ).filter(index => !indexSet.has(index));
+    res.json({
+      uploadId,
+      received: indexes.length,
+      total: Number(meta.totalChunks),
+      missingIndexes,
+      readyToFinalize: missingIndexes.length === 0,
+    });
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }
 });
 
 // ─── /chunk — receive a chunk, auto-finalize on last chunk ───────────────────
-videoUploadRouter.post("/chunk", upload.single("chunk"), async (req: Request, res: Response) => {
-  try {
-    // @ts-ignore
-    if (!req.file) return res.status(400).json({ error: "No chunk file" });
-    const { uploadId, chunkIndex } = req.body;
-    if (!uploadId || chunkIndex === undefined) {
-      return res.status(400).json({ error: "uploadId and chunkIndex required" });
-    }
-    const sessionDir = path.join(UPLOAD_DIR, uploadId);
-    if (!existsSync(sessionDir)) {
-      return res.status(404).json({ error: "Upload session not found — call /init first" });
-    }
-    const chunkPath = path.join(sessionDir, `chunk-${parseInt(chunkIndex).toString().padStart(5, "0")}`);
-    // @ts-ignore
-    await writeFile(chunkPath, req.file.buffer);
-
-        const meta = JSON.parse(await readFile(path.join(sessionDir, "meta.json"), "utf-8"));
-    // Count the durable chunk files rather than incrementing a shared counter. This lets a
-    // large creator video transfer several safe chunks at once without losing progress to a race.
-    const storedChunks = (await readdir(sessionDir)).filter((name) => /^chunk-\d+$/.test(name)).length;
-    meta.receivedChunks = storedChunks;
-    await writeFile(path.join(sessionDir, "meta.json"), JSON.stringify(meta));
-    // Only one request may assemble the finished source. The other concurrent chunk requests
-    // return their durable receipt while this owner-bound finalization happens exactly once.
-    if (storedChunks >= meta.totalChunks) {
-      const finalizeLock = path.join(sessionDir, ".finalizing");
-      try {
-        await writeFile(finalizeLock, String(Date.now()), { flag: "wx" });
-      } catch {
-        return res.json({ uploadId, chunkIndex, received: storedChunks, total: meta.totalChunks, complete: false, finalizing: true });
+videoUploadRouter.post(
+  "/chunk",
+  upload.single("chunk"),
+  async (req: Request, res: Response) => {
+    try {
+      // @ts-ignore
+      if (!req.file) return res.status(400).json({ error: "No chunk file" });
+      const { uploadId, chunkIndex } = req.body;
+      if (!uploadId || chunkIndex === undefined) {
+        return res
+          .status(400)
+          .json({ error: "uploadId and chunkIndex required" });
       }
-      const { url, filename: finalFilename, storageId, directory } = await assembleAndUpload(sessionDir, meta);
-      const uploadReceipt = await writeVerifiedUploadReceipt({
-        storageId,
-        creatorId: Number((req as any).authenticatedUserId),
-        creatorProfileId: Number((req as any).authenticatedCreatorId),
-        url,
-        filename: finalFilename,
-        filePath: path.join(directory, finalFilename),
-      });
-      const file = { url, filename: finalFilename, storageId, directory };
-      const chunkedMedia = await registerChunkedVideoMediaAsset({ req, file, receipt: uploadReceipt, sourceClassification: meta.sourceClassification });
-      const paidContent = meta.registerPaidContent === false ? null : await registerUploadedPaidContent(req, file, meta);
-      return res.json({
-        uploadId, chunkIndex, received: storedChunks, total: meta.totalChunks,
-        complete: true,
-        file,
-        uploadReceipt,
-        mediaAssetId: chunkedMedia.mediaAssetId,
-        createdByFeature: chunkedMedia.createdByFeature,
-        paidContent,
-      });
-    }
+      const sessionDir = path.join(UPLOAD_DIR, uploadId);
+      if (!existsSync(sessionDir)) {
+        return res
+          .status(404)
+          .json({ error: "Upload session not found — call /init first" });
+      }
+      const chunkPath = path.join(
+        sessionDir,
+        `chunk-${parseInt(chunkIndex).toString().padStart(5, "0")}`
+      );
+      // @ts-ignore
+      await writeFile(chunkPath, req.file.buffer);
 
-    res.json({ uploadId, chunkIndex, received: storedChunks, total: meta.totalChunks, complete: false });
-  } catch (e) {
-    res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      const meta = JSON.parse(
+        await readFile(path.join(sessionDir, "meta.json"), "utf-8")
+      );
+      // Count the durable chunk files rather than incrementing a shared counter. This lets a
+      // large creator video transfer several safe chunks at once without losing progress to a race.
+      const storedChunks = (await readdir(sessionDir)).filter(name =>
+        /^chunk-\d+$/.test(name)
+      ).length;
+      meta.receivedChunks = storedChunks;
+      await writeFile(path.join(sessionDir, "meta.json"), JSON.stringify(meta));
+      // Only one request may assemble the finished source. The other concurrent chunk requests
+      // return their durable receipt while this owner-bound finalization happens exactly once.
+      if (storedChunks >= meta.totalChunks) {
+        const finalizeLock = path.join(sessionDir, ".finalizing");
+        try {
+          await writeFile(finalizeLock, String(Date.now()), { flag: "wx" });
+        } catch {
+          return res.json({
+            uploadId,
+            chunkIndex,
+            received: storedChunks,
+            total: meta.totalChunks,
+            complete: false,
+            finalizing: true,
+          });
+        }
+        const {
+          url,
+          filename: finalFilename,
+          storageId,
+          directory,
+        } = await assembleAndUpload(sessionDir, meta);
+        const uploadReceipt = await writeVerifiedUploadReceipt({
+          storageId,
+          creatorId: Number((req as any).authenticatedUserId),
+          creatorProfileId: Number((req as any).authenticatedCreatorId),
+          url,
+          filename: finalFilename,
+          filePath: path.join(directory, finalFilename),
+        });
+        const file = { url, filename: finalFilename, storageId, directory };
+        const chunkedMedia = await registerChunkedVideoMediaAsset({
+          req,
+          file,
+          receipt: uploadReceipt,
+          sourceClassification: meta.sourceClassification,
+        });
+        const paidContent =
+          meta.registerPaidContent === false
+            ? null
+            : await registerUploadedPaidContent(req, file, meta);
+        return res.json({
+          uploadId,
+          chunkIndex,
+          received: storedChunks,
+          total: meta.totalChunks,
+          complete: true,
+          file,
+          uploadReceipt,
+          mediaAssetId: chunkedMedia.mediaAssetId,
+          createdByFeature: chunkedMedia.createdByFeature,
+          paidContent,
+        });
+      }
+
+      res.json({
+        uploadId,
+        chunkIndex,
+        received: storedChunks,
+        total: meta.totalChunks,
+        complete: false,
+      });
+    } catch (e) {
+      res
+        .status(500)
+        .json({ error: e instanceof Error ? e.message : String(e) });
+    }
   }
-});
+);
 
 // ─── /finalize — manual finalize (fallback) ───────────────────────────────────
 videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
@@ -531,13 +792,26 @@ videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
     if (!existsSync(sessionDir)) {
       return res.status(404).json({ error: "Upload session not found" });
     }
-    const meta = JSON.parse(await readFile(path.join(sessionDir, "meta.json"), "utf-8"));
-    const storedChunks = (await readdir(sessionDir)).filter((name) => /^chunk-\d+$/.test(name)).length;
+    const meta = JSON.parse(
+      await readFile(path.join(sessionDir, "meta.json"), "utf-8")
+    );
+    const storedChunks = (await readdir(sessionDir)).filter(name =>
+      /^chunk-\d+$/.test(name)
+    ).length;
     if (storedChunks !== Number(meta.totalChunks)) {
-      return res.status(409).json({ error: "Upload is not complete", received: storedChunks, total: Number(meta.totalChunks) });
+      return res.status(409).json({
+        error: "Upload is not complete",
+        received: storedChunks,
+        total: Number(meta.totalChunks),
+      });
     }
     if (filename) meta.filename = filename;
-    const { url, filename: finalFilename, storageId, directory } = await assembleAndUpload(sessionDir, meta);
+    const {
+      url,
+      filename: finalFilename,
+      storageId,
+      directory,
+    } = await assembleAndUpload(sessionDir, meta);
     const uploadReceipt = await writeVerifiedUploadReceipt({
       storageId,
       creatorId: Number((req as any).authenticatedUserId),
@@ -547,9 +821,25 @@ videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
       filePath: path.join(directory, finalFilename),
     });
     const file = { url, filename: finalFilename, storageId, directory };
-    const chunkedMedia = await registerChunkedVideoMediaAsset({ req, file, receipt: uploadReceipt, sourceClassification: meta.sourceClassification });
-    const paidContent = meta.registerPaidContent === false ? null : await registerUploadedPaidContent(req, file, meta);
-    res.json({ url, filename: finalFilename, file, uploadReceipt, mediaAssetId: chunkedMedia.mediaAssetId, createdByFeature: chunkedMedia.createdByFeature, paidContent });
+    const chunkedMedia = await registerChunkedVideoMediaAsset({
+      req,
+      file,
+      receipt: uploadReceipt,
+      sourceClassification: meta.sourceClassification,
+    });
+    const paidContent =
+      meta.registerPaidContent === false
+        ? null
+        : await registerUploadedPaidContent(req, file, meta);
+    res.json({
+      url,
+      filename: finalFilename,
+      file,
+      uploadReceipt,
+      mediaAssetId: chunkedMedia.mediaAssetId,
+      createdByFeature: chunkedMedia.createdByFeature,
+      paidContent,
+    });
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }
@@ -558,153 +848,223 @@ videoUploadRouter.post("/finalize", async (req: Request, res: Response) => {
 // ─── /direct — single-shot upload (tap-to-upload, no chunking, no URLs) ────────
 // The creator picks a file; this stores it and returns a real public HTTPS URL.
 // Used by VaultX Drop so creators never touch a URL.
-videoUploadRouter.post("/direct", upload.single("file"), async (req: Request, res: Response) => {
-  let destPath: string | null = null;
-  let receiptPath: string | null = null;
-  try {
-    const f = (req as any).file;
-    if (!f || !f.buffer || f.size < 1) return res.status(400).json({ error: "Choose a non-empty video file." });
+videoUploadRouter.post(
+  "/direct",
+  upload.single("file"),
+  async (req: Request, res: Response) => {
+    let destPath: string | null = null;
+    let receiptPath: string | null = null;
+    try {
+      const f = (req as any).file;
+      if (!f || !f.buffer || f.size < 1)
+        return res
+          .status(400)
+          .json({ error: "Choose a non-empty video file." });
 
-    const originalName = sanitiseBodyCinemaUploadFilename(f.originalname);
-    const suppliedMime = String(f.mimetype || "").toLowerCase();
-    const isAudioUpload = isSupportedAudioSelection(originalName, suppliedMime);
-    const isVideoUpload = isSupportedBodyCinemaVideoSelection(originalName, suppliedMime);
-    if (!isAudioUpload && !isVideoUpload) {
-      return res.status(415).json({ error: "CreatorVault accepts verified video or soundtrack files in this studio." });
-    }
+      const originalName = sanitiseBodyCinemaUploadFilename(f.originalname);
+      const suppliedMime = String(f.mimetype || "").toLowerCase();
+      const isAudioUpload = isSupportedAudioSelection(
+        originalName,
+        suppliedMime
+      );
+      const isVideoUpload = isSupportedBodyCinemaVideoSelection(
+        originalName,
+        suppliedMime
+      );
+      if (!isAudioUpload && !isVideoUpload) {
+        return res.status(415).json({
+          error:
+            "CreatorVault accepts verified video or soundtrack files in this studio.",
+        });
+      }
 
-    const fileUuid = randomUUID();
-    const destDir = path.join(DURABLE_UPLOADS_DIR, fileUuid);
-    await mkdir(destDir, { recursive: true });
-    destPath = path.join(destDir, originalName);
-    await writeFile(destPath, f.buffer);
+      const fileUuid = randomUUID();
+      const destDir = path.join(DURABLE_UPLOADS_DIR, fileUuid);
+      await mkdir(destDir, { recursive: true });
+      destPath = path.join(destDir, originalName);
+      await writeFile(destPath, f.buffer);
 
-    const media = isAudioUpload ? await validateDirectAudio(destPath) : await validateDirectVideo(destPath);
-    const sha256 = createHash("sha256").update(f.buffer).digest("hex");
-    const createdAt = new Date().toISOString();
-    const url = `https://creatorvault.live/uploads/content-vault/${fileUuid}/${encodeURIComponent(originalName)}`;
-    const creatorId = Number((req as any).authenticatedUserId);
-    const creatorProfileId = Number((req as any).authenticatedCreatorId);
-    const requestedClassification = String(req.get("x-creatorvault-source-classification") || "").trim().toLowerCase();
-    const approvedDemo = requestedClassification === "approved_demo" && OWNER_IDS.includes(creatorId) && (req as Request & { authenticatedOwnerRole?: boolean }).authenticatedOwnerRole === true;
-    const kingcamPerformanceCapture = requestedClassification === "kingcam_performance_capture" && OWNER_IDS.includes(creatorId) && (req as Request & { authenticatedOwnerRole?: boolean }).authenticatedOwnerRole === true && isVideoUpload;
-    // media_assets.source_type is a constrained legacy field. Creator-recorded
-    // KingCam performance is still creator-owned footage, but the immutable
-    // feature tag keeps it out of Body Cinema and reserves it for clone motion.
-    // media_assets permits `upload` for real creator-owned originals. The feature tag below
-    // still keeps KingCam Performance Capture out of Body Cinema and all generic source lanes.
-    const sourceType = approvedDemo ? "generated" : "upload";
-    const createdByFeature = approvedDemo
-      ? "creatorvault_approved_demo"
-      : kingcamPerformanceCapture
-        ? "kingcam_performance_capture"
-        : "body_cinema_direct_upload";
+      const media = isAudioUpload
+        ? await validateDirectAudio(destPath)
+        : await validateDirectVideo(destPath);
+      const sha256 = createHash("sha256").update(f.buffer).digest("hex");
+      const createdAt = new Date().toISOString();
+      const url = publicUploadUrl(fileUuid, originalName);
+      const creatorId = Number((req as any).authenticatedUserId);
+      const creatorProfileId = Number((req as any).authenticatedCreatorId);
+      const requestedClassification = String(
+        req.get("x-creatorvault-source-classification") || ""
+      )
+        .trim()
+        .toLowerCase();
+      const approvedDemo =
+        requestedClassification === "approved_demo" &&
+        OWNER_IDS.includes(creatorId) &&
+        (req as Request & { authenticatedOwnerRole?: boolean })
+          .authenticatedOwnerRole === true;
+      const kingcamPerformanceCapture =
+        requestedClassification === "kingcam_performance_capture" &&
+        OWNER_IDS.includes(creatorId) &&
+        (req as Request & { authenticatedOwnerRole?: boolean })
+          .authenticatedOwnerRole === true &&
+        isVideoUpload;
+      // media_assets.source_type is a constrained legacy field. Creator-recorded
+      // KingCam performance is still creator-owned footage, but the immutable
+      // feature tag keeps it out of Body Cinema and reserves it for clone motion.
+      // media_assets permits `upload` for real creator-owned originals. The feature tag below
+      // still keeps KingCam Performance Capture out of Body Cinema and all generic source lanes.
+      const sourceType = approvedDemo ? "generated" : "upload";
+      const createdByFeature = approvedDemo
+        ? "creatorvault_approved_demo"
+        : kingcamPerformanceCapture
+          ? "kingcam_performance_capture"
+          : "body_cinema_direct_upload";
 
-    await mkdir(PRIVATE_UPLOAD_RECEIPTS_DIR, { recursive: true });
-    receiptPath = path.join(PRIVATE_UPLOAD_RECEIPTS_DIR, `${fileUuid}.json`);
-    await writeFile(receiptPath, JSON.stringify({
-      id: fileUuid,
-      creatorId,
-      creatorProfileId,
-      url,
-      filename: originalName,
-      size: Number(f.size),
-      mime: getMimeType(originalName),
-      sha256,
-      media,
-      verified: true,
-      createdAt,
-      classification: approvedDemo ? "approved_demo" : kingcamPerformanceCapture ? "kingcam_performance_driver" : "creator_owned",
-    }, null, 2));
+      await mkdir(PRIVATE_UPLOAD_RECEIPTS_DIR, { recursive: true });
+      receiptPath = path.join(PRIVATE_UPLOAD_RECEIPTS_DIR, `${ fileUuid}.json`);
+      await writeFile(
+        receiptPath,
+        JSON.stringify(
+          {
+            id: fileUuid,
+            creatorId,
+            creatorProfileId,
+            url,
+            filename: originalName,
+            size: Number(f.size),
+            mime: getMimeType(originalName),
+            sha256,
+            media,
+            verified: true,
+            createdAt,
+            classification: approvedDemo
+              ? "approved_demo"
+              : kingcamPerformanceCapture
+                ? "kingcam_performance_driver"
+                : "creator_owned",
+          },
+          null,
+          2
+        )
+      );
 
-    const mediaAssetId = randomUUID();
-    let canonicalAudioAsset: any = null;
-    if (isAudioUpload) {
-      await rawExec(
-        `INSERT INTO media_assets
+      const mediaAssetId = randomUUID();
+      let canonicalAudioAsset: any = null;
+      if (isAudioUpload) {
+        await rawExec(
+          `INSERT INTO media_assets
           (id, user_id, source_type, asset_type, file_name, original_name, mime_type, storage_path, public_url, thumbnail_url, duration, status, created_by_feature)
          VALUES (?, ?, ?, 'audio', ?, ?, ?, ?, ?, NULL, ?, 'ready', ?)`,
-        [mediaAssetId, creatorId, sourceType, originalName, originalName, getMimeType(originalName), url, url, (media as any).durationSec, approvedDemo ? "creatorvault_approved_demo_audio" : "canonical_audio_intelligence"]
-      );
-      canonicalAudioAsset = approvedDemo
-        ? await registerCanonicalAudioAsset({
-          creatorId,
-          title: originalName.replace(/\.[^.]+$/, "") || "CreatorVault demonstration soundtrack",
-          assetUrl: url,
-          mimeType: getMimeType(originalName),
-          kind: "music",
-          fingerprint: sha256,
-          durationSeconds: (media as any).durationSec,
-          sampleRate: (media as any).sampleRate,
-          channels: (media as any).channels,
-          mediaAssetId,
-          rights: {
-            state: "creator_owned",
-            source: "first_party_fixture",
-            allowedPlatforms: ["creatorvault", "vaultx", "instagram", "tiktok", "youtube"],
-            permittedUses: ["preview", "render", "distribution"],
-            attributionRequired: false,
-            evidenceNote: "CreatorVault-owned generated demonstration soundtrack imported with an owner-bound receipt, source checksum, and approved-demo classification.",
-          },
-        })
-        : await registerCreatorOwnedAudioUpload({
-          creatorId,
-          title: originalName.replace(/\.[^.]+$/, "") || "Creator soundtrack",
-          assetUrl: url,
-          mimeType: getMimeType(originalName),
-          fileFingerprint: sha256,
-          durationSeconds: (media as any).durationSec,
-          sampleRate: (media as any).sampleRate,
-          channels: (media as any).channels,
-          mediaAssetId,
-        });
-    } else {
-      await rawExec(
-        `INSERT INTO media_assets
+          [
+            mediaAssetId,
+            creatorId,
+            sourceType,
+            originalName,
+            originalName,
+            getMimeType(originalName),
+            url,
+            url,
+            (media as any).durationSec,
+            approvedDemo
+              ? "creatorvault_approved_demo_audio"
+              : "canonical_audio_intelligence",
+          ]
+        );
+        canonicalAudioAsset = approvedDemo
+          ? await registerCanonicalAudioAsset({
+              creatorId,
+              title:
+                originalName.replace(/\.[^.]+$/, "") ||
+                "CreatorVault demonstration soundtrack",
+              assetUrl: url,
+              mimeType: getMimeType(originalName),
+              kind: "music",
+              fingerprint: sha256,
+              durationSeconds: (media as any).durationSec,
+              sampleRate: (media as any).sampleRate,
+              channels: (media as any).channels,
+              mediaAssetId,
+              rights: {
+                state: "creator_owned",
+                source: "first_party_fixture",
+                allowedPlatforms: [
+                  "creatorvault",
+                  "vaultx",
+                  "instagram",
+                  "tiktok",
+                  "youtube",
+                ],
+                permittedUses: ["preview", "render", "distribution"],
+                attributionRequired: false,
+                evidenceNote:
+                  "CreatorVault-owned generated demonstration soundtrack imported with an owner-bound receipt, source checksum, and approved-demo classification.",
+              },
+            })
+          : await registerCreatorOwnedAudioUpload({
+              creatorId,
+              title:
+                originalName.replace(/\.[^.]+$/, "") || "Creator soundtrack",
+              assetUrl: url,
+              mimeType: getMimeType(originalName),
+              fileFingerprint: sha256,
+              durationSeconds: (media as any).durationSec,
+              sampleRate: (media as any).sampleRate,
+              channels: (media as any).channels,
+              mediaAssetId,
+            });
+      } else {
+        await rawExec(
+          `INSERT INTO media_assets
           (id, user_id, source_type, asset_type, file_name, original_name, mime_type, file_size, storage_path, public_url, thumbnail_url, duration, width, height, status, created_by_feature)
          VALUES (?, ?, ?, 'video', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?)`,
-        [
-          mediaAssetId,
-          creatorId,
-          sourceType,
-          originalName,
-          originalName,
-          getMimeType(originalName),
-          Number(f.size),
-          url,
-          url,
-          url,
-          (media as any).durationSec,
-          (media as any).width,
-          (media as any).height,
-          createdByFeature,
-        ]
-      );
-    }
+          [
+            mediaAssetId,
+            creatorId,
+            sourceType,
+            originalName,
+            originalName,
+            getMimeType(originalName),
+            Number(f.size),
+            url,
+            url,
+            url,
+            (media as any).durationSec,
+            (media as any).width,
+            (media as any).height,
+            createdByFeature,
+          ]
+        );
+      }
 
-    return res.json({
-      url,
-      filename: originalName,
-      storageId: fileUuid,
-      mediaAssetId,
-      size: Number(f.size),
-      mime: getMimeType(originalName),
-      uploadReceipt: {
-        id: fileUuid,
+      return res.json({
+        url,
+        filename: originalName,
+        storageId: fileUuid,
         mediaAssetId,
-        sha256,
-        verified: true,
-        ownerBound: true,
-        createdAt,
-        ...media,
-      },
-      audioAsset: canonicalAudioAsset,
-    });
-  } catch (e) {
-    if (destPath) await unlink(destPath).catch(() => undefined);
-    if (receiptPath) await unlink(receiptPath).catch(() => undefined);
-    const message = e instanceof Error ? e.message : String(e);
-    const status = /readable video stream|readable audio|accepts verified|accepts soundtracks/i.test(message) ? 422 : 500;
-    return res.status(status).json({ error: message });
+        size: Number(f.size),
+        mime: getMimeType(originalName),
+        uploadReceipt: {
+          id: fileUuid,
+          mediaAssetId,
+          sha256,
+          verified: true,
+          ownerBound: true,
+          createdAt,
+          ...media,
+        },
+        audioAsset: canonicalAudioAsset,
+      });
+    } catch (e) {
+      if (destPath) await unlink(destPath).catch(() => undefined);
+      if (receiptPath) await unlink(receiptPath).catch(() => undefined);
+      const message = e instanceof Error ? e.message : String(e);
+      const status =
+        /readable video stream|readable audio|accepts verified|accepts soundtracks/i.test(
+          message
+        )
+          ? 422
+          : 500;
+      return res.status(status).json({ error: message });
+    }
   }
-});
+);
