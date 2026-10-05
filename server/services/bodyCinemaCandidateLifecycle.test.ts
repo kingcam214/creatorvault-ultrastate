@@ -726,3 +726,313 @@ describe("Body Cinema candidate lifecycle native transaction proof", () => {
     ).rejects.toBeInstanceOf(BodyCinemaLifecycleError);
   });
 });
+
+// These are synthetic observations for persistence tests, not an independent
+// anatomical analysis of the existing test clip and never production inputs.
+function bodyDirectedDeclaration() {
+  return {
+    version: "body_cinema.body_directed_assertion.v1" as const,
+    ownSource: true as const,
+    performerLikenessConsent: true as const,
+    treatmentScope: "body_directed_source_analysis_and_plan_only" as const,
+    intendedUse: "source_analysis_and_plan_only" as const,
+    acknowledgesNoIndependentVerification: true as const,
+  };
+}
+function syntheticBodyFrames() {
+  const coordinates: Record<number, [number, number]> = {
+    0: [0.5, 0.1],
+    1: [0.48, 0.09],
+    2: [0.47, 0.09],
+    3: [0.46, 0.09],
+    4: [0.52, 0.09],
+    5: [0.53, 0.09],
+    6: [0.54, 0.09],
+    7: [0.45, 0.11],
+    8: [0.55, 0.11],
+    9: [0.48, 0.14],
+    10: [0.52, 0.14],
+    11: [0.38, 0.24],
+    12: [0.62, 0.24],
+    13: [0.32, 0.38],
+    14: [0.68, 0.38],
+    15: [0.29, 0.5],
+    16: [0.71, 0.5],
+    17: [0.28, 0.51],
+    18: [0.72, 0.51],
+    19: [0.28, 0.52],
+    20: [0.72, 0.52],
+    21: [0.29, 0.53],
+    22: [0.71, 0.53],
+    23: [0.43, 0.56],
+    24: [0.57, 0.56],
+    25: [0.44, 0.73],
+    26: [0.56, 0.73],
+    27: [0.44, 0.89],
+    28: [0.56, 0.89],
+    29: [0.43, 0.9],
+    30: [0.57, 0.9],
+    31: [0.41, 0.94],
+    32: [0.59, 0.94],
+  };
+  return [200, 800, 1400, 2000, 2600, 3200].map((timestampMs, index) => ({
+    timestampMs,
+    width: 720,
+    height: 1280,
+    landmarks: Array.from({ length: 33 }, (_, joint) => ({
+      x: coordinates[joint][0] + (index === 3 ? 0.006 : 0),
+      y: coordinates[joint][1],
+      visibility: 0.96,
+    })),
+    face: { present: true, centerX: 0.5, centerY: 0.11, coverage: 0.03 },
+    brightness: 0.54,
+    contrast: 0.6,
+    sharpness: 0.74,
+    subjectCoverage: 0.8,
+    frameFingerprint: `synthetic-fixture-frame-${index}`,
+  }));
+}
+
+describe("Body Cinema body-directed native planning-only proof", () => {
+  it("persists owned source-bound analysis and immutable selected snapshots without candidate or handoff authority", async () => {
+    const sourceAssetId = randomUUID();
+    const original = await seedSource(
+      sourceAssetId,
+      randomUUID(),
+      "native-body-directed-original.mp4"
+    );
+    const qualified = await service.qualifyBodyDirected({
+      creatorId,
+      sourceAssetId,
+      rights: bodyDirectedDeclaration(),
+    });
+    expect(qualified.kind).toBe("body_directed_v2");
+    expect(qualified.rights.verificationStatus).toBe(
+      "creator_asserted_not_independently_verified"
+    );
+    expect(qualified.candidate).toBeNull();
+    expect(qualified.handoff).toBeNull();
+    expect(
+      (
+        await service.qualifyBodyDirected({
+          creatorId,
+          sourceAssetId,
+          rights: bodyDirectedDeclaration(),
+        })
+      ).id
+    ).toBe(qualified.id);
+    expect(
+      await service.getBodyDirected(otherCreatorId, qualified.id)
+    ).toBeNull();
+    expect(await service.getMine(creatorId, qualified.id)).toBeNull();
+    await pool.query(
+      "UPDATE creation_projects SET metadata_json=JSON_SET(metadata_json,'$.unrelatedOwnerNote','keep-me') WHERE id=?",
+      [qualified.projectId]
+    );
+    await expect(
+      service.analyzeBodyDirected({
+        creatorId,
+        id: qualified.id,
+        sourceSha256: "f".repeat(64),
+        frameEvidence: syntheticBodyFrames(),
+      })
+    ).rejects.toBeInstanceOf(BodyCinemaLifecycleError);
+    const analyzed = await service.analyzeBodyDirected({
+      creatorId,
+      id: qualified.id,
+      sourceSha256: original.hash,
+      frameEvidence: syntheticBodyFrames(),
+    });
+    expect(analyzed.analysis?.sourceMap.source.assetId).toBe(sourceAssetId);
+    expect(analyzed.analysis?.sourceMap.source.sha256).toBe(original.hash);
+    const options = (
+      await service.recommendBodyDirected({
+        creatorId,
+        id: qualified.id,
+        bodyFocusId: "full_body",
+      })
+    ).options;
+    expect(options.length).toBeGreaterThanOrEqual(3);
+    expect(options.length).toBeLessThanOrEqual(5);
+    const selected = options[0];
+    const input = {
+      creatorId,
+      id: qualified.id,
+      sourceMapHash: analyzed.analysis!.sourceMapHash,
+      bodyFocusId: selected.bodyFocus.id,
+      bodyTreatmentId: selected.bodyTreatment.id,
+      visualIdentityId: selected.visualIdentity.id,
+      selectedRangeIds: selected.selectedTimecodes.map(range => range.rangeId),
+    };
+    await expect(
+      service.freezeBodyDirected({ ...input, sourceMapHash: "b".repeat(64) })
+    ).rejects.toBeInstanceOf(BodyCinemaLifecycleError);
+    const frozen = await service.freezeBodyDirected(input);
+    expect(frozen.state).toBe("frozen");
+    expect(frozen.treatment?.bodyFocus).toEqual(selected.bodyFocus);
+    expect(frozen.treatment?.bodyTreatment).toEqual(selected.bodyTreatment);
+    expect(frozen.treatment?.visualIdentity).toEqual(selected.visualIdentity);
+    expect(frozen.treatment?.sourceMap).toEqual(analyzed.analysis?.sourceMap);
+    expect(frozen.treatment?.editBlueprint.shots.length).toBeGreaterThan(0);
+    expect(frozen.treatment?.preservationConstraints.providerCall).toBe(
+      "not_authorized"
+    );
+    expect(frozen.treatment?.noCandidateGenerated).toBe(true);
+    expect(frozen.candidate).toBeNull();
+    expect(frozen.handoff).toBeNull();
+    expect((await service.freezeBodyDirected(input)).treatmentHash).toBe(
+      frozen.treatmentHash
+    );
+    expect(
+      (await service.getBodyDirected(creatorId, qualified.id))?.treatment
+    ).toEqual(frozen.treatment);
+    await expect(
+      service.analyzeBodyDirected({
+        creatorId,
+        id: qualified.id,
+        sourceSha256: original.hash,
+        frameEvidence: syntheticBodyFrames(),
+      })
+    ).rejects.toBeInstanceOf(BodyCinemaLifecycleError);
+    await expect(
+      service.freezeBodyDirected({ ...input, bodyTreatmentId: "runway_heat" })
+    ).rejects.toBeInstanceOf(BodyCinemaLifecycleError);
+    for (const action of [
+      () => service.reserve({ creatorId, id: qualified.id }),
+      () =>
+        service.freeze({ creatorId, id: qualified.id, treatment: treatment() }),
+      () => service.beginReview({ creatorId, id: qualified.id }),
+      () => service.handoff({ creatorId, id: qualified.id }),
+      () =>
+        service.openPlayback({
+          creatorId,
+          id: qualified.id,
+          artifact: "candidate" as const,
+        }),
+    ])
+      await expect(action()).rejects.toBeInstanceOf(BodyCinemaLifecycleError);
+    const [rows] = await pool.query<RowDataPacket[]>(
+      "SELECT metadata_json,accepted_media_asset_id FROM creation_projects WHERE id=?",
+      [qualified.projectId]
+    );
+    const metadata = JSON.parse(String(rows[0].metadata_json)) as {
+      unrelatedOwnerNote: string;
+    };
+    expect(metadata.unrelatedOwnerNote).toBe("keep-me");
+    expect(rows[0].accepted_media_asset_id).toBeNull();
+    const playback = await service.openPlayback({
+      creatorId,
+      id: qualified.id,
+      artifact: "source",
+    });
+    try {
+      const bytes = Buffer.alloc(playback.sizeBytes);
+      const result = await playback.handle.read(bytes, 0, bytes.length, 0);
+      expect(result.bytesRead).toBe(bytes.length);
+      expect(sha256(bytes)).toBe(original.hash);
+    } finally {
+      await playback.handle.close();
+    }
+  });
+  it("rejects unconfirmed detail, invalid observation times and wrong ownership without inventing a plan", async () => {
+    const sourceAssetId = randomUUID();
+    const original = await seedSource(
+      sourceAssetId,
+      randomUUID(),
+      "native-body-unconfirmed.mp4"
+    );
+    await expect(
+      service.qualifyBodyDirected({
+        creatorId: otherCreatorId,
+        sourceAssetId,
+        rights: bodyDirectedDeclaration(),
+      })
+    ).rejects.toBeInstanceOf(BodyCinemaLifecycleError);
+    const record = await service.qualifyBodyDirected({
+      creatorId,
+      sourceAssetId,
+      rights: bodyDirectedDeclaration(),
+    });
+    await expect(
+      service.analyzeBodyDirected({
+        creatorId,
+        id: record.id,
+        sourceSha256: original.hash,
+        frameEvidence: syntheticBodyFrames().map(frame => ({
+          ...frame,
+          timestampMs: frame.timestampMs + 10_000,
+        })),
+      })
+    ).rejects.toThrow();
+    expect(
+      (await service.getBodyDirected(creatorId, record.id))?.analysis
+    ).toBeNull();
+    const analyzed = await service.analyzeBodyDirected({
+      creatorId,
+      id: record.id,
+      sourceSha256: original.hash,
+      frameEvidence: syntheticBodyFrames(),
+    });
+    const unsupported = await service.recommendBodyDirected({
+      creatorId,
+      id: record.id,
+      bodyFocusId: "abs_core",
+      bodyTreatmentId: "pressure_core",
+      visualIdentityId: "obsidian",
+    });
+    expect(unsupported.options).toEqual([]);
+    expect(unsupported.reason).toBeTruthy();
+    expect(unsupported.alternatives.map(focus => focus.id)).toContain(
+      "full_body"
+    );
+    await expect(
+      service.freezeBodyDirected({
+        creatorId,
+        id: record.id,
+        sourceMapHash: analyzed.analysis!.sourceMapHash,
+        bodyFocusId: "abs_core",
+        bodyTreatmentId: "pressure_core",
+        visualIdentityId: "obsidian",
+      })
+    ).rejects.toThrow();
+    expect(
+      (await service.getBodyDirected(creatorId, record.id))?.treatment
+    ).toBeNull();
+  });
+  it("retains historical lifecycle fields unchanged and never reinterprets them as a new body-directed plan", async () => {
+    const sourceAssetId = randomUUID();
+    await seedSource(
+      sourceAssetId,
+      randomUUID(),
+      "native-historical-original.mp4"
+    );
+    const historical = await service.qualify({
+      creatorId,
+      sourceAssetId,
+      rights: rights(),
+    });
+    const saved = await service.freeze({
+      creatorId,
+      id: historical.id,
+      treatment: treatment(),
+    });
+    const before = await service.getMine(creatorId, saved.id);
+    await expect(
+      service.qualifyBodyDirected({
+        creatorId,
+        sourceAssetId,
+        rights: bodyDirectedDeclaration(),
+      })
+    ).rejects.toBeInstanceOf(BodyCinemaLifecycleError);
+    expect(await service.getMine(creatorId, saved.id)).toEqual(before);
+    expect(await service.getBodyDirected(creatorId, saved.id)).toBeNull();
+    expect(
+      (await service.listBodyDirected(creatorId)).some(
+        plan => plan.id === saved.id
+      )
+    ).toBe(false);
+    expect(
+      (await service.listMine(creatorId)).some(plan => plan.id === saved.id)
+    ).toBe(true);
+  });
+});

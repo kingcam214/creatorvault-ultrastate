@@ -45,10 +45,10 @@ describe("consolidated non-rotating guarded release", () => {
 
   it("pins the verified live Phase A artifact and exact corrective checkout parent while preserving the 3762 signing epoch", () => {
     expect(CONSOLIDATED_RELEASE_PARENT).toBe(
-      "80748aa9e50b3196d3d8f796b63e855c6ded6c4e"
+      "532c3de5fb7bafcbeb47560697bcb8cbd95d8401"
     );
     expect(CONSOLIDATED_RELEASE_CHECKOUT_PARENT).toBe(
-      "80748aa9e50b3196d3d8f796b63e855c6ded6c4e"
+      "532c3de5fb7bafcbeb47560697bcb8cbd95d8401"
     );
     expect(CONSOLIDATED_SECURITY_BASELINE).toBe(
       "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da"
@@ -88,7 +88,18 @@ describe("consolidated non-rotating guarded release", () => {
     expect(harness).toContain("trap cleanup EXIT");
     expect(harness).toContain("--skip-networking");
     expect(harness).toContain("env -i PATH=");
-    expect(CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS).toHaveLength(28);
+    expect(CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS).toHaveLength(35);
+    expect(CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS).toEqual(
+      expect.arrayContaining([
+        "client/src/lib/bodyCinemaPerception.ts",
+        "client/src/components/body-cinema/BodyDirectedDirector.tsx",
+        "client/src/components/body-cinema/BodyDirectedDirector.test.tsx",
+        "server/services/bodyCinemaBodyDirection.test.ts",
+        "server/services/bodyCinemaSourceMapService.ts",
+        "server/services/bodyCinemaEditBlueprintService.ts",
+        "shared/bodyCinemaBodyDirection.ts",
+      ])
+    );
   });
 
   it("rejects every other push predecessor before accepting a checkout", () => {

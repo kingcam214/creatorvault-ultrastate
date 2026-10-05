@@ -1,5 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import {
+  bodyDirectedAnalyzeInputSchema,
+  bodyDirectedFreezeInputSchema,
+  bodyDirectedQualifyInputSchema,
+  bodyDirectedRecommendInputSchema,
   bodyCinemaLifecycleAttachInputSchema,
   bodyCinemaLifecycleBeginReviewInputSchema,
   bodyCinemaLifecycleDecideInputSchema,
@@ -16,6 +20,9 @@ import {
   BodyCinemaLifecycleError,
   getBodyCinemaCandidateLifecycleService,
 } from "../services/bodyCinemaCandidateLifecycle";
+import {
+  BODY_FOCUS_LIBRARY, BODY_FOCUS_TREATMENTS, BODY_VISUAL_IDENTITIES,
+} from "../../shared/bodyCinemaBodyDirection";
 
 function lifecycleError(error: unknown): TRPCError {
   if (error instanceof BodyCinemaLifecycleError) {
@@ -41,6 +48,48 @@ function lifecycleError(error: unknown): TRPCError {
 }
 
 export const bodyCinemaCandidateLifecycleRouter = router({
+  bodyDirectionLibrary: protectedProcedure.query(() => ({
+    focuses: BODY_FOCUS_LIBRARY,
+    treatments: BODY_FOCUS_TREATMENTS,
+    visualIdentities: BODY_VISUAL_IDENTITIES,
+  })),
+
+  listBodyDirected: protectedProcedure.input(bodyCinemaLifecycleListMineInputSchema)
+    .query(async ({ ctx, input }) => {
+      try { return await (await getBodyCinemaCandidateLifecycleService()).listBodyDirected(Number(ctx.user.id), input.limit); }
+      catch (error) { throw lifecycleError(error); }
+    }),
+
+  getBodyDirected: protectedProcedure.input(bodyCinemaLifecycleGetMineInputSchema)
+    .query(async ({ ctx, input }) => {
+      try { return await (await getBodyCinemaCandidateLifecycleService()).getBodyDirected(Number(ctx.user.id), input.id); }
+      catch (error) { throw lifecycleError(error); }
+    }),
+
+  qualifyBodyDirected: protectedProcedure.input(bodyDirectedQualifyInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try { return await (await getBodyCinemaCandidateLifecycleService()).qualifyBodyDirected({creatorId:Number(ctx.user.id), ...input}); }
+      catch (error) { throw lifecycleError(error); }
+    }),
+
+  analyzeBodyDirected: protectedProcedure.input(bodyDirectedAnalyzeInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try { return await (await getBodyCinemaCandidateLifecycleService()).analyzeBodyDirected({creatorId:Number(ctx.user.id), ...input}); }
+      catch (error) { throw lifecycleError(error); }
+    }),
+
+  recommendBodyDirected: protectedProcedure.input(bodyDirectedRecommendInputSchema)
+    .query(async ({ ctx, input }) => {
+      try { return await (await getBodyCinemaCandidateLifecycleService()).recommendBodyDirected({creatorId:Number(ctx.user.id), ...input}); }
+      catch (error) { throw lifecycleError(error); }
+    }),
+
+  freezeBodyDirected: protectedProcedure.input(bodyDirectedFreezeInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try { return await (await getBodyCinemaCandidateLifecycleService()).freezeBodyDirected({creatorId:Number(ctx.user.id), ...input}); }
+      catch (error) { throw lifecycleError(error); }
+    }),
+
   listMine: protectedProcedure
     .input(bodyCinemaLifecycleListMineInputSchema)
     .query(async ({ ctx, input }) => {

@@ -16,6 +16,19 @@ import type {
 import { z } from "zod";
 import { getDb } from "../db";
 import {
+  BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION,
+  bodyDirectedRightsInputSchema, bodyDirectedRightsSnapshotSchema,
+  bodyDirectedAnalysisSchema, bodyDirectedLifecycleRecordSchema,
+  bodyDirectedAnalyzeInputSchema, bodyDirectedFreezeInputSchema,
+  type BodyDirectedLifecycleRecord, type BodyDirectedRightsInput,
+} from "../../shared/bodyCinemaCandidateLifecycle";
+import {
+  BODY_FOCUS_LIBRARY, BODY_FOCUS_TREATMENTS, bodyDirectedPlanSchema,
+  type BodyDirectedSourceMap,
+} from "../../shared/bodyCinemaBodyDirection";
+import { deriveBodyDirectedSourceMap, assessBodyDirectedTreatment } from "./bodyCinemaSourceMapService";
+import { compileBodyDirectedPlan, recommendBodyDirectedOptions } from "./bodyCinemaEditBlueprintService";
+import {
   BODY_CINEMA_CROWN_REVEAL_TREATMENT_VERSION,
   BODY_CINEMA_FUTURE_ATTACHMENT_GRANT_VERSION,
   bodyCinemaCandidateProvenanceSchema,
@@ -765,7 +778,22 @@ function parseStoredCandidate(value: unknown): StoredCandidateSnapshot {
   };
 }
 
+// Existing text-column collations may be narrower than UTF-8. Escaping storage
+// JSON preserves the decoded snapshot and its canonical immutable hash.
+function bodyDirectedMetadataJson(value: unknown): string {
+  return JSON.stringify(value).replace(/[^\x00-\x7F]/g, character =>
+    `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`
+  );
+}
+
+function isBodyDirectedRow(row: LifecycleRow): boolean {
+  return parseJsonRecord(row.rights_assertion_json, "The creator assertion").version === BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION;
+}
+function requireLegacyCandidateAuthority(row: LifecycleRow): void {
+  if (isBodyDirectedRow(row)) failure("precondition", "This body-directed plan has no candidate, rendering, review, acceptance or Trailer Maker execution authority.");
+}
 function parseLifecycle(row: LifecycleRow): BodyCinemaLifecycleRecord {
+  requireLegacyCandidateAuthority(row);
   const source = parseStoredSource(row.source_snapshot_json);
   const candidate = row.candidate_snapshot_json
     ? parseStoredCandidate(row.candidate_snapshot_json)
@@ -924,6 +952,186 @@ export type BodyCinemaPlaybackArtifact = {
 export class BodyCinemaCandidateLifecycleService {
   constructor(private readonly pool: Pool) {}
 
+  /** Versioned planning on the same lifecycle/project owners; no new schema. */
+  async listBodyDirected(creatorId: number, limit = 30): Promise<BodyDirectedLifecycleRecord[]> {
+    const rows = await queryRows<LifecycleRow>(this.pool,
+      `SELECT * FROM body_cinema_candidate_lifecycles WHERE creator_id = ?
+       AND JSON_UNQUOTE(JSON_EXTRACT(rights_assertion_json, '$.version')) = ?
+       ORDER BY updated_at DESC LIMIT ?`,
+      [creatorId, BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION, Math.max(1, Math.min(100, Math.floor(limit)))]);
+    return Promise.all(rows.map(row => this.readBodyDirectedRecord(this.pool, row)));
+  }
+
+  async getBodyDirected(creatorId: number, id: string): Promise<BodyDirectedLifecycleRecord | null> {
+    const rows = await queryRows<LifecycleRow>(this.pool,
+      'SELECT * FROM body_cinema_candidate_lifecycles WHERE id = ? AND creator_id = ? LIMIT 1', [id, creatorId]);
+    return rows[0] && isBodyDirectedRow(rows[0]) ? this.readBodyDirectedRecord(this.pool, rows[0]) : null;
+  }
+
+  async qualifyBodyDirected(input: {creatorId: number; sourceAssetId: string; rights: BodyDirectedRightsInput}): Promise<BodyDirectedLifecycleRecord> {
+    const declaration = bodyDirectedRightsInputSchema.parse(input.rights);
+    const assertionHash = digest(declaration);
+    const rights = bodyDirectedRightsSnapshotSchema.parse({ ...declaration,
+      verificationStatus: 'creator_asserted_not_independently_verified', assertedAt: new Date().toISOString() });
+    return this.transaction(async connection => {
+      const asset = await this.lockAsset(connection, input.creatorId, input.sourceAssetId);
+      const source = await this.verifyOriginalSource(asset, input.creatorId, false);
+      const existing = await queryRows<LifecycleRow>(connection,
+        'SELECT * FROM body_cinema_candidate_lifecycles WHERE creator_id = ? AND source_asset_id = ? FOR UPDATE',
+        [input.creatorId, input.sourceAssetId]);
+      if (existing[0]) {
+        if (!isBodyDirectedRow(existing[0])) failure('conflict', 'An earlier saved record is linked to this original. It is not a Body Cinema edit treatment. Choose a different owned original; the saved record will not be overwritten.');
+        if (existing[0].rights_assertion_hash !== assertionHash) failure('conflict', 'This source already has a different immutable creator declaration.');
+        return this.readBodyDirectedRecord(connection, existing[0]);
+      }
+      const id = randomUUID(), projectId = randomUUID();
+      await execute(connection,
+        `INSERT INTO creation_projects
+         (id, creator_id, title, intent, output_purpose, state, source_media_asset_id, metadata_json, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 'ready_to_create', ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))`,
+        [projectId, input.creatorId, 'Body Cinema — body-directed cinematic plan',
+         'Source-aware body focus, edit language and visual identity planning only.',
+         'Private source analysis and immutable cinematic direction; no candidate or handoff authority.',
+         input.sourceAssetId, JSON.stringify({feature:'body_cinema_candidate_lifecycle', sourceSha256:source.snapshot.sha256,
+           rightsAssertionVersion:rights.version, bodyCinemaBodyDirectedV2:{version:'body_cinema.body_directed_metadata.v1', analysis:null}})]);
+      await execute(connection,
+        `INSERT INTO body_cinema_candidate_lifecycles
+         (id, project_id, creator_id, source_asset_id, source_sha256, source_snapshot_json, rights_assertion_json, rights_assertion_hash, state, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'qualified', CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))`,
+        [id, projectId, input.creatorId, input.sourceAssetId, source.snapshot.sha256, JSON.stringify(source.snapshot), JSON.stringify(rights), assertionHash]);
+      await appendEvent(connection, projectId, input.creatorId, 'body_cinema_body_directed_source_qualified',
+        {lifecycleId:id, sourceAssetId:input.sourceAssetId, sourceSha256:source.snapshot.sha256,
+         rightsAssertionVersion:rights.version, independentVerification:'not_claimed', executionAuthority:'none'});
+      return this.readBodyDirectedRecord(connection, await this.lockBodyDirectedRow(connection, input.creatorId, id));
+    });
+  }
+
+  async analyzeBodyDirected(input: {creatorId: number} & z.input<typeof bodyDirectedAnalyzeInputSchema>): Promise<BodyDirectedLifecycleRecord> {
+    const parsed = bodyDirectedAnalyzeInputSchema.parse({id:input.id, sourceSha256:input.sourceSha256,
+      frameEvidence:input.frameEvidence, detailObservations:input.detailObservations ?? []});
+    return this.transaction(async connection => {
+      const row = await this.lockBodyDirectedRow(connection, input.creatorId, parsed.id);
+      if (row.state !== 'qualified' || row.treatment_hash) failure('conflict', 'The source map is immutable after this cinematic plan is locked.');
+      const source = await this.reverifyFrozenSource(connection, row, input.creatorId);
+      if (source.snapshot.sha256 !== parsed.sourceSha256.toLowerCase()) failure('precondition', 'The measurements do not match this exact verified original.');
+      const map = deriveBodyDirectedSourceMap({ source:{assetId:source.snapshot.assetId, sha256:source.snapshot.sha256,
+        width:source.snapshot.width, height:source.snapshot.height, durationSeconds:source.snapshot.durationSeconds},
+        frameEvidence:parsed.frameEvidence, detailObservations:parsed.detailObservations });
+      const analysis = bodyDirectedAnalysisSchema.parse({version:'body_cinema.body_directed_analysis.v1', sourceMap:map,
+        sourceMapHash:digest(map), frameEvidence:parsed.frameEvidence, detailObservations:parsed.detailObservations});
+      const project = await this.readBodyDirectedProject(connection, row, true);
+      const metadata = parseJsonRecord(project.metadata_json, 'The creator project metadata');
+      await execute(connection,
+        'UPDATE creation_projects SET metadata_json = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ? AND creator_id = ?',
+        [bodyDirectedMetadataJson({...metadata, bodyCinemaBodyDirectedV2:{version:'body_cinema.body_directed_metadata.v1', analysis}}), row.project_id, input.creatorId]);
+      await appendEvent(connection, row.project_id, input.creatorId, 'body_cinema_body_directed_source_mapped',
+        {lifecycleId:row.id, sourceSha256:source.snapshot.sha256, sourceMapHash:analysis.sourceMapHash,
+         observationProvenance:'creator_device_pose_and_creator_marks_not_independently_verified', executionAuthority:'none'});
+      return this.readBodyDirectedRecord(connection, row);
+    });
+  }
+
+  async recommendBodyDirected(input: {creatorId: number; id: string; bodyFocusId?: string; bodyTreatmentId?: string; visualIdentityId?: string}) {
+    return this.transaction(async connection => {
+      const row = await this.lockBodyDirectedRow(connection, input.creatorId, input.id);
+      await this.reverifyFrozenSource(connection, row, input.creatorId);
+      const record = await this.readBodyDirectedRecord(connection, row);
+      if (record.treatment) return {options:[record.treatment], sourceMapHash:record.analysis?.sourceMapHash ?? null,
+        reason:'This is your immutable saved plan, not a newly applied treatment.', alternatives:[], eligibleTreatmentIds:[record.treatment.bodyTreatment.id]};
+      if (!record.analysis) return {options:[], sourceMapHash:null, reason:'Read the original before choosing a source-supported treatment.', alternatives:[], eligibleTreatmentIds:[] as string[]};
+      const map = record.analysis.sourceMap;
+      if (input.bodyFocusId && !BODY_FOCUS_LIBRARY.some(focus => focus.id === input.bodyFocusId)) failure('precondition', 'Choose one of the canonical body focuses.');
+      const options = recommendBodyDirectedOptions(map, input.bodyFocusId);
+      let reason: string | null = null;
+      if (input.bodyFocusId && input.bodyTreatmentId && input.visualIdentityId) {
+        try {
+          const selected = compileBodyDirectedPlan(map, {bodyFocusId:input.bodyFocusId,
+            bodyTreatmentId:input.bodyTreatmentId, visualIdentityId:input.visualIdentityId});
+          const others = options.filter(plan => plan.bodyTreatment.id !== selected.bodyTreatment.id || plan.visualIdentity.id !== selected.visualIdentity.id);
+          options.splice(0, options.length, selected, ...others.slice(0, 4));
+        } catch (error) { reason = error instanceof Error ? error.message : 'This combination is not supported by the original.'; }
+      }
+      if (!options.length && !reason) reason = 'This focus is not confirmed in usable source ranges. Choose a measured focus or mark an actually visible detail in the original.';
+      const supported = new Set(map.usableRanges.flatMap(range => range.visibleFocusIds));
+      return {options, sourceMapHash:record.analysis.sourceMapHash, reason,
+        alternatives:BODY_FOCUS_LIBRARY.filter(focus => supported.has(focus.id) && focus.id !== input.bodyFocusId).map(({id,label}) => ({id,label})),
+        eligibleTreatmentIds: input.bodyFocusId ? BODY_FOCUS_TREATMENTS.filter(treatment =>
+          assessBodyDirectedTreatment(map, input.bodyFocusId!, treatment.id).supported
+        ).map(treatment => treatment.id) : []};
+    });
+  }
+
+  async freezeBodyDirected(input: {creatorId: number} & z.input<typeof bodyDirectedFreezeInputSchema>): Promise<BodyDirectedLifecycleRecord> {
+    const parsed = bodyDirectedFreezeInputSchema.parse({id:input.id, sourceMapHash:input.sourceMapHash,
+      bodyFocusId:input.bodyFocusId, bodyTreatmentId:input.bodyTreatmentId, visualIdentityId:input.visualIdentityId,
+      ...(input.selectedRangeIds ? {selectedRangeIds:input.selectedRangeIds} : {})});
+    return this.transaction(async connection => {
+      const row = await this.lockBodyDirectedRow(connection, input.creatorId, parsed.id);
+      await this.reverifyFrozenSource(connection, row, input.creatorId);
+      const record = await this.readBodyDirectedRecord(connection, row);
+      const analysis = record.analysis;
+      if (!analysis || analysis.sourceMapHash !== parsed.sourceMapHash) failure('conflict', 'The source map changed. Review the current options before locking this plan.');
+      if (record.treatment) {
+        const same = record.treatment.bodyFocus.id === parsed.bodyFocusId && record.treatment.bodyTreatment.id === parsed.bodyTreatmentId && record.treatment.visualIdentity.id === parsed.visualIdentityId;
+        const selected = parsed.selectedRangeIds;
+        const stored = record.treatment.selectedTimecodes.map(range => range.rangeId);
+        if (same && (!selected || digest(selected) === digest(stored))) return record;
+        failure('conflict', 'Your locked body-directed plan cannot be replaced or reinterpreted.');
+      }
+      if (row.state !== 'qualified') failure('conflict', 'Only a qualified original can lock its first cinematic plan.');
+      const plan = compileBodyDirectedPlan(analysis.sourceMap, {bodyFocusId:parsed.bodyFocusId,
+        bodyTreatmentId:parsed.bodyTreatmentId, visualIdentityId:parsed.visualIdentityId,
+        ...(parsed.selectedRangeIds ? {selectedRangeIds:parsed.selectedRangeIds} : {})});
+      const hash = digest(plan);
+      await execute(connection,
+        `UPDATE body_cinema_candidate_lifecycles SET treatment_version = ?, treatment_json = ?, treatment_hash = ?, state = 'frozen', updated_at = CURRENT_TIMESTAMP(3) WHERE id = ? AND creator_id = ?`,
+        [plan.version, JSON.stringify(plan), hash, parsed.id, input.creatorId]);
+      await execute(connection, 'UPDATE creation_projects SET treatment_id = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ? AND creator_id = ?',
+        [plan.bodyTreatment.id, row.project_id, input.creatorId]);
+      await appendEvent(connection, row.project_id, input.creatorId, 'body_cinema_body_directed_plan_frozen',
+        {lifecycleId:parsed.id, treatmentVersion:plan.version, treatmentHash:hash, sourceSha256:record.source.sha256,
+         sourceMapHash:analysis.sourceMapHash, bodyFocusId:plan.bodyFocus.id, bodyTreatmentId:plan.bodyTreatment.id,
+         visualIdentityId:plan.visualIdentity.id, executionAuthority:'none', candidateGenerated:false});
+      return this.readBodyDirectedRecord(connection, await this.lockBodyDirectedRow(connection, input.creatorId, parsed.id));
+    });
+  }
+
+  private async readBodyDirectedProject(executor: QueryExecutor, row: LifecycleRow, forUpdate = false) {
+    const rows = await queryRows<ProjectRow & {metadata_json:unknown}>(executor,
+      `SELECT id, creator_id, accepted_media_asset_id, metadata_json FROM creation_projects WHERE id = ? AND creator_id = ? LIMIT 1${forUpdate ? ' FOR UPDATE' : ''}`,
+      [row.project_id, Number(row.creator_id)]);
+    if (!rows[0] || rows[0].accepted_media_asset_id) failure('precondition', 'The plan-only owned project is unavailable or has an invalid accepted asset.');
+    return rows[0];
+  }
+
+  private async readBodyDirectedRecord(executor: QueryExecutor, row: LifecycleRow): Promise<BodyDirectedLifecycleRecord> {
+    if (!isBodyDirectedRow(row)) failure('precondition', 'This is a preserved legacy lifecycle, not a body-directed plan.');
+    if (row.candidate_asset_id || row.candidate_snapshot_json || row.candidate_sha256 || row.attachment_authorization_json || row.review_json || row.decision_json || row.handoff_json) failure('precondition', 'A body-directed plan cannot contain candidate or handoff execution state.');
+    const source = parseStoredSource(row.source_snapshot_json);
+    const rights = bodyDirectedRightsSnapshotSchema.parse(parseJsonRecord(row.rights_assertion_json, 'The plan-only creator declaration'));
+    const {verificationStatus:_status, assertedAt:_time, ...rightsInput} = rights;
+    if (digest(rightsInput) !== row.rights_assertion_hash) failure('precondition', 'The immutable creator declaration no longer matches its hash.');
+    const project = await this.readBodyDirectedProject(executor, row);
+    const metadata = parseJsonRecord(project.metadata_json, 'The project metadata');
+    const namespace = parseJsonRecord(metadata.bodyCinemaBodyDirectedV2, 'The body-directed source map');
+    const analysis = namespace.analysis ? bodyDirectedAnalysisSchema.parse(namespace.analysis) : null;
+    const plan = row.treatment_json ? bodyDirectedPlanSchema.parse(parseJsonRecord(row.treatment_json, 'The frozen body-directed plan')) : null;
+    if (plan && (digest(plan) !== row.treatment_hash || plan.version !== row.treatment_version || digest(plan.source) !== digest({assetId:source.assetId, sha256:source.sha256,width:source.width,height:source.height,durationSeconds:source.durationSeconds}))) failure('precondition', 'The saved cinematic plan no longer matches its immutable source and hash.');
+    if (analysis && (digest(analysis.sourceMap) !== analysis.sourceMapHash || analysis.sourceMap.source.sha256 !== source.sha256 || analysis.sourceMap.source.assetId !== source.assetId)) failure('precondition', 'The saved source map no longer matches this original and its snapshot hash.');
+    if (plan && (!analysis || digest(plan.sourceMap) !== analysis.sourceMapHash)) failure('precondition', 'The frozen source map is not the immutable selected snapshot.');
+    if ((row.state === 'frozen') !== Boolean(plan)) failure('precondition', 'The plan-only lifecycle state does not match its immutable snapshot.');
+    return bodyDirectedLifecycleRecordSchema.parse({id:row.id, projectId:row.project_id, creatorId:Number(row.creator_id), kind:'body_directed_v2',
+      state:row.state, source:publicSourceSnapshot(source), rights, analysis, treatment:plan, treatmentHash:valueOrNull(row.treatment_hash),
+      candidate:null,handoff:null,createdAt:toIso(row.created_at,'The lifecycle creation time'),updatedAt:toIso(row.updated_at,'The lifecycle update time')});
+  }
+
+  private async lockBodyDirectedRow(connection: PoolConnection, creatorId: number, id: string): Promise<LifecycleRow> {
+    const row = await this.lockLifecycleRow(connection, creatorId, id, true);
+    if (!isBodyDirectedRow(row)) failure('precondition', 'This source belongs to a preserved legacy plan.');
+    return row;
+  }
+
+
   async listMine(
     creatorId: number,
     limit = 30
@@ -932,8 +1140,9 @@ export class BodyCinemaCandidateLifecycleService {
     const rows = await queryRows<LifecycleRow>(
       this.pool,
       `SELECT * FROM body_cinema_candidate_lifecycles
-       WHERE creator_id = ? ORDER BY updated_at DESC LIMIT ?`,
-      [creatorId, bounded]
+       WHERE creator_id = ? AND JSON_UNQUOTE(JSON_EXTRACT(rights_assertion_json, '$.version')) <> ?
+       ORDER BY updated_at DESC LIMIT ?`,
+      [creatorId, BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION, bounded]
     );
     return rows.map(parseLifecycle);
   }
@@ -948,7 +1157,7 @@ export class BodyCinemaCandidateLifecycleService {
        WHERE id = ? AND creator_id = ? LIMIT 1`,
       [id, creatorId]
     );
-    return rows[0] ? parseLifecycle(rows[0]) : null;
+    return rows[0] && !isBodyDirectedRow(rows[0]) ? parseLifecycle(rows[0]) : null;
   }
 
   async qualify(input: {
@@ -2147,6 +2356,7 @@ export class BodyCinemaCandidateLifecycleService {
         throw error;
       }
     }
+    requireLegacyCandidateAuthority(row);
     if (!row.candidate_asset_id || !row.candidate_snapshot_json) {
       failure(
         "not_found",
@@ -2258,7 +2468,8 @@ export class BodyCinemaCandidateLifecycleService {
   private async lockLifecycleRow(
     connection: PoolConnection,
     creatorId: number,
-    id: string
+    id: string,
+    allowBodyDirected = false
   ): Promise<LifecycleRow> {
     const rows = await queryRows<LifecycleRow>(
       connection,
@@ -2268,6 +2479,7 @@ export class BodyCinemaCandidateLifecycleService {
     );
     if (!rows[0])
       failure("not_found", "This Body Cinema lifecycle is unavailable.");
+    if (!allowBodyDirected) requireLegacyCandidateAuthority(rows[0]);
     return rows[0];
   }
 

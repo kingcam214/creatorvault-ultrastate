@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import MediaPicker, { type MediaAssetItem } from "@/components/MediaPicker";
+import BodyDirectedDirector from "@/components/body-cinema/BodyDirectedDirector";
 import {
   parseDirectVideoUploadResponse,
   type DirectVideoUploadResponse,
@@ -475,7 +476,7 @@ function LifecycleReferences({
   );
 }
 
-export default function VaultXDrop() {
+function LegacyVaultXDrop() {
   const search = useSearch();
   const [, navigate] = useLocation();
   const query = useMemo(() => new URLSearchParams(search), [search]);
@@ -1932,4 +1933,58 @@ export default function VaultXDrop() {
       />
     </div>
   );
+}
+
+
+/** Sole route owner: body-directed product first; old data is not a treatment. */
+export default function VaultXDrop() {
+  const search = useSearch();
+  const params = useMemo(() => new URLSearchParams(search), [search]);
+  const id = params.get("lifecycleId");
+  // Saving a new record's URL must not unmount its in-progress source read.
+  const startedAsNewDirector = useRef(!id).current;
+  const body = trpc.bodyCinema.lifecycle.getBodyDirected.useQuery(
+    {id:id ?? ""}, {enabled:Boolean(id) && !startedAsNewDirector, retry:false});
+  const archive = trpc.bodyCinema.lifecycle.getMine.useQuery(
+    {id:id ?? ""}, {enabled:Boolean(id) && !startedAsNewDirector && body.data === null, retry:false});
+  if (!id || startedAsNewDirector) return <BodyDirectedDirector initialSourceAssetId={params.get("sourceAssetId")} />;
+  if (body.isLoading || (body.data === null && archive.isLoading)) {
+    return <main className="min-h-screen bg-[#0A0A0A] p-8 text-white" aria-live="polite">Opening your saved source and plan…</main>;
+  }
+  if (body.data) return <BodyDirectedDirector key={id} lifecycleId={id} />;
+  if (archive.data) return <BodyCinemaHistoricalArchive record={archive.data} />;
+  return <main className="min-h-screen bg-[#0A0A0A] p-8 text-white">
+    <BodyCinemaActionError failure={{action:"Saved record unavailable",message:"This saved record is not available to your account. No source or plan has been substituted."}} />
+    <Link href="/vault-x/studio" className="mt-6 inline-block border border-cyan-400 px-6 py-3">Open Body Cinema</Link>
+  </main>;
+}
+
+export function BodyCinemaHistoricalArchive({record}: {record:BodyCinemaLifecycleRecord}) {
+  return <main className="min-h-screen bg-[#0A0A0A] px-5 py-8 text-white md:px-10">
+    <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.3fr_1fr]">
+      <section>
+        <p className="mb-3 text-sm font-semibold tracking-widest text-cyan-300">PREVIOUS SAVED RECORD · READ ONLY</p>
+        <h1 style={{fontFamily:'"Bebas Neue", sans-serif'}} className="mb-6 text-6xl">YOUR ORIGINAL</h1>
+        <video className="max-h-[75vh] w-full bg-black object-contain" controls playsInline preload="metadata"
+          src={`/api/body-cinema/lifecycle/${encodeURIComponent(record.id)}/source`} aria-label="Original video from an earlier saved record" />
+        <p className="mt-4 text-base text-white/90">Original · unchanged. No new candidate or treatment is being created.</p>
+      </section>
+      <section className="space-y-6 lg:pt-16">
+        <h2 style={{fontFamily:'"Bebas Neue", sans-serif'}} className="text-5xl">SAVED ORIGINAL. READ ONLY.</h2>
+        <p className="text-lg leading-relaxed text-white/90">Your earlier source and saved record are still here. Start a new body-directed shot plan in the current Body Cinema experience.</p>
+        <p className="text-base text-white/90">Its original source, saved direction and state remain unchanged. The body-directed product starts with source analysis, body focus, edit language and visual identity.</p>
+        <a href="/vault-x/studio" className="inline-block border border-cyan-400 bg-cyan-400 px-7 py-4 font-bold text-black">Open body-directed planning</a>
+        <details className="border-t border-white/20 pt-5 text-base">
+          <summary className="cursor-pointer font-semibold">Historical record details</summary>
+          <dl className="mt-4 space-y-3 break-words">
+            <div><dt className="font-semibold">Historical label</dt><dd>{record.treatment?.treatmentName ?? "No saved treatment"}</dd></div>
+            <div><dt className="font-semibold">Stored state</dt><dd>{record.state.replace(/_/g," ")}</dd></div>
+            <div><dt className="font-semibold">Original filename</dt><dd>{record.source.fileName}</dd></div>
+            <div><dt className="font-semibold">Candidate attachment</dt><dd>{record.candidate ? "Historical attachment retained" : "None — slot remains empty"}</dd></div>
+            <div><dt className="font-semibold">Accepted asset</dt><dd>{record.decision?.decision === "accept" ? "Historical acceptance retained" : "None"}</dd></div>
+          </dl>
+        </details>
+      </section>
+    </div>
+  </main>;
 }

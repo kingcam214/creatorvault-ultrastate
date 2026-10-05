@@ -46,6 +46,8 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 30_000,
     include: [
+      "server/services/bodyCinemaBodyDirection.test.ts",
+      "client/src/components/body-cinema/BodyDirectedDirector.test.tsx",
       "server/services/bodyCinemaCandidateLifecycle.test.ts",
       "server/services/bodyCinemaLifecycleBoundaries.test.ts",
       "server/services/bodyCinemaVerifiedSourceAttestationService.test.ts",

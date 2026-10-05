@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  bodyDirectedDetailObservationSchema,
+  bodyDirectedFrameEvidenceSchema,
+  bodyDirectedPlanSchema,
+  bodyDirectedSourceMapSchema,
+} from "./bodyCinemaBodyDirection";
 
 export const BODY_CINEMA_CROWN_REVEAL_TREATMENT_VERSION =
   "body_cinema.crown_reveal.v1" as const;
@@ -298,3 +304,73 @@ export type BodyCinemaLifecycleAttachInput = z.infer<
 export type BodyCinemaLifecycleDecideInput = z.infer<
   typeof bodyCinemaLifecycleDecideInputSchema
 >;
+
+// This version is additive. Crown Reveal assertions, data and candidate
+// authority remain unchanged and cannot be used to execute a body-directed plan.
+export const BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION =
+  "body_cinema.body_directed_assertion.v1" as const;
+export const bodyDirectedRightsInputSchema = z.object({
+  version: z.literal(BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION),
+  ownSource: z.literal(true),
+  performerLikenessConsent: z.literal(true),
+  treatmentScope: z.literal("body_directed_source_analysis_and_plan_only"),
+  intendedUse: z.literal("source_analysis_and_plan_only"),
+  acknowledgesNoIndependentVerification: z.literal(true),
+}).strict();
+export const bodyDirectedRightsSnapshotSchema = bodyDirectedRightsInputSchema.extend({
+  verificationStatus: z.literal("creator_asserted_not_independently_verified"),
+  assertedAt: z.string().datetime(),
+});
+export type BodyDirectedRightsInput = z.infer<typeof bodyDirectedRightsInputSchema>;
+
+export const bodyDirectedAnalysisSchema = z.object({
+  version: z.literal("body_cinema.body_directed_analysis.v1"),
+  sourceMap: bodyDirectedSourceMapSchema,
+  sourceMapHash: sha256Schema,
+  frameEvidence: z.array(bodyDirectedFrameEvidenceSchema).min(3).max(24),
+  detailObservations: z.array(bodyDirectedDetailObservationSchema).max(32),
+}).strict();
+export type BodyDirectedAnalysis = z.infer<typeof bodyDirectedAnalysisSchema>;
+
+export const bodyDirectedLifecycleRecordSchema = z.object({
+  id: lifecycleIdSchema,
+  projectId: lifecycleIdSchema,
+  creatorId: z.number().int().positive(),
+  kind: z.literal("body_directed_v2"),
+  state: z.enum(["qualified", "frozen"]),
+  source: bodyCinemaPublicAssetSnapshotSchema,
+  rights: bodyDirectedRightsSnapshotSchema,
+  analysis: bodyDirectedAnalysisSchema.nullable(),
+  treatment: bodyDirectedPlanSchema.nullable(),
+  treatmentHash: sha256Schema.nullable(),
+  candidate: z.null(),
+  handoff: z.null(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+}).strict();
+export type BodyDirectedLifecycleRecord = z.infer<typeof bodyDirectedLifecycleRecordSchema>;
+
+export const bodyDirectedQualifyInputSchema = z.object({
+  sourceAssetId: mediaAssetIdSchema,
+  rights: bodyDirectedRightsInputSchema,
+}).strict();
+export const bodyDirectedAnalyzeInputSchema = z.object({
+  id: lifecycleIdSchema,
+  sourceSha256: sha256Schema,
+  frameEvidence: z.array(bodyDirectedFrameEvidenceSchema).min(3).max(24),
+  detailObservations: z.array(bodyDirectedDetailObservationSchema).max(32).default([]),
+}).strict();
+export const bodyDirectedRecommendInputSchema = z.object({
+  id: lifecycleIdSchema,
+  bodyFocusId: z.string().min(1).max(64).optional(),
+  bodyTreatmentId: z.string().min(1).max(64).optional(),
+  visualIdentityId: z.string().min(1).max(64).optional(),
+}).strict();
+export const bodyDirectedFreezeInputSchema = z.object({
+  id: lifecycleIdSchema,
+  sourceMapHash: sha256Schema,
+  bodyFocusId: z.string().min(1).max(64),
+  bodyTreatmentId: z.string().min(1).max(64),
+  visualIdentityId: z.string().min(1).max(64),
+  selectedRangeIds: z.array(z.string().min(1).max(128)).min(1).max(24).optional(),
+}).strict();

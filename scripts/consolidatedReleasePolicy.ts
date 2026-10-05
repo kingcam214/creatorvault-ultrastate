@@ -19,9 +19,9 @@ export const CONSOLIDATED_SECURITY_BASELINE =
  * rollback reference, and its single direct checkout parent.
  */
 export const CONSOLIDATED_RELEASE_PARENT =
-  "80748aa9e50b3196d3d8f796b63e855c6ded6c4e";
+  "532c3de5fb7bafcbeb47560697bcb8cbd95d8401";
 export const CONSOLIDATED_RELEASE_CHECKOUT_PARENT =
-  "80748aa9e50b3196d3d8f796b63e855c6ded6c4e";
+  "532c3de5fb7bafcbeb47560697bcb8cbd95d8401";
 export const APP_ROOT = "/root/creatorvault";
 export const APPROVED_FEATURE_HEADS = {
   stripe: "ccba8cd56f887d041311d4f37d3ec912fd57322d",
@@ -129,6 +129,14 @@ export const CONSOLIDATED_ALLOWED_PATHS = [
  * lockfiles, historical migrations, and unrelated routes remain excluded.
  */
 const bodyCinemaPhaseAReleasePaths = [
+  "client/src/lib/bodyCinemaPerception.ts",
+  "client/src/components/body-cinema/BodyDirectedDirector.tsx",
+  "client/src/components/body-cinema/BodyDirectedDirector.test.tsx",
+  "server/services/bodyCinemaBodyDirection.test.ts",
+  "server/services/bodyCinemaSourceMapService.ts",
+  "server/services/bodyCinemaEditBlueprintService.ts",
+  "shared/bodyCinemaBodyDirection.ts",
+
   ".github/workflows/deploy.yml",
   "TODO.md",
   "client/src/pages/BodyCinemaLifecycle.test.tsx",
