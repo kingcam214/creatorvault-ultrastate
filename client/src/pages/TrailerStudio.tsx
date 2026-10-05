@@ -98,6 +98,132 @@ const VIBES = [
 ];
 
 export default function TrailerStudio() {
+  const params = new URLSearchParams(useSearch());
+  const handoffId = params.get("bodyCinemaHandoffId");
+  return handoffId ? (
+    <BodyCinemaAcceptedMasterPlanning handoffId={handoffId} />
+  ) : (
+    <ExistingTrailerStudio />
+  );
+}
+
+function BodyCinemaAcceptedMasterPlanning({
+  handoffId,
+}: {
+  handoffId: string;
+}) {
+  const handoff = trpc.bodyCinema.lifecycle.getHandoff.useQuery(
+    { handoffId },
+    { retry: false, refetchOnWindowFocus: true }
+  );
+  const savedHandoff = handoff.data;
+  return (
+    <main
+      className="cv-dna cv-page"
+      style={{ minHeight: "100vh", padding: "32px 20px" }}
+    >
+      <div style={{ maxWidth: 960, margin: "0 auto" }}>
+        <Link href="/vault-x/studio" className="cv-label-cyan">
+          Back to Body Cinema
+        </Link>
+        <p className="cv-label-cyan" style={{ marginTop: 24 }}>
+          Trailer Maker · saved planning handoff
+        </p>
+        <h1 className="cv-heading">
+          Your accepted master.
+          <br />
+          Two trailer plans.
+        </h1>
+        <p className="cv-body">
+          These are saved planning artifacts tied to your exact creator-approved
+          Body Cinema candidate. No trailer, export, post, sale, or public
+          marketing approval is claimed.
+        </p>
+        {handoff.isLoading ? (
+          <p className="cv-state" role="status">
+            Checking owned master and saved lineage…
+          </p>
+        ) : handoff.isError || !savedHandoff ? (
+          <div
+            className="cv-panel"
+            role="alert"
+            style={{ padding: 24, marginTop: 24 }}
+          >
+            <h2 className="cv-heading">This handoff is unavailable.</h2>
+            <p className="cv-body">
+              {handoff.error?.message ||
+                "An owned, accessible, accepted master and its saved decision are required. No replacement source or plan has been created."}
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gap: 20, marginTop: 28 }}>
+            <section className="cv-panel" style={{ padding: 24 }}>
+              <p className="cv-label-cyan">Crown Reveal · planning only</p>
+              <h2 className="cv-heading">
+                {savedHandoff.teaserPlanSeconds}-second teaser direction
+              </h2>
+              <p className="cv-body">
+                Open on the approved source moment and its first hook. Preserve
+                the frozen crop, emphasis, natural rhythm, and original sound.
+                End on the creator-approved held moment; do not manufacture
+                repeats.
+              </p>
+              <h2 className="cv-heading" style={{ marginTop: 28 }}>
+                {savedHandoff.reelPlanSeconds}-second reel direction
+              </h2>
+              <p className="cv-body">
+                Carry the same exact accepted master through opening,
+                source-supported reveal, and ending. These durations describe
+                proposed edits—not existing rendered files.
+              </p>
+            </section>
+            <section className="cv-panel" style={{ padding: 24 }}>
+              <h2 className="cv-heading">Source-specific hooks and titles</h2>
+              <ol className="cv-body">
+                {savedHandoff.hooks.map((hook, index) => (
+                  <li key={`${index}-${hook}`}>{hook}</li>
+                ))}
+              </ol>
+              <h2 className="cv-heading" style={{ marginTop: 28 }}>
+                Caption direction
+              </h2>
+              <p className="cv-body">{savedHandoff.captionDirection}</p>
+            </section>
+            <section className="cv-panel" style={{ padding: 24 }}>
+              <h2 className="cv-heading">Saved lineage</h2>
+              <dl className="cv-body" style={{ overflowWrap: "anywhere" }}>
+                <dt>Accepted master asset</dt>
+                <dd>{savedHandoff.candidateAssetId}</dd>
+                <dt>Master SHA-256</dt>
+                <dd className="cv-label">{savedHandoff.candidateHash}</dd>
+                <dt>Original source asset</dt>
+                <dd>{savedHandoff.sourceAssetId}</dd>
+                <dt>Source SHA-256</dt>
+                <dd className="cv-label">{savedHandoff.sourceHash}</dd>
+                <dt>Frozen treatment</dt>
+                <dd>{savedHandoff.treatmentVersion}</dd>
+                <dt>Creator decision reference</dt>
+                <dd>{savedHandoff.decisionId}</dd>
+                <dt>Saved draft</dt>
+                <dd>{savedHandoff.trailerProjectId}</dd>
+              </dl>
+              <p className="cv-body">
+                Creator creative acceptance is not owner approval of public
+                marketing claims. Rights and consent remain creator assertions,
+                not independent legal verification.
+              </p>
+              <button className="cv-cta" disabled style={{ marginTop: 20 }}>
+                No rendered trailer to download
+              </button>
+            </section>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
+function ExistingTrailerStudio() {
   const search = useSearch();
   const handoffParams = new URLSearchParams(search);
   const selectedVaultAssetId = handoffParams.get("sourceAssetId");

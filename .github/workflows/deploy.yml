@@ -46,14 +46,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify approved visual successor trigger
+      - name: Verify approved Body Cinema Phase A successor trigger
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_EVENT_NAME" = 'push'
-          test "$CREATORVAULT_RELEASE_BEFORE" = '3cb144abdcc4c2025223df6c45c3b3aa3dd854e2'
+          test "$CREATORVAULT_RELEASE_BEFORE" = '552aee6aa27a79c717e96b60fefa72703deeb356'
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git rev-parse "$GITHUB_SHA^")" = '3cb144abdcc4c2025223df6c45c3b3aa3dd854e2'
+          test "$(git rev-parse "$GITHUB_SHA^")" = '552aee6aa27a79c717e96b60fefa72703deeb356'
           git merge-base --is-ancestor 3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da HEAD
           git merge-base --is-ancestor ccba8cd56f887d041311d4f37d3ec912fd57322d HEAD
           git merge-base --is-ancestor d0bec580d387f962bb779663f873c9e642f57ae3 HEAD
@@ -77,7 +77,7 @@ jobs:
           export PATH="$PNPM_HOME:$PATH"
           pnpm install --frozen-lockfile
 
-      - name: Validate consolidation scope and preserved security
+      - name: Validate Phase A release scope and preserved security
         run: |
           set -euo pipefail
           export PNPM_HOME="/home/runner/.local/share/pnpm"
@@ -119,12 +119,19 @@ jobs:
           # Database binaries are extracted privately if needed, never installed.
           sudo -n apt-get update -qq
 
-      - name: Full Stripe Persona Video Studio and additive migration regressions
+      - name: Retained Stripe Persona Video Studio and additive migration regressions
         run: |
           set -euo pipefail
           export PNPM_HOME="/home/runner/.local/share/pnpm"
           export PATH="$PNPM_HOME:$PATH"
           sudo -n env PATH="$PATH" bash "$GITHUB_WORKSPACE/scripts/run-consolidation-regressions.sh"
+
+      - name: Native Body Cinema Phase A lifecycle regressions
+        run: |
+          set -euo pipefail
+          export PNPM_HOME="/home/runner/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+          bash "$GITHUB_WORKSPACE/scripts/run-body-cinema-phase-a-tests.sh"
 
       - name: Strict feature and non-rotating deployment type checks
         env:

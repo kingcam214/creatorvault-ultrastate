@@ -1,911 +1,1848 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useSearch } from "wouter";
+import React, {
+  type ChangeEvent,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Link, useLocation, useSearch } from "wouter";
 import {
   ArrowLeft,
   Check,
-  Copy,
+  ChevronRight,
   Download,
   FileVideo,
   Film,
   Loader2,
-  Pause,
   Play,
-  RotateCcw,
+  ShieldAlert,
   ShieldCheck,
-  Sparkles,
   Upload,
-  Volume2,
-  VolumeX,
-  Wand2,
+  X,
 } from "lucide-react";
-import { trpc } from "@/lib/trpc";
-import { analyzeBodyCinemaSourceLocally } from "@/lib/bodyCinemaPerception";
-import { HOMEPAGE_MEDIA } from "@/lib/homepageMediaRegistry";
-import MediaPicker, { type MediaAssetItem } from "@/components/MediaPicker";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+import MediaPicker, { type MediaAssetItem } from "@/components/MediaPicker";
+import {
+  parseDirectVideoUploadResponse,
+  type DirectVideoUploadResponse,
+} from "@/components/CreatorSourceVideoIntake";
+import {
+  BODY_CINEMA_CREATOR_ASSERTION_VERSION,
+  BODY_CINEMA_CROWN_REVEAL_TREATMENT_VERSION,
+  type BodyCinemaCreatorRightsInput,
+  type BodyCinemaCrownRevealTreatment,
+  type BodyCinemaLifecycleRecord,
+  type BodyCinemaLifecycleState,
+} from "@shared/bodyCinemaCandidateLifecycle";
 
-const GOLD = "#D5B760";
-const GOLD_DIM = "rgba(213,183,96,0.12)";
-const GOLD_BORDER = "rgba(213,183,96,0.38)";
-const BG = "#070707";
-const CARD = "#111111";
-const CARD_SOFT = "#171717";
-const BORDER = "rgba(255,255,255,0.09)";
-const MUTED = "rgba(255,255,255,0.55)";
-const GREEN = "#45E38A";
-const CYAN = "#63D9F5";
-const RED = "#FF7C7C";
+const LIFECYCLE_LIMIT = 20;
 
-type Step = "upload" | "preset" | "configure" | "review";
-type UploadReceipt = {
-  id: string;
-  mediaAssetId?: string;
-  sha256: string;
-  verified: boolean;
-  ownerBound: boolean;
-  createdAt: string;
-  codec: string;
-  width: number;
-  height: number;
-  durationSec: number;
+type IntendedUse = BodyCinemaCreatorRightsInput["intendedUse"];
+type Emphasis = BodyCinemaCrownRevealTreatment["bodyFaceEmphasis"][number];
+
+type TreatmentDraft = {
+  feeling: string;
+  opening: string;
+  hook: string;
+  sourceMomentStart: string;
+  sourceMomentEnd: string;
+  sourceMomentRationale: string;
+  cropLeft: string;
+  cropTop: string;
+  cropWidth: string;
+  cropHeight: string;
+  naturalRhythm: string;
+  colorLight: string;
+  typography: string;
+  ending: string;
+  rejectionOne: string;
+  rejectionTwo: string;
+  rejectionThree: string;
+  outputWidth: string;
+  outputHeight: string;
+  outputDuration: string;
 };
 
-type QuickPreset = {
-  id: string;
-  name: string;
-  direction: string;
-  focus: string;
+const EMPTY_TREATMENT: TreatmentDraft = {
+  feeling: "",
+  opening: "",
+  hook: "",
+  sourceMomentStart: "",
+  sourceMomentEnd: "",
+  sourceMomentRationale: "",
+  cropLeft: "0",
+  cropTop: "0",
+  cropWidth: "1",
+  cropHeight: "1",
+  naturalRhythm: "",
+  colorLight: "",
+  typography: "",
+  ending: "",
+  rejectionOne: "",
+  rejectionTwo: "",
+  rejectionThree: "",
+  outputWidth: "",
+  outputHeight: "",
+  outputDuration: "",
 };
 
-type GovernedJob = {
-  id: number | null;
-  requestId: string;
-  state: string;
-  fingerprint: string;
-  sourceUrl: string;
-  providerModelPath: string;
-  resolution: string;
-  durationSeconds: number;
-  estimatedCostCredits: number | null;
-  actualCostCredits: number | null;
-  costEvidenceReference: string | null;
-  providerJobId: string | null;
-  outputUrl: string | null;
-  artifactUrl: string | null;
-  qualityState: string | null;
-  qualityScore: number | null;
-  qualityReason: string | null;
-  failureMessage: string | null;
-  audioAssetId?: string | null;
-};
-
-const STEP_ORDER: Step[] = ["upload", "preset", "configure", "review"];
-const STEP_LABELS: Record<Step, string> = {
-  upload: "Source",
-  preset: "Treatment",
-  configure: "Request",
-  review: "Review",
-};
-
-const QUICK_PRESETS: QuickPreset[] = [
-  { id: "the-arch", name: "The Arch", direction: "Sculpted side light, a controlled body line, and a delayed payoff.", focus: "Structural reveal" },
-  { id: "silhouette", name: "Silhouette", direction: "Backlight, negative space, and a clear graphic outline.", focus: "Shape & light" },
-  { id: "luxury-reveal", name: "Luxury Reveal", direction: "Warm private-campaign detail that unfolds slowly into a polished reveal.", focus: "Private campaign" },
-  { id: "vip-tease", name: "VIP Tease", direction: "A decisive first second, a measured hold, and an unresolved private-access finish.", focus: "Access hook" },
+const EMPHASIS_OPTIONS: Array<{ value: Emphasis; label: string }> = [
+  { value: "face", label: "Face" },
+  { value: "shoulders", label: "Shoulders" },
+  { value: "torso", label: "Torso" },
+  { value: "hips", label: "Hips" },
+  { value: "legs", label: "Legs" },
+  { value: "full_body", label: "Full body" },
 ];
 
-function stepIndex(step: Step) {
-  return STEP_ORDER.indexOf(step);
-}
-
-function formatSeconds(value?: number) {
-  if (!Number.isFinite(value)) return "—";
-  return `${Number(value).toFixed(value && value < 10 ? 1 : 0)}s`;
-}
-
-function formatMoment(timestampMs?: number) {
-  if (!Number.isFinite(timestampMs)) return "—";
-  return `${(Number(timestampMs) / 1000).toFixed(Number(timestampMs) < 10_000 ? 1 : 0)}s`;
-}
-
-function isEligibleBodyCinemaSource(asset: MediaAssetItem) {
-  const sourceUrl = String(asset.publicUrl || "").trim();
-  const reference = [sourceUrl, asset.fileName, asset.originalName].filter(Boolean).join(" ").toLowerCase();
-  const isCreatorVaultHosted = /^(?:https:\/\/creatorvault\.live\/(?:uploads|videos)\/|\/(?:uploads|videos)\/)/i.test(sourceUrl);
-  const isVideo = asset.assetType === "video" || Boolean(asset.mimeType?.startsWith("video/"));
-  const hasReadableMediaFacts = Number(asset.duration || 0) > 0 && Number(asset.width || 0) > 0 && Number(asset.height || 0) > 0;
-  const isRecoveredOriginal = asset.bodyCinemaEligible === true;
-  const isFinishedPiece = String(asset.classification || "").toLowerCase() === "finished_showcase";
-  const unsafeName = /demo|showcase|pilot|sample|test|placeholder|kingcam|flyer|trailer|screen.?record/i.test(reference);
-  return isVideo && isCreatorVaultHosted && hasReadableMediaFacts && isRecoveredOriginal && !isFinishedPiece && !unsafeName;
-}
-
-function statusCopy(state?: string | null) {
-  switch (state) {
-    case "cost_pending": return { label: "Cost evidence required", detail: "No provider request was sent. An owner must add a documented credit cap before approval.", tone: "locked" as const };
-    case "awaiting_approval": return { label: "Awaiting owner approval", detail: "The source, treatment, and approved maximum are locked for owner review. No provider request was sent.", tone: "working" as const };
-    case "approved": return { label: "Approved — queue controlled", detail: "The request has a reserved cap. Submission remains a separate, logged owner action.", tone: "working" as const };
-    case "queued": return { label: "Worker lease active", detail: "A governed worker has the exclusive lease. Duplicate submissions are blocked.", tone: "working" as const };
-    case "submitted": return { label: "Rendering under control", detail: "One provider task is recorded. This status does not create another request.", tone: "working" as const };
-    case "submission_unknown": return { label: "Reconciliation required", detail: "The provider response was ambiguous. Automatic retries are blocked to prevent duplicate spend.", tone: "failed" as const };
-    case "provider_complete": return { label: "Output pending quality review", detail: "The provider output exists but cannot be sold or published until a durable artifact passes review.", tone: "working" as const };
-    case "accepted": return { label: "Accepted after review", detail: "A durable asset passed review. Checkout and publication still require separate future approvals.", tone: "ready" as const };
-    case "rejected": return { label: "Output rejected", detail: "The output did not meet the acceptance standard. It is not sellable or publishable.", tone: "failed" as const };
-    case "failed": return { label: "Request failed safely", detail: "No automatic retry is permitted. A new reviewed request is required for another attempt.", tone: "failed" as const };
-    case "cancelled": return { label: "Request cancelled", detail: "The request was cancelled before a provider submission.", tone: "locked" as const };
-    default: return { label: "Draft recorded", detail: "Your source and treatment are saved. No provider request has been sent.", tone: "locked" as const };
+const LIFECYCLE_COPY: Record<
+  BodyCinemaLifecycleState,
+  {
+    eyebrow: string;
+    title: string;
+    detail: string;
+    tone: "cyan" | "gold" | "danger" | "success";
   }
+> = {
+  qualified: {
+    eyebrow: "Source qualified",
+    title: "Freeze the Crown Reveal plan.",
+    detail:
+      "The server qualified the exact source identity and bytes. A treatment is still a plan, not an edit or output.",
+    tone: "cyan",
+  },
+  frozen: {
+    eyebrow: "Plan frozen",
+    title: "One immutable treatment is saved.",
+    detail:
+      "The selected source, source hash, creator assertion, and treatment identity cannot be changed in this lifecycle.",
+    tone: "gold",
+  },
+  awaiting_candidate: {
+    eyebrow: "One candidate slot reserved",
+    title: "Awaiting separately authorized candidate attachment.",
+    detail:
+      "No candidate can be attached from this screen. Attachment remains a future, separately authorized boundary.",
+    tone: "gold",
+  },
+  candidate_attached: {
+    eyebrow: "Candidate attached",
+    title: "Candidate evidence is recorded.",
+    detail:
+      "Begin review only when protected source and candidate playback are available from the server.",
+    tone: "cyan",
+  },
+  review_in_progress: {
+    eyebrow: "Creator review",
+    title: "Watch the exact attached candidate before deciding.",
+    detail:
+      "Your decision must name this exact review and candidate hash. No new source or candidate is created here.",
+    tone: "cyan",
+  },
+  rejected: {
+    eyebrow: "Candidate rejected",
+    title: "Private evidence is retained; no master exists.",
+    detail:
+      "A rejected candidate cannot be downloaded, handed off, published, or replaced silently.",
+    tone: "danger",
+  },
+  accepted: {
+    eyebrow: "Creator accepted master",
+    title: "The exact reviewed candidate is the accepted master.",
+    detail:
+      "Creator acceptance is not owner marketing approval. Only a planning handoff may follow.",
+    tone: "success",
+  },
+  handoff_ready: {
+    eyebrow: "Trailer Maker planning draft",
+    title: "Accepted-master planning handoff is saved.",
+    detail:
+      "This records planning only: no trailer render, export, publication, checkout, share, or provider action is authorized.",
+    tone: "success",
+  },
+};
+
+export function isBodyCinemaSourceCandidate(asset: MediaAssetItem): boolean {
+  const isVideo =
+    asset.assetType === "video" ||
+    Boolean(asset.mimeType?.startsWith("video/"));
+  return isVideo && String(asset.status || "ready").toLowerCase() === "ready";
 }
 
-function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
-  const [done, setDone] = useState(false);
+function shortHash(hash: string | null | undefined): string {
+  if (!hash) return "Unavailable";
+  return `${hash.slice(0, 12)}…${hash.slice(-8)}`;
+}
+
+function formatSeconds(value: number | null | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value))
+    return "Unavailable";
+  return `${value.toFixed(value < 10 ? 1 : 0)}s`;
+}
+
+function readUploadError(payload: unknown, fallback: string): string {
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    Array.isArray(payload)
+  ) {
+    return fallback;
+  }
+  const message = (payload as Record<string, unknown>).error;
+  return typeof message === "string" && message.trim() ? message : fallback;
+}
+
+async function uploadSourceVideo(
+  file: File,
+  onProgress: (progress: number) => void
+): Promise<DirectVideoUploadResponse> {
+  const form = new FormData();
+  form.append("file", file);
+
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.upload.onprogress = event => {
+      if (event.lengthComputable && event.total > 0) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    request.onload = () => {
+      let payload: unknown = null;
+      try {
+        payload = JSON.parse(request.responseText) as unknown;
+      } catch {
+        reject(
+          new Error(
+            `CreatorVault could not read the upload response (${request.status}).`
+          )
+        );
+        return;
+      }
+      if (request.status < 200 || request.status >= 300) {
+        reject(
+          new Error(
+            readUploadError(
+              payload,
+              `Source upload stopped (${request.status}).`
+            )
+          )
+        );
+        return;
+      }
+      try {
+        resolve(parseDirectVideoUploadResponse(payload));
+      } catch (error) {
+        reject(
+          error instanceof Error
+            ? error
+            : new Error("CreatorVault could not save this source video.")
+        );
+      }
+    };
+    request.onerror = () =>
+      reject(
+        new Error(
+          "CreatorVault could not reach the saved-source upload service."
+        )
+      );
+    request.open("POST", "/api/video/upload/direct");
+    request.withCredentials = true;
+    request.send(form);
+  });
+}
+
+function numericValue(value: string): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function makeTreatment(
+  draft: TreatmentDraft,
+  emphasis: Emphasis[],
+  verifiedDuration: number | null
+): BodyCinemaCrownRevealTreatment | string {
+  const startSeconds = numericValue(draft.sourceMomentStart);
+  const endSeconds = numericValue(draft.sourceMomentEnd);
+  const left = numericValue(draft.cropLeft);
+  const top = numericValue(draft.cropTop);
+  const width = numericValue(draft.cropWidth);
+  const height = numericValue(draft.cropHeight);
+  const outputWidth = numericValue(draft.outputWidth);
+  const outputHeight = numericValue(draft.outputHeight);
+  const outputDuration = numericValue(draft.outputDuration);
+
+  if (!verifiedDuration || verifiedDuration <= 0) {
+    return "The server-qualified source duration is required before a moment can be frozen.";
+  }
+  if (
+    startSeconds === null ||
+    endSeconds === null ||
+    startSeconds < 0 ||
+    endSeconds <= startSeconds ||
+    endSeconds > verifiedDuration
+  ) {
+    return `Select a source moment within the verified ${formatSeconds(verifiedDuration)} duration.`;
+  }
+  if (
+    left === null ||
+    top === null ||
+    width === null ||
+    height === null ||
+    left < 0 ||
+    top < 0 ||
+    width <= 0 ||
+    height <= 0 ||
+    left + width > 1 ||
+    top + height > 1
+  ) {
+    return "Crop bounds must stay within the 0–1 source frame.";
+  }
+  if (!emphasis.length)
+    return "Choose at least one creator-approved body or face emphasis.";
+  if (
+    outputWidth === null ||
+    outputHeight === null ||
+    !Number.isInteger(outputWidth) ||
+    !Number.isInteger(outputHeight) ||
+    !outputDuration ||
+    outputDuration <= 0
+  ) {
+    return "Enter a proposed source-supported output width, height, and duration. This is a plan only; it does not render media.";
+  }
+
+  return {
+    version: BODY_CINEMA_CROWN_REVEAL_TREATMENT_VERSION,
+    treatmentName: "Crown Reveal",
+    feeling: draft.feeling,
+    opening: draft.opening,
+    hook: draft.hook,
+    sourceMoment: {
+      startSeconds,
+      endSeconds,
+      rationale: draft.sourceMomentRationale,
+    },
+    bodyFaceEmphasis: emphasis,
+    cropBoundaries: { left, top, width, height },
+    naturalRhythm: draft.naturalRhythm,
+    originalAudio: "preserve_original_audio",
+    colorLight: draft.colorLight,
+    typography: draft.typography,
+    ending: draft.ending,
+    rejectionConditions: [
+      draft.rejectionOne,
+      draft.rejectionTwo,
+      draft.rejectionThree,
+    ],
+    proposedOutput: {
+      aspectRatio: "9:16",
+      width: outputWidth,
+      height: outputHeight,
+      durationSeconds: outputDuration,
+      codec: "h264",
+      container: "mp4",
+    },
+    noUpscale: true,
+    noSyntheticRepeats: true,
+  };
+}
+
+function QueryError({ error }: { error: unknown }) {
+  if (!error) return null;
+  const message =
+    error instanceof Error
+      ? error.message
+      : "CreatorVault could not load this lifecycle.";
   return (
-    <button
-      type="button"
-      onClick={async () => {
-        await navigator.clipboard.writeText(text);
-        setDone(true);
-        window.setTimeout(() => setDone(false), 1500);
-      }}
-      style={{ minHeight: 32, padding: "5px 10px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "transparent", color: done ? GREEN : MUTED, fontSize: 11, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
-    >
-      {done ? <Check size={13} /> : <Copy size={13} />}
-      {done ? "Copied" : label}
-    </button>
+    <div className="cv-state cv-state-error body-cinema-error" role="alert">
+      {message}
+    </div>
   );
 }
 
-function StatusRow({ label, value, state }: { label: string; value: string; state: "ready" | "working" | "locked" | "failed" }) {
-  const color = state === "ready" ? GREEN : state === "working" ? GOLD : state === "failed" ? RED : MUTED;
+function HashReference({
+  label,
+  hash,
+}: {
+  label: string;
+  hash: string | null | undefined;
+}) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "10px 0", borderBottom: `1px solid ${BORDER}` }}>
-      <span style={{ fontSize: 12, color: MUTED }}>{label}</span>
-      <span style={{ fontSize: 12, color, fontWeight: 800, textAlign: "right", display: "inline-flex", alignItems: "center", gap: 6 }}>
-        {state === "working" && <Loader2 size={13} className="body-cinema-spin" />}
-        {state === "ready" && <Check size={13} />}
-        {value}
-      </span>
+    <div className="body-cinema-hash">
+      <span>{label}</span>
+      <code title={hash ?? undefined}>{shortHash(hash)}</code>
     </div>
+  );
+}
+
+export function BodyCinemaLifecycleStatic({
+  state,
+}: {
+  state: BodyCinemaLifecycleState;
+}) {
+  const copy = LIFECYCLE_COPY[state];
+  return (
+    <section
+      className={`cv-panel body-cinema-state body-cinema-state--${copy.tone}`}
+      aria-live="polite"
+    >
+      <p className="eyebrow">{copy.eyebrow}</p>
+      <h2 className="cv-heading heading-md">{copy.title}</h2>
+      <p className="body-sm">{copy.detail}</p>
+    </section>
+  );
+}
+
+function LifecycleReferences({
+  record,
+}: {
+  record: BodyCinemaLifecycleRecord;
+}) {
+  const review = record.review;
+  return (
+    <section
+      className="body-cinema-references"
+      aria-label="Immutable source and candidate references"
+    >
+      <div className="cv-panel body-cinema-reference-card">
+        <p className="eyebrow">Original source</p>
+        <strong>{record.source.fileName}</strong>
+        <p className="body-xs">
+          {formatSeconds(record.source.durationSeconds)} ·{" "}
+          {record.source.mimeType}
+        </p>
+        <HashReference label="Source SHA-256" hash={record.source.sha256} />
+      </div>
+      <div className="cv-panel body-cinema-reference-card">
+        <p className="eyebrow">Candidate</p>
+        <strong>{record.candidate?.fileName ?? "Not attached"}</strong>
+        <p className="body-xs">
+          {record.candidate
+            ? `${formatSeconds(record.candidate.durationSeconds)} · ${record.candidate.mimeType}`
+            : "No attachment exists."}
+        </p>
+        <HashReference
+          label="Candidate SHA-256"
+          hash={record.candidate?.sha256 ?? review?.candidateHash}
+        />
+      </div>
+    </section>
   );
 }
 
 export default function VaultXDrop() {
   const search = useSearch();
-  const selectedVaultAssetId = new URLSearchParams(search).get("sourceAssetId");
-  const selectedVaultAudioAssetId = new URLSearchParams(search).get("audioAssetId");
-  const [step, setStep] = useState<Step>("upload");
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [hostedUrl, setHostedUrl] = useState<string | null>(null);
-  const [uploadReceipt, setUploadReceipt] = useState<UploadReceipt | null>(null);
-  const [fileName, setFileName] = useState("");
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-  const [selectedPreset, setSelectedPreset] = useState<QuickPreset | null>(null);
-  const [audioAssetId, setAudioAssetId] = useState<string | null>(null);
-  const [audioLibraryOpen, setAudioLibraryOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [consent, setConsent] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [creating, setCreating] = useState(false);
-  const [governedJob, setGovernedJob] = useState<GovernedJob | null>(null);
-  const [sourceEvidence, setSourceEvidence] = useState<any>(null);
-  const [analyzingSource, setAnalyzingSource] = useState(false);
-  const [activeInsightId, setActiveInsightId] = useState<string | null>(null);
-  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
-  const [creationProjectId, setCreationProjectId] = useState<string | null>(null);
-  const [releasePrice, setReleasePrice] = useState("25");
-  const [publishedContentId, setPublishedContentId] = useState<number | null>(null);
-
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [, navigate] = useLocation();
+  const query = useMemo(() => new URLSearchParams(search), [search]);
+  const lifecycleId = query.get("lifecycleId") || null;
+  const sourceAssetIdPrefill = query.get("sourceAssetId") || null;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const prepareCreationPath = (trpc as any).creationDirector.prepare.useMutation();
-  const openCreationProject = (trpc as any).creationProjects.open.useMutation();
-  const linkCreationProject = (trpc as any).creationProjects.link.useMutation();
-  const analyzeSource = (trpc as any).bodyCinema.analyzeSource.useMutation();
-  const planAudioTimeline = (trpc as any).editor.planAudioDirectedEdit.useMutation();
-  const audioLibraryQ = (trpc as any).audioIntelligence.listAssets.useQuery();
-  const audioReadinessQ = (trpc as any).audioIntelligence.getRenderReadiness.useQuery(
-    { assetId: audioAssetId || "", platform: "creatorvault" },
-    { enabled: Boolean(audioAssetId) }
+
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [selectedSource, setSelectedSource] = useState<MediaAssetItem | null>(
+    null
   );
-  const approveDirection = (trpc as any).bodyCinema.approveDirection.useMutation();
-  const publishAcceptedDrop = (trpc as any).vaultx.publishAcceptedBodyCinemaDrop.useMutation();
-  const existingVideosQuery = (trpc as any).mediaAssets.list.useQuery(
-    { filter: "videos", limit: 120 },
-    { staleTime: 30_000 },
+  const [uploadedSource, setUploadedSource] =
+    useState<DirectVideoUploadResponse | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [ownSource, setOwnSource] = useState(false);
+  const [performerLikenessConsent, setPerformerLikenessConsent] =
+    useState(false);
+  const [
+    acknowledgesNoIndependentVerification,
+    setAcknowledgesNoIndependentVerification,
+  ] = useState(false);
+  const [intendedUse, setIntendedUse] = useState<IntendedUse | "">("");
+  const [treatment, setTreatment] = useState<TreatmentDraft>(EMPTY_TREATMENT);
+  const [emphasis, setEmphasis] = useState<Emphasis[]>(["face", "full_body"]);
+  const [decisionReason, setDecisionReason] = useState("");
+  const [completedCandidateKey, setCompletedCandidateKey] = useState<
+    string | null
+  >(null);
+  const [watchAssertionKey, setWatchAssertionKey] = useState<string | null>(
+    null
   );
-  const autoSelectedMediaIdRef = useRef<string | null>(null);
-
-  // Preserve an exact soundtrack selected in the Vault. Otherwise the canonical
-  // audio library is newest-first, so Body Cinema brings the latest verified
-  // soundtrack forward automatically without another hunt.
-  useEffect(() => {
-    const verifiedAssets = audioLibraryQ.data?.assets?.filter((asset: any) => asset.status === "ready") || [];
-    const requestedAsset = selectedVaultAudioAssetId
-      ? verifiedAssets.find((asset: any) => String(asset.id) === selectedVaultAudioAssetId)
-      : null;
-    if (requestedAsset?.id) {
-      if (audioAssetId !== String(requestedAsset.id)) setAudioAssetId(String(requestedAsset.id));
-      return;
-    }
-    if (audioAssetId) return;
-    const newestVerified = verifiedAssets[0];
-    if (newestVerified?.id) setAudioAssetId(String(newestVerified.id));
-  }, [audioAssetId, audioLibraryQ.data?.assets, selectedVaultAudioAssetId]);
-  const jobQuery = trpc.governedPollo.job.useQuery(
-    { jobId: governedJob?.id ?? 1 },
-    { enabled: typeof governedJob?.id === "number" && governedJob.id > 0, refetchInterval: governedJob && typeof governedJob.id === "number" && governedJob.id > 0 && ["approved", "queued", "submitted", "provider_complete", "quality_review"].includes(governedJob.state) ? 8000 : false },
+  const [playbackFailureKey, setPlaybackFailureKey] = useState<string | null>(
+    null
   );
-  const currentJob = (jobQuery.data as GovernedJob | undefined) || governedJob;
-  const currentStatus = statusCopy(currentJob?.state);
-  const acceptedAsset = currentJob?.state === "accepted" && Boolean(currentJob.artifactUrl);
-  const sourceDurationMs = Math.max(
-    Number(uploadReceipt?.durationSec || 0) * 1000,
-    ...(sourceEvidence?.frameEvidence || []).map((frame: any) => Number(frame.timestampMs || 0)),
-    1,
+
+  const lifecycleListQuery = trpc.bodyCinema.lifecycle.listMine.useQuery(
+    { limit: LIFECYCLE_LIMIT },
+    { staleTime: 15_000 }
   );
-  const jumpToSourceMoment = useCallback((insight: any) => {
-    const timestampMs = Math.max(0, Number(insight?.timestampMs || 0));
-    setActiveInsightId(String(insight?.id || ""));
-    const video = videoRef.current;
-    if (!video) return;
-    video.currentTime = timestampMs / 1000;
-    void video.play().catch(() => undefined);
-  }, []);
+  const lifecycleQuery = trpc.bodyCinema.lifecycle.getMine.useQuery(
+    { id: lifecycleId ?? "" },
+    { enabled: Boolean(lifecycleId), staleTime: 10_000 }
+  );
+  const lifecycle = lifecycleQuery.data ?? null;
+  const playbackQuery = trpc.bodyCinema.lifecycle.getPlaybackAccess.useQuery(
+    { id: lifecycleId ?? "" },
+    { enabled: Boolean(lifecycle), staleTime: 0 }
+  );
+  const reviewKey = lifecycle?.candidate
+    ? `${lifecycle.id}:${lifecycle.review?.id ?? "not-started"}:${lifecycle.candidate.sha256}`
+    : null;
+  const candidateEnded = Boolean(
+    reviewKey && completedCandidateKey === reviewKey
+  );
+  const watchAsserted = Boolean(reviewKey && watchAssertionKey === reviewKey);
+  const playbackReady = Boolean(
+    playbackQuery.data?.sourceUrl &&
+    playbackQuery.data?.candidateUrl &&
+    playbackFailureKey !== reviewKey
+  );
+  const handoffId = lifecycle?.handoff?.trailerProjectId ?? null;
+  const handoffQuery = trpc.bodyCinema.lifecycle.getHandoff.useQuery(
+    { handoffId: handoffId ?? "" },
+    { enabled: Boolean(handoffId), staleTime: 10_000 }
+  );
+  const utils = trpc.useUtils();
+  const qualifyMutation = trpc.bodyCinema.lifecycle.qualify.useMutation();
+  const freezeMutation = trpc.bodyCinema.lifecycle.freeze.useMutation();
+  const reserveMutation = trpc.bodyCinema.lifecycle.reserve.useMutation();
+  const beginReviewMutation =
+    trpc.bodyCinema.lifecycle.beginReview.useMutation();
+  const decideMutation = trpc.bodyCinema.lifecycle.decide.useMutation();
+  const handoffMutation = trpc.bodyCinema.lifecycle.handoff.useMutation();
 
-  const openBodyCinemaCreation = useCallback(async (sourceAssetId: string, sourceUrl: string) => {
-    const project = await openCreationProject.mutateAsync({
-      title: title.trim() || "Body Cinema private release",
-      intent: "Turn this creator-owned video into a distinct cinematic Body Cinema treatment.",
-      outputPurpose: "Body Cinema Drop",
-      sourceAssetId,
-      metadata: { enteredFrom: "body_cinema", sourceUrl, finishingLane: "source_preserving_assembly" },
-    });
-    setCreationProjectId(project.id);
-    return project;
-  }, [openCreationProject, title]);
+  const sourceAssetId = selectedSource?.id ?? sourceAssetIdPrefill;
+  const sourceDuration = lifecycle?.source.durationSeconds ?? null;
+  const isBusy =
+    qualifyMutation.isPending ||
+    freezeMutation.isPending ||
+    reserveMutation.isPending ||
+    beginReviewMutation.isPending ||
+    decideMutation.isPending ||
+    handoffMutation.isPending;
 
-  const linkBodyCinemaEvidence = useCallback(async (projectId: string, evidence: any, treatmentId?: string | null, audioId?: string | null) => {
-    await linkCreationProject.mutateAsync({
-      projectId,
-      sourceEvidenceId: evidence.id,
-      treatmentId: treatmentId || undefined,
-      audioAssetId: audioId || undefined,
-      state: "ready_to_create",
-      metadata: { analysisStatus: evidence.analysisStatus, analysisVersion: evidence.analysisVersion || null, treatmentSelected: treatmentId || null },
-    });
-  }, [linkCreationProject]);
+  const updateQuery = useCallback(
+    (changes: Record<string, string | null>) => {
+      const next = new URLSearchParams(search);
+      for (const [key, value] of Object.entries(changes)) {
+        if (value) next.set(key, value);
+        else next.delete(key);
+      }
+      const suffix = next.toString();
+      navigate(`/vault-x/studio${suffix ? `?${suffix}` : ""}`);
+    },
+    [navigate, search]
+  );
 
-  useEffect(() => () => {
-    if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
-  }, [videoUrl]);
+  const openLifecycle = useCallback(
+    async (id: string) => {
+      updateQuery({ lifecycleId: id });
+      await Promise.all([
+        utils.bodyCinema.lifecycle.getMine.invalidate({ id }),
+        utils.bodyCinema.lifecycle.listMine.invalidate({
+          limit: LIFECYCLE_LIMIT,
+        }),
+      ]);
+    },
+    [updateQuery, utils]
+  );
 
-  const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("video/")) {
-      toast.error("Choose a video file.");
+  const handleSourceSelection = useCallback(
+    (assets: MediaAssetItem[]) => {
+      const asset = assets[0];
+      setMediaPickerOpen(false);
+      if (!asset || !isBodyCinemaSourceCandidate(asset)) {
+        toast.error(
+          "Choose a ready video from your Vault. The server will decide whether its stored bytes qualify."
+        );
+        return;
+      }
+      setSelectedSource(asset);
+      setUploadedSource(null);
+      setOwnSource(false);
+      setPerformerLikenessConsent(false);
+      setAcknowledgesNoIndependentVerification(false);
+      setIntendedUse("");
+      updateQuery({ sourceAssetId: asset.id, lifecycleId: null });
+    },
+    [updateQuery]
+  );
+
+  const handleUpload = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
       event.target.value = "";
-      return;
-    }
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error("Choose a video up to 100 MB.");
-      event.target.value = "";
-      return;
-    }
-
-    if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
-    const localPreview = URL.createObjectURL(file);
-    setVideoUrl(localPreview);
-    setFileName(file.name);
-    setHostedUrl(null);
-    setUploadReceipt(null);
-    setGovernedJob(null);
-    setSourceEvidence(null);
-    setActiveInsightId(null);
-    setCreationProjectId(null);
-    setUploadProgress(0);
-    setUploading(true);
-    setStep("preset");
-
-    try {
-      const form = new FormData();
-      form.append("file", file);
-      const payload = await new Promise<any>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.upload.onprogress = progressEvent => {
-          if (progressEvent.lengthComputable) setUploadProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
-        };
-        xhr.onload = () => {
-          let body: any = null;
-          try { body = JSON.parse(xhr.responseText); } catch { /* handled below */ }
-          if (xhr.status >= 200 && xhr.status < 300 && body?.url && body?.uploadReceipt?.verified) resolve(body);
-          else reject(new Error(body?.error || `Upload failed (${xhr.status})`));
-        };
-        xhr.onerror = () => reject(new Error("Upload network error"));
-        xhr.open("POST", "/api/video/upload/direct");
-        xhr.withCredentials = true;
-        xhr.send(form);
-      });
-      setHostedUrl(payload.url);
-      setUploadReceipt({ ...payload.uploadReceipt, mediaAssetId: payload.mediaAssetId || payload.uploadReceipt?.mediaAssetId });
-      setUploadProgress(100);
-      setAnalyzingSource(true);
+      if (!file) return;
+      if (!file.type.startsWith("video/")) {
+        toast.error("Choose a video file to save into your Vault.");
+        return;
+      }
+      setUploading(true);
+      setUploadProgress(0);
       try {
-        const localAnalysis = await analyzeBodyCinemaSourceLocally(file);
-        const evidence = await analyzeSource.mutateAsync({
-          sourceMediaUrl: payload.url,
-          sourceType: "video",
-          sourceFingerprint: localAnalysis.sourceFingerprint,
-          analysisVersion: localAnalysis.analyzer,
-          frameEvidence: localAnalysis.frameEvidence,
-        });
-        setSourceEvidence(evidence);
-        const sourceAssetId = payload.mediaAssetId || payload.uploadReceipt?.mediaAssetId;
-        if (!sourceAssetId) throw new Error("CreatorVault could not attach this verified upload to your Vault.");
-        const project = await openBodyCinemaCreation(sourceAssetId, payload.url);
-        await linkBodyCinemaEvidence(project.id, evidence);
-        toast.success("Source verified and analyzed. Choose a treatment supported by the observed frames.");
-      } catch (analysisError: any) {
-        setSourceEvidence(null);
-        toast.error(analysisError?.message || "Source uploaded, but local evidence analysis could not verify enough usable frames.");
+        const response = await uploadSourceVideo(file, setUploadProgress);
+        setUploadedSource(response);
+        toast.success(
+          "Source saved to your Vault. Select it from Your Vault before you ask the lifecycle server to qualify it."
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "CreatorVault could not save this source video."
+        );
       } finally {
-        setAnalyzingSource(false);
+        setUploading(false);
       }
-    } catch (error: any) {
-      setHostedUrl(null);
-      setUploadReceipt(null);
-      setVideoUrl(null);
-      setFileName("");
-      setStep("upload");
-      toast.error(error?.message || "Upload verification failed.");
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  }, [videoUrl]);
+    },
+    []
+  );
 
-  const handleExistingMediaSelection = useCallback(async (selected: MediaAssetItem[]) => {
-    const asset = selected[0];
-    setMediaLibraryOpen(false);
-    if (!asset || !isEligibleBodyCinemaSource(asset)) {
-      toast.error("Choose your verified original footage. Finished pieces and anything not ready stay separate from Body Cinema.");
+  const qualifySelectedSource = useCallback(async () => {
+    if (!sourceAssetId) {
+      toast.error("Select an exact source from Your Vault first.");
       return;
     }
-
-    if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
-    setUploading(true);
-    setAnalyzingSource(true);
-    setUploadProgress(0);
-    setHostedUrl(asset.publicUrl);
-    setUploadReceipt(null);
-    setGovernedJob(null);
-    setSourceEvidence(null);
-    setActiveInsightId(null);
-    setCreationProjectId(null);
-    setFileName(asset.originalName || asset.fileName || "CreatorVault video");
-
+    if (
+      !ownSource ||
+      !performerLikenessConsent ||
+      !acknowledgesNoIndependentVerification ||
+      !intendedUse
+    ) {
+      toast.error(
+        "Complete the required creator assertion before asking the server to qualify this source."
+      );
+      return;
+    }
     try {
-      const response = await fetch(asset.publicUrl, { credentials: "include" });
-      if (!response.ok) throw new Error("Your saved video could not be opened for analysis.");
-      const blob = await response.blob();
-      const file = new File([blob], asset.originalName || asset.fileName || "creatorvault-video.mp4", {
-        type: asset.mimeType || blob.type || "video/mp4",
-        lastModified: asset.createdAt ? Date.parse(asset.createdAt) || Date.now() : Date.now(),
+      const result = await qualifyMutation.mutateAsync({
+        sourceAssetId,
+        rights: {
+          version: BODY_CINEMA_CREATOR_ASSERTION_VERSION,
+          ownSource: true,
+          performerLikenessConsent: true,
+          treatmentScope: "crown_reveal_candidate_review",
+          intendedUse,
+          acknowledgesNoIndependentVerification: true,
+        },
       });
-      const previewUrl = URL.createObjectURL(file);
-      setVideoUrl(previewUrl);
-      setUploadProgress(25);
-      const localAnalysis = await analyzeBodyCinemaSourceLocally(file);
-      setUploadProgress(70);
-      const evidence = await analyzeSource.mutateAsync({
-        sourceMediaUrl: asset.publicUrl,
-        sourceType: "video",
-        sourceFingerprint: localAnalysis.sourceFingerprint,
-        analysisVersion: localAnalysis.analyzer,
-        frameEvidence: localAnalysis.frameEvidence,
-      });
-      setSourceEvidence(evidence);
-      const project = await openBodyCinemaCreation(asset.id, asset.publicUrl);
-      await linkBodyCinemaEvidence(project.id, evidence);
-      setUploadReceipt({
-        id: asset.id,
-        mediaAssetId: asset.id,
-        sha256: localAnalysis.sourceFingerprint,
-        verified: true,
-        ownerBound: true,
-        createdAt: asset.createdAt || new Date().toISOString(),
-        codec: asset.mimeType || "video/mp4",
-        width: asset.width || 0,
-        height: asset.height || 0,
-        durationSec: Math.max(
-          Number(asset.duration || 0),
-          ...localAnalysis.frameEvidence.map((frame) => Number(frame.timestampMs || 0) / 1000),
-        ),
-      });
-      setUploadProgress(100);
-      setStep("preset");
-      toast.success("Your saved video is ready. We found the strongest moments and built your treatment options.");
-    } catch (error: any) {
-      setHostedUrl(null);
-      setVideoUrl(null);
-      setUploadReceipt(null);
-      setSourceEvidence(null);
-      setFileName("");
-      setStep("upload");
-      toast.error(error?.message || "We could not analyze that saved video. Choose another clip from your Vault.");
-    } finally {
-      setUploading(false);
-      setAnalyzingSource(false);
+      await openLifecycle(result.id);
+      toast.success("The source qualification record was saved.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "The server could not qualify this source."
+      );
     }
-  }, [analyzeSource, videoUrl]);
+  }, [
+    acknowledgesNoIndependentVerification,
+    intendedUse,
+    openLifecycle,
+    ownSource,
+    performerLikenessConsent,
+    qualifyMutation,
+    sourceAssetId,
+  ]);
 
-  useEffect(() => {
-    const videos = Array.isArray(existingVideosQuery.data) ? existingVideosQuery.data as MediaAssetItem[] : [];
-    const usableVideos = videos.filter(isEligibleBodyCinemaSource);
-    const requestedVaultVideo = selectedVaultAssetId ? usableVideos.find((asset) => asset.id === selectedVaultAssetId) : null;
-    const sourceToUse = requestedVaultVideo || usableVideos[0];
-    if (!sourceToUse || autoSelectedMediaIdRef.current || uploading || videoUrl || sourceEvidence) return;
-    autoSelectedMediaIdRef.current = sourceToUse.id;
-    void handleExistingMediaSelection([sourceToUse]);
-  }, [existingVideosQuery.data, handleExistingMediaSelection, selectedVaultAssetId, sourceEvidence, uploading, videoUrl]);
-
-  const handleSelectPreset = useCallback(async (preset: QuickPreset) => {
-    if (!sourceEvidence?.id || sourceEvidence?.analysisStatus !== "verified") {
-      toast.error("A verified local source analysis is required before choosing a treatment.");
+  const freezePlan = useCallback(async () => {
+    if (!lifecycle) return;
+    const parsedTreatment = makeTreatment(treatment, emphasis, sourceDuration);
+    if (typeof parsedTreatment === "string") {
+      toast.error(parsedTreatment);
       return;
     }
-    const directionId = preset.id;
     try {
-      const evidence = await approveDirection.mutateAsync({ evidenceId: sourceEvidence.id, directionId });
-      setSourceEvidence(evidence);
-      if (creationProjectId) await linkBodyCinemaEvidence(creationProjectId, evidence, preset.id, audioAssetId);
-      setSelectedPreset(preset);
-      setTitle(`${preset.name} — Private Release`);
-      setStep("configure");
-    } catch (error: any) {
-      toast.error(error?.message || "This treatment is not supported by the verified source evidence.");
+      const result = await freezeMutation.mutateAsync({
+        id: lifecycle.id,
+        treatment: parsedTreatment,
+      });
+      await openLifecycle(result.id);
+      toast.success(
+        "The Crown Reveal plan is frozen. It does not create media."
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "The server could not freeze this treatment."
+      );
     }
-  }, [approveDirection, audioAssetId, creationProjectId, linkBodyCinemaEvidence, sourceEvidence]);
+  }, [
+    emphasis,
+    freezeMutation,
+    lifecycle,
+    openLifecycle,
+    sourceDuration,
+    treatment,
+  ]);
 
-  const handleCreateGovernedDraft = useCallback(async () => {
-    if (!hostedUrl || !uploadReceipt?.verified) {
-      toast.error(uploading ? "Your source is still being verified." : "Upload and verify a source video first.");
-      return;
-    }
-    if (!selectedPreset || !sourceEvidence?.id || !sourceEvidence?.selectedDirectionId) {
-      toast.error("Choose and approve an evidence-backed treatment first.");
-      setStep("preset");
-      return;
-    }
-    if (!consent) {
-      toast.error("Confirm ownership and consent before requesting a render.");
-      return;
-    }
-    setCreating(true);
+  const reserveCandidateSlot = useCallback(async () => {
+    if (!lifecycle) return;
     try {
-      let audioPlan: any = null;
-      if (audioAssetId) {
-        if (!audioReadinessQ.data?.ready) {
-          toast.error(audioReadinessQ.data?.reason || "CreatorVault must verify this soundtrack before it can direct your treatment.");
-          return;
-        }
-        audioPlan = await planAudioTimeline.mutateAsync({
-          audioAssetId,
-          sourceEvidenceId: sourceEvidence.id,
-          treatmentId: selectedPreset.id,
-          targetDurationSeconds: 6,
-          preserveSourceAudio: true,
-          destinationPlatform: "creatorvault",
+      const result = await reserveMutation.mutateAsync({ id: lifecycle.id });
+      await openLifecycle(result.id);
+      toast.success("Exactly one candidate slot is reserved.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "The server could not reserve the candidate slot."
+      );
+    }
+  }, [lifecycle, openLifecycle, reserveMutation]);
+
+  const beginReview = useCallback(async () => {
+    if (!lifecycle) return;
+    try {
+      const result = await beginReviewMutation.mutateAsync({
+        id: lifecycle.id,
+      });
+      setCompletedCandidateKey(null);
+      setWatchAssertionKey(null);
+      setPlaybackFailureKey(null);
+      await openLifecycle(result.id);
+      toast.success(
+        "Review started. Watch the exact candidate before deciding."
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "The server could not begin review."
+      );
+    }
+  }, [beginReviewMutation, lifecycle, openLifecycle]);
+
+  const decide = useCallback(
+    async (decision: "accept" | "reject") => {
+      if (!lifecycle?.review || !lifecycle.candidate) return;
+      if (!candidateEnded || !watchAsserted || !playbackReady) {
+        toast.error(
+          "The candidate must finish playing before you can record a decision."
+        );
+        return;
+      }
+      if (decisionReason.trim().length < 12) {
+        toast.error("Give a decision reason of at least 12 characters.");
+        return;
+      }
+      try {
+        const result = await decideMutation.mutateAsync({
+          id: lifecycle.id,
+          reviewId: lifecycle.review.id,
+          candidateSha256: lifecycle.candidate.sha256,
+          decision,
+          reason: decisionReason.trim(),
+          watchedEntireCandidate: true,
         });
+        await openLifecycle(result.id);
+        toast.success(
+          decision === "accept"
+            ? "Creator acceptance was saved."
+            : "Creator rejection was saved with private evidence retained."
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "The server could not record this decision."
+        );
       }
-      const sourceAssetId = uploadReceipt.mediaAssetId || uploadReceipt.id;
-      const project = creationProjectId
-        ? { id: creationProjectId }
-        : await openBodyCinemaCreation(sourceAssetId, hostedUrl);
-      const response = await prepareCreationPath.mutateAsync({
-        tool: "body_cinema",
-        intent: `${selectedPreset.name}: ${selectedPreset.direction}`,
-        outputPurpose: "Body Cinema Drop",
-        source: {
-          assetUrl: hostedUrl,
-          sourceEvidenceId: sourceEvidence.id,
-          sourceFingerprint: uploadReceipt.sha256,
-          ownershipConfirmed: true,
-          consentConfirmed: true,
-          adultVerified: true,
-        },
-        capabilities: {
-          requiresGeneratedShot: true,
-          requiredInputModes: ["reference_video"],
-          durationSeconds: 6,
-          resolution: "720p",
-          preserveIdentity: true,
-          naturalBody: true,
-          preserveProps: true,
-          cameraControl: true,
-          minimumQualityScore: 75,
-        },
-        creativeDirection: {
-          treatment: selectedPreset.id,
-          prompt: `${selectedPreset.name}: ${selectedPreset.direction} Preserve the creator-owned source identity, natural anatomy, and stable cinematic motion.`,
-          motionPlan: "Match the source body mechanics.",
-          cameraPlan: selectedPreset.focus,
-          identityRequirements: ["preserve creator identity", "natural anatomy", "preserve outfit and props"],
-          sourceAnalysisReference: sourceEvidence.id,
-          audioAssetId: audioAssetId || null,
-        },
-        output: { durationSeconds: 6, aspectRatio: "9:16", resolution: "720p" },
-        metadata: {
-          product: "body_cinema",
-          releaseTitle: title.trim() || `${selectedPreset.name} — Private Release`,
-          presetId: selectedPreset.id,
-          presetName: selectedPreset.name,
-          sourceReceiptId: uploadReceipt.id,
-          audioTimelinePlanId: audioPlan?.planId || undefined,
-          audioTimingEvidence: audioPlan?.anchors || undefined,
-          creationProjectId: project.id,
-        },
-      });
-      await linkCreationProject.mutateAsync({
-        projectId: project.id,
-        sourceEvidenceId: sourceEvidence.id,
-        treatmentId: selectedPreset.id,
-        audioAssetId: audioAssetId || undefined,
-        creationDirectorRequestId: response.requestId,
-        state: response.state === "ready_to_finish" ? "ready_to_create" : response.state === "in_progress" ? "in_progress" : "blocked",
-        metadata: { releaseTitle: title.trim() || `${selectedPreset.name} — Private Release`, creationPath: response.creationPath },
-      });
-      setCreationProjectId(project.id);
-      setGovernedJob({ id: null, requestId: response.requestId, state: response.state === "ready_to_finish" ? "cost_pending" : "failed", fingerprint: uploadReceipt.sha256, sourceUrl: hostedUrl, providerModelPath: response.selectedLane || "no provider route", resolution: "720p", durationSeconds: 6, estimatedCostCredits: null, actualCostCredits: null, costEvidenceReference: null, providerJobId: null, outputUrl: null, artifactUrl: null, qualityState: null, qualityScore: null, qualityReason: null, failureMessage: response.blockedReasons?.[0] || null, audioAssetId: audioAssetId || undefined });
-      setStep("review");
-      toast.success(response.creationPath);
-    } catch (error: any) {
-      toast.error(error?.message || "The governed request could not be recorded.");
-    } finally {
-      setCreating(false);
-    }
-  }, [audioAssetId, audioReadinessQ.data, consent, creationProjectId, hostedUrl, linkCreationProject, openBodyCinemaCreation, planAudioTimeline, prepareCreationPath, selectedPreset, sourceEvidence, title, uploadReceipt, uploading]);
+    },
+    [
+      candidateEnded,
+      watchAsserted,
+      playbackReady,
+      decideMutation,
+      decisionReason,
+      lifecycle,
+      openLifecycle,
+    ]
+  );
 
-  const handleDownload = useCallback(() => {
-    if (!currentJob?.artifactUrl) return;
-    const anchor = document.createElement("a");
-    anchor.href = currentJob.artifactUrl;
-    anchor.target = "_blank";
-    anchor.rel = "noreferrer";
-    anchor.download = `${(title || "body-cinema").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.mp4`;
-    anchor.click();
-  }, [currentJob?.artifactUrl, title]);
-
-  const publishToVaultX = useCallback(async () => {
-    if (!acceptedAsset || !currentJob?.id) {
-      toast.error("Only a reviewed, accepted finished drop can enter a paid VaultX release.");
-      return;
-    }
-    const priceCents = Math.round(Number(releasePrice) * 100);
-    if (!Number.isFinite(priceCents) || priceCents < 100) {
-      toast.error("Set a private-unlock price of at least $1.00.");
-      return;
-    }
+  const createHandoff = useCallback(async () => {
+    if (!lifecycle) return;
     try {
-      const result = await publishAcceptedDrop.mutateAsync({
-        governedJobId: currentJob.id,
-        title: title.trim() || "Private Body Cinema Release",
-        priceCents,
-      });
-      setPublishedContentId(Number(result.contentId));
-      toast.success(result.alreadyPublished ? "This finished drop is already connected to VaultX." : "Your paid VaultX unlock is ready.");
-    } catch (error: any) {
-      toast.error(error?.message || "CreatorVault could not prepare this paid VaultX unlock.");
+      const result = await handoffMutation.mutateAsync({ id: lifecycle.id });
+      await openLifecycle(result.id);
+      toast.success(
+        "Trailer Maker planning handoff saved. No trailer was rendered."
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "The server could not create the Trailer Maker planning handoff."
+      );
     }
-  }, [acceptedAsset, currentJob?.id, publishAcceptedDrop, releasePrice, title]);
+  }, [handoffMutation, lifecycle, openLifecycle]);
 
-  const reuseSource = useCallback(() => {
-    setSelectedPreset(null);
-    setTitle("");
-    setConsent(false);
-    setPublishedContentId(null);
-    setGovernedJob(null);
-    setStep("preset");
-    toast.info("Source retained. Choose another treatment to create a separate governed request.");
+  const toggleEmphasis = useCallback((value: Emphasis) => {
+    setEmphasis(current =>
+      current.includes(value)
+        ? current.filter(item => item !== value)
+        : [...current, value]
+    );
   }, []);
 
-  const reset = useCallback(() => {
-    if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
-    autoSelectedMediaIdRef.current = null;
-    setStep("upload");
-    setVideoUrl(null);
-    setHostedUrl(null);
-    setUploadReceipt(null);
-    setSourceEvidence(null);
-    setActiveInsightId(null);
-    setFileName("");
-    setSelectedPreset(null);
-    setAudioAssetId(null);
-    setTitle("");
-    setConsent(false);
-    setReleasePrice("25");
-    setPublishedContentId(null);
-    setUploading(false);
-    setUploadProgress(0);
-    setCreating(false);
-    setGovernedJob(null);
-  }, [videoUrl]);
+  const sourcePreviewUrl = selectedSource?.publicUrl ?? null;
+  const candidateDownloadUrl =
+    playbackFailureKey === reviewKey
+      ? null
+      : (playbackQuery.data?.downloadUrl ?? null);
+  const handoff = handoffQuery.data ?? lifecycle?.handoff ?? null;
+  const handoffHref = handoffQuery.data
+    ? `/trailer-maker?bodyCinemaHandoffId=${encodeURIComponent(handoffQuery.data.trailerProjectId)}`
+    : null;
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: "#fff", fontFamily: "DM Sans, sans-serif", paddingBottom: 96 }}>
+    <div className="cv-dna cv-page body-cinema-page">
       <style>{`
-        @keyframes body-cinema-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .body-cinema-spin { animation: body-cinema-spin 1s linear infinite; }
-        .body-cinema-button { transition: transform 150ms cubic-bezier(0.23,1,0.32,1), border-color 150ms cubic-bezier(0.23,1,0.32,1), background 150ms cubic-bezier(0.23,1,0.32,1); }
-        .body-cinema-button:active:not(:disabled) { transform: scale(0.975); }
-        .body-cinema-button:focus-visible { outline: 2px solid ${GOLD}; outline-offset: 3px; }
-        @media (prefers-reduced-motion: reduce) { .body-cinema-spin { animation: none; } .body-cinema-button { transition: none; } }
+        .body-cinema-page { min-height: 100vh; padding-bottom: 72px; background: var(--bg-void, #0A0A0A); color: var(--text-primary, #fff); }
+        .body-cinema-shell { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+        .body-cinema-top { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:72px; border-bottom:1px solid var(--border-subtle, rgba(255,255,255,.08)); }
+        .body-cinema-back { color:var(--text-secondary, rgba(255,255,255,.6)); display:inline-flex; gap:8px; align-items:center; text-decoration:none; font-size:13px; }
+        .body-cinema-hero { position:relative; min-height:290px; overflow:hidden; border-bottom:1px solid var(--border-subtle, rgba(255,255,255,.08)); background:linear-gradient(135deg,#16120a,#0A0A0A 62%); }
+        .body-cinema-hero::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,rgba(0,0,0,.94),rgba(0,0,0,.58) 54%,rgba(0,0,0,.88)); pointer-events:none; }
+        .body-cinema-hero__reference { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.42; }
+        .body-cinema-hero__copy { position:relative; z-index:1; max-width:690px; padding:58px 0 48px; }
+        .body-cinema-hero h1 { margin:8px 0 14px; max-width:600px; }
+        .body-cinema-hero p { max-width:620px; color:var(--text-secondary,rgba(255,255,255,.65)); margin:0; }
+        .body-cinema-reference-label { color:var(--accent-gold,#C9A84C) !important; }
+        .body-cinema-layout { display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:20px; padding-top:28px; }
+        .body-cinema-main { min-width:0; display:grid; gap:20px; }
+        .body-cinema-side { display:grid; align-content:start; gap:14px; }
+        .body-cinema-panel { padding:22px; }
+        .body-cinema-panel h2, .body-cinema-panel h3 { margin:5px 0 10px; }
+        .body-cinema-panel > p { color:var(--text-secondary,rgba(255,255,255,.65)); margin:0; }
+        .body-cinema-state { padding:20px; border-left:2px solid var(--accent-cyan,#00D9FF); }
+        .body-cinema-state--gold { border-left-color:var(--accent-gold,#C9A84C); }
+        .body-cinema-state--danger { border-left-color:var(--danger,#FF3B3B); }
+        .body-cinema-state--success { border-left-color:var(--success,#00FF94); }
+        .body-cinema-state .eyebrow, .body-cinema-panel .eyebrow { margin:0; color:var(--accent-cyan,#00D9FF); }
+        .body-cinema-state--gold .eyebrow { color:var(--accent-gold,#C9A84C); }
+        .body-cinema-state--danger .eyebrow { color:var(--danger,#FF3B3B); }
+        .body-cinema-state--success .eyebrow { color:var(--success,#00FF94); }
+        .body-cinema-state h2 { margin:7px 0; }
+        .body-cinema-state p:last-child { margin:0; color:var(--text-secondary,rgba(255,255,255,.65)); }
+        .body-cinema-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+        .body-cinema-actions .cv-cta, .body-cinema-actions .cv-cta-outline { min-height:52px; }
+        .body-cinema-quiet-button { min-height:44px; border:1px solid var(--border-medium,rgba(255,255,255,.15)); border-radius:2px; background:var(--bg-surface,#1A1A1A); color:var(--text-primary,#fff); padding:0 15px; cursor:pointer; font-family:"DM Sans",sans-serif; font-size:13px; }
+        .body-cinema-quiet-button:disabled { opacity:.46; cursor:not-allowed; }
+        .body-cinema-form { display:grid; gap:16px; margin-top:20px; }
+        .body-cinema-form label, .body-cinema-fieldset legend { display:grid; gap:7px; color:var(--text-primary,#fff); font-size:13px; font-weight:600; }
+        .body-cinema-fieldset { margin:0; padding:0; border:0; display:grid; gap:9px; }
+        .body-cinema-fieldset legend { padding:0; }
+        .body-cinema-checkbox { display:flex !important; align-items:flex-start; gap:10px; color:var(--text-secondary,rgba(255,255,255,.65)) !important; font-weight:400 !important; line-height:1.5; }
+        .body-cinema-checkbox input { width:18px; height:18px; flex:none; margin-top:2px; accent-color:var(--accent-cyan,#00D9FF); }
+        .body-cinema-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+        .body-cinema-grid--four { grid-template-columns:repeat(4,minmax(0,1fr)); }
+        .body-cinema-emphasis { display:flex; flex-wrap:wrap; gap:8px; }
+        .body-cinema-emphasis label { display:flex; align-items:center; gap:7px; min-height:38px; padding:0 10px; border:1px solid var(--border-medium,rgba(255,255,255,.15)); background:var(--bg-void,#0A0A0A); }
+        .body-cinema-emphasis input { accent-color:var(--accent-cyan,#00D9FF); }
+        .body-cinema-help { color:var(--text-muted,rgba(255,255,255,.42)) !important; font-size:12px; line-height:1.55; }
+        .body-cinema-source-select { display:grid; grid-template-columns:72px minmax(0,1fr); gap:16px; align-items:center; }
+        .body-cinema-source-icon { width:60px; height:60px; display:grid; place-items:center; border:1px solid var(--accent-cyan-border,rgba(0,217,255,.3)); color:var(--accent-cyan,#00D9FF); background:var(--accent-cyan-dim,rgba(0,217,255,.12)); }
+        .body-cinema-source-select strong { display:block; margin-bottom:4px; overflow-wrap:anywhere; }
+        .body-cinema-source-select p { margin:0; color:var(--text-secondary,rgba(255,255,255,.65)); font-size:12px; line-height:1.45; }
+        .body-cinema-upload { border-top:1px solid var(--border-subtle,rgba(255,255,255,.08)); margin-top:18px; padding-top:18px; }
+        .body-cinema-references { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+        .body-cinema-reference-card { padding:16px; min-width:0; }
+        .body-cinema-reference-card strong { display:block; margin:5px 0; overflow-wrap:anywhere; }
+        .body-cinema-reference-card > p { margin:0 0 12px; color:var(--text-secondary,rgba(255,255,255,.65)); }
+        .body-cinema-hash { display:grid; gap:5px; border-top:1px solid var(--border-subtle,rgba(255,255,255,.08)); padding-top:10px; }
+        .body-cinema-hash span { color:var(--text-muted,rgba(255,255,255,.42)); font:10px "Space Mono",monospace; letter-spacing:.12em; text-transform:uppercase; }
+        .body-cinema-hash code { color:var(--accent-cyan,#00D9FF); font-size:11px; overflow:hidden; text-overflow:ellipsis; }
+        .body-cinema-preview { width:100%; max-height:430px; margin-top:18px; background:#000; border:1px solid var(--border-subtle,rgba(255,255,255,.08)); object-fit:contain; }
+        .body-cinema-unavailable { margin-top:16px; padding:15px; border:1px dashed var(--border-medium,rgba(255,255,255,.15)); color:var(--text-secondary,rgba(255,255,255,.65)); font-size:12px; line-height:1.55; }
+        .body-cinema-list { display:grid; gap:8px; }
+        .body-cinema-list a { display:grid; gap:4px; padding:12px; border:1px solid var(--border-subtle,rgba(255,255,255,.08)); background:var(--bg-surface,#1A1A1A); color:var(--text-primary,#fff); text-decoration:none; }
+        .body-cinema-list a:hover, .body-cinema-list a:focus-visible { border-color:var(--accent-cyan-border,rgba(0,217,255,.3)); }
+        .body-cinema-list strong { font-size:12px; overflow-wrap:anywhere; }
+        .body-cinema-list span { color:var(--text-muted,rgba(255,255,255,.42)); font:10px "Space Mono",monospace; letter-spacing:.1em; text-transform:uppercase; }
+        .body-cinema-error { padding:14px; border:1px solid rgba(255,59,59,.45); background:rgba(255,59,59,.08); color:#ffd0d0; }
+        .body-cinema-accepted { border-color:var(--accent-gold-border,rgba(201,168,76,.3)); }
+        @media (max-width: 800px) { .body-cinema-layout { grid-template-columns:1fr; } .body-cinema-side { order:-1; } .body-cinema-hero__copy { padding:42px 0 36px; } }
+        @media (max-width: 580px) { .body-cinema-shell { width:min(100% - 24px,1120px); } .body-cinema-hero { min-height:245px; } .body-cinema-grid, .body-cinema-grid--four, .body-cinema-references { grid-template-columns:1fr; } .body-cinema-top { min-height:60px; } }
+        @media (prefers-reduced-motion: reduce) { .body-cinema-hero__reference { display:none; } }
       `}</style>
 
-      <header style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(7,7,7,0.94)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(16px)" }}>
-        <div style={{ maxWidth: 620, margin: "0 auto", padding: "12px 16px", display: "flex", alignItems: "center", gap: 14 }}>
-          <Link href="/vault-x" aria-label="Back to VaultX" style={{ color: MUTED, display: "inline-flex", alignItems: "center" }}><ArrowLeft size={19} /></Link>
-          <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontFamily: "Bebas Neue, sans-serif", fontSize: 21, letterSpacing: "0.06em" }}>Body <span style={{ color: GOLD }}>Cinema</span></p>
-            <p style={{ margin: "1px 0 0", color: MUTED, fontSize: 10 }}>Shape your video into a cinematic drop plan.</p>
-          </div>
-          {step === "review" && <button type="button" className="body-cinema-button" onClick={reset} style={{ border: `1px solid ${BORDER}`, background: "transparent", color: "#fff", borderRadius: 999, padding: "7px 11px", fontSize: 11, cursor: "pointer" }}>New source</button>}
-        </div>
-        <div style={{ maxWidth: 620, margin: "0 auto", padding: "0 16px 11px", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
-          {STEP_ORDER.map((item, index) => {
-            const active = item === step;
-            const complete = stepIndex(step) > index;
-            return <div key={item} aria-current={active ? "step" : undefined}><div style={{ height: 3, borderRadius: 3, background: complete ? GREEN : active ? GOLD : BORDER, marginBottom: 5 }} /><p style={{ margin: 0, textAlign: "center", fontSize: 9, color: active ? "#fff" : complete ? GREEN : MUTED }}>{STEP_LABELS[item]}</p></div>;
-          })}
-        </div>
+      <header className="body-cinema-shell body-cinema-top">
+        <Link
+          href="/vault-x"
+          className="body-cinema-back"
+          aria-label="Back to VaultX"
+        >
+          <ArrowLeft size={16} aria-hidden="true" /> Back to VaultX
+        </Link>
+        <p className="eyebrow">Body Cinema · Phase A</p>
       </header>
 
-      <MediaPicker
-        open={mediaLibraryOpen}
-        onClose={() => setMediaLibraryOpen(false)}
-        onConfirm={(assets) => void handleExistingMediaSelection(assets)}
-        mode="single"
-        title="Your Vault"
-        subtitle="Choose a video you have already uploaded. Body Cinema will analyze this exact source."
-        confirmLabel="Use this video"
-        assetEligibility={isEligibleBodyCinemaSource}
-      />
-      <main style={{ maxWidth: 620, margin: "0 auto", padding: "24px 16px" }}>
-        {step === "upload" && (
-          <section style={{ animation: "fadeIn 0.6s cubic-bezier(0.23,1,0.32,1)" }}>
-            <div style={{ position: "relative", borderRadius: 24, overflow: "hidden", marginBottom: 32, border: `1px solid ${BORDER}`, boxShadow: "0 20px 40px rgba(0,0,0,0.6)" }}>
-              <video src={HOMEPAGE_MEDIA.homepageMotionPilot.livePath} autoPlay loop muted playsInline preload="metadata" style={{ width: "100%", display: "block" }} />
-              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 24, background: "linear-gradient(to top, rgba(0,0,0,0.9), transparent)" }}>
-                <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 8px", textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>CreatorVault Motion Reference</p>
-                <h1 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 48, letterSpacing: "0.025em", lineHeight: 0.98, margin: 0, textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>Your Body.<br /><span style={{ color: GOLD }}>Your Empire.</span></h1>
-              </div>
-            </div>
-            
-            <p style={{ fontSize: 16, color: "#fff", lineHeight: 1.65, margin: "0 0 20px", textAlign: "center", fontWeight: 500 }}>Start with a video you already have in CreatorVault. We read its movement and framing, then help you choose a cinematic plan for your next drop.</p>
-            {existingVideosQuery.isLoading && <p style={{ color: GOLD, fontSize: 12, textAlign: "center", margin: "-8px 0 20px" }}>Finding your saved videos…</p>}
-            {!existingVideosQuery.isLoading && Array.isArray(existingVideosQuery.data) && existingVideosQuery.data.some(isEligibleBodyCinemaSource) && <p style={{ color: GREEN, fontSize: 12, textAlign: "center", margin: "-8px 0 20px" }}>Your verified original footage is ready. You can choose it below.</p>}
-            {!existingVideosQuery.isLoading && Array.isArray(existingVideosQuery.data) && existingVideosQuery.data.length > 0 && !existingVideosQuery.data.some(isEligibleBodyCinemaSource) && <p style={{ color: GOLD, fontSize: 12, textAlign: "center", margin: "-8px 0 20px" }}>Your saved footage is protected. CreatorVault is confirming the original source record before Body Cinema touches it.</p>}
+      <section className="body-cinema-hero">
+        <video
+          className="body-cinema-hero__reference"
+          src="/videos/homepage-motion-pilot.mp4"
+          muted
+          autoPlay
+          loop
+          playsInline
+          preload="metadata"
+          aria-label="CreatorVault motion reference, not a candidate"
+        />
+        <div className="body-cinema-shell body-cinema-hero__copy">
+          <p className="eyebrow body-cinema-reference-label">
+            CreatorVault cinematic reference — not a candidate
+          </p>
+          <h1 className="cv-heading display-md">
+            ONE SOURCE. ONE CANDIDATE. ONE CREATOR DECISION.
+          </h1>
+          <p className="body-lg">
+            Build a durable Crown Reveal plan around one creator-owned original.
+            This workspace never renders, publishes, sells, shares, or requests
+            a provider output.
+          </p>
+        </div>
+      </section>
 
-            <button type="button" className="body-cinema-button" onClick={() => setMediaLibraryOpen(true)} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, minHeight: 150, padding: 24, borderRadius: 24, border: `1px solid ${GOLD_BORDER}`, background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, cursor: "pointer", textAlign: "center", boxShadow: "0 8px 30px rgba(213,183,96,0.1)", color: "#fff" }}>
-              <div style={{ width: 58, height: 58, borderRadius: 18, background: `linear-gradient(135deg, ${GOLD}, #b09140)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(213,183,96,0.25)" }}><Film size={26} color="#080808" /></div>
-              <div><p style={{ fontSize: 20, fontWeight: 900, margin: 0 }}>Choose from your Vault</p><p style={{ fontSize: 13, color: MUTED, margin: "6px 0 0" }}>Your verified original footage appears here automatically</p></div>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 7, color: GREEN, fontSize: 11, fontWeight: 800 }}><ShieldCheck size={14} /> Your videos stay attached to your account</div>
-            </button>
+      <main className="body-cinema-shell body-cinema-layout">
+        <div className="body-cinema-main">
+          <QueryError
+            error={
+              lifecycleQuery.error ??
+              lifecycleListQuery.error ??
+              handoffQuery.error ??
+              playbackQuery.error
+            }
+          />
 
-            <div style={{ margin: "44px -16px 0", padding: "32px 16px", background: "linear-gradient(180deg, rgba(213,183,96,0.06), transparent)", borderTop: `1px solid ${BORDER}` }}>
-              <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", textAlign: "center", margin: "0 0 10px" }}>Choose your cinematic direction</p>
-              <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 38, lineHeight: 0.95, letterSpacing: "0.03em", textAlign: "center", margin: "0 0 12px" }}>Your source decides<br /><span style={{ color: GOLD }}>what hits hardest.</span></h2>
-              <p style={{ maxWidth: 440, margin: "0 auto 24px", color: MUTED, fontSize: 13, lineHeight: 1.55, textAlign: "center" }}>Body Cinema reads your real footage first, then brings forward the directions that fit it. A finished version of your own footage appears only after it is made and accepted.</p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-                {QUICK_PRESETS.map(preset => (
-                  <div key={`showcase-${preset.id}`} style={{ minHeight: 138, borderRadius: 16, background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 8px 20px rgba(0,0,0,0.35)", padding: 16, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <Film size={18} color={GOLD} />
-                    <div>
-                      <p style={{ margin: 0, color: "#fff", fontSize: 15, fontWeight: 900 }}>{preset.name}</p>
-                      <p style={{ margin: "5px 0 0", color: GOLD, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 800 }}>{preset.focus}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ position: "relative", overflow: "hidden", borderRadius: 20, marginTop: 20, aspectRatio: "9 / 16", maxHeight: 520, background: "#000", border: `1px solid ${GOLD_BORDER}`, boxShadow: "0 14px 36px rgba(213,183,96,0.12)" }}>
-                <video src={HOMEPAGE_MEDIA.premiumUnlockVisual.livePath} autoPlay loop muted playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.05) 65%)" }} />
-                <div style={{ position: "absolute", left: 20, right: 20, bottom: 20 }}>
-                  <p style={{ margin: 0, color: GOLD, fontSize: 10, fontFamily: "monospace", letterSpacing: "0.16em", textTransform: "uppercase" }}>CreatorVault Motion Reference</p>
-                  <p style={{ margin: "8px 0 0", color: "#fff", fontSize: 24, fontWeight: 900, lineHeight: 1.05 }}>Your Body Cinema result belongs here only after it is real.</p>
-                  <p style={{ margin: "8px 0 0", color: "rgba(255,255,255,0.75)", fontSize: 12, lineHeight: 1.45 }}>This is an accepted CreatorVault visual reference, not a result made from your source.</p>
+          {!lifecycle && (
+            <section className="cv-panel body-cinema-panel">
+              <p className="eyebrow">01 · Exact original</p>
+              <h2 className="cv-heading heading-md">
+                Select a source. Then ask the server to qualify it.
+              </h2>
+              <p className="body-sm">
+                A selection is not qualification. The server alone checks
+                creator ownership, stored bytes, media facts, and source
+                identity.
+              </p>
+              <div
+                className="body-cinema-source-select"
+                style={{ marginTop: 20 }}
+              >
+                <div className="body-cinema-source-icon">
+                  <FileVideo size={26} aria-hidden="true" />
                 </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {step === "preset" && (
-          <section>
-            {videoUrl && <div style={{ position: "relative", borderRadius: 18, overflow: "hidden", marginBottom: 20, background: "#000", aspectRatio: "16/9", maxHeight: 290, border: `1px solid ${BORDER}` }}>
-              <video ref={videoRef} src={videoUrl} muted={isMuted} playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} />
-              <div style={{ position: "absolute", inset: "auto 10px 10px 10px", display: "flex", alignItems: "center", gap: 7 }}>
-                <button type="button" aria-label={isPlaying ? "Pause source preview" : "Play source preview"} onClick={() => isPlaying ? videoRef.current?.pause() : void videoRef.current?.play()} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(0,0,0,0.74)", border: `1px solid ${BORDER}`, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{isPlaying ? <Pause size={15} /> : <Play size={15} />}</button>
-                <button type="button" aria-label={isMuted ? "Unmute source preview" : "Mute source preview"} onClick={() => { const next = !isMuted; setIsMuted(next); if (videoRef.current) videoRef.current.muted = next; }} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(0,0,0,0.74)", border: `1px solid ${BORDER}`, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}</button>
-                <div style={{ marginLeft: "auto", background: "rgba(0,0,0,0.74)", border: `1px solid ${BORDER}`, borderRadius: 999, padding: "7px 10px", fontSize: 10, color: uploadReceipt ? GREEN : GOLD, display: "inline-flex", alignItems: "center", gap: 6 }}>{uploadReceipt ? <Check size={12} /> : <Loader2 size={12} className="body-cinema-spin" />}{uploadReceipt ? "Source verified" : `Verifying ${uploadProgress}%`}</div>
-              </div>
-            </div>}
-            <p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 6px" }}>Cinematic Direction</p>
-            <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 40, letterSpacing: "0.035em", margin: 0 }}>Set the vibe.</h2>
-            <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, margin: "8px 0 20px" }}>Choose the editorial treatment. We map the motion and lighting to fit your exact source.</p>
-            
-            {analyzingSource && (
-              <div style={{ background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 24, marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>
-                <Loader2 size={24} color={GOLD} className="body-cinema-spin" />
                 <div>
-                  <p style={{ fontSize: 15, fontWeight: 900, color: "#fff", margin: 0 }}>Reading source movement...</p>
-                  <p style={{ fontSize: 12, color: MUTED, margin: "4px 0 0" }}>Mapping framing and exposure locally.</p>
+                  <strong>
+                    {selectedSource?.originalName ??
+                      selectedSource?.fileName ??
+                      sourceAssetId ??
+                      "No source selected"}
+                  </strong>
+                  <p>
+                    {sourceAssetId
+                      ? "Explicit source selection only — not yet server qualified."
+                      : "Choose one ready video from Your Vault."}
+                  </p>
                 </div>
               </div>
-            )}
-            
-            {sourceEvidence?.analysisStatus === "verified" && <div style={{ background: `linear-gradient(145deg, ${CARD}, #0a0a0a)`, border: `1px solid rgba(69,227,138,0.35)`, borderRadius: 20, padding: 20, marginBottom: 24, boxShadow: "0 8px 30px rgba(69,227,138,0.08)" }}>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}><div><p style={{ fontSize: 11, color: GREEN, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", margin: 0, display: "flex", alignItems: "center", gap: 6 }}><Sparkles size={14} /> Analysis Complete</p><p style={{ fontSize: 13, color: MUTED, lineHeight: 1.5, margin: "6px 0 0" }}>We found the strongest moments in your clip. The treatments below are mapped to your actual movement and framing.</p></div></div>
-              {sourceEvidence.editorFindings?.insights?.length > 0 && <div style={{ marginTop: 18, borderTop: `1px solid ${BORDER}`, paddingTop: 18 }}>
-                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 13 }}>
-                  <div><p style={{ margin: 0, color: GOLD, fontSize: 10, fontFamily: "monospace", letterSpacing: "0.14em", textTransform: "uppercase" }}>Moment map</p><p style={{ margin: "5px 0 0", color: "#fff", fontSize: 14, fontWeight: 900 }}>Tap a marker. Your actual source jumps to that moment.</p></div>
-                  <span style={{ color: GREEN, fontSize: 10, fontWeight: 900, whiteSpace: "nowrap" }}>{sourceEvidence.analysisScore}/100 source read</span>
-                </div>
-                <div style={{ position: "relative", minHeight: 56, overflow: "hidden", borderRadius: 14, border: `1px solid ${BORDER}`, background: "linear-gradient(90deg, rgba(213,183,96,0.12), rgba(0,0,0,0.56) 42%, rgba(99,217,245,0.10))", marginBottom: 12 }}>
-                  <div style={{ position: "absolute", left: 12, right: 12, top: "50%", height: 1, background: "rgba(255,255,255,0.20)" }} />
-                  {sourceEvidence.editorFindings.insights.map((insight: any) => {
-                    const isWeak = insight.id === "weakest";
-                    const active = activeInsightId === insight.id;
-                    const left = `${Math.min(96, Math.max(2, (Number(insight.timestampMs || 0) / sourceDurationMs) * 96 + 2))}%`;
-                    return <button key={`marker-${insight.id}`} type="button" onClick={() => jumpToSourceMoment(insight)} aria-label={`Watch ${insight.label} at ${formatMoment(insight.timestampMs)}`} style={{ position: "absolute", left, top: "50%", transform: "translate(-50%, -50%)", width: active ? 31 : 25, height: active ? 31 : 25, padding: 0, borderRadius: 999, border: `2px solid ${active ? "#fff" : isWeak ? RED : GOLD}`, background: active ? (isWeak ? RED : GOLD) : "#090909", color: active ? "#090909" : isWeak ? RED : GOLD, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: active ? `0 0 0 5px ${isWeak ? "rgba(255,124,124,0.16)" : "rgba(213,183,96,0.18)"}` : "0 4px 12px rgba(0,0,0,0.55)", transition: "all 160ms cubic-bezier(0.23,1,0.32,1)", zIndex: active ? 3 : 2 }}><span style={{ fontSize: 8, fontWeight: 950 }}>{formatMoment(insight.timestampMs).replace("s", "")}</span></button>;
-                  })}
-                  <span style={{ position: "absolute", left: 10, bottom: 7, color: MUTED, fontSize: 9 }}>0:00</span><span style={{ position: "absolute", right: 10, bottom: 7, color: MUTED, fontSize: 9 }}>{formatMoment(sourceDurationMs)}</span>
-                </div>
-                <div style={{ display: "grid", gap: 8 }}>
-                  {sourceEvidence.editorFindings.insights.map((insight: any) => {
-                    const isWeak = insight.id === "weakest";
-                    const active = activeInsightId === insight.id;
-                    return <button key={insight.id} type="button" className="body-cinema-button" onClick={() => jumpToSourceMoment(insight)} style={{ width: "100%", padding: "13px 14px", textAlign: "left", background: active ? (isWeak ? "rgba(255,124,124,0.10)" : "rgba(213,183,96,0.12)") : "rgba(0,0,0,0.38)", border: `1px solid ${active ? (isWeak ? "rgba(255,124,124,0.52)" : GOLD_BORDER) : (isWeak ? "rgba(255,124,124,0.26)" : BORDER)}`, borderRadius: 14, color: "#fff", cursor: "pointer" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}><span style={{ color: isWeak ? "#ffb2b2" : "#fff", fontSize: 12, fontWeight: 950 }}>{insight.label}</span><span style={{ color: isWeak ? RED : GOLD, fontSize: 11, fontWeight: 900, whiteSpace: "nowrap" }}>{formatMoment(insight.timestampMs)} · Watch</span></div>
-                      <p style={{ margin: "8px 0 0", color: "rgba(255,255,255,0.75)", fontSize: 11, lineHeight: 1.45 }}>{insight.why}</p>
-                      <p style={{ margin: "6px 0 0", color: isWeak ? "#ffb2b2" : GREEN, fontSize: 10, lineHeight: 1.42, fontWeight: 800 }}>{insight.action}</p>
-                    </button>;
-                  })}
-                </div>
-              </div>}
-              <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
-                {sourceEvidence.directions?.map((dir: any) => (
-                  <div key={dir.id} style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${BORDER}`, borderRadius: 12, padding: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <p style={{ margin: 0, color: "#fff", fontSize: 14, fontWeight: 900 }}>{dir.label}</p>
-                      <span style={{ background: "rgba(213,183,96,0.15)", color: GOLD, padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 800 }}>{dir.confidence}% Match</span>
-                    </div>
-                    <p style={{ margin: "0 0 8px", color: "rgba(255,255,255,0.78)", fontSize: 11, lineHeight: 1.45 }}>{dir.grammar?.pace || dir.distinction}</p>
-                    <div style={{ display: "grid", gap: 6 }}>
-                      {dir.evidence?.map((ev: string, i: number) => (
-                        <p key={i} style={{ margin: 0, color: MUTED, fontSize: 11, display: "flex", gap: 6 }}><span style={{ color: GOLD }}>•</span> {ev}</p>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>}
-            
-            {sourceEvidence?.analysisStatus === "rejected" && <div style={{ background: "rgba(255,124,124,0.1)", border: "1px solid rgba(255,124,124,0.3)", borderRadius: 16, padding: 16, marginBottom: 20, color: RED, fontSize: 13, lineHeight: 1.5 }}>{(sourceEvidence.rejectionReasons || ["We need a clearer clip to build a high-quality drop."]).map((reason: string) => <p key={reason} style={{ margin: "4px 0" }}>{reason}</p>)}</div>}
-            
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-              {QUICK_PRESETS.map(preset => (
-                <button key={preset.id} type="button" className="body-cinema-button" onClick={() => void handleSelectPreset(preset)} disabled={analyzingSource || sourceEvidence?.analysisStatus !== "verified"} style={{ minHeight: 240, padding: 20, textAlign: "left", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, color: "#fff", cursor: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? "not-allowed" : "pointer", opacity: analyzingSource || sourceEvidence?.analysisStatus !== "verified" ? 0.4 : 1, boxShadow: "0 4px 15px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                  <div><Film size={20} color={GOLD} /><span style={{ display: "inline-block", marginTop: 14, background: GOLD_DIM, border: `1px solid ${GOLD_BORDER}`, padding: "4px 10px", borderRadius: 999, fontSize: 9, color: GOLD, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase" }}>{preset.focus}</span></div>
-                  <div>
-                    <p style={{ fontSize: 20, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.01em" }}>{preset.name}</p>
-                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", lineHeight: 1.4, margin: 0 }}>{preset.direction}</p>
-                  </div>
+              {sourcePreviewUrl && (
+                <video
+                  className="body-cinema-preview"
+                  src={sourcePreviewUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  aria-label="Selected source preview"
+                />
+              )}
+              <div className="body-cinema-actions">
+                <button
+                  type="button"
+                  className="cv-cta"
+                  onClick={() => setMediaPickerOpen(true)}
+                  disabled={uploading}
+                >
+                  <Film size={17} aria-hidden="true" /> Choose from Your Vault
                 </button>
+              </div>
+
+              <div className="body-cinema-upload">
+                <p className="eyebrow">Manual upload</p>
+                <p className="body-sm">
+                  Upload saves a video into Your Vault only. It does not select
+                  or qualify the upload for this lifecycle.
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="video/*"
+                  onChange={handleUpload}
+                  hidden
+                />
+                <div className="body-cinema-actions">
+                  <button
+                    type="button"
+                    className="body-cinema-quiet-button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? (
+                      <Loader2
+                        className="body-cinema-spin"
+                        size={16}
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <Upload size={16} aria-hidden="true" />
+                    )}
+                    {uploading
+                      ? `Saving source ${uploadProgress}%`
+                      : "Save video to Your Vault"}
+                  </button>
+                </div>
+                {uploadedSource && (
+                  <p className="body-cinema-help">
+                    Saved source record: {uploadedSource.filename}. Open Your
+                    Vault and select its exact asset before qualification.
+                  </p>
+                )}
+              </div>
+
+              {sourceAssetId && (
+                <div className="body-cinema-form">
+                  <p className="eyebrow">Versioned creator assertion</p>
+                  <p className="body-cinema-help">
+                    This is your self-attestation. It is not independent
+                    verification of rights, age, identity, ownership, or
+                    consent.
+                  </p>
+                  <label className="body-cinema-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={ownSource}
+                      onChange={event => setOwnSource(event.target.checked)}
+                    />
+                    I assert that I own or control this exact original source.
+                  </label>
+                  <label className="body-cinema-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={performerLikenessConsent}
+                      onChange={event =>
+                        setPerformerLikenessConsent(event.target.checked)
+                      }
+                    />
+                    I assert performer and likeness consent for this Crown
+                    Reveal candidate-review scope.
+                  </label>
+                  <label className="body-cinema-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={acknowledgesNoIndependentVerification}
+                      onChange={event =>
+                        setAcknowledgesNoIndependentVerification(
+                          event.target.checked
+                        )
+                      }
+                    />
+                    I understand CreatorVault records this as creator asserted,
+                    not independently verified.
+                  </label>
+                  <label>
+                    Intended use
+                    <select
+                      className="cv-input"
+                      value={intendedUse}
+                      onChange={event =>
+                        setIntendedUse(event.target.value as IntendedUse | "")
+                      }
+                    >
+                      <option value="">Select intended use</option>
+                      <option value="private_candidate_review">
+                        Private candidate review
+                      </option>
+                      <option value="accepted_master_and_trailer_plan">
+                        Accepted master and Trailer Maker plan
+                      </option>
+                    </select>
+                  </label>
+                  <p className="body-cinema-help">
+                    Recorded scope: <code>crown_reveal_candidate_review</code>.
+                    No age checkbox or independent-verification claim is used
+                    here.
+                  </p>
+                  <div className="body-cinema-actions">
+                    <button
+                      type="button"
+                      className="cv-cta"
+                      onClick={() => void qualifySelectedSource()}
+                      disabled={isBusy}
+                    >
+                      {qualifyMutation.isPending ? (
+                        <Loader2
+                          className="body-cinema-spin"
+                          size={17}
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <ShieldCheck size={17} aria-hidden="true" />
+                      )}
+                      Qualify selected source
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          {lifecycle && (
+            <>
+              <BodyCinemaLifecycleStatic state={lifecycle.state} />
+              <LifecycleReferences record={lifecycle} />
+
+              {lifecycle.state === "qualified" && (
+                <section className="cv-panel body-cinema-panel">
+                  <p className="eyebrow">02 · Crown Reveal treatment</p>
+                  <h2 className="cv-heading heading-md">
+                    Freeze one source-bound plan.
+                  </h2>
+                  <p className="body-sm">
+                    The selected moment must remain inside the server-verified
+                    actual source duration:{" "}
+                    <strong>{formatSeconds(sourceDuration)}</strong>. No media
+                    is made by freezing this plan.
+                  </p>
+                  <div className="body-cinema-form">
+                    <div className="body-cinema-grid">
+                      <label>
+                        Intended feeling
+                        <textarea
+                          className="cv-input"
+                          value={treatment.feeling}
+                          onChange={event =>
+                            setTreatment(current => ({
+                              ...current,
+                              feeling: event.target.value,
+                            }))
+                          }
+                          maxLength={280}
+                        />
+                      </label>
+                      <label>
+                        Opening
+                        <textarea
+                          className="cv-input"
+                          value={treatment.opening}
+                          onChange={event =>
+                            setTreatment(current => ({
+                              ...current,
+                              opening: event.target.value,
+                            }))
+                          }
+                          maxLength={600}
+                        />
+                      </label>
+                      <label>
+                        Hook
+                        <textarea
+                          className="cv-input"
+                          value={treatment.hook}
+                          onChange={event =>
+                            setTreatment(current => ({
+                              ...current,
+                              hook: event.target.value,
+                            }))
+                          }
+                          maxLength={600}
+                        />
+                      </label>
+                      <label>
+                        Source-moment rationale
+                        <textarea
+                          className="cv-input"
+                          value={treatment.sourceMomentRationale}
+                          onChange={event =>
+                            setTreatment(current => ({
+                              ...current,
+                              sourceMomentRationale: event.target.value,
+                            }))
+                          }
+                          maxLength={800}
+                        />
+                      </label>
+                    </div>
+                    <div className="body-cinema-grid">
+                      <label>
+                        Moment start (seconds)
+                        <input
+                          className="cv-input"
+                          value={treatment.sourceMomentStart}
+                          onChange={event =>
+                            setTreatment(current => ({
+                              ...current,
+                              sourceMomentStart: event.target.value,
+                            }))
+                          }
+                          inputMode="decimal"
+                          type="number"
+                          min="0"
+                          step="0.1"
+                        />
+                      </label>
+                      <label>
+                        Moment end (seconds)
+                        <input
+                          className="cv-input"
+                          value={treatment.sourceMomentEnd}
+                          onChange={event =>
+                            setTreatment(current => ({
+                              ...current,
+                              sourceMomentEnd: event.target.value,
+                            }))
+                          }
+                          inputMode="decimal"
+                          type="number"
+                          min="0"
+                          step="0.1"
+                        />
+                      </label>
+                    </div>
+                    <fieldset className="body-cinema-fieldset">
+                      <legend>Creator-approved body / face emphasis</legend>
+                      <div className="body-cinema-emphasis">
+                        {EMPHASIS_OPTIONS.map(option => (
+                          <label key={option.value}>
+                            <input
+                              type="checkbox"
+                              checked={emphasis.includes(option.value)}
+                              onChange={() => toggleEmphasis(option.value)}
+                            />
+                            {option.label}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                    <fieldset className="body-cinema-fieldset">
+                      <legend>
+                        Crop boundaries (0–1 relative to the original source
+                        frame)
+                      </legend>
+                      <div className="body-cinema-grid body-cinema-grid--four">
+                        <label>
+                          Left
+                          <input
+                            className="cv-input"
+                            value={treatment.cropLeft}
+                            onChange={event =>
+                              setTreatment(current => ({
+                                ...current,
+                                cropLeft: event.target.value,
+                              }))
+                            }
+                            inputMode="decimal"
+                            type="number"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                          />
+                        </label>
+                        <label>
+                          Top
+                          <input
+                            className="cv-input"
+                            value={treatment.cropTop}
+                            onChange={event =>
+                              setTreatment(current => ({
+                                ...current,
+                                cropTop: event.target.value,
+                              }))
+                            }
+                            inputMode="decimal"
+                            type="number"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                          />
+                        </label>
+                        <label>
+                          Width
+                          <input
+                            className="cv-input"
+                            value={treatment.cropWidth}
+                            onChange={event =>
+                              setTreatment(current => ({
+                                ...current,
+                                cropWidth: event.target.value,
+                              }))
+                            }
+                            inputMode="decimal"
+                            type="number"
+                            min="0.01"
+                            max="1"
+                            step="0.01"
+                          />
+                        </label>
+                        <label>
+                          Height
+                          <input
+                            className="cv-input"
+                            value={treatment.cropHeight}
+                            onChange={event =>
+                              setTreatment(current => ({
+                                ...current,
+                                cropHeight: event.target.value,
+                              }))
+                            }
+                            inputMode="decimal"
+                            type="number"
+                            min="0.01"
+                            max="1"
+                            step="0.01"
+                          />
+                        </label>
+                      </div>
+                    </fieldset>
+                    <div className="body-cinema-grid">
+                      <label>
+                        Natural rhythm
+                        <textarea
+                          className="cv-input"
+                          value={treatment.naturalRhythm}
+                          onChange={event =>
+                            setTreatment(current => ({
+                              ...current,
+                              naturalRhythm: event.target.value,
+                            }))
+                          }
+                          maxLength={600}
+                        />
+                      </label>
+                      <label>
+                        Color and light
+                        <textarea
+                          className="cv-input"
+                          value={treatment.colorLight}
+                          onChange={event =>
+                            setTreatment(current => ({
+                              ...current,
+                              colorLight: event.target.value,
+                            }))
+                          }
+                          maxLength={600}
+                        />
+                      </label>
+                      <label>
+                        Typography
+                        <textarea
+                          className="cv-input"
+                          value={treatment.typography}
+                          onChange={event =>
+                            setTreatment(current => ({
+                              ...current,
+                              typography: event.target.value,
+                            }))
+                          }
+                          maxLength={600}
+                        />
+                      </label>
+                      <label>
+                        Ending
+                        <textarea
+                          className="cv-input"
+                          value={treatment.ending}
+                          onChange={event =>
+                            setTreatment(current => ({
+                              ...current,
+                              ending: event.target.value,
+                            }))
+                          }
+                          maxLength={600}
+                        />
+                      </label>
+                    </div>
+                    <fieldset className="body-cinema-fieldset">
+                      <legend>Automatic reject conditions</legend>
+                      <label>
+                        Condition one
+                        <input
+                          className="cv-input"
+                          value={treatment.rejectionOne}
+                          onChange={event =>
+                            setTreatment(current => ({
+                              ...current,
+                              rejectionOne: event.target.value,
+                            }))
+                          }
+                          maxLength={400}
+                        />
+                      </label>
+                      <label>
+                        Condition two
+                        <input
+                          className="cv-input"
+                          value={treatment.rejectionTwo}
+                          onChange={event =>
+                            setTreatment(current => ({
+                              ...current,
+                              rejectionTwo: event.target.value,
+                            }))
+                          }
+                          maxLength={400}
+                        />
+                      </label>
+                      <label>
+                        Condition three
+                        <input
+                          className="cv-input"
+                          value={treatment.rejectionThree}
+                          onChange={event =>
+                            setTreatment(current => ({
+                              ...current,
+                              rejectionThree: event.target.value,
+                            }))
+                          }
+                          maxLength={400}
+                        />
+                      </label>
+                    </fieldset>
+                    <fieldset className="body-cinema-fieldset">
+                      <legend>Proposed 9:16 output plan</legend>
+                      <p className="body-cinema-help">
+                        Enter only a source-supported proposal. No default size
+                        or duration is assumed, no upscale is allowed, and this
+                        does not render an output.
+                      </p>
+                      <div className="body-cinema-grid">
+                        <label>
+                          Width (pixels)
+                          <input
+                            className="cv-input"
+                            value={treatment.outputWidth}
+                            onChange={event =>
+                              setTreatment(current => ({
+                                ...current,
+                                outputWidth: event.target.value,
+                              }))
+                            }
+                            inputMode="numeric"
+                            type="number"
+                            min="240"
+                            step="1"
+                          />
+                        </label>
+                        <label>
+                          Height (pixels)
+                          <input
+                            className="cv-input"
+                            value={treatment.outputHeight}
+                            onChange={event =>
+                              setTreatment(current => ({
+                                ...current,
+                                outputHeight: event.target.value,
+                              }))
+                            }
+                            inputMode="numeric"
+                            type="number"
+                            min="426"
+                            step="1"
+                          />
+                        </label>
+                        <label>
+                          Duration (seconds)
+                          <input
+                            className="cv-input"
+                            value={treatment.outputDuration}
+                            onChange={event =>
+                              setTreatment(current => ({
+                                ...current,
+                                outputDuration: event.target.value,
+                              }))
+                            }
+                            inputMode="decimal"
+                            type="number"
+                            min="1"
+                            step="0.1"
+                          />
+                        </label>
+                      </div>
+                      <p className="body-cinema-help">
+                        Original sound is preserved. Proposed container: MP4 /
+                        H.264. No synthetic repeats.
+                      </p>
+                    </fieldset>
+                    <div className="body-cinema-actions">
+                      <button
+                        type="button"
+                        className="cv-cta"
+                        onClick={() => void freezePlan()}
+                        disabled={isBusy}
+                      >
+                        {freezeMutation.isPending ? (
+                          <Loader2
+                            className="body-cinema-spin"
+                            size={17}
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <ShieldCheck size={17} aria-hidden="true" />
+                        )}{" "}
+                        Freeze Crown Reveal plan
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {lifecycle.state === "frozen" && (
+                <section className="cv-panel body-cinema-panel">
+                  <p className="eyebrow">03 · Candidate slot</p>
+                  <h2 className="cv-heading heading-md">
+                    Reserve the only candidate slot.
+                  </h2>
+                  <p className="body-sm">
+                    Reservation creates no candidate and sends no provider
+                    request. It only records the single future attachment
+                    boundary.
+                  </p>
+                  <div className="body-cinema-actions">
+                    <button
+                      type="button"
+                      className="cv-cta"
+                      onClick={() => void reserveCandidateSlot()}
+                      disabled={isBusy}
+                    >
+                      {reserveMutation.isPending ? (
+                        <Loader2
+                          className="body-cinema-spin"
+                          size={17}
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Check size={17} aria-hidden="true" />
+                      )}{" "}
+                      Reserve one candidate slot
+                    </button>
+                  </div>
+                </section>
+              )}
+
+              {lifecycle.state === "awaiting_candidate" && (
+                <section className="cv-panel body-cinema-panel">
+                  <p className="eyebrow">Attachment boundary</p>
+                  <h2 className="cv-heading heading-md">
+                    No attachment action is available.
+                  </h2>
+                  <p className="body-sm">
+                    This reserved slot remains empty until a future separately
+                    authorized pilot attaches one verified private candidate.
+                    There is deliberately no attachment, retry, provider,
+                    upload, publish, checkout, or sharing control here.
+                  </p>
+                </section>
+              )}
+
+              {playbackQuery.data?.sourceUrl && (
+                <section
+                  className="cv-panel body-cinema-panel"
+                  aria-label="Protected source and candidate comparison"
+                >
+                  <p className="eyebrow">Private byte-bound playback</p>
+                  <div className="body-cinema-references">
+                    <div>
+                      <h3 className="cv-heading heading-xs">
+                        Exact original source
+                      </h3>
+                      <video
+                        key={`${lifecycle.id}:source`}
+                        className="body-cinema-preview"
+                        src={playbackQuery.data.sourceUrl}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        aria-label="Protected original source"
+                        onError={() => setPlaybackFailureKey(reviewKey)}
+                      />
+                    </div>
+                    <div>
+                      <h3 className="cv-heading heading-xs">Exact candidate</h3>
+                      {playbackQuery.data.candidateUrl ? (
+                        <video
+                          key={reviewKey}
+                          className="body-cinema-preview"
+                          src={playbackQuery.data.candidateUrl}
+                          controls
+                          playsInline
+                          preload="metadata"
+                          aria-label="Protected attached candidate"
+                          onEnded={() => setCompletedCandidateKey(reviewKey)}
+                          onError={() => setPlaybackFailureKey(reviewKey)}
+                        />
+                      ) : (
+                        <p className="body-sm">
+                          No verified candidate is available. No output is
+                          claimed.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {playbackQuery.data.unavailableReason && (
+                    <p className="body-cinema-help">
+                      {playbackQuery.data.unavailableReason}
+                    </p>
+                  )}
+                </section>
+              )}
+
+              {lifecycle.state === "candidate_attached" && (
+                <section className="cv-panel body-cinema-panel">
+                  <p className="eyebrow">04 · Explicit review</p>
+                  <h2 className="cv-heading heading-md">
+                    Start review only when you can watch both files.
+                  </h2>
+                  <p className="body-sm">
+                    The lifecycle record has candidate identity and hashes.
+                    Protected playback paths are intentionally not inferred from
+                    storage or public URLs.
+                  </p>
+                  {!playbackReady && (
+                    <div className="body-cinema-unavailable">
+                      Protected playback is unavailable. Review remains blocked
+                      until the server verifies both files.
+                    </div>
+                  )}
+                  <div className="body-cinema-actions">
+                    <button
+                      type="button"
+                      className="cv-cta"
+                      onClick={() => void beginReview()}
+                      disabled={isBusy || !playbackReady}
+                    >
+                      {beginReviewMutation.isPending ? (
+                        <Loader2
+                          className="body-cinema-spin"
+                          size={17}
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Play size={17} aria-hidden="true" />
+                      )}{" "}
+                      Begin review
+                    </button>
+                  </div>
+                </section>
+              )}
+
+              {lifecycle.state === "review_in_progress" && (
+                <section className="cv-panel body-cinema-panel">
+                  <p className="eyebrow">05 · Review exact bytes</p>
+                  <h2 className="cv-heading heading-md">
+                    Compare the source and candidate by their recorded hashes.
+                  </h2>
+                  <p className="body-sm">
+                    Watch the exact private candidate, then explicitly assert
+                    that you watched it from start to finish. Playback and your
+                    assertion do not constitute independent creative-quality
+                    verification.
+                  </p>
+                  {!playbackReady && (
+                    <div className="body-cinema-unavailable">
+                      Verified candidate playback is unavailable; accept and
+                      reject are blocked.
+                    </div>
+                  )}
+                  <label
+                    className="body-cinema-checkbox"
+                    style={{ marginTop: 16 }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={watchAsserted}
+                      onChange={event =>
+                        setWatchAssertionKey(
+                          event.target.checked ? reviewKey : null
+                        )
+                      }
+                      disabled={!candidateEnded || !playbackReady}
+                    />
+                    I watched the candidate from start to finish.
+                  </label>
+                  <label className="body-cinema-form">
+                    Decision reason
+                    <textarea
+                      className="cv-input"
+                      value={decisionReason}
+                      onChange={event => setDecisionReason(event.target.value)}
+                      minLength={12}
+                      maxLength={3000}
+                      placeholder="Describe the acceptance or rejection against the frozen treatment."
+                    />
+                  </label>
+                  <div className="body-cinema-actions">
+                    <button
+                      type="button"
+                      className="cv-cta"
+                      onClick={() => void decide("accept")}
+                      disabled={
+                        isBusy ||
+                        !candidateEnded ||
+                        !watchAsserted ||
+                        !playbackReady ||
+                        decisionReason.trim().length < 12
+                      }
+                    >
+                      <Check size={17} aria-hidden="true" /> Accept exact
+                      candidate
+                    </button>
+                    <button
+                      type="button"
+                      className="body-cinema-quiet-button"
+                      onClick={() => void decide("reject")}
+                      disabled={
+                        isBusy ||
+                        !candidateEnded ||
+                        !watchAsserted ||
+                        !playbackReady ||
+                        decisionReason.trim().length < 12
+                      }
+                    >
+                      <X size={17} aria-hidden="true" /> Reject exact candidate
+                    </button>
+                  </div>
+                </section>
+              )}
+
+              {(lifecycle.state === "accepted" ||
+                lifecycle.state === "handoff_ready") && (
+                <section className="cv-panel body-cinema-panel body-cinema-accepted">
+                  <p className="eyebrow">Accepted master</p>
+                  <h2 className="cv-heading heading-md">
+                    Creator accepted master—not owner marketing approval.
+                  </h2>
+                  <p className="body-sm">
+                    The accepted master references the exact candidate hash. It
+                    does not authorize provider work, creative exports,
+                    publishing, checkout, payment, or sharing.
+                  </p>
+                  <HashReference
+                    label="Accepted candidate SHA-256"
+                    hash={lifecycle.candidate?.sha256}
+                  />
+                  <div className="body-cinema-actions">
+                    <button
+                      type="button"
+                      className="body-cinema-quiet-button"
+                      disabled={!candidateDownloadUrl}
+                      title="A server-authorized owned download URL is required."
+                      onClick={() => {
+                        if (candidateDownloadUrl)
+                          window.location.assign(candidateDownloadUrl);
+                      }}
+                    >
+                      <Download size={16} aria-hidden="true" />{" "}
+                      {candidateDownloadUrl
+                        ? "Download exact accepted master"
+                        : "Download unavailable"}
+                    </button>
+                    {lifecycle.state === "accepted" && (
+                      <button
+                        type="button"
+                        className="cv-cta"
+                        onClick={() => void createHandoff()}
+                        disabled={isBusy}
+                      >
+                        {handoffMutation.isPending ? (
+                          <Loader2
+                            className="body-cinema-spin"
+                            size={17}
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <ChevronRight size={17} aria-hidden="true" />
+                        )}{" "}
+                        Create Trailer Maker planning handoff
+                      </button>
+                    )}
+                    {handoffHref && (
+                      <a className="cv-cta-outline" href={handoffHref}>
+                        Open planning draft{" "}
+                        <ChevronRight size={17} aria-hidden="true" />
+                      </a>
+                    )}
+                  </div>
+                  {handoff && (
+                    <p className="body-cinema-help">
+                      Saved planning artifact: 8-second teaser, 12-second reel,
+                      three source-specific hooks, and caption direction.
+                      Status: planning only.
+                    </p>
+                  )}
+                </section>
+              )}
+            </>
+          )}
+        </div>
+
+        <aside
+          className="body-cinema-side"
+          aria-label="Recent Body Cinema lifecycles"
+        >
+          <section className="cv-panel body-cinema-panel">
+            <p className="eyebrow">Durable lifecycle records</p>
+            <h2 className="cv-heading heading-xs">Resume private work.</h2>
+            <p className="body-xs">
+              Choose an owned lifecycle by ID. Re-entry never selects the newest
+              source, starts analysis, creates a project, or writes to the
+              lifecycle.
+            </p>
+            <div className="body-cinema-list" style={{ marginTop: 14 }}>
+              {lifecycleListQuery.isLoading && (
+                <p className="body-cinema-help">
+                  <Loader2
+                    className="body-cinema-spin"
+                    size={14}
+                    aria-hidden="true"
+                  />{" "}
+                  Loading records…
+                </p>
+              )}
+              {!lifecycleListQuery.isLoading &&
+                !lifecycleListQuery.data?.length && (
+                  <p className="body-cinema-help">
+                    No durable Body Cinema lifecycle record exists yet.
+                  </p>
+                )}
+              {lifecycleListQuery.data?.map(record => (
+                <Link
+                  key={record.id}
+                  href={`/vault-x/studio?lifecycleId=${encodeURIComponent(record.id)}`}
+                >
+                  <span>{LIFECYCLE_COPY[record.state].eyebrow}</span>
+                  <strong>{record.source.fileName}</strong>
+                  <span>{record.id}</span>
+                </Link>
               ))}
             </div>
           </section>
-        )}
-
-        {step === "configure" && (
-          <section>
-            <button type="button" onClick={() => setStep("preset")} style={{ border: "none", background: "transparent", color: MUTED, padding: 0, marginBottom: 18, display: "inline-flex", alignItems: "center", gap: 7, cursor: "pointer", fontSize: 12 }}><ArrowLeft size={15} /> Change treatment</button>
-            <div style={{ background: GOLD_DIM, border: `1px solid ${GOLD_BORDER}`, borderRadius: 16, padding: "14px", marginBottom: 20 }}><p style={{ fontSize: 10, color: GOLD, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", margin: "0 0 5px" }}>{selectedPreset?.focus || "Custom"} treatment</p><p style={{ fontSize: 16, fontWeight: 900, margin: "0 0 4px" }}>{selectedPreset?.name || "Custom direction"}</p><p style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, margin: 0 }}>{selectedPreset?.direction || "A restrained cinematic treatment."}</p></div>
-            <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 40, letterSpacing: "0.035em", margin: "0 0 6px" }}>Prepare the drop.</h2>
-            <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, margin: "0 0 24px" }}>Set the title and confirm your ownership. We'll lock the cinematic plan so it's ready for final review.</p>
-            
-            <div style={{ background: `linear-gradient(180deg, ${CARD_SOFT}, ${CARD})`, border: `1px solid ${uploadReceipt ? "rgba(69,227,138,0.3)" : BORDER}`, borderRadius: 20, padding: 20, marginBottom: 20, boxShadow: uploadReceipt ? "0 8px 24px rgba(69,227,138,0.05)" : "none" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>{uploading ? <Loader2 size={24} color={GOLD} className="body-cinema-spin" /> : uploadReceipt ? <div style={{ background: "rgba(69,227,138,0.15)", padding: 10, borderRadius: 12 }}><ShieldCheck size={22} color={GREEN} /></div> : <FileVideo size={24} color={MUTED} />}<div style={{ flex: 1, minWidth: 0 }}><p style={{ fontSize: 15, fontWeight: 900, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{fileName || "No source selected"}</p><p style={{ fontSize: 12, color: uploadReceipt ? GREEN : GOLD, margin: "4px 0 0", fontWeight: 600 }}>{uploading ? `Securing upload… ${uploadProgress}%` : uploadReceipt ? `Verified · ${formatSeconds(uploadReceipt.durationSec)}` : "Waiting for video"}</p></div></div>
-              {uploadReceipt?.verified && (
-                <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${BORDER}`, display: "grid", gap: 10, fontSize: 12, color: MUTED }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Render Purpose</span><span>Premium PPV Teaser</span></div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Expected Output</span><span>6-second cinematic loop</span></div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Soundtrack</span><span style={{ color: audioAssetId ? GREEN : MUTED }}>{audioAssetId ? "Verified" : "None"}</span></div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#fff" }}>Estimated Cost</span><span style={{ color: GOLD, fontWeight: 800 }}>Not approved yet</span></div>
-                  <p style={{ margin: 0, color: MUTED, fontSize: 11, lineHeight: 1.5 }}>No render can start until an owner records a real credit estimate and you can see the approved cap.</p>
-                </div>
-              )}
-            </div>
-            
-            <div style={{ marginBottom: 24 }}>
-              <span style={{ fontSize: 13, color: "#fff", fontWeight: 800, display: "block", marginBottom: 8 }}>Music Direction</span>
-              <p style={{ margin: "0 0 10px", color: MUTED, fontSize: 12, lineHeight: 1.45 }}>Your newest cleared soundtrack is selected automatically. Its rhythm will shape cut moments and pacing; choose another only when this drop needs a different pulse.</p>
-              <div style={{ display: "grid", gap: 8 }}>
-                {audioLibraryQ.isLoading ? <p style={{ color: MUTED, fontSize: 12, margin: 0 }}>Loading your soundtracks...</p> : audioLibraryQ.data?.assets?.length ? audioLibraryQ.data.assets.map((asset: any) => (
-                  <button key={asset.id} type="button" onClick={() => setAudioAssetId(asset.id)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 14px", textAlign: "left", background: audioAssetId === asset.id ? GOLD_DIM : CARD, border: `1px solid ${audioAssetId === asset.id ? GOLD_BORDER : BORDER}`, borderRadius: 12, color: "#fff", cursor: asset.status === "ready" ? "pointer" : "not-allowed", opacity: asset.status === "ready" ? 1 : 0.55 }}>
-                    <span><strong style={{ display: "block", fontSize: 13 }}>🎵 {asset.title}</strong><small style={{ color: MUTED }}>{Math.round(asset.durationSeconds || 0)}s · {(asset.rights?.state || "unknown").replace(/_/g, " ")}</small></span>
-                    <span style={{ color: audioAssetId === asset.id ? GOLD : MUTED, fontSize: 11, fontWeight: 800 }}>{audioAssetId === asset.id ? "Selected" : "Choose"}</span>
-                  </button>
-                )) : <p style={{ color: MUTED, fontSize: 12, margin: 0 }}>{audioLibraryQ.data?.creatorMessage || "Add a creator-owned soundtrack in VaultX Editor to use music direction."}</p>}
-              </div>
-              {audioAssetId && audioReadinessQ.data && <p style={{ margin: "10px 0 0", color: audioReadinessQ.data.ready ? GREEN : GOLD, fontSize: 11 }}>{audioReadinessQ.data.reason}</p>}
-              {audioAssetId && audioReadinessQ.data?.analysis?.analysisStatus === "ready" && <div style={{ marginTop: 12, padding: 14, borderRadius: 14, background: "rgba(69,227,138,0.06)", border: "1px solid rgba(69,227,138,0.22)" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}><span style={{ color: "#fff", fontSize: 11, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>Rhythm direction</span><span style={{ color: GREEN, fontSize: 11, fontWeight: 800 }}>{Math.round(Number(audioReadinessQ.data.analysis.bpm || 0)) || "—"} BPM · {audioReadinessQ.data.analysis.beatTimesMs?.length || 0} cut moments</span></div>
-                <div style={{ height: 30, display: "flex", gap: 3, alignItems: "end" }}>{(audioReadinessQ.data.analysis.sections || []).map((section: any) => <div key={section.id} title={`${section.label} · ${Math.round(Number(section.energy || 0) * 100)}% energy`} style={{ flex: Math.max(1, Number(section.endMs || 0) - Number(section.startMs || 0)), height: `${22 + Math.round(Number(section.energy || 0) * 78)}%`, minHeight: 8, borderRadius: 5, background: section.label === "peak" ? `linear-gradient(180deg, ${GOLD}, #fff0a3)` : section.label === "release" ? "rgba(255,255,255,0.28)" : "linear-gradient(180deg, #7ee6ba, rgba(69,227,138,0.35))" }} />)}</div>
-                <p style={{ margin: "9px 0 0", color: MUTED, fontSize: 10, lineHeight: 1.45 }}>Opening, build, payoff, release, and closing are measured from this exact soundtrack. Body Cinema carries those moments into the treatment direction.</p>
-              </div>}
-            </div>
-            <label style={{ display: "block", marginBottom: 24 }}><span style={{ fontSize: 13, color: "#fff", fontWeight: 800, display: "block", marginBottom: 8 }}>Release Title</span><input value={title} onChange={event => setTitle(event.target.value)} maxLength={120} placeholder="e.g. Midnight Arch Drop" style={{ width: "100%", boxSizing: "border-box", background: "#000", border: `1px solid ${BORDER}`, borderRadius: 16, color: "#fff", fontSize: 16, padding: "16px 18px", outline: "none", transition: "border-color 0.2s", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.5)" }} onFocus={e => e.target.style.borderColor = GOLD} onBlur={e => e.target.style.borderColor = BORDER} /></label>
-            
-            <label style={{ display: "flex", alignItems: "flex-start", gap: 14, background: consent ? "rgba(69,227,138,0.05)" : "transparent", border: `1px solid ${consent ? "rgba(69,227,138,0.4)" : BORDER}`, borderRadius: 16, padding: "18px", cursor: "pointer", marginBottom: 24, transition: "all 0.2s" }}><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} style={{ width: 22, height: 22, accentColor: GREEN, marginTop: 2, flexShrink: 0, cursor: "pointer" }} /><span style={{ fontSize: 13, color: consent ? "#fff" : MUTED, lineHeight: 1.6 }}>I confirm I am 18+, I own this content, and I authorize CreatorVault to transform it into a cinematic PPV drop.</span></label>
-            
-            <button type="button" className="body-cinema-button" onClick={() => void handleCreateGovernedDraft()} disabled={!consent || !uploadReceipt?.verified || creating || uploading} style={{ width: "100%", minHeight: 64, borderRadius: 20, border: "none", background: consent && uploadReceipt?.verified && !uploading ? `linear-gradient(135deg, ${GOLD}, #b09140)` : CARD_SOFT, color: consent && uploadReceipt?.verified && !uploading ? "#090909" : MUTED, fontFamily: "Bebas Neue, sans-serif", fontSize: 22, letterSpacing: "0.08em", fontWeight: 900, cursor: consent && uploadReceipt?.verified && !uploading ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: consent && uploadReceipt?.verified && !uploading ? "0 10px 30px rgba(213,183,96,0.3)" : "none" }}>{creating ? <Loader2 size={22} className="body-cinema-spin" /> : <Wand2 size={22} />} Lock Cinematic Plan</button>
-          </section>
-        )}
-
-        {step === "review" && currentJob && (
-          <section>
-            <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <div style={{ width: 58, height: 58, borderRadius: 19, background: currentStatus.tone === "ready" ? "rgba(69,227,138,0.13)" : currentStatus.tone === "failed" ? "rgba(255,124,124,0.11)" : GOLD_DIM, border: `1px solid ${currentStatus.tone === "ready" ? "rgba(69,227,138,0.42)" : currentStatus.tone === "failed" ? "rgba(255,124,124,0.35)" : GOLD_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>{currentStatus.tone === "ready" ? <Check size={25} color={GREEN} /> : currentStatus.tone === "failed" ? <ShieldCheck size={25} color={RED} /> : <Loader2 size={25} color={GOLD} className="body-cinema-spin" />}</div>
-              <p style={{ fontSize: 10, color: currentStatus.tone === "ready" ? GREEN : currentStatus.tone === "failed" ? RED : GOLD, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", margin: "0 0 6px" }}>{currentStatus.label}</p>
-              <h2 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: 35, letterSpacing: "0.035em", margin: "0 0 7px" }}>{acceptedAsset ? "Your finished drop passed." : "Your footage is protected."}</h2>
-              <p style={{ color: MUTED, fontSize: 12, lineHeight: 1.55, margin: 0 }}>{currentStatus.detail}</p>
-            </div>
-            <div style={{ position: "relative", borderRadius: 24, overflow: "hidden", background: "#000", aspectRatio: "9/16", maxHeight: 560, margin: "0 auto 24px", border: `1px solid ${BORDER}`, boxShadow: "0 20px 40px rgba(0,0,0,0.6)" }}>
-              <video src={currentJob?.artifactUrl || currentJob?.outputUrl || undefined} autoPlay={acceptedAsset} loop={acceptedAsset} controls={acceptedAsset} muted={!acceptedAsset} playsInline style={{ width: "100%", height: "100%", objectFit: "cover", opacity: acceptedAsset ? 1 : 0.7 }} />
-              {!acceptedAsset && (
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.7) 100%)", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 24 }}>
-                  <div style={{ alignSelf: "flex-start", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", padding: "6px 12px", borderRadius: 999, border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: GOLD, animation: "pulse 2s infinite" }} />
-                    <style>{`@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }`}</style>
-                    <span style={{ fontSize: 10, color: "#fff", fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase" }}>No finished drop yet</span>
-                  </div>
-                  <div style={{ textAlign: "center" }}>
-                    <Film size={32} color={GOLD} style={{ marginBottom: 12, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} />
-                    <p style={{ margin: 0, fontSize: 18, color: "#fff", fontWeight: 900, textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}>Your source and treatment are locked</p>
-                    <p style={{ margin: "6px 0 0", fontSize: 13, color: "rgba(255,255,255,0.8)", lineHeight: 1.5, textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>CreatorVault shows a video here only after a real finished drop passes review.</p>
-                  </div>
-                </div>
-              )}
-            </div>
-            {acceptedAsset && <div style={{ marginBottom: 16, padding: 20, borderRadius: 20, border: `1px solid ${GOLD_BORDER}`, background: "linear-gradient(135deg, rgba(213,183,96,0.16), rgba(17,17,17,0.94))", boxShadow: "0 14px 32px rgba(0,0,0,0.26)" }}>
-              <p style={{ margin: "0 0 7px", color: GOLD, fontSize: 10, fontFamily: "monospace", letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 900 }}>Paid unlock ready</p>
-              <h3 style={{ margin: "0 0 8px", color: "#fff", fontSize: 21, lineHeight: 1.1, fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.06em" }}>Turn this accepted drop into a VaultX private release.</h3>
-              <p style={{ margin: "0 0 16px", color: MUTED, fontSize: 12, lineHeight: 1.55 }}>CreatorVault will preserve this reviewed master, create one paid unlock, and keep the full video hidden until a buyer completes payment.</p>
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 0.7fr) minmax(0, 1.3fr)", gap: 10, alignItems: "stretch" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 13px", borderRadius: 12, border: `1px solid ${BORDER}`, background: "#070707", color: GOLD, fontWeight: 900, fontSize: 18 }}><span>$</span><input aria-label="Private unlock price" value={releasePrice} onChange={(event) => setReleasePrice(event.target.value)} inputMode="decimal" type="number" min="1" step="0.01" style={{ width: "100%", border: 0, outline: 0, background: "transparent", color: "#fff", fontSize: 17, fontWeight: 800 }} /></label>
-                <button type="button" className="body-cinema-button" onClick={() => void publishToVaultX()} disabled={publishAcceptedDrop.isPending} style={{ minHeight: 52, borderRadius: 12, border: "none", background: publishAcceptedDrop.isPending ? CARD_SOFT : `linear-gradient(135deg, ${GOLD}, #fff0a3)`, color: publishAcceptedDrop.isPending ? MUTED : "#090909", fontFamily: "Bebas Neue, sans-serif", fontSize: 18, letterSpacing: "0.07em", fontWeight: 900, cursor: publishAcceptedDrop.isPending ? "wait" : "pointer" }}>{publishAcceptedDrop.isPending ? "Preparing private unlock…" : "Put It Behind Paid Access"}</button>
-              </div>
-              {publishedContentId && <a href={`/vaultx?content=${publishedContentId}`} style={{ display: "inline-flex", marginTop: 14, color: GOLD, fontSize: 12, fontWeight: 900, textDecoration: "none" }}>Open your VaultX paid release →</a>}
-            </div>}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 16 }}><button type="button" className="body-cinema-button" onClick={handleDownload} disabled={!acceptedAsset} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${acceptedAsset ? GOLD_BORDER : BORDER}`, background: acceptedAsset ? GOLD_DIM : CARD, color: acceptedAsset ? GOLD : MUTED, fontWeight: 800, cursor: acceptedAsset ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><Download size={16} /> Download</button><button type="button" className="body-cinema-button" onClick={reuseSource} style={{ minHeight: 46, borderRadius: 12, border: `1px solid ${BORDER}`, background: CARD, color: "#fff", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}><RotateCcw size={16} /> Reuse source</button></div>
-            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, padding: "10px 20px", marginBottom: 20, boxShadow: "0 4px 15px rgba(0,0,0,0.2)" }}>
-              <StatusRow label="Your footage" value="Verified original" state="ready" />
-              {currentJob.audioAssetId && <StatusRow label="Music Direction" value="Rights verified" state="ready" />}
-              <StatusRow label="Your drop" value={currentStatus.label} state={currentStatus.tone} />
-              <StatusRow label="Creation budget" value={currentJob.estimatedCostCredits ? "Set for this drop" : "Not set yet"} state={currentJob.estimatedCostCredits ? "working" : "locked"} />
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "14px 0" }}><span style={{ fontSize: 13, color: MUTED }}>Sales & Distribution</span><span style={{ fontSize: 13, color: MUTED, fontWeight: 800 }}>Requires Final Creator Review</span></div>
-            </div>
-            
-            <div style={{ background: `linear-gradient(145deg, ${CARD_SOFT}, ${CARD})`, border: `1px solid ${GOLD_BORDER}`, borderRadius: 20, padding: "20px", marginBottom: 20, boxShadow: "0 8px 24px rgba(213,183,96,0.08)" }}>
-              <p style={{ fontSize: 11, color: GOLD, fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase", margin: "0 0 8px", display: "flex", alignItems: "center", gap: 6 }}><ShieldCheck size={14} /> Your creation promise</p>
-              <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, margin: 0 }}>CreatorVault keeps your original footage, framing, and chosen direction together. Nothing is remade or changed behind your back.</p>
-            </div>
-          </section>
-        )}
+          {lifecycle && (
+            <button
+              type="button"
+              className="body-cinema-quiet-button"
+              onClick={() => updateQuery({ lifecycleId: null })}
+            >
+              Start a different source selection
+            </button>
+          )}
+        </aside>
       </main>
+
+      <MediaPicker
+        open={mediaPickerOpen}
+        onClose={() => setMediaPickerOpen(false)}
+        onConfirm={handleSourceSelection}
+        mode="single"
+        title="Your Vault originals"
+        subtitle="Select one ready video. The lifecycle server, not this picker, decides whether stored source bytes qualify."
+        confirmLabel="Select exact source"
+        assetEligibility={isBodyCinemaSourceCandidate}
+      />
     </div>
   );
 }

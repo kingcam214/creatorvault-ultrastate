@@ -33,6 +33,16 @@ const files = [
   "server/routers/mediaAssets.ts",
   "server/services/localTrailerCut.ts",
   "server/services/localTrailerCut.test.ts",
+  "shared/bodyCinemaCandidateLifecycle.ts",
+  "server/services/bodyCinemaCandidateLifecycle.ts",
+  "server/routers/bodyCinemaCandidateLifecycleRouter.ts",
+  "server/services/creationProjectService.ts",
+  "server/routers/bodyCinemaRouter.ts",
+  "client/src/pages/VaultXDrop.tsx",
+  "client/src/pages/TrailerStudio.tsx",
+  "client/src/pages/BodyCinemaLifecycle.test.tsx",
+  "server/services/bodyCinemaCandidateLifecycle.test.ts",
+  "vitest.body-cinema-lifecycle.config.ts",
 ];
 const configPath = ts.findConfigFile(root, ts.sys.fileExists, "tsconfig.json");
 if (!configPath) throw new Error("Project tsconfig.json is missing");

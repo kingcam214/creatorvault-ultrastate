@@ -21,6 +21,7 @@ import { getLLMProviderStatus } from "./llm";
 import { sdk } from "./sdk";
 import videoStudioRouter from "../routers/videoStudioRouter";
 import { videoUploadRouter } from "../routers/videoUploadRouter";
+import { registerBodyCinemaCandidatePlayback } from "../routers/bodyCinemaCandidatePlayback";
 import { registerTelegramConnectRoutes } from "../services/telegramConnectRoute";
 import { startDailyDropCron } from "../services/telegramDailyDropEngine";
 import { startReactivationCron } from "../services/telegramBuyerReactivation";
@@ -34,6 +35,7 @@ import { getBodyCinemaPreProviderAttestation, runBodyCinemaExistingMediaPreProvi
 import {
   buildPolloCapabilitySummary,
   getLatestPolloCapabilitySnapshot,
+  isProviderCapabilityAttestationEnabled,
   refreshPolloCapabilitySnapshot,
 } from "../services/polloCapabilityRegistryService";
 import { ensureSocialSpineSchema } from "../services/socialSpineService";
@@ -79,12 +81,12 @@ async function refreshProviderCapabilityAttestation(): Promise<void> {
       providerGenerationCalled: false,
     };
     console.log(JSON.stringify({ event: "provider_capability_audit_refreshed", ...providerCapabilityAttestation }));
-  } catch (error) {
+  } catch {
     const latest = await getLatestPolloCapabilitySnapshot().catch(() => null);
     providerCapabilityAttestation = {
       summary: buildPolloCapabilitySummary(latest),
       auditedAt: latest?.checkedAt ?? null,
-      auditError: error instanceof Error ? error.message : String(error),
+      auditError: "Provider capability attestation did not complete.",
       auditOnly: true,
       providerGenerationCalled: false,
     };
@@ -189,6 +191,7 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerAuthenticationRoutes(app);
+  registerBodyCinemaCandidatePlayback(app);
   
   // Authenticated CreatorVault media playback. This route must be registered before
   // the Vite single-page-app fallback; otherwise saved media URLs return index.html.
@@ -408,8 +411,16 @@ async function startServer() {
     void runBodyCinemaExistingMediaPreProviderProof().catch(error =>
       console.log("[BodyCinema] pre-provider proof deferred:", error instanceof Error ? error.message : String(error)),
     );
-    // This audit calls only public catalog and read-only account endpoints. It never creates or submits a provider task.
-    void refreshProviderCapabilityAttestation();
+    // Catalog/balance reads are provider calls. Ordinary startup, deployment, and
+    // PM2 reload default-deny this audit; this opt-in never enables execution.
+    if (isProviderCapabilityAttestationEnabled()) {
+      console.log(JSON.stringify({ event: "provider_capability_attestation_explicitly_enabled" }));
+      void refreshProviderCapabilityAttestation().catch(() =>
+        console.log(JSON.stringify({ event: "provider_capability_attestation_failed" }))
+      );
+    } else {
+      console.log(JSON.stringify({ event: "provider_capability_audit_not_requested", ...providerCapabilityAttestation }));
+    }
     
     // Initialize simulated bots (no owner dependencies)
 

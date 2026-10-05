@@ -345,6 +345,21 @@ export async function listCreationProjects(creatorId: number, limit = 30): Promi
   return rows.map(normaliseProject);
 }
 
+export async function assertCreationProjectOutsideCandidateLifecycle(projectId: string): Promise<boolean> {
+  const tables = await rawQuery(
+    "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'body_cinema_candidate_lifecycles'",
+  );
+  if (tables.length === 0) return false;
+  const lifecycles = await rawQuery(
+    "SELECT project_id FROM body_cinema_candidate_lifecycles WHERE project_id = ? LIMIT 1",
+    [projectId],
+  );
+  if (lifecycles.length > 0) {
+    throw new Error("This Body Cinema project is locked to its candidate lifecycle. Generic links and assembly acceptance cannot replace its source, treatment, decision, or master.");
+  }
+  return true;
+}
+
 export async function updateCreationProjectLinks(input: {
   creatorId: number;
   projectId: string;
@@ -353,6 +368,7 @@ export async function updateCreationProjectLinks(input: {
 }): Promise<CreationProject> {
   const current = await getCreationProject(input.creatorId, input.projectId);
   if (!current) throw new Error("This creation could not be found.");
+  const lifecycleSchemaExists = await assertCreationProjectOutsideCandidateLifecycle(input.projectId);
   await validateProjectLinks(input.creatorId, input.patch);
 
   const nextMetadata = input.patch.metadata ? { ...current.metadata, ...input.patch.metadata } : current.metadata;
@@ -369,12 +385,12 @@ export async function updateCreationProjectLinks(input: {
     state: input.patch.state || current.state,
   };
 
-  await rawExec(
+  const result = await rawExec(
     `UPDATE creation_projects
         SET source_media_asset_id = ?, source_evidence_id = ?, treatment_id = ?, identity_reference = ?, audio_asset_id = ?,
             creation_director_request_id = ?, render_job_id = ?, accepted_media_asset_id = ?, social_package_id = ?,
             state = ?, metadata_json = ?, updated_at = NOW()
-      WHERE id = ? AND creator_id = ?`,
+      WHERE id = ? AND creator_id = ?${lifecycleSchemaExists ? " AND NOT EXISTS (SELECT 1 FROM body_cinema_candidate_lifecycles WHERE project_id = creation_projects.id)" : ""}`,
     [
       next.sourceAssetId,
       next.sourceEvidenceId,
@@ -391,6 +407,9 @@ export async function updateCreationProjectLinks(input: {
       input.creatorId,
     ],
   );
+  if (lifecycleSchemaExists && Number(result.affectedRows) !== 1) {
+    throw new Error("This creation is locked or changed. No generic master or source update was applied.");
+  }
   await appendEvent({
     projectId: input.projectId,
     actorId: input.actorId,
@@ -424,6 +443,7 @@ export async function acceptInspectedAssemblyRender(input: {
 }): Promise<CreationProject> {
   const project = await getCreationProject(input.creatorId, input.projectId);
   if (!project) throw new Error("This creation could not be found.");
+  await assertCreationProjectOutsideCandidateLifecycle(input.projectId);
   if (!project.renderJobId || project.renderJobId !== input.renderJobId) {
     throw new Error("This finished edit is not linked to this creation.");
   }

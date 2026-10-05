@@ -28,6 +28,7 @@ import {
   preparePortableMariaDbTools,
   portableMariaDbServiceEnvironment,
 } from "./portableMariaDbTools";
+import { applyBodyCinemaPhaseAMigration } from "./bodyCinemaPhaseAMigration";
 import {
   OWNER_READ,
   cleanupLoginVerifier,
@@ -1142,11 +1143,7 @@ async function verifyMigratedTables(databaseUrl: string): Promise<void> {
   }
 }
 
-/**
- * The visual successor never creates the Drizzle ledger, executes SQL, or
- * applies a migration. Both reviewed additive migrations were applied by the
- * verified consolidated release and are now only proved read-only.
- */
+/** The completed 0024/0025 migrations remain read-only baseline proof. */
 export function alreadyAppliedSchemaMatches(inspection: {
   pending: readonly string[];
   alreadyApplied: readonly string[];
@@ -1434,7 +1431,7 @@ async function verifyPersonaRoute(proof: LoginProof): Promise<void> {
 
 async function verifyLive(
   sha: string,
-  proof: LoginProof,
+  proof: LoginProof | undefined,
   key: string,
   before: Pm2Proof,
   cursors: readonly LogCursor[],
@@ -1472,50 +1469,54 @@ async function verifyLive(
       "CONSOLIDATED_DEVELOPMENT_LOGIN_NOT_RETIRED"
     );
   }
-  const retained = await requestPublic("/api/trpc/auth.me", {
-    token: proof.oldSession,
-  });
-  const retainedAccount = record(trpcData(retained.body));
-  requireRelease(
-    retained.status === 200 &&
-      Number(retainedAccount.id) === proof.id &&
-      retainedAccount.role === proof.role,
-    "CONSOLIDATED_RETAINED_SESSION_FAILED"
-  );
-  const login = await requestPublic("/api/auth/login", {
-    method: "POST",
-    body: { email: proof.email, password: proof.password, rememberMe: false },
-  });
-  const fresh = tokenFromLogin(login);
-  const claims = await jwtVerify(fresh, Buffer.from(key), {
-    algorithms: ["HS256"],
-  }).catch(() => {
-    throw new ReleaseFailure("CONSOLIDATED_NATIVE_LOGIN_SIGNATURE_FAILED");
-  });
-  requireRelease(
-    claims.payload.openId === proof.openId,
-    "CONSOLIDATED_NATIVE_LOGIN_IDENTITY_FAILED"
-  );
-  const denied = await requestPublic(OWNER_READ, { token: fresh });
-  requireRelease(
-    denied.status === 403,
-    "CONSOLIDATED_ORDINARY_OWNER_READ_NOT_DENIED"
-  );
-  const ownerToken = await new SignJWT({
-    openId: proof.ownerOpenId,
-    appId: proof.appId,
-    name: "Consolidated release verification",
-  })
-    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-    .setExpirationTime(Math.floor(Date.now() / 1000) + 60)
-    .sign(Buffer.from(key));
-  const owner = await requestPublic(OWNER_READ, { token: ownerToken });
-  requireRelease(
-    owner.status === 200 &&
-      typeof record(trpcData(owner.body)).total === "number",
-    "CONSOLIDATED_OWNER_READ_FAILED"
-  );
-  await verifyPersonaRoute(proof);
+  // Phase A forbids production test accounts and unauthorised authenticated writes.
+  // Retained native authentication/role regressions run only on isolated fixtures.
+  if (proof) {
+    const retained = await requestPublic("/api/trpc/auth.me", {
+      token: proof.oldSession,
+    });
+    const retainedAccount = record(trpcData(retained.body));
+    requireRelease(
+      retained.status === 200 &&
+        Number(retainedAccount.id) === proof.id &&
+        retainedAccount.role === proof.role,
+      "CONSOLIDATED_RETAINED_SESSION_FAILED"
+    );
+    const login = await requestPublic("/api/auth/login", {
+      method: "POST",
+      body: { email: proof.email, password: proof.password, rememberMe: false },
+    });
+    const fresh = tokenFromLogin(login);
+    const claims = await jwtVerify(fresh, Buffer.from(key), {
+      algorithms: ["HS256"],
+    }).catch(() => {
+      throw new ReleaseFailure("CONSOLIDATED_NATIVE_LOGIN_SIGNATURE_FAILED");
+    });
+    requireRelease(
+      claims.payload.openId === proof.openId,
+      "CONSOLIDATED_NATIVE_LOGIN_IDENTITY_FAILED"
+    );
+    const denied = await requestPublic(OWNER_READ, { token: fresh });
+    requireRelease(
+      denied.status === 403,
+      "CONSOLIDATED_ORDINARY_OWNER_READ_NOT_DENIED"
+    );
+    const ownerToken = await new SignJWT({
+      openId: proof.ownerOpenId,
+      appId: proof.appId,
+      name: "Consolidated release verification",
+    })
+      .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+      .setExpirationTime(Math.floor(Date.now() / 1000) + 60)
+      .sign(Buffer.from(key));
+    const owner = await requestPublic(OWNER_READ, { token: ownerToken });
+    requireRelease(
+      owner.status === 200 &&
+        typeof record(trpcData(owner.body)).total === "number",
+      "CONSOLIDATED_OWNER_READ_FAILED"
+    );
+    await verifyPersonaRoute(proof);
+  }
   const active = await pm2Proof();
   requireRelease(
     active.pid > 1 &&
@@ -1633,7 +1634,6 @@ async function runProductionRelease(
   let capture: EnvCapture | undefined;
   let settings: Record<string, string> = {};
   let signingKey = "";
-  let proof: LoginProof | undefined;
   let processBefore: Pm2Proof | undefined;
   let cursors: LogCursor[] = [];
   let phase: ReleasePhase = "preflight";
@@ -1674,28 +1674,9 @@ async function runProductionRelease(
         code: "CONSOLIDATED_PREFLIGHT_COMPLETE",
       })
     );
-    const verifier = await guardedMutation(capture.snapshot, () =>
-      provisionLoginVerifier(settings, inputs.sha, openId =>
-        persistFixtureOwnership(inputs.sha, openId)
-      )
-    );
-    try {
-      proof = await prepareLoginProof(verifier);
-    } finally {
-      for (const key of Object.keys(verifier)) delete verifier[key];
-    }
-    await jwtVerify(proof.oldSession, Buffer.from(signingKey), {
-      algorithms: ["HS256"],
-    }).catch(() => {
-      throw new ReleaseFailure("CONSOLIDATED_ACTIVE_SIGNING_SOURCE_UNPROVEN");
-    });
-    const ordinaryBefore = await requestPublic(OWNER_READ, {
-      token: proof.oldSession,
-    });
-    requireRelease(
-      ordinaryBefore.status === 403,
-      "CONSOLIDATED_BASELINE_ORDINARY_OWNER_DENIAL_UNPROVEN"
-    );
+    // Owner's Phase A scope does not authorize provisioning production test users,
+    // login verifiers, or updating lastSignedIn via authenticated production requests.
+    // The unchanged authoritative key and boot guard remain checked independently.
     cursors = await logCursors();
     const digest = await guardedMutation(capture.snapshot, () =>
       stageCandidate(inputs.workspace, inputs.sha)
@@ -1708,12 +1689,37 @@ async function runProductionRelease(
         code: "CONSOLIDATED_SCHEMA_VERIFICATION_PENDING",
       })
     );
-    const migrations = await guardedMutation(capture.snapshot, () =>
+    const existingMigrations = await guardedMutation(capture.snapshot, () =>
       verifyExistingApprovedAdditiveSchema(
         settings.DATABASE_URL ?? "",
         inputs.workspace
       )
     );
+    let protectedBackupCompleted = false;
+    const phaseAMigration = await guardedMutation(capture.snapshot, () =>
+      applyBodyCinemaPhaseAMigration(
+        settings.DATABASE_URL ?? "",
+        inputs.workspace,
+        {
+          beforeFirstDdl: async () => {
+            await protectedDatabaseBackup(
+              settings.DATABASE_URL ?? "",
+              inputs.sha
+            );
+            protectedBackupCompleted = true;
+          },
+        }
+      )
+    );
+    requireRelease(
+      phaseAMigration.applied === 0 || protectedBackupCompleted,
+      "CONSOLIDATED_BODY_CINEMA_BACKUP_PROOF_MISSING"
+    );
+    const migrations = {
+      migrations: existingMigrations.migrations + phaseAMigration.applied,
+      alreadyApplied:
+        existingMigrations.alreadyApplied + phaseAMigration.alreadyApplied,
+    };
     phase = "activation-intent";
     activationStarted = true;
     await guardedMutation(capture.snapshot, () =>
@@ -1745,25 +1751,14 @@ async function runProductionRelease(
         "--update-env",
       ]);
     });
-    if (!proof || !processBefore)
+    if (!processBefore)
       throw new ReleaseFailure("CONSOLIDATED_PREFLIGHT_INCOMPLETE");
-    const loginProof = proof;
     const preReloadProcess = processBefore;
     const evidence = await guardedMutation(capture.snapshot, () =>
-      verifyLive(
-        inputs.sha,
-        loginProof,
-        signingKey,
-        preReloadProcess,
-        cursors,
-        {
-          migrations: migrations.migrations,
-          alreadyApplied: migrations.alreadyApplied,
-        }
-      )
-    );
-    await guardedMutation(capture.snapshot, () =>
-      cleanupOwnedFixture(settings.DATABASE_URL ?? "", inputs.sha)
+      verifyLive(inputs.sha, undefined, signingKey, preReloadProcess, cursors, {
+        migrations: migrations.migrations,
+        alreadyApplied: migrations.alreadyApplied,
+      })
     );
     await guardedMutation(capture.snapshot, async () => {
       silentCommand(APP_ROOT, "pm2", ["save"]);
@@ -1776,7 +1771,7 @@ async function runProductionRelease(
         code: "CONSOLIDATED_RELEASE_VERIFIED",
         migrations: migrations.migrations,
         alreadyApplied: migrations.alreadyApplied,
-        proof: "NATIVE_LOGIN_SESSION_PRESERVED",
+        proof: "NO_PRODUCTION_TEST_ACCOUNTS_OR_AUTHENTICATED_WRITES",
       })
     );
     return {
@@ -1820,11 +1815,6 @@ async function runProductionRelease(
       phase: activationStarted ? "failed" : phase,
     };
   } finally {
-    if (proof) {
-      proof.password = "";
-      proof.oldSession = "";
-    }
-    proof = undefined;
     signingKey = "";
     if (capture) capture.source = "";
     capture = undefined;

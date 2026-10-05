@@ -64,6 +64,17 @@ export type PolloCapabilitySnapshot = {
   warnings: string[];
 };
 
+export function isProviderCapabilityAttestationEnabled(): boolean {
+  const value = process.env.ENABLE_PROVIDER_CAPABILITY_ATTESTATION;
+  return value === "true" || value === "1";
+}
+
+function requireProviderCapabilityAttestation(): void {
+  if (!isProviderCapabilityAttestationEnabled()) {
+    throw new Error("Provider capability attestation is not enabled for this process.");
+  }
+}
+
 export type ControlledModelAccessState = "available" | "unavailable" | "unknown";
 
 export type ControlledSourceVideoCandidate = {
@@ -431,8 +442,9 @@ export async function ensurePolloCapabilityRegistrySchema(): Promise<void> {
 
 export async function refreshPolloCapabilitySnapshot(requestedBy: number): Promise<PolloCapabilitySnapshot> {
   if (!OWNER_IDS.has(Number(requestedBy))) throw new Error("Owner approval is required to refresh provider capability access.");
+  requireProviderCapabilityAttestation();
   await ensurePolloCapabilityRegistrySchema();
-
+  requireProviderCapabilityAttestation();
   const warnings: string[] = [];
   let catalogPayload: Record<string, unknown> | unknown[] = [];
   try {
@@ -455,6 +467,7 @@ export async function refreshPolloCapabilitySnapshot(requestedBy: number): Promi
   } else {
     const headers = { "x-api-key": apiKey };
     try {
+      requireProviderCapabilityAttestation();
       const balancePayload = await fetchJson(`${POLLO_PLATFORM_BASE}/credit/balance`, headers);
       const payload = isObject(balancePayload) && isObject(balancePayload.data) ? balancePayload.data : balancePayload;
       const record = isObject(payload) ? payload : {};

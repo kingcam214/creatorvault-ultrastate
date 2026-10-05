@@ -14,7 +14,7 @@ import {
   CONSOLIDATED_RELEASE_CHECKOUT_PARENT,
   CONSOLIDATED_RELEASE_PARENT,
   CONSOLIDATED_SECURITY_BASELINE,
-  CONSOLIDATED_VISUAL_RELEASE_ALLOWED_PATHS,
+  CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS,
 } from "./consolidatedReleasePolicy";
 
 const SHA = "a".repeat(40);
@@ -42,12 +42,12 @@ describe("consolidated non-rotating guarded release", () => {
     expect(source).toContain("assertNewKey(key)");
   });
 
-  it("pins exactly one visual successor to the verified 3cb visual artifact while preserving the 3762 signing epoch", () => {
+  it("pins exactly one Phase A successor to the verified 552 artifact while preserving the 3762 signing epoch", () => {
     expect(CONSOLIDATED_RELEASE_PARENT).toBe(
-      "3cb144abdcc4c2025223df6c45c3b3aa3dd854e2"
+      "552aee6aa27a79c717e96b60fefa72703deeb356"
     );
     expect(CONSOLIDATED_RELEASE_CHECKOUT_PARENT).toBe(
-      "3cb144abdcc4c2025223df6c45c3b3aa3dd854e2"
+      "552aee6aa27a79c717e96b60fefa72703deeb356"
     );
     expect(CONSOLIDATED_SECURITY_BASELINE).toBe(
       "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da"
@@ -58,19 +58,19 @@ describe("consolidated non-rotating guarded release", () => {
     expect(source).toContain("rollbackArtifact: priorArtifactPath()");
   });
 
-  it("allows only the reviewed visual tree and its exact-parent controller maintenance", () => {
+  it("allows only the reviewed Phase A lifecycle and exact-parent controller closure", () => {
     for (const allowed of [
-      "client/src/index.css",
-      "client/src/pages/Home.tsx",
-      "client/src/pages/Login.tsx",
-      "client/src/components/AppHeader.tsx",
-      "client/src/pages/CreatorWorkspace.tsx",
-      "server/routers/creatorWorkspace.ts",
-      "server/services/localTrailerCut.ts",
+      "drizzle/0026_body_cinema_candidate_lifecycle.sql",
+      "scripts/bodyCinemaPhaseAMigration.ts",
+      "scripts/bodyCinemaPhaseAMigration.test.ts",
+      "scripts/run-body-cinema-phase-a-tests.sh",
+      "server/routers/bodyCinemaCandidateLifecycleRouter.ts",
+      "server/services/bodyCinemaCandidateLifecycle.ts",
+      "shared/bodyCinemaCandidateLifecycle.ts",
       "scripts/consolidatedReleaseRunner.ts",
       ".github/workflows/deploy.yml",
     ])
-      expect(CONSOLIDATED_VISUAL_RELEASE_ALLOWED_PATHS).toContain(allowed);
+      expect(CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS).toContain(allowed);
     for (const blocked of [
       "package.json",
       "drizzle/schema.ts",
@@ -78,7 +78,9 @@ describe("consolidated non-rotating guarded release", () => {
       "server/services/personaVideoProvider.ts",
       "server/_core/authenticationRoutes.ts",
     ])
-      expect(CONSOLIDATED_VISUAL_RELEASE_ALLOWED_PATHS).not.toContain(blocked);
+      expect(CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS).not.toContain(
+        blocked
+      );
   });
 
   it("holds the verified security baseline on pre-activation failure and fails closed only after activation intent", () => {
@@ -162,7 +164,7 @@ describe("consolidated non-rotating guarded release", () => {
       })
     ).toBe(false);
   });
-  it("keeps root protections, read-only existing-schema proof, and one guarded reload explicit", () => {
+  it("keeps root protections, read-only legacy proof, a backup-gated Phase A migration, and one guarded reload explicit", () => {
     expect(source).toContain("CONSOLIDATED_ROOT_CONTEXT_REQUIRED");
     expect(source).toContain("assertRootPrivateFile(lock");
     expect(source).toContain("inspectConsolidatedMigrations");
@@ -171,7 +173,9 @@ describe("consolidated non-rotating guarded release", () => {
       "CONSOLIDATED_ADDITIVE_SCHEMA_NOT_ALREADY_APPLIED"
     );
     expect(source).not.toContain("applyConsolidatedMigrations");
-    expect(source).not.toContain("await protectedDatabaseBackup(");
+    expect(source).toContain("applyBodyCinemaPhaseAMigration");
+    expect(source).toContain("await protectedDatabaseBackup(");
+    expect(source).toContain("CONSOLIDATED_BODY_CINEMA_BACKUP_PROOF_MISSING");
     expect(
       source.match(/\[\s*"reload",\s*"creatorvault",\s*"--update-env",?\s*\]/g)
     ).toHaveLength(1);

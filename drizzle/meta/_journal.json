@@ -134,6 +134,13 @@
       "when": 1790959430000,
       "tag": "0025_persona_vault_chained_continuity",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1791129600000,
+      "tag": "0026_body_cinema_candidate_lifecycle",
+      "breakpoints": true
     }
   ]
 }

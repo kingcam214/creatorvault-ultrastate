@@ -44,8 +44,9 @@ import { recoverVerifiedLegacyBodyCinemaSource } from "../services/bodyCinemaVer
 import { buildAudioDirectedTimeline } from "../services/audioTimelinePlanner";
 import { getCanonicalAudioAsset } from "../services/audioIntelligenceService";
 import { startRender } from "../services/realRenderEngine";
-import { getCreationProject, updateCreationProjectLinks } from "../services/creationProjectService";
+import { getCreationProject, updateCreationProjectLinks, assertCreationProjectOutsideCandidateLifecycle } from "../services/creationProjectService";
 import { buildCreationCapabilities, getCreationPlan, prepareCreationPlan, toCreatorFacingCreationPlan } from "../services/creationDirector";
+import { bodyCinemaCandidateLifecycleRouter } from "./bodyCinemaCandidateLifecycleRouter";
 
 const cinemaRouter = new BodyCinemaRouter();
 const configuredProviders: Record<string, boolean> = {
@@ -93,6 +94,8 @@ function evidencePrecondition(message: string): TRPCError {
 }
 
 export const bodyCinemaRouter = router({
+  lifecycle: bodyCinemaCandidateLifecycleRouter,
+
   savedSourceInventory: ownerProcedure.query(async ({ ctx }) => {
     if (![6, 33].includes(Number(ctx.user.id))) {
       throw new TRPCError({ code: "FORBIDDEN", message: "This private source inventory is reserved for the owner workspace." });
@@ -348,6 +351,7 @@ export const bodyCinemaRouter = router({
       });
       const project = await getCreationProject(creatorId, input.creationProjectId);
       if (!project) throw new Error("CreatorVault could not find the creation attached to this master.");
+      await assertCreationProjectOutsideCandidateLifecycle(input.creationProjectId);
       if (project.sourceEvidenceId && project.sourceEvidenceId !== input.evidenceId) {
         throw new Error("This saved creation belongs to a different source understanding.");
       }

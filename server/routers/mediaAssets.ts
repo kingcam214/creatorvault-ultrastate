@@ -345,6 +345,7 @@ export const mediaAssetsRouter = router({
         FROM media_assets
         WHERE user_id = ${ctx.user.id}
           AND status = 'ready'
+          AND COALESCE(created_by_feature, '') <> 'body_cinema_candidate'
           -- Legacy entries using the private delivery endpoint have already failed
           -- durable playback verification. They remain auditable but cannot be offered
           -- as source media until their backing file is restored and reverified.
@@ -613,6 +614,7 @@ export const mediaAssetsRouter = router({
           WHERE user_id = ${ctx.user.id}
             AND id IN (${selectedIdsSql})
             AND status = 'ready'
+            AND COALESCE(created_by_feature, '') <> 'body_cinema_candidate'
             AND (public_url IS NULL OR public_url NOT LIKE '%/api/media/asset/%')
           LIMIT ${input.selectedAssetIds.length}
         ` as any
@@ -625,8 +627,8 @@ export const mediaAssetsRouter = router({
         .map(assetId => ownedById.get(String(assetId)))
         .filter(Boolean);
 
-      if (ownedAssets.length === 0) {
-        throw new Error("No valid media assets selected");
+      if (ownedAssets.length !== input.selectedAssetIds.length) {
+        throw new Error("Every selected asset must be owned and ready. Body Cinema candidates require the accepted-master planning handoff.");
       }
 
       const primaryAssetId = String((ownedAssets[0] as any).id);

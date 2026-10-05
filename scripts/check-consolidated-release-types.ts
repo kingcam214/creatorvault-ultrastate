@@ -14,6 +14,9 @@ const files = [
   "scripts/consolidatedMigrations.test.ts",
   "scripts/portableMariaDbTools.ts",
   "scripts/portableMariaDbTools.test.ts",
+  "scripts/bodyCinemaPhaseAMigration.ts",
+  "scripts/bodyCinemaPhaseAMigration.test.ts",
+  "vitest.body-cinema-lifecycle.config.ts",
   "vitest.consolidated-release.config.ts",
   "scripts/check-consolidated-release-types.ts",
 ];
