@@ -14,14 +14,14 @@ import { BODY_CINEMA_PHASE_A_MIGRATION } from "./bodyCinemaPhaseAMigration";
 export const CONSOLIDATED_SECURITY_BASELINE =
   "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da";
 /**
- * The last verified live consolidated artifact remains the Phase A scope,
- * protected-artifact and rollback baseline. The exact checkout parent below
- * is the already-pushed but undeployed corrective main predecessor.
+ * Phase A is now verified live. This corrective release is pinned to that exact
+ * deployed artifact for live preflight, scope diff, protected-artifact proof,
+ * rollback reference, and its single direct checkout parent.
  */
 export const CONSOLIDATED_RELEASE_PARENT =
-  "552aee6aa27a79c717e96b60fefa72703deeb356";
+  "80748aa9e50b3196d3d8f796b63e855c6ded6c4e";
 export const CONSOLIDATED_RELEASE_CHECKOUT_PARENT =
-  "320d5012d6555b9c576c2164cb0e6d5aff739b2b";
+  "80748aa9e50b3196d3d8f796b63e855c6ded6c4e";
 export const APP_ROOT = "/root/creatorvault";
 export const APPROVED_FEATURE_HEADS = {
   stripe: "ccba8cd56f887d041311d4f37d3ec912fd57322d",

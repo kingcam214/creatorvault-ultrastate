@@ -1,6 +1,7 @@
 import React, {
   type ChangeEvent,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -347,6 +348,50 @@ export function makeTreatment(
   };
 }
 
+export type BodyCinemaActionFailure = { action: string; message: string };
+
+export function bodyCinemaActionFailure(
+  action: string,
+  error: unknown,
+  fallback: string
+): BodyCinemaActionFailure {
+  const message = error instanceof Error ? error.message.trim() : "";
+  // Schema diagnostics are not creator copy. Keep the step-specific guidance.
+  return {
+    action,
+    message: message && !message.startsWith("[") ? message : fallback,
+  };
+}
+
+export function BodyCinemaActionError({
+  failure,
+}: {
+  failure: BodyCinemaActionFailure | null;
+}) {
+  const alertRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!failure) return;
+    alertRef.current?.focus({ preventScroll: true });
+    alertRef.current?.scrollIntoView({ block: "center", behavior: "auto" });
+  }, [failure]);
+  if (!failure) return null;
+  return (
+    <section
+      ref={alertRef}
+      role="alert"
+      tabIndex={-1}
+      aria-labelledby="body-cinema-action-error-title"
+      className="cv-panel body-cinema-state body-cinema-state--gold"
+    >
+      <p className="eyebrow">This step needs attention</p>
+      <h2 id="body-cinema-action-error-title" className="cv-heading heading-md">
+        {failure.action}
+      </h2>
+      <p className="body-sm">{failure.message}</p>
+    </section>
+  );
+}
+
 function QueryError({ error }: { error: unknown }) {
   if (!error) return null;
   const message =
@@ -456,6 +501,14 @@ export default function VaultXDrop() {
   const [intendedUse, setIntendedUse] = useState<IntendedUse | "">("");
   const [treatment, setTreatment] = useState<TreatmentDraft>(EMPTY_TREATMENT);
   const [emphasis, setEmphasis] = useState<Emphasis[]>(["face", "full_body"]);
+  const [actionFailure, setActionFailure] =
+    useState<BodyCinemaActionFailure | null>(null);
+  const showActionError = useCallback(
+    (action: string, error: unknown, fallback: string) => {
+      setActionFailure(bodyCinemaActionFailure(action, error, fallback));
+    },
+    []
+  );
   const [decisionReason, setDecisionReason] = useState("");
   const [completedCandidateKey, setCompletedCandidateKey] = useState<
     string | null
@@ -546,8 +599,11 @@ export default function VaultXDrop() {
     (assets: MediaAssetItem[]) => {
       const asset = assets[0];
       setMediaPickerOpen(false);
+      setActionFailure(null);
       if (!asset || !isBodyCinemaSourceCandidate(asset)) {
-        toast.error(
+        showActionError(
+          "Source selection stopped",
+          null,
           "Choose a ready video from your Vault. The server will decide whether its stored bytes qualify."
         );
         return;
@@ -560,7 +616,7 @@ export default function VaultXDrop() {
       setIntendedUse("");
       updateQuery({ sourceAssetId: asset.id, lifecycleId: null });
     },
-    [updateQuery]
+    [showActionError, updateQuery]
   );
 
   const handleUpload = useCallback(
@@ -568,8 +624,13 @@ export default function VaultXDrop() {
       const file = event.target.files?.[0];
       event.target.value = "";
       if (!file) return;
+      setActionFailure(null);
       if (!file.type.startsWith("video/")) {
-        toast.error("Choose a video file to save into your Vault.");
+        showActionError(
+          "Source upload stopped",
+          null,
+          "Choose a video file to save into your Vault."
+        );
         return;
       }
       setUploading(true);
@@ -581,21 +642,26 @@ export default function VaultXDrop() {
           "Source saved to your Vault. Select it from Your Vault before you ask the lifecycle server to qualify it."
         );
       } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "CreatorVault could not save this source video."
+        showActionError(
+          "Source upload stopped",
+          error,
+          "CreatorVault could not save this source video. Check your connection before trying this upload again."
         );
       } finally {
         setUploading(false);
       }
     },
-    []
+    [showActionError]
   );
 
   const qualifySelectedSource = useCallback(async () => {
+    setActionFailure(null);
     if (!sourceAssetId) {
-      toast.error("Select an exact source from Your Vault first.");
+      showActionError(
+        "Source qualification stopped",
+        null,
+        "Select an exact source from Your Vault first."
+      );
       return;
     }
     if (
@@ -604,7 +670,9 @@ export default function VaultXDrop() {
       !acknowledgesNoIndependentVerification ||
       !intendedUse
     ) {
-      toast.error(
+      showActionError(
+        "Source qualification stopped",
+        null,
         "Complete the required creator assertion before asking the server to qualify this source."
       );
       return;
@@ -624,10 +692,10 @@ export default function VaultXDrop() {
       await openLifecycle(result.id);
       toast.success("The source qualification record was saved.");
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "The server could not qualify this source."
+      showActionError(
+        "Source qualification stopped",
+        error,
+        "CreatorVault could not qualify this source. Check the source and complete every declaration before continuing."
       );
     }
   }, [
@@ -637,14 +705,20 @@ export default function VaultXDrop() {
     ownSource,
     performerLikenessConsent,
     qualifyMutation,
+    showActionError,
     sourceAssetId,
   ]);
 
   const freezePlan = useCallback(async () => {
     if (!lifecycle) return;
+    setActionFailure(null);
     const parsedTreatment = makeTreatment(treatment, emphasis, sourceDuration);
     if (typeof parsedTreatment === "string") {
-      toast.error(parsedTreatment);
+      showActionError(
+        "Plan could not be frozen",
+        new Error(parsedTreatment),
+        parsedTreatment
+      );
       return;
     }
     try {
@@ -657,10 +731,10 @@ export default function VaultXDrop() {
         "The Crown Reveal plan is frozen. It does not create media."
       );
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "The server could not freeze this treatment."
+      showActionError(
+        "Plan could not be frozen",
+        error,
+        "Complete all Crown Reveal fields with a source-supported moment, crop, and output proposal before freezing the plan."
       );
     }
   }, [
@@ -670,25 +744,28 @@ export default function VaultXDrop() {
     openLifecycle,
     sourceDuration,
     treatment,
+    showActionError,
   ]);
 
   const reserveCandidateSlot = useCallback(async () => {
     if (!lifecycle) return;
+    setActionFailure(null);
     try {
       const result = await reserveMutation.mutateAsync({ id: lifecycle.id });
       await openLifecycle(result.id);
       toast.success("Exactly one candidate slot is reserved.");
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "The server could not reserve the candidate slot."
+      showActionError(
+        "Candidate slot could not be reserved",
+        error,
+        "CreatorVault could not reserve this slot. Reopen the saved lifecycle to check its current state."
       );
     }
-  }, [lifecycle, openLifecycle, reserveMutation]);
+  }, [lifecycle, openLifecycle, reserveMutation, showActionError]);
 
   const beginReview = useCallback(async () => {
     if (!lifecycle) return;
+    setActionFailure(null);
     try {
       const result = await beginReviewMutation.mutateAsync({
         id: lifecycle.id,
@@ -701,25 +778,32 @@ export default function VaultXDrop() {
         "Review started. Watch the exact candidate before deciding."
       );
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "The server could not begin review."
+      showActionError(
+        "Review could not start",
+        error,
+        "CreatorVault could not start this review. Check that both saved videos are available."
       );
     }
-  }, [beginReviewMutation, lifecycle, openLifecycle]);
+  }, [beginReviewMutation, lifecycle, openLifecycle, showActionError]);
 
   const decide = useCallback(
     async (decision: "accept" | "reject") => {
       if (!lifecycle?.review || !lifecycle.candidate) return;
+      setActionFailure(null);
       if (!candidateEnded || !watchAsserted || !playbackReady) {
-        toast.error(
+        showActionError(
+          "Decision could not be saved",
+          null,
           "The candidate must finish playing before you can record a decision."
         );
         return;
       }
       if (decisionReason.trim().length < 12) {
-        toast.error("Give a decision reason of at least 12 characters.");
+        showActionError(
+          "Decision could not be saved",
+          null,
+          "Give a decision reason of at least 12 characters."
+        );
         return;
       }
       try {
@@ -738,10 +822,10 @@ export default function VaultXDrop() {
             : "Creator rejection was saved with private evidence retained."
         );
       } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "The server could not record this decision."
+        showActionError(
+          "Decision could not be saved",
+          error,
+          "CreatorVault could not save this decision. Reopen the exact review before continuing."
         );
       }
     },
@@ -753,11 +837,13 @@ export default function VaultXDrop() {
       decisionReason,
       lifecycle,
       openLifecycle,
+      showActionError,
     ]
   );
 
   const createHandoff = useCallback(async () => {
     if (!lifecycle) return;
+    setActionFailure(null);
     try {
       const result = await handoffMutation.mutateAsync({ id: lifecycle.id });
       await openLifecycle(result.id);
@@ -765,13 +851,13 @@ export default function VaultXDrop() {
         "Trailer Maker planning handoff saved. No trailer was rendered."
       );
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "The server could not create the Trailer Maker planning handoff."
+      showActionError(
+        "Planning handoff could not be saved",
+        error,
+        "CreatorVault could not save the planning handoff. Only an accepted master can continue."
       );
     }
-  }, [handoffMutation, lifecycle, openLifecycle]);
+  }, [handoffMutation, lifecycle, openLifecycle, showActionError]);
 
   const toggleEmphasis = useCallback((value: Emphasis) => {
     setEmphasis(current =>
@@ -902,6 +988,7 @@ export default function VaultXDrop() {
 
       <main className="body-cinema-shell body-cinema-layout">
         <div className="body-cinema-main">
+          <BodyCinemaActionError failure={actionFailure} />
           <QueryError
             error={
               lifecycleQuery.error ??

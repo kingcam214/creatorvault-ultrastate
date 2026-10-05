@@ -51,7 +51,7 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_EVENT_NAME" = 'push'
-          checkout_parent='320d5012d6555b9c576c2164cb0e6d5aff739b2b'
+          checkout_parent='80748aa9e50b3196d3d8f796b63e855c6ded6c4e'
           test "$CREATORVAULT_RELEASE_BEFORE" = "$checkout_parent"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$(git rev-parse "$GITHUB_SHA^")" = "$checkout_parent"
