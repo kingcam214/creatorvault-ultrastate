@@ -15,6 +15,7 @@ import {
   CONSOLIDATED_RELEASE_PARENT,
   CONSOLIDATED_SECURITY_BASELINE,
   CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS,
+  checkConsolidatedCheckout,
 } from "./consolidatedReleasePolicy";
 
 const SHA = "a".repeat(40);
@@ -47,7 +48,7 @@ describe("consolidated non-rotating guarded release", () => {
       "552aee6aa27a79c717e96b60fefa72703deeb356"
     );
     expect(CONSOLIDATED_RELEASE_CHECKOUT_PARENT).toBe(
-      "afffb824a2eb8f111a55bf73db45eaaab49d0c94"
+      "320d5012d6555b9c576c2164cb0e6d5aff739b2b"
     );
     expect(CONSOLIDATED_SECURITY_BASELINE).toBe(
       "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da"
@@ -56,6 +57,49 @@ describe("consolidated non-rotating guarded release", () => {
     expect(source).toContain("assertLiveConsolidatedRelease");
     expect(source).toContain("CONSOLIDATED_ACTIVE_RELEASE_SECURITY_UNPROVEN");
     expect(source).toContain("rollbackArtifact: priorArtifactPath()");
+  });
+
+  it("runs the unchanged private lifecycle fixture with the existing noninteractive root boundary", () => {
+    const workflow = readFileSync(
+      path.join(root, ".github/workflows/deploy.yml"),
+      "utf8"
+    );
+    const lifecycleStep = workflow
+      .split("- name: Native Body Cinema Phase A lifecycle regressions")[1]
+      ?.split("- name:")[0];
+    expect(lifecycleStep).toContain(
+      'sudo -n env PATH="$PATH" bash "$GITHUB_WORKSPACE/scripts/run-body-cinema-phase-a-tests.sh"'
+    );
+    expect(lifecycleStep).not.toContain("continue-on-error");
+    expect(workflow).toContain(
+      `checkout_parent='${CONSOLIDATED_RELEASE_CHECKOUT_PARENT}'`
+    );
+    expect(workflow).toContain(
+      'test "$CREATORVAULT_RELEASE_BEFORE" = "$checkout_parent"'
+    );
+    expect(workflow).toContain(
+      'test "$(git rev-parse "$GITHUB_SHA^")" = "$checkout_parent"'
+    );
+    const harness = readFileSync(
+      path.join(root, "scripts/run-body-cinema-phase-a-tests.sh"),
+      "utf8"
+    );
+    expect(harness).toContain('mkdir -m 700 "$fixture"');
+    expect(harness).toContain("trap cleanup EXIT");
+    expect(harness).toContain("--skip-networking");
+    expect(harness).toContain("env -i PATH=");
+    expect(CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS).toHaveLength(28);
+  });
+
+  it("rejects every other push predecessor before accepting a checkout", () => {
+    for (const before of [
+      CONSOLIDATED_RELEASE_PARENT,
+      "afffb824a2eb8f111a55bf73db45eaaab49d0c94",
+      "f".repeat(40),
+    ])
+      expect(() =>
+        checkConsolidatedCheckout(root, SHA, "refs/heads/main", "push", before)
+      ).toThrow("UNAPPROVED_CONSOLIDATED_BASELINE");
   });
 
   it("allows only the reviewed Phase A lifecycle and exact-parent controller closure", () => {

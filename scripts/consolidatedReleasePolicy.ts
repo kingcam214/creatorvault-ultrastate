@@ -21,7 +21,7 @@ export const CONSOLIDATED_SECURITY_BASELINE =
 export const CONSOLIDATED_RELEASE_PARENT =
   "552aee6aa27a79c717e96b60fefa72703deeb356";
 export const CONSOLIDATED_RELEASE_CHECKOUT_PARENT =
-  "afffb824a2eb8f111a55bf73db45eaaab49d0c94";
+  "320d5012d6555b9c576c2164cb0e6d5aff739b2b";
 export const APP_ROOT = "/root/creatorvault";
 export const APPROVED_FEATURE_HEADS = {
   stripe: "ccba8cd56f887d041311d4f37d3ec912fd57322d",
