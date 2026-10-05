@@ -42,12 +42,12 @@ describe("consolidated non-rotating guarded release", () => {
     expect(source).toContain("assertNewKey(key)");
   });
 
-  it("pins exactly one Phase A successor to the verified 552 artifact while preserving the 3762 signing epoch", () => {
+  it("pins the verified 552 live baseline and exact corrective checkout parent while preserving the 3762 signing epoch", () => {
     expect(CONSOLIDATED_RELEASE_PARENT).toBe(
       "552aee6aa27a79c717e96b60fefa72703deeb356"
     );
     expect(CONSOLIDATED_RELEASE_CHECKOUT_PARENT).toBe(
-      "552aee6aa27a79c717e96b60fefa72703deeb356"
+      "afffb824a2eb8f111a55bf73db45eaaab49d0c94"
     );
     expect(CONSOLIDATED_SECURITY_BASELINE).toBe(
       "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da"
@@ -66,6 +66,8 @@ describe("consolidated non-rotating guarded release", () => {
       "scripts/run-body-cinema-phase-a-tests.sh",
       "server/routers/bodyCinemaCandidateLifecycleRouter.ts",
       "server/services/bodyCinemaCandidateLifecycle.ts",
+      "server/services/governedPolloService.test.ts",
+      "server/services/polloCapabilityRegistryService.ts",
       "shared/bodyCinemaCandidateLifecycle.ts",
       "scripts/consolidatedReleaseRunner.ts",
       ".github/workflows/deploy.yml",

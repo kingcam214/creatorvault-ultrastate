@@ -14,14 +14,14 @@ import { BODY_CINEMA_PHASE_A_MIGRATION } from "./bodyCinemaPhaseAMigration";
 export const CONSOLIDATED_SECURITY_BASELINE =
   "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da";
 /**
- * The last verified live consolidated artifact remains the Phase A successor,
- * artifact and session-preservation baseline. The checkout parent below is
- * exact current main; the security signing epoch above remains immutable.
+ * The last verified live consolidated artifact remains the Phase A scope,
+ * protected-artifact and rollback baseline. The exact checkout parent below
+ * is the already-pushed but undeployed corrective main predecessor.
  */
 export const CONSOLIDATED_RELEASE_PARENT =
   "552aee6aa27a79c717e96b60fefa72703deeb356";
 export const CONSOLIDATED_RELEASE_CHECKOUT_PARENT =
-  "552aee6aa27a79c717e96b60fefa72703deeb356";
+  "afffb824a2eb8f111a55bf73db45eaaab49d0c94";
 export const APP_ROOT = "/root/creatorvault";
 export const APPROVED_FEATURE_HEADS = {
   stripe: "ccba8cd56f887d041311d4f37d3ec912fd57322d",
@@ -153,6 +153,8 @@ const bodyCinemaPhaseAReleasePaths = [
   "server/services/bodyCinemaCandidateLifecycle.test.ts",
   "server/services/bodyCinemaLifecycleBoundaries.test.ts",
   "server/services/creationProjectService.ts",
+  "server/services/governedPolloService.test.ts",
+  "server/services/polloCapabilityRegistryService.ts",
   "shared/bodyCinemaCandidateLifecycle.ts",
   "vitest.body-cinema-lifecycle.config.ts",
 ];
