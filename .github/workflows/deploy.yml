@@ -51,7 +51,7 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_EVENT_NAME" = 'push'
-          checkout_parent='532c3de5fb7bafcbeb47560697bcb8cbd95d8401'
+          checkout_parent='84ac4b9b657f72669b9c638d79d616eb3eedfe3d'
           test "$CREATORVAULT_RELEASE_BEFORE" = "$checkout_parent"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$(git rev-parse "$GITHUB_SHA^")" = "$checkout_parent"
@@ -86,6 +86,46 @@ jobs:
           pnpm exec tsx scripts/consolidatedReleaseRunner.ts --check-checkout
           git diff --check
           bash -n deploy_work_to_prod.sh scripts/run-consolidation-regressions.sh scripts/run-historical-security-release-checks.sh
+
+      - name: Read-only VPS release filesystem diagnostics
+        run: |
+          set -euo pipefail
+          sudo -n env -u NODE_OPTIONS -u NODE_PATH -u LD_PRELOAD -u LD_LIBRARY_PATH PATH="$PATH" DIAGNOSTIC_WORKSPACE="$GITHUB_WORKSPACE" node --input-type=module <<'JS'
+          import { promises as fs } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          import path from 'node:path';
+          const appRoot='/root/creatorvault', workspace=process.env.DIAGNOSTIC_WORKSPACE;
+          if(process.getuid()!==0 || !workspace || !workspace.includes('/_work/') || workspace===appRoot || workspace.startsWith(appRoot+'/'))throw new Error('UNSAFE_READ_ONLY_DIAGNOSTIC_CONTEXT');
+          const meta=await fs.lstat(appRoot);
+          if(!meta.isDirectory() || meta.isSymbolicLink() || await fs.realpath(appRoot)!==appRoot || await fs.realpath(workspace)!==workspace)throw new Error('UNSAFE_READ_ONLY_DIAGNOSTIC_ROOT');
+          for(const directory of [appRoot,workspace,'/tmp']){
+            const stat=await fs.statfs(directory,{bigint:true});
+            console.log(JSON.stringify({kind:'filesystem',directory,type:stat.type.toString(),totalBytes:(stat.blocks*stat.bsize).toString(),availableBytes:(stat.bavail*stat.bsize).toString(),freeBytes:(stat.bfree*stat.bsize).toString(),totalInodes:stat.files.toString(),freeInodes:stat.ffree.toString()}));
+          }
+          const names=(await fs.readdir(appRoot)).filter(name=>/^(?:\.consolidated-release-(?:stage|control)-[a-f0-9]{40}|dist\.secure-[a-f0-9]{40}|dist|node_modules|uploads|logs|\.consolidated-release-backups)$/.test(name)).sort();
+          if(names.length>100)throw new Error('READ_ONLY_DIAGNOSTIC_DIRECTORY_LIMIT');
+          for(const name of names){
+            const directory=path.join(appRoot,name), item=await fs.lstat(directory);
+            if(!item.isDirectory() || item.isSymbolicLink() || await fs.realpath(directory)!==directory){console.log(JSON.stringify({kind:'directory_skipped',name,reason:'NOT_CANONICAL_DIRECTORY'}));continue;}
+            const output=execFileSync('/usr/bin/du',['-sx','--block-size=1','--',directory],{encoding:'utf8',timeout:60000,maxBuffer:4096,env:{PATH:'/usr/bin:/bin',LC_ALL:'C'},stdio:['ignore','pipe','pipe']});
+            const bytes=/^([0-9]+)\s/.exec(output)?.[1];
+            if(!bytes)throw new Error('READ_ONLY_DIAGNOSTIC_SIZE_INVALID');
+            const sha=/^\.consolidated-release-(?:stage|control)-([a-f0-9]{40})$/.exec(name)?.[1];
+            let releasePhase='NOT_A_TEMPORARY_RELEASE_DIRECTORY',releaseCode;
+            if(sha){
+              releasePhase='NO_RECORDED_STATE';
+              try{
+                const file=path.join(appRoot,'.consolidated-release-state-'+sha+'.json'), stateMeta=await fs.lstat(file);
+                if(!stateMeta.isFile() || stateMeta.isSymbolicLink() || stateMeta.nlink!==1 || stateMeta.uid!==0 || stateMeta.gid!==0 || (stateMeta.mode&0o077)!==0 || stateMeta.size>32768)throw new Error('UNSAFE_STATE_METADATA');
+                const state=JSON.parse(await fs.readFile(file,'utf8'));
+                if(state.sha!==sha || !['preflight','migrating','activation-intent','ready','verified','failed'].includes(state.phase) || !/^[A-Z][A-Z0-9_]{1,120}$/.test(state.code))throw new Error('INVALID_STATE_METADATA');
+                releasePhase=state.phase;releaseCode=state.code;
+              }catch(error){if(error.code!=='ENOENT')releasePhase='STATE_NOT_VERIFIED';}
+            }
+            console.log(JSON.stringify({kind:'directory_size',name,bytes,releasePhase,releaseCode,deletionAuthorized:false}));
+          }
+          console.log('READ_ONLY_STORAGE_DIAGNOSTICS_COMPLETE_NO_FILES_CHANGED');
+          JS
 
       - name: Historical completed security-controller regressions
         run: |

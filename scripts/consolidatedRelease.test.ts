@@ -48,7 +48,7 @@ describe("consolidated non-rotating guarded release", () => {
       "532c3de5fb7bafcbeb47560697bcb8cbd95d8401"
     );
     expect(CONSOLIDATED_RELEASE_CHECKOUT_PARENT).toBe(
-      "532c3de5fb7bafcbeb47560697bcb8cbd95d8401"
+      "84ac4b9b657f72669b9c638d79d616eb3eedfe3d"
     );
     expect(CONSOLIDATED_SECURITY_BASELINE).toBe(
       "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da"
@@ -57,6 +57,42 @@ describe("consolidated non-rotating guarded release", () => {
     expect(source).toContain("assertLiveConsolidatedRelease");
     expect(source).toContain("CONSOLIDATED_ACTIVE_RELEASE_SECURITY_UNPROVEN");
     expect(source).toContain("rollbackArtifact: priorArtifactPath()");
+  });
+
+  it("measures VPS bytes, inodes and release directories without cleanup or secret reads", () => {
+    const workflow = readFileSync(
+      path.join(root, ".github/workflows/deploy.yml"),
+      "utf8"
+    );
+    const diagnostic = workflow
+      .split("- name: Read-only VPS release filesystem diagnostics")[1]
+      ?.split("- name:")[0];
+    expect(diagnostic).toBeDefined();
+    expect(diagnostic).toContain("fs.statfs(directory,{bigint:true})");
+    expect(diagnostic).toContain("freeInodes:stat.ffree.toString()");
+    expect(diagnostic).toContain("'/usr/bin/du'");
+    expect(diagnostic).toContain("deletionAuthorized:false");
+    expect(diagnostic).toContain(
+      "READ_ONLY_STORAGE_DIAGNOSTICS_COMPLETE_NO_FILES_CHANGED"
+    );
+    expect(diagnostic).not.toMatch(
+      /\b(?:unlink|writeFile|rename|mkdir|chmod|chown|truncate|rmdir|rmSync)\s*\(/
+    );
+    expect(diagnostic).not.toMatch(
+      /\b(?:pm2|mysqldump|mariadb|apt-get|curl|fetch)\b/
+    );
+    expect(diagnostic).not.toContain("JWT_SECRET");
+    expect(diagnostic).not.toContain("DATABASE_URL");
+    expect(diagnostic).not.toMatch(/readFile\([^\n]*["']\.env["']/);
+    expect(diagnostic).not.toContain("continue-on-error");
+    expect(
+      workflow.indexOf("Read-only VPS release filesystem diagnostics")
+    ).toBeGreaterThan(
+      workflow.indexOf("Validate Phase A release scope and preserved security")
+    );
+    expect(workflow).toContain(
+      'bash "$GITHUB_WORKSPACE/deploy_work_to_prod.sh"'
+    );
   });
 
   it("runs the unchanged private lifecycle fixture with the existing noninteractive root boundary", () => {
@@ -104,6 +140,7 @@ describe("consolidated non-rotating guarded release", () => {
 
   it("rejects every other push predecessor before accepting a checkout", () => {
     for (const before of [
+      "532c3de5fb7bafcbeb47560697bcb8cbd95d8401",
       "552aee6aa27a79c717e96b60fefa72703deeb356",
       "320d5012d6555b9c576c2164cb0e6d5aff739b2b",
       "afffb824a2eb8f111a55bf73db45eaaab49d0c94",
