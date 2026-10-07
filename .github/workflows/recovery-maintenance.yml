@@ -69,7 +69,7 @@ jobs:
             let after;for(let attempt=0;attempt<24;attempt++){try{after=app();if(after.instances===1||after.instances==='1'){const r=await getJson('https://creatorvault.live/__release');if(r.commit===baseline)break;}}catch{}await sleep(5000);}
             requireOk(after&&(after.instances===1||after.instances==='1'),'NATIVE_SINGLE_FORK_RESTORE_FAILED');
             requireOk((await getJson('https://creatorvault.live/__release')).commit===baseline,'BASELINE_CHANGED_AFTER_RESTART');
-            const health=await getJson('https://creatorvault.live/api/trpc/system.health');requireOk(JSON.stringify(health).includes('"ok":true'),'REAL_JSON_HEALTH_FAILED');
+            const health=await getJson('https://creatorvault.live/api/trpc/system.health?input='+encodeURIComponent(JSON.stringify({json:{timestamp:0}})));requireOk(health?.result?.data?.json?.ok===true,'REAL_JSON_HEALTH_FAILED');
             await sleep(10000);const stable=app();requireOk(stable.pid===after.pid&&stable.restarts===after.restarts,'RESTART_LOOP_DETECTED');
             await kernel(stable.pid);
             const currentHashes=await Promise.all(protectedFiles.map(fingerprint));requireOk(hashes.every((h,i)=>h===currentHashes[i]),'PROTECTED_LIVE_FILES_CHANGED');
