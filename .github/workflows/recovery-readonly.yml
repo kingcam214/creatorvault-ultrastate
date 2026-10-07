@@ -68,6 +68,16 @@ jobs:
             const names=(await fs.readdir(parent)).sort();output({kind:'top_level_listing',parent,entries:names.length});if(names.length>1000)throw new Error('READONLY_TOP_LEVEL_LIMIT');
             for(const name of names){const directory=parent+'/'+name;const m=await fs.lstat(directory);if(m.isSymbolicLink())continue;if(m.isDirectory()){try{const v=/^([0-9]+)\s/.exec(command('/usr/bin/du',['-sx','--block-size=1','--',directory],10000))?.[1];output({kind:'top_level_directory',directory,bytes:v??null,deletionAuthorized:false});}catch{output({kind:'top_level_size_unavailable',directory});}}else if(m.isFile()&&m.size>268435456)output({kind:'large_file_metadata',file:directory,bytes:m.size,deletionAuthorized:false});}
           }
+          try{
+            const docker=args=>command('docker',['--host','unix:///var/run/docker.sock',...args]);
+            const ids=docker(['container','ls','--all','--quiet','--no-trunc']).trim().split('\n').filter(Boolean);if(ids.length>200)throw new Error('READONLY_CONTAINER_LIMIT');
+            const refs=new Set(ids.length?docker(['container','inspect','--format','{{.Image}}',...ids]).trim().split('\n'):[]);
+            const images=[...new Set(docker(['image','ls','--quiet','--no-trunc']).trim().split('\n').filter(Boolean))];if(images.length>200)throw new Error('READONLY_IMAGE_LIMIT');
+            const format='{"id":{{json .Id}},"repoTags":{{json .RepoTags}},"repoDigests":{{json .RepoDigests}},"bytes":{{json .Size}}}';
+            const data=images.length?docker(['image','inspect','--format',format,...images]).trim().split('\n').map(v=>JSON.parse(v)):[];
+            output({kind:'docker_catalog_summary',containers:ids.length,images:data.length,containersModified:false});
+            for(const image of data)output({kind:'docker_image_readonly',...image,referencedByExistingContainer:refs.has(image.id),deletionAuthorized:false});
+          }catch{output({kind:'docker_catalog_unavailable'});}
           try{const p=await fs.lstat(root+'/uploads');output({kind:'uploads_metadata',symlink:p.isSymbolicLink(),target:p.isSymbolicLink()?await fs.readlink(root+'/uploads'):null,modified:false});}catch{output({kind:'uploads_metadata',available:false});}
           try{const value=command('/usr/bin/systemctl',['show','pm2-root','--property=ActiveState','--property=SubState','--property=UnitFileState','--property=FragmentPath']);output({kind:'pm2_boot_unit',properties:value.trim().split('\n')});}catch{output({kind:'pm2_boot_unit',available:false});}
           output({kind:'readonly_complete',appRestarted:false,mainChanged:false,deploymentExecuted:false,filesDeleted:false,credentialsOrEnvironmentPrinted:false});
