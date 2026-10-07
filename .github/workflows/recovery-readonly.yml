@@ -43,7 +43,7 @@ jobs:
           if(!/^Uid:\s+0\s/m.test(daemonStatus)||!daemonCmd.includes('God Daemon'))throw new Error('EXISTING_ROOT_PM2_DAEMON_REQUIRED');
           const rows=JSON.parse(command('pm2',['jlist']));
           const apps=rows.filter(a=>a.name==='creatorvault');
-          output({kind:'pm2_readonly',daemonPid:daemon,appCount:apps.length});
+          output({kind:'pm2_readonly',daemonPid:daemon,appCount:apps.length,version:/PM2 v([0-9.]+)/.exec(daemonCmd)?.[1]??null});
           for(const app of apps){
             const p=app.pm2_env||{};
             const checks={online:p.status==='online',forkMode:p.exec_mode==='fork_mode',singleInstance:p.instances===1||p.instances==='1',watchDisabled:p.watch===false,canonicalCwd:p.pm_cwd===root,canonicalEntry:p.pm_exec_path===entry,nodeInterpreter:typeof p.exec_interpreter==='string'&&/(?:^|\/)node$/.test(p.exec_interpreter),autorestart:p.autorestart===true,noNodeArgs:noArgs(p.node_args),noArgs:noArgs(p.args),noInterpreterArgs:noArgs(p.interpreter_args)};
@@ -60,7 +60,7 @@ jobs:
           for(const directory of [root,'/tmp','/home/runner/actions-runner/_work']){
             const s=await fs.statfs(directory,{bigint:true});output({kind:'filesystem',directory,totalBytes:String(s.blocks*s.bsize),availableBytes:String(s.bavail*s.bsize),freeBytes:String(s.bfree*s.bsize),freeInodes:String(s.ffree)});
           }
-          const paths=[root,'/root/.cache','/root/.local/share/pnpm','/home/runner/.cache','/home/runner/.local/share/pnpm','/home/runner/actions-runner/_work','/var/lib/mysql','/var/lib/docker','/var/log','/tmp','/root/.pm2/logs'];
+          const paths=[root,'/root/.cache','/root/.local/share/pnpm','/home/runner/.cache','/home/runner/.local/share/pnpm','/home/runner/actions-runner/_work','/var/lib/mysql','/var/lib/docker','/var/log','/tmp','/root/.pm2/logs','/root/uploads','/root/.npm','/var/cache/apt/archives','/var/tmp','/root/.cache/puppeteer','/root/.cache/ms-playwright'];
           for(const directory of paths){
             try{const m=await fs.lstat(directory);if(!m.isDirectory()||m.isSymbolicLink()){output({kind:'storage_path_skipped',directory});continue;}const v=/^([0-9]+)\s/.exec(command('/usr/bin/du',['-sx','--block-size=1','--',directory],40000))?.[1];output({kind:'storage_directory',directory,bytes:v??null,deletionAuthorized:false});}catch{output({kind:'storage_path_unavailable',directory});}
           }
