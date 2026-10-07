@@ -1,0 +1,70 @@
+name: CreatorVault Read-only Recovery Diagnostics
+
+on:
+  push:
+    branches:
+      - ops/recovery-readonly-2026-10-07
+
+permissions:
+  contents: read
+
+concurrency:
+  group: creatorvault-readonly-recovery-2026-10-07
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, linux, creatorvault-production]
+    timeout-minutes: 8
+    steps:
+      - name: Read-only PM2 runtime and storage evidence — no checkout or deployment
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/ops/recovery-readonly-2026-10-07'
+          test "$GITHUB_EVENT_NAME" = 'push'
+          sudo -n env -u NODE_OPTIONS -u NODE_PATH -u LD_PRELOAD -u LD_LIBRARY_PATH -u BASH_ENV -u ENV node --input-type=module <<'JS'
+          import fs from 'node:fs/promises';
+          import { execFileSync } from 'node:child_process';
+          import crypto from 'node:crypto';
+          const root='/root/creatorvault', entry=root+'/dist/index.js';
+          const env={PATH:'/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',HOME:'/root',PM2_HOME:'/root/.pm2',LC_ALL:'C',NO_COLOR:'1'};
+          const output=value=>console.log(JSON.stringify(value));
+          const noArgs=value=>value===undefined||value===null||value===''||(Array.isArray(value)&&value.length===0);
+          function command(file,args,timeout=30000){return execFileSync(file,args,{env,encoding:'utf8',timeout,maxBuffer:4*1024*1024,stdio:['ignore','pipe','pipe']});}
+          function selected(app){
+            const p=app.pm2_env||app;
+            return {name:app.name||p.name,pid:app.pid??null,status:p.status??null,execMode:p.exec_mode??null,instances:p.instances??null,instancesPresent:Object.hasOwn(p,'instances'),watch:p.watch===false?'false':typeof p.watch,autorestart:p.autorestart??null,cwd:p.pm_cwd??null,execPath:p.pm_exec_path??null,interpreter:p.exec_interpreter??null,nodeArgsEmpty:noArgs(p.node_args),argsEmpty:noArgs(p.args),interpreterArgsEmpty:noArgs(p.interpreter_args),restarts:p.restart_time??null};
+          }
+          if(process.getuid()!==0||await fs.realpath(root)!==root)throw new Error('READONLY_ROOT_TARGET_INVALID');
+          const daemon=Number((await fs.readFile('/root/.pm2/pm2.pid','utf8')).trim());
+          if(!Number.isSafeInteger(daemon)||daemon<2)throw new Error('EXISTING_PM2_DAEMON_REQUIRED');
+          const daemonStatus=await fs.readFile(`/proc/${daemon}/status`,'utf8');
+          const daemonCmd=await fs.readFile(`/proc/${daemon}/cmdline`,'utf8');
+          if(!/^Uid:\s+0\s/m.test(daemonStatus)||!daemonCmd.includes('God Daemon'))throw new Error('EXISTING_ROOT_PM2_DAEMON_REQUIRED');
+          const rows=JSON.parse(command('pm2',['jlist']));
+          const apps=rows.filter(a=>a.name==='creatorvault');
+          output({kind:'pm2_readonly',daemonPid:daemon,appCount:apps.length});
+          for(const app of apps){
+            const p=app.pm2_env||{};
+            const checks={online:p.status==='online',forkMode:p.exec_mode==='fork_mode',singleInstance:p.instances===1||p.instances==='1',watchDisabled:p.watch===false,canonicalCwd:p.pm_cwd===root,canonicalEntry:p.pm_exec_path===entry,nodeInterpreter:typeof p.exec_interpreter==='string'&&/(?:^|\/)node$/.test(p.exec_interpreter),autorestart:p.autorestart===true,noNodeArgs:noArgs(p.node_args),noArgs:noArgs(p.args),noInterpreterArgs:noArgs(p.interpreter_args)};
+            output({kind:'pm2_runtime_fields',...selected(app),checks,failedChecks:Object.entries(checks).filter(([,v])=>!v).map(([k])=>k)});
+            if(Number.isSafeInteger(app.pid)&&app.pid>1){
+              const cwd=await fs.readlink(`/proc/${app.pid}/cwd`),exe=await fs.realpath(`/proc/${app.pid}/exe`);
+              const status=await fs.readFile(`/proc/${app.pid}/status`,'utf8'),argv=(await fs.readFile(`/proc/${app.pid}/cmdline`,'utf8')).split('\0').filter(Boolean);
+              output({kind:'app_kernel_metadata',pid:app.pid,rootUid:/^Uid:\s+0\s/m.test(status),cwd,executable:exe,argumentCount:argv.length,expectedDirectLauncher:argv.length===2&&argv[0]===exe&&argv[1]===entry,expectedPm2NodeTitle:argv.length===1&&argv[0]===`node ${entry}`});
+            }
+          }
+          for(const file of ['/root/.pm2/dump.pm2','/root/.pm2/dump.pm2.bak']){
+            try{const m=await fs.lstat(file);if(!m.isFile()||m.isSymbolicLink()||m.size>4*1024*1024){output({kind:'pm2_dump_skipped',file});continue;}const bytes=await fs.readFile(file);const saved=JSON.parse(bytes);output({kind:'pm2_dump_metadata',file,uid:m.uid,gid:m.gid,mode:(m.mode&0o777).toString(8),bytes:m.size,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),apps:saved.filter(a=>a.name==='creatorvault').map(selected)});bytes.fill(0);}catch{output({kind:'pm2_dump_unavailable',file});}
+          }
+          for(const directory of [root,'/tmp','/home/runner/actions-runner/_work']){
+            const s=await fs.statfs(directory,{bigint:true});output({kind:'filesystem',directory,totalBytes:String(s.blocks*s.bsize),availableBytes:String(s.bavail*s.bsize),freeBytes:String(s.bfree*s.bsize),freeInodes:String(s.ffree)});
+          }
+          const paths=[root,'/root/.cache','/root/.local/share/pnpm','/home/runner/.cache','/home/runner/.local/share/pnpm','/home/runner/actions-runner/_work','/var/lib/mysql','/var/lib/docker','/var/log','/tmp','/root/.pm2/logs'];
+          for(const directory of paths){
+            try{const m=await fs.lstat(directory);if(!m.isDirectory()||m.isSymbolicLink()){output({kind:'storage_path_skipped',directory});continue;}const v=/^([0-9]+)\s/.exec(command('/usr/bin/du',['-sx','--block-size=1','--',directory],40000))?.[1];output({kind:'storage_directory',directory,bytes:v??null,deletionAuthorized:false});}catch{output({kind:'storage_path_unavailable',directory});}
+          }
+          try{const p=await fs.lstat(root+'/uploads');output({kind:'uploads_metadata',symlink:p.isSymbolicLink(),target:p.isSymbolicLink()?await fs.readlink(root+'/uploads'):null,modified:false});}catch{output({kind:'uploads_metadata',available:false});}
+          try{const value=command('/usr/bin/systemctl',['show','pm2-root','--property=ActiveState','--property=SubState','--property=UnitFileState','--property=FragmentPath']);output({kind:'pm2_boot_unit',properties:value.trim().split('\n')});}catch{output({kind:'pm2_boot_unit',available:false});}
+          output({kind:'readonly_complete',appRestarted:false,mainChanged:false,deploymentExecuted:false,filesDeleted:false,credentialsOrEnvironmentPrinted:false});
+          JS
