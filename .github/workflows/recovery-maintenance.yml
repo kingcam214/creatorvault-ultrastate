@@ -1,0 +1,78 @@
+name: CreatorVault Native Startup and Package Cache Recovery
+
+on:
+  push:
+    branches:
+      - ops/recovery-maintenance-2026-10-07
+
+permissions:
+  contents: read
+
+concurrency:
+  group: creatorvault-native-maintenance-2026-10-07
+  cancel-in-progress: false
+
+jobs:
+  maintain:
+    runs-on: [self-hosted, linux, creatorvault-production]
+    timeout-minutes: 8
+    steps:
+      - name: Preserve live baseline and restore native PM2 startup configuration
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/ops/recovery-maintenance-2026-10-07'
+          test "$GITHUB_EVENT_NAME" = 'push'
+          sudo -n env -u NODE_OPTIONS -u NODE_PATH -u NODE_DEBUG -u NODE_DEBUG_NATIVE -u DEBUG -u LD_PRELOAD -u LD_LIBRARY_PATH -u BASH_ENV -u ENV /usr/bin/flock --exclusive --nonblock --close /root/creatorvault/.env.writer.lock /usr/bin/node --input-type=module <<'JS'
+          import fs from 'node:fs/promises';
+          import {execFileSync} from 'node:child_process';
+          import crypto from 'node:crypto';
+          const root='/root/creatorvault',entry=root+'/dist/index.js',baseline='532c3de5fb7bafcbeb47560697bcb8cbd95d8401';
+          const env={PATH:'/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',HOME:'/root',PM2_HOME:'/root/.pm2',LC_ALL:'C',NO_COLOR:'1'};
+          const emit=x=>console.log(JSON.stringify(x));
+          function requireOk(value,code){if(!value)throw new Error(code);}
+          function command(file,args,timeout=60000,cwd=root){return execFileSync(file,args,{cwd,env,encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout,maxBuffer:4*1024*1024});}
+          const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+          async function getJson(url){const r=await fetch(url,{signal:AbortSignal.timeout(10000),headers:{'Cache-Control':'no-cache'}});requireOk(r.ok,'PUBLIC_READBACK_FAILED');return r.json();}
+          async function fingerprint(file){const b=await fs.readFile(file);const h=crypto.createHash('sha256').update(b).digest('hex');b.fill(0);return h;}
+          async function space(){const s=await fs.statfs(root,{bigint:true});return s.bavail*s.bsize;}
+          function empty(v){return v===undefined||v===null||v===''||(Array.isArray(v)&&v.length===0);}
+          async function kernel(pid){requireOk(Number.isSafeInteger(pid)&&pid>1,'KERNEL_PID_INVALID');const status=await fs.readFile(`/proc/${pid}/status`,'utf8'),cwd=await fs.readlink(`/proc/${pid}/cwd`),exe=await fs.realpath(`/proc/${pid}/exe`),argv=(await fs.readFile(`/proc/${pid}/cmdline`,'utf8')).split('\0').filter(Boolean);requireOk(/^Uid:\s+0\s/m.test(status)&&cwd===root&&exe==='/usr/bin/node'&&((argv.length===1&&argv[0]===`node ${entry}`)||(argv.length===2&&argv[0]===exe&&argv[1]===entry)),'CANONICAL_KERNEL_LAUNCH_CHANGED');}
+          function app(){const rows=JSON.parse(command('pm2',['jlist']));const apps=rows.filter(a=>a.name==='creatorvault');requireOk(apps.length===1,'APP_NOT_UNIQUE');const a=apps[0],p=a.pm2_env;requireOk(p.status==='online'&&p.exec_mode==='fork_mode'&&p.watch===false&&p.autorestart===true&&p.pm_cwd===root&&p.pm_exec_path===entry&&/(?:^|\/)node$/.test(p.exec_interpreter)&&empty(p.node_args)&&empty(p.args)&&empty(p.interpreter_args),'EXISTING_BASELINE_RUNTIME_CHANGED');requireOk(p.instances===undefined||p.instances===1||p.instances==='1','EXISTING_INSTANCE_COUNT_UNEXPECTED');return {pid:a.pid,restarts:p.restart_time,instances:p.instances??null};}
+          async function protectedDirectory(directory,create=false){let m;try{m=await fs.lstat(directory);}catch(e){if(e.code!=='ENOENT'||!create)throw e;await fs.mkdir(directory,{mode:0o700});m=await fs.lstat(directory);}requireOk(m.isDirectory()&&!m.isSymbolicLink()&&m.uid===0&&m.gid===0&&(m.mode&0o022)===0,'CONFIG_DIRECTORY_UNSAFE');}
+          async function writeNewOrIdentical(file,text,mode){try{const m=await fs.lstat(file);requireOk(m.isFile()&&!m.isSymbolicLink()&&m.uid===0&&m.gid===0&&(m.mode&0o022)===0,'EXISTING_CONFIG_UNSAFE');requireOk(await fs.readFile(file,'utf8')===text,'EXISTING_CONFIG_REQUIRES_REVIEW');return;}catch(e){if(e.code!=='ENOENT')throw e;}const h=await fs.open(file,'wx',mode);try{await h.writeFile(text);await h.sync();}finally{await h.close();}}
+          try{
+            requireOk(process.getuid()===0&&process.getgid()===0&&await fs.realpath(root)===root,'ROOT_TARGET_INVALID');
+            const id=command('/usr/bin/curl',['--noproxy','*','--silent','--show-error','--max-time','3','http://169.254.169.254/metadata/v1/id']).trim();requireOk(id==='545144175','DROPLET_TARGET_MISMATCH');
+            const stamp=JSON.parse(await fs.readFile(root+'/dist/public/release.json','utf8'));requireOk(stamp.commit===baseline&&stamp.branch==='main'&&stamp.environment==='production','BASELINE_ARTIFACT_CHANGED');
+            requireOk((await getJson('https://creatorvault.live/__release')).commit===baseline,'LIVE_BASELINE_CHANGED');
+            const daemon=Number((await fs.readFile('/root/.pm2/pm2.pid','utf8')).trim());requireOk(Number.isSafeInteger(daemon)&&daemon>1,'EXISTING_DAEMON_REQUIRED');
+            requireOk((await fs.readFile(`/proc/${daemon}/cmdline`,'utf8')).includes('God Daemon'),'EXISTING_DAEMON_REQUIRED');
+            const before=app();const protectedFiles=[root+'/.env',entry,root+'/dist/secure-app.js',root+'/dist/consolidated-release-runtime.mjs',root+'/dist/public/release.json'];const hashes=await Promise.all(protectedFiles.map(fingerprint));const freeBefore=await space();
+            await kernel(before.pid);
+            emit({kind:'maintenance_bound',droplet:545144175,baseline,before,availableBytes:String(freeBefore),releaseCodeUnchanged:true});
+            // Official package-manager cache operations only: no uploads/database/logs/artifacts/state/containers/volumes are deleted.
+            for(const [label,file,args,cwd]of [['root_pnpm_unused_store','pnpm',['store','prune'],root],['root_npm_cache','npm',['cache','clean','--force','--cache','/root/.npm'],root],['runner_pnpm_unused_store','/usr/bin/sudo',['-n','-u','runner','-H','env','HOME=/home/runner','PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','pnpm','store','prune'],'/home/runner/actions-runner/_work/creatorvault-ultrastate/creatorvault-ultrastate']]){
+              let ok=true;try{command(file,args,120000,cwd);}catch{ok=false;}emit({kind:'package_cache_operation',label,ok,availableBytes:String(await space()),productionDataModified:false});
+            }
+            const pm2bin=await fs.realpath(command('/usr/bin/which',['pm2']).trim());requireOk(/^\/(?:usr|opt)\/[A-Za-z0-9_./-]+$/.test(pm2bin),'PM2_BINARY_PATH_UNSAFE');const binary=await fs.stat(pm2bin);requireOk(binary.uid===0&&(binary.mode&0o022)===0,'PM2_BINARY_UNSAFE');
+            const configDirectory='/etc/creatorvault';await protectedDirectory(configDirectory,true);
+            const cfg=configDirectory+'/pm2-single-fork.config.cjs';
+            const config='module.exports = '+JSON.stringify({apps:[{name:'creatorvault',script:entry,cwd:root,interpreter:'/usr/bin/node',exec_mode:'fork',instances:1,watch:false,autorestart:true,args:[],node_args:[],interpreter_args:[]}]})+';\n';
+            const dropDirectory='/etc/systemd/system/pm2-root.service.d';await protectedDirectory(dropDirectory,true);
+            const drop=dropDirectory+'/20-creatorvault-single-fork.conf';
+            const directive='[Service]\nExecStartPost=/usr/bin/env -u NODE_OPTIONS -u NODE_PATH -u NODE_DEBUG -u NODE_DEBUG_NATIVE -u DEBUG -u LD_PRELOAD -u LD_LIBRARY_PATH -u BASH_ENV -u ENV HOME=/root PM2_HOME=/root/.pm2 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /usr/bin/node '+pm2bin+' restart '+cfg+' --only creatorvault\n';
+            const existingPost=command('/usr/bin/systemctl',['show','pm2-root','--property=ExecStartPost','--value']).trim();requireOk(!existingPost||existingPost.includes(cfg),'OTHER_BOOT_POSTSTART_REQUIRES_REVIEW');
+            await writeNewOrIdentical(cfg,config,0o600);await writeNewOrIdentical(drop,directive,0o644);
+            command('/usr/bin/systemctl',['daemon-reload']);
+            requireOk(command('/usr/bin/systemctl',['show','pm2-root','--property=ExecStartPost','--value']).includes(cfg),'BOOT_DIRECTIVE_NOT_LOADED');
+            if(before.instances===null)command('/usr/bin/node',[pm2bin,'restart',cfg,'--only','creatorvault']);
+            let after;for(let attempt=0;attempt<24;attempt++){try{after=app();if(after.instances===1||after.instances==='1'){const r=await getJson('https://creatorvault.live/__release');if(r.commit===baseline)break;}}catch{}await sleep(5000);}
+            requireOk(after&&(after.instances===1||after.instances==='1'),'NATIVE_SINGLE_FORK_RESTORE_FAILED');
+            requireOk((await getJson('https://creatorvault.live/__release')).commit===baseline,'BASELINE_CHANGED_AFTER_RESTART');
+            const health=await getJson('https://creatorvault.live/api/trpc/system.health');requireOk(JSON.stringify(health).includes('"ok":true'),'REAL_JSON_HEALTH_FAILED');
+            await sleep(10000);const stable=app();requireOk(stable.pid===after.pid&&stable.restarts===after.restarts,'RESTART_LOOP_DETECTED');
+            await kernel(stable.pid);
+            const currentHashes=await Promise.all(protectedFiles.map(fingerprint));requireOk(hashes.every((h,i)=>h===currentHashes[i]),'PROTECTED_LIVE_FILES_CHANGED');
+            emit({kind:'maintenance_complete',droplet:545144175,baseline,after:stable,availableBeforeBytes:String(freeBefore),availableAfterBytes:String(await space()),nativeStartupConfig:cfg,bootDropIn:drop,bootDirectiveLoaded:true,protectedLiveFilesUnchanged:true,healthOk:true,applicationReleaseChanged:false,protectedReleaseStatesMovedOrDeleted:false,providerFlagsChanged:false,dockerImagesContainersVolumesModified:false,productionDataDeleted:false});
+          }catch(e){const message=String(e.message||''),code=/^[A-Z][A-Z0-9_]{3,100}$/.test(message)?message:(/^[A-Z][A-Z0-9_]{3,100}$/.test(String(e.code||''))?e.code:'CONTROLLED_OPERATION_FAILED');emit({kind:'maintenance_failed',code,productionDeploymentExecuted:false,noForcedFallback:true});process.exitCode=1;}
+          JS
