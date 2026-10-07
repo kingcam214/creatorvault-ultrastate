@@ -64,6 +64,10 @@ jobs:
           for(const directory of paths){
             try{const m=await fs.lstat(directory);if(!m.isDirectory()||m.isSymbolicLink()){output({kind:'storage_path_skipped',directory});continue;}const v=/^([0-9]+)\s/.exec(command('/usr/bin/du',['-sx','--block-size=1','--',directory],40000))?.[1];output({kind:'storage_directory',directory,bytes:v??null,deletionAuthorized:false});}catch{output({kind:'storage_path_unavailable',directory});}
           }
+          for(const parent of ['/root','/home','/opt','/var/lib']){
+            const names=(await fs.readdir(parent)).sort();if(names.length>100)throw new Error('READONLY_TOP_LEVEL_LIMIT');
+            for(const name of names){const directory=parent+'/'+name;const m=await fs.lstat(directory);if(m.isSymbolicLink())continue;if(m.isDirectory()){try{const v=/^([0-9]+)\s/.exec(command('/usr/bin/du',['-sx','--block-size=1','--',directory],10000))?.[1];output({kind:'top_level_directory',directory,bytes:v??null,deletionAuthorized:false});}catch{output({kind:'top_level_size_unavailable',directory});}}else if(m.isFile()&&m.size>268435456)output({kind:'large_file_metadata',file:directory,bytes:m.size,deletionAuthorized:false});}
+          }
           try{const p=await fs.lstat(root+'/uploads');output({kind:'uploads_metadata',symlink:p.isSymbolicLink(),target:p.isSymbolicLink()?await fs.readlink(root+'/uploads'):null,modified:false});}catch{output({kind:'uploads_metadata',available:false});}
           try{const value=command('/usr/bin/systemctl',['show','pm2-root','--property=ActiveState','--property=SubState','--property=UnitFileState','--property=FragmentPath']);output({kind:'pm2_boot_unit',properties:value.trim().split('\n')});}catch{output({kind:'pm2_boot_unit',available:false});}
           output({kind:'readonly_complete',appRestarted:false,mainChanged:false,deploymentExecuted:false,filesDeleted:false,credentialsOrEnvironmentPrinted:false});
