@@ -51,7 +51,7 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_EVENT_NAME" = 'push'
-          checkout_parent='84ac4b9b657f72669b9c638d79d616eb3eedfe3d'
+          checkout_parent='03eb5aee88157aad39b30f1c913988ac671ed18f'
           test "$CREATORVAULT_RELEASE_BEFORE" = "$checkout_parent"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$(git rev-parse "$GITHUB_SHA^")" = "$checkout_parent"
@@ -266,3 +266,30 @@ jobs:
             CREATORVAULT_RELEASE_BEFORE="$CREATORVAULT_RELEASE_BEFORE" \
             CREATORVAULT_RELEASE_WORKSPACE="$GITHUB_WORKSPACE" \
             bash "$GITHUB_WORKSPACE/deploy_work_to_prod.sh"
+
+      - name: Reclaim disposable build cache after verified deployment
+        if: success()
+        run: |
+          set -euo pipefail
+          sudo -n env -u NODE_OPTIONS -u NODE_PATH -u NODE_DEBUG -u LD_PRELOAD -u LD_LIBRARY_PATH PATH="$PATH" CACHE_WORKSPACE="$GITHUB_WORKSPACE" VERIFIED_RELEASE_SHA="$GITHUB_SHA" node --input-type=module <<'JS'
+          import fs from 'node:fs/promises';
+          import crypto from 'node:crypto';
+          import {execFileSync} from 'node:child_process';
+          const appRoot='/root/creatorvault',workspace=process.env.CACHE_WORKSPACE,sha=process.env.VERIFIED_RELEASE_SHA;
+          const env={PATH:'/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',HOME:'/root',PM2_HOME:'/root/.pm2',LC_ALL:'C',NO_COLOR:'1'};
+          const command=(file,args)=>execFileSync(file,args,{env,encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:120000,maxBuffer:4*1024*1024});
+          if(process.getuid()!==0||workspace!=='/home/runner/actions-runner/_work/creatorvault-ultrastate/creatorvault-ultrastate'||await fs.realpath(workspace)!==workspace||await fs.realpath(appRoot)!==appRoot||!/^[a-f0-9]{40}$/.test(sha))throw new Error('UNSAFE_DISPOSABLE_CACHE_CONTEXT');
+          const stateFile=appRoot+'/.consolidated-release-state-'+sha+'.json',meta=await fs.lstat(stateFile);
+          if(!meta.isFile()||meta.isSymbolicLink()||meta.uid!==0||meta.gid!==0||(meta.mode&0o077)!==0||meta.size>32768)throw new Error('UNVERIFIED_RELEASE_CACHE_CLEANUP_FORBIDDEN');
+          const state=JSON.parse(await fs.readFile(stateFile,'utf8')),stamp=JSON.parse(await fs.readFile(appRoot+'/dist/public/release.json','utf8'));
+          if(state.sha!==sha||state.phase!=='verified'||stamp.commit!==sha)throw new Error('UNVERIFIED_RELEASE_CACHE_CLEANUP_FORBIDDEN');
+          const rows=JSON.parse(command('pm2',['jlist']));
+          if(rows.some(a=>[a.pm2_env?.pm_cwd,a.pm2_env?.pm_exec_path].some(p=>typeof p==='string'&&(p===workspace||p.startsWith(workspace+'/')))))throw new Error('CACHE_REFERENCED_BY_LIVE_PROCESS');
+          const protectedFiles=[appRoot+'/.env',appRoot+'/dist/index.js',appRoot+'/dist/secure-app.js',appRoot+'/dist/consolidated-release-runtime.mjs',appRoot+'/dist/public/release.json',stateFile];
+          const digest=async file=>crypto.createHash('sha256').update(await fs.readFile(file)).digest('hex');
+          const before=await Promise.all(protectedFiles.map(digest));const free=async()=>{const s=await fs.statfs(appRoot,{bigint:true});return String(s.bavail*s.bsize);};const availableBefore=await free();
+          for(const name of ['node_modules','dist']){const directory=workspace+'/'+name;const m=await fs.lstat(directory).catch(e=>{if(e.code==='ENOENT')return null;throw e;});if(!m)continue;if(!m.isDirectory()||m.isSymbolicLink()||await fs.realpath(directory)!==directory)throw new Error('UNSAFE_DISPOSABLE_CACHE_DIRECTORY');await fs.rm(directory,{recursive:true,force:false});}
+          let unusedStorePruned=true;try{command('/usr/bin/sudo',['-n','-u','runner','-H','env','HOME=/home/runner','PATH=/home/runner/.local/share/pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','pnpm','store','prune']);}catch{unusedStorePruned=false;}
+          const after=await Promise.all(protectedFiles.map(digest));if(!before.every((h,i)=>h===after[i]))throw new Error('PROTECTED_LIVE_FILES_CHANGED');
+          console.log(JSON.stringify({kind:'verified_build_cache_reclaimed',sha,availableBeforeBytes:availableBefore,availableAfterBytes:await free(),unusedStorePruned,protectedLiveFilesUnchanged:true,productionDataDeleted:false,failedReleaseEvidencePreserved:true}));
+          JS
