@@ -68,7 +68,7 @@ async function closeArtifact(
 async function deliver(
   request: Request,
   response: Response,
-  artifactType: "source" | "candidate"
+  artifactType: "source" | "candidate" | "hd-candidate"
 ): Promise<void> {
   let artifact: BodyCinemaPlaybackArtifact | null = null;
   privateHeaders(response);
@@ -94,11 +94,26 @@ async function deliver(
         );
       }
     }
-    artifact = await service.openPlayback({
-      creatorId: Number(user.id),
-      id: lifecycleId,
-      artifact: artifactType,
-    });
+    if (
+      artifactType === "hd-candidate" &&
+      String(request.query.download || "") === "1"
+    ) {
+      throw new BodyCinemaLifecycleError(
+        "forbidden",
+        "Private review does not authorize an accepted-master download."
+      );
+    }
+    artifact =
+      artifactType === "hd-candidate"
+        ? await service.openHdPlayback({
+            creatorId: Number(user.id),
+            id: lifecycleId,
+          })
+        : await service.openPlayback({
+            creatorId: Number(user.id),
+            id: lifecycleId,
+            artifact: artifactType,
+          });
     response.type(artifact.mimeType);
     response.setHeader(
       "Content-Disposition",
@@ -160,16 +175,14 @@ async function deliver(
       response.destroy();
       return;
     }
-    response
-      .status(status)
-      .json({
-        error:
-          status === 401
-            ? "Sign in to access protected Body Cinema media."
-            : status === 403
-              ? "This protected Body Cinema media is unavailable to the current creator in this state."
-              : "This protected Body Cinema media is unavailable.",
-      });
+    response.status(status).json({
+      error:
+        status === 401
+          ? "Sign in to access protected Body Cinema media."
+          : status === 403
+            ? "This protected Body Cinema media is unavailable to the current creator in this state."
+            : "This protected Body Cinema media is unavailable.",
+    });
   }
 }
 
@@ -183,4 +196,8 @@ export function registerBodyCinemaCandidatePlayback(app: Express): void {
   app.head("/api/body-cinema/lifecycle/:id/source", source);
   app.get("/api/body-cinema/lifecycle/:id/candidate", candidate);
   app.head("/api/body-cinema/lifecycle/:id/candidate", candidate);
+  const hdCandidate = (request: Request, response: Response) =>
+    deliver(request, response, "hd-candidate");
+  app.get("/api/body-cinema/lifecycle/:id/hd-candidate", hdCandidate);
+  app.head("/api/body-cinema/lifecycle/:id/hd-candidate", hdCandidate);
 }

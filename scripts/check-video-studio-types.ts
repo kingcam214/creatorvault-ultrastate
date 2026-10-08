@@ -3,6 +3,15 @@ import ts from "typescript";
 
 const root = process.cwd();
 const files = [
+  "shared/bodyCinemaHd.ts",
+  "server/services/bodyCinemaHdBlueprint.ts",
+  "server/services/bodyCinemaHdBlueprint.test.ts",
+  "server/services/bodyCinemaHdRenderEngine.ts",
+  "server/services/bodyCinemaHdRenderEngine.test.ts",
+  "server/services/bodyCinemaHdLifecycle.test.ts",
+  "client/src/components/body-cinema/BodyCinemaHdReview.tsx",
+  "client/src/components/body-cinema/BodyCinemaHdReview.test.tsx",
+
   "client/src/lib/bodyCinemaPerception.ts",
   "client/src/components/body-cinema/BodyDirectedDirector.tsx",
   "client/src/components/body-cinema/BodyDirectedDirector.test.tsx",

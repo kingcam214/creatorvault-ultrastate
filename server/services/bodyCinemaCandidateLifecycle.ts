@@ -1,8 +1,17 @@
+import {
+  bodyCinemaHdJobSchema,
+  bodyCinemaHdPrepareSchema,
+  bodyCinemaHdExecuteSchema,
+  type BodyCinemaHdJob,
+  type BodyCinemaHdRecipe,
+} from "../../shared/bodyCinemaHd";
+import { compileBodyCinemaHdRecipe } from "./bodyCinemaHdBlueprint";
+import { renderBodyCinemaHd } from "./bodyCinemaHdRenderEngine";
 import { lstat } from "node:fs/promises";
 import { createHash, randomUUID } from "crypto";
 import { execFile } from "child_process";
 import { constants } from "fs";
-import { open, readFile } from "fs/promises";
+import { open, readFile, mkdir, chmod } from "fs/promises";
 import type { FileHandle } from "fs/promises";
 import os from "os";
 import path from "path";
@@ -951,6 +960,542 @@ export type BodyCinemaPlaybackArtifact = {
 
 export class BodyCinemaCandidateLifecycleService {
   constructor(private readonly pool: Pool) {}
+
+  async getHdRender(
+    creatorId: number,
+    id: string
+  ): Promise<BodyCinemaHdJob | null> {
+    return this.transaction(async connection => {
+      const row = await this.lockBodyDirectedRow(connection, creatorId, id);
+      const record = await this.readBodyDirectedRecord(connection, row);
+      const project = await this.readBodyDirectedProject(connection, row, true);
+      const metadata = parseJsonRecord(
+        project.metadata_json,
+        "The owned project metadata"
+      );
+      if (!metadata.bodyCinemaHdRenderV1) return null;
+      const job = this.parseHdJob(metadata.bodyCinemaHdRenderV1, record);
+      if (
+        job.status === "rendering" &&
+        job.startedAt &&
+        Date.now() - Date.parse(job.startedAt) > 12 * 60 * 1000
+      ) {
+        const failed = bodyCinemaHdJobSchema.parse({
+          ...job,
+          status: "failed",
+          error:
+            "The bounded render did not finish. No automatic retry or replacement is authorized.",
+          completedAt: new Date().toISOString(),
+        });
+        await this.saveHdJob(connection, row, metadata, failed);
+        return failed;
+      }
+      return job;
+    });
+  }
+
+  private parseHdJob(
+    value: unknown,
+    record: BodyDirectedLifecycleRecord
+  ): BodyCinemaHdJob {
+    const job = bodyCinemaHdJobSchema.parse(value);
+    if (
+      job.lifecycleId !== record.id ||
+      job.creatorId !== record.creatorId ||
+      job.treatmentHash !== record.treatmentHash ||
+      job.recipeHash !== digest(job.recipe) ||
+      job.recipe.sourceSha256 !== record.source.sha256 ||
+      job.recipe.sourceAssetId !== record.source.assetId
+    )
+      failure(
+        "precondition",
+        "The private HD receipt does not match the immutable creator, source and plan."
+      );
+    return job;
+  }
+
+  private async saveHdJob(
+    connection: PoolConnection,
+    row: LifecycleRow,
+    metadata: Record<string, unknown>,
+    job: BodyCinemaHdJob
+  ): Promise<void> {
+    await execute(
+      connection,
+      "UPDATE creation_projects SET metadata_json=?,updated_at=CURRENT_TIMESTAMP(3) WHERE id=? AND creator_id=?",
+      [
+        JSON.stringify({ ...metadata, bodyCinemaHdRenderV1: job }),
+        row.project_id,
+        job.creatorId,
+      ]
+    );
+  }
+
+  async prepareHdRender(
+    input: { creatorId: number } & z.infer<typeof bodyCinemaHdPrepareSchema>
+  ): Promise<BodyCinemaHdJob> {
+    const parsed = bodyCinemaHdPrepareSchema.parse({
+      id: input.id,
+      treatmentHash: input.treatmentHash,
+      segments: input.segments,
+    });
+    return this.transaction(async connection => {
+      const row = await this.lockBodyDirectedRow(
+        connection,
+        input.creatorId,
+        parsed.id
+      );
+      await this.reverifyFrozenSource(connection, row, input.creatorId);
+      const record = await this.readBodyDirectedRecord(connection, row);
+      if (record.treatmentHash !== parsed.treatmentHash)
+        failure(
+          "conflict",
+          "The selected saved plan changed; review it before creating an HD blueprint."
+        );
+      let recipe: BodyCinemaHdRecipe;
+      try {
+        recipe = compileBodyCinemaHdRecipe(record, parsed.segments);
+      } catch (error) {
+        failure(
+          "precondition",
+          error instanceof Error
+            ? error.message
+            : "This original cannot support a safe full-length HD sequence."
+        );
+      }
+      const recipeHash = digest(recipe);
+      const project = await this.readBodyDirectedProject(connection, row, true);
+      const metadata = parseJsonRecord(
+        project.metadata_json,
+        "The owned project metadata"
+      );
+      if (metadata.bodyCinemaHdRenderV1) {
+        const existing = this.parseHdJob(metadata.bodyCinemaHdRenderV1, record);
+        if (existing.recipeHash === recipeHash) return existing;
+        failure(
+          "conflict",
+          "The separate saved HD blueprint is immutable. Its history cannot be silently replaced."
+        );
+      }
+      const job = bodyCinemaHdJobSchema.parse({
+        version: "body_cinema.hd_job.v1",
+        id: randomUUID(),
+        lifecycleId: row.id,
+        creatorId: input.creatorId,
+        treatmentHash: parsed.treatmentHash,
+        recipe,
+        recipeHash,
+        status: "prepared",
+        createdAt: new Date().toISOString(),
+        startedAt: null,
+        completedAt: null,
+        error: null,
+        candidate: null,
+        ownerAcceptance: "not_reviewed",
+        externalCostUsd: 0,
+        providerCallMade: false,
+      });
+      await this.saveHdJob(connection, row, metadata, job);
+      await appendEvent(
+        connection,
+        row.project_id,
+        input.creatorId,
+        "body_cinema_hd_blueprint_prepared",
+        {
+          jobId: job.id,
+          recipeHash,
+          sourceSha256: recipe.sourceSha256,
+          treatmentHash: job.treatmentHash,
+          historicalPlanChanged: false,
+        }
+      );
+      return job;
+    });
+  }
+
+  async executeHdRender(
+    input: { creatorId: number } & z.infer<typeof bodyCinemaHdExecuteSchema>
+  ): Promise<BodyCinemaHdJob> {
+    const parsed = bodyCinemaHdExecuteSchema.parse({
+      id: input.id,
+      jobId: input.jobId,
+      recipeHash: input.recipeHash,
+      authorization: input.authorization,
+    });
+    const gate = await this.pool.getConnection();
+    let acquired = false;
+    try {
+      const locked = await queryRows<RowDataPacket & { acquired: number }>(
+        gate,
+        "SELECT GET_LOCK('creatorvault_body_cinema_hd_single_worker_v1',0) AS acquired"
+      );
+      acquired = Number(locked[0]?.acquired) === 1;
+      if (!acquired)
+        failure(
+          "precondition",
+          "Another HD candidate is rendering. This saved blueprint is unchanged; wait for that job to finish."
+        );
+      const admission = await this.transaction(async connection => {
+        const row = await this.lockBodyDirectedRow(
+          connection,
+          input.creatorId,
+          parsed.id
+        );
+        await this.reverifyFrozenSource(connection, row, input.creatorId);
+        const record = await this.readBodyDirectedRecord(connection, row);
+        const project = await this.readBodyDirectedProject(
+          connection,
+          row,
+          true
+        );
+        const metadata = parseJsonRecord(
+          project.metadata_json,
+          "The owned project metadata"
+        );
+        const current = this.parseHdJob(metadata.bodyCinemaHdRenderV1, record);
+        if (
+          current.id !== parsed.jobId ||
+          current.recipeHash !== parsed.recipeHash
+        )
+          failure(
+            "conflict",
+            "Render authorization must name the exact saved HD blueprint."
+          );
+        if (current.status !== "prepared")
+          return { job: current, launch: false };
+        compileBodyCinemaHdRecipe(record, current.recipe.segments);
+        const next = bodyCinemaHdJobSchema.parse({
+          ...current,
+          status: "rendering",
+          startedAt: new Date().toISOString(),
+        });
+        await this.saveHdJob(connection, row, metadata, next);
+        await appendEvent(
+          connection,
+          row.project_id,
+          input.creatorId,
+          "body_cinema_hd_private_render_authorized",
+          {
+            jobId: next.id,
+            recipeHash: next.recipeHash,
+            authorization: parsed.authorization,
+            execution: "local_ffmpeg_only",
+            externalCostUsd: 0,
+            providerCallMade: false,
+          }
+        );
+        return { job: next, launch: true };
+      });
+      const job = admission.job;
+      if (!admission.launch) {
+        await gate.query(
+          "DO RELEASE_LOCK('creatorvault_body_cinema_hd_single_worker_v1')"
+        );
+        gate.release();
+        return job;
+      }
+      // Admission and one-use status are durable before this finite worker starts. Failures never trigger another export.
+      void this.runHdRender(job)
+        .catch(() => undefined)
+        .finally(async () => {
+          await gate
+            .query(
+              "DO RELEASE_LOCK('creatorvault_body_cinema_hd_single_worker_v1')"
+            )
+            .catch(() => undefined);
+          gate.release();
+        });
+      return job;
+    } catch (error) {
+      if (acquired)
+        await gate
+          .query(
+            "DO RELEASE_LOCK('creatorvault_body_cinema_hd_single_worker_v1')"
+          )
+          .catch(() => undefined);
+      gate.release();
+      throw error;
+    }
+  }
+
+  private async runHdRender(job: BodyCinemaHdJob): Promise<void> {
+    let source: BodyCinemaPlaybackArtifact | null = null;
+    try {
+      const roots = storageRoots();
+      await mkdir(roots.candidateRoot, { recursive: true, mode: 0o700 });
+      const directory = await lstat(roots.candidateRoot);
+      if (
+        !directory.isDirectory() ||
+        directory.isSymbolicLink() ||
+        directory.uid !== process.getuid?.() ||
+        (directory.mode & 0o077) !== 0
+      )
+        failure(
+          "forbidden",
+          "The candidate storage must be a private trusted directory."
+        );
+      const pathId = `hd_${job.id.replace(/-/g, "")}`;
+      const outputPath = path.join(roots.candidateRoot, pathId);
+      source = await this.openPlayback({
+        creatorId: job.creatorId,
+        id: job.lifecycleId,
+        artifact: "source",
+      });
+      const result = await renderBodyCinemaHd({
+        sourcePath: `/proc/${process.pid}/fd/${source.handle.fd}`,
+        outputPath,
+        recipe: job.recipe,
+      });
+      await chmod(outputPath, 0o600);
+      const filename = `body-cinema-${job.recipe.visualGradeId}-${job.id}.mp4`;
+      const receipt = {
+        privatePathId: pathId,
+        creatorId: job.creatorId,
+        filename,
+        size: result.sizeBytes,
+        sha256: result.sha256,
+        verified: true,
+        classification: "body_cinema_candidate",
+        sourceHash: job.recipe.sourceSha256,
+        treatmentHash: job.treatmentHash,
+        recipeHash: job.recipeHash,
+        execution: "local_ffmpeg_hd",
+        ownerAcceptance: "not_reviewed",
+        media: {
+          codec: "h264",
+          width: result.width,
+          height: result.height,
+          durationSec: result.durationSeconds,
+          frameRate: result.frameRate,
+          frameCount: result.frameCount,
+          hasAudio: result.hasAudio,
+        },
+      };
+      const receiptFile = await open(
+        path.join(roots.candidateRoot, `${pathId}.receipt.json`),
+        constants.O_WRONLY |
+          constants.O_CREAT |
+          constants.O_EXCL |
+          constants.O_NOFOLLOW,
+        0o600
+      );
+      try {
+        await receiptFile.writeFile(JSON.stringify(receipt));
+        await receiptFile.sync();
+      } finally {
+        await receiptFile.close();
+      }
+      const receiptDirectory = await open(
+        roots.candidateRoot,
+        constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW
+      );
+      try {
+        await receiptDirectory.sync();
+      } finally {
+        await receiptDirectory.close();
+      }
+      await this.transaction(async connection => {
+        const row = await this.lockBodyDirectedRow(
+          connection,
+          job.creatorId,
+          job.lifecycleId
+        );
+        const record = await this.readBodyDirectedRecord(connection, row);
+        await this.reverifyFrozenSource(connection, row, job.creatorId);
+        const project = await this.readBodyDirectedProject(
+          connection,
+          row,
+          true
+        );
+        const metadata = parseJsonRecord(
+          project.metadata_json,
+          "The owned project metadata"
+        );
+        const current = this.parseHdJob(metadata.bodyCinemaHdRenderV1, record);
+        if (
+          current.id !== job.id ||
+          current.status !== "rendering" ||
+          current.recipeHash !== job.recipeHash
+        )
+          failure(
+            "conflict",
+            "The exact one-use HD render is no longer awaiting this output."
+          );
+        const assetId = randomUUID();
+        await execute(
+          connection,
+          `INSERT INTO media_assets (id,user_id,source_type,asset_type,file_name,original_name,mime_type,file_size,storage_path,public_url,duration,width,height,status,created_by_feature) VALUES (?,?,'generated','video',?,?,'video/mp4',?,?,NULL,?,?,?,'ready','body_cinema_candidate')`,
+          [
+            assetId,
+            job.creatorId,
+            filename,
+            filename,
+            result.sizeBytes,
+            `${CANDIDATE_PRIVATE_STORAGE_PREFIX}${pathId}`,
+            result.durationSeconds,
+            result.width,
+            result.height,
+          ]
+        );
+        const asset = await this.readAsset(
+          connection,
+          job.creatorId,
+          assetId,
+          false
+        );
+        const verified = await this.verifyPrivateCandidate(
+          asset,
+          job.creatorId,
+          false
+        );
+        if (verified.snapshot.sha256 !== result.sha256)
+          failure(
+            "precondition",
+            "The saved HD candidate bytes failed final receipt verification."
+          );
+        const next = bodyCinemaHdJobSchema.parse({
+          ...current,
+          status: "ready",
+          completedAt: new Date().toISOString(),
+          candidate: { assetId, ...result },
+          error: null,
+        });
+        await this.saveHdJob(connection, row, metadata, next);
+        await appendEvent(
+          connection,
+          row.project_id,
+          job.creatorId,
+          "body_cinema_hd_candidate_ready",
+          {
+            jobId: job.id,
+            recipeHash: job.recipeHash,
+            candidateAssetId: assetId,
+            candidateSha256: result.sha256,
+            sourceSha256: job.recipe.sourceSha256,
+            ownerAcceptance: "not_reviewed",
+            providerCallMade: false,
+            externalCostUsd: 0,
+          }
+        );
+      });
+    } catch (error) {
+      const message =
+        error instanceof BodyCinemaLifecycleError
+          ? error.message
+          : error instanceof Error &&
+              /^BODY_CINEMA_HD_[A-Z0-9_]+$/.test(error.message)
+            ? error.message
+            : "The bounded local HD export or verification failed. No candidate is offered and no automatic retry occurred.";
+      await this.transaction(async connection => {
+        const row = await this.lockBodyDirectedRow(
+          connection,
+          job.creatorId,
+          job.lifecycleId
+        );
+        const record = await this.readBodyDirectedRecord(connection, row);
+        const project = await this.readBodyDirectedProject(
+          connection,
+          row,
+          true
+        );
+        const metadata = parseJsonRecord(
+          project.metadata_json,
+          "The owned project metadata"
+        );
+        const current = this.parseHdJob(metadata.bodyCinemaHdRenderV1, record);
+        if (current.status !== "rendering" || current.id !== job.id) return;
+        await this.saveHdJob(
+          connection,
+          row,
+          metadata,
+          bodyCinemaHdJobSchema.parse({
+            ...current,
+            status: "failed",
+            completedAt: new Date().toISOString(),
+            error: message.slice(0, 600),
+            candidate: null,
+          })
+        );
+        await appendEvent(
+          connection,
+          row.project_id,
+          job.creatorId,
+          "body_cinema_hd_render_failed",
+          {
+            jobId: job.id,
+            noRetry: true,
+            candidateOffered: false,
+            error: message.slice(0, 600),
+          }
+        );
+      }).catch(() => undefined);
+      // Retain partial artifacts as private failure evidence. Never prune creator media, receipts or historical state.
+    } finally {
+      await source?.handle.close().catch(() => undefined);
+    }
+  }
+
+  async openHdPlayback(input: {
+    creatorId: number;
+    id: string;
+  }): Promise<BodyCinemaPlaybackArtifact> {
+    const job = await this.getHdRender(input.creatorId, input.id);
+    if (!job || job.status !== "ready" || !job.candidate)
+      failure(
+        "not_found",
+        "No verified private HD candidate is ready for this creator."
+      );
+    const source = await this.openPlayback({
+      creatorId: input.creatorId,
+      id: input.id,
+      artifact: "source",
+    });
+    await source.handle.close();
+    const asset = await this.readAsset(
+      this.pool,
+      input.creatorId,
+      job.candidate.assetId,
+      false
+    );
+    const verified = await this.verifyPrivateCandidate(
+      asset,
+      input.creatorId,
+      true
+    );
+    try {
+      const receipt = await this.readCandidateReceipt(
+        verified.snapshot.privatePathId
+      );
+      if (
+        !verified.opened ||
+        verified.snapshot.sha256 !== job.candidate.sha256 ||
+        receipt.recipeHash !== job.recipeHash ||
+        receipt.sourceHash !== job.recipe.sourceSha256 ||
+        receipt.treatmentHash !== job.treatmentHash ||
+        verified.snapshot.width !== job.recipe.width ||
+        verified.snapshot.height !== job.recipe.height ||
+        !sameDuration(
+          verified.snapshot.durationSeconds,
+          job.candidate.durationSeconds
+        )
+      )
+        failure(
+          "precondition",
+          "The private HD candidate no longer matches its exact source, blueprint and verified receipt."
+        );
+      return {
+        handle: verified.opened.handle,
+        fileName: verified.snapshot.fileName,
+        mimeType: "video/mp4",
+        sizeBytes: verified.opened.sizeBytes,
+      };
+    } catch (error) {
+      await verified.opened?.handle.close().catch(() => undefined);
+      throw error;
+    }
+  }
+
+
 
   /** Versioned planning on the same lifecycle/project owners; no new schema. */
   async listBodyDirected(creatorId: number, limit = 30): Promise<BodyDirectedLifecycleRecord[]> {

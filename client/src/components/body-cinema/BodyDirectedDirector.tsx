@@ -1,3 +1,4 @@
+import { BodyCinemaHdReview } from "./BodyCinemaHdReview";
 import React, {
   useCallback,
   useEffect,
@@ -347,7 +348,7 @@ export function BodyDirectedPlanSummary({
           </button>
         ))}
       </div>
-      <p className="bd-plan-notice">Plan only — no candidate generated yet.</p>
+      <p className="bd-plan-notice">{frozen ? "Original saved plan · separate HD review below." : "Plan only — no candidate generated yet."}</p>
       {!frozen && onChoose && (
         <button
           type="button"
@@ -666,7 +667,7 @@ function FrozenPlan({
           ))}
         </ol>
         <p className="bd-plan-notice">
-          Plan only — no candidate generated yet.
+          Original planning snapshot unchanged. Its separate HD blueprint and private candidate appear below.
         </p>
       </div>
       <details className="bd-details">
@@ -1351,11 +1352,14 @@ export default function BodyDirectedDirector({
           )}
 
           {record && record.state === "frozen" && record.treatment && (
-            <FrozenPlan
-              plan={record.treatment}
-              sourceMap={sourceMap}
-              onSeek={seekOriginal}
-            />
+            <>
+              <FrozenPlan
+                plan={record.treatment}
+                sourceMap={sourceMap}
+                onSeek={seekOriginal}
+              />
+              <BodyCinemaHdReview record={record} onSeek={seekOriginal} />
+            </>
           )}
 
           {record && record.state === "qualified" && (

@@ -45,10 +45,10 @@ describe("consolidated non-rotating guarded release", () => {
 
   it("pins the verified live Phase A artifact and exact corrective checkout parent while preserving the 3762 signing epoch", () => {
     expect(CONSOLIDATED_RELEASE_PARENT).toBe(
-      "532c3de5fb7bafcbeb47560697bcb8cbd95d8401"
+      "7077afd9260dcdd4368db4b7db8ffb6ddc05737c"
     );
     expect(CONSOLIDATED_RELEASE_CHECKOUT_PARENT).toBe(
-      "03eb5aee88157aad39b30f1c913988ac671ed18f"
+      "7077afd9260dcdd4368db4b7db8ffb6ddc05737c"
     );
     expect(CONSOLIDATED_SECURITY_BASELINE).toBe(
       "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da"
@@ -124,7 +124,7 @@ describe("consolidated non-rotating guarded release", () => {
     expect(harness).toContain("trap cleanup EXIT");
     expect(harness).toContain("--skip-networking");
     expect(harness).toContain("env -i PATH=");
-    expect(CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS).toHaveLength(35);
+    expect(CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS).toHaveLength(44);
     expect(CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS).toEqual(
       expect.arrayContaining([
         "client/src/lib/bodyCinemaPerception.ts",

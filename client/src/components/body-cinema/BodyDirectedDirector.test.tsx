@@ -140,7 +140,7 @@ describe("Body Directed Director", () => {
     expect(markup).toContain("Historic Entrance");
     expect(markup).toContain("Historic Obsidian Name");
     expect(markup).toContain("00:01–00:04");
-    expect(markup).toContain("Plan only — no candidate generated yet.");
+    expect(markup).toContain("Original saved plan · separate HD review below.");
     expect(markup).not.toContain("Use this source plan");
   });
 });

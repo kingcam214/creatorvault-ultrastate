@@ -46,6 +46,11 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 30_000,
     include: [
+      "server/services/bodyCinemaHdBlueprint.test.ts",
+      "server/services/bodyCinemaHdRenderEngine.test.ts",
+      "server/services/bodyCinemaHdLifecycle.test.ts",
+      "client/src/components/body-cinema/BodyCinemaHdReview.test.tsx",
+
       "server/services/bodyCinemaBodyDirection.test.ts",
       "client/src/components/body-cinema/BodyDirectedDirector.test.tsx",
       "server/services/bodyCinemaCandidateLifecycle.test.ts",
@@ -54,6 +59,6 @@ export default defineConfig({
       "scripts/bodyCinemaPhaseAMigration.test.ts",
       "client/src/pages/BodyCinemaLifecycle.test.tsx",
     ],
-    env: { ...base.test?.env, DATABASE_URL: databaseUrl, NODE_ENV: "test" },
+    env: { ...base.test?.env, DATABASE_URL: databaseUrl, NODE_ENV: "test", BODY_CINEMA_HD_RUN_FFMPEG_TESTS: "1" },
   },
 });

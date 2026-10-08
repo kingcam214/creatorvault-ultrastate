@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import {bodyCinemaHdGetSchema,bodyCinemaHdPrepareSchema,bodyCinemaHdExecuteSchema} from "../../shared/bodyCinemaHd";
 import {
   bodyDirectedAnalyzeInputSchema,
   bodyDirectedFreezeInputSchema,
@@ -48,6 +49,40 @@ function lifecycleError(error: unknown): TRPCError {
 }
 
 export const bodyCinemaCandidateLifecycleRouter = router({
+  getHdRender: protectedProcedure
+    .input(bodyCinemaHdGetSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await (
+          await getBodyCinemaCandidateLifecycleService()
+        ).getHdRender(Number(ctx.user.id), input.id);
+      } catch (error) {
+        throw lifecycleError(error);
+      }
+    }),
+  prepareHdRender: protectedProcedure
+    .input(bodyCinemaHdPrepareSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await (
+          await getBodyCinemaCandidateLifecycleService()
+        ).prepareHdRender({ creatorId: Number(ctx.user.id), ...input });
+      } catch (error) {
+        throw lifecycleError(error);
+      }
+    }),
+  executeHdRender: protectedProcedure
+    .input(bodyCinemaHdExecuteSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await (
+          await getBodyCinemaCandidateLifecycleService()
+        ).executeHdRender({ creatorId: Number(ctx.user.id), ...input });
+      } catch (error) {
+        throw lifecycleError(error);
+      }
+    }),
+
   bodyDirectionLibrary: protectedProcedure.query(() => ({
     focuses: BODY_FOCUS_LIBRARY,
     treatments: BODY_FOCUS_TREATMENTS,
