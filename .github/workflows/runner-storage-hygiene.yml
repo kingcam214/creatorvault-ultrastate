@@ -18,62 +18,46 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/ops/runner-storage-2026-10-13'
           sudo -n /usr/bin/python3 - <<'PY'
-          import os,stat,json,subprocess,glob,time,hashlib,shutil
+          import os,json,stat,subprocess,glob,time,shutil
           from pathlib import Path
           ENV={'PATH':'/home/runner/.local/share/pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C','HOME':'/root','PM2_HOME':'/root/.pm2'}
           def emit(x):print(json.dumps(x),flush=True)
-          def cmd(args,timeout=60,cwd='/root/creatorvault'):
-              p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,timeout=timeout,env=ENV,cwd=cwd)
-              return p.stdout,p.returncode
-          root=Path('/root/creatorvault');runner=Path('/home/runner/actions-runner');workspace=runner/'_work/creatorvault-ultrastate/creatorvault-ultrastate'
+          def cmd(args,timeout=90):
+           p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,timeout=timeout,env=ENV,cwd='/root/creatorvault');return p.stdout.strip(),p.returncode
           assert os.geteuid()==0
-          assert cmd(['/usr/bin/curl','--noproxy','*','-fsS','--max-time','3','http://169.254.169.254/metadata/v1/id'])[0].strip()=='545144175'
-          assert json.loads((root/'dist/public/release.json').read_text())['commit']=='7077afd9260dcdd4368db4b7db8ffb6ddc05737c'
-          for p in [root,runner]:assert p.is_dir() and not p.is_symlink() and p.resolve()==p
-          s=os.statvfs(runner);emit({'kind':'initial_capacity','availableBytes':s.f_bavail*s.f_frsize,'freeInodes':s.f_favail,'totalBytes':s.f_blocks*s.f_frsize,'device':os.stat(runner).st_dev})
-          for args in [['df','-h','/'],['df','-i','/'],['journalctl','--disk-usage']]:
-              out,code=cmd(args);emit({'kind':'command_readonly','command':args,'exit':code,'output':out.strip()})
-          out,code=cmd(['du','-ah','-d','2','/home/runner','/tmp','/var/log','/root'],timeout=150)
-          rank=[]
-          for line in out.splitlines():
-              if '\t' in line:
-                  size,name=line.split('\t',1);rank.append({'size':size,'path':name})
-          # Equivalent to sort -hr | head -30 but no fragile pipe failures.
-          ordered=subprocess.run(['sort','-hr'],input=out,text=True,stdout=subprocess.PIPE,env=ENV).stdout.splitlines()[:30]
-          emit({'kind':'requested_deep_top30','rows':ordered,'duExit':code})
-          for path in ['/var/log','/var/log/journal','/var/lib/docker','/var/cache','/var/tmp','/home/runner/actions-runner/_work/creatorvault-ultrastate','/root/.cache','/root/.local/share/pnpm','/home/runner/.local/share/pnpm']:
-              p=Path(path)
-              if not p.exists():continue
-              out,code=cmd(['du','-x','--block-size=1','--max-depth=2','--',path],timeout=100);rows=[]
-              for line in out.splitlines():
-                  if '\t' in line:
-                      size,name=line.split('\t',1)
-                      if size.isdecimal():rows.append({'bytes':int(size),'path':name})
-              emit({'kind':'target_deep_sizes','root':path,'exit':code,'rows':sorted(rows,key=lambda x:x['bytes'],reverse=True)[:30]})
-          opened=set();refs=[]
-          for item in glob.glob('/proc/[0-9]*/fd/*'):
-              try:m=os.stat(item);opened.add((m.st_dev,m.st_ino))
-              except (OSError,PermissionError):pass
-          for item in glob.glob('/proc/[0-9]*/cwd')+glob.glob('/proc/[0-9]*/exe'):
-              try:
-                  value=os.readlink(item)
-                  if value.startswith(str(workspace)) or value.startswith('/tmp/') or value.startswith('/var/tmp/'):refs.append({'pid':int(item.split('/')[2]),'reference':value,'type':item.split('/')[-1]})
-              except OSError:pass
-          emit({'kind':'temporary_process_references','rows':refs})
-          if workspace.exists():
-              out,code=cmd(['git','-C',str(workspace),'rev-parse','HEAD']);emit({'kind':'runner_checkout_metadata','path':str(workspace),'gitHead':out.strip(),'gitHeadExit':code,'maintenanceWorkspace':os.environ.get('GITHUB_WORKSPACE'),'protectedGitHistoryRetained':True})
-              for p in sorted(workspace.iterdir()):
-                  m=p.lstat()
-                  if p.name in ['dist','node_modules','.git','uploads','videos','tmp','logs','.env'] or p.name.startswith('.consolidated-'):
-                      emit({'kind':'workspace_entry_metadata','path':str(p),'directory':stat.S_ISDIR(m.st_mode),'symlink':p.is_symlink(),'mtimeUtc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(m.st_mtime)),'openInode':(m.st_dev,m.st_ino) in opened})
-          for path in ['/tmp','/var/tmp']:
-              for p in Path(path).iterdir():
-                  m=p.lstat()
-                  if m.st_mtime<time.time()-86400 and (stat.S_ISREG(m.st_mode) or stat.S_ISDIR(m.st_mode)):
-                      emit({'kind':'aged_temporary_entry','path':str(p),'bytes':m.st_size,'directory':stat.S_ISDIR(m.st_mode),'ageHours':round((time.time()-m.st_mtime)/3600,2),'openInode':(m.st_dev,m.st_ino) in opened,'protectedBackupOrDataName':any(x in p.name.lower() for x in ['.sql','backup','upload','media','asset','receipt','database','mysql','mariadb'])})
-          if shutil.which('docker',path=ENV['PATH']):
-              for args in [['docker','--host','unix:///var/run/docker.sock','system','df'],['docker','--host','unix:///var/run/docker.sock','system','df','-v'],['docker','--host','unix:///var/run/docker.sock','ps','-a','--format','{{.ID}}\t{{.Image}}\t{{.Status}}'],['docker','--host','unix:///var/run/docker.sock','buildx','du']]:
-                  out,code=cmd(args,timeout=90);emit({'kind':'docker_readonly','command':args,'exit':code,'output':out[:24000]})
-          else:emit({'kind':'docker_readonly','present':False})
-          emit({'kind':'bulk_inventory_complete','dataDeleted':False,'deploymentExecuted':False})
+          assert cmd(['curl','--noproxy','*','-fsS','--max-time','3','http://169.254.169.254/metadata/v1/id'])[0]=='545144175'
+          assert json.loads(Path('/root/creatorvault/dist/public/release.json').read_text())['commit']=='7077afd9260dcdd4368db4b7db8ffb6ddc05737c'
+          for args in [['pnpm','--version'],['pnpm','store','path'],['pnpm','store','prune','--help'],['/usr/local/bin/pnpm','--version'],['/usr/local/bin/pnpm','store','path']]:
+           try:out,code=cmd(args);emit({'kind':'package_tool_metadata','command':args,'exit':code,'output':out[:6000]})
+           except OSError:emit({'kind':'package_tool_metadata','command':args,'missing':True})
+          for cache in ['/root/.local/share/pnpm/store','/home/runner/.local/share/pnpm/store']:
+           counts={};largest=[]
+           for directory,ds,fs in os.walk(cache,followlinks=False):
+            for name in fs:
+             p=Path(directory)/name;m=p.lstat()
+             if not stat.S_ISREG(m.st_mode):continue
+             key=str(m.st_nlink);entry=counts.setdefault(key,{'files':0,'allocatedBytes':0});entry['files']+=1;entry['allocatedBytes']+=m.st_blocks*512
+           emit({'kind':'package_store_link_counts','path':cache,'links':counts})
+          for p in Path('/var/log').iterdir():
+           m=p.lstat()
+           if stat.S_ISREG(m.st_mode) and m.st_size>1048576:emit({'kind':'system_log_file_metadata','path':str(p),'bytes':m.st_size,'allocatedBytes':m.st_blocks*512,'mtimeUtc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(m.st_mtime)),'nlink':m.st_nlink})
+          for args in [['du','-x','--block-size=1','--max-depth=2','/opt','/home','/var/lib','/var/cache'],['find','/root/.local/share/pnpm/.tools','/home/runner/.local/share/pnpm/.tools','-maxdepth','6','-type','f','-name','pnpm.cjs'],['readlink','-f','/usr/local/bin/pnpm'],['readlink','-f','/home/runner/.local/share/pnpm/pnpm']]:
+           out,code=cmd(args,timeout=150)
+           if args[0]=='du':
+            rows=[]
+            for line in out.splitlines():
+             if '\t' in line:
+              size,name=line.split('\t',1)
+              if size.isdecimal():rows.append({'bytes':int(size),'path':name})
+            emit({'kind':'remaining_top_sizes','rows':sorted(rows,key=lambda x:x['bytes'],reverse=True)[:35],'exit':code})
+           else:emit({'kind':'package_tool_metadata','command':args,'exit':code,'output':out[:4000]})
+          # Check every process for open or mapped cache usage without exposing environment/argv values.
+          for name in ['cwd','exe','fd/*']:
+           refs=[]
+           for item in glob.glob('/proc/[0-9]*/'+name):
+            try:value=os.readlink(item)
+            except OSError:continue
+            if value.startswith('/root/.cache/') or '/.local/share/pnpm/store/' in value:refs.append({'pid':int(item.split('/')[2]),'path':value})
+           emit({'kind':'cache_process_references','type':name,'rows':refs})
+          emit({'kind':'bulk_cache_qualification_complete','filesDeleted':False})
           PY
