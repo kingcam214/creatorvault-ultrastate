@@ -12,63 +12,83 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  inspect:
+  hygiene:
     runs-on: [self-hosted, linux, creatorvault-production]
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - name: Read-only runner mount and disposable-file inventory without checkout
+      - name: Approved closed-log and unused package-cache hygiene without checkout
         shell: bash
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/ops/runner-storage-2026-10-13'
           test "$GITHUB_EVENT_NAME" = 'push'
           sudo -n /usr/bin/python3 - <<'PY'
-          import os,stat,json,subprocess,glob,time,hashlib
+          import os,stat,json,subprocess,glob,time,hashlib,fcntl,shutil
           from pathlib import Path
           def emit(x): print(json.dumps(x),flush=True)
-          def cmd(args,timeout=40):return subprocess.check_output(args,text=True,timeout=timeout,stderr=subprocess.DEVNULL,env={'PATH':'/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})
-          root=Path('/root/creatorvault');runner=Path('/home/runner/actions-runner');diag=runner/'_diag';workspace=runner/'_work/creatorvault-ultrastate/creatorvault-ultrastate'
+          baseenv={'PATH':'/home/runner/.local/share/pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C','HOME':'/root','PM2_HOME':'/root/.pm2'}
+          def cmd(args,timeout=40,cwd='/root/creatorvault'):return subprocess.check_output(args,text=True,timeout=timeout,stderr=subprocess.DEVNULL,env=baseenv,cwd=cwd)
+          root=Path('/root/creatorvault');runner=Path('/home/runner/actions-runner');diag=runner/'_diag'
           assert os.geteuid()==0
           assert cmd(['/usr/bin/curl','--noproxy','*','-fsS','--max-time','3','http://169.254.169.254/metadata/v1/id']).strip()=='545144175'
           for p in [root,runner,diag]:assert p.is_dir() and not p.is_symlink() and str(p.resolve())==str(p)
           stamp=json.loads((root/'dist/public/release.json').read_text());assert stamp['commit']=='7077afd9260dcdd4368db4b7db8ffb6ddc05737c'
-          print('DF_H_BEGIN',flush=True);print(cmd(['/usr/bin/df','-h',str(diag),str(root),'/tmp']),flush=True)
-          print('DF_I_BEGIN',flush=True);print(cmd(['/usr/bin/df','-i',str(diag),str(root),'/tmp']),flush=True)
-          for p in [diag,root,Path('/tmp')]:
-            s=os.statvfs(p);emit({'kind':'filesystem','path':str(p),'device':os.stat(p).st_dev,'availableBytes':s.f_bavail*s.f_frsize,'freeInodes':s.f_favail,'totalBytes':s.f_blocks*s.f_frsize})
-          opened=set()
-          for file in glob.glob('/proc/[0-9]*/fd/*'):
-            try:
-              m=os.stat(file);opened.add((m.st_dev,m.st_ino))
-            except (FileNotFoundError,PermissionError,ProcessLookupError):pass
-          logs=[]
+          lock=os.open(str(root/'.env.writer.lock'),os.O_RDWR|os.O_NOFOLLOW);fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+          def fingerprint(p):
+            m=p.lstat();assert stat.S_ISREG(m.st_mode) and not p.is_symlink()
+            with p.open('rb') as h:return hashlib.file_digest(h,'sha256').hexdigest()
+          protected=[root/'.env',root/'dist/index.js',root/'dist/secure-app.js',root/'dist/consolidated-release-runtime.mjs',root/'dist/public/release.json']
+          protected.extend(sorted(root.glob('.consolidated-release-state-*.json')))
+          beforehash=[fingerprint(p) for p in protected]
+          def runtime():
+            rows=json.loads(cmd(['pm2','jlist']));apps=[x for x in rows if x['name']=='creatorvault'];assert len(apps)==1
+            x=apps[0];e=x['pm2_env'];assert e['status']=='online' and e['pm_cwd']==str(root) and e['pm_exec_path']==str(root/'dist/index.js')
+            return {'pid':x['pid'],'restarts':e.get('restart_time')}
+          beforeapp=runtime()
+          def capacity():
+            s=os.statvfs(diag);return {'availableBytes':s.f_bavail*s.f_frsize,'freeInodes':s.f_favail,'device':os.stat(diag).st_dev}
+          for p in [Path('/root/.local/share/pnpm/store'),Path('/home/runner/.local/share/pnpm/store'),Path('/root/.npm'),Path('/home/runner/.npm'),Path('/root/.cache/pip')]:assert p.is_dir() and not p.is_symlink() and str(p.resolve())==str(p),'CACHE_ROOT_UNSAFE'
+          before=capacity();emit({'kind':'cleanup_before','capacity':before,'runtime':beforeapp,'liveBaseline':stamp['commit']})
+          print(cmd(['/usr/bin/df','-h',str(diag)]),flush=True);print(cmd(['/usr/bin/df','-i',str(diag)]),flush=True)
+          def openinodes():
+            result=set()
+            for file in glob.glob('/proc/[0-9]*/fd/*'):
+              try:m=os.stat(file);result.add((m.st_dev,m.st_ino))
+              except (FileNotFoundError,PermissionError,ProcessLookupError):pass
+            return result
+          opened=openinodes();logs=[]
           for p in diag.glob('*.log'):
             m=p.lstat()
-            if stat.S_ISREG(m.st_mode) and not p.is_symlink():logs.append({'name':p.name,'bytes':m.st_size,'allocatedBytes':m.st_blocks*512,'mtimeUtc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(m.st_mtime)),'mtimeEpoch':m.st_mtime,'nlink':m.st_nlink,'open':(m.st_dev,m.st_ino) in opened})
-          logs.sort(key=lambda x:x['mtimeEpoch']);assert len(logs)<5000
-          emit({'kind':'diagnostic_logs','directory':str(diag),'count':len(logs),'allocatedBytes':sum(x['allocatedBytes'] for x in logs),'files':logs[-100:],'deletionPerformed':False})
-          paths=[diag,workspace/'node_modules',workspace/'dist',Path('/home/runner/.local/share/pnpm/store'),Path('/home/runner/.cache'),Path('/home/runner/.npm'),Path('/root/.local/share/pnpm/store'),Path('/root/.npm'),Path('/tmp')]
-          for p in paths:
-            if p.is_dir() and not p.is_symlink():
-              try:emit({'kind':'directory_size','path':str(p),'du':cmd(['/usr/bin/du','-sx','--block-size=1','--',str(p)],timeout=45).strip()})
-              except subprocess.TimeoutExpired:emit({'kind':'directory_size','path':str(p),'error':'BOUNDED_TIMEOUT'})
-          protected=[root/'.env',root/'dist/index.js',root/'dist/secure-app.js',root/'dist/consolidated-release-runtime.mjs',root/'dist/public/release.json']
-          for p in [Path('/root/.cache'),Path('/root/.local/share/pnpm'),Path('/home/runner/.local/share/pnpm'),runner/'_work/creatorvault-ultrastate',runner/'_work/_update',Path('/tmp')]:
+            if stat.S_ISREG(m.st_mode) and m.st_nlink==1:logs.append((p,m))
+          assert len(logs)<5000
+          active=[m.st_mtime for p,m in logs if p.name.startswith('Runner_') and (m.st_dev,m.st_ino) in opened];assert active,'ACTIVE_SESSION_LOG_MISSING'
+          cutoff=min(active);newest=set(p.name for p,m in sorted(logs,key=lambda x:x[1].st_mtime,reverse=True)[:20])
+          eligible=[(p,m) for p,m in logs if m.st_mtime<cutoff and p.name not in newest and (m.st_dev,m.st_ino) not in opened and p.name.startswith(('Runner_','Worker_'))]
+          freshopen=openinodes();removed=0;freed=0;dfd=os.open(str(diag),os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+          try:
+            for p,m in eligible:
+              now=os.stat(p.name,dir_fd=dfd,follow_symlinks=False)
+              if (now.st_dev,now.st_ino,now.st_mtime,now.st_size)!=(m.st_dev,m.st_ino,m.st_mtime,m.st_size) or (now.st_dev,now.st_ino) in freshopen:continue
+              assert stat.S_ISREG(now.st_mode) and now.st_nlink==1
+              os.unlink(p.name,dir_fd=dfd);removed+=1;freed+=now.st_blocks*512
+          finally:os.close(dfd)
+          emit({'kind':'closed_stale_runner_logs_removed','count':removed,'allocatedBytes':freed,'cutoffUtc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(cutoff)),'activeAndNewestLogsPreserved':True,'capacity':capacity()})
+          operations=[
+            ('root_pnpm_unreferenced_store',['pnpm','store','prune'],'/root'),
+            ('runner_pnpm_unreferenced_store',['/usr/bin/sudo','-n','-u','runner','-H','env','HOME=/home/runner','PATH='+baseenv['PATH'],'pnpm','store','prune'],'/home/runner'),
+            ('root_npm_regenerable_cache',['npm','cache','clean','--force','--cache','/root/.npm'],'/root'),
+            ('runner_npm_regenerable_cache',['/usr/bin/sudo','-n','-u','runner','-H','env','HOME=/home/runner','PATH='+baseenv['PATH'],'npm','cache','clean','--force','--cache','/home/runner/.npm'],'/home/runner'),
+            ('root_pip_download_wheel_cache',['/usr/bin/python3','-m','pip','cache','purge'],'/root')
+          ]
+          for label,args,cwd in operations:
             try:
-              entries=[]
-              for line in cmd(['/usr/bin/du','-x','--max-depth=1','--block-size=1','--',str(p)],timeout=90).splitlines():
-                size,name=line.split('\t',1);entries.append({'bytes':int(size),'path':name})
-              emit({'kind':'bounded_top_sizes','root':str(p),'entries':sorted(entries,key=lambda x:x['bytes'],reverse=True)[:40],'deletionAuthorizedBySize':False})
-            except subprocess.TimeoutExpired:emit({'kind':'bounded_top_sizes','root':str(p),'error':'BOUNDED_TIMEOUT'})
-          for p in Path('/tmp').iterdir():
-            m=p.lstat()
-            if stat.S_ISREG(m.st_mode) and m.st_size>1048576:emit({'kind':'tmp_regular_file_metadata','name':p.name,'bytes':m.st_size,'mtimeUtc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(m.st_mtime)),'open':(m.st_dev,m.st_ino) in opened,'nlink':m.st_nlink,'uid':m.st_uid})
-          for p in root.glob('.consolidated-release-state-*.json'):
-            m=p.lstat()
-            if not stat.S_ISREG(m.st_mode) or p.is_symlink() or m.st_size>32768:continue
-            try:
-              d=json.loads(p.read_text());emit({'kind':'release_state_metadata','file':p.name,'sha':d.get('sha'),'phase':d.get('phase'),'code':d.get('code'),'fields':sorted(d.keys()),'modifiedUtc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(m.st_mtime))})
-            except json.JSONDecodeError:emit({'kind':'release_state_metadata','file':p.name,'error':'INVALID_JSON_PRESERVE'})
-          emit({'kind':'protected_files_readonly','fingerprints':[{'path':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in protected],'contentPrinted':False})
-          emit({'kind':'inspection_complete','targetDroplet':545144175,'liveBaseline':stamp['commit'],'deploymentExecuted':False,'productionDataDeleted':False})
+              cmd(args,timeout=90,cwd=cwd);ok=True;error=None
+            except subprocess.CalledProcessError as e:ok=False;error='PACKAGE_MANAGER_EXIT_'+str(e.returncode)
+            except subprocess.TimeoutExpired:ok=False;error='BOUNDED_PACKAGE_MANAGER_TIMEOUT'
+            emit({'kind':'package_cache_operation','label':label,'ok':ok,'error':error,'capacity':capacity(),'productionDataModified':False})
+          assert beforehash==[fingerprint(p) for p in protected],'PROTECTED_LIVE_BYTES_CHANGED'
+          afterapp=runtime();assert beforeapp==afterapp,'APP_RUNTIME_CHANGED'
+          after=capacity();print(cmd(['/usr/bin/df','-h',str(diag)]),flush=True);print(cmd(['/usr/bin/df','-i',str(diag)]),flush=True)
+          emit({'kind':'cleanup_complete','before':before,'after':after,'protectedFilesUnchanged':True,'runtimeUnchanged':True,'logsRemoved':removed,'productionDataDeleted':False,'backupFilesDeleted':False,'runnerUpdateFilesDeleted':False,'containerDataModified':False,'externalSpendUsd':0,'deploymentEligible':after['availableBytes']>=4*1024**3,'requiredFreeBytes':4*1024**3,'deploymentExecuted':False})
+          fcntl.flock(lock,fcntl.LOCK_UN);os.close(lock)
           PY
