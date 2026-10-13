@@ -1,0 +1,58 @@
+name: CreatorVault Runner Storage Hygiene 2026-10-13
+
+on:
+  push:
+    branches: [ops/runner-storage-2026-10-13]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: creatorvault-production-security-release
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, linux, creatorvault-production]
+    timeout-minutes: 5
+    steps:
+      - name: Read-only runner mount and disposable-file inventory without checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/ops/runner-storage-2026-10-13'
+          test "$GITHUB_EVENT_NAME" = 'push'
+          sudo -n /usr/bin/python3 - <<'PY'
+          import os,stat,json,subprocess,glob,time,hashlib
+          from pathlib import Path
+          def emit(x): print(json.dumps(x),flush=True)
+          def cmd(args,timeout=40):return subprocess.check_output(args,text=True,timeout=timeout,stderr=subprocess.DEVNULL,env={'PATH':'/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})
+          root=Path('/root/creatorvault');runner=Path('/home/runner/actions-runner');diag=runner/'_diag';workspace=runner/'_work/creatorvault-ultrastate/creatorvault-ultrastate'
+          assert os.geteuid()==0
+          assert cmd(['/usr/bin/curl','--noproxy','*','-fsS','--max-time','3','http://169.254.169.254/metadata/v1/id']).strip()=='545144175'
+          for p in [root,runner,diag]:assert p.is_dir() and not p.is_symlink() and str(p.resolve())==str(p)
+          stamp=json.loads((root/'dist/public/release.json').read_text());assert stamp['commit']=='7077afd9260dcdd4368db4b7db8ffb6ddc05737c'
+          print('DF_H_BEGIN',flush=True);print(cmd(['/usr/bin/df','-h',str(diag),str(root),'/tmp']),flush=True)
+          print('DF_I_BEGIN',flush=True);print(cmd(['/usr/bin/df','-i',str(diag),str(root),'/tmp']),flush=True)
+          for p in [diag,root,Path('/tmp')]:
+            s=os.statvfs(p);emit({'kind':'filesystem','path':str(p),'device':os.stat(p).st_dev,'availableBytes':s.f_bavail*s.f_frsize,'freeInodes':s.f_favail,'totalBytes':s.f_blocks*s.f_frsize})
+          opened=set()
+          for file in glob.glob('/proc/[0-9]*/fd/*'):
+            try:
+              m=os.stat(file);opened.add((m.st_dev,m.st_ino))
+            except (FileNotFoundError,PermissionError,ProcessLookupError):pass
+          logs=[]
+          for p in diag.glob('*.log'):
+            m=p.lstat()
+            if stat.S_ISREG(m.st_mode) and not p.is_symlink():logs.append({'name':p.name,'bytes':m.st_size,'allocatedBytes':m.st_blocks*512,'mtimeUtc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(m.st_mtime)),'mtimeEpoch':m.st_mtime,'nlink':m.st_nlink,'open':(m.st_dev,m.st_ino) in opened})
+          logs.sort(key=lambda x:x['mtimeEpoch']);assert len(logs)<5000
+          emit({'kind':'diagnostic_logs','directory':str(diag),'count':len(logs),'allocatedBytes':sum(x['allocatedBytes'] for x in logs),'files':logs[-100:],'deletionPerformed':False})
+          paths=[diag,workspace/'node_modules',workspace/'dist',Path('/home/runner/.local/share/pnpm/store'),Path('/home/runner/.cache'),Path('/home/runner/.npm'),Path('/root/.local/share/pnpm/store'),Path('/root/.npm'),Path('/tmp')]
+          for p in paths:
+            if p.is_dir() and not p.is_symlink():
+              try:emit({'kind':'directory_size','path':str(p),'du':cmd(['/usr/bin/du','-sx','--block-size=1','--',str(p)],timeout=45).strip()})
+              except subprocess.TimeoutExpired:emit({'kind':'directory_size','path':str(p),'error':'BOUNDED_TIMEOUT'})
+          protected=[root/'.env',root/'dist/index.js',root/'dist/secure-app.js',root/'dist/consolidated-release-runtime.mjs',root/'dist/public/release.json']
+          emit({'kind':'protected_files_readonly','fingerprints':[{'path':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in protected],'contentPrinted':False})
+          emit({'kind':'inspection_complete','targetDroplet':545144175,'liveBaseline':stamp['commit'],'deploymentExecuted':False,'productionDataDeleted':False})
+          PY
