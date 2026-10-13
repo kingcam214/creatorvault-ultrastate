@@ -18,46 +18,43 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/ops/runner-storage-2026-10-13'
           sudo -n /usr/bin/python3 - <<'PY'
-          import os,json,stat,subprocess,glob,time,shutil
+          import os,json,stat,subprocess,glob,time,re
           from pathlib import Path
           ENV={'PATH':'/home/runner/.local/share/pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C','HOME':'/root','PM2_HOME':'/root/.pm2'}
           def emit(x):print(json.dumps(x),flush=True)
-          def cmd(args,timeout=90):
-           p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,timeout=timeout,env=ENV,cwd='/root/creatorvault');return p.stdout.strip(),p.returncode
-          assert os.geteuid()==0
+          def cmd(args,t=90):
+           p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,timeout=t,env=ENV,cwd='/root/creatorvault');return p.stdout.strip(),p.returncode
           assert cmd(['curl','--noproxy','*','-fsS','--max-time','3','http://169.254.169.254/metadata/v1/id'])[0]=='545144175'
-          assert json.loads(Path('/root/creatorvault/dist/public/release.json').read_text())['commit']=='7077afd9260dcdd4368db4b7db8ffb6ddc05737c'
-          for args in [['pnpm','--version'],['pnpm','store','path'],['pnpm','store','prune','--help'],['/usr/local/bin/pnpm','--version'],['/usr/local/bin/pnpm','store','path']]:
-           try:out,code=cmd(args);emit({'kind':'package_tool_metadata','command':args,'exit':code,'output':out[:6000]})
-           except OSError:emit({'kind':'package_tool_metadata','command':args,'missing':True})
-          for cache in ['/root/.local/share/pnpm/store','/home/runner/.local/share/pnpm/store']:
-           counts={};largest=[]
+          refs=[]
+          for pat in ['/proc/[0-9]*/exe','/proc/[0-9]*/cwd','/proc/[0-9]*/fd/*']:
+           for f in glob.glob(pat):
+            try:v=os.readlink(f)
+            except OSError:continue
+            if v.startswith('/home/runner/actions-runner/') or v.startswith('/root/.cache/') or v.startswith('/var/lib/snapd/cache/'):
+             refs.append({'pid':int(f.split('/')[2]),'path':v,'type':f.split('/')[-2] if '/fd/' in f else f.split('/')[-1]})
+          emit({'kind':'runner_payload_references','rows':refs})
+          for p in Path('/home/runner/actions-runner').iterdir():
+           if p.name in ['bin','externals'] or re.fullmatch(r'(?:bin|externals)\.[0-9.]+',p.name):
+            m=p.lstat();emit({'kind':'runner_install_metadata','path':str(p),'symlink':p.is_symlink(),'resolved':str(p.resolve()),'mtime':m.st_mtime})
+          for cache in ['/var/lib/snapd/cache','/root/.cache/ffmpeg-static-nodejs','/root/.cache/ms-playwright','/home/runner/actions-runner/_work/_update']:
+           counts={};rows=[]
            for directory,ds,fs in os.walk(cache,followlinks=False):
             for name in fs:
              p=Path(directory)/name;m=p.lstat()
-             if not stat.S_ISREG(m.st_mode):continue
-             key=str(m.st_nlink);entry=counts.setdefault(key,{'files':0,'allocatedBytes':0});entry['files']+=1;entry['allocatedBytes']+=m.st_blocks*512
-           emit({'kind':'package_store_link_counts','path':cache,'links':counts})
-          for p in Path('/var/log').iterdir():
-           m=p.lstat()
-           if stat.S_ISREG(m.st_mode) and m.st_size>1048576:emit({'kind':'system_log_file_metadata','path':str(p),'bytes':m.st_size,'allocatedBytes':m.st_blocks*512,'mtimeUtc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(m.st_mtime)),'nlink':m.st_nlink})
-          for args in [['du','-x','--block-size=1','--max-depth=2','/opt','/home','/var/lib','/var/cache'],['find','/root/.local/share/pnpm/.tools','/home/runner/.local/share/pnpm/.tools','-maxdepth','6','-type','f','-name','pnpm.cjs'],['readlink','-f','/usr/local/bin/pnpm'],['readlink','-f','/home/runner/.local/share/pnpm/pnpm']]:
-           out,code=cmd(args,timeout=150)
-           if args[0]=='du':
-            rows=[]
-            for line in out.splitlines():
-             if '\t' in line:
-              size,name=line.split('\t',1)
-              if size.isdecimal():rows.append({'bytes':int(size),'path':name})
-            emit({'kind':'remaining_top_sizes','rows':sorted(rows,key=lambda x:x['bytes'],reverse=True)[:35],'exit':code})
-           else:emit({'kind':'package_tool_metadata','command':args,'exit':code,'output':out[:4000]})
-          # Check every process for open or mapped cache usage without exposing environment/argv values.
-          for name in ['cwd','exe','fd/*']:
-           refs=[]
-           for item in glob.glob('/proc/[0-9]*/'+name):
-            try:value=os.readlink(item)
-            except OSError:continue
-            if value.startswith('/root/.cache/') or '/.local/share/pnpm/store/' in value:refs.append({'pid':int(item.split('/')[2]),'path':value})
-           emit({'kind':'cache_process_references','type':name,'rows':refs})
-          emit({'kind':'bulk_cache_qualification_complete','filesDeleted':False})
+             if stat.S_ISREG(m.st_mode):
+              key=str(m.st_nlink);item=counts.setdefault(key,{'files':0,'bytes':0});item['files']+=1;item['bytes']+=m.st_blocks*512
+              if p.parent==Path(cache) or ('_update' in cache and name in ['package.json','Runner.Listener','Runner.Worker']):rows.append({'path':str(p),'bytes':m.st_size,'nlink':m.st_nlink,'mtime':m.st_mtime})
+           emit({'kind':'download_payload_links','path':cache,'linkCounts':counts,'topFiles':rows[:30]})
+          for cache in ['/home/runner/actions-runner/_work/_update','/root/.cache/ffmpeg-static-nodejs','/root/.cache/ms-playwright/.links']:
+           p=Path(cache)
+           if p.exists():emit({'kind':'payload_directory_metadata','path':cache,'mtime':p.stat().st_mtime,'children':[x.name for x in p.iterdir()]})
+          # Only selected package/library metadata, not .env or credentials.
+          for path in ['/root/creatorvault/node_modules/.modules.yaml','/home/runner/actions-runner/_work/creatorvault-ultrastate/creatorvault-ultrastate/node_modules/.modules.yaml']:
+           p=Path(path)
+           if p.exists():
+            text=p.read_text();emit({'kind':'installed_dependency_store_reference','path':path,'fields':[line for line in text.splitlines() if re.match(r'^(?:storeDir|packageManager|virtualStoreDir):',line)]})
+          workspace='/home/runner/actions-runner/_work/creatorvault-ultrastate/creatorvault-ultrastate'
+          for args in [['git','-C',workspace,'status','--porcelain'],['git','-C',workspace,'ls-files','dist.prev','dist.old','dist_temp','client/public','uploads'],['grep','-rIl','ffmpeg-static-nodejs','/root/creatorvault/server'],['grep','-rIl','ms-playwright','/root/creatorvault/server'],['grep','-rIl','huggingface','/root/creatorvault/server']]:
+           out,code=cmd(args);emit({'kind':'safe_source_reference_names','command':args,'exit':code,'output':out[:3500]})
+          emit({'kind':'qualification_complete','deleted':False})
           PY
