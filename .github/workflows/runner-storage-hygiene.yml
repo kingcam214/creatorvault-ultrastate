@@ -12,112 +12,26 @@ jobs:
     runs-on: [self-hosted, linux, creatorvault-production]
     timeout-minutes: 12
     steps:
-      - name: Approved target-pinned bulk disposable cleanup without checkout
+      - name: Read-only rejected updater path inspection
         shell: bash
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/ops/runner-storage-2026-10-13'
           sudo -n /usr/bin/python3 - <<'PY'
-          import os,stat,json,subprocess,glob,time,hashlib,fcntl,shutil,re
+          import json,os,stat,glob,hashlib
           from pathlib import Path
-          ENV={'PATH':'/home/runner/.local/share/pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C','HOME':'/root','PM2_HOME':'/root/.pm2'}
-          def emit(x):print(json.dumps(x),flush=True)
-          def command(args,timeout=100,cwd='/root/creatorvault'):
-           p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=timeout,env=ENV,cwd=cwd)
-           assert p.returncode==0,'SCOPED_COMMAND_EXIT_'+str(p.returncode)
-           return p.stdout.strip(),p.stderr.strip()
-          def digest(p):
-           with p.open('rb') as h:return hashlib.file_digest(h,'sha256').hexdigest()
-          def capacity():
-           s=os.statvfs('/home/runner/actions-runner/_diag');return {'availableBytes':s.f_bavail*s.f_frsize,'freeInodes':s.f_favail}
-          root=Path('/root/creatorvault');runner=Path('/home/runner/actions-runner');workspace=runner/'_work/creatorvault-ultrastate/creatorvault-ultrastate'
-          assert os.geteuid()==0
-          assert command(['curl','--noproxy','*','-fsS','--max-time','3','http://169.254.169.254/metadata/v1/id'])[0]=='545144175'
-          assert json.loads((root/'dist/public/release.json').read_text())['commit']=='7077afd9260dcdd4368db4b7db8ffb6ddc05737c'
-          for p in [root,runner,workspace]:assert p.is_dir() and not p.is_symlink() and p.resolve()==p
-          lock=os.open(str(root/'.env.writer.lock'),os.O_RDWR|os.O_NOFOLLOW);fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-          protected=[root/'.env',root/'dist/index.js',root/'dist/secure-app.js',root/'dist/consolidated-release-runtime.mjs',root/'dist/public/release.json',root/'.git/HEAD',workspace/'.git/HEAD']+sorted(root.glob('.consolidated-release-state-*.json'))
-          beforehash=[digest(p) for p in protected]
-          def runtime():
-           rows=json.loads(command(['pm2','jlist'])[0]);apps=[x for x in rows if x['name']=='creatorvault'];assert len(apps)==1
-           x=apps[0];e=x['pm2_env'];assert e['status']=='online' and e['pm_cwd']==str(root) and e['pm_exec_path']==str(root/'dist/index.js');return {'pid':x['pid'],'restarts':e.get('restart_time')}
-          beforeapp=runtime();before=capacity();reclaimed=[];emit({'kind':'bulk_cleanup_before','capacity':before,'runtime':beforeapp})
-          def refs():
-           paths=[];opened=set()
-           for f in glob.glob('/proc/[0-9]*/fd/*'):
-            try:m=os.stat(f);opened.add((m.st_dev,m.st_ino));paths.append(os.readlink(f))
-            except OSError:pass
-           for f in glob.glob('/proc/[0-9]*/exe')+glob.glob('/proc/[0-9]*/cwd'):
-            try:paths.append(os.readlink(f))
-            except OSError:pass
-           for f in glob.glob('/proc/[0-9]*/maps'):
-            try:
-             for line in Path(f).read_text().splitlines():
-              fields=line.split(None,5)
-              if len(fields)==6 and fields[5].startswith('/'):paths.append(fields[5])
-            except OSError:pass
-           return paths,opened
-          def canonical(p):assert p.is_dir() and not p.is_symlink() and p.resolve()==p
-          cutoff=time.time()-86400
-          # Journalctl only vacuums archived journals, preserving active logs and process.
-          pre=capacity();out,err=command(['journalctl','--vacuum-size=100M'],timeout=90);reclaimed.append({'target':'/var/log/journal','method':'journalctl --vacuum-size=100M','availableIncrease':capacity()['availableBytes']-pre['availableBytes'],'archivedOnly':True});emit({'kind':'journal_vacuum','status':'SUCCESS','readback':command(['journalctl','--disk-usage'])[0],'capacity':capacity()})
-          # Closed rotated OS logs only; no active application/payment/database logs.
-          paths,opened=refs();logroot=Path('/var/log');canonical(logroot);deleted=[]
-          for p in sorted(logroot.iterdir()):
-           if not re.fullmatch(r'(?:syslog|auth\.log|kern\.log|ufw\.log|btmp|dmesg)\.[0-9]+(?:\.gz)?',p.name):continue
-           m=p.lstat()
-           if not stat.S_ISREG(m.st_mode) or m.st_nlink!=1 or m.st_mtime>=cutoff or (m.st_dev,m.st_ino) in opened:continue
-           current=p.lstat();assert (m.st_dev,m.st_ino,m.st_size,m.st_mtime)==(current.st_dev,current.st_ino,current.st_size,current.st_mtime)
-           p.unlink();deleted.append({'path':str(p),'allocatedBytes':m.st_blocks*512})
-          reclaimed.extend({'target':x['path'],'method':'closed rotated system log unlink','allocatedBytes':x['allocatedBytes']} for x in deleted);emit({'kind':'rotated_system_logs_removed','files':deleted,'activeLogsPreserved':True,'capacity':capacity()})
-          # Verify the ancient _update directory is a completed duplicate of the installed active version.
-          update=runner/'_work/_update';canonical(update)
-          assert update.stat().st_mtime<cutoff
-          assert (runner/'bin').resolve()==runner/'bin.2.337.0' and (runner/'externals').resolve()==runner/'externals.2.337.0'
-          assert digest(update/'bin/Runner.Listener')==digest(runner/'bin.2.337.0/Runner.Listener')
-          assert digest(update/'externals/node20/bin/node')==digest(runner/'externals.2.337.0/node20/bin/node')
-          paths,opened=refs();assert not any(p==str(update) or p.startswith(str(update)+'/') for p in paths),'UPDATE_PAYLOAD_ACTIVE'
-          # No symlink traversal, special files, embedded history, secrets or user data.
-          for directory,ds,fs in os.walk(update,followlinks=False):
+          root=Path('/home/runner/actions-runner/_work/_update');opened=set()
+          for f in glob.glob('/proc/[0-9]*/fd/*'):
+           try:m=os.stat(f);opened.add((m.st_dev,m.st_ino))
+           except OSError:pass
+          bad=[]
+          for directory,ds,fs in os.walk(root,followlinks=False):
            for name in ds+fs:
-            p=Path(directory)/name;m=p.lstat();assert not p.is_symlink() and (stat.S_ISDIR(m.st_mode) or stat.S_ISREG(m.st_mode));assert name not in ['.git','.env','uploads','media','backups','credentials'];assert (m.st_dev,m.st_ino) not in opened
-          pre=capacity();shutil.rmtree(update);delta=capacity()['availableBytes']-pre['availableBytes'];reclaimed.append({'target':str(update),'method':'completed unreferenced updater staging duplicate','availableIncrease':delta});emit({'kind':'orphaned_runner_update_payload_removed','installedActiveRunnerPreserved':True,'capacity':capacity()})
-          # Previous failed install's CI dependencies, not source/history/media or current Python job inputs.
-          p=workspace/'node_modules'
-          if p.exists():
-           canonical(p);assert p.stat().st_mtime<cutoff
-           paths,opened=refs();assert not any(x==str(p) or x.startswith(str(p)+'/') for x in paths),'CI_DEPENDENCIES_ACTIVE'
-           pre=capacity();shutil.rmtree(p);reclaimed.append({'target':str(p),'method':'stale unreferenced CI dependencies','availableIncrease':capacity()['availableBytes']-pre['availableBytes']});emit({'kind':'stale_ci_dependencies_removed','gitHistoryAndUploadsLinkPreserved':True,'capacity':capacity()})
-          # Download cache has no installed files: remove old unique regular cache files only.
-          for directory,pattern in [('/var/lib/snapd/cache',r'[a-f0-9]{96}'),('/root/.cache/ffmpeg-static-nodejs',r'[a-f0-9]{128}\.(?:body|json)')]:
-           p=Path(directory);canonical(p);paths,opened=refs();removed=[];pre=capacity()
-           for file in sorted(p.iterdir()):
-            m=file.lstat()
-            if not re.fullmatch(pattern,file.name) or not stat.S_ISREG(m.st_mode) or m.st_nlink!=1 or m.st_mtime>=cutoff or (m.st_dev,m.st_ino) in opened:continue
-            current=file.lstat();assert (m.st_dev,m.st_ino,m.st_size,m.st_mtime)==(current.st_dev,current.st_ino,current.st_size,current.st_mtime)
-            file.unlink();removed.append({'name':file.name,'allocatedBytes':m.st_blocks*512})
-           reclaimed.append({'target':directory,'method':'unused unique old package-download cache','fileCount':len(removed),'availableIncrease':capacity()['availableBytes']-pre['availableBytes']});emit({'kind':'package_download_cache_reclaimed','path':directory,'fileCount':len(removed),'hardlinkedInstalledPackagesPreserved':True,'capacity':capacity()})
-          # Official archive cleaning: no package uninstall or apt autoremove.
-          pre=capacity();command(['apt-get','clean']);reclaimed.append({'target':'/var/cache/apt/archives','method':'apt-get clean','availableIncrease':capacity()['availableBytes']-pre['availableBytes']});emit({'kind':'apt_download_archives_reclaimed','capacity':capacity()})
-          for home,cache in [('/root','/root/.npm'),('/home/runner','/home/runner/.npm')]:
-           args=['npm','cache','clean','--force','--cache',cache] if home=='/root' else ['sudo','-n','-u','runner','-H','env','HOME=/home/runner','PATH='+ENV['PATH'],'npm','cache','clean','--force','--cache',cache]
-           command(args,cwd=home)
-          # Official prune never deletes installed runtime's linked package files.
-          command(['pnpm','store','prune','--force'],timeout=90,cwd='/root')
-          command(['sudo','-n','-u','runner','-H','env','HOME=/home/runner','PATH='+ENV['PATH'],'pnpm','store','prune','--force'],timeout=90,cwd='/home/runner')
-          # Only known TS compile cache older than 24h; backup/sql/systemd tmp entries untouched.
-          for directory in ['/tmp/tsx-1000','/tmp/tsx-0']:
-           p=Path(directory)
-           if not p.exists():continue
-           canonical(p);paths,opened=refs()
-           for file in p.iterdir():
-            m=file.lstat()
-            if stat.S_ISREG(m.st_mode) and m.st_nlink==1 and m.st_mtime<cutoff and (m.st_dev,m.st_ino) not in opened:file.unlink()
-          assert beforehash==[digest(p) for p in protected],'PROTECTED_FILES_CHANGED'
-          assert beforeapp==runtime(),'LIVE_RUNTIME_CHANGED'
-          assert (workspace/'uploads').is_symlink(),'UPLOADS_LINK_CHANGED'
-          assert (runner/'bin').resolve()==runner/'bin.2.337.0' and (runner/'externals').resolve()==runner/'externals.2.337.0'
-          after=capacity();emit({'kind':'bulk_cleanup_complete','before':before,'after':after,'reclaimed':reclaimed,'requiredBytes':int(3.5*1024**3),'preferredBytes':4*1024**3,'deploymentEligible':after['availableBytes']>=int(3.5*1024**3),'protectedFilesUnchanged':True,'runtimeUnchanged':True,'databaseBackupsMediaGitHistoryPreserved':True,'dockerPruningPerformed':False,'externalSpendUsd':0})
-          print(command(['df','-h','/'])[0],flush=True);print(command(['df','-i','/'])[0],flush=True)
-          fcntl.flock(lock,fcntl.LOCK_UN);os.close(lock)
+            p=Path(directory)/name;m=p.lstat()
+            if p.is_symlink() or not(stat.S_ISDIR(m.st_mode) or stat.S_ISREG(m.st_mode)) or name in ['.git','.env','uploads','media','backups','credentials'] or (m.st_dev,m.st_ino) in opened:
+             bad.append({'relative':str(p.relative_to(root)),'symlink':p.is_symlink(),'resolvedInsidePayload':str(p.resolve()).startswith(str(root)+'/'),'protectedName':name in ['.git','.env','uploads','media','backups','credentials'],'open':(m.st_dev,m.st_ino) in opened})
+          print(json.dumps({'kind':'orphan_update_rejected_paths','rows':bad[:40],'count':len(bad)}),flush=True)
+          for f in Path('/root/.cache/ms-playwright/.links').iterdir():
+           if f.is_file() and f.stat().st_size<4096:
+            target=Path(f.read_text().strip());print(json.dumps({'kind':'browser_cache_owner','ownerPath':str(target),'ownerExists':target.exists(),'ownerValidPackage':(target/'package.json').exists()}),flush=True)
           PY
