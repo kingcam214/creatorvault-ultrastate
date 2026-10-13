@@ -53,13 +53,16 @@ jobs:
               try:emit({'kind':'directory_size','path':str(p),'du':cmd(['/usr/bin/du','-sx','--block-size=1','--',str(p)],timeout=45).strip()})
               except subprocess.TimeoutExpired:emit({'kind':'directory_size','path':str(p),'error':'BOUNDED_TIMEOUT'})
           protected=[root/'.env',root/'dist/index.js',root/'dist/secure-app.js',root/'dist/consolidated-release-runtime.mjs',root/'dist/public/release.json']
-          for p in [Path('/root'),root,runner/'_work',Path('/tmp')]:
+          for p in [Path('/root/.cache'),Path('/root/.local/share/pnpm'),Path('/home/runner/.local/share/pnpm'),runner/'_work/creatorvault-ultrastate',runner/'_work/_update',Path('/tmp')]:
             try:
               entries=[]
               for line in cmd(['/usr/bin/du','-x','--max-depth=1','--block-size=1','--',str(p)],timeout=90).splitlines():
                 size,name=line.split('\t',1);entries.append({'bytes':int(size),'path':name})
               emit({'kind':'bounded_top_sizes','root':str(p),'entries':sorted(entries,key=lambda x:x['bytes'],reverse=True)[:40],'deletionAuthorizedBySize':False})
             except subprocess.TimeoutExpired:emit({'kind':'bounded_top_sizes','root':str(p),'error':'BOUNDED_TIMEOUT'})
+          for p in Path('/tmp').iterdir():
+            m=p.lstat()
+            if stat.S_ISREG(m.st_mode) and m.st_size>1048576:emit({'kind':'tmp_regular_file_metadata','name':p.name,'bytes':m.st_size,'mtimeUtc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(m.st_mtime)),'open':(m.st_dev,m.st_ino) in opened,'nlink':m.st_nlink,'uid':m.st_uid})
           for p in root.glob('.consolidated-release-state-*.json'):
             m=p.lstat()
             if not stat.S_ISREG(m.st_mode) or p.is_symlink() or m.st_size>32768:continue
