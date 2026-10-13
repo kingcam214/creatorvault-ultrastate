@@ -53,6 +53,19 @@ jobs:
               try:emit({'kind':'directory_size','path':str(p),'du':cmd(['/usr/bin/du','-sx','--block-size=1','--',str(p)],timeout=45).strip()})
               except subprocess.TimeoutExpired:emit({'kind':'directory_size','path':str(p),'error':'BOUNDED_TIMEOUT'})
           protected=[root/'.env',root/'dist/index.js',root/'dist/secure-app.js',root/'dist/consolidated-release-runtime.mjs',root/'dist/public/release.json']
+          for p in [Path('/root'),root,runner/'_work',Path('/tmp')]:
+            try:
+              entries=[]
+              for line in cmd(['/usr/bin/du','-x','--max-depth=1','--block-size=1','--',str(p)],timeout=90).splitlines():
+                size,name=line.split('\t',1);entries.append({'bytes':int(size),'path':name})
+              emit({'kind':'bounded_top_sizes','root':str(p),'entries':sorted(entries,key=lambda x:x['bytes'],reverse=True)[:40],'deletionAuthorizedBySize':False})
+            except subprocess.TimeoutExpired:emit({'kind':'bounded_top_sizes','root':str(p),'error':'BOUNDED_TIMEOUT'})
+          for p in root.glob('.consolidated-release-state-*.json'):
+            m=p.lstat()
+            if not stat.S_ISREG(m.st_mode) or p.is_symlink() or m.st_size>32768:continue
+            try:
+              d=json.loads(p.read_text());emit({'kind':'release_state_metadata','file':p.name,'sha':d.get('sha'),'phase':d.get('phase'),'code':d.get('code'),'fields':sorted(d.keys()),'modifiedUtc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(m.st_mtime))})
+            except json.JSONDecodeError:emit({'kind':'release_state_metadata','file':p.name,'error':'INVALID_JSON_PRESERVE'})
           emit({'kind':'protected_files_readonly','fingerprints':[{'path':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in protected],'contentPrinted':False})
           emit({'kind':'inspection_complete','targetDroplet':545144175,'liveBaseline':stamp['commit'],'deploymentExecuted':False,'productionDataDeleted':False})
           PY
