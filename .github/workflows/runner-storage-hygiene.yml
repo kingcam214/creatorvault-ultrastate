@@ -12,121 +12,29 @@ jobs:
     runs-on: [self-hosted, linux, creatorvault-production]
     timeout-minutes: 12
     steps:
-      - name: Approved verified orphan payload and package-cache reclamation
+      - name: Read-only independent post-HD-deployment verification
         shell: bash
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/ops/runner-storage-2026-10-13'
           sudo -n /usr/bin/python3 - <<'PY'
-          import os,stat,json,subprocess,glob,time,hashlib,fcntl,shutil,re
+          import os,json,stat,subprocess,datetime,hashlib
           from pathlib import Path
-          ENV={'PATH':'/home/runner/.local/share/pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C','HOME':'/root','PM2_HOME':'/root/.pm2'}
+          ENV={'PATH':'/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C','HOME':'/root','PM2_HOME':'/root/.pm2'}
           def emit(x):print(json.dumps(x),flush=True)
-          def command(args,timeout=100,cwd='/root/creatorvault'):
-           p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=timeout,env=ENV,cwd=cwd)
-           assert p.returncode==0,'SCOPED_COMMAND_EXIT_'+str(p.returncode)
-           return p.stdout.strip(),p.stderr.strip()
-          def digest(p):
-           with p.open('rb') as h:return hashlib.file_digest(h,'sha256').hexdigest()
-          def capacity():
-           s=os.statvfs('/home/runner/actions-runner/_diag');return {'availableBytes':s.f_bavail*s.f_frsize,'freeInodes':s.f_favail}
-          root=Path('/root/creatorvault');runner=Path('/home/runner/actions-runner');workspace=runner/'_work/creatorvault-ultrastate/creatorvault-ultrastate'
-          assert os.geteuid()==0
-          assert command(['curl','--noproxy','*','-fsS','--max-time','3','http://169.254.169.254/metadata/v1/id'])[0]=='545144175'
-          assert json.loads((root/'dist/public/release.json').read_text())['commit']=='7077afd9260dcdd4368db4b7db8ffb6ddc05737c'
-          for p in [root,runner,workspace]:assert p.is_dir() and not p.is_symlink() and p.resolve()==p
-          lock=os.open(str(root/'.env.writer.lock'),os.O_RDWR|os.O_NOFOLLOW);fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-          protected=[root/'.env',root/'dist/index.js',root/'dist/secure-app.js',root/'dist/consolidated-release-runtime.mjs',root/'dist/public/release.json',root/'.git/HEAD',workspace/'.git/HEAD']+sorted(root.glob('.consolidated-release-state-*.json'))
-          beforehash=[digest(p) for p in protected]
-          def runtime():
-           rows=json.loads(command(['pm2','jlist'])[0]);apps=[x for x in rows if x['name']=='creatorvault'];assert len(apps)==1
-           x=apps[0];e=x['pm2_env'];assert e['status']=='online' and e['pm_cwd']==str(root) and e['pm_exec_path']==str(root/'dist/index.js');return {'pid':x['pid'],'restarts':e.get('restart_time')}
-          beforeapp=runtime();before=capacity();reclaimed=[];emit({'kind':'bulk_cleanup_before','capacity':before,'runtime':beforeapp})
-          def refs():
-           paths=[];opened=set()
-           for f in glob.glob('/proc/[0-9]*/fd/*'):
-            try:m=os.stat(f);opened.add((m.st_dev,m.st_ino));paths.append(os.readlink(f))
-            except OSError:pass
-           for f in glob.glob('/proc/[0-9]*/exe')+glob.glob('/proc/[0-9]*/cwd'):
-            try:paths.append(os.readlink(f))
-            except OSError:pass
-           for f in glob.glob('/proc/[0-9]*/maps'):
-            try:
-             for line in Path(f).read_text().splitlines():
-              fields=line.split(None,5)
-              if len(fields)==6 and fields[5].startswith('/'):paths.append(fields[5])
-            except OSError:pass
-           return paths,opened
-          def canonical(p):assert p.is_dir() and not p.is_symlink() and p.resolve()==p
-          cutoff=time.time()-86400
-          # Journalctl only vacuums archived journals, preserving active logs and process.
-          pre=capacity();out,err=command(['journalctl','--vacuum-size=100M'],timeout=90);reclaimed.append({'target':'/var/log/journal','method':'journalctl --vacuum-size=100M','availableIncrease':capacity()['availableBytes']-pre['availableBytes'],'archivedOnly':True});emit({'kind':'journal_vacuum','status':'SUCCESS','readback':command(['journalctl','--disk-usage'])[0],'capacity':capacity()})
-          # Closed rotated OS logs only; no active application/payment/database logs.
-          paths,opened=refs();logroot=Path('/var/log');canonical(logroot);deleted=[]
-          for p in sorted(logroot.iterdir()):
-           if not re.fullmatch(r'(?:syslog|auth\.log|kern\.log|ufw\.log|btmp|dmesg)\.[0-9]+(?:\.gz)?',p.name):continue
-           m=p.lstat()
-           if not stat.S_ISREG(m.st_mode) or m.st_nlink!=1 or m.st_mtime>=cutoff or (m.st_dev,m.st_ino) in opened:continue
-           current=p.lstat();assert (m.st_dev,m.st_ino,m.st_size,m.st_mtime)==(current.st_dev,current.st_ino,current.st_size,current.st_mtime)
-           p.unlink();deleted.append({'path':str(p),'allocatedBytes':m.st_blocks*512})
-          reclaimed.extend({'target':x['path'],'method':'closed rotated system log unlink','allocatedBytes':x['allocatedBytes']} for x in deleted);emit({'kind':'rotated_system_logs_removed','files':deleted,'activeLogsPreserved':True,'capacity':capacity()})
-          # Verify the ancient _update directory is a completed duplicate of the installed active version.
-          update=runner/'_work/_update';canonical(update)
-          assert update.stat().st_mtime<cutoff
-          assert (runner/'bin').resolve()==runner/'bin.2.337.0' and (runner/'externals').resolve()==runner/'externals.2.337.0'
-          assert digest(update/'bin/Runner.Listener')==digest(runner/'bin.2.337.0/Runner.Listener')
-          assert digest(update/'externals/node20/bin/node')==digest(runner/'externals.2.337.0/node20/bin/node')
-          paths,opened=refs();assert not any(p==str(update) or p.startswith(str(update)+'/') for p in paths),'UPDATE_PAYLOAD_ACTIVE'
-          # No symlink traversal, special files, embedded history, secrets or user data.
-          for directory,ds,fs in os.walk(update,followlinks=False):
-           for name in ds+fs:
-            p=Path(directory)/name;m=p.lstat();assert (stat.S_ISDIR(m.st_mode) or stat.S_ISREG(m.st_mode) or (p.is_symlink() and str(p.resolve()).startswith(str(update)+'/'))),'UNSAFE_PAYLOAD_MEMBER';assert name not in ['.git','.env','uploads','media','backups','credentials'];assert (m.st_dev,m.st_ino) not in opened
-          pre=capacity();shutil.rmtree(update);delta=capacity()['availableBytes']-pre['availableBytes'];reclaimed.append({'target':str(update),'method':'completed unreferenced updater staging duplicate','availableIncrease':delta});emit({'kind':'orphaned_runner_update_payload_removed','installedActiveRunnerPreserved':True,'capacity':capacity()})
-          # Only the superseded 2.336.0 updater payload; current 2.337.0 links/executables are immutable.
-          for name in ['bin.2.336.0','externals.2.336.0']:
-           p=runner/name;canonical(p);assert p.stat().st_mtime<cutoff
-           assert (runner/'bin').resolve()==runner/'bin.2.337.0' and (runner/'externals').resolve()==runner/'externals.2.337.0'
-           paths,opened=refs();assert not any(x==str(p) or x.startswith(str(p)+'/') for x in paths),'SUPERSEDED_PAYLOAD_REFERENCED'
-           for directory,ds,fs in os.walk(p,followlinks=False):
-            for child in ds+fs:
-             item=Path(directory)/child;m=item.lstat();assert (stat.S_ISDIR(m.st_mode) or stat.S_ISREG(m.st_mode) or (item.is_symlink() and str(item.resolve()).startswith(str(p)+'/')));assert child not in ['.git','.env','uploads','media','backups','credentials'];assert (m.st_dev,m.st_ino) not in opened
-           pre=capacity();shutil.rmtree(p);reclaimed.append({'target':str(p),'method':'unreferenced superseded runner update payload','availableIncrease':capacity()['availableBytes']-pre['availableBytes']});emit({'kind':'superseded_runner_payload_removed','path':str(p),'activeVersion':'2.337.0','capacity':capacity()})
-          # Previous failed install's CI dependencies, not source/history/media or current Python job inputs.
-          p=workspace/'node_modules'
-          if p.exists():
-           canonical(p);assert p.stat().st_mtime<cutoff
-           paths,opened=refs();assert not any(x==str(p) or x.startswith(str(p)+'/') for x in paths),'CI_DEPENDENCIES_ACTIVE'
-           pre=capacity();shutil.rmtree(p);reclaimed.append({'target':str(p),'method':'stale unreferenced CI dependencies','availableIncrease':capacity()['availableBytes']-pre['availableBytes']});emit({'kind':'stale_ci_dependencies_removed','gitHistoryAndUploadsLinkPreserved':True,'capacity':capacity()})
-          # Download cache has no installed files: remove old unique regular cache files only.
-          for directory,pattern in [('/var/lib/snapd/cache',r'[a-f0-9]{96}'),('/root/.cache/ffmpeg-static-nodejs',r'[a-f0-9]{128}\.(?:body|json)')]:
-           p=Path(directory);canonical(p);paths,opened=refs();removed=[];pre=capacity()
-           for file in sorted(p.iterdir()):
-            m=file.lstat()
-            if not re.fullmatch(pattern,file.name) or not stat.S_ISREG(m.st_mode) or m.st_nlink!=1 or m.st_mtime>=cutoff or (m.st_dev,m.st_ino) in opened:continue
-            current=file.lstat();assert (m.st_dev,m.st_ino,m.st_size,m.st_mtime)==(current.st_dev,current.st_ino,current.st_size,current.st_mtime)
-            file.unlink();removed.append({'name':file.name,'allocatedBytes':m.st_blocks*512})
-           reclaimed.append({'target':directory,'method':'unused unique old package-download cache','fileCount':len(removed),'availableIncrease':capacity()['availableBytes']-pre['availableBytes']});emit({'kind':'package_download_cache_reclaimed','path':directory,'fileCount':len(removed),'hardlinkedInstalledPackagesPreserved':True,'capacity':capacity()})
-          # Official archive cleaning: no package uninstall or apt autoremove.
-          pre=capacity();command(['apt-get','clean']);reclaimed.append({'target':'/var/cache/apt/archives','method':'apt-get clean','availableIncrease':capacity()['availableBytes']-pre['availableBytes']});emit({'kind':'apt_download_archives_reclaimed','capacity':capacity()})
-          for home,cache in [('/root','/root/.npm'),('/home/runner','/home/runner/.npm')]:
-           args=['npm','cache','clean','--force','--cache',cache] if home=='/root' else ['sudo','-n','-u','runner','-H','env','HOME=/home/runner','PATH='+ENV['PATH'],'npm','cache','clean','--force','--cache',cache]
-           command(args,cwd=home)
-          # Official prune never deletes installed runtime's linked package files.
-          command(['pnpm','store','prune','--force'],timeout=90,cwd='/root')
-          command(['sudo','-n','-u','runner','-H','env','HOME=/home/runner','PATH='+ENV['PATH'],'pnpm','store','prune','--force'],timeout=90,cwd='/home/runner')
-          # Only known TS compile cache older than 24h; backup/sql/systemd tmp entries untouched.
-          for directory in ['/tmp/tsx-1000','/tmp/tsx-0']:
-           p=Path(directory)
-           if not p.exists():continue
-           canonical(p);paths,opened=refs()
-           for file in p.iterdir():
-            m=file.lstat()
-            if stat.S_ISREG(m.st_mode) and m.st_nlink==1 and m.st_mtime<cutoff and (m.st_dev,m.st_ino) not in opened:file.unlink()
-          assert beforehash==[digest(p) for p in protected],'PROTECTED_FILES_CHANGED'
-          assert beforeapp==runtime(),'LIVE_RUNTIME_CHANGED'
-          assert (workspace/'uploads').is_symlink(),'UPLOADS_LINK_CHANGED'
-          assert (runner/'bin').resolve()==runner/'bin.2.337.0' and (runner/'externals').resolve()==runner/'externals.2.337.0'
-          after=capacity();emit({'kind':'bulk_cleanup_complete','before':before,'after':after,'reclaimed':reclaimed,'requiredBytes':int(3.5*1024**3),'preferredBytes':4*1024**3,'deploymentEligible':after['availableBytes']>=int(3.5*1024**3),'protectedFilesUnchanged':True,'runtimeUnchanged':True,'databaseBackupsMediaGitHistoryPreserved':True,'dockerPruningPerformed':False,'externalSpendUsd':0})
-          print(command(['df','-h','/'])[0],flush=True);print(command(['df','-i','/'])[0],flush=True)
-          fcntl.flock(lock,fcntl.LOCK_UN);os.close(lock)
+          def cmd(a):return subprocess.check_output(a,text=True,timeout=45,stderr=subprocess.DEVNULL,env=ENV,cwd='/root/creatorvault').strip()
+          sha='3a47ce4dc7178893e958ed491a136c9749242033';root=Path('/root/creatorvault');runner=Path('/home/runner/actions-runner')
+          assert os.geteuid()==0 and cmd(['curl','--noproxy','*','-fsS','--max-time','3','http://169.254.169.254/metadata/v1/id'])=='545144175'
+          assert root.resolve()==root and not root.is_symlink()
+          stamp=json.loads((root/'dist/public/release.json').read_text());assert stamp['commit']==sha
+          statefile=root/('.consolidated-release-state-'+sha+'.json');m=statefile.lstat();assert stat.S_ISREG(m.st_mode) and m.st_uid==0 and (m.st_mode&0o077)==0
+          state=json.loads(statefile.read_text());assert state['sha']==sha and state['phase']=='verified'
+          rows=json.loads(cmd(['pm2','jlist']));apps=[x for x in rows if x['name']=='creatorvault'];assert len(apps)==1
+          app=apps[0];e=app['pm2_env'];pid=app['pid'];assert e['status']=='online' and e['pm_cwd']==str(root) and e['pm_exec_path']==str(root/'dist/index.js') and e['exec_mode']=='fork_mode' and e['instances']==1 and os.stat('/proc/'+str(pid)).st_uid==0
+          for p in [root,runner/'_diag',Path('/tmp')]:
+           s=os.statvfs(p);emit({'kind':'post_deploy_filesystem','path':str(p),'availableBytes':s.f_bavail*s.f_frsize,'freeInodes':s.f_favail,'totalBytes':s.f_blocks*s.f_frsize})
+          print(cmd(['df','-h','/']),flush=True);print(cmd(['df','-i','/']),flush=True)
+          emit({'kind':'canonical_runtime_post_deploy','sha':sha,'statePhase':state['phase'],'stateCode':state['code'],'pid':pid,'restartCount':e.get('restart_time'),'status':e['status'],'instances':e['instances'],'mode':e['exec_mode'],'ownerUid':os.stat('/proc/'+str(pid)).st_uid,'cwd':e['pm_cwd'],'entry':e['pm_exec_path'],'bootUnitEnabled':cmd(['systemctl','is-enabled','pm2-root.service'])=='enabled','guardedStateVerified':True})
+          emit({'kind':'retained_storage_after_deployment','creatorUploadsPresent':Path('/root/uploads').is_dir(),'databaseDataPresent':Path('/var/lib/mysql').is_dir(),'backupRootPresent':Path('/opt/backups').is_dir(),'appGitPresent':(root/'.git').is_dir(),'runnerGitPresent':(runner/'_work/creatorvault-ultrastate/creatorvault-ultrastate/.git').is_dir(),'activeRunnerBin':str((runner/'bin').resolve()),'activeRunnerExternals':str((runner/'externals').resolve()),'dockerContainers':cmd(['docker','--host','unix:///var/run/docker.sock','ps','-a','--format','{{.ID}}\t{{.Status}}']).splitlines(),'oldSqlBackupsPresent':all(Path(p).is_file() for p in ['/tmp/creatorvault_2026-10-08_03-05-01.sql','/tmp/creatorvault_2026-10-11_03-05-01.sql'])})
+          emit({'kind':'post_deploy_readonly_complete','sha':sha,'filesChanged':False,'generationTriggered':False,'externalSpendUsd':0,'at':datetime.datetime.now(datetime.timezone.utc).isoformat()})
           PY
