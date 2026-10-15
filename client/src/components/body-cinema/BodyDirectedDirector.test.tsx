@@ -1,6 +1,6 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { assessBodyDirectedTreatment } from "../../../../server/services/bodyCinemaSourceMapService";
 import { compileBodyDirectedPlan } from "../../../../server/services/bodyCinemaEditBlueprintService";
 import {
@@ -9,9 +9,11 @@ import {
   type BodyDirectedSourceMap,
 } from "@shared/bodyCinemaBodyDirection";
 import {
+  BodyDirectedNewPlanAction,
   BodyDirectedOriginalCaption,
   BodyDirectedPlanSummary,
   BodyDirectionChoice,
+  bodyDirectedPlanRequestId,
   sourceSupportedTreatmentLabels,
   selectedBodyPlanMatchesRanges,
   treatmentsForBodyFocus,
@@ -70,6 +72,45 @@ const frozenSnapshot = {
 };
 
 describe("Body Directed Director", () => {
+  it("reuses a deliberate plan's UUID on retries and issues a distinct UUID only after new-plan intent", () => {
+    const firstId = "a58ac316-4d69-4cef-946b-e97a9dc49af1";
+    const secondId = "638d7dc2-5ff2-41d7-ae63-6e8d3c6b7d0f";
+    const createId = vi.fn<() => string>()
+      .mockReturnValueOnce(firstId)
+      .mockReturnValueOnce(secondId);
+    let requestId: string | null = null;
+    requestId = bodyDirectedPlanRequestId(requestId, createId);
+    expect(requestId).toBe(firstId);
+    expect(bodyDirectedPlanRequestId(requestId, createId)).toBe(firstId);
+    expect(bodyDirectedPlanRequestId(requestId, createId)).toBe(firstId);
+    expect(createId).toHaveBeenCalledTimes(1);
+
+    // Choosing the original for a separate plan clears the old request token,
+    // regardless of whether the source asset changed.
+    requestId = null;
+    requestId = bodyDirectedPlanRequestId(requestId, createId);
+    expect(requestId).toBe(secondId);
+    expect(bodyDirectedPlanRequestId(requestId, createId)).toBe(secondId);
+    expect(createId).toHaveBeenCalledTimes(2);
+  });
+
+  it("offers a separate same-original plan without navigating to or replacing the saved lifecycle", () => {
+    const markup = renderToStaticMarkup(
+      <BodyDirectedNewPlanAction sourceAssetId="owned video/1" />
+    );
+    expect(markup).toContain(
+      'href="/vault-x/studio?sourceAssetId=owned%20video%2F1"'
+    );
+    expect(markup).toContain("Start a new plan from this original");
+    expect(markup).toContain("saved plan and its private review stay unchanged");
+    expect(markup).not.toContain("lifecycleId=");
+    expect(
+      renderToStaticMarkup(
+        <BodyDirectedNewPlanAction sourceAssetId="owned-video-1" disabled />
+      )
+    ).toContain('aria-disabled="true"');
+  });
+
   it("keeps all canonical focus IDs and treatment IDs unique, with multiple edit languages per focus", () => {
     const focusIds = BODY_FOCUS_LIBRARY.map(focus => focus.id);
     const treatmentIds = BODY_FOCUS_TREATMENTS.map(treatment => treatment.id);

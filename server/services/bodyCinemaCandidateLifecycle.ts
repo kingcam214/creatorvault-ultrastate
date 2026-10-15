@@ -26,7 +26,7 @@ import { z } from "zod";
 import { getDb } from "../db";
 import {
   BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION,
-  bodyDirectedRightsInputSchema, bodyDirectedRightsSnapshotSchema,
+  bodyDirectedQualifyInputSchema, bodyDirectedRightsSnapshotSchema,
   bodyDirectedAnalysisSchema, bodyDirectedLifecycleRecordSchema,
   bodyDirectedAnalyzeInputSchema, bodyDirectedFreezeInputSchema,
   type BodyDirectedLifecycleRecord, type BodyDirectedRightsInput,
@@ -1501,7 +1501,7 @@ export class BodyCinemaCandidateLifecycleService {
   async listBodyDirected(creatorId: number, limit = 30): Promise<BodyDirectedLifecycleRecord[]> {
     const rows = await queryRows<LifecycleRow>(this.pool,
       `SELECT * FROM body_cinema_candidate_lifecycles WHERE creator_id = ?
-       AND JSON_UNQUOTE(JSON_EXTRACT(rights_assertion_json, '$.version')) = ?
+       AND CAST(JSON_UNQUOTE(JSON_EXTRACT(rights_assertion_json, '$.version')) AS BINARY) = CAST(? AS BINARY)
        ORDER BY updated_at DESC LIMIT ?`,
       [creatorId, BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION, Math.max(1, Math.min(100, Math.floor(limit)))]);
     return Promise.all(rows.map(row => this.readBodyDirectedRecord(this.pool, row)));
@@ -1513,23 +1513,37 @@ export class BodyCinemaCandidateLifecycleService {
     return rows[0] && isBodyDirectedRow(rows[0]) ? this.readBodyDirectedRecord(this.pool, rows[0]) : null;
   }
 
-  async qualifyBodyDirected(input: {creatorId: number; sourceAssetId: string; rights: BodyDirectedRightsInput}): Promise<BodyDirectedLifecycleRecord> {
-    const declaration = bodyDirectedRightsInputSchema.parse(input.rights);
+  async qualifyBodyDirected(input: {creatorId: number; sourceAssetId: string; planRequestId?: string; rights: BodyDirectedRightsInput}): Promise<BodyDirectedLifecycleRecord> {
+    const parsed = bodyDirectedQualifyInputSchema.parse({sourceAssetId:input.sourceAssetId,
+      rights:input.rights, ...(input.planRequestId !== undefined ? {planRequestId:input.planRequestId} : {})});
+    const declaration = parsed.rights;
     const assertionHash = digest(declaration);
     const rights = bodyDirectedRightsSnapshotSchema.parse({ ...declaration,
       verificationStatus: 'creator_asserted_not_independently_verified', assertedAt: new Date().toISOString() });
     return this.transaction(async connection => {
       const asset = await this.lockAsset(connection, input.creatorId, input.sourceAssetId);
       const source = await this.verifyOriginalSource(asset, input.creatorId, false);
-      const existing = await queryRows<LifecycleRow>(connection,
-        'SELECT * FROM body_cinema_candidate_lifecycles WHERE creator_id = ? AND source_asset_id = ? FOR UPDATE',
-        [input.creatorId, input.sourceAssetId]);
+      // The owned asset lock serializes same-source retries before either lookup
+      // or insert. Explicit requests never fall back to another plan or legacy row.
+      const existing = parsed.planRequestId
+        ? await queryRows<LifecycleRow>(connection,
+          'SELECT * FROM body_cinema_candidate_lifecycles WHERE id = ? LIMIT 1 FOR UPDATE',
+          [parsed.planRequestId])
+        : await queryRows<LifecycleRow>(connection,
+          `SELECT * FROM body_cinema_candidate_lifecycles WHERE creator_id = ? AND source_asset_id = ?
+           AND CAST(JSON_UNQUOTE(JSON_EXTRACT(rights_assertion_json, '$.version')) AS BINARY) = CAST(? AS BINARY)
+           ORDER BY created_at ASC, id ASC LIMIT 1 FOR UPDATE`,
+          [input.creatorId, input.sourceAssetId, BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION]);
       if (existing[0]) {
-        if (!isBodyDirectedRow(existing[0])) failure('conflict', 'An earlier saved record is linked to this original. It is not a Body Cinema edit treatment. Choose a different owned original; the saved record will not be overwritten.');
-        if (existing[0].rights_assertion_hash !== assertionHash) failure('conflict', 'This source already has a different immutable creator declaration.');
+        const row = existing[0];
+        if (Number(row.creator_id) !== input.creatorId || row.source_asset_id !== input.sourceAssetId ||
+          !isBodyDirectedRow(row) || row.rights_assertion_hash !== assertionHash ||
+          row.source_sha256 !== source.snapshot.sha256 || digest(parseStoredSource(row.source_snapshot_json)) !== digest(source.snapshot)) {
+          failure('conflict', 'This plan request conflicts with an immutable creator, original or declaration. No saved record was changed.');
+        }
         return this.readBodyDirectedRecord(connection, existing[0]);
       }
-      const id = randomUUID(), projectId = randomUUID();
+      const id = parsed.planRequestId ?? randomUUID(), projectId = randomUUID();
       await execute(connection,
         `INSERT INTO creation_projects
          (id, creator_id, title, intent, output_purpose, state, source_media_asset_id, metadata_json, created_at, updated_at)
@@ -1548,6 +1562,14 @@ export class BodyCinemaCandidateLifecycleService {
         {lifecycleId:id, sourceAssetId:input.sourceAssetId, sourceSha256:source.snapshot.sha256,
          rightsAssertionVersion:rights.version, independentVerification:'not_claimed', executionAuthority:'none'});
       return this.readBodyDirectedRecord(connection, await this.lockBodyDirectedRow(connection, input.creatorId, id));
+    }).catch((error: unknown) => {
+      // A UUID concurrently claimed against a different source still fails closed;
+      // transaction rollback also removes this request's uncommitted project.
+      if (error instanceof Error && 'code' in error && (error.code === 'ER_DUP_ENTRY' ||
+        (parsed.planRequestId && error.code === 'ER_LOCK_DEADLOCK'))) {
+        failure('conflict', 'This plan request conflicts with an existing saved record. No saved record was changed.');
+      }
+      throw error;
     });
   }
 
@@ -1730,8 +1752,10 @@ export class BodyCinemaCandidateLifecycleService {
       const existingRows = await queryRows<LifecycleRow>(
         connection,
         `SELECT * FROM body_cinema_candidate_lifecycles
-         WHERE creator_id = ? AND source_asset_id = ? FOR UPDATE`,
-        [input.creatorId, input.sourceAssetId]
+         WHERE creator_id = ? AND source_asset_id = ?
+           AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(rights_assertion_json, '$.version')), '') <> ?
+         LIMIT 1 FOR UPDATE`,
+        [input.creatorId, input.sourceAssetId, BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION]
       );
       if (existingRows[0]) {
         if (

@@ -78,13 +78,20 @@ async function executeSchema(database: Pool): Promise<void> {
     candidate_snapshot_json json NULL, candidate_provenance_json json NULL,
     attachment_authorization_json json NULL, review_id char(36) NULL, review_json json NULL,
     decision_json json NULL, handoff_json json NULL, created_at datetime(3) NOT NULL,
-    updated_at datetime(3) NOT NULL, UNIQUE KEY lifecycle_project_unique (project_id),
-    UNIQUE KEY lifecycle_creator_source_unique (creator_id, source_asset_id),
+    updated_at datetime(3) NOT NULL,
+    plan_scope varchar(36) GENERATED ALWAYS AS (
+      CASE WHEN JSON_VALUE(rights_assertion_json, '$.version') COLLATE utf8mb4_bin = _utf8mb4'${BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION}' COLLATE utf8mb4_bin THEN RTRIM(id) ELSE '' END
+    ) VIRTUAL,
+    UNIQUE KEY lifecycle_project_unique (project_id),
+    UNIQUE KEY lifecycle_creator_source_scope_unique (creator_id, source_asset_id, plan_scope),
     UNIQUE KEY lifecycle_candidate_unique (candidate_asset_id)
   ) ENGINE=InnoDB`);
   // The service persists canonical source-map text (including ≥) in project
   // metadata. The disposable socket fixture begins with MariaDB's latin1
-  // default, unlike the application's UTF-8 project table.
+  // default, unlike the application's UTF-8 lifecycle and project tables.
+  await database.query(
+    "ALTER TABLE body_cinema_candidate_lifecycles CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+  );
   await database.query(
     "ALTER TABLE creation_projects CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
   );

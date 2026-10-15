@@ -2,11 +2,16 @@ import { createHash, randomUUID } from "crypto";
 import { chmod, copyFile, mkdir, readFile, writeFile, rm } from "fs/promises";
 import path from "path";
 import express from "express";
+import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import { z } from "zod";
 import { once } from "node:events";
 import { getTableConfig } from "drizzle-orm/mysql-core";
 import { users } from "../../drizzle/schema";
 import { COOKIE_NAME } from "../../shared/const";
+import { bodyDirectedLifecycleRecordSchema } from "../../shared/bodyCinemaCandidateLifecycle";
+import { createContext } from "../_core/context";
 import { sdk } from "../_core/sdk";
+import { bodyCinemaCandidateLifecycleRouter } from "../routers/bodyCinemaCandidateLifecycleRouter";
 import { registerBodyCinemaCandidatePlayback } from "../routers/bodyCinemaCandidatePlayback";
 import {
   updateCreationProjectLinks,
@@ -16,6 +21,7 @@ import { createPool, type Pool } from "mysql2/promise";
 import type { RowDataPacket } from "mysql2";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION,
   BODY_CINEMA_CREATOR_ASSERTION_VERSION,
   BODY_CINEMA_CROWN_REVEAL_TREATMENT_VERSION,
   BODY_CINEMA_FUTURE_ATTACHMENT_GRANT_VERSION,
@@ -96,8 +102,12 @@ async function executeSchema(database: Pool): Promise<void> {
     candidate_snapshot_json json NULL, candidate_provenance_json json NULL,
     attachment_authorization_json json NULL, review_id char(36) NULL, review_json json NULL,
     decision_json json NULL, handoff_json json NULL, created_at datetime(3) NOT NULL,
-    updated_at datetime(3) NOT NULL, UNIQUE KEY lifecycle_project_unique (project_id),
-    UNIQUE KEY lifecycle_creator_source_unique (creator_id, source_asset_id),
+    updated_at datetime(3) NOT NULL,
+    plan_scope varchar(36) GENERATED ALWAYS AS (
+      CASE WHEN JSON_VALUE(rights_assertion_json, '$.version') COLLATE utf8mb4_bin = _utf8mb4'${BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION}' COLLATE utf8mb4_bin THEN RTRIM(id) ELSE '' END
+    ) VIRTUAL,
+    UNIQUE KEY lifecycle_project_unique (project_id),
+    UNIQUE KEY lifecycle_creator_source_scope_unique (creator_id, source_asset_id, plan_scope),
     UNIQUE KEY lifecycle_candidate_unique (candidate_asset_id)
   ) ENGINE=InnoDB`);
 }
@@ -105,7 +115,8 @@ async function executeSchema(database: Pool): Promise<void> {
 async function seedSource(
   assetId: string,
   storageId: string,
-  filename: string
+  filename: string,
+  ownerId = creatorId
 ): Promise<{ hash: string; size: number }> {
   const root = requireNativeFixture().storageRoot;
   const bytes = await readFile(fixturePath);
@@ -118,7 +129,7 @@ async function seedSource(
     path.join(root, "content-vault-receipts", `${storageId}.json`),
     JSON.stringify({
       id: storageId,
-      creatorId,
+      creatorId: ownerId,
       url: sourceUrl(storageId, filename),
       filename,
       size: bytes.length,
@@ -135,7 +146,7 @@ async function seedSource(
      VALUES (?, ?, 'upload', 'video', ?, ?, 'video/mp4', ?, ?, ?, 4, 720, 1280, 'ready', 'body_cinema_direct_upload')`,
     [
       assetId,
-      creatorId,
+      ownerId,
       filename,
       filename,
       bytes.length,
@@ -1017,13 +1028,19 @@ describe("Body Cinema body-directed native planning-only proof", () => {
       treatment: treatment(),
     });
     const before = await service.getMine(creatorId, saved.id);
-    await expect(
-      service.qualifyBodyDirected({
-        creatorId,
-        sourceAssetId,
-        rights: bodyDirectedDeclaration(),
-      })
-    ).rejects.toBeInstanceOf(BodyCinemaLifecycleError);
+    const originalBytes = await snapshotNativeRowBytes("body_cinema_candidate_lifecycles", saved.id);
+    const originalProject = await snapshotNativeRowBytes("creation_projects", saved.projectId);
+    const separate = await service.qualifyBodyDirected({
+      creatorId,
+      sourceAssetId,
+      rights: bodyDirectedDeclaration(),
+    });
+    expect(separate.id).not.toBe(saved.id);
+    expect(separate.projectId).not.toBe(saved.projectId);
+    expect(separate.state).toBe("qualified");
+    expect(separate.kind).toBe("body_directed_v2");
+    expect(await snapshotNativeRowBytes("body_cinema_candidate_lifecycles", saved.id)).toEqual(originalBytes);
+    expect(await snapshotNativeRowBytes("creation_projects", saved.projectId)).toEqual(originalProject);
     expect(await service.getMine(creatorId, saved.id)).toEqual(before);
     expect(await service.getBodyDirected(creatorId, saved.id)).toBeNull();
     expect(
@@ -1034,5 +1051,176 @@ describe("Body Cinema body-directed native planning-only proof", () => {
     expect(
       (await service.listMine(creatorId)).some(plan => plan.id === saved.id)
     ).toBe(true);
+  });
+});
+
+async function snapshotNativeRowBytes(table: "body_cinema_candidate_lifecycles" | "creation_projects", id: string): Promise<RowDataPacket[]> {
+  const [columns] = await pool.query<RowDataPacket[]>(
+    "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME <> 'plan_scope' ORDER BY ORDINAL_POSITION", [table]
+  );
+  const projection = columns.map(column => {
+    const name = String(column.COLUMN_NAME);
+    if (!/^[a-z][a-z0-9_]*$/.test(name)) throw new Error("INVALID_NATIVE_FIXTURE_COLUMN");
+    return `HEX(CAST(\`${name}\` AS BINARY)) AS \`${name}\``;
+  }).join(",");
+  const [rows] = await pool.query<RowDataPacket[]>(`SELECT ${projection} FROM \`${table}\` WHERE id=?`, [id]);
+  return rows;
+}
+
+async function sourceCounts(sourceAssetId: string): Promise<{ lifecycles: number; projects: number; events: number }> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT
+      (SELECT COUNT(*) FROM body_cinema_candidate_lifecycles WHERE source_asset_id=?) AS lifecycles,
+      (SELECT COUNT(*) FROM creation_projects WHERE source_media_asset_id=?) AS projects,
+      (SELECT COUNT(*) FROM creation_project_events e JOIN creation_projects p ON p.id=e.project_id WHERE p.source_media_asset_id=?) AS events`,
+    [sourceAssetId, sourceAssetId, sourceAssetId]
+  );
+  return {lifecycles: Number(rows[0]!.lifecycles), projects: Number(rows[0]!.projects), events: Number(rows[0]!.events)};
+}
+
+const qualificationHttpEnvelopeSchema = z.object({
+  result: z.object({ data: z.object({ json: bodyDirectedLifecycleRecordSchema }) }),
+});
+
+describe("Body Cinema same-source explicit plan request native proof", () => {
+  it("serializes identical request retries into one lifecycle/project/event and distinct concurrent requests into distinct plans", async () => {
+    const sourceAssetId = randomUUID();
+    await seedSource(sourceAssetId, randomUUID(), "same-source-concurrent.mp4");
+    const planRequestId = randomUUID();
+    const input = {creatorId, sourceAssetId, planRequestId, rights: bodyDirectedDeclaration()};
+    const retries = await Promise.all(Array.from({length: 5}, () => service.qualifyBodyDirected(input)));
+    expect(new Set(retries.map(record => record.id))).toEqual(new Set([planRequestId]));
+    expect(new Set(retries.map(record => record.projectId)).size).toBe(1);
+    expect(await sourceCounts(sourceAssetId)).toEqual({lifecycles: 1, projects: 1, events: 1});
+    const before = await snapshotNativeRowBytes("body_cinema_candidate_lifecycles", planRequestId);
+    const projectBefore = await snapshotNativeRowBytes("creation_projects", retries[0]!.projectId);
+    expect((await service.qualifyBodyDirected(input)).id).toBe(planRequestId);
+    expect(await snapshotNativeRowBytes("body_cinema_candidate_lifecycles", planRequestId)).toEqual(before);
+    expect(await snapshotNativeRowBytes("creation_projects", retries[0]!.projectId)).toEqual(projectBefore);
+    expect(await sourceCounts(sourceAssetId)).toEqual({lifecycles: 1, projects: 1, events: 1});
+    const nextIds = [randomUUID(), randomUUID()];
+    const distinct = await Promise.all(nextIds.map(id => service.qualifyBodyDirected({...input, planRequestId: id})));
+    expect(distinct.map(record => record.id)).toEqual(nextIds);
+    expect(new Set([retries[0]!.projectId, ...distinct.map(record => record.projectId)]).size).toBe(3);
+    expect(await sourceCounts(sourceAssetId)).toEqual({lifecycles: 3, projects: 3, events: 3});
+    // No-token compatibility is still a Body Directed source singleton lookup,
+    // not a request to create another plan or return a legacy row.
+    const [oldest] = await pool.query<RowDataPacket[]>(
+      "SELECT id FROM body_cinema_candidate_lifecycles WHERE source_asset_id=? ORDER BY created_at ASC,id ASC LIMIT 1", [sourceAssetId]);
+    const compatible = await service.qualifyBodyDirected({creatorId, sourceAssetId, rights: bodyDirectedDeclaration()});
+    expect(compatible.id).toBe(oldest[0]!.id);
+    expect(await sourceCounts(sourceAssetId)).toEqual({lifecycles: 3, projects: 3, events: 3});
+  });
+
+  it("rejects request reuse against a different original, owner, legacy identity or immutable declaration hash without an orphan project", async () => {
+    const sourceAssetId = randomUUID(), anotherSource = randomUUID(), otherOwnedSource = randomUUID();
+    await seedSource(sourceAssetId, randomUUID(), "request-bound-original.mp4");
+    await seedSource(anotherSource, randomUUID(), "different-owned-original.mp4");
+    await seedSource(otherOwnedSource, randomUUID(), "other-owner-original.mp4", otherCreatorId);
+    const input = {creatorId, sourceAssetId, planRequestId: randomUUID(), rights: bodyDirectedDeclaration()};
+    const record = await service.qualifyBodyDirected(input);
+    const before = await snapshotNativeRowBytes("body_cinema_candidate_lifecycles", record.id);
+    await expect(service.qualifyBodyDirected({...input, sourceAssetId: anotherSource})).rejects.toMatchObject({code: "conflict"});
+    await expect(service.qualifyBodyDirected({...input, creatorId: otherCreatorId})).rejects.toBeInstanceOf(BodyCinemaLifecycleError);
+    await expect(service.qualifyBodyDirected({...input, creatorId: otherCreatorId, sourceAssetId: otherOwnedSource})).rejects.toMatchObject({code: "conflict"});
+    expect(await snapshotNativeRowBytes("body_cinema_candidate_lifecycles", record.id)).toEqual(before);
+    expect(await sourceCounts(sourceAssetId)).toEqual({lifecycles: 1, projects: 1, events: 1});
+    expect(await sourceCounts(anotherSource)).toEqual({lifecycles: 0, projects: 0, events: 0});
+    expect(await sourceCounts(otherOwnedSource)).toEqual({lifecycles: 0, projects: 0, events: 0});
+    const historical = await service.qualify({creatorId, sourceAssetId, rights: rights()});
+    await expect(service.qualifyBodyDirected({...input, planRequestId: historical.id})).rejects.toMatchObject({code: "conflict"});
+    const afterLegacyCounts = await sourceCounts(sourceAssetId);
+    // Controlled test corruption proves a valid-shaped retry cannot reinterpret
+    // a changed saved declaration. Restore the fixture hash afterward.
+    await pool.query("UPDATE body_cinema_candidate_lifecycles SET rights_assertion_hash=? WHERE id=?", ["f".repeat(64), record.id]);
+    const tampered = await snapshotNativeRowBytes("body_cinema_candidate_lifecycles", record.id);
+    await expect(service.qualifyBodyDirected(input)).rejects.toMatchObject({code: "conflict"});
+    expect(await snapshotNativeRowBytes("body_cinema_candidate_lifecycles", record.id)).toEqual(tampered);
+    expect(await sourceCounts(sourceAssetId)).toEqual(afterLegacyCounts);
+  });
+
+  it("returns real HTTP 200 for separate qualified plans beside legacy pending history, replays the token, denies payload/owner mismatches, and freezes independent selections", async () => {
+    const columns = getTableConfig(users).columns;
+    await pool.query(`CREATE TABLE IF NOT EXISTS users (${columns.map(column => `\`${column.name}\` ${column.getSQLType()}${column.name === "id" ? " NOT NULL AUTO_INCREMENT" : ""}`).join(", ")}, PRIMARY KEY(id), UNIQUE KEY user_openid(openId)) ENGINE=InnoDB`);
+    await pool.query("INSERT IGNORE INTO users (id,openId,name,email,role) VALUES (?,?,'Synthetic creator','phase-a@example.invalid','user'),(?,?,'Other synthetic creator','other@example.invalid','user')",
+      [creatorId, "cv_phase_a_creator", otherCreatorId, "cv_phase_a_other"]);
+    const sourceAssetId = randomUUID(), anotherSource = randomUUID();
+    const original = await seedSource(sourceAssetId, randomUUID(), "http-legacy-and-new-plans.mp4");
+    await seedSource(anotherSource, randomUUID(), "http-mismatched-source.mp4");
+    const legacy = await service.qualify({creatorId, sourceAssetId, rights: rights()});
+    const legacyBefore = await service.getMine(creatorId, legacy.id);
+    const legacyBytes = await snapshotNativeRowBytes("body_cinema_candidate_lifecycles", legacy.id);
+    const legacyProjectBytes = await snapshotNativeRowBytes("creation_projects", legacy.projectId);
+    const cookie = `${COOKIE_NAME}=${await sdk.createSessionToken("cv_phase_a_creator", {name: "Synthetic creator"})}`;
+    const otherCookie = `${COOKIE_NAME}=${await sdk.createSessionToken("cv_phase_a_other", {name: "Other synthetic creator"})}`;
+    const app = express();
+    app.use("/api/trpc", createExpressMiddleware({router: bodyCinemaCandidateLifecycleRouter, createContext}));
+    const server = app.listen(0, "127.0.0.1");
+    await once(server, "listening");
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("NATIVE_HTTP_FIXTURE_ADDRESS_INVALID");
+      const post = async (input: unknown, session: string | null = cookie) => {
+        const response = await fetch(`http://127.0.0.1:${address.port}/api/trpc/qualifyBodyDirected`, {
+          method: "POST", headers: {"content-type": "application/json", ...(session ? {cookie: session} : {})}, body: JSON.stringify({json: input}),
+        });
+        const body: unknown = await response.json();
+        return {status: response.status, body};
+      };
+      const tokenA = randomUUID(), tokenB = randomUUID();
+      const input = {sourceAssetId, planRequestId: tokenA, rights: bodyDirectedDeclaration()};
+      const first = await post(input);
+      expect(first.status).toBe(200);
+      const planA = qualificationHttpEnvelopeSchema.parse(first.body).result.data.json;
+      expect(planA.id).toBe(tokenA);
+      expect(planA.id).not.toBe(legacy.id);
+      expect(planA.state).toBe("qualified");
+      const countAfterFirst = await sourceCounts(sourceAssetId);
+      const again = await post(input);
+      expect(again.status).toBe(200);
+      expect(qualificationHttpEnvelopeSchema.parse(again.body).result.data.json).toEqual(planA);
+      expect(await sourceCounts(sourceAssetId)).toEqual(countAfterFirst);
+      const second = await post({...input, planRequestId: tokenB});
+      expect(second.status).toBe(200);
+      const planB = qualificationHttpEnvelopeSchema.parse(second.body).result.data.json;
+      expect(planB.id).toBe(tokenB);
+      expect(planB.projectId).not.toBe(planA.projectId);
+      expect((await post({...input, sourceAssetId: anotherSource})).status).toBe(409);
+      expect((await post({...input, rights: {...input.rights, performerLikenessConsent: false}})).status).toBe(400);
+      expect((await post({...input, rights: rights()})).status).toBe(400);
+      expect([403,404]).toContain((await post(input, otherCookie)).status);
+      expect((await post(input, null)).status).toBe(401);
+      // The preserved legacy qualification has creation_opened plus source_qualified;
+      // each new Body Directed plan adds one source-qualified history event.
+      expect(await sourceCounts(sourceAssetId)).toEqual({lifecycles: 3, projects: 3, events: 4});
+      expect(await sourceCounts(anotherSource)).toEqual({lifecycles: 0, projects: 0, events: 0});
+      const plans = [planA, planB];
+      const frozen = [];
+      for (let n = 0; n < plans.length; n += 1) {
+        const plan = plans[n]!;
+        const analyzed = await service.analyzeBodyDirected({creatorId, id: plan.id, sourceSha256: original.hash, frameEvidence: syntheticBodyFrames()});
+        const recommendations = await service.recommendBodyDirected({creatorId, id: plan.id, bodyFocusId: "full_body"});
+        const selection = recommendations.options[n]!;
+        expect(selection).toBeDefined();
+        frozen.push(await service.freezeBodyDirected({creatorId, id: plan.id, sourceMapHash: analyzed.analysis!.sourceMapHash,
+          bodyFocusId: selection.bodyFocus.id, bodyTreatmentId: selection.bodyTreatment.id, visualIdentityId: selection.visualIdentity.id,
+          selectedRangeIds: selection.selectedTimecodes.map(range => range.rangeId)}));
+      }
+      expect(frozen.map(record => record.state)).toEqual(["frozen", "frozen"]);
+      expect(frozen[0]!.treatmentHash).not.toBe(frozen[1]!.treatmentHash);
+      expect([frozen[0]!.treatment!.bodyTreatment.id, frozen[0]!.treatment!.visualIdentity.id])
+        .not.toEqual([frozen[1]!.treatment!.bodyTreatment.id, frozen[1]!.treatment!.visualIdentity.id]);
+      const replayFrozen = await post(input);
+      expect(replayFrozen.status).toBe(200);
+      expect(qualificationHttpEnvelopeSchema.parse(replayFrozen.body).result.data.json.state).toBe("frozen");
+      expect((await service.qualify({creatorId, sourceAssetId, rights: rights()})).id).toBe(legacy.id);
+      expect(await service.getMine(creatorId, legacy.id)).toEqual(legacyBefore);
+      expect(await snapshotNativeRowBytes("body_cinema_candidate_lifecycles", legacy.id)).toEqual(legacyBytes);
+      expect(await snapshotNativeRowBytes("creation_projects", legacy.projectId)).toEqual(legacyProjectBytes);
+      expect(await service.getBodyDirected(creatorId, legacy.id)).toBeNull();
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    }
   });
 });
