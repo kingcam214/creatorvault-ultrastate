@@ -1,0 +1,57 @@
+name: CreatorVault existing guest-access diagnostic 2026-10-14
+on:
+  push:
+    branches: [ops/guest-access-readonly-2026-10-14]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - name: Authenticate once through the existing configured preview credential and inspect only
+        shell: bash
+        env:
+          SSH_KEY: ${{ secrets.CREATORVAULT_VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          set +x
+          test "$GITHUB_REF" = 'refs/heads/ops/guest-access-readonly-2026-10-14'
+          if test -z "$SSH_KEY"; then
+            echo 'CREATORVAULT_EXISTING_GUEST_ACCESS_UNAVAILABLE: existing workflow SSH credential is not configured'
+            exit 2
+          fi
+          umask 077
+          private=$(mktemp -d)
+          trap 'rm -rf "$private"' EXIT
+          printf '%s\n' "$SSH_KEY" > "$private/key"
+          unset SSH_KEY
+          chmod 600 "$private/key"
+          ssh-keyscan -T 8 -t ed25519 134.199.202.69 > "$private/known_hosts" 2>/dev/null
+          fingerprint=$(ssh-keygen -lf "$private/known_hosts" | awk '{print $2}')
+          test "$fingerprint" = 'SHA256:HkIbOJTnWPtjV+cvpceaYk9TCuMNwfH0us7aWxxIz2w'
+          timeout 100s ssh -T -i "$private/key" -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityAgent=none -o ForwardAgent=no -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$private/known_hosts" -o ConnectTimeout=10 root@134.199.202.69 'python3 -' <<'PY'
+          import os,json,subprocess,stat,datetime
+          from pathlib import Path
+          ENV={'PATH':'/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C','HOME':'/root'}
+          def run(args):
+              return subprocess.check_output(args,text=True,timeout=15,stderr=subprocess.DEVNULL,env=ENV).strip()
+          assert os.geteuid()==0
+          assert run(['curl','--noproxy','*','-fsS','--max-time','3','http://169.254.169.254/metadata/v1/id'])=='545144175'
+          root=Path('/root/creatorvault')
+          assert root.resolve()==root and not root.is_symlink()
+          release=json.loads((root/'dist/public/release.json').read_text())
+          assert release['commit']=='3a47ce4dc7178893e958ed491a136c9749242033'
+          for path in [root,Path('/home/runner/actions-runner'),Path('/tmp')]:
+              v=os.statvfs(path)
+              print(json.dumps({'kind':'guest_filesystem_readonly','path':str(path),'availableBytes':v.f_bavail*v.f_frsize,'freeInodes':v.f_favail}),flush=True)
+          print(run(['df','-h','/']),flush=True)
+          print(run(['df','-i','/']),flush=True)
+          units=[]
+          for row in run(['systemctl','list-units','--all','--plain','--no-legend','actions.runner*']).splitlines():
+              name=row.split()[0]
+              if name.startswith('actions.runner.') and name.endswith('.service'):
+                  units.append({'unit':name,'properties':run(['systemctl','show',name,'-p','LoadState','-p','ActiveState','-p','SubState','-p','MainPID','-p','ExecMainStatus','-p','ExecMainCode']).splitlines()})
+          print(json.dumps({'kind':'runner_units_readonly','units':units}),flush=True)
+          print(json.dumps({'kind':'guest_readonly_complete','dropletId':545144175,'sha':release['commit'],'filesChanged':False,'serviceRestarted':False,'deploymentTriggered':False,'externalSpendUsd':0,'at':datetime.datetime.now(datetime.timezone.utc).isoformat()}),flush=True)
+          PY
