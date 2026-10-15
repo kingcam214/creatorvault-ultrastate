@@ -22,6 +22,23 @@ export const BODY_CINEMA_PHASE_A_MIGRATION = {
   table: LIFECYCLE_TABLE,
 } as const;
 
+export const BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION = {
+  name: "0027_body_cinema_plan_source_scope",
+  file: "drizzle/0027_body_cinema_plan_source_scope.sql",
+  sha256: "c2c9d6251d24c322278c5be5b405dbdfbaa81343975554432ee7f969b5265319",
+  when: 1791993600000,
+  table: LIFECYCLE_TABLE,
+} as const;
+
+export const BODY_CINEMA_PLAN_SCOPE_EXPRESSION =
+  "CASE WHEN JSON_VALUE(rights_assertion_json, '$.version') COLLATE utf8mb4_bin = _utf8mb4'body_cinema.body_directed_assertion.v1' COLLATE utf8mb4_bin THEN RTRIM(id) ELSE '' END";
+
+type PinnedMigration = typeof BODY_CINEMA_PHASE_A_MIGRATION | typeof BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION;
+// Negative timestamp is an immutable preservation intent, not an applied migration.
+// It cannot advance a generic Drizzle runner's last-applied positive timestamp.
+const SCOPE_PRESERVATION_WHEN = -BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.when;
+const SCOPE_PRESERVATION_PREFIX = "body_cinema.0027.preservation.v1:";
+
 type Row = Record<string, unknown>;
 type SqlValue = string | number;
 type ColumnFingerprint = {
@@ -33,6 +50,7 @@ type ColumnFingerprint = {
   precision: number | null;
   defaultValue: string | null;
   extra: string;
+  generationExpression: string;
 };
 type ExpectedColumn = {
   name: string;
@@ -419,6 +437,16 @@ function normalized(value: string): string {
   return value.toLowerCase().replace(/`/g, "").replace(/\s+/g, "");
 }
 
+function normalizedGenerationExpression(value: string): string {
+  // Engines add redundant parentheses/backticks and charset literal introducers.
+  // Preserve quoted values case-exact; only SQL identifiers/keywords are folded.
+  return (value.match(/'(?:''|\\.|[^'])*'|[^']+/g) ?? []).map(token =>
+    token.startsWith("'") ? token : token.toLowerCase()
+      .replace(/_(?:utf8mb4|utf8mb3|utf8|latin1)$/g, "")
+      .replace(/[\s`()]/g, "")
+  ).join("");
+}
+
 function normalizedDefault(value: string | null): string | null {
   if (value === null) return null;
   const canonical = normalized(value).replace(/\(\)/g, "");
@@ -538,7 +566,7 @@ async function columnsForTable(
 ): Promise<ColumnFingerprint[]> {
   const rows = await queryRows(
     connection,
-    "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH, DATETIME_PRECISION, COLUMN_DEFAULT, EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION",
+    "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH, DATETIME_PRECISION, COLUMN_DEFAULT, EXTRA, GENERATION_EXPRESSION FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION",
     [table]
   );
   const columns: ColumnFingerprint[] = [];
@@ -565,6 +593,7 @@ async function columnsForTable(
       precision: integer(row, "DATETIME_PRECISION"),
       defaultValue: text(row, "COLUMN_DEFAULT"),
       extra: extra.toLowerCase(),
+      generationExpression: text(row, "GENERATION_EXPRESSION") ?? "",
     });
   }
   return columns;
@@ -698,7 +727,8 @@ async function runtimeTablePrerequisitesMatch(
 }
 
 async function lifecycleFingerprintMatches(
-  connection: Connection
+  connection: Connection,
+  scoped = false
 ): Promise<boolean> {
   if (
     (await tableEngine(connection, LIFECYCLE_TABLE))?.toUpperCase() !== "INNODB"
@@ -707,10 +737,16 @@ async function lifecycleFingerprintMatches(
   const collation = await tableCollation(connection, LIFECYCLE_TABLE);
   if (collation === null || !collation.toLowerCase().startsWith("utf8mb4_"))
     return false;
+  const expectedColumns: readonly ExpectedColumn[] = scoped ? [
+    ...LIFECYCLE_COLUMNS,
+    { name: "plan_scope", dataType: "varchar", columnType: "varchar(36)",
+      nullable: true, length: 36, precision: null, defaultValue: null,
+      extra: "virtual generated" },
+  ] : LIFECYCLE_COLUMNS;
   const columns = await columnsForTable(connection, LIFECYCLE_TABLE);
-  if (columns.length !== LIFECYCLE_COLUMNS.length) return false;
+  if (columns.length !== expectedColumns.length) return false;
   const exactColumns = columns.every((actual, position) => {
-    const expected = LIFECYCLE_COLUMNS[position];
+    const expected = expectedColumns[position];
     if (expected === undefined || actual.name !== expected.name) return false;
     return (
       expectedDataTypeMatches(actual, expected) &&
@@ -720,7 +756,9 @@ async function lifecycleFingerprintMatches(
       actual.precision === expected.precision &&
       normalizedDefault(actual.defaultValue) ===
         normalizedDefault(expected.defaultValue) &&
-      normalizedExtra(actual.extra) === normalizedExtra(expected.extra ?? "")
+      normalizedExtra(actual.extra) === normalizedExtra(expected.extra ?? "") &&
+      normalizedGenerationExpression(actual.generationExpression) ===
+        (expected.name === "plan_scope" ? normalizedGenerationExpression(BODY_CINEMA_PLAN_SCOPE_EXPRESSION) : "")
     );
   });
   if (!exactColumns) return false;
@@ -740,7 +778,13 @@ async function lifecycleFingerprintMatches(
     )
       return false;
   }
-  return exactIndexesMatch(connection, LIFECYCLE_TABLE, LIFECYCLE_INDEXES);
+  const indexes = scoped ? LIFECYCLE_INDEXES.map(index =>
+    index.name === "body_cinema_lifecycle_creator_source_unique"
+      ? { name: "body_cinema_lifecycle_creator_source_scope_unique",
+        columns: ["creator_id", "source_asset_id", "plan_scope"], unique: true }
+      : index
+  ) : LIFECYCLE_INDEXES;
+  return exactIndexesMatch(connection, LIFECYCLE_TABLE, indexes);
 }
 
 async function lifecycleTableIsEmpty(connection: Connection): Promise<boolean> {
@@ -752,32 +796,33 @@ async function lifecycleTableIsEmpty(connection: Connection): Promise<boolean> {
 }
 
 async function recordState(
-  connection: Connection
+  connection: Connection,
+  migration: PinnedMigration = BODY_CINEMA_PHASE_A_MIGRATION
 ): Promise<MigrationRecordState> {
   const rows = await queryRows(
     connection,
     "SELECT hash, created_at FROM `__drizzle_migrations` WHERE hash = ? OR created_at = ?",
-    [BODY_CINEMA_PHASE_A_MIGRATION.sha256, BODY_CINEMA_PHASE_A_MIGRATION.when]
+    [migration.sha256, migration.when]
   );
   if (rows.length === 0) return "pending";
   const exact = rows.filter(
     row =>
-      text(row, "hash") === BODY_CINEMA_PHASE_A_MIGRATION.sha256 &&
-      integer(row, "created_at") === BODY_CINEMA_PHASE_A_MIGRATION.when
+      text(row, "hash") === migration.sha256 &&
+      integer(row, "created_at") === migration.when
   );
   if (rows.length === 1 && exact.length === 1) return "recorded";
   fail("MIGRATION_METADATA_CONFLICT");
 }
 
-async function loadPinnedMigration(root: string): Promise<string> {
+async function loadPinnedMigration(root: string, pinned: PinnedMigration): Promise<string> {
   const resolvedRoot = path.resolve(root);
   const migration = path.resolve(
     resolvedRoot,
-    BODY_CINEMA_PHASE_A_MIGRATION.file
+    pinned.file
   );
   const journal = path.resolve(resolvedRoot, "drizzle/meta/_journal.json");
   if (
-    migration !== path.join(resolvedRoot, BODY_CINEMA_PHASE_A_MIGRATION.file) ||
+    migration !== path.join(resolvedRoot, pinned.file) ||
     journal !== path.join(resolvedRoot, "drizzle/meta/_journal.json")
   )
     fail("MIGRATION_PATH_INVALID");
@@ -801,7 +846,7 @@ async function loadPinnedMigration(root: string): Promise<string> {
     ]);
     if (
       createHash("sha256").update(sql).digest("hex") !==
-      BODY_CINEMA_PHASE_A_MIGRATION.sha256
+      pinned.sha256
     )
       fail("MIGRATION_BYTES_INVALID");
     const value: unknown = JSON.parse(journalText);
@@ -820,14 +865,14 @@ async function loadPinnedMigration(root: string): Promise<string> {
         entry !== null &&
         !Array.isArray(entry) &&
         (entry as Record<string, unknown>).tag ===
-          BODY_CINEMA_PHASE_A_MIGRATION.name
+          pinned.name
     );
     if (entries.length !== 1) fail("MIGRATION_JOURNAL_INVALID");
     const entry = entries[0] as Record<string, unknown>;
     if (
-      entry.idx !== 19 ||
+      entry.idx !== (pinned.name === BODY_CINEMA_PHASE_A_MIGRATION.name ? 19 : 20) ||
       entry.version !== "5" ||
-      entry.when !== BODY_CINEMA_PHASE_A_MIGRATION.when ||
+      entry.when !== pinned.when ||
       entry.breakpoints !== true ||
       Object.keys(entry).sort().join(",") !== "breakpoints,idx,tag,version,when"
     )
@@ -898,24 +943,143 @@ async function executePinnedDdl(
   }
 }
 
-async function recordVerifiedMigration(connection: Connection): Promise<void> {
+async function recordVerifiedMigration(connection: Connection, migration: PinnedMigration = BODY_CINEMA_PHASE_A_MIGRATION): Promise<void> {
   try {
     await connection.execute(
       "INSERT INTO `__drizzle_migrations` (`hash`, `created_at`) VALUES (?, ?)",
-      [BODY_CINEMA_PHASE_A_MIGRATION.sha256, BODY_CINEMA_PHASE_A_MIGRATION.when]
+      [migration.sha256, migration.when]
     );
   } catch {
     fail("MIGRATION_RECORD_FAILED");
   }
-  if ((await recordState(connection)) !== "recorded")
+  if ((await recordState(connection, migration)) !== "recorded")
     fail("MIGRATION_RECORD_FAILED");
 }
 
+async function lifecycleRowsFingerprint(connection: Connection): Promise<string> {
+  // Fetch binary server representations, not mysql2 date/JSON conversions. Null
+  // and empty strings differ; every original column is length-framed and hashed.
+  // Keyset batches bound memory; generated plan_scope is deliberately excluded.
+  const hash = createHash("sha256");
+  hash.update(JSON.stringify(LIFECYCLE_COLUMNS.map(column => column.name)));
+  const projection = LIFECYCLE_COLUMNS.map(column =>
+    `HEX(CAST(\`${column.name}\` AS BINARY)) AS \`${column.name}\``
+  ).join(", ");
+  let lastId: string | null = null;
+  let count = 0;
+  for (;;) {
+    const rows = await queryRows(connection,
+      `SELECT ${projection} FROM \`${LIFECYCLE_TABLE}\` ${lastId === null ? "" : "WHERE CAST(id AS BINARY) > UNHEX(?)"} ORDER BY CAST(id AS BINARY) LIMIT 32`,
+      lastId === null ? [] : [lastId]);
+    if (rows.length === 0) break;
+    for (const row of rows) {
+      hash.update("row:");
+      for (const column of LIFECYCLE_COLUMNS) {
+        const value = row[column.name];
+        if (value === null) hash.update("N;");
+        else if (typeof value === "string" && /^(?:[0-9A-F]{2})*$/.test(value))
+          hash.update(`S${value.length}:${value};`);
+        else fail("ROW_FINGERPRINT_INVALID");
+      }
+      const id = text(row, "id");
+      if (id === null || (lastId !== null && id <= lastId))
+        fail("ROW_FINGERPRINT_INVALID");
+      lastId = id;
+      count += 1;
+      if (!Number.isSafeInteger(count)) fail("ROW_FINGERPRINT_INVALID");
+    }
+  }
+  return `${SCOPE_PRESERVATION_PREFIX}${count}:${hash.digest("hex")}`;
+}
+
+async function scopePreservationIntent(connection: Connection): Promise<string | null> {
+  const rows = await queryRows(connection,
+    "SELECT hash FROM `__drizzle_migrations` WHERE created_at = ? OR hash LIKE ?",
+    [SCOPE_PRESERVATION_WHEN, `${SCOPE_PRESERVATION_PREFIX}%`]);
+  if (rows.length === 0) return null;
+  const value = rows.length === 1 ? text(rows[0]!, "hash") : null;
+  if (value === null || !/^body_cinema\.0027\.preservation\.v1:(?:0|[1-9][0-9]*):[a-f0-9]{64}$/.test(value))
+    fail("PRESERVATION_METADATA_CONFLICT");
+  // The prefix must occur only at the negative intent timestamp, never masquerade
+  // as an applied migration or contaminate another migration's ledger slot.
+  const exact = await queryRows(connection,
+    "SELECT hash FROM `__drizzle_migrations` WHERE created_at = ? AND hash = ?",
+    [SCOPE_PRESERVATION_WHEN, value]);
+  if (exact.length !== 1) fail("PRESERVATION_METADATA_CONFLICT");
+  return value;
+}
+
+async function recordScopePreservationIntent(connection: Connection, value: string): Promise<void> {
+  try {
+    await connection.execute(
+      "INSERT INTO `__drizzle_migrations` (`hash`, `created_at`) VALUES (?, ?)",
+      [value, SCOPE_PRESERVATION_WHEN]);
+  } catch {
+    fail("PRESERVATION_RECORD_FAILED");
+  }
+  if (await scopePreservationIntent(connection) !== value)
+    fail("PRESERVATION_RECORD_FAILED");
+}
+
+async function applyPlanSourceScopeMigration(
+  connection: Connection,
+  sql: string,
+  beforeFirstDdl: () => Promise<void>
+): Promise<BodyCinemaPhaseAMigrationResult> {
+  const metadata = await recordState(connection, BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION);
+  const scoped = await lifecycleFingerprintMatches(connection, true);
+  const intent = await scopePreservationIntent(connection);
+  if (metadata === "recorded") {
+    if (!scoped || intent === null) fail("RECORDED_SCOPE_SCHEMA_MISMATCH");
+    // Historical rows may legitimately change after an applied release. Exact
+    // byte preservation is checked across DDL/recovery, not across future use.
+    return { applied: 0, alreadyApplied: 1, recoveredInterruptedDdl: false };
+  }
+  if (!scoped && !(await lifecycleFingerprintMatches(connection)))
+    fail("SCOPE_SCHEMA_CONFLICT");
+  if (scoped && intent === null) fail("UNTRACKED_SCOPE_SCHEMA_CONFLICT");
+  // Never call the separate backup connection while holding table locks: the
+  // protected dump would otherwise wait on this connection. No writes yet.
+  if (!scoped) await beforeFirstDdl();
+  let tablesLocked = false;
+  try {
+    try {
+      await connection.query("SET SESSION lock_wait_timeout = 30");
+      await connection.query("LOCK TABLES `body_cinema_candidate_lifecycles` WRITE, `__drizzle_migrations` WRITE");
+      tablesLocked = true;
+    } catch {
+      fail("PRESERVATION_LOCK_UNAVAILABLE");
+    }
+    if (!(await lifecycleFingerprintMatches(connection, scoped)))
+      fail("SCOPE_SCHEMA_CONFLICT");
+    if ((await recordState(connection, BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION)) !== "pending")
+      fail("MIGRATION_METADATA_CONFLICT");
+    const before = await lifecycleRowsFingerprint(connection);
+    if (intent !== null && before !== intent) fail("HISTORICAL_ROWS_CHANGED");
+    if (scoped) {
+      await recordVerifiedMigration(connection, BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION);
+      return { applied: 0, alreadyApplied: 1, recoveredInterruptedDdl: true };
+    }
+    if (intent === null) await recordScopePreservationIntent(connection, before);
+    await executePinnedDdl(connection, sql);
+    if (!(await lifecycleFingerprintMatches(connection, true)))
+      fail("POST_DDL_SCOPE_SCHEMA_MISMATCH");
+    if ((await lifecycleRowsFingerprint(connection)) !== before)
+      fail("HISTORICAL_ROWS_CHANGED");
+    await recordVerifiedMigration(connection, BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION);
+    return { applied: 1, alreadyApplied: 0, recoveredInterruptedDdl: intent !== null };
+  } finally {
+    if (tablesLocked) {
+      await connection.query("UNLOCK TABLES").catch(() => undefined);
+    }
+  }
+}
+
 /**
- * Applies only the fixed Phase A lifecycle DDL. Existing 0024/0025 proof is
- * read-only; metadata is written only after the exact one-table fingerprint
- * verifies. There is intentionally no DROP, ALTER, DELETE, generic runner, or
- * transaction-rollback claim for this implicitly committing MySQL DDL.
+ * Applies only pinned 0026 plus the specifically authorized 0027 scoped key.
+ * Existing 0024/0025 proof remains read-only; exact historical schema checks,
+ * backup callback, advisory lock and verified ledger writes remain enforced.
+ * There is no generic SQL runner or pretend transaction rollback for MySQL DDL.
  */
 export async function applyBodyCinemaPhaseAMigration(
   databaseUrl: string,
@@ -929,7 +1093,10 @@ export async function applyBodyCinemaPhaseAMigration(
     root.length === 0
   )
     fail("INVALID_ARGUMENT");
-  const sql = await loadPinnedMigration(root);
+  const [sql, scopeSql] = await Promise.all([
+    loadPinnedMigration(root, BODY_CINEMA_PHASE_A_MIGRATION),
+    loadPinnedMigration(root, BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION),
+  ]);
   const connection = await mysql
     .createConnection(databaseUrl)
     .catch(() => fail("CONNECTION_FAILED"));
@@ -945,27 +1112,48 @@ export async function applyBodyCinemaPhaseAMigration(
     if (!(await runtimeTablePrerequisitesMatch(connection)))
       fail("RUNTIME_SCHEMA_PREREQUISITES_INVALID");
     const metadata = await recordState(connection);
+    const scopeMetadata = await recordState(connection, BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION);
     const tablePresent = await tableExists(connection, LIFECYCLE_TABLE);
+    let applied = 0;
+    let alreadyApplied = 0;
+    let recoveredInterruptedDdl = false;
+    let backupCalled = false;
+    const beforeFirstDdl = async () => {
+      if (!backupCalled) {
+        await invokeBackup(options.beforeFirstDdl);
+        backupCalled = true;
+      }
+    };
     if (metadata === "recorded") {
-      if (!tablePresent || !(await lifecycleFingerprintMatches(connection)))
+      if (!tablePresent || !(
+        (await lifecycleFingerprintMatches(connection)) ||
+        (await lifecycleFingerprintMatches(connection, true))
+      ))
         fail("RECORDED_SCHEMA_MISMATCH");
-      return { applied: 0, alreadyApplied: 1, recoveredInterruptedDdl: false };
-    }
-    if (tablePresent) {
+      alreadyApplied += 1;
+    } else if (tablePresent) {
+      if (scopeMetadata !== "pending") fail("MIGRATION_METADATA_CONFLICT");
       if (
         !(await lifecycleFingerprintMatches(connection)) ||
         !(await lifecycleTableIsEmpty(connection))
       )
         fail("UNTRACKED_SCHEMA_CONFLICT");
       await recordVerifiedMigration(connection);
-      return { applied: 0, alreadyApplied: 1, recoveredInterruptedDdl: true };
+      alreadyApplied += 1;
+      recoveredInterruptedDdl = true;
+    } else {
+      if (scopeMetadata !== "pending" || await scopePreservationIntent(connection) !== null)
+        fail("MIGRATION_METADATA_CONFLICT");
+      await beforeFirstDdl();
+      await executePinnedDdl(connection, sql);
+      if (!(await lifecycleFingerprintMatches(connection)))
+        fail("POST_DDL_SCHEMA_MISMATCH");
+      await recordVerifiedMigration(connection);
+      applied += 1;
     }
-    await invokeBackup(options.beforeFirstDdl);
-    await executePinnedDdl(connection, sql);
-    if (!(await lifecycleFingerprintMatches(connection)))
-      fail("POST_DDL_SCHEMA_MISMATCH");
-    await recordVerifiedMigration(connection);
-    return { applied: 1, alreadyApplied: 0, recoveredInterruptedDdl: false };
+    const scope = await applyPlanSourceScopeMigration(connection, scopeSql, beforeFirstDdl);
+    return { applied: applied + scope.applied, alreadyApplied: alreadyApplied + scope.alreadyApplied,
+      recoveredInterruptedDdl: recoveredInterruptedDdl || scope.recoveredInterruptedDdl };
   } catch (error: unknown) {
     if (
       error instanceof BodyCinemaPhaseAMigrationError ||

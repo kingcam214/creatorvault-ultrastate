@@ -45,10 +45,10 @@ describe("consolidated non-rotating guarded release", () => {
 
   it("pins the verified live Phase A artifact and exact corrective checkout parent while preserving the 3762 signing epoch", () => {
     expect(CONSOLIDATED_RELEASE_PARENT).toBe(
-      "7077afd9260dcdd4368db4b7db8ffb6ddc05737c"
+      "3a47ce4dc7178893e958ed491a136c9749242033"
     );
     expect(CONSOLIDATED_RELEASE_CHECKOUT_PARENT).toBe(
-      "7077afd9260dcdd4368db4b7db8ffb6ddc05737c"
+      "3a47ce4dc7178893e958ed491a136c9749242033"
     );
     expect(CONSOLIDATED_SECURITY_BASELINE).toBe(
       "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da"
@@ -124,7 +124,7 @@ describe("consolidated non-rotating guarded release", () => {
     expect(harness).toContain("trap cleanup EXIT");
     expect(harness).toContain("--skip-networking");
     expect(harness).toContain("env -i PATH=");
-    expect(CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS).toHaveLength(44);
+    expect(CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS).toHaveLength(45);
     expect(CONSOLIDATED_BODY_CINEMA_PHASE_A_ALLOWED_PATHS).toEqual(
       expect.arrayContaining([
         "client/src/lib/bodyCinemaPerception.ts",
@@ -154,6 +154,7 @@ describe("consolidated non-rotating guarded release", () => {
   it("allows only the reviewed Phase A lifecycle and exact-parent controller closure", () => {
     for (const allowed of [
       "drizzle/0026_body_cinema_candidate_lifecycle.sql",
+      "drizzle/0027_body_cinema_plan_source_scope.sql",
       "scripts/bodyCinemaPhaseAMigration.ts",
       "scripts/bodyCinemaPhaseAMigration.test.ts",
       "scripts/run-body-cinema-phase-a-tests.sh",

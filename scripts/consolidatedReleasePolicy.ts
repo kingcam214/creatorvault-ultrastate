@@ -9,7 +9,10 @@ import {
   record,
 } from "./securityReleasePolicy";
 import { collectPrivilegedProcedurePaths } from "./securityProcedureInventory";
-import { BODY_CINEMA_PHASE_A_MIGRATION } from "./bodyCinemaPhaseAMigration";
+import {
+  BODY_CINEMA_PHASE_A_MIGRATION,
+  BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION,
+} from "./bodyCinemaPhaseAMigration";
 
 export const CONSOLIDATED_SECURITY_BASELINE =
   "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da";
@@ -19,9 +22,9 @@ export const CONSOLIDATED_SECURITY_BASELINE =
  * rollback reference, and its single direct checkout parent.
  */
 export const CONSOLIDATED_RELEASE_PARENT =
-  "7077afd9260dcdd4368db4b7db8ffb6ddc05737c";
+  "3a47ce4dc7178893e958ed491a136c9749242033";
 export const CONSOLIDATED_RELEASE_CHECKOUT_PARENT =
-  "7077afd9260dcdd4368db4b7db8ffb6ddc05737c";
+  "3a47ce4dc7178893e958ed491a136c9749242033";
 export const APP_ROOT = "/root/creatorvault";
 export const APPROVED_FEATURE_HEADS = {
   stripe: "ccba8cd56f887d041311d4f37d3ec912fd57322d",
@@ -36,6 +39,7 @@ export const APPROVED_MIGRATION_HASHES = {
 } as const;
 export const BODY_CINEMA_PHASE_A_MIGRATION_HASHES = {
   [BODY_CINEMA_PHASE_A_MIGRATION.file]: BODY_CINEMA_PHASE_A_MIGRATION.sha256,
+  [BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.file]: BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.sha256,
 } as const;
 
 const featurePaths = [
@@ -153,6 +157,7 @@ const bodyCinemaPhaseAReleasePaths = [
   "client/src/pages/TrailerStudio.tsx",
   "client/src/pages/VaultXDrop.tsx",
   "drizzle/0026_body_cinema_candidate_lifecycle.sql",
+  "drizzle/0027_body_cinema_plan_source_scope.sql",
   "drizzle/meta/_journal.json",
   "scripts/bodyCinemaPhaseAMigration.test.ts",
   "scripts/bodyCinemaPhaseAMigration.ts",

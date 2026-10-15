@@ -141,6 +141,13 @@
       "when": 1791129600000,
       "tag": "0026_body_cinema_candidate_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1791993600000,
+      "tag": "0027_body_cinema_plan_source_scope",
+      "breakpoints": true
     }
   ]
 }

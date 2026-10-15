@@ -352,6 +352,8 @@ export type BodyDirectedLifecycleRecord = z.infer<typeof bodyDirectedLifecycleRe
 
 export const bodyDirectedQualifyInputSchema = z.object({
   sourceAssetId: mediaAssetIdSchema,
+  // One deliberate plan; qualification retries must reuse this identity.
+  planRequestId: lifecycleIdSchema.optional(),
   rights: bodyDirectedRightsInputSchema,
 }).strict();
 export const bodyDirectedAnalyzeInputSchema = z.object({

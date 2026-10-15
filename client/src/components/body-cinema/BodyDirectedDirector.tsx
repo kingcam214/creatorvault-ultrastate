@@ -85,6 +85,41 @@ type RecommendationResult = {
 
 type PersistentFailure = { title: string; message: string };
 
+/** Keep one request identity through retries; clear it only for a deliberate new plan. */
+export function bodyDirectedPlanRequestId(
+  current: string | null,
+  createId: () => string = () => crypto.randomUUID()
+): string {
+  return current ?? createId();
+}
+
+export function BodyDirectedNewPlanAction({
+  sourceAssetId,
+  disabled = false,
+}: {
+  sourceAssetId: string;
+  disabled?: boolean;
+}) {
+  return (
+    <section className="bd-source-action" aria-label="New Body Directed plan">
+      <a
+        className="bd-quiet-action"
+        href={`/vault-x/studio?sourceAssetId=${encodeURIComponent(sourceAssetId)}`}
+        aria-disabled={disabled}
+        onClick={event => {
+          if (disabled) event.preventDefault();
+        }}
+      >
+        Start a new plan from this original
+      </a>
+      <p className="bd-copy">
+        Your saved plan and its private review stay unchanged. Confirm the
+        original and declaration again for a separate plan.
+      </p>
+    </section>
+  );
+}
+
 function isReadyVideo(asset: MediaAssetItem): boolean {
   const video =
     String(asset.assetType || "").toLowerCase() === "video" ||
@@ -718,6 +753,7 @@ export default function BodyDirectedDirector({
   const measuredEvidence = measurementCache?.frames ?? [];
   const [analysisStage, setAnalysisStage] = useState<string | null>(null);
   const [failure, setFailure] = useState<PersistentFailure | null>(null);
+  const planRequestId = useRef<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const originalClip = useRef<{
     startSeconds: number;
@@ -941,6 +977,8 @@ export default function BodyDirectedDirector({
       });
       return;
     }
+    // Confirming a source is deliberate new-plan intent, even for the same asset.
+    planRequestId.current = null;
     setMeasurementCache(null);
     setCreatorMarks([]);
     setSelectedFocusId(null);
@@ -970,8 +1008,10 @@ export default function BodyDirectedDirector({
     }
     setFailure(null);
     try {
+      planRequestId.current = bodyDirectedPlanRequestId(planRequestId.current);
       const result = (await qualifyMutation.mutateAsync({
         sourceAssetId,
+        planRequestId: planRequestId.current,
         rights: {
           version: BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION,
           ownSource: true,
@@ -991,13 +1031,15 @@ export default function BodyDirectedDirector({
           limit: BODY_DIRECTED_LIMIT,
         }),
       ]);
-      await analyzeRecord(result, []);
+      if (result.state === "qualified" && !result.analysis) {
+        await analyzeRecord(result, []);
+      }
     } catch (error) {
       setFailure({
         title: "Original could not be qualified",
         message: asMessage(
           error,
-          "The saved original conflicts with the lifecycle requirements. Choose another ready Vault video; no source map was created."
+          "The original could not be qualified. Retry this plan when the original is available; no saved plan was replaced."
         ),
       });
     }
@@ -1525,6 +1567,13 @@ export default function BodyDirectedDirector({
                 </>
               )}
             </>
+          )}
+
+          {record && (
+            <BodyDirectedNewPlanAction
+              sourceAssetId={record.source.assetId}
+              disabled={isBusy}
+            />
           )}
 
           <details className="bd-library">
