@@ -1,7 +1,8 @@
 name: CreatorVault Runner Storage Hygiene 2026-10-13
-on:
+'on':
   push:
-    branches: [ops/runner-storage-2026-10-13]
+    branches:
+    - ops/runner-storage-2026-10-13
 permissions:
   contents: read
 concurrency:
@@ -9,32 +10,12 @@ concurrency:
   cancel-in-progress: false
 jobs:
   hygiene:
-    runs-on: [self-hosted, linux, creatorvault-production]
+    runs-on:
+    - self-hosted
+    - linux
+    - creatorvault-production
     timeout-minutes: 12
     steps:
-      - name: Read-only independent post-HD-deployment verification
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$GITHUB_REF" = 'refs/heads/ops/runner-storage-2026-10-13'
-          sudo -n /usr/bin/python3 - <<'PY'
-          import os,json,stat,subprocess,datetime,hashlib
-          from pathlib import Path
-          ENV={'PATH':'/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C','HOME':'/root','PM2_HOME':'/root/.pm2'}
-          def emit(x):print(json.dumps(x),flush=True)
-          def cmd(a):return subprocess.check_output(a,text=True,timeout=45,stderr=subprocess.DEVNULL,env=ENV,cwd='/root/creatorvault').strip()
-          sha='3a47ce4dc7178893e958ed491a136c9749242033';root=Path('/root/creatorvault');runner=Path('/home/runner/actions-runner')
-          assert os.geteuid()==0 and cmd(['curl','--noproxy','*','-fsS','--max-time','3','http://169.254.169.254/metadata/v1/id'])=='545144175'
-          assert root.resolve()==root and not root.is_symlink()
-          stamp=json.loads((root/'dist/public/release.json').read_text());assert stamp['commit']==sha
-          statefile=root/('.consolidated-release-state-'+sha+'.json');m=statefile.lstat();assert stat.S_ISREG(m.st_mode) and m.st_uid==0 and (m.st_mode&0o077)==0
-          state=json.loads(statefile.read_text());assert state['sha']==sha and state['phase']=='verified'
-          rows=json.loads(cmd(['pm2','jlist']));apps=[x for x in rows if x['name']=='creatorvault'];assert len(apps)==1
-          app=apps[0];e=app['pm2_env'];pid=app['pid'];assert e['status']=='online' and e['pm_cwd']==str(root) and e['pm_exec_path']==str(root/'dist/index.js') and e['exec_mode']=='fork_mode' and e['instances']==1 and os.stat('/proc/'+str(pid)).st_uid==0
-          for p in [root,runner/'_diag',Path('/tmp')]:
-           s=os.statvfs(p);emit({'kind':'post_deploy_filesystem','path':str(p),'availableBytes':s.f_bavail*s.f_frsize,'freeInodes':s.f_favail,'totalBytes':s.f_blocks*s.f_frsize})
-          print(cmd(['df','-h','/']),flush=True);print(cmd(['df','-i','/']),flush=True)
-          emit({'kind':'canonical_runtime_post_deploy','sha':sha,'statePhase':state['phase'],'stateCode':state['code'],'pid':pid,'restartCount':e.get('restart_time'),'status':e['status'],'instances':e['instances'],'mode':e['exec_mode'],'ownerUid':os.stat('/proc/'+str(pid)).st_uid,'cwd':e['pm_cwd'],'entry':e['pm_exec_path'],'bootUnitEnabled':cmd(['systemctl','is-enabled','pm2-root.service'])=='enabled','guardedStateVerified':True})
-          emit({'kind':'retained_storage_after_deployment','creatorUploadsPresent':Path('/root/uploads').is_dir(),'databaseDataPresent':Path('/var/lib/mysql').is_dir(),'backupRootPresent':Path('/opt/backups').is_dir(),'appGitPresent':(root/'.git').is_dir(),'runnerGitPresent':(runner/'_work/creatorvault-ultrastate/creatorvault-ultrastate/.git').is_dir(),'activeRunnerBin':str((runner/'bin').resolve()),'activeRunnerExternals':str((runner/'externals').resolve()),'dockerContainers':cmd(['docker','--host','unix:///var/run/docker.sock','ps','-a','--format','{{.ID}}\t{{.Status}}']).splitlines(),'oldSqlBackupsPresent':all(Path(p).is_file() for p in ['/tmp/creatorvault_2026-10-08_03-05-01.sql','/tmp/creatorvault_2026-10-11_03-05-01.sql'])})
-          emit({'kind':'post_deploy_readonly_complete','sha':sha,'filesChanged':False,'generationTriggered':False,'externalSpendUsd':0,'at':datetime.datetime.now(datetime.timezone.utc).isoformat()})
-          PY
+    - name: Read-only fresh production storage inventory
+      shell: bash
+      run: "set -euo pipefail\ntest \"$GITHUB_REF\" = 'refs/heads/ops/runner-storage-2026-10-13'\nsudo -n /usr/bin/python3 - <<'PY'\nimport os,stat,json,subprocess,glob,time,hashlib,shutil\nfrom pathlib import Path\nENV={'PATH':'/home/runner/.local/share/pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C','HOME':'/root','PM2_HOME':'/root/.pm2'}\ndef emit(x):print(json.dumps(x),flush=True)\ndef cmd(args,timeout=60,cwd='/root/creatorvault'):\n    p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,timeout=timeout,env=ENV,cwd=cwd)\n    return p.stdout,p.returncode\nroot=Path('/root/creatorvault');runner=Path('/home/runner/actions-runner');workspace=runner/'_work/creatorvault-ultrastate/creatorvault-ultrastate'\nassert os.geteuid()==0\nassert cmd(['/usr/bin/curl','--noproxy','*','-fsS','--max-time','3','http://169.254.169.254/metadata/v1/id'])[0].strip()=='545144175'\nassert json.loads((root/'dist/public/release.json').read_text())['commit']=='3a47ce4dc7178893e958ed491a136c9749242033'\nfor p in [root,runner]:assert p.is_dir() and not p.is_symlink() and p.resolve()==p\ns=os.statvfs(runner);emit({'kind':'initial_capacity','availableBytes':s.f_bavail*s.f_frsize,'freeInodes':s.f_favail,'totalBytes':s.f_blocks*s.f_frsize,'device':os.stat(runner).st_dev})\nfor args in [['df','-h','/'],['df','-i','/'],['journalctl','--disk-usage']]:\n    out,code=cmd(args);emit({'kind':'command_readonly','command':args,'exit':code,'output':out.strip()})\nout,code=cmd(['du','-ah','-d','2','/home/runner','/tmp','/var/log','/root'],timeout=150)\nrank=[]\nfor line in out.splitlines():\n    if '\\t' in line:\n        size,name=line.split('\\t',1);rank.append({'size':size,'path':name})\n# Equivalent to sort -hr | head -30 but no fragile pipe failures.\nordered=subprocess.run(['sort','-hr'],input=out,text=True,stdout=subprocess.PIPE,env=ENV).stdout.splitlines()[:30]\nemit({'kind':'requested_deep_top30','rows':ordered,'duExit':code})\nfor path in ['/opt/backups','/root/.pm2/logs','/var/log','/var/log/journal','/var/lib/docker','/var/cache','/var/tmp','/home/runner/actions-runner/_work/creatorvault-ultrastate','/root/.cache','/root/.local/share/pnpm','/home/runner/.local/share/pnpm']:\n    p=Path(path)\n    if not p.exists():continue\n    out,code=cmd(['du','-x','--block-size=1','--max-depth=2','--',path],timeout=100);rows=[]\n    for line in out.splitlines():\n        if '\\t' in line:\n            size,name=line.split('\\t',1)\n            if size.isdecimal():rows.append({'bytes':int(size),'path':name})\n    emit({'kind':'target_deep_sizes','root':path,'exit':code,'rows':sorted(rows,key=lambda x:x['bytes'],reverse=True)[:30]})\nopened=set();refs=[]\nfor item in glob.glob('/proc/[0-9]*/fd/*'):\n    try:m=os.stat(item);opened.add((m.st_dev,m.st_ino))\n    except (OSError,PermissionError):pass\nfor item in glob.glob('/proc/[0-9]*/cwd')+glob.glob('/proc/[0-9]*/exe'):\n    try:\n        value=os.readlink(item)\n        if value.startswith(str(workspace)) or value.startswith('/tmp/') or value.startswith('/var/tmp/'):refs.append({'pid':int(item.split('/')[2]),'reference':value,'type':item.split('/')[-1]})\n    except OSError:pass\nemit({'kind':'temporary_process_references','rows':refs})\nif workspace.exists():\n    out,code=cmd(['git','-C',str(workspace),'rev-parse','HEAD']);emit({'kind':'runner_checkout_metadata','path':str(workspace),'gitHead':out.strip(),'gitHeadExit':code,'maintenanceWorkspace':os.environ.get('GITHUB_WORKSPACE'),'protectedGitHistoryRetained':True})\n    for p in sorted(workspace.iterdir()):\n        m=p.lstat()\n        if p.name in ['dist','node_modules','.git','uploads','videos','tmp','logs','.env'] or p.name.startswith('.consolidated-'):\n            emit({'kind':'workspace_entry_metadata','path':str(p),'directory':stat.S_ISDIR(m.st_mode),'symlink':p.is_symlink(),'mtimeUtc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(m.st_mtime)),'openInode':(m.st_dev,m.st_ino) in opened})\nfor path in ['/tmp','/var/tmp']:\n    for p in Path(path).iterdir():\n        m=p.lstat()\n        if m.st_mtime<time.time()-86400 and (stat.S_ISREG(m.st_mode) or stat.S_ISDIR(m.st_mode)):\n            emit({'kind':'aged_temporary_entry','path':str(p),'bytes':m.st_size,'directory':stat.S_ISDIR(m.st_mode),'ageHours':round((time.time()-m.st_mtime)/3600,2),'openInode':(m.st_dev,m.st_ino) in opened,'protectedBackupOrDataName':any(x in p.name.lower() for x in ['.sql','backup','upload','media','asset','receipt','database','mysql','mariadb'])})\nif shutil.which('docker',path=ENV['PATH']):\n    for args in [['docker','--host','unix:///var/run/docker.sock','system','df'],['docker','--host','unix:///var/run/docker.sock','system','df','-v'],['docker','--host','unix:///var/run/docker.sock','ps','-a','--format','{{.ID}}\\t{{.Image}}\\t{{.Status}}'],['docker','--host','unix:///var/run/docker.sock','buildx','du']]:\n        out,code=cmd(args,timeout=90);emit({'kind':'docker_readonly','command':args,'exit':code,'output':out[:24000]})\nelse:emit({'kind':'docker_readonly','present':False})\nemit({'kind':'bulk_inventory_complete','dataDeleted':False,'deploymentExecuted':False})\nPY\n"
