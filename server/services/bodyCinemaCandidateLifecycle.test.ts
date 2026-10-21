@@ -47,6 +47,14 @@ function sha256(bytes: Buffer): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+function nativeJsonObject(value: unknown): Record<string, unknown> {
+  const parsed = typeof value === "string" ? JSON.parse(value) : value;
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("NATIVE_JSON_OBJECT_REQUIRED");
+  }
+  return parsed as Record<string, unknown>;
+}
+
 function sourceUrl(storageId: string, filename: string): string {
   return `/uploads/content-vault/${storageId}/${encodeURIComponent(filename)}`;
 }
@@ -891,6 +899,25 @@ describe("Body Cinema body-directed native planning-only proof", () => {
     expect(frozen.treatment?.noCandidateGenerated).toBe(true);
     expect(frozen.candidate).toBeNull();
     expect(frozen.handoff).toBeNull();
+    const [storedPlanRows] = await pool.query<
+      (RowDataPacket & { treatment_json: unknown; treatment_hash: string; treatment_version: string })[]
+    >(
+      "SELECT treatment_json,treatment_hash,treatment_version FROM body_cinema_candidate_lifecycles WHERE id=?",
+      [qualified.id]
+    );
+    const storedEnvelope = nativeJsonObject(storedPlanRows[0]!.treatment_json);
+    expect(Object.keys(storedEnvelope).sort()).toEqual(["encoding", "planJson"]);
+    expect(storedEnvelope.encoding).toBe(
+      "body_cinema.body_directed_lossless_plan.v1"
+    );
+    if (typeof storedEnvelope.planJson !== "string") {
+      throw new Error("LOSSLESS_PLAN_JSON_STRING_REQUIRED");
+    }
+    expect(JSON.parse(storedEnvelope.planJson)).toEqual(frozen.treatment);
+    expect(storedPlanRows[0]!.treatment_hash).toBe(frozen.treatmentHash);
+    expect(storedPlanRows[0]!.treatment_version).toBe(
+      frozen.treatment?.version
+    );
     expect((await service.freezeBodyDirected(input)).treatmentHash).toBe(
       frozen.treatmentHash
     );
@@ -944,6 +971,57 @@ describe("Body Cinema body-directed native planning-only proof", () => {
     } finally {
       await playback.handle.close();
     }
+    // A body-directed row stored before the envelope remains readable. This
+    // controlled fixture mutation does not touch any legacy Crown Reveal row.
+    await pool.query(
+      "UPDATE body_cinema_candidate_lifecycles SET treatment_json=? WHERE id=?",
+      [JSON.stringify(frozen.treatment), qualified.id]
+    );
+    expect(
+      (await service.getBodyDirected(creatorId, qualified.id))?.treatment
+    ).toEqual(frozen.treatment);
+    const rejectStoredPlan = async (stored: unknown) => {
+      await pool.query(
+        "UPDATE body_cinema_candidate_lifecycles SET treatment_json=? WHERE id=?",
+        [JSON.stringify(stored), qualified.id]
+      );
+      await expect(
+        service.getBodyDirected(creatorId, qualified.id)
+      ).rejects.toBeInstanceOf(BodyCinemaLifecycleError);
+    };
+    await rejectStoredPlan({
+      ...storedEnvelope,
+      encoding: "body_cinema.body_directed_lossless_plan.v2",
+    });
+    await rejectStoredPlan({ ...storedEnvelope, extra: true });
+    await rejectStoredPlan({
+      encoding: "body_cinema.body_directed_lossless_plan.v1",
+      planJson: frozen.treatment,
+    });
+    await rejectStoredPlan({
+      encoding: "body_cinema.body_directed_lossless_plan.v1",
+      planJson: JSON.stringify(storedEnvelope),
+    });
+    await rejectStoredPlan({
+      encoding: "body_cinema.body_directed_lossless_plan.v1",
+      planJson: "{",
+    });
+    const tamperedPlan = JSON.parse(storedEnvelope.planJson) as Record<
+      string,
+      unknown
+    >;
+    tamperedPlan.providerReadyDirection = "tampered planning-only direction";
+    await rejectStoredPlan({
+      encoding: "body_cinema.body_directed_lossless_plan.v1",
+      planJson: JSON.stringify(tamperedPlan),
+    });
+    await pool.query(
+      "UPDATE body_cinema_candidate_lifecycles SET treatment_json=? WHERE id=?",
+      [JSON.stringify(storedEnvelope), qualified.id]
+    );
+    expect(
+      (await service.getBodyDirected(creatorId, qualified.id))?.treatment
+    ).toEqual(frozen.treatment);
   });
   it("rejects unconfirmed detail, invalid observation times and wrong ownership without inventing a plan", async () => {
     const sourceAssetId = randomUUID();

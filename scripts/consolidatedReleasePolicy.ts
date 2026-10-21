@@ -22,9 +22,9 @@ export const CONSOLIDATED_SECURITY_BASELINE =
  * rollback reference, and its single direct checkout parent.
  */
 export const CONSOLIDATED_RELEASE_PARENT =
-  "3a47ce4dc7178893e958ed491a136c9749242033";
+  "43197ff412d92324db03559b63eafc578d62dcbf";
 export const CONSOLIDATED_RELEASE_CHECKOUT_PARENT =
-  "4a3b5609f7849f547af38541550658979dbec222";
+  "43197ff412d92324db03559b63eafc578d62dcbf";
 export const APP_ROOT = "/root/creatorvault";
 export const APPROVED_FEATURE_HEADS = {
   stripe: "ccba8cd56f887d041311d4f37d3ec912fd57322d",

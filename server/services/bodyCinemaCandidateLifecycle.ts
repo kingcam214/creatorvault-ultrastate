@@ -795,6 +795,53 @@ function bodyDirectedMetadataJson(value: unknown): string {
   );
 }
 
+const BODY_DIRECTED_LOSSLESS_PLAN_ENCODING =
+  "body_cinema.body_directed_lossless_plan.v1";
+const MAX_BODY_DIRECTED_PLAN_JSON_BYTES = 1_048_576;
+
+function bodyDirectedPlanStorageJson(plan: unknown): string {
+  return JSON.stringify({
+    encoding: BODY_DIRECTED_LOSSLESS_PLAN_ENCODING,
+    // This must remain JSON text nested in the JSON envelope. MySQL/MariaDB
+    // materialize JSON numbers, but neither engine interprets string contents.
+    planJson: bodyDirectedMetadataJson(plan),
+  });
+}
+
+function parseStoredBodyDirectedPlan(value: unknown): z.infer<typeof bodyDirectedPlanSchema> {
+  const stored = parseJsonRecord(value, "The frozen body-directed plan");
+  const hasEnvelopeKey =
+    Object.prototype.hasOwnProperty.call(stored, "encoding") ||
+    Object.prototype.hasOwnProperty.call(stored, "planJson");
+  // Plain-object records predate the lossless envelope and retain their exact
+  // historical read behavior. Only a recognizable envelope is decoded.
+  if (!hasEnvelopeKey) return bodyDirectedPlanSchema.parse(stored);
+
+  const keys = Object.keys(stored).sort();
+  if (
+    keys.length !== 2 ||
+    keys[0] !== "encoding" ||
+    keys[1] !== "planJson" ||
+    stored.encoding !== BODY_DIRECTED_LOSSLESS_PLAN_ENCODING ||
+    typeof stored.planJson !== "string"
+  ) {
+    failure("precondition", "The frozen body-directed plan envelope is invalid.");
+  }
+  const planJson = stored.planJson;
+  const bytes = Buffer.byteLength(planJson, "utf8");
+  if (bytes < 2 || bytes > MAX_BODY_DIRECTED_PLAN_JSON_BYTES) {
+    failure("precondition", "The frozen body-directed plan payload is outside its byte limit.");
+  }
+  const decoded = parseJsonRecord(planJson, "The frozen body-directed plan payload");
+  if (
+    Object.prototype.hasOwnProperty.call(decoded, "encoding") ||
+    Object.prototype.hasOwnProperty.call(decoded, "planJson")
+  ) {
+    failure("precondition", "The frozen body-directed plan payload cannot be wrapped twice.");
+  }
+  return bodyDirectedPlanSchema.parse(decoded);
+}
+
 function isBodyDirectedRow(row: LifecycleRow): boolean {
   return parseJsonRecord(row.rights_assertion_json, "The creator assertion").version === BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION;
 }
@@ -1652,7 +1699,7 @@ export class BodyCinemaCandidateLifecycleService {
       const hash = digest(plan);
       await execute(connection,
         `UPDATE body_cinema_candidate_lifecycles SET treatment_version = ?, treatment_json = ?, treatment_hash = ?, state = 'frozen', updated_at = CURRENT_TIMESTAMP(3) WHERE id = ? AND creator_id = ?`,
-        [plan.version, JSON.stringify(plan), hash, parsed.id, input.creatorId]);
+        [plan.version, bodyDirectedPlanStorageJson(plan), hash, parsed.id, input.creatorId]);
       await execute(connection, 'UPDATE creation_projects SET treatment_id = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ? AND creator_id = ?',
         [plan.bodyTreatment.id, row.project_id, input.creatorId]);
       await appendEvent(connection, row.project_id, input.creatorId, 'body_cinema_body_directed_plan_frozen',
@@ -1682,7 +1729,7 @@ export class BodyCinemaCandidateLifecycleService {
     const metadata = parseJsonRecord(project.metadata_json, 'The project metadata');
     const namespace = parseJsonRecord(metadata.bodyCinemaBodyDirectedV2, 'The body-directed source map');
     const analysis = namespace.analysis ? bodyDirectedAnalysisSchema.parse(namespace.analysis) : null;
-    const plan = row.treatment_json ? bodyDirectedPlanSchema.parse(parseJsonRecord(row.treatment_json, 'The frozen body-directed plan')) : null;
+    const plan = row.treatment_json ? parseStoredBodyDirectedPlan(row.treatment_json) : null;
     if (plan && (digest(plan) !== row.treatment_hash || plan.version !== row.treatment_version || digest(plan.source) !== digest({assetId:source.assetId, sha256:source.sha256,width:source.width,height:source.height,durationSeconds:source.durationSeconds}))) failure('precondition', 'The saved cinematic plan no longer matches its immutable source and hash.');
     if (analysis && (digest(analysis.sourceMap) !== analysis.sourceMapHash || analysis.sourceMap.source.sha256 !== source.sha256 || analysis.sourceMap.source.assetId !== source.assetId)) failure('precondition', 'The saved source map no longer matches this original and its snapshot hash.');
     if (plan && (!analysis || digest(plan.sourceMap) !== analysis.sourceMapHash)) failure('precondition', 'The frozen source map is not the immutable selected snapshot.');

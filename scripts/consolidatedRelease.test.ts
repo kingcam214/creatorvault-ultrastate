@@ -45,10 +45,10 @@ describe("consolidated non-rotating guarded release", () => {
 
   it("pins the verified live Phase A artifact and exact corrective checkout parent while preserving the 3762 signing epoch", () => {
     expect(CONSOLIDATED_RELEASE_PARENT).toBe(
-      "3a47ce4dc7178893e958ed491a136c9749242033"
+      "43197ff412d92324db03559b63eafc578d62dcbf"
     );
     expect(CONSOLIDATED_RELEASE_CHECKOUT_PARENT).toBe(
-      "4a3b5609f7849f547af38541550658979dbec222"
+      "43197ff412d92324db03559b63eafc578d62dcbf"
     );
     expect(CONSOLIDATED_SECURITY_BASELINE).toBe(
       "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da"
