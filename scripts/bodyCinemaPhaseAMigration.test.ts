@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { applyConsolidatedMigrations } from "./consolidatedMigrations.js";
 import {
   applyBodyCinemaPhaseAMigration,
+  bodyCinemaPlanScopeExpressionMatches,
   BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION,
   BODY_CINEMA_PLAN_SCOPE_EXPRESSION,
   BODY_CINEMA_PHASE_A_MIGRATION,
@@ -15,6 +16,99 @@ import { BODY_CINEMA_BODY_DIRECTED_ASSERTION_VERSION } from "../shared/bodyCinem
 
 const TEST_DATABASE = "creatorvault_body_cinema_test";
 const repositoryRoot = path.resolve(import.meta.dirname, "..");
+
+// Exact observed production MySQL 8.0.46 metadata, not a normalized SQL fixture.
+const MYSQL8_PLAN_SCOPE_EXPRESSION = "(case when ((json_value(`rights_assertion_json`, _utf8mb4'$.version' returning char(512)) collate utf8mb4_bin) = (_utf8mb4'body_cinema.body_directed_assertion.v1' collate utf8mb4_bin)) then rtrim(`id`) else _utf8mb4'' end)";
+const MYSQL8_ESCAPED_PLAN_SCOPE_EXPRESSION = String.raw`(case when ((json_value(\`rights_assertion_json\`, _utf8mb4\'$.version\' returning char(512)) collate utf8mb4_bin) = (_utf8mb4\'body_cinema.body_directed_assertion.v1\' collate utf8mb4_bin)) then rtrim(\`id\`) else _utf8mb4\'\' end)`.replace(/\\`/g, "`");
+const MARIADB_PLAN_SCOPE_EXPRESSION = "case when json_value(`rights_assertion_json`,'$.version') collate utf8mb4_bin = _utf8mb4'body_cinema.body_directed_assertion.v1' collate utf8mb4_bin then rtrim(`id`) else '' end";
+const MYSQL8_LEGACY_CLIENT_EXPRESSION = String.raw`(case when ((json_value(\`rights_assertion_json\`, _utf8mb3\'$.version\' returning char(512)) collate utf8mb4_bin) = (_utf8mb4\'body_cinema.body_directed_assertion.v1\' collate utf8mb4_bin)) then rtrim(\`id\`) else _utf8mb3\'\' end)`.replace(/\\`/g, "`");
+
+describe("Body Cinema exact plan_scope metadata spellings", () => {
+  it.each([
+    ["immutable source", BODY_CINEMA_PLAN_SCOPE_EXPRESSION],
+    ["MariaDB 10.11.14", MARIADB_PLAN_SCOPE_EXPRESSION],
+    ["MySQL 8.0.46 unescaped engine display", MYSQL8_PLAN_SCOPE_EXPRESSION],
+    ["MySQL 8.0.46 escaped production metadata", MYSQL8_ESCAPED_PLAN_SCOPE_EXPRESSION],
+    ["MySQL 8.0.46 legacy client charset metadata", MYSQL8_LEGACY_CLIENT_EXPRESSION],
+    ["MySQL 8.0.46 legacy client unescaped display", MYSQL8_LEGACY_CLIENT_EXPRESSION.replace(/\\'/g, "'")],
+    ["SQL keyword case/whitespace only", MYSQL8_PLAN_SCOPE_EXPRESSION.replace(/case when/, "CASE\n  WHEN").replace(/rtrim/, "RTRIM")],
+    ["escaped SQL keyword case/whitespace only", MYSQL8_ESCAPED_PLAN_SCOPE_EXPRESSION.replace(/returning char/, "RETURNING\n CHAR").replace(/rtrim/, "RTRIM")],
+  ])("accepts only the vetted %s expression", (_label, expression) => {
+    expect(bodyCinemaPlanScopeExpressionMatches(expression)).toBe(true);
+  });
+
+  const mutations: [string, string, string][] = [
+    ["JSON path", "$.version", "$.other"],
+    ["JSON path case", "$.version", "$.Version"],
+    ["JSON path trailing space", "$.version", "$.version "],
+    ["assertion generation", "assertion.v1", "assertion.v2"],
+    ["assertion case", "body_cinema.body_directed", "Body_cinema.body_directed"],
+    ["assertion trailing space", "assertion.v1", "assertion.v1 "],
+    ["assertion internal whitespace", "body_cinema.body_directed", "body_cinema. body_directed"],
+    ["source column", "rights_assertion_json", "source_snapshot_json"],
+    ["JSON function", "json_value", "json_extract"],
+    ["JSON function spelling", "json_value", "json_ value"],
+    ["first collation", ") collate utf8mb4_bin) =", ") collate utf8mb4_0900_ai_ci) ="],
+    ["first collation removed", ") collate utf8mb4_bin) =", ")) ="],
+    ["second collation", "assertion.v1' collate utf8mb4_bin", "assertion.v1' collate utf8mb4_0900_ai_ci"],
+    ["second collation removed", "assertion.v1' collate utf8mb4_bin", "assertion.v1'"],
+    ["both collations", "utf8mb4_bin", "utf8mb4_general_ci"],
+    ["assertion charset latin1", "_utf8mb4'body_cinema", "_latin1'body_cinema"],
+    ["assertion charset utf8mb3", "_utf8mb4'body_cinema", "_utf8mb3'body_cinema"],
+    ["path charset latin1", "_utf8mb4'$.version", "_latin1'$.version"],
+    ["mixed path/else charset", "_utf8mb4'$.version", "_utf8mb3'$.version"],
+    ["return length short", "char(512)", "char(511)"],
+    ["return length long", "char(512)", "char(513)"],
+    ["return length huge", "char(512)", "char(5120)"],
+    ["return length arithmetic", "char(512)", "char(256+256)"],
+    ["return type", "char(512)", "varchar(512)"],
+    ["numeric return type", "char(512)", "signed"],
+    ["return charset", "char(512)", "char(512) character set latin1"],
+    ["error behavior", "char(512)", "char(512) error on error"],
+    ["empty behavior", "char(512)", "char(512) default 'x' on empty"],
+    ["trim function", "rtrim", "ltrim"],
+    ["trim function changes", "rtrim", "trim"],
+    ["trim function token boundary", "rtrim", "rt rim"],
+    ["trim argument", "rtrim(`id`)", "rtrim(`project_id`)"],
+    ["then branch wrapper", "rtrim(`id`)", "lower(rtrim(`id`))"],
+    ["else branch", "else _utf8mb4''", "else _utf8mb4' '"],
+    ["else NULL", "else _utf8mb4''", "else NULL"],
+    ["else id", "else _utf8mb4''", "else rtrim(`id`)"],
+    ["else charset", "else _utf8mb4''", "else _latin1''"],
+    ["comparison null-safe", " = ", " <=> "],
+    ["comparison inequality", " = ", " <> "],
+    ["comparison direction", " = ", " >= "],
+    ["extra predicate", ")) then", ") OR 1) then"],
+    ["conditional kind", "case when", "if when"],
+    ["extra branch", " end)", " when 1 then 'x' end)"],
+    ["SQL comment", "returning", "/* default */ returning"],
+    ["return keyword boundary", "returning char", "returningchar"],
+    ["unbalanced parentheses", "char(512)", "char512)"],
+    ["unexpected trailing operator", " end)", " end)+1"],
+  ];
+  it.each(mutations)("rejects changed %s in plain and escaped MySQL metadata", (_label, from, to) => {
+    const changed = MYSQL8_PLAN_SCOPE_EXPRESSION.replaceAll(from, to);
+    expect(changed).not.toBe(MYSQL8_PLAN_SCOPE_EXPRESSION);
+    expect(bodyCinemaPlanScopeExpressionMatches(changed)).toBe(false);
+    expect(bodyCinemaPlanScopeExpressionMatches(changed.replace(/'/g, "\\'"))).toBe(false);
+  });
+
+  it.each([
+    ["empty", ""],
+    ["whitespace", " \n "],
+    ["unbounded input", " ".repeat(1025) + MYSQL8_PLAN_SCOPE_EXPRESSION],
+    ["unbounded tokens", "(".repeat(129)],
+    ["malformed escapes", MYSQL8_ESCAPED_PLAN_SCOPE_EXPRESSION.replace("\\'$.version\\'", "\\'$.version'")],
+    ["double escaped delimiters", MYSQL8_ESCAPED_PLAN_SCOPE_EXPRESSION.replace(/\\'/g, "\\\\'")],
+    ["extra parentheses not vetted", `(${MYSQL8_PLAN_SCOPE_EXPRESSION})`],
+    ["MySQL default removed from engine form", MYSQL8_PLAN_SCOPE_EXPRESSION.replace(" returning char(512)", "")],
+    ["source return-type mutation", BODY_CINEMA_PLAN_SCOPE_EXPRESSION.replace("'$.version')", "'$.version' RETURNING CHAR(513))")],
+    ["MariaDB version case mutation", MARIADB_PLAN_SCOPE_EXPRESSION.replace("assertion.v1", "assertion.V1")],
+    ["source path case mutation", BODY_CINEMA_PLAN_SCOPE_EXPRESSION.replace("$.version", "$.Version")],
+  ])("rejects unknown or malformed %s expression", (_label, expression) => {
+    expect(bodyCinemaPlanScopeExpressionMatches(expression)).toBe(false);
+  });
+});
 
 function nativeFixtureDatabaseUrl(): string {
   const candidate = process.env.CREATORVAULT_BODY_CINEMA_TEST_DATABASE_URL;
@@ -463,6 +557,23 @@ async function historicalBytes(): Promise<RowDataPacket[]> {
   }
 }
 
+function preservationIntentForBytes(rows: readonly RowDataPacket[]): string {
+  if (rows.length === 0) throw new Error("NONEMPTY_PRESERVATION_FIXTURE_REQUIRED");
+  const columns = Object.keys(rows[0]!);
+  const hash = createHash("sha256").update(JSON.stringify(columns));
+  for (const row of rows) {
+    hash.update("row:");
+    for (const column of columns) {
+      const value: unknown = row[column];
+      if (value === null) hash.update("N;");
+      else if (typeof value === "string" && /^(?:[0-9A-F]{2})*$/.test(value))
+        hash.update(`S${value.length}:${value};`);
+      else throw new Error("INVALID_PRESERVATION_FIXTURE_BYTES");
+    }
+  }
+  return `body_cinema.0027.preservation.v1:${rows.length}:${hash.digest("hex")}`;
+}
+
 async function scopeLedgerRows(): Promise<RowDataPacket[]> {
   const connection = await mysql.createConnection(databaseUrl);
   try {
@@ -633,6 +744,126 @@ describe("Body Cinema authorized 0027 plan-source scope migration", () => {
 });
 
 describe("Body Cinema native interrupted scope completion boundary", () => {
+  it("verifies the actual immutable engine spelling and recovers pending 0027 using only its exact negative intent", async () => {
+    await bootstrapRecordedPhaseA();
+    await seedHistoricalRow(1, "legacy-original");
+    await seedHistoricalRow(2, "body-directed-original", true);
+    const before = await historicalBytes();
+    const intent = preservationIntentForBytes(before);
+    const connection = await mysql.createConnection(databaseUrl);
+    let schema: unknown;
+    try {
+      // Independently construct the real failed-deployment boundary: durable
+      // pre-DDL intent + immutable ALTER, with NO positive 0027 marker ever made.
+      await connection.execute("INSERT INTO __drizzle_migrations (hash,created_at) VALUES (?,?)",
+        [intent, -BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.when]);
+      await connection.query(await fs.readFile(path.join(repositoryRoot, BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.file), "utf8"));
+      const [metadata] = await connection.query<RowDataPacket[]>(
+        "SELECT VERSION() AS version, GENERATION_EXPRESSION AS expression FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='body_cinema_candidate_lifecycles' AND COLUMN_NAME='plan_scope'");
+      expect(metadata).toHaveLength(1);
+      const { version, expression } = metadata[0]!;
+      if (String(version).includes("MariaDB")) {
+        expect(expression).toBe(MARIADB_PLAN_SCOPE_EXPRESSION);
+      } else {
+        expect(String(version)).toMatch(/^8\.0\.46(?:-|$)/);
+        expect(expression).toBe(MYSQL8_ESCAPED_PLAN_SCOPE_EXPRESSION);
+      }
+      expect(bodyCinemaPlanScopeExpressionMatches(String(expression))).toBe(true);
+      const [create] = await connection.query("SHOW CREATE TABLE body_cinema_candidate_lifecycles");
+      schema = create;
+      expect(await historicalBytes()).toEqual(before);
+      expect(await scopeLedgerRows()).toEqual([{hash: intent, created_at: -BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.when}]);
+      // These markers let the external real-MySQL general-log audit prove the
+      // bounded recovery window contains no DDL or lifecycle mutation.
+      await connection.query("SELECT 1 AS test_only_scope_recovery_begin");
+      let backups = 0;
+      const recovered = await applyBodyCinemaPhaseAMigration(databaseUrl, repositoryRoot,
+        {beforeFirstDdl: async () => {backups += 1;}});
+      await connection.query("SELECT 1 AS test_only_scope_recovery_end");
+      expect(recovered).toEqual({applied: 0, alreadyApplied: 2, recoveredInterruptedDdl: true});
+      expect(backups).toBe(0);
+      const [afterSchema] = await connection.query("SHOW CREATE TABLE body_cinema_candidate_lifecycles");
+      expect(afterSchema).toEqual(schema);
+      expect(await historicalBytes()).toEqual(before);
+      const ledger = await scopeLedgerRows();
+      expect(ledger).toEqual([
+        {hash: intent, created_at: -BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.when},
+        {hash: BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.sha256, created_at: BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.when},
+      ]);
+      expect(await applyBodyCinemaPhaseAMigration(databaseUrl, repositoryRoot,
+        {beforeFirstDdl: async () => {backups += 1;}})).toEqual(
+          {applied: 0, alreadyApplied: 2, recoveredInterruptedDdl: false});
+      expect(backups).toBe(0);
+      expect(await historicalBytes()).toEqual(before);
+      expect(await scopeLedgerRows()).toEqual(ledger);
+    } finally { await connection.end(); }
+  });
+
+  it.each([
+    ["path", "$.version", "$.Version"],
+    ["version", "assertion.v1", "assertion.v2"],
+    ["version case", "body_cinema.body_directed", "Body_cinema.body_directed"],
+    ["first collation removed", "JSON_VALUE(rights_assertion_json, '$.version') COLLATE utf8mb4_bin", "JSON_VALUE(rights_assertion_json, '$.version')"],
+    ["second collation removed", "assertion.v1' COLLATE utf8mb4_bin", "assertion.v1'"],
+    ["both collations changed", "utf8mb4_bin", "utf8mb4_unicode_ci"],
+    ["operator", " = ", " <> "],
+    ["RTRIM function", "RTRIM(id)", "TRIM(id)"],
+    ["RTRIM argument", "RTRIM(id)", "RTRIM(project_id)"],
+    ["else branch", "ELSE ''", "ELSE 'x'"],
+  ])("rejects actual post-ALTER %s drift before backup or positive completion", async (_label, from, to) => {
+    await bootstrapRecordedPhaseA();
+    await seedHistoricalRow(1, "original-receipted-source");
+    const before = await historicalBytes();
+    const intent = preservationIntentForBytes(before);
+    const connection = await mysql.createConnection(databaseUrl);
+    try {
+      await connection.execute("INSERT INTO __drizzle_migrations (hash,created_at) VALUES (?,?)",
+        [intent, -BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.when]);
+      await connection.query(await fs.readFile(path.join(repositoryRoot, BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.file), "utf8"));
+      const changed = BODY_CINEMA_PLAN_SCOPE_EXPRESSION.replaceAll(from, to);
+      expect(changed).not.toBe(BODY_CINEMA_PLAN_SCOPE_EXPRESSION);
+      await connection.query(`ALTER TABLE body_cinema_candidate_lifecycles
+        DROP INDEX body_cinema_lifecycle_creator_source_scope_unique,
+        MODIFY COLUMN plan_scope varchar(36) GENERATED ALWAYS AS (${changed}) VIRTUAL,
+        ADD UNIQUE KEY body_cinema_lifecycle_creator_source_scope_unique(creator_id,source_asset_id,plan_scope)`);
+    } finally { await connection.end(); }
+    let backups = 0;
+    expect(await migrationErrorCode(() => applyBodyCinemaPhaseAMigration(databaseUrl, repositoryRoot,
+      {beforeFirstDdl: async () => {backups += 1;}}))).toBe("BODY_CINEMA_PHASE_A_RECORDED_SCHEMA_MISMATCH");
+    expect(backups).toBe(0);
+    expect(await historicalBytes()).toEqual(before);
+    expect(await scopeLedgerRows()).toEqual([{hash: intent, created_at: -BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.when}]);
+  });
+
+  it("rejects an actual changed JSON_VALUE return length on MySQL or declared scope length on MariaDB", async () => {
+    await bootstrapRecordedPhaseA();
+    await seedHistoricalRow(1, "original-receipted-source");
+    const before = await historicalBytes();
+    const intent = preservationIntentForBytes(before);
+    const connection = await mysql.createConnection(databaseUrl);
+    try {
+      await connection.execute("INSERT INTO __drizzle_migrations (hash,created_at) VALUES (?,?)",
+        [intent, -BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.when]);
+      await connection.query(await fs.readFile(path.join(repositoryRoot, BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.file), "utf8"));
+      const [version] = await connection.query<RowDataPacket[]>("SELECT VERSION() AS version");
+      const mariaDb = String(version[0]!.version).includes("MariaDB");
+      // MariaDB JSON_VALUE has no RETURNING grammar. It still checks the exact
+      // declared varchar(36); MySQL exercises a real CHAR(513) JSON_VALUE change.
+      const changed = mariaDb ? BODY_CINEMA_PLAN_SCOPE_EXPRESSION
+        : BODY_CINEMA_PLAN_SCOPE_EXPRESSION.replace("'$.version')", "'$.version' RETURNING CHAR(513))");
+      await connection.query(`ALTER TABLE body_cinema_candidate_lifecycles
+        DROP INDEX body_cinema_lifecycle_creator_source_scope_unique,
+        MODIFY COLUMN plan_scope varchar(${mariaDb ? 37 : 36}) GENERATED ALWAYS AS (${changed}) VIRTUAL,
+        ADD UNIQUE KEY body_cinema_lifecycle_creator_source_scope_unique(creator_id,source_asset_id,plan_scope)`);
+    } finally { await connection.end(); }
+    let backups = 0;
+    expect(await migrationErrorCode(() => applyBodyCinemaPhaseAMigration(databaseUrl, repositoryRoot,
+      {beforeFirstDdl: async () => {backups += 1;}}))).toBe("BODY_CINEMA_PHASE_A_RECORDED_SCHEMA_MISMATCH");
+    expect(backups).toBe(0);
+    expect(await historicalBytes()).toEqual(before);
+    expect(await scopeLedgerRows()).toEqual([{hash: intent, created_at: -BODY_CINEMA_PLAN_SOURCE_SCOPE_MIGRATION.when}]);
+  });
+
   it("retains preservation proof after a real post-ALTER ledger INSERT failure and recovers without DDL or backup replay", async () => {
     await bootstrapRecordedPhaseA();
     await seedHistoricalRow(1, "original-receipted-source");

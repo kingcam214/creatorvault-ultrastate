@@ -48,7 +48,7 @@ describe("consolidated non-rotating guarded release", () => {
       "3a47ce4dc7178893e958ed491a136c9749242033"
     );
     expect(CONSOLIDATED_RELEASE_CHECKOUT_PARENT).toBe(
-      "3a47ce4dc7178893e958ed491a136c9749242033"
+      "4a3b5609f7849f547af38541550658979dbec222"
     );
     expect(CONSOLIDATED_SECURITY_BASELINE).toBe(
       "3762e69c7bf5e59b3e6070085f2fbd4b3fb2c8da"

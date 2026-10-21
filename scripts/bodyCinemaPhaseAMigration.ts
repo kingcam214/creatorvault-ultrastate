@@ -437,6 +437,50 @@ function normalized(value: string): string {
   return value.toLowerCase().replace(/`/g, "").replace(/\s+/g, "");
 }
 
+function planScopeExpressionTokens(value: string): string | null {
+  // This is a bounded metadata lexer, not a SQL normalizer. Keep parentheses,
+  // token boundaries, introducers and quoted bytes (including escaped delimiters).
+  // Only whitespace, keyword case and identifier backticks are display details.
+  // The pinned literals have no internal quotes/backslashes; reject those rather
+  // than treating escaped delimiters as a general SQL string-unescaping grammar.
+  if (value.length > 1024) return null;
+  const token = /\s+|\\'[^'\\]*\\'|'[^'\\]*'|`[a-zA-Z_][a-zA-Z0-9_]*`|[a-zA-Z_][a-zA-Z0-9_]*|[0-9]+|[(),=]/gy;
+  const tokens: string[] = [];
+  let position = 0;
+  while (position < value.length) {
+    token.lastIndex = position;
+    const match = token.exec(value);
+    if (match === null) return null;
+    position = token.lastIndex;
+    const part = match[0];
+    if (/^\s+$/.test(part)) continue;
+    tokens.push(part.startsWith("'") || part.startsWith("\\'")
+      ? part : part.replace(/^`|`$/g, "").toLowerCase());
+    if (tokens.length > 128) return null;
+  }
+  return tokens.join("\0");
+}
+
+const VETTED_PLAN_SCOPE_EXPRESSIONS = new Set([
+  // Immutable 0027 source and MariaDB 10.11.14 INFORMATION_SCHEMA spelling.
+  BODY_CINEMA_PLAN_SCOPE_EXPRESSION,
+  // MySQL 8.0.46 spells JSON_VALUE's implicit default as RETURNING CHAR(512).
+  // utf8mb3 is observed with the legacy CLI connection; mysql2/production use
+  // utf8mb4. Only these exact ASCII path/empty-literal introducers may differ;
+  // the assertion literal and BOTH binary collations are always utf8mb4.
+  ...["utf8mb4", "utf8mb3"].flatMap(charset => {
+    const expression = `(case when ((json_value(\`rights_assertion_json\`, _${charset}'$.version' returning char(512)) collate utf8mb4_bin) = (_utf8mb4'body_cinema.body_directed_assertion.v1' collate utf8mb4_bin)) then rtrim(\`id\`) else _${charset}'' end)`;
+    // MySQL exposes escaped quote delimiters in GENERATION_EXPRESSION; retain
+    // the corresponding unescaped engine/DDL display as a separate vetted form.
+    return [expression, expression.replace(/'/g, "\\'")];
+  }),
+].map(planScopeExpressionTokens));
+
+export function bodyCinemaPlanScopeExpressionMatches(value: string): boolean {
+  const tokens = planScopeExpressionTokens(value);
+  return tokens !== null && VETTED_PLAN_SCOPE_EXPRESSIONS.has(tokens);
+}
+
 function normalizedGenerationExpression(value: string): string {
   // Engines add redundant parentheses/backticks and charset literal introducers.
   // Preserve quoted values case-exact; only SQL identifiers/keywords are folded.
@@ -757,8 +801,9 @@ async function lifecycleFingerprintMatches(
       normalizedDefault(actual.defaultValue) ===
         normalizedDefault(expected.defaultValue) &&
       normalizedExtra(actual.extra) === normalizedExtra(expected.extra ?? "") &&
-      normalizedGenerationExpression(actual.generationExpression) ===
-        (expected.name === "plan_scope" ? normalizedGenerationExpression(BODY_CINEMA_PLAN_SCOPE_EXPRESSION) : "")
+      (expected.name === "plan_scope"
+        ? bodyCinemaPlanScopeExpressionMatches(actual.generationExpression)
+        : normalizedGenerationExpression(actual.generationExpression) === "")
     );
   });
   if (!exactColumns) return false;
